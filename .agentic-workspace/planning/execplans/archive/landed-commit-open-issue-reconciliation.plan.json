@@ -1,0 +1,165 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Landed Commit Open Issue Reconciliation",
+  "goal": [
+    "Detect open external tracker items that have checked-in archive or review evidence suggesting implementation already landed."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "#425 is the remaining broad issue-ingestion guardrail: detect checked-in or landed implementation evidence while tracker state remains open.",
+      "constraints": "Keep core planning provider-agnostic; compare checked-in residue with external evidence without calling GitHub or auto-closing issues.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "landed-commit-open-issue-reconciliation",
+      "status": "completed",
+      "next_step": "Archive this slice and close #425 after the milestone is pushed.",
+      "proof": "uv run pytest packages/planning/tests/test_installer.py -q -k \"landed_open or intent_validation\"; uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check packages/planning; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json"
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/landed-commit-open-issue-reconciliation.plan.json"
+      ],
+      "invariants": [
+        "External trackers remain optional provider-agnostic evidence.",
+        "The package may report stale tracker evidence but must not auto-close upstream items."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#425 is the remaining broad issue-ingestion guardrail: detect checked-in or landed implementation evidence while tracker state remains open.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Detect checked-in landed evidence while tracker state remains open.",
+    "hard constraints": "Keep core planning provider-agnostic and do not auto-close upstream items.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "landed-commit-open-issue-reconciliation",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this slice and close #425 after the milestone is pushed."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/landed-commit-open-issue-reconciliation.plan.json"
+  ],
+  "invariants": [
+    "External trackers remain optional provider-agnostic evidence.",
+    "The package may report stale tracker evidence but must not auto-close upstream items."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"landed_open or intent_validation\"",
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run ruff check packages/planning",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "A compact planning surface reports open external items that have checked-in landed/closeout evidence without auto-closing them."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Intent validation now includes landed_open_issue_reconciliation, which compares open external work evidence against checked-in archive/review residue and reports implemented-and-unclosed or ambiguous-open-reference items without auto-closing anything.",
+    "validation confirmed": "Focused planning tests and ruff passed; full planning tests, summary, reconcile, and planning doctor are the commit gate for this milestone.",
+    "follow-on routed to": "none for #425 after closeout; broader open lanes remain in state.toml.",
+    "post-work posterity capture": "Archived execplan plus planning package tests.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "Select the next open roadmap lane in .agentic-workspace/planning/state.toml."
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest packages/planning/tests/test_installer.py -q -k \"landed_open or intent_validation\"; uv run ruff check packages/planning; uv run agentic-workspace summary --format json",
+    "proof achieved now": "A synthetic open external issue with an archived closeout is surfaced as implemented-and-unclosed in compact summary.",
+    "evidence for \"proof achieved\" state": "test_planning_summary_reports_open_issue_with_landed_archive_evidence creates provider-agnostic external evidence plus a machine-first archived execplan and asserts landed_open_issue_reconciliation reports the stale tracker state."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "none for #425 after closeout; broader open lanes remain in state.toml.",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Detect checked-in landed evidence while tracker state remains open.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Compact summary now includes landed_open_issue_reconciliation for open external evidence that has checked-in archive/review landed evidence, with synthetic test coverage.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#425 requested a compact check for landed implementation evidence while tracker state remains open; intent validation now reports implemented-and-unclosed and ambiguous-open-reference without auto-closing.",
+    "evidence carried forward": "full planning installer tests, focused landed-open test, ruff, planning summary, reconcile, and planning doctor passed",
+    "reopen trigger": "An open external issue with structured landed archive evidence is no longer visible in compact planning summary."
+  }
+}

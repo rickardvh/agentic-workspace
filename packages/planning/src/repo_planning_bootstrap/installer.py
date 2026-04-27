@@ -1926,6 +1926,10 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "primary_owner",
                 "counts",
                 "external_evidence",
+                "current_external_work",
+                "historical_audit_references",
+                "closeout_reconciliation",
+                "landed_open_issue_reconciliation",
                 "signals",
                 "recommended_next_action",
                 "minimal_refs",
@@ -2201,6 +2205,10 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         intent_validation_contract["closeout_reconciliation"] = _compact_closeout_reconciliation(
             intent_validation_contract["closeout_reconciliation"]
         )
+    if "landed_open_issue_reconciliation" in intent_validation_contract:
+        intent_validation_contract["landed_open_issue_reconciliation"] = _compact_landed_open_issue_reconciliation(
+            intent_validation_contract["landed_open_issue_reconciliation"]
+        )
     finished_work_inspection_contract = dict(summary.get("finished_work_inspection_contract", {}))
     if "derived_follow_up_candidates" in finished_work_inspection_contract:
         finished_work_inspection_contract = _compact_finished_work_inspection(finished_work_inspection_contract)
@@ -2349,6 +2357,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "current_external_work",
                 "historical_audit_references",
                 "closeout_reconciliation",
+                "landed_open_issue_reconciliation",
                 "recommended_next_action",
             ),
         ),
@@ -2403,6 +2412,23 @@ def _compact_closeout_reconciliation(reconciliation: Any) -> dict[str, Any]:
         "sample_items_by_state": sample_items_by_state,
         "omitted_item_count": max(0, sum(len(value) for value in items_by_state.values()) - displayed_item_count),
         "detail": "Use `agentic-workspace summary --format json --profile full` for full reconciliation sources and item ids.",
+    }
+
+
+def _compact_landed_open_issue_reconciliation(reconciliation: Any) -> dict[str, Any]:
+    if not isinstance(reconciliation, dict):
+        return {}
+    items = reconciliation.get("items", [])
+    if not isinstance(items, list):
+        items = []
+    max_items = 5
+    return {
+        "status": reconciliation.get("status", "absent"),
+        "item_count": reconciliation.get("item_count", 0),
+        "counts": reconciliation.get("counts", {}),
+        "sample_items": items[:max_items],
+        "omitted_item_count": max(0, len(items) - max_items),
+        "detail": "Use `agentic-workspace summary --format json --profile full` for full landed-open issue evidence.",
     }
 
 
@@ -2553,6 +2579,7 @@ def _intent_validation_contract(
     external_closed = 0
     lower_trust_closeouts = 0
     closed_residue_items: list[dict[str, Any]] = []
+    open_residue_items: list[dict[str, Any]] = []
     external_items = external_evidence.get("items", [])
     if isinstance(external_items, list):
         for item in external_items:
@@ -2565,6 +2592,7 @@ def _intent_validation_contract(
             active_refs = [ref for ref in refs if _is_live_planning_tracking_ref(ref)]
             if _external_status_is_open(item.get("status")):
                 external_open += 1
+                open_residue_items.append(item)
                 if active_refs:
                     tracked_open += 1
                 else:
@@ -2605,6 +2633,11 @@ def _intent_validation_contract(
         target_root=target_root,
         closed_residue_items=closed_residue_items,
     )
+    landed_open_issue_reconciliation = _landed_open_issue_reconciliation(
+        target_root=target_root,
+        open_residue_items=open_residue_items,
+        surface_index=surface_index,
+    )
     counts = {
         "internal_dangling_count": len(internal_signals),
         "tracked_external_open_count": tracked_open,
@@ -2612,6 +2645,7 @@ def _intent_validation_contract(
         "lower_trust_closeout_count": lower_trust_closeouts,
         "closeout_reconciled_count": closeout_reconciliation["counts"]["reconciled_count"],
         "closeout_needs_audit_count": closeout_reconciliation["counts"]["needs_audit_count"],
+        "landed_open_issue_count": landed_open_issue_reconciliation["counts"]["implemented_and_unclosed_count"],
         "attention_count": len(signals),
     }
     current_external_work = {
@@ -2649,6 +2683,10 @@ def _intent_validation_contract(
     if untracked_open:
         recommended_next_action = (
             "Route open external planning items into checked-in active or candidate planning state before treating the repo as quiet."
+        )
+    elif landed_open_issue_reconciliation["counts"]["implemented_and_unclosed_count"]:
+        recommended_next_action = (
+            "Review open external items with checked-in landed evidence and close or reroute the tracker item explicitly."
         )
     elif closeout_reconciliation["counts"]["likely_premature_closeout_count"]:
         recommended_next_action = "Inspect likely premature closeouts before treating recently closed work as settled."
@@ -2695,6 +2733,7 @@ def _intent_validation_contract(
         "historical_audit_references": historical_audit_references,
         "counts": counts,
         "closeout_reconciliation": closeout_reconciliation,
+        "landed_open_issue_reconciliation": landed_open_issue_reconciliation,
         "signals": signals,
         "recommended_next_action": recommended_next_action,
         "minimal_refs": [ref for ref in refs if ref],
@@ -2802,6 +2841,91 @@ def _closeout_reconciliation_from_reviews(
         "counts": counts,
         "items": items,
     }
+
+
+def _landed_open_issue_reconciliation(
+    *,
+    target_root: Path,
+    open_residue_items: list[dict[str, Any]],
+    surface_index: dict[str, str],
+) -> dict[str, Any]:
+    items: list[dict[str, Any]] = []
+    for item in open_residue_items:
+        item_id = str(item.get("id", "")).strip()
+        if not item_id:
+            continue
+        refs = _reference_locations(token=item_id, surface_index=surface_index)
+        evidence_refs = [
+            ref
+            for ref in refs
+            if ref.startswith(".agentic-workspace/planning/execplans/archive/") or ref.startswith(".agentic-workspace/planning/reviews/")
+        ]
+        if not evidence_refs:
+            continue
+        closeout_refs = [
+            ref for ref in evidence_refs if _checked_in_ref_looks_landed(target_root=target_root, relative_path=ref, item_id=item_id)
+        ]
+        if closeout_refs:
+            action_state = "implemented-and-unclosed"
+            evidence = "Checked-in closeout evidence says the item landed, but external evidence still marks it open."
+        else:
+            action_state = "ambiguous-open-reference"
+            evidence = "Checked-in historical evidence references this open item, but does not clearly prove landed implementation."
+        items.append(
+            {
+                "id": item_id,
+                "title": str(item.get("title", "")).strip(),
+                "external_status": str(item.get("status", "")).strip(),
+                "action_state": action_state,
+                "evidence": evidence,
+                "sources": closeout_refs or evidence_refs,
+            }
+        )
+    counts = {
+        "implemented_and_unclosed_count": sum(1 for item in items if item["action_state"] == "implemented-and-unclosed"),
+        "ambiguous_open_reference_count": sum(1 for item in items if item["action_state"] == "ambiguous-open-reference"),
+    }
+    status = "present" if items else "absent"
+    if counts["implemented_and_unclosed_count"]:
+        status = "implemented-and-unclosed"
+    elif counts["ambiguous_open_reference_count"]:
+        status = "ambiguous"
+    return {
+        "status": status,
+        "rule": (
+            "Compare provider-agnostic open external work evidence against checked-in archive/review residue; "
+            "report stale tracker state without auto-closing anything."
+        ),
+        "item_count": len(items),
+        "counts": counts,
+        "items": items,
+    }
+
+
+def _checked_in_ref_looks_landed(*, target_root: Path, relative_path: str, item_id: str) -> bool:
+    path = target_root / relative_path
+    if not path.exists() or not path.is_file():
+        return False
+    if path.suffix == ".json":
+        try:
+            record = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            return False
+        references = record.get("references", []) if isinstance(record, dict) else []
+        if isinstance(references, list):
+            structured_refs = [ref for ref in references if isinstance(ref, dict) and str(ref.get("target", "")).strip() == item_id]
+            if not structured_refs:
+                return False
+    closure_check = _execplan_closure_check(path)
+    intent_satisfaction = _execplan_intent_satisfaction(path)
+    closure_decision = str(closure_check.get("closure decision", "")).strip().lower()
+    slice_status = str(closure_check.get("slice status", "")).strip().lower()
+    intent_satisfied = str(intent_satisfaction.get("was original intent fully satisfied?", "")).strip().lower()
+    if closure_decision == "archive-and-close":
+        return True
+    if intent_satisfied in {"yes", "true"}:
+        return True
+    return "complete" in slice_status or "landed" in slice_status
 
 
 def _closeout_reconciliation_action_state(classification: str) -> str:

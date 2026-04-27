@@ -1337,7 +1337,7 @@
       "system": "github",
       "id": "#425",
       "title": "[Workspace]: Add landed-commit to open-issue reconciliation check",
-      "status": "open",
+      "status": "closed",
       "kind": "task",
       "parent_id": "",
       "planning_residue_expected": "required"

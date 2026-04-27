@@ -3289,6 +3289,69 @@ def test_planning_summary_reconciles_lower_trust_closeouts_from_review_artifact(
     assert summary["intent_validation_contract"]["counts"]["closeout_needs_audit_count"] == 1
 
 
+def test_planning_summary_reports_open_issue_with_landed_archive_evidence(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "stale-tracker", title = "Stale tracker", priority = "first", issues = ["EXT-OPEN"], outcome = "Close stale tracker.", reason = "Landed evidence exists.", promotion_signal = "Review open tracker.", suggested_first_slice = "Close or reroute." },
+]
+candidates = []
+""",
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "EXT-OPEN",
+                "title": "Still open upstream",
+                "status": "open",
+                "kind": "slice",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            },
+        ],
+    )
+    archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    plan_path = archive_dir / "stale-tracker.plan.json"
+    _write_execplan_record(plan_path, item_id="stale-tracker", status="completed")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["references"] = [{"kind": "issue", "target": "EXT-OPEN", "role": "source"}]
+    record["intent_satisfaction"] = {
+        "original intent": "Implement EXT-OPEN.",
+        "was original intent fully satisfied?": "yes",
+        "evidence of intent satisfaction": "The bounded implementation landed.",
+        "unsolved intent passed to": "none",
+    }
+    record["closure_check"] = {
+        "slice status": "completed",
+        "larger-intent status": "closed",
+        "closure decision": "archive-and-close",
+        "why this decision is honest": "The archived plan says the issue landed.",
+        "evidence carried forward": "test archive",
+        "reopen trigger": "upstream item remains open",
+    }
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    reconciliation = summary["intent_validation_contract"]["landed_open_issue_reconciliation"]
+
+    assert reconciliation["status"] == "implemented-and-unclosed"
+    assert reconciliation["counts"]["implemented_and_unclosed_count"] == 1
+    assert reconciliation["sample_items"][0]["id"] == "EXT-OPEN"
+    assert reconciliation["sample_items"][0]["action_state"] == "implemented-and-unclosed"
+    assert summary["intent_validation_contract"]["counts"]["landed_open_issue_count"] == 1
+    assert "close or reroute" in summary["intent_validation_contract"]["recommended_next_action"].lower()
+
+
 def test_planning_summary_accepts_historical_closeout_baseline(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
