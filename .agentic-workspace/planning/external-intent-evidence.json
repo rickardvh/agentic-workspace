@@ -3,13 +3,13 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-27T20:31:44+00:00",
+  "refreshed_at": "2026-04-27T20:43:15+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-27T20:31:44+00:00",
-    "item_count": 32,
-    "open_count": 32,
+    "refreshed_at": "2026-04-27T20:43:15+00:00",
+    "item_count": 34,
+    "open_count": 34,
     "closed_count": 0,
     "limit": 1000,
     "state": "open",
@@ -235,23 +235,6 @@
       ],
       "created_at": "2026-04-27T15:07:31Z",
       "updated_at": "2026-04-27T15:07:31Z",
-      "comments_count": 0
-    },
-    {
-      "system": "github",
-      "id": "#448",
-      "title": "[Planning]: Prioritize historical audit pressure by current lane, recency, owner, and supersession",
-      "status": "open",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "optional",
-      "url": "https://github.com/rickardvh/agentic-workspace/issues/448",
-      "source_repository": "rickardvh/agentic-workspace",
-      "labels": [
-        "planning"
-      ],
-      "created_at": "2026-04-27T15:07:39Z",
-      "updated_at": "2026-04-27T15:07:39Z",
       "comments_count": 0
     },
     {
@@ -558,6 +541,57 @@
       ],
       "created_at": "2026-04-27T19:51:09Z",
       "updated_at": "2026-04-27T19:51:09Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#467",
+      "title": "[Workspace]: Make self-improvement detect and reduce total operating cost",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#379",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/467",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T20:33:58Z",
+      "updated_at": "2026-04-27T20:36:29Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#468",
+      "title": "[Planning]: Expose autopilot loop status for satisfied, continued, blocked, and routed intent",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#442",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/468",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T20:38:42Z",
+      "updated_at": "2026-04-27T20:38:42Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#469",
+      "title": "[Workspace]: Add first-class improvement signal capture before routing and remediation",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#467",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/469",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T20:41:03Z",
+      "updated_at": "2026-04-27T20:41:03Z",
       "comments_count": 0
     }
   ]
