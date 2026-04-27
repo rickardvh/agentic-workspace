@@ -4407,6 +4407,42 @@ def test_preflight_command_emits_gate_token(capsys) -> None:
     assert payload["preflight_token"].startswith("preflight-v1:")
 
 
+def test_preflight_surfaces_closeout_workflow_obligations_for_active_scope(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n"
+        "[workflow_obligations.dogfooding_lane_closeout]\n"
+        'summary = "Run dogfooding closeout review."\n'
+        'stage = "closeout"\n'
+        'scope_tags = ["planning", "memory", "dogfooding"]\n'
+        'commands = ["agentic-workspace skills --target . --task dogfooding --format json"]\n'
+        'review_hint = "Route lane friction before claiming completion."\n',
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "    { id = 'dogfood-closeout', status = 'in-progress', surface = '.agentic-workspace/planning/execplans/dogfood.plan.json', why_now = 'closeout should not be optional.', next_action = 'make closeout obligations visible.', done_when = 'preflight surfaces closeout obligations.' }\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\n"
+        "lanes = []\n"
+        "candidates = []\n",
+    )
+
+    assert cli.main(["preflight", "--target", str(target), "--active-only", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    obligations = payload["closeout_obligations"]["required_before_lane_closeout"]
+    assert payload["workflow_obligations"]["configured_count"] == 1
+    assert payload["closeout_obligations"]["status"] == "present"
+    assert obligations[0]["id"] == "dogfooding_lane_closeout"
+    assert obligations[0]["stage"] == "closeout"
+
+
 def test_preflight_active_only_includes_active_todo_without_execplan(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

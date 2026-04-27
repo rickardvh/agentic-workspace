@@ -10,7 +10,9 @@
     "active_state_summary",
     "package_boundary",
     "authority_markers",
-    "immediate_next_allowed_action"
+    "immediate_next_allowed_action",
+    "workflow_obligations",
+    "closeout_obligations"
   ],
   "properties": {
     "kind": {
@@ -103,6 +105,12 @@
         }
       },
       "additionalProperties": false
+    },
+    "workflow_obligations": {
+      "type": "object"
+    },
+    "closeout_obligations": {
+      "type": "object"
     },
     "skill_routing": {
       "$ref": "#/$defs/skill_routing"

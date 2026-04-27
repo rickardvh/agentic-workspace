@@ -3696,6 +3696,15 @@ def _run_preflight_command(
     planning_record = active_state.get("planning_record", {"status": "unavailable"})
     branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
     local_memory = _local_memory_payload(config=config)
+    active_count = int(active_state.get("todo", {}).get("active_count", 0) or 0)
+    obligation_record = (
+        planning_record if isinstance(planning_record, dict) and (planning_record.get("status") == "present" or active_count > 0) else None
+    )
+    workflow_obligations = _workflow_obligations_report_payload(
+        config=config,
+        active_planning_record=obligation_record,
+    )
+    closeout_obligations = _closeout_workflow_obligations_payload(workflow_obligations)
 
     if active_only:
         # Return only compact active state for polling/monitoring.
@@ -3710,6 +3719,8 @@ def _run_preflight_command(
             "timestamp_hint": "Run this periodically to poll current active state without startup overhead.",
             "branch_workflow_posture": branch_workflow_posture,
             "local_memory": local_memory,
+            "workflow_obligations": workflow_obligations,
+            "closeout_obligations": closeout_obligations,
             "active_planning_state": active_state,
             "planning_record": planning_record if isinstance(planning_record, dict) else {"status": "unavailable"},
         }
@@ -3750,6 +3761,8 @@ def _run_preflight_command(
         },
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
+        "workflow_obligations": workflow_obligations,
+        "closeout_obligations": closeout_obligations,
         "active_planning_state": active_state,
     }
 
@@ -4004,6 +4017,8 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
             "read_first": preflight.get("startup_guidance", {}).get("first_compact_queries", []),
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         },
+        "workflow_obligations": preflight.get("workflow_obligations", {}),
+        "closeout_obligations": preflight.get("closeout_obligations", {}),
         "skill_routing": _startup_skill_routing_payload(cli_invoke=config.cli_invoke),
     }
     normalized_paths = _normalize_changed_paths(changed_paths)
@@ -4298,6 +4313,29 @@ def _workflow_obligations_report_payload(
         "current_scope_tags": current_tags,
         "configured": configured,
         "relevant_to_current_work": relevant,
+    }
+
+
+def _closeout_workflow_obligations_payload(workflow_obligations: dict[str, Any]) -> dict[str, Any]:
+    relevant = workflow_obligations.get("relevant_to_current_work", [])
+    if not isinstance(relevant, list):
+        relevant = []
+    closeout_stages = {"before-claiming-completion", "closeout"}
+    closeout_relevant = [
+        obligation for obligation in relevant if isinstance(obligation, dict) and str(obligation.get("stage", "")) in closeout_stages
+    ]
+    return {
+        "status": "present" if closeout_relevant else "none-configured-for-current-work",
+        "rule": (
+            "Before claiming a lane or milestone is complete, run relevant closeout obligations from repo config; "
+            "validation success alone is not a closeout."
+        ),
+        "required_before_lane_closeout": closeout_relevant,
+        "recommended_next_action": (
+            "Run the listed closeout obligation commands and record any friction as planning, memory, review, or issue follow-up."
+            if closeout_relevant
+            else "No repo-custom closeout obligation matched the current active scope."
+        ),
     }
 
 
