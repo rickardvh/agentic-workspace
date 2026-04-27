@@ -1,0 +1,240 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Stale Child Continuation Suppression",
+  "goal": [
+    "Implement #443 so finished-work inspection no longer promotes child archive continuations that have been consumed by a later parent closeout."
+  ],
+  "non_goals": [
+    "Do not implement the full parent autopilot runner in this slice.",
+    "Do not add provider-specific GitHub refresh behavior.",
+    "Do not change external tracker state until the slice is proven."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Suppress stale child continuation pressure after later parent validation consumes it while preserving historical closeout visibility.",
+      "constraints": "Keep archived residue inspectable; only remove superseded continuations from current execution pressure.",
+      "latitude": "Local implementation may use conservative archive-reference heuristics if tests pin the intended behavior.",
+      "escalation": "Stop if distinguishing consumed continuations requires a new closeout schema rather than a bounded inspection fix."
+    },
+    "execution": {
+      "milestone": "first slice for #443",
+      "status": "completed",
+      "next_step": "Archive this slice and continue the parent lane with the structured-reference-roles active item.",
+      "proof": "uv run pytest packages/planning/tests/test_installer.py -q -k \"finished_work_inspection\""
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/reviews/long-session-dogfooding-report-2026-04-27.review.json"
+      ],
+      "invariants": [
+        "Compact summary must keep current execution pressure distinct from historical residue.",
+        "Archived execplans remain the source of closeout history.",
+        "External tracker issues remain source references, not execution authority."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "The parent autopilot lane should make plan -> implement -> evaluate continuation behavior first-class enough that long lanes do not rely on chat memory.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane long-session-dogfooding-intent-loop",
+    "parent lane": "GitHub issue 442"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "The structured-reference-roles slice and the remaining dogfooding slices remain open after this slice; the parent lane remains open until the loop itself is first-class.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after this closeout, promote the next issue in the long-session-dogfooding-intent-loop lane"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Cleaner execution readiness for the new dogfooding issue lane.",
+    "intentionally deferred": "Full autopilot runner, structured reference roles, GitHub adapter refresh, source payload classification, CLI authority preflight, and historical pressure prioritization.",
+    "discovered implications": "None yet.",
+    "proof achieved now": "",
+    "validation still needed": "Focused tests and live summary check.",
+    "next likely slice": "structured reference roles, unless the parent loop command needs to come first."
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest those new issues and address them first.",
+    "inferred intended outcome": "New dogfooding findings should become checked-in planning and execution should start before older lanes.",
+    "chosen concrete what": "Ingest the dogfooding issue batch and implement #443 first because current summary shows stale child continuation pressure.",
+    "interpretation distance": "low",
+    "review guidance": "Verify the package surfaces, not this chat, show the new issue lane and cleaner continuation routing."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning package installer/tests plus checked-in planning surfaces for this active lane",
+    "max changed files": "about 6",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q -k \"finished_work_inspection\"; uv run agentic-workspace summary --format json; uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "ask-before-refactor threshold": "Do not redesign closeout schemas in this slice.",
+    "stop before touching": "GitHub issue closure, generated command packages, or unrelated historical archive cleanup."
+  },
+  "stop_conditions": {
+    "stop when": "The focused test and summary prove superseded child continuations are not promoted as current pressure.",
+    "escalate when boundary reached": "A robust fix requires the structured reference roles follow-on.",
+    "escalate on scope drift": "If implementation expands into GitHub sync or full autopilot execution.",
+    "escalate on proof failure": "Record blocker in this plan and keep #443 open."
+  },
+  "context_budget": {
+    "live working set": "summary output, dogfooding report, #443 issue intent, finished-work inspection code and tests",
+    "recoverable later": "full external evidence and archived closeout history",
+    "externalize before shift": "update this plan's execution_run and closure_check",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Implemented #443 stale continuation suppression after ingesting the dogfooding issue batch.",
+    "context-shift triggers": "Before changing schemas or provider-specific GitHub behavior."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Remove stale child continuation pressure without losing historical evidence.",
+    "hard constraints": "Keep planning state checked in; preserve archive history; prove with tests.",
+    "agent may decide locally": "Exact conservative supersession heuristic for this slice.",
+    "escalate when": "Supersession cannot be inferred safely without new structured closeout roles."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/443",
+      "label": "#443 stale child continuation suppression",
+      "role": "closed_item",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/442",
+      "label": "parent autopilot intent loop",
+      "role": "parent_intent",
+      "locator": "issue body system intent pressure"
+    },
+    {
+      "kind": "review",
+      "target": ".agentic-workspace/planning/reviews/long-session-dogfooding-report-2026-04-27.review.json",
+      "label": "long-session dogfooding report",
+      "role": "related_context",
+      "locator": "finding continuation-priority-can-point-at-stale-children"
+    }
+  ],
+  "active_milestone": {
+    "id": "suppress-superseded-continuations",
+    "status": "completed",
+    "scope": "finished-work inspection only",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "None."
+  },
+  "immediate_next_action": [
+    "Add a focused regression test for a child archive whose continuation is consumed by a later parent archive.",
+    "Implement conservative suppression of superseded candidates from current execution readiness.",
+    "Run focused planning tests and live summary."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/stale-child-continuation-suppression.plan.json",
+    ".agentic-workspace/planning/reviews/long-session-dogfooding-report-2026-04-27.review.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "invariants": [
+    "Do not treat superseded history as active continuation pressure.",
+    "Do not hide the fact that a child archive was partial when it closed.",
+    "Do not rely on GitHub state as the execution authority."
+  ],
+  "contract_decisions_to_freeze": [
+    "A later closed archive can conservatively supersede a child continuation when it references all of that child's tracked refs or the child source plan."
+  ],
+  "open_questions_to_close": [
+    "Should future structured reference roles replace this heuristic?"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"finished_work_inspection\"",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/external-intent-evidence.json .agentic-workspace/planning/execplans/stale-child-continuation-suppression.plan.json .agentic-workspace/planning/reviews/long-session-dogfooding-report-2026-04-27.review.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Focused regression proves a consumed child continuation is counted as superseded and not promoted.",
+    "Live summary no longer recommends the already-consumed source-payload/root-CLI child continuations as current execution pressure.",
+    "Planning state records remaining parent lane work after #443."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "user request plus checked-in planning surfaces",
+    "what happened": "Ingested the dogfooding issue batch, implemented supersession-aware finished-work inspection, and validated #443.",
+    "scope touched": "planning package finished-work inspection plus checked-in planning evidence",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; this execplan; dogfooding report; planning installer and tests",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"finished_work_inspection\"; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace proof --target . --changed <slice paths> --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace summary --format json",
+    "result for continuation": "#443 is complete; parent lane remains open and structured-reference-roles is promoted next.",
+    "next step": "Implement structured reference roles."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes for #443; the parent lane remains open",
+    "config compliance": "used checked-in planning surfaces and package proof selector",
+    "misinterpretation risk": "low for this bounded slice; the next slice should replace the heuristic with explicit roles",
+    "follow-on decision": "archive-and-continue-parent-lane"
+  },
+  "proof_report": {
+    "validation proof": "focused regression, full planning installer tests, ruff, proof selection, doctor, and live summary",
+    "proof achieved now": "Consumed child continuations are counted as superseded history and excluded from current derived follow-up candidates.",
+    "evidence for \"proof achieved\" state": "Live summary shows superseded_continuation_count and no longer lists the root-CLI/source-payload consumed child archives as current top continuation pressure."
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest and address the new dogfooding issues first.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#443 was satisfied, but the requested dogfooding batch remains open.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml active item structured-reference-roles"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger user or product outcome separately from the bounded slice so later archive, review, and continuation decisions stay honest.",
+    "slice shaping bias": "This slice narrows to current stale-continuation pressure while preserving the larger parent loop lane.",
+    "broader-lane validation question": "After this slice, does the package point to the true next continuation instead of stale child residue?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#443 is validated, while the parent and remaining dogfooding slices remain open.",
+    "evidence carried forward": "superseded_continuation_count and superseded_by inspection evidence",
+    "reopen trigger": "summary again promotes an already-consumed child archive as current execution pressure"
+  },
+  "execution_summary": {
+    "outcome delivered": "#443 stale child continuation suppression landed.",
+    "validation confirmed": "focused regression, full planning installer tests, ruff, proof selector, doctor, and live summary",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml active item structured-reference-roles",
+    "post-work posterity capture": "dogfooding report and external intent evidence carry the promoted issue and closeout proof",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": ".agentic-workspace/planning/state.toml active item structured-reference-roles"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "The parent lane remains open after #443."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "structured reference roles",
+        "external intent refresh",
+        "source payload drift classification",
+        "CLI authority surfacing",
+        "historical audit pressure prioritization"
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Ingested the dogfooding issue batch and promoted #443 as the first active slice.",
+    "2026-04-27: Completed #443 and routed continuation to structured-reference-roles."
+  ]
+}

@@ -1,0 +1,228 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Structured Reference Roles",
+  "goal": [
+    "Implement #444 so closeout and review evidence can identify issue-reference roles explicitly before finished-work inspection falls back to prose."
+  ],
+  "non_goals": [
+    "Do not implement provider-specific GitHub refresh behavior.",
+    "Do not rewrite historical archives broadly.",
+    "Do not close the #442 parent lane in this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Make issue-reference semantics explicit enough that parent, next-lane, closed-item, and context references are not inferred only from prose.",
+      "constraints": "Keep the change compatible with existing closeout and review artifacts.",
+      "latitude": "Add role-aware parsing and compact summary/report output where it directly supports finished-work inspection.",
+      "escalation": "Stop if the change requires a full schema migration of historical planning artifacts."
+    },
+    "execution": {
+      "milestone": "first slice for #444",
+      "status": "in-progress",
+      "next_step": "Inspect existing structured reference extraction and add role-aware finished-work inspection behavior.",
+      "proof": "focused planning installer tests plus proof selector"
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json"
+      ],
+      "invariants": [
+        "Existing artifacts without roles remain supported.",
+        "Explicit roles override prose inference when present.",
+        "Historical residue remains inspectable."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#442: make the plan -> implement -> evaluate continuation loop first-class for long lanes.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane long-session-dogfooding-intent-loop",
+    "parent lane": "#442"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "#445-#448 remain open after this slice, and #442 remains open until the loop itself is first-class.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #444 closeout, promote the next issue in the dogfooding lane"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Role-aware references should reduce closeout prose massaging and make #443's supersession heuristic safer to evolve.",
+    "intentionally deferred": "GitHub adapter refresh, source payload classification, CLI authority startup surfacing, and historical pressure prioritization.",
+    "discovered implications": "",
+    "proof achieved now": "",
+    "validation still needed": "focused tests and summary/proof checks",
+    "next likely slice": "#445 external intent refresh"
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest those new issues and address them first.",
+    "inferred intended outcome": "Continue the newly ingested dogfooding issue lane before older roadmap lanes.",
+    "chosen concrete what": "Promote #444 after completing #443.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm role-aware behavior is generic and not overfit to one archive."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning installer/tests and checked-in planning state",
+    "max changed files": "about 5",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q -k \"reference_role or finished_work_inspection\"; uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "ask-before-refactor threshold": "Do not migrate all historical artifacts.",
+    "stop before touching": "GitHub adapter, root workspace CLI, generated command packages."
+  },
+  "stop_conditions": {
+    "stop when": "Reference roles are consumed by inspection with regression coverage.",
+    "escalate when boundary reached": "The role model needs a broader schema migration.",
+    "escalate on scope drift": "The work expands into provider sync or full autopilot implementation.",
+    "escalate on proof failure": "Record blocker and keep #444 open."
+  },
+  "context_budget": {
+    "live working set": "state, this execplan, #444 issue, finished-work inspection code/tests",
+    "recoverable later": "dogfooding report and external evidence",
+    "externalize before shift": "update execution_run and closure_check",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Next active issue is #444 structured reference roles.",
+    "context-shift triggers": "Before schema migration or broad archive rewrite."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Add structured reference roles for closeout and review evidence.",
+    "hard constraints": "Stay compatible with existing artifacts and keep execution in checked-in planning.",
+    "agent may decide locally": "The smallest role vocabulary and where to expose counts.",
+    "escalate when": "The role behavior cannot be proven without broad historical migration."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/444",
+      "label": "#444 structured reference roles",
+      "role": "closed_item",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/442",
+      "label": "#442 autopilot intent loop",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "role-aware-finished-work-inspection",
+    "status": "in-progress",
+    "scope": "finished-work inspection and reference extraction",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "None."
+  },
+  "immediate_next_action": [
+    "Inspect existing reference extraction helpers.",
+    "Add a role-aware regression for parent/next-lane refs not becoming closure claims.",
+    "Implement the narrowest compatible role handling."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/structured-reference-roles.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "invariants": [
+    "Existing unstructured issue references continue to work.",
+    "Explicit reference roles should reduce, not increase, false continuation pressure."
+  ],
+  "contract_decisions_to_freeze": [
+    "Explicit issue-reference roles are higher-trust than prose inference."
+  ],
+  "open_questions_to_close": [
+    "Which roles must be represented in compact output for agents to trust closeout?"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"reference_role or finished_work_inspection\"",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/external-intent-evidence.json .agentic-workspace/planning/execplans/structured-reference-roles.plan.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Closeout/review references with explicit parent or next-lane roles are not treated as closure claims.",
+    "Finished-work inspection exposes enough role-aware evidence for compact trust.",
+    "#442 parent lane remains routed after #444."
+  ],
+  "execution_run": {
+    "run status": "not-started",
+    "executor": "Codex",
+    "handoff source": "#443 closeout continuation",
+    "what happened": "Promoted #444 after #443 completion.",
+    "scope touched": "planning state and this execplan so far",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; this execplan",
+    "validations run": "",
+    "result for continuation": "",
+    "next step": "Implement #444."
+  },
+  "finished_run_review": {
+    "review status": "not-yet-run",
+    "scope respected": "",
+    "proof status": "",
+    "intent served": "",
+    "config compliance": "",
+    "misinterpretation risk": "",
+    "follow-on decision": ""
+  },
+  "proof_report": {
+    "validation proof": "",
+    "proof achieved now": "",
+    "evidence for \"proof achieved\" state": ""
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest and address the new dogfooding issues first.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#443 landed; #444 is now active.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml long-session-dogfooding-intent-loop"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Confirmed higher-level intent must stay recoverable separately from the currently active slice.",
+    "slice shaping bias": "Explicit roles keep parent intent, closed slices, and follow-on work from being confused.",
+    "broader-lane validation question": "Can later agents distinguish closure claims from parent or next-lane context without prose interpretation?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "open",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "Implementation has not started.",
+    "evidence carried forward": "",
+    "reopen trigger": "role-aware inspection remains absent"
+  },
+  "execution_summary": {
+    "outcome delivered": "",
+    "validation confirmed": "",
+    "follow-on routed to": "",
+    "post-work posterity capture": "",
+    "knowledge promoted (Memory/Docs/Config)": "",
+    "resume from": ".agentic-workspace/planning/execplans/structured-reference-roles.plan.json"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "#442 remains the parent lane after #444."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "#445",
+        "#446",
+        "#447",
+        "#448"
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted #444 after #443 closeout."
+  ]
+}

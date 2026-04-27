@@ -1591,6 +1591,81 @@
       "kind": "slice",
       "parent_id": "#436",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#442",
+      "title": "[Planning]: Add an autopilot intent loop for plan, implement, evaluate, and continue",
+      "status": "open",
+      "kind": "lane",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#443",
+      "title": "[Planning]: Suppress stale child continuations after parent validation consumes them",
+      "status": "closed",
+      "kind": "slice",
+      "parent_id": "#442",
+      "planning_residue_expected": "present",
+      "closeout": {
+        "plan": ".agentic-workspace/planning/execplans/archive/stale-child-continuation-suppression.plan.json",
+        "proof": "Finished-work inspection now marks consumed child continuations as superseded_partial, counts superseded_continuation_count, removes superseded child candidates from current execution pressure, and preserves superseded_by history.",
+        "validation": [
+          "uv run pytest packages/planning/tests/test_installer.py -q -k \"finished_work_inspection\"",
+          "cd packages/planning && uv run pytest tests/test_installer.py",
+          "cd packages/planning && uv run ruff check .",
+          "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/external-intent-evidence.json .agentic-workspace/planning/execplans/stale-child-continuation-suppression.plan.json .agentic-workspace/planning/reviews/long-session-dogfooding-report-2026-04-27.review.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json",
+          "uv run agentic-workspace doctor --target . --modules planning --format json",
+          "uv run agentic-workspace summary --format json"
+        ]
+      }
+    },
+    {
+      "system": "github",
+      "id": "#444",
+      "title": "[Planning]: Add structured reference roles for closeout and review evidence",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#442",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#445",
+      "title": "[Planning]: Add a GitHub adapter to refresh provider-agnostic external intent evidence",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#442",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#446",
+      "title": "[Planning]: Classify source payload audit drift instead of reporting raw mismatches",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#442",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#447",
+      "title": "[Planning]: Surface CLI authority before generated or executable CLI edits",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#442",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#448",
+      "title": "[Planning]: Prioritize historical audit pressure by current lane, recency, owner, and supersession",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#442",
+      "planning_residue_expected": "required"
     }
   ]
 }

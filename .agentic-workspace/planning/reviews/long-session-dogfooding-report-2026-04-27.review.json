@@ -79,8 +79,10 @@
       "suggested_action": "Teach finished-work inspection to understand continuation supersession: child archive continuations should be suppressed or downgraded when a later parent validation archive, roadmap owner, or refreshed external evidence proves the follow-on path was consumed.",
       "confidence": "high",
       "source": "summary-output",
+      "action_state": "addressed",
       "promotion_target": "finished-work inspection and execution readiness",
       "promoted_issue": "https://github.com/rickardvh/agentic-workspace/issues/443",
+      "resolution": "Finished-work inspection now detects later closed archive supersession, counts superseded continuations, preserves superseded_by history, and excludes consumed child continuations from current derived follow-up candidates.",
       "promotion_trigger": "Any lane using `archive-but-keep-lane-open` with a later parent closeout",
       "post_remediation_note_shape": "record the superseding plan or external item that consumed the continuation"
     },

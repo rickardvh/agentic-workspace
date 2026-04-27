@@ -2950,6 +2950,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
     clearly_landed = 0
     partial = 0
     likely_premature = 0
+    superseded_continuation = 0
 
     archived_paths = _archived_execplan_paths(archive_dir)
     evidence_items = evidence.get("items", [])
@@ -3038,8 +3039,41 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
                 "tracked_refs": issue_refs,
                 "reopened_by": reopened_by,
                 "reason": reason,
+                "superseded_by": [],
             }
         )
+
+    superseded_source_plans: set[str] = set()
+    active_derived_follow_up_candidates: list[dict[str, Any]] = []
+    for candidate in derived_follow_up_candidates:
+        superseded_by = _finished_work_continuation_superseded_by(
+            target_root=target_root,
+            archived_paths=archived_paths,
+            candidate=candidate,
+        )
+        if superseded_by:
+            superseded_continuation += 1
+            source_plan = str(candidate.get("source_plan", ""))
+            superseded_source_plans.add(source_plan)
+            candidate["superseded_by"] = superseded_by
+            candidate["recommended_action"] = "no promotion; continuation appears consumed by later closeout evidence"
+            for inspection in inspections:
+                if inspection.get("plan") == source_plan:
+                    inspection["classification"] = "superseded_partial"
+                    inspection["superseded_by"] = superseded_by
+                    inspection["reason"] = (
+                        "Archived residue left larger intent open, but later closeout evidence appears to consume the continuation."
+                    )
+                    break
+            continue
+        active_derived_follow_up_candidates.append(candidate)
+    if superseded_source_plans:
+        signals = [
+            signal
+            for signal in signals
+            if not (signal.get("kind") == "intent_continuation_required" and signal.get("path") in superseded_source_plans)
+        ]
+    derived_follow_up_candidates = active_derived_follow_up_candidates
 
     if evidence.get("status") == "invalid":
         signals.append(
@@ -3061,6 +3095,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
         "clearly_landed_count": clearly_landed,
         "partial_count": partial,
         "likely_premature_closeout_count": likely_premature,
+        "superseded_continuation_count": superseded_continuation,
         "derived_follow_up_candidate_count": len(derived_follow_up_candidates),
         "attention_count": len(signals),
     }
@@ -3114,6 +3149,44 @@ def _candidate_source_mtime_ns(*, target_root: Path, candidate: dict[str, Any]) 
         return (target_root / source_plan).stat().st_mtime_ns
     except OSError:
         return 0
+
+
+def _finished_work_continuation_superseded_by(
+    *,
+    target_root: Path,
+    archived_paths: list[Path],
+    candidate: dict[str, Any],
+) -> list[str]:
+    source_plan = str(candidate.get("source_plan", "")).strip()
+    if not source_plan:
+        return []
+    source_path = target_root / source_plan
+    source_mtime = _candidate_source_mtime_ns(target_root=target_root, candidate=candidate)
+    tracked_refs = [str(ref).strip() for ref in candidate.get("tracked_refs", []) if str(ref).strip()]
+    superseding_paths: list[str] = []
+    for path in archived_paths:
+        if path == source_path:
+            continue
+        try:
+            if source_mtime and path.stat().st_mtime_ns < source_mtime:
+                continue
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if not _archived_execplan_closes_larger_intent(path):
+            continue
+        if source_plan in text or (tracked_refs and all(ref in text for ref in tracked_refs)):
+            superseding_paths.append(path.relative_to(target_root).as_posix())
+    return superseding_paths
+
+
+def _archived_execplan_closes_larger_intent(path: Path) -> bool:
+    closure_check = _execplan_closure_check(path)
+    intent_satisfaction = _execplan_intent_satisfaction(path)
+    closure_decision = str(closure_check.get("closure decision", "")).strip().lower()
+    larger_intent_status = str(closure_check.get("larger-intent status", "")).strip().lower()
+    intent_satisfied = str(intent_satisfaction.get("was original intent fully satisfied?", "")).strip().lower()
+    return closure_decision == "archive-and-close" or larger_intent_status == "closed" or intent_satisfied in {"yes", "true"}
 
 
 def _archived_execplan_paths(archive_dir: Path) -> list[Path]:

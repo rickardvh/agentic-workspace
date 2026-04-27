@@ -1665,7 +1665,7 @@ def test_planning_summary_and_handoff_project_review_residue_from_structured_ref
     )
     _write_review_record(tmp_path / ".agentic-workspace" / "planning" / "reviews" / "review-alpha.review.json")
 
-    summary = planning_summary(target=tmp_path, profile="compact")
+    summary = planning_summary(target=tmp_path)
     handoff = planning_handoff(target=tmp_path)
 
     assert summary["planning_record"]["review_residue"] == [
@@ -3675,7 +3675,7 @@ def test_planning_summary_inspects_machine_first_archived_execplans_for_required
     }
     installer_mod._write_execplan_record(record_path=plan_path, record=record)
 
-    summary = planning_summary(target=tmp_path, profile="compact")
+    summary = planning_summary(target=tmp_path)
     contract = summary["finished_work_inspection_contract"]
 
     assert contract["counts"]["archived_closeout_count"] == 1
@@ -3686,6 +3686,95 @@ def test_planning_summary_inspects_machine_first_archived_execplans_for_required
     assert candidate["recommended_owner"] == ".agentic-workspace/planning/state.toml"
     assert summary["execution_readiness"]["status"] == "intent-continuation-needs-promotion"
     assert summary["execution_readiness"]["recommendation"]["id"] == "promote-intent-derived-continuation"
+
+
+def test_planning_summary_suppresses_child_continuation_consumed_by_later_parent_archive(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    child_path = archive_dir / "source-payload-install-sync-proof.plan.json"
+    _write_execplan_record(
+        child_path,
+        item_id="source-payload-install-sync-proof",
+        status="completed",
+        references=[
+            {
+                "kind": "github-issue",
+                "target": "#410",
+                "label": "root CLI authority audit",
+                "role": "closed_item",
+                "locator": "GitHub issue",
+            },
+            {
+                "kind": "github-issue",
+                "target": "#411",
+                "label": "source payload sync proof",
+                "role": "closed_item",
+                "locator": "GitHub issue",
+            },
+        ],
+    )
+    child_record = json.loads(child_path.read_text(encoding="utf-8"))
+    child_record["title"] = "Source Payload Install Sync Proof"
+    child_record["intent_satisfaction"] = {
+        "original intent": "Strengthen architecture boundaries after contract expansion.",
+        "was original intent fully satisfied?": "no",
+        "evidence of intent satisfaction": "This child slice landed, but parent validation remained open.",
+        "unsolved intent passed to": ".agentic-workspace/planning/state.toml architecture-boundary lane for parent validation",
+    }
+    child_record["closure_check"] = {
+        "slice status": "bounded slice complete",
+        "larger-intent status": "open",
+        "closure decision": "archive-but-keep-lane-open",
+        "why this decision is honest": "The child slice landed while parent validation remained open.",
+        "evidence carried forward": "source payload proof",
+        "reopen trigger": "parent validation fails",
+    }
+    installer_mod._write_execplan_record(record_path=child_path, record=child_record)
+
+    parent_path = archive_dir / "architecture-boundary-parent-validation.plan.json"
+    _write_execplan_record(parent_path, item_id="architecture-boundary-parent-validation", status="completed")
+    parent_record = json.loads(parent_path.read_text(encoding="utf-8"))
+    parent_record["title"] = "Architecture Boundary Parent Validation"
+    parent_record["intent_satisfaction"] = {
+        "original intent": "Strengthen architecture boundaries after contract expansion.",
+        "was original intent fully satisfied?": "yes",
+        "evidence of intent satisfaction": "Parent acceptance mapped to closed children #410 and #411.",
+        "unsolved intent passed to": "none",
+    }
+    parent_record["closure_check"] = {
+        "slice status": "parent lane complete",
+        "larger-intent status": "closed",
+        "closure decision": "archive-and-close",
+        "why this decision is honest": "The later parent archive consumed child follow-on refs #410 and #411.",
+        "evidence carried forward": "parent proof references #410 and #411",
+        "reopen trigger": "new boundary issue opens",
+    }
+    parent_record["proof_report"] = {
+        "validation proof": "summary and reconciliation",
+        "proof achieved now": "parent lane validated",
+        'evidence for "proof achieved" state': "closed children #410 and #411 were mapped to parent acceptance",
+    }
+    installer_mod._write_execplan_record(record_path=parent_path, record=parent_record)
+
+    summary = planning_summary(target=tmp_path)
+    contract = summary["finished_work_inspection_contract"]
+
+    assert contract["counts"]["partial_count"] == 1
+    assert contract["counts"]["superseded_continuation_count"] == 1
+    assert contract["counts"]["derived_follow_up_candidate_count"] == 0
+    inspection = next(
+        item
+        for item in contract["inspections"]
+        if item["plan"] == ".agentic-workspace/planning/execplans/archive/source-payload-install-sync-proof.plan.json"
+    )
+    assert inspection["classification"] == "superseded_partial"
+    assert inspection["superseded_by"] == [
+        ".agentic-workspace/planning/execplans/archive/architecture-boundary-parent-validation.plan.json"
+    ]
+    assert contract["derived_follow_up_candidates"] == []
+    assert summary["execution_readiness"]["status"] == "narrow-direct-ready"
 
 
 def test_planning_summary_exposes_closeout_distillation_contract(tmp_path: Path) -> None:
