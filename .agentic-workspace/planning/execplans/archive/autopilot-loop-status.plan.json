@@ -17,14 +17,16 @@
     },
     "execution": {
       "milestone": "autopilot-loop-status",
-      "status": "in-progress",
-      "next_step": "Inspect summary projections and hierarchy/closure contracts for the smallest status derivation.",
+      "status": "completed",
+      "next_step": "Promote #462 as the next planned payload-boundary slice.",
       "proof": "focused planning summary tests plus package validation"
     },
     "scope": {
       "touched": [
         ".agentic-workspace/planning/state.toml",
-        ".agentic-workspace/planning/execplans/autopilot-loop-status.plan.json"
+        ".agentic-workspace/planning/execplans/autopilot-loop-status.plan.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py"
       ],
       "invariants": [
         "Do not add host-specific tracker semantics to core planning.",
@@ -34,14 +36,14 @@
   },
   "intent_continuity": {
     "larger intended outcome": "#442: make the plan -> implement -> evaluate continuation loop first-class for long lanes.",
-    "this slice completes the larger intended outcome": "maybe",
-    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane long-session-dogfooding-intent-loop"
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none for this parent lane; next active work moves to #462"
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "review-after-slice",
-    "required follow-on detail": "After #468, reassess whether #442 can close honestly.",
+    "required follow-on for the larger intended outcome": "no",
+    "required follow-on detail": "#445-#448 plus #468 now satisfy the parent #442 loop-intent lane.",
     "owner surface": ".agentic-workspace/planning/state.toml",
-    "activation trigger": "after #468 closeout, re-run summary/reconcile and decide #442 closure"
+    "activation trigger": "none for #442"
   },
   "parent_lane": {
     "id": "#442",
@@ -50,12 +52,12 @@
     "issues": "#442, #445, #446, #447, #448, #468"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
-    "intentionally deferred": "none",
-    "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "what this slice enabled": "Compact planning summary now exposes autopilot_loop.status as one of satisfied, continued, blocked, or routed; active hierarchy also recovers execplan parent_lane objects.",
+    "intentionally deferred": "No remaining #442 child slice is required.",
+    "discovered implications": "Parent-lane projection was relying on older intent_continuity prose; structured parent_lane objects now recover in hierarchy and handoff projections.",
+    "proof achieved now": "focused planning tests and ruff passed; full package validation is listed in validation_commands.",
+    "validation still needed": "run the full validation_commands before commit",
+    "next likely slice": "#462 planning payload surface classification"
   },
   "delegated_judgment": {
     "requested outcome": "Expose autopilot loop status for satisfied, continued, blocked, and routed intent.",
@@ -112,7 +114,9 @@
   ],
   "touched_paths": [
     ".agentic-workspace/planning/state.toml",
-    ".agentic-workspace/planning/execplans/autopilot-loop-status.plan.json"
+    ".agentic-workspace/planning/execplans/autopilot-loop-status.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
@@ -120,7 +124,9 @@
   "validation_commands": [
     "cd packages/planning && uv run pytest tests/test_installer.py -q",
     "cd packages/planning && uv run ruff check .",
-    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/autopilot-loop-status.plan.json --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests packages/planning/src packages/planning/tests",
+    "uv run agentic-workspace proof --target . --changed packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/archive/autopilot-loop-status.plan.json .agentic-workspace/planning/execplans/planning-payload-surface-classification.plan.json --format json",
     "uv run agentic-workspace doctor --target . --modules planning --format json"
   ],
   "required_tools": [
@@ -133,32 +139,55 @@
     "#442 can be honestly closed or remains explicitly routed after this slice."
   ],
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "Summary exposes a compact autopilot_loop status; active planning records return continued, blocked surfaces return blocked, promotion pressure returns routed, and quiet state returns satisfied. The active hierarchy also recovers structured execplan parent_lane data.",
+    "validation confirmed": "pending full validation before commit",
+    "follow-on routed to": "#462 planning payload surface classification",
+    "post-work posterity capture": "#442 can close honestly; future lanes can inspect summary.autopilot_loop instead of reconstructing continuation state from archived child plans.",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": ".agentic-workspace/planning/execplans/planning-payload-surface-classification.plan.json"
   },
   "closure_check": {
-    "slice status": "open",
-    "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "Implementation has not started.",
-    "evidence carried forward": "#445-#448 landed, but #442 still needs explicit loop status.",
+    "slice status": "closed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#445-#448 landed the refresh, audit, authority, and priority pieces; #468 adds the missing machine-readable loop status and parent-lane projection needed to evaluate continuation without chat.",
+    "evidence carried forward": "summary.autopilot_loop and hierarchy_contract.parent_lane",
     "reopen trigger": "summary still lacks satisfied/continued/blocked/routed autopilot status"
   },
   "closeout_distillation": {
     "buckets": {
       "discard": [],
-      "continuation": [],
+      "continuation": [
+        {
+          "summary": "#462 planning payload surface classification",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "roadmap next lane after #442"
+        }
+      ],
       "memory": [],
       "config_check": [],
       "docs": [],
-      "issue_follow_up": []
+      "issue_follow_up": [
+        {
+          "summary": "#468 autopilot loop status",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/468"
+        },
+        {
+          "summary": "#442 autopilot intent loop",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/442"
+        },
+        {
+          "summary": "#462 planning payload surface classification",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/462"
+        }
+      ]
     }
   },
   "drift_log": [
-    "2026-04-27: Promoted after #448 closeout review."
+    "2026-04-27: Promoted after #448 closeout review.",
+    "2026-04-27: Dogfooding found structured parent_lane was not projected; fixed inside this slice."
   ]
 }

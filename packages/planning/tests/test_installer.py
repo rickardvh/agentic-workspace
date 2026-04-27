@@ -3646,6 +3646,77 @@ candidates = []
     assert len(full["finished_work_inspection_contract"]["derived_follow_up_candidates"]) == 6
 
 
+def test_planning_summary_exposes_autopilot_loop_status_for_required_continuation(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "autopilot-loop-status", status = "in-progress", source = "github:#468", surface = ".agentic-workspace/planning/execplans/autopilot-loop-status.plan.json", why_now = "remaining #442 continuation." }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/autopilot-loop-status.plan.json"
+    _write_execplan_record(plan_path, item_id="autopilot-loop-status", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["references"] = [
+        {
+            "kind": "github-issue",
+            "target": "https://github.com/example/repo/issues/468",
+            "label": "#468 loop status",
+            "role": "source_intent",
+            "locator": "issue",
+        },
+        {
+            "kind": "github-issue",
+            "target": "https://github.com/example/repo/issues/442",
+            "label": "#442 parent lane",
+            "role": "parent_intent",
+            "locator": "issue",
+        },
+    ]
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "required follow-on detail": "One more slice remains before the parent can close.",
+        "owner surface": ".agentic-workspace/planning/state.toml",
+        "activation trigger": "after this slice",
+    }
+    record["parent_lane"] = {
+        "id": "#442",
+        "title": "Autopilot intent loop",
+        "priority": "1",
+        "issues": "#442, #468",
+    }
+    record["closure_check"] = {
+        "slice status": "open",
+        "larger-intent status": "open",
+        "closure decision": "keep-active",
+        "why this decision is honest": "#442 is still being evaluated.",
+        "evidence carried forward": "#468 owns the remaining status gap.",
+        "reopen trigger": "loop status is absent",
+    }
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+
+    compact = planning_summary(target=tmp_path, profile="compact")
+
+    assert "autopilot_loop" in compact["schema"]["shared_fields"]
+    loop = compact["autopilot_loop"]
+    assert loop["allowed_statuses"] == ["satisfied", "continued", "blocked", "routed"]
+    assert loop["status"] == "continued"
+    assert loop["current_task"]["id"] == "autopilot-loop-status"
+    assert loop["larger_intent_status"] == "open"
+    assert loop["closure_decision"] == "keep-active"
+    assert loop["required_follow_on"] == "yes"
+    assert loop["recommended_next_action"] == "add one checker."
+    assert installer_mod._execplan_parent_lane(plan_path)["id"] == "#442"
+
+
 def test_planning_reconcile_reports_stale_state_from_provider_agnostic_evidence(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(

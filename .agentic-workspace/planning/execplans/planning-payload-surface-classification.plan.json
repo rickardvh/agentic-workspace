@@ -1,0 +1,163 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning Payload Surface Classification",
+  "goal": [
+    "Implement #462 by classifying planning payload surfaces before any shrinking, extraction, or config-gating work."
+  ],
+  "non_goals": [
+    "Do not remove or move planning payload in this slice unless the change is trivial and directly justified by classification.",
+    "Do not redefine planning core beyond the classification needed for #461 follow-up slices."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Every planning payload doc, template, skill, helper, installed surface, README claim, and packaging include has a compact classification and owner rationale.",
+      "constraints": "Keep classification compact and useful for deciding the smallest safe default planning install.",
+      "latitude": "Choose the lowest-residue artifact shape that lets #463-#466 proceed without redoing inventory.",
+      "escalation": "Escalate if classification would require removing payload or changing install behavior before the inventory is reviewed."
+    },
+    "execution": {
+      "milestone": "planning-payload-surface-classification",
+      "status": "in-progress",
+      "next_step": "Inventory packages/planning/bootstrap, packages/planning/skills, planning-installed docs, README claims, and pyproject package-data includes.",
+      "proof": "planning package tests, ruff, proof selector, and planning doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/planning-payload-surface-classification.plan.json"
+      ],
+      "invariants": [
+        "Classification must make future default-footprint reduction cheaper.",
+        "Do not add another first-contact surface unless it replaces or compresses an existing one."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#461: make Agentic Planning smaller by default and clearer by boundary.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane planning-payload-boundary"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#463-#466 depend on the classification produced by #462.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #462 closeout, promote the next #461 child based on classification results"
+  },
+  "parent_lane": {
+    "id": "#461",
+    "title": "Reclassify planning payload into core, optional extensions, and extraction candidates",
+    "priority": "1",
+    "issues": "#461, #462, #463, #464, #465, #466"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "default install shrink, config gating, extraction boundaries, and capability map refresh",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "#463 or #464 depending on classification"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Classify planning payload surfaces by core, optional, on-demand, dev-only, and extraction status.",
+    "hard constraints": "Classify before deleting, moving, or splitting payload.",
+    "agent may decide locally": "Classification artifact format and exact owner-rationale wording.",
+    "escalate when": "Classification implies immediate removal of a surface that may still be needed for compatibility."
+  },
+  "context_budget": {
+    "live working set": "state, this execplan, #461/#462, packages/planning/bootstrap, packages/planning/skills, planning README, pyproject package-data, and installer payload lists",
+    "recoverable later": "the archived previous lane and prior product-shape reviews",
+    "externalize before shift": "record classification artifact path and summary in execution_summary",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Next active issue is #462 planning payload classification.",
+    "context-shift triggers": "Before changing default install behavior or deleting payload."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Classify and compress future work; avoid capability expansion.",
+    "broader-lane validation question": "Does the classification make #463-#466 cheaper and less ambiguous?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/462"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/462",
+      "label": "#462 planning payload surface classification",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/461",
+      "label": "#461 planning payload boundary",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "planning-payload-surface-classification",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to classification and preparation for the next #461 child.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inventory packages/planning/bootstrap and package-data includes.",
+    "Inventory packages/planning/skills and planning-installed docs.",
+    "Choose or add the compact classification artifact and tests needed for #462 acceptance."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/planning-payload-surface-classification.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "cd packages/planning && uv run pytest tests/test_installer.py -q",
+    "cd packages/planning && uv run ruff check .",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/planning-payload-surface-classification.plan.json --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Every planning payload surface has a classification and owner rationale.",
+    "Classification identifies the smallest safe default planning install.",
+    "Classification names surfaces that should become optional, on-demand, dev-only, or extraction candidates."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "closure_check": {
+    "slice status": "open",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "Implementation has not started.",
+    "evidence carried forward": "#462 owns classification before default-footprint changes.",
+    "reopen trigger": "planning payload shrink starts without complete classification"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted after the previous intent-loop lane completed."
+  ]
+}

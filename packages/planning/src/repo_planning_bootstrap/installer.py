@@ -1470,6 +1470,14 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
         },
         "machine_first_planning": _machine_first_planning_payload(active_execplans=active_execplans),
         "execution_readiness": execution_readiness,
+        "autopilot_loop": _autopilot_loop_status(
+            execution_readiness=execution_readiness,
+            planning_record=planning_record,
+            planning_surface_health=planning_surface_health,
+            finished_work_inspection=finished_work_inspection_contract,
+            roadmap_lanes=roadmap_lanes,
+            roadmap_candidates=roadmap_candidates,
+        ),
         "planning_record": planning_record,
         "active_contract": _contract_projection(active_contract, view_name="active_contract"),
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
@@ -1801,6 +1809,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "execplans",
             "machine_first_planning",
             "execution_readiness",
+            "autopilot_loop",
             "ownership_review",
             "planning_surface_health",
             "planning_record",
@@ -1850,6 +1859,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "intent_satisfaction",
                 "system_intent_alignment",
                 "closure_check",
+                "required_continuation",
                 "intent_interpretation",
                 "execution_bounds",
                 "stop_conditions",
@@ -2150,6 +2160,89 @@ def _execution_readiness_payload(
     }
 
 
+def _autopilot_loop_status(
+    *,
+    execution_readiness: dict[str, Any],
+    planning_record: dict[str, Any],
+    planning_surface_health: dict[str, Any],
+    finished_work_inspection: dict[str, Any],
+    roadmap_lanes: list[dict[str, Any]],
+    roadmap_candidates: list[dict[str, str]],
+) -> dict[str, Any]:
+    allowed_statuses = ["satisfied", "continued", "blocked", "routed"]
+    blockers = [str(blocker).strip() for blocker in planning_record.get("blockers", []) if str(blocker).strip()]
+    blockers = [blocker for blocker in blockers if blocker.lower() not in {"none", "none."}]
+    warning_count = int(planning_surface_health.get("warning_count", 0) or 0)
+    recommendation = execution_readiness.get("recommendation", {})
+    if not isinstance(recommendation, dict):
+        recommendation = {}
+    next_step = str(recommendation.get("next_step", "")).strip()
+    planning_task = planning_record.get("task", {}) if isinstance(planning_record.get("task"), dict) else {}
+    closure_check = planning_record.get("closure_check", {}) if isinstance(planning_record.get("closure_check"), dict) else {}
+    if warning_count or blockers:
+        return {
+            "status": "blocked",
+            "allowed_statuses": allowed_statuses,
+            "current_task": {
+                "id": planning_task.get("id", ""),
+                "surface": planning_task.get("surface", ""),
+            },
+            "blockers": blockers,
+            "warning_count": warning_count,
+            "recommended_next_action": planning_surface_health.get("recommended_next_action", "")
+            or "Resolve planning-surface warnings or explicit blockers before continuing the loop.",
+            "rule": "Autopilot should not claim continuation or satisfaction while planning health or explicit blockers require attention.",
+        }
+    if planning_record.get("status") == "present":
+        return {
+            "status": "continued",
+            "allowed_statuses": allowed_statuses,
+            "current_task": {
+                "id": planning_task.get("id", ""),
+                "surface": planning_task.get("surface", ""),
+            },
+            "larger_intent_status": closure_check.get("larger-intent status", ""),
+            "closure_decision": closure_check.get("closure decision", ""),
+            "required_follow_on": _planning_record_required_follow_on(planning_record),
+            "recommended_next_action": str(planning_record.get("next_action", "")).strip()
+            or next_step
+            or "Continue the active planning record.",
+            "rule": "One active planning record means the loop is continuing until closeout proves satisfaction, routing, or blockage.",
+        }
+    readiness_status = str(execution_readiness.get("status", "")).strip()
+    derived_count = int(execution_readiness.get("derived_follow_up_candidate_count", 0) or 0)
+    finished_counts = finished_work_inspection.get("counts", {}) if isinstance(finished_work_inspection.get("counts", {}), dict) else {}
+    follow_up_count = int(finished_counts.get("derived_follow_up_candidate_count", 0) or derived_count or 0)
+    if readiness_status in {"active-item-without-execplan", "intent-continuation-needs-promotion", "roadmap-needs-promotion"}:
+        return {
+            "status": "routed",
+            "allowed_statuses": allowed_statuses,
+            "route_source": readiness_status,
+            "roadmap_lane_count": len(roadmap_lanes),
+            "roadmap_candidate_count": len(roadmap_candidates),
+            "derived_follow_up_candidate_count": follow_up_count,
+            "recommended_next_action": next_step or "Promote the selected route into one active planning record.",
+            "rule": "Autopilot is routed when work exists but must be promoted, selected, or explicitly owned before broad execution.",
+        }
+    return {
+        "status": "satisfied",
+        "allowed_statuses": allowed_statuses,
+        "route_source": readiness_status or "quiet",
+        "roadmap_lane_count": len(roadmap_lanes),
+        "roadmap_candidate_count": len(roadmap_candidates),
+        "derived_follow_up_candidate_count": follow_up_count,
+        "recommended_next_action": "No active autopilot continuation is required.",
+        "rule": "The loop is satisfied when there is no active plan, no routed continuation pressure, and no planning-health blocker.",
+    }
+
+
+def _planning_record_required_follow_on(planning_record: dict[str, Any]) -> str:
+    required = planning_record.get("required_continuation", {})
+    if isinstance(required, dict):
+        return required.get("required follow-on for the larger intended outcome", "").strip()
+    return ""
+
+
 def _planning_summary_compact_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-summary-compact-schema/v1",
@@ -2165,6 +2258,7 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "execplans",
             "machine_first_planning",
             "execution_readiness",
+            "autopilot_loop",
             "planning_surface_health",
             "projection_state",
             "planning_record",
@@ -2271,6 +2365,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "recommendation": execution_readiness.get("recommendation", {}),
             "rule": execution_readiness.get("rule", ""),
         },
+        "autopilot_loop": dict(summary.get("autopilot_loop", {})),
         "planning_surface_health": {
             "status": planning_surface_health.get("status", "unknown"),
             "warning_count": planning_surface_health.get("warning_count", 0),
@@ -2291,6 +2386,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "review_residue",
                 "proof_expectations",
                 "system_intent_alignment",
+                "required_continuation",
                 "tool_verification",
                 "continuation_owner",
                 "execution_bounds",
@@ -4041,6 +4137,7 @@ def _canonical_planning_record(
     intent_satisfaction: dict[str, str] = {}
     system_intent_alignment: dict[str, str] = {}
     closure_check: dict[str, str] = {}
+    required_continuation: dict[str, str] = {}
     intent_interpretation: dict[str, str] = {}
     execution_bounds: dict[str, str] = {}
     stop_conditions: dict[str, str] = {}
@@ -4052,6 +4149,7 @@ def _canonical_planning_record(
         intent_satisfaction = _execplan_intent_satisfaction(plan_path)
         system_intent_alignment = _execplan_system_intent_alignment(plan_path)
         closure_check = _execplan_closure_check(plan_path)
+        required_continuation = _execplan_required_continuation(plan_path)
         intent_interpretation = _execplan_intent_interpretation(plan_path)
         execution_bounds = _execplan_execution_bounds(plan_path)
         stop_conditions = _execplan_stop_conditions(plan_path)
@@ -4083,6 +4181,7 @@ def _canonical_planning_record(
         "intent_satisfaction": intent_satisfaction,
         "system_intent_alignment": system_intent_alignment,
         "closure_check": closure_check,
+        "required_continuation": required_continuation,
         "intent_interpretation": intent_interpretation,
         "execution_bounds": execution_bounds,
         "stop_conditions": stop_conditions,
@@ -4681,11 +4780,20 @@ def _active_hierarchy_contract(
 
     intent_continuity = _execplan_intent_continuity(plan_path)
     required_continuation = _execplan_required_continuation(plan_path)
+    execplan_parent_lane = _execplan_parent_lane(plan_path)
     active_milestone = resumable_contract.get("active_milestone", {})
     todo_item = active_contract.get("todo_item", {})
 
-    parent_lane_ref = intent_continuity.get("parent lane", "").strip()
+    parent_lane_ref = intent_continuity.get("parent lane", "").strip() or execplan_parent_lane.get("id", "")
     parent_lane = _resolve_parent_lane(parent_lane_ref=parent_lane_ref, roadmap_lanes=roadmap_lanes)
+    if parent_lane.get("source") == "execplan":
+        parent_lane.update(
+            {
+                "title": execplan_parent_lane.get("title", parent_lane.get("title", "")),
+                "priority": execplan_parent_lane.get("priority", parent_lane.get("priority", "")),
+                "issues": execplan_parent_lane.get("issues", parent_lane.get("issues", "")),
+            }
+        )
     continuation_surface = str(follow_through_contract.get("continuation_surface", "")).strip()
     required_owner_surface = required_continuation.get("owner surface", "").strip()
     required_follow_on = required_continuation.get("required follow-on for the larger intended outcome", "").strip()
@@ -4947,6 +5055,18 @@ def _resolve_parent_lane(*, parent_lane_ref: str, roadmap_lanes: list[dict[str, 
         "issues": "",
         "references": [],
         "source": "unspecified",
+    }
+
+
+def _execplan_parent_lane(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "parent_lane")
+    if not record:
+        return {}
+    return {
+        "id": record.get("id", "").strip(),
+        "title": record.get("title", "").strip(),
+        "priority": record.get("priority", "").strip(),
+        "issues": record.get("issues", "").strip(),
     }
 
 
