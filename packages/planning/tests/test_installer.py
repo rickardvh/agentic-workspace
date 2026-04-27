@@ -9,6 +9,7 @@ import repo_planning_bootstrap.cli as planning_cli
 import repo_planning_bootstrap.installer as installer_mod
 from repo_planning_bootstrap._ownership import module_root as planning_module_root
 from repo_planning_bootstrap.installer import (
+    OPTIONAL_PAYLOAD_FILES,
     PLANNING_COMPATIBILITY_CONTRACT_FILES,
     PLANNING_LOWER_STABILITY_HELPER_FILES,
     REQUIRED_PAYLOAD_FILES,
@@ -492,23 +493,23 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert not (tmp_path / ".agentic-workspace/planning/ROADMAP.md").exists()
     assert not (tmp_path / "TODO.md").exists()
     assert not (tmp_path / "ROADMAP.md").exists()
-    assert capability_fit_doc_path.exists()
+    assert not capability_fit_doc_path.exists()
     assert routing_doc_path.exists()
     assert execution_flow_doc_path.exists()
     assert lifecycle_doc_path.exists()
-    assert extraction_doc_path.exists()
-    assert review_readme_path.exists()
-    assert review_record_template_path.exists()
+    assert not extraction_doc_path.exists()
+    assert not review_readme_path.exists()
+    assert not review_record_template_path.exists()
     assert not review_template_path.exists()
-    assert intake_doc_path.exists()
-    assert refinement_doc_path.exists()
+    assert not intake_doc_path.exists()
+    assert not refinement_doc_path.exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "TEMPLATE.plan.json").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert not (tmp_path / ".agentic-workspace" / "planning" / "scripts").exists()
-    assert skill_readme_path.exists()
-    assert skill_registry_path.exists()
-    assert skill_path.exists()
-    assert intake_skill_path.exists()
+    assert not skill_readme_path.exists()
+    assert not skill_registry_path.exists()
+    assert not skill_path.exists()
+    assert not intake_skill_path.exists()
     assert not (tmp_path / "tools").exists()
     assert not (tmp_path / "scripts").exists()
     assert any(action.kind in {"copied", "created", "updated"} for action in result.actions)
@@ -536,15 +537,15 @@ def test_ownership_module_root_matches_workspace_ledger() -> None:
 
 def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path("AGENTS.template.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path(".agentic-workspace/docs/capability-aware-execution.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path(".agentic-workspace/docs/capability-aware-execution.md") in OPTIONAL_PAYLOAD_FILES
     assert Path(".agentic-workspace/docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path(".agentic-workspace/docs/orchestrator-workflow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path(".agentic-workspace/docs/orchestrator-workflow-contract.md") in OPTIONAL_PAYLOAD_FILES
     assert Path(".agentic-workspace/docs/minimum-operating-model.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path(".agentic-workspace/planning/reviews/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path(".agentic-workspace/planning/upstream-task-intake.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path(".agentic-workspace/planning/pre-ingestion-refinement.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path(".agentic-workspace/planning/reviews/README.md") in OPTIONAL_PAYLOAD_FILES
+    assert Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json") in OPTIONAL_PAYLOAD_FILES
+    assert Path(".agentic-workspace/planning/upstream-task-intake.md") in OPTIONAL_PAYLOAD_FILES
+    assert Path(".agentic-workspace/planning/pre-ingestion-refinement.md") in OPTIONAL_PAYLOAD_FILES
     assert Path(".agentic-workspace/docs/routing-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/UPGRADE-SOURCE.toml") in PLANNING_LOWER_STABILITY_HELPER_FILES
     assert Path("tools/AGENT_QUICKSTART.md") not in REQUIRED_PAYLOAD_FILES
@@ -552,6 +553,7 @@ def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path(".agentic-workspace/planning/scripts/render_agent_docs.py") not in REQUIRED_PAYLOAD_FILES
     assert set(PLANNING_COMPATIBILITY_CONTRACT_FILES).isdisjoint(PLANNING_LOWER_STABILITY_HELPER_FILES)
     assert set(PLANNING_COMPATIBILITY_CONTRACT_FILES) | set(PLANNING_LOWER_STABILITY_HELPER_FILES) == set(REQUIRED_PAYLOAD_FILES)
+    assert set(REQUIRED_PAYLOAD_FILES).isdisjoint(OPTIONAL_PAYLOAD_FILES)
 
 
 def test_adopt_bootstrap_preserves_existing_agents(tmp_path: Path) -> None:
@@ -586,7 +588,7 @@ def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_he
     assert contributor_playbook_path.read_text(encoding="utf-8") == "# Existing contributor playbook\n"
     assert maintainer_commands_path.read_text(encoding="utf-8") == "# Existing commands\n"
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
-    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md").exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md").exists()
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
     assert any(action.kind == "skipped" and action.path == execplan_readme_path for action in result.actions)
     assert any(
@@ -689,7 +691,7 @@ def test_verify_payload_reports_contract_surface_shortlists() -> None:
     assert any(
         action.path.name == "agent-manifest.json"
         and action.kind == "current"
-        and "compatibility contract files:" in action.detail
+        and "default compatibility contract files:" in action.detail
         and "AGENTS.md" in action.detail
         and ".agentic-workspace/planning/agent-manifest.json" in action.detail
         for action in result.actions
@@ -697,10 +699,30 @@ def test_verify_payload_reports_contract_surface_shortlists() -> None:
     assert any(
         action.path.name == "agent-manifest.json"
         and action.kind == "current"
-        and "lower-stability helper files:" in action.detail
+        and "default lower-stability helper files:" in action.detail
         and ".agentic-workspace/planning/UPGRADE-SOURCE.toml" in action.detail
         for action in result.actions
     )
+    assert any(
+        action.path.name == "agent-manifest.json"
+        and action.kind == "current"
+        and "optional packaged payload files:" in action.detail
+        and ".agentic-workspace/docs/capability-aware-execution.md" in action.detail
+        and ".agentic-workspace/planning/upstream-task-intake.md" in action.detail
+        for action in result.actions
+    )
+
+
+def test_list_files_json_separates_default_optional_and_skill_payloads(capsys) -> None:
+    result = planning_cli.main(["list-files", "--format", "json"])
+
+    assert result == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert ".agentic-workspace/docs/execution-flow-contract.md" in payload["default_files"]
+    assert ".agentic-workspace/docs/capability-aware-execution.md" in payload["optional_files"]
+    assert "planning-autopilot/SKILL.md" in payload["bundled_skill_files"]
+    assert ".agentic-workspace/docs/capability-aware-execution.md" in payload["files"]
+    assert "skills/planning-autopilot/SKILL.md" not in payload["files"]
 
 
 def test_bootstrap_review_readme_includes_canonical_review_portfolio() -> None:
@@ -895,13 +917,12 @@ def test_bootstrap_iterative_follow_through_contract_is_part_of_payload() -> Non
 
 def test_bootstrap_intent_contract_is_part_of_payload() -> None:
     text = (installer_mod.payload_root() / ".agentic-workspace" / "docs" / "standing-intent-contract.md").read_text(encoding="utf-8")
-    assert Path(".agentic-workspace/docs/standing-intent-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path(".agentic-workspace/docs/standing-intent-contract.md") in OPTIONAL_PAYLOAD_FILES
     assert "Standing Intent Contract" in text
     assert "active_directional_intent" in text
     assert "repo_doctrine" in text
     assert "config_policy" in text
     assert "agentic-workspace report" in text
-    assert Path(".agentic-workspace/docs/standing-intent-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
 def test_bootstrap_resumable_execution_contract_is_part_of_payload() -> None:
@@ -920,18 +941,24 @@ def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
     assert any(
         action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
         and action.kind == "current"
-        and "compatibility contract files:" in action.detail
+        and "default compatibility contract files:" in action.detail
         and "AGENTS.md" in action.detail
-        and ".agentic-workspace/docs/capability-aware-execution.md" in action.detail
         and ".agentic-workspace/planning/execplans/TEMPLATE.plan.json" in action.detail
-        and ".agentic-workspace/planning/upstream-task-intake.md" in action.detail
         for action in result.actions
     )
     assert any(
         action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
         and action.kind == "current"
-        and "lower-stability helper files:" in action.detail
+        and "default lower-stability helper files:" in action.detail
         and ".agentic-workspace/planning/UPGRADE-SOURCE.toml" in action.detail
+        for action in result.actions
+    )
+    assert any(
+        action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
+        and action.kind == "current"
+        and "optional packaged payload files:" in action.detail
+        and ".agentic-workspace/docs/capability-aware-execution.md" in action.detail
+        and ".agentic-workspace/planning/upstream-task-intake.md" in action.detail
         for action in result.actions
     )
 
@@ -1143,16 +1170,17 @@ def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(
 
     agents_path.write_text("repo-owned agents\n", encoding="utf-8")
     checker_path.write_text("stale checker\n", encoding="utf-8")
+    skill_path.parent.mkdir(parents=True, exist_ok=True)
     skill_path.write_text("stale skill\n", encoding="utf-8")
 
     result = upgrade_bootstrap(target=tmp_path)
 
     assert agents_path.read_text(encoding="utf-8") == "repo-owned agents\n"
     assert "stale checker" not in checker_path.read_text(encoding="utf-8")
-    assert "stale skill" not in skill_path.read_text(encoding="utf-8")
+    assert skill_path.read_text(encoding="utf-8") == "stale skill\n"
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
     assert any(action.kind == "overwritten" and action.path == checker_path for action in result.actions)
-    assert any(action.kind == "overwritten" and action.path == skill_path for action in result.actions)
+    assert not any(action.path == skill_path for action in result.actions)
 
 
 def test_upgrade_bootstrap_legacy_standalone_install_adds_managed_helpers_without_overwriting_root_surfaces(tmp_path: Path) -> None:
@@ -1271,6 +1299,9 @@ def test_uninstall_bootstrap_removes_pristine_files_and_keeps_modified_surfaces(
     skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
 
     agents_path.write_text("repo-owned agents\n", encoding="utf-8")
+    skill_source = installer_mod.skills_root() / "planning-autopilot" / "SKILL.md"
+    skill_path.parent.mkdir(parents=True, exist_ok=True)
+    skill_path.write_bytes(skill_source.read_bytes())
 
     result = uninstall_bootstrap(target=tmp_path)
 
@@ -1698,6 +1729,7 @@ def test_planning_summary_and_handoff_project_review_residue_from_structured_ref
 def test_upgrade_backfills_canonical_review_records(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     review_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "review-alpha.md"
+    review_path.parent.mkdir(parents=True, exist_ok=True)
     review_path.write_text(
         """
 # Review Alpha

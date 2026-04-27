@@ -17,6 +17,9 @@ from repo_planning_bootstrap.installer import (
     format_result_json,
     format_summary_json,
     install_bootstrap,
+    list_bundled_skill_files,
+    list_default_payload_files,
+    list_optional_payload_files,
     list_payload_files,
     planning_handoff,
     planning_reconcile,
@@ -241,7 +244,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "list-files":
         files = list_payload_files()
         if args.format == "json":
-            print(json.dumps({"files": files}, indent=2))
+            print(
+                json.dumps(
+                    {
+                        "files": files,
+                        "default_files": list_default_payload_files(),
+                        "optional_files": list_optional_payload_files(),
+                        "bundled_skill_files": list_bundled_skill_files(),
+                    },
+                    indent=2,
+                )
+            )
         else:
             for path in files:
                 print(path)

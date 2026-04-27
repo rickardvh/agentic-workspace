@@ -18,14 +18,21 @@
     },
     "execution": {
       "milestone": "planning-default-core-install",
-      "status": "in-progress",
-      "next_step": "Compare REQUIRED_PAYLOAD_FILES and packaging force-includes against smallest_safe_default_install.",
+      "status": "completed",
+      "next_step": "Promote #464 to finish the optional extension boundary and explicit enablement story.",
       "proof": "planning package tests, ruff, workspace proof selector, and planning doctor"
     },
     "scope": {
       "touched": [
         ".agentic-workspace/planning/state.toml",
-        ".agentic-workspace/planning/execplans/planning-default-core-install.plan.json"
+        ".agentic-workspace/planning/execplans/planning-default-core-install.plan.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/src/repo_planning_bootstrap/cli.py",
+        "packages/planning/README.md",
+        "packages/planning/tests/test_installer.py",
+        "packages/planning/tests/test_packaging.py",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py"
       ],
       "invariants": [
         "Default planning install becomes smaller.",
@@ -52,12 +59,12 @@
     "issues": "#461, #463, #464, #465, #466"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
-    "intentionally deferred": "review/intake extraction, generated-mirror separation, and capability-map refresh",
-    "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "#464 or #465 depending on which optional surfaces still ship by default"
+    "what this slice enabled": "Default install/adopt/upgrade now copy only core daily-operation payload while optional docs and planning skills remain packaged and queryable through list-files or workspace skill discovery.",
+    "intentionally deferred": "explicit config enablement for optional planning extensions, extraction boundaries, generated-mirror separation, and capability-map refresh",
+    "discovered implications": "Workspace skill discovery needed a package-registry fallback so optional skills could remain discoverable without being copied into target repos.",
+    "proof achieved now": "package installer/packaging tests, workspace CLI tests, and ruff passed",
+    "validation still needed": "final proof selector and planning doctor before commit",
+    "next likely slice": "#464 optional extension boundary"
   },
   "delegated_judgment": {
     "requested outcome": "Shrink default planning install to core daily-operation surfaces.",
@@ -105,23 +112,29 @@
   ],
   "active_milestone": {
     "id": "planning-default-core-install",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to default planning payload shrink and conservative migration support.",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Compare REQUIRED_PAYLOAD_FILES and wheel force-includes against payload-surface-classification.json.",
-    "Change the default install to copy only core daily-operation surfaces.",
-    "Keep optional surfaces available through an explicit non-default path or package resource."
+    "Run final validation for #463.",
+    "Promote #464 as the next active #461 child."
   ],
   "blockers": [
     "None."
   ],
   "touched_paths": [
     ".agentic-workspace/planning/state.toml",
-    ".agentic-workspace/planning/execplans/planning-default-core-install.plan.json"
+    ".agentic-workspace/planning/execplans/planning-default-core-install.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/src/repo_planning_bootstrap/cli.py",
+    "packages/planning/README.md",
+    "packages/planning/tests/test_installer.py",
+    "packages/planning/tests/test_packaging.py",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan.",
@@ -143,32 +156,43 @@
     "Agents can still discover optional extensions when needed."
   ],
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "Separated package payload from default installed payload. New planning installs copy only core daily-operation surfaces; optional docs and bundled skills remain packaged and discoverable without first-contact install residue.",
+    "validation confirmed": "pending final validation",
+    "follow-on routed to": "#464 optional extension boundary",
+    "post-work posterity capture": "README contract, installer constants, list-files JSON fields, and tests",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": ".agentic-workspace/planning/execplans/planning-optional-extension-boundary.plan.json"
   },
   "closure_check": {
-    "slice status": "open",
+    "slice status": "completed",
     "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "Implementation has not started.",
-    "evidence carried forward": "#463 owns the first payload shrink after #462 classification.",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#463 default shrink is complete, but #461 still needs optional-extension/config, extraction, and capability-map follow-through.",
+    "evidence carried forward": "Core/default payload constants, optional package discovery, package tests, workspace skills fallback tests.",
     "reopen trigger": "default planning install still ships non-core surfaces without opt-in selection"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        "Raw test failure output; the retained knowledge is the package-registry fallback and updated tests."
+      ],
+      "continuation": [
+        "#464 should define explicit config or discovery mechanics for optional review/intake/recovery/autopilot surfaces."
+      ],
       "memory": [],
-      "config_check": [],
+      "config_check": [
+        "tests now assert smaller default payload and workspace skill discovery of non-installed package skills."
+      ],
       "docs": [],
-      "issue_follow_up": []
+      "issue_follow_up": [
+        "#464",
+        "#465",
+        "#466"
+      ]
     }
   },
   "drift_log": [
-    "2026-04-27: Promoted after #462 classified the planning payload."
+    "2026-04-27: Promoted after #462 classified the planning payload.",
+    "2026-04-27: Shrunk default planning install to core daily-operation payload and kept optional skills discoverable through package registry fallback."
   ]
 }

@@ -3034,15 +3034,8 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["execution_shape"]["recommendation"]["id"] == "stay-direct"
     assert payload["execution_shape"]["recommendation"]["consult"] == ["agentic-workspace config --target ./repo --format json"]
     assert payload["next_action"]["summary"] == "No immediate action"
-    assert any(
-        item["surface"]
-        in {
-            "docs/delegated-judgment-contract.md",
-            "docs/resumable-execution-contract.md",
-            ".agentic-workspace/docs/capability-aware-execution.md",
-            "docs/execution-summary-contract.md",
-        }
-        for item in payload["discovery"]["memory_candidates"]
+    assert not any(
+        item["surface"] == ".agentic-workspace/docs/capability-aware-execution.md" for item in payload["discovery"]["memory_candidates"]
     )
     assert any(item["surface"] == ".agentic-workspace/planning/state.toml" for item in payload["discovery"]["planning_candidates"])
     assert payload["discovery"]["ambiguous"] == []

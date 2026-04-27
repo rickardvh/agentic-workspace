@@ -9539,10 +9539,19 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
     for source in _skill_catalog_sources():
         registry_file = target_root / source.registry_path
         skills_root = target_root / source.skills_root
+        package_registry_file = _package_skill_registry_file(source)
         source_state = "absent"
         if registry_file.exists():
             source_state = "registry"
             for skill in _load_registered_skills(source=source, registry_file=registry_file):
+                key = (skill.skill_id, skill.path.as_posix())
+                if key in seen:
+                    continue
+                seen.add(key)
+                discovered.append(skill)
+        elif package_registry_file is not None:
+            source_state = "package-registry"
+            for skill in _load_registered_skills(source=source, registry_file=package_registry_file):
                 key = (skill.skill_id, skill.path.as_posix())
                 if key in seen:
                     continue
@@ -9590,7 +9599,7 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
             ]
             for missing in missing_files:
                 warnings.append(f"{source.registry_path.as_posix()} points at missing skill file {missing}")
-        if registry_file.exists() or scanned_paths:
+        if registry_file.exists() or scanned_paths or package_registry_file is not None:
             sources.append(
                 {
                     "name": source.name,
@@ -9602,6 +9611,17 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
 
     discovered.sort(key=lambda skill: (skill.source_kind, skill.skill_id, skill.path.as_posix()))
     return discovered, warnings, sources
+
+
+def _package_skill_registry_file(source: SkillCatalogSource) -> Path | None:
+    if source.name != "planning-bundled":
+        return None
+    try:
+        from repo_planning_bootstrap.installer import skills_root as planning_skills_root
+    except ImportError:
+        return None
+    registry_file = planning_skills_root() / "REGISTRY.json"
+    return registry_file if registry_file.exists() else None
 
 
 def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path) -> list[RegisteredSkill]:

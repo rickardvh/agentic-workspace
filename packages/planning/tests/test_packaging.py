@@ -16,7 +16,7 @@ from repo_planning_bootstrap import installer
 
 PLANNING_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 CLASSIFICATION_PATH = PLANNING_PACKAGE_ROOT / "payload-surface-classification.json"
-EXPECTED_PAYLOAD_ENTRIES = {path.as_posix() for path in installer.REQUIRED_PAYLOAD_FILES}
+EXPECTED_PAYLOAD_ENTRIES = {path.as_posix() for path in installer.PACKAGE_PAYLOAD_FILES}
 EXPECTED_SKILL_ENTRIES = {
     path.relative_to(installer.PLANNING_SKILLS_MANAGED_ROOT).as_posix() for path in installer.PLANNING_BUNDLED_SKILL_FILES
 }

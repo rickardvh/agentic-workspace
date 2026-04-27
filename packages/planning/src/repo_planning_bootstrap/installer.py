@@ -35,6 +35,14 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/docs/minimum-operating-model.md"),
     Path(".agentic-workspace/docs/lifecycle-and-config-contract.md"),
     Path(".agentic-workspace/docs/workspace-config-contract.md"),
+    Path(".agentic-workspace/planning/execplans/README.md"),
+    Path(".agentic-workspace/planning/execplans/TEMPLATE.plan.json"),
+    Path(".agentic-workspace/planning/execplans/archive/README.md"),
+    UPGRADE_SOURCE_PATH,
+    PLANNING_MANIFEST_PATH,
+)
+
+OPTIONAL_PAYLOAD_FILES = (
     Path(".agentic-workspace/docs/extraction-and-discovery-contract.md"),
     Path(".agentic-workspace/docs/reporting-contract.md"),
     Path(".agentic-workspace/docs/capability-aware-execution.md"),
@@ -48,16 +56,13 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/docs/external-intent-evidence-contract.md"),
     Path(".agentic-workspace/docs/finished-work-inspection-contract.md"),
     Path(".agentic-workspace/docs/installer-behavior.md"),
-    Path(".agentic-workspace/planning/execplans/README.md"),
-    Path(".agentic-workspace/planning/execplans/TEMPLATE.plan.json"),
-    Path(".agentic-workspace/planning/execplans/archive/README.md"),
     Path(".agentic-workspace/planning/reviews/README.md"),
     Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json"),
     Path(".agentic-workspace/planning/upstream-task-intake.md"),
     Path(".agentic-workspace/planning/pre-ingestion-refinement.md"),
-    UPGRADE_SOURCE_PATH,
-    PLANNING_MANIFEST_PATH,
 )
+
+PACKAGE_PAYLOAD_FILES = REQUIRED_PAYLOAD_FILES + OPTIONAL_PAYLOAD_FILES
 
 PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("AGENTS.template.md"),
@@ -67,26 +72,9 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path(".agentic-workspace/docs/minimum-operating-model.md"),
     Path(".agentic-workspace/docs/lifecycle-and-config-contract.md"),
     Path(".agentic-workspace/docs/workspace-config-contract.md"),
-    Path(".agentic-workspace/docs/extraction-and-discovery-contract.md"),
-    Path(".agentic-workspace/docs/reporting-contract.md"),
-    Path(".agentic-workspace/docs/capability-aware-execution.md"),
-    Path(".agentic-workspace/docs/orchestrator-workflow-contract.md"),
-    Path(".agentic-workspace/docs/capability-contract.json"),
-    Path(".agentic-workspace/docs/signal-hygiene-contract.md"),
-    Path(".agentic-workspace/docs/knowledge-promotion-workflow.md"),
-    Path(".agentic-workspace/docs/standing-intent-contract.md"),
-    Path(".agentic-workspace/docs/candidate-lanes-contract.md"),
-    Path(".agentic-workspace/docs/context-budget-contract.md"),
-    Path(".agentic-workspace/docs/external-intent-evidence-contract.md"),
-    Path(".agentic-workspace/docs/finished-work-inspection-contract.md"),
-    Path(".agentic-workspace/docs/installer-behavior.md"),
     Path(".agentic-workspace/planning/execplans/README.md"),
     Path(".agentic-workspace/planning/execplans/TEMPLATE.plan.json"),
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
-    Path(".agentic-workspace/planning/reviews/README.md"),
-    Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json"),
-    Path(".agentic-workspace/planning/upstream-task-intake.md"),
-    Path(".agentic-workspace/planning/pre-ingestion-refinement.md"),
     PLANNING_MANIFEST_PATH,
 )
 
@@ -200,15 +188,21 @@ def _add_contract_surface_summary(result: InstallResult, root: Path) -> None:
 
     compatibility = ", ".join(resolve_template(path) for path in PLANNING_COMPATIBILITY_CONTRACT_FILES)
     helpers = ", ".join(resolve_template(path) for path in PLANNING_LOWER_STABILITY_HELPER_FILES)
+    optional = ", ".join(path.as_posix() for path in OPTIONAL_PAYLOAD_FILES)
     result.add(
         "current",
         root / PLANNING_MANIFEST_PATH,
-        f"compatibility contract files: {compatibility}",
+        f"default compatibility contract files: {compatibility}",
     )
     result.add(
         "current",
         root / PLANNING_MANIFEST_PATH,
-        f"lower-stability helper files: {helpers}",
+        f"default lower-stability helper files: {helpers}",
+    )
+    result.add(
+        "current",
+        root / PLANNING_MANIFEST_PATH,
+        f"optional packaged payload files: {optional}",
     )
 
 
@@ -265,7 +259,7 @@ def _detect_payload_drift(target_root: Path) -> list[dict[str, str]]:
         return []
 
     drift = []
-    managed_by_mirror = set(REQUIRED_PAYLOAD_FILES)
+    managed_by_mirror = set(PACKAGE_PAYLOAD_FILES)
 
     # Check for missing or differing files in the mirror
     for relative in managed_by_mirror:
@@ -342,7 +336,7 @@ PLANNING_BUNDLED_SKILL_FILES = tuple(PLANNING_SKILLS_MANAGED_ROOT / relative for
 
 
 def _installed_surface_files() -> tuple[Path, ...]:
-    return REQUIRED_PAYLOAD_FILES + PLANNING_BUNDLED_SKILL_FILES
+    return REQUIRED_PAYLOAD_FILES
 
 
 def resolve_target_root(target: str | Path | None, *, local_only: bool = False) -> Path:
@@ -1043,6 +1037,18 @@ def list_payload_files() -> list[str]:
     return [path.relative_to(root).as_posix() for path in sorted(root.rglob("*")) if _should_include_payload_path(path, root)]
 
 
+def list_default_payload_files() -> list[str]:
+    return [path.as_posix() for path in REQUIRED_PAYLOAD_FILES]
+
+
+def list_optional_payload_files() -> list[str]:
+    return [path.as_posix() for path in OPTIONAL_PAYLOAD_FILES]
+
+
+def list_bundled_skill_files() -> list[str]:
+    return [path.relative_to(PLANNING_SKILLS_MANAGED_ROOT).as_posix() for path in PLANNING_BUNDLED_SKILL_FILES]
+
+
 def install_bootstrap(
     *,
     target: str | Path | None = None,
@@ -1053,7 +1059,6 @@ def install_bootstrap(
     target_root = resolve_target_root(target, local_only=local_only)
     result = InstallResult(target_root=target_root, message="Install plan", dry_run=dry_run)
     _copy_payload(target_root=target_root, result=result, conservative=False, force=force)
-    _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=force)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
         _migrate_legacy_planning_surfaces(target_root, force=force)
@@ -1081,7 +1086,6 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) 
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message="Adoption plan for existing repository", dry_run=dry_run)
     _copy_payload(target_root=target_root, result=result, conservative=True, force=False)
-    _copy_bundled_skills(target_root=target_root, result=result, conservative=True, force=False)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
         _migrate_legacy_planning_surfaces(target_root)
@@ -1099,8 +1103,6 @@ def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
 
     for relative in PACKAGE_MANAGED_FILES:
         _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=True)
-
-    _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=True)
 
     for relative in ROOT_SURFACE_FILES:
         _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=False)
@@ -1121,7 +1123,7 @@ def uninstall_bootstrap(*, target: str | Path | None = None, dry_run: bool = Fal
     result = InstallResult(target_root=target_root, message="Uninstall plan", dry_run=dry_run)
 
     removable: list[Path] = []
-    for relative in _installed_surface_files():
+    for relative in PACKAGE_PAYLOAD_FILES + PLANNING_BUNDLED_SKILL_FILES:
         target_relative = relative
         if target_relative.name.endswith(".template.md"):
             target_relative = target_relative.with_name(target_relative.name[:-12] + ".md")
@@ -1233,12 +1235,13 @@ def verify_payload() -> InstallResult:
     root = payload_root()
     result = InstallResult(target_root=root, message="Payload verification", dry_run=False)
     payload_files = {Path(item) for item in list_payload_files()}
-    for relative in REQUIRED_PAYLOAD_FILES:
+    for relative in PACKAGE_PAYLOAD_FILES:
         target_relative = relative
         if target_relative.name.endswith(".template.md"):
             target_relative = target_relative.with_name(target_relative.name[:-12] + ".md")
 
-        detail = "required payload file present" if relative in payload_files else "required payload file missing"
+        prefix = "default" if relative in REQUIRED_PAYLOAD_FILES else "optional"
+        detail = f"{prefix} payload file present" if relative in payload_files else f"{prefix} payload file missing"
         result.add("current" if relative in payload_files else "manual review", root / target_relative, detail)
 
     _add_contract_surface_summary(result, root)

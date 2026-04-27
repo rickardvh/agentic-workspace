@@ -1,0 +1,174 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning Optional Extension Boundary",
+  "goal": [
+    "Implement #464 by making non-core planning capabilities explicitly discoverable or config-enabled rather than default installed surfaces."
+  ],
+  "non_goals": [
+    "Do not create separate packages in this slice.",
+    "Do not remove optional capabilities entirely.",
+    "Do not make optional-extension config more expensive than the payload reduction."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Review, intake, recovery, reporting, orchestration, and autopilot surfaces are clearly optional and reachable through compact discovery or explicit enablement.",
+      "constraints": "Keep core planning usable without optional surfaces and preserve dogfooding access in this repo.",
+      "latitude": "Choose compact config/discovery mechanics using existing commands where possible.",
+      "escalation": "Escalate if optional enablement requires a broad new command surface or re-expands first-contact payload."
+    },
+    "execution": {
+      "milestone": "planning-optional-extension-boundary",
+      "status": "in-progress",
+      "next_step": "Inspect current optional payload discovery and config surfaces after #463 shrink.",
+      "proof": "planning package tests, workspace CLI tests, ruff, proof selector, and planning doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/planning-optional-extension-boundary.plan.json"
+      ],
+      "invariants": [
+        "Optional surfaces do not return to default install.",
+        "Discovery stays compact and command-backed.",
+        "This repo can still dogfood advanced planning extensions explicitly."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#461: make Agentic Planning smaller by default and clearer by boundary.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane planning-payload-boundary"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#465 and #466 still need extraction-boundary and capability-map follow-through after optional extension boundary lands.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #464 closeout, promote #465 or the next #461 child indicated by validation"
+  },
+  "parent_lane": {
+    "id": "#461",
+    "title": "Reclassify planning payload into core, optional extensions, and extraction candidates",
+    "priority": "1",
+    "issues": "#461, #464, #465, #466"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "module extraction and capability-map refresh",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "#465 extraction candidates"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Move review, intake, recovery, and autopilot surfaces behind config or on-demand discovery.",
+    "hard constraints": "Do not re-expand default install or ordinary startup.",
+    "agent may decide locally": "Exact existing command/config surfaces to carry discovery and enablement.",
+    "escalate when": "The solution requires new permanent first-contact surfaces."
+  },
+  "context_budget": {
+    "live working set": "state, this execplan, #461/#464, #463 diff, payload classification, installer/list-files/skills/report surfaces",
+    "recoverable later": "#462 and #463 archived closeouts",
+    "externalize before shift": "record optional extension discovery and enablement surface in execution_summary",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Next active issue is #464 planning optional extension boundary.",
+    "context-shift triggers": "Before adding a new command or restoring optional files to default install."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Keep optional power cheap to discover but absent from the default installed surface.",
+    "broader-lane validation question": "Can a repo intentionally enable richer planning workflows without making ordinary repos pay the surface cost?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/464"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/464",
+      "label": "#464 optional extension boundary",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/461",
+      "label": "#461 planning payload boundary",
+      "role": "parent_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "artifact",
+      "target": "packages/planning/payload-surface-classification.json",
+      "label": "#462 payload classification",
+      "role": "dependency",
+      "locator": "compression_candidates"
+    }
+  ],
+  "active_milestone": {
+    "id": "planning-optional-extension-boundary",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to optional-extension discovery and explicit enablement.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect existing config, list-files, skills, report, and README surfaces for optional-extension discovery.",
+    "Add the smallest enable/discover mechanism that satisfies #464 without adding first-contact burden."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/planning-optional-extension-boundary.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan.",
+    "Use existing compact commands before adding new surfaces."
+  ],
+  "validation_commands": [
+    "cd packages/planning && uv run pytest tests/test_installer.py tests/test_packaging.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests packages/planning/src packages/planning/tests",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/planning-optional-extension-boundary.plan.json --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Non-core planning capabilities are not always present in default installs.",
+    "Agents can discover and enable them when the repo has the relevant problem.",
+    "Startup and summary remain focused on active execution state.",
+    "This repo can explicitly enable advanced planning extensions for dogfooding."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "closure_check": {
+    "slice status": "open",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "Implementation has not started.",
+    "evidence carried forward": "#464 owns optional extension boundary after #463 default shrink.",
+    "reopen trigger": "optional planning capabilities require broad manual file reads or default install residue to discover"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted after #463 shrank default planning install."
+  ]
+}
