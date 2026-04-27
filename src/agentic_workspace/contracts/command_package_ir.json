@@ -1,0 +1,293 @@
+{
+  "schema_version": "agentic-workspace/command-package-ir/v1",
+  "summary": "Implementation-independent command-package view for generated Python and TypeScript CLI package targets.",
+  "schema": "schemas/command_package_ir.schema.json",
+  "source_contracts": [
+    "cli_commands.json",
+    "cli_option_groups.json",
+    "operation_contracts.json",
+    "operation_primitives.json",
+    "command_adapter_generation.json",
+    "conformance_contracts.json"
+  ],
+  "generation_policy": {
+    "authority_rule": "Command/interface truth belongs in contracts and this package IR; generated target files are derived outputs.",
+    "runtime_boundary": "Runtime primitives and live workspace inspection stay hand-owned and are referenced, not generated.",
+    "ordinary_development_environment": "Python development remains sufficient for ordinary repo work.",
+    "test_environment": "Generated non-Python package tests run in Docker-selected proof lanes.",
+    "custom_codegen_boundary": "Custom generation code should stay small: validated IR loading, target rendering, freshness checks, and no-direct-edit sentinels."
+  },
+  "packages": [
+    {
+      "id": "root-workspace",
+      "program": "agentic-workspace",
+      "package_role": "root-workspace-cli",
+      "targets": [
+        {
+          "kind": "python",
+          "package_name": "agentic-workspace",
+          "generated_root": "src/agentic_workspace/generated_cli_package",
+          "entrypoints": [
+            "agentic-workspace"
+          ],
+          "test_environment": "python-dev",
+          "generation_status": "supported-now"
+        },
+        {
+          "kind": "typescript",
+          "package_name": "@agentic-workspace/workspace-cli",
+          "generated_root": "generated/typescript/workspace-cli",
+          "entrypoints": [
+            "agentic-workspace"
+          ],
+          "test_environment": "docker",
+          "generation_status": "proof-fixture"
+        },
+        {
+          "kind": "bash",
+          "package_name": "agentic-workspace-shell",
+          "generated_root": "generated/shell/bash",
+          "entrypoints": [
+            "agentic-workspace"
+          ],
+          "test_environment": "docker",
+          "generation_status": "deferred"
+        },
+        {
+          "kind": "powershell",
+          "package_name": "AgenticWorkspace.PowerShell",
+          "generated_root": "generated/shell/powershell",
+          "entrypoints": [
+            "agentic-workspace"
+          ],
+          "test_environment": "docker",
+          "generation_status": "deferred"
+        }
+      ],
+      "commands": [
+        {
+          "adapter_id": "defaults.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "defaults",
+            "manifest_ref": "cli_commands.json"
+          },
+          "operation_ref": {
+            "id": "defaults.report",
+            "path": "operations/defaults.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.defaults.load",
+              "workspace.defaults.select",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "compact_contract_answer.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "defaults.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "defaults payload assembly",
+              "section selection",
+              "output emission"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "planning-bootstrap",
+      "program": "agentic-planning-bootstrap",
+      "package_role": "planning-module-cli",
+      "targets": [
+        {
+          "kind": "python",
+          "package_name": "agentic-planning-bootstrap",
+          "generated_root": "packages/planning/src/repo_planning_bootstrap/generated_cli_package",
+          "entrypoints": [
+            "agentic-planning-bootstrap"
+          ],
+          "test_environment": "python-dev",
+          "generation_status": "supported-now"
+        },
+        {
+          "kind": "typescript",
+          "package_name": "@agentic-workspace/planning-cli",
+          "generated_root": "generated/typescript/planning-cli",
+          "entrypoints": [
+            "agentic-planning-bootstrap"
+          ],
+          "test_environment": "docker",
+          "generation_status": "proof-fixture"
+        }
+      ],
+      "commands": [
+        {
+          "adapter_id": "planning.status.cli",
+          "status": "generated",
+          "command": {
+            "name": "status",
+            "manifest_ref": "package:planning:cli"
+          },
+          "operation_ref": {
+            "id": "planning.status.report",
+            "path": "operations/planning.status.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.bootstrap.status.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "planning.status.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning bootstrap inspection",
+              "module result assembly",
+              "output emission"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "memory-bootstrap",
+      "program": "agentic-memory-bootstrap",
+      "package_role": "memory-module-cli",
+      "targets": [
+        {
+          "kind": "python",
+          "package_name": "agentic-memory-bootstrap",
+          "generated_root": "packages/memory/src/repo_memory_bootstrap/generated_cli_package",
+          "entrypoints": [
+            "agentic-memory-bootstrap"
+          ],
+          "test_environment": "python-dev",
+          "generation_status": "supported-now"
+        },
+        {
+          "kind": "typescript",
+          "package_name": "@agentic-workspace/memory-cli",
+          "generated_root": "generated/typescript/memory-cli",
+          "entrypoints": [
+            "agentic-memory-bootstrap"
+          ],
+          "test_environment": "docker",
+          "generation_status": "proof-fixture"
+        }
+      ],
+      "commands": [
+        {
+          "adapter_id": "memory.status.cli",
+          "status": "generated",
+          "command": {
+            "name": "status",
+            "manifest_ref": "package:memory:cli"
+          },
+          "operation_ref": {
+            "id": "memory.status.report",
+            "path": "operations/memory.status.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "memory.bootstrap.status.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "memory.status.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "memory bootstrap inspection",
+              "module result assembly",
+              "output emission"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

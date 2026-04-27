@@ -14,6 +14,7 @@ from agentic_workspace.contract_tooling import (
     cli_commands_manifest,
     cli_option_groups_manifest,
     command_adapter_generation_manifest,
+    command_package_ir_manifest,
     compact_contract_manifest,
     conformance_contract_manifest,
     conformance_contracts_manifest,
@@ -460,6 +461,87 @@ def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str
     return errors
 
 
+def _validate_command_package_ir(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    if payload.get("schema_version") != "agentic-workspace/command-package-ir/v1":
+        return ["command_package_ir.json has unexpected schema_version"]
+    adapters = {adapter["id"]: adapter for adapter in command_adapter_generation_manifest()["adapters"]}
+    operations = {operation["id"]: operation for operation in operation_contracts_manifest()["operations"]}
+    conformance_refs = {contract["id"] for contract in conformance_contracts_manifest()["contracts"]}
+    primitive_refs = {primitive["id"] for primitive in operation_primitives_manifest()["primitives"]}
+    packages = payload.get("packages", [])
+    if not isinstance(packages, list):
+        return ["command_package_ir.json packages must be a list"]
+    seen_adapter_ids: set[str] = set()
+    for package_index, package in enumerate(packages):
+        if not isinstance(package, dict):
+            errors.append(f"command_package_ir package {package_index} must be an object")
+            continue
+        program = str(package.get("program", ""))
+        targets = package.get("targets", [])
+        commands = package.get("commands", [])
+        if not isinstance(targets, list) or not isinstance(commands, list):
+            errors.append(f"command_package_ir package {program} targets and commands must be lists")
+            continue
+        target_kinds = {str(target.get("kind", "")) for target in targets if isinstance(target, dict)}
+        if "python" not in target_kinds:
+            errors.append(f"command_package_ir package {program} must declare a python target")
+        if "typescript" not in target_kinds:
+            errors.append(f"command_package_ir package {program} must declare a typescript target")
+        for command in commands:
+            if not isinstance(command, dict):
+                errors.append(f"command_package_ir package {program} command entry must be an object")
+                continue
+            adapter_id = str(command.get("adapter_id", ""))
+            seen_adapter_ids.add(adapter_id)
+            adapter = adapters.get(adapter_id)
+            if adapter is None:
+                errors.append(f"command_package_ir command {adapter_id} does not reference a known generated adapter")
+                continue
+            if adapter["command"]["program"] != program:
+                errors.append(f"command_package_ir command {adapter_id} program drifted from command_adapter_generation.json")
+            operation_ref = command.get("operation_ref", {})
+            runtime_binding = command.get("runtime_binding", {})
+            if not isinstance(operation_ref, dict) or not isinstance(runtime_binding, dict):
+                errors.append(f"command_package_ir command {adapter_id} has malformed operation or runtime binding")
+                continue
+            operation_id = str(operation_ref.get("id", ""))
+            operation = operations.get(operation_id)
+            if operation is None:
+                errors.append(f"command_package_ir command {adapter_id} references unknown operation {operation_id}")
+            elif operation.get("path") != operation_ref.get("path"):
+                errors.append(f"command_package_ir command {adapter_id} operation path drifted from registry")
+            expected_operation_ref = {"id": adapter["operation_ref"]["id"], "path": adapter["operation_ref"]["path"]}
+            if operation_ref != expected_operation_ref:
+                errors.append(f"command_package_ir command {adapter_id} operation ref drifted from command_adapter_generation.json")
+            if runtime_binding != adapter["runtime_binding"]:
+                errors.append(f"command_package_ir command {adapter_id} runtime binding drifted from command_adapter_generation.json")
+            unknown_primitives = sorted(set(runtime_binding.get("primitive_refs", [])) - primitive_refs)
+            if unknown_primitives:
+                errors.append(
+                    f"command_package_ir command {adapter_id} references unknown primitive(s): "
+                    + ", ".join(str(item) for item in unknown_primitives)
+                )
+            if command.get("effect_hints") != adapter["effect_hints"]:
+                errors.append(f"command_package_ir command {adapter_id} effect hints drifted from command_adapter_generation.json")
+            if command.get("schemas") != adapter["schemas"]:
+                errors.append(f"command_package_ir command {adapter_id} schema refs drifted from command_adapter_generation.json")
+            command_conformance_refs = command.get("conformance_refs", [])
+            if command_conformance_refs != adapter["conformance_refs"]:
+                errors.append(f"command_package_ir command {adapter_id} conformance refs drifted from command_adapter_generation.json")
+            unknown_conformance = sorted(set(command_conformance_refs) - conformance_refs) if isinstance(command_conformance_refs, list) else []
+            if unknown_conformance:
+                errors.append(
+                    f"command_package_ir command {adapter_id} references unknown conformance ref(s): "
+                    + ", ".join(str(item) for item in unknown_conformance)
+                )
+    generated_adapter_ids = {adapter["id"] for adapter in adapters.values() if adapter.get("status") == "generated"}
+    missing_generated = sorted(generated_adapter_ids - seen_adapter_ids)
+    if missing_generated:
+        errors.append("command_package_ir.json missing generated adapter(s): " + ", ".join(missing_generated))
+    return errors
+
+
 def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list[str]]:
     statuses: list[dict[str, object]] = []
     errors: list[str] = []
@@ -896,6 +978,11 @@ def main(argv: list[str] | None = None) -> int:
             "command adapter generation manifest",
             _validate(command_adapter_generation_manifest(), "command_adapter_generation.schema.json")
             + _validate_command_adapter_generation(command_adapter_generation_manifest()),
+        ),
+        (
+            "command package IR",
+            _validate(command_package_ir_manifest(), "command_package_ir.schema.json")
+            + _validate_command_package_ir(command_package_ir_manifest()),
         ),
         (
             "generated command adapter output",

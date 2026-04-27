@@ -116,6 +116,10 @@ def command_adapter_generation_manifest() -> dict[str, Any]:
     return load_validated_contract_json("command_adapter_generation.json", "command_adapter_generation.schema.json")
 
 
+def command_package_ir_manifest() -> dict[str, Any]:
+    return load_validated_contract_json("command_package_ir.json", "command_package_ir.schema.json")
+
+
 def lifecycle_generation_readiness_manifest() -> dict[str, Any]:
     return load_validated_contract_json("lifecycle_generation_readiness.json", "lifecycle_generation_readiness.schema.json")
 

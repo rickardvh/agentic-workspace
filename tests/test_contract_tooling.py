@@ -121,6 +121,45 @@ def test_command_adapter_generation_contract_records_multi_target_requirements()
     assert target_kinds["local-mcp-tool"]["status"] == "requirements-baseline"
 
 
+def test_command_package_ir_declares_python_and_typescript_targets() -> None:
+    manifest = contract_tooling.command_package_ir_manifest()
+    packages = {package["id"]: package for package in manifest["packages"]}
+
+    assert (
+        manifest["generation_policy"]["ordinary_development_environment"] == "Python development remains sufficient for ordinary repo work."
+    )
+    assert manifest["generation_policy"]["test_environment"] == "Generated non-Python package tests run in Docker-selected proof lanes."
+
+    root_package = packages["root-workspace"]
+    targets = {target["kind"]: target for target in root_package["targets"]}
+
+    assert root_package["program"] == "agentic-workspace"
+    assert targets["python"]["test_environment"] == "python-dev"
+    assert targets["typescript"]["test_environment"] == "docker"
+    assert targets["bash"]["generation_status"] == "deferred"
+    assert targets["powershell"]["generation_status"] == "deferred"
+
+
+def test_command_package_ir_reuses_generated_adapter_truth() -> None:
+    package_ir = contract_tooling.command_package_ir_manifest()
+    adapter_manifest = contract_tooling.command_adapter_generation_manifest()
+    adapters = {adapter["id"]: adapter for adapter in adapter_manifest["adapters"]}
+    commands = {command["adapter_id"]: command for package in package_ir["packages"] for command in package["commands"]}
+
+    assert set(commands) == {"defaults.report.cli", "planning.status.cli", "memory.status.cli"}
+    defaults_command = commands["defaults.report.cli"]
+    defaults_adapter = adapters["defaults.report.cli"]
+
+    assert defaults_command["operation_ref"] == {
+        "id": defaults_adapter["operation_ref"]["id"],
+        "path": defaults_adapter["operation_ref"]["path"],
+    }
+    assert defaults_command["runtime_binding"] == defaults_adapter["runtime_binding"]
+    assert defaults_command["effect_hints"] == defaults_adapter["effect_hints"]
+    assert defaults_command["conformance_refs"] == defaults_adapter["conformance_refs"]
+    assert "parser library" in defaults_command["projection_boundary"]["target_specific"]
+
+
 def test_python_contract_consumption_declares_validated_loader_bindings() -> None:
     manifest = contract_tooling.python_contract_consumption_manifest()
     entries = manifest["validated_at_consumption"]
@@ -142,6 +181,7 @@ def test_python_contract_consumption_declares_validated_loader_bindings() -> Non
             "command_adapter_generation_manifest",
         )
     }
+    assert any(entry["loader"] == "command_package_ir_manifest" for entry in entries)
     assert any(entry["loader"] == "lifecycle_generation_readiness_manifest" for entry in entries)
 
 

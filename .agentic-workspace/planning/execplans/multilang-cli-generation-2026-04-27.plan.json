@@ -21,7 +21,7 @@
     "execution": {
       "milestone": "multilang-cli-generation-2026-04-27",
       "status": "active",
-      "next_step": "Define the canonical command-package IR for #396.",
+      "next_step": "Generate Python and TypeScript proof package slices for #397/#398.",
       "proof": "Use agentic-workspace proof --changed, focused contract tests, generated-package checks, maintainer surfaces, planning checks, and root CLI tests as selected."
     },
     "scope": {
@@ -57,9 +57,9 @@
     "what this slice enabled": "A durable migration path from hand-authored CLI surfaces to generated Python and TypeScript package adapters.",
     "intentionally deferred": "Full lifecycle mutation generation and broad shell implementation.",
     "discovered implications": "The existing generated-adapter contract is adapter-centric; multi-language packages need one compact command-package view that joins command shape, operation refs, primitive bindings, target outputs, and conformance refs.",
-    "proof achieved now": "#394/#395 audit and strategy artifacts identify blockers, first safe slices, and off-the-shelf-first tooling posture.",
-    "validation still needed": "Command-package IR validation and generated target proofs.",
-    "next likely slice": "#396 canonical command-package IR."
+    "proof achieved now": "#394/#395 audit/strategy artifacts are present; #396 command-package IR validates and is checked against adapter, operation, primitive, and conformance refs.",
+    "validation still needed": "Generated Python/TypeScript package target proofs and Docker routing.",
+    "next likely slice": "#397/#398 generated package proof."
   },
   "intent_interpretation": {
     "literal request": "Create a branch, ingest issues, plan and implement the work end-to-end, commit after each milestone, create a PR, and dogfood the package with new issues for actionable improvement lanes.",
@@ -113,15 +113,15 @@
     }
   ],
   "active_milestone": {
-    "id": "command-package-ir",
+    "id": "generated-python-typescript-proof",
     "status": "active",
-    "scope": "#396",
+    "scope": "#397/#398",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Define and validate a compact command-package IR for #396."
+    "Generate Python and TypeScript proof package slices from the command-package IR."
   ],
   "blockers": [
     "None."
@@ -132,6 +132,12 @@
     ".agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json",
     "docs/reviews/multi-language-cli-generation-gap-audit-2026-04-27.md",
     "docs/reviews/generated-cli-package-strategy-2026-04-27.md"
+    ,
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/schemas/command_package_ir.schema.json",
+    "src/agentic_workspace/contract_tooling.py",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "tests/test_contract_tooling.py"
   ],
   "invariants": [
     "Preserve runtime primitive ownership.",
@@ -165,12 +171,12 @@
     "run status": "active",
     "executor": "Codex",
     "handoff source": "#393-#401",
-    "what happened": "Created branch, ingested issue bodies, initialized checked-in planning, and added the #394/#395 audit/strategy artifacts.",
-    "scope touched": "planning state/evidence/execplan and review artifacts",
-    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json; docs/reviews/multi-language-cli-generation-gap-audit-2026-04-27.md; docs/reviews/generated-cli-package-strategy-2026-04-27.md",
-    "validations run": "startup, summary, ownership, planning surface check, planning doctor",
-    "result for continuation": "#394/#395 evidence is present; continue to #396.",
-    "next step": "Define command-package IR."
+    "what happened": "Created branch, ingested issue bodies, added the #394/#395 audit/strategy artifacts, and added the #396 command-package IR with schema, loader, checker parity, and tests.",
+    "scope touched": "planning state/evidence/execplan, review artifacts, contracts, checker, and focused tests",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json; docs/reviews/multi-language-cli-generation-gap-audit-2026-04-27.md; docs/reviews/generated-cli-package-strategy-2026-04-27.md; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/schemas/command_package_ir.schema.json; src/agentic_workspace/contracts/contract_inventory.json; src/agentic_workspace/contracts/python_contract_consumption.json; src/agentic_workspace/contract_tooling.py; scripts/check/check_contract_tooling_surfaces.py; tests/test_contract_tooling.py",
+    "validations run": "contract tooling check, focused contract tests, focused ruff",
+    "result for continuation": "#396 IR is present and checked; continue to #397/#398.",
+    "next step": "Generate Python and TypeScript proof package slices."
   },
   "finished_run_review": {
     "review status": "not-finished",
@@ -212,7 +218,7 @@
     "follow-on routed to": "",
     "post-work posterity capture": "",
     "knowledge promoted (Memory/Docs/Config)": "",
-    "resume from": "Continue with active_milestone command-package-ir."
+    "resume from": "Continue with active_milestone generated-python-typescript-proof."
   },
   "closeout_distillation": {
     "buckets": {

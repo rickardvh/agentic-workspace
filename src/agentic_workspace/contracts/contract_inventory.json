@@ -295,6 +295,16 @@
       "notes": "Generator-facing adapter bindings join command shape, operation contracts, primitive refs, schemas, projection hints, and conformance refs while leaving runtime primitive behavior implementation-owned."
     },
     {
+      "area": "command_package_ir",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json",
+      "consumers": [
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "future Python and TypeScript package generators"
+      ],
+      "notes": "Implementation-independent package view joins generated command adapters into target package definitions so Python and TypeScript outputs can derive from the same contract without reading CLI implementation code."
+    },
+    {
       "area": "python_extraction_map",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/python_extraction_map.json",
