@@ -1,0 +1,230 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Archive Closeout Proof Report Prep",
+  "goal": [
+    "Implement #471 by teaching archive closeout preparation to fill a compact proof_report when validation evidence is already present, so completed plans do not require manual JSON edits solely to satisfy archive validation."
+  ],
+  "non_goals": [
+    "Do not invent or execute validation commands from the archive command.",
+    "Do not weaken archive validation for truly missing proof.",
+    "Do not make proof-report prose large or first-line startup input."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "A completed execplan with validation evidence can be archived with --prepare-closeout without manual proof_report patching.",
+      "constraints": "Keep proof_report compact and derived only from existing plan evidence.",
+      "latitude": "Choose a small normalized proof_report default using execution_summary, execution_run, or validation_commands evidence.",
+      "escalation": "Escalate if archive validation cannot distinguish missing proof from compact evidence."
+    },
+    "execution": {
+      "milestone": "archive-closeout-proof-report-prep",
+      "status": "completed",
+      "next_step": "Archive this completed slice and continue with the next #450 child lane.",
+      "proof": "planning package tests, archive-plan focused tests, ruff, proof selector, planning surfaces"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/archive-closeout-proof-report-prep.plan.json",
+        "packages/planning/src/repo_planning_bootstrap/",
+        "packages/planning/tests/"
+      ],
+      "invariants": [
+        "Archive validation still catches truly missing proof.",
+        "Prepared proof_report is compact and evidence-derived.",
+        "No validation command execution is hidden inside archive-plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#467/#469 remain after this slice unless validation proves they are satisfied or superseded.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #471 closeout, refresh external evidence and promote the next #450 child indicated by validation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "archive-plan --prepare-closeout can populate compact proof_report fields from existing validation evidence.",
+    "intentionally deferred": "#467/#469 remain separate #450 child lanes.",
+    "discovered implications": "Closeout is cheaper when validation evidence is recorded in execution_summary or execution_run before archive.",
+    "proof achieved now": "yes; planning package tests, ruff, planning-surface checks, proof selection, and planning doctor passed.",
+    "validation still needed": "none for this bounded slice",
+    "next likely slice": "refresh external evidence, then promote the next #450 child indicated by open issue state"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Archive closeout preparation should accept proof-report evidence.",
+    "hard constraints": "Do not reduce archive proof trust or hide validation execution.",
+    "agent may decide locally": "Which existing evidence fields should populate the compact proof_report.",
+    "escalate when": "A plan has no validation evidence and archive would have to invent proof."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Reduce closeout ceremony rather than adding new workflow surfaces.",
+    "broader-lane validation question": "Can a validated milestone close with one archive command and no manual schema patch?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/471"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/471",
+      "label": "#471 archive proof report prep",
+      "role": "source_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "archive-closeout-proof-report-prep",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive the completed plan with --prepare-closeout, refresh external evidence, and promote the next #450 child lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/archive-closeout-proof-report-prep.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/",
+    "packages/planning/tests/"
+  ],
+  "invariants": [
+    "Archive validation still catches truly missing proof.",
+    "Prepared proof_report is compact and evidence-derived.",
+    "No validation command execution is hidden inside archive-plan."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "cd packages/planning && uv run pytest tests/test_installer.py -q",
+    "cd packages/planning && uv run ruff check .",
+    "uv run ruff check packages/planning/src packages/planning/tests",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/archive-closeout-proof-report-prep.plan.json packages/planning/src/repo_planning_bootstrap packages/planning/tests --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "--prepare-closeout can populate proof_report from existing validation evidence.",
+    "Archive validation still fails when no proof or validation evidence exists.",
+    "Tests cover proof_report normalization and missing-proof behavior.",
+    "Closeout remains compact and mechanical."
+  ],
+  "execution_summary": {
+    "outcome delivered": "archive-plan --prepare-closeout now derives compact proof_report fields from existing validation evidence without weakening missing-proof validation.",
+    "validation confirmed": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .; uv run ruff check packages/planning/src packages/planning/tests; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/archive-closeout-proof-report-prep.plan.json packages/planning/src/repo_planning_bootstrap packages/planning/tests --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge",
+    "post-work posterity capture": "No durable docs or Memory promotion needed; tests and archived proof capture the reusable behavior.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next #450 child lane after external evidence refresh"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "codex",
+    "handoff source": ".agentic-workspace/planning/execplans/archive-closeout-proof-report-prep.plan.json",
+    "what happened": "Added proof_report preparation from existing validation evidence and covered it with archive-plan tests while preserving missing-proof validation.",
+    "scope touched": "packages/planning archive closeout preparation plus focused tests and planning surfaces",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/archive-closeout-proof-report-prep.plan.json",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .; uv run ruff check packages/planning/src packages/planning/tests; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/archive-closeout-proof-report-prep.plan.json packages/planning/src/repo_planning_bootstrap packages/planning/tests --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "#471 is complete; #467/#469 remain under #450.",
+    "next step": "archive this plan, close #471, refresh external evidence, then continue the next open child lane"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed inside planning closeout behavior, focused tests, and planning state.",
+    "proof status": "validation and closure checks passed for the bounded slice.",
+    "intent served": "yes; the archive closeout path now avoids manual proof_report edits when validation evidence already exists.",
+    "config compliance": "yes; compact package commands and checked-in planning surfaces drove execution.",
+    "misinterpretation risk": "low; missing validation evidence still leaves proof_report absent and archive validation still rejects it.",
+    "follow-on decision": "archive-but-keep-lane-open for #450; continue #467/#469 separately."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-level execution detail is preserved only in the archived proof record.",
+          "owner": "discard",
+          "source": "execution_summary"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#467/#469 remain open under #450 after #471 closes.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "none",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "none",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#471 archive proof report prep",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/471"
+        },
+        {
+          "summary": "#450 feature tiers and surface merge",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/450"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted after #472 closeout; #471 is the remaining small closeout-friction child under #450."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Archive closeout preparation should accept proof-report evidence.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge activates a fresh bounded slice."
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .; uv run ruff check packages/planning/src packages/planning/tests; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/archive-closeout-proof-report-prep.plan.json packages/planning/src/repo_planning_bootstrap packages/planning/tests --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "proof achieved now": "yes; planning package tests, ruff, planning-surface checks, proof selection, and planning doctor passed.",
+    "evidence for \"proof achieved\" state": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .; uv run ruff check packages/planning/src packages/planning/tests; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/archive-closeout-proof-report-prep.plan.json packages/planning/src/repo_planning_bootstrap packages/planning/tests --format json; uv run agentic-workspace doctor --target . --modules planning --format json"
+  }
+}

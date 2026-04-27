@@ -2069,6 +2069,7 @@ def test_archive_plan_prepare_closeout_dry_run_returns_valid_patch(tmp_path: Pat
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
     _write_execplan_record(record_path, status="completed")
     record = json.loads(record_path.read_text(encoding="utf-8"))
+    record.pop("proof_report")
     record.pop("intent_satisfaction")
     record.pop("closure_check")
     record.pop("closeout_distillation", None)
@@ -2137,6 +2138,8 @@ candidates = []
     assert any(action["kind"] == "updated" and "prepared normalized closeout fields" in action["detail"] for action in payload["actions"])
     assert any(action["kind"] == "archived" for action in payload["actions"])
     assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
+    assert archived["proof_report"]["validation proof"] == "uv run pytest tests/test_check_planning_surfaces.py"
+    assert archived["proof_report"]["proof achieved now"] == "validation and closure checks passed for the bounded slice."
     assert archived["closure_check"]["closure decision"] == "archive-and-close"
     assert archived["closeout_distillation"]["buckets"]["discard"][0]["owner"] == "discard"
     assert not record_path.exists()

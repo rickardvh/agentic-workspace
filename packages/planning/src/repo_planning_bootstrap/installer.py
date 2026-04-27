@@ -5403,6 +5403,41 @@ def _render_inactive_execplan_residue(*, plan_path: Path, target_root: Path) -> 
     return "\n".join(lines)
 
 
+def _prepared_closeout_proof_report(
+    *,
+    proof_report: dict[str, str],
+    execution_summary: dict[str, str],
+    execution_run: dict[str, str],
+    finished_run_review: dict[str, str],
+    iterative_follow_through: dict[str, str],
+) -> dict[str, str]:
+    validation_evidence = (
+        proof_report.get("validation proof", "").strip()
+        or execution_summary.get("validation confirmed", "").strip()
+        or execution_run.get("validations run", "").strip()
+    )
+    if not validation_evidence or validation_evidence.lower() in {"pending", "tbd", "todo"}:
+        return {}
+
+    proof_now = (
+        proof_report.get("proof achieved now", "").strip()
+        or iterative_follow_through.get("proof achieved now", "").strip()
+        or finished_run_review.get("proof status", "").strip()
+    )
+    if not proof_now or proof_now.lower() in {"pending", "tbd", "todo"}:
+        proof_now = "yes; validation evidence is recorded in execution summary."
+
+    proof_evidence = proof_report.get('evidence for "proof achieved" state', "").strip()
+    if not proof_evidence:
+        proof_evidence = execution_run.get("validations run", "").strip() or execution_summary.get("validation confirmed", "").strip()
+
+    return {
+        "validation proof": validation_evidence,
+        "proof achieved now": proof_now,
+        'evidence for "proof achieved" state': proof_evidence,
+    }
+
+
 def _prepare_execplan_closeout(
     *,
     plan_path: Path,
@@ -5429,6 +5464,11 @@ def _prepare_execplan_closeout(
     required_continuation = _record_section_dict(record, "required_continuation") or {}
     delegated_judgment = _record_section_dict(record, "delegated_judgment") or {}
     intent_interpretation = _record_section_dict(record, "intent_interpretation") or {}
+    execution_summary = _record_section_dict(record, "execution_summary") or {}
+    execution_run = _record_section_dict(record, "execution_run") or {}
+    finished_run_review = _record_section_dict(record, "finished_run_review") or {}
+    iterative_follow_through = _record_section_dict(record, "iterative_follow_through") or {}
+    proof_report = _record_section_dict(record, "proof_report") or {}
     completes_larger_outcome = intent_continuity.get("this slice completes the larger intended outcome", "").strip().lower()
     continuation_owner = (
         unsolved_intent
@@ -5490,6 +5530,16 @@ def _prepare_execplan_closeout(
             "reopen trigger": reopen,
         },
     }
+
+    prepared_proof_report = _prepared_closeout_proof_report(
+        proof_report=proof_report,
+        execution_summary=execution_summary,
+        execution_run=execution_run,
+        finished_run_review=finished_run_review,
+        iterative_follow_through=iterative_follow_through,
+    )
+    if prepared_proof_report:
+        patch["proof_report"] = prepared_proof_report
 
     buckets = _closeout_distillation_buckets(record=record, explicit={})
     for bucket in ("discard", "continuation", "memory", "config_check", "docs", "issue_follow_up"):
