@@ -65,6 +65,18 @@ def _artifact_entries(path: Path) -> set[str]:
         return _normalized_contract_entries(names, payload_prefix=f"{root_dir}/bootstrap/", skills_prefix=f"{root_dir}/skills/")
 
 
+def _raw_artifact_entries(path: Path) -> set[str]:
+    if path.name.endswith(".whl"):
+        with ZipFile(path) as whl:
+            return {name for name in whl.namelist() if not name.endswith("/")}
+
+    with tarfile.open(path, "r:gz") as tar:
+        members = [member for member in tar.getmembers() if member.isfile()]
+    root_dir = next(name.split("/", 1)[0] for name in (member.name for member in members) if name.startswith("agentic_planning_bootstrap-"))
+    prefix = f"{root_dir}/"
+    return {member.name.removeprefix(prefix) for member in members if member.name.startswith(prefix)}
+
+
 def _normalized_contract_entries(names: list[str], *, payload_prefix: str, skills_prefix: str) -> set[str]:
     entries: set[str] = set()
     for name in names:
@@ -126,6 +138,16 @@ def test_planning_artifacts_contain_required_contract_inventory(kind: str) -> No
     with tempfile.TemporaryDirectory() as tmpdir:
         artifact = _build_artifact(kind, Path(tmpdir))
         _assert_contract_inventory(artifact)
+
+
+@pytest.mark.parametrize("kind", ("wheel", "sdist"))
+def test_planning_artifacts_exclude_generated_cli_package_metadata(kind: str) -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        artifact = _build_artifact(kind, Path(tmpdir))
+        entries = _raw_artifact_entries(artifact)
+
+    assert any(entry.endswith("repo_planning_bootstrap/generated_command_adapters.py") for entry in entries)
+    assert not any("repo_planning_bootstrap/generated_cli_package/" in entry for entry in entries)
 
 
 def test_payload_surface_classification_covers_package_payload_sources() -> None:

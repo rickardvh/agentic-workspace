@@ -1,0 +1,240 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workspace Codegen Shipped Footprint",
+  "goal": [
+    "Implement #459 by ensuring generated CLI package infrastructure stays source-checkout/development scoped rather than shipped as daily-operation runtime package payload, while intentionally shipped runtime generated adapters remain available."
+  ],
+  "non_goals": [
+    "Do not remove generated command adapters used by runtime dispatch.",
+    "Do not remove command-generation work from the source checkout.",
+    "Do not publish or extract the generator package in this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Ordinary installed packages do not include generated CLI package infrastructure unless runtime operation requires it.",
+      "constraints": "Keep source-checkout maintainer checks and generated fixtures working.",
+      "latitude": "Choose the smallest package metadata/tests/docs changes that prove the shipped boundary.",
+      "escalation": "Escalate if excluding a generated surface breaks an intentional runtime path."
+    },
+    "execution": {
+      "milestone": "workspace-codegen-shipped-footprint",
+      "status": "completed",
+      "next_step": "Archive this completed slice, close #459, refresh external issue evidence, then promote the next #450 child indicated by refreshed planning state.",
+      "proof": "package build inventory tests, contract tooling, workspace/planning/memory tests as touched, ruff, proof selector, doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/workspace-codegen-shipped-footprint.plan.json",
+        "pyproject.toml",
+        "packages/planning/pyproject.toml",
+        "packages/memory/pyproject.toml",
+        "tests/",
+        "packages/planning/tests/",
+        "packages/memory/tests/",
+        "docs/"
+      ],
+      "invariants": [
+        "Runtime generated command adapters remain shipped when CLIs import them.",
+        "Generated CLI package metadata remains available in the source checkout for maintainer proof.",
+        "Host repos are not asked to understand generator internals."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#460 plus #467/#469/#471 remain after this slice unless validation proves they are satisfied or superseded.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #459 closeout, refresh external evidence and promote the next #450 child indicated by validation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Root, planning, and memory package artifacts now prove generated_cli_package metadata is source-checkout infrastructure while runtime generated_command_adapters.py stays shipped where package CLIs import it.",
+    "intentionally deferred": "none",
+    "discovered implications": "The package build boundary needs explicit regression tests because generated metadata directories are easy to ship accidentally.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this bounded slice",
+    "next likely slice": "promote the next #450 child after external issue evidence refresh"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Keep generated CLI package infrastructure out of shipped daily-operation packages.",
+    "hard constraints": "Do not break runtime CLI dispatch or maintainer source-checkout proof.",
+    "agent may decide locally": "Which generated artifacts are runtime adapters versus development/proof metadata.",
+    "escalate when": "A generated package metadata module is required by installed runtime behavior."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Reduce shipped/default footprint rather than adding capability.",
+    "broader-lane validation question": "Does this make ordinary installed packages smaller without weakening maintainer proof?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/459"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/459",
+      "label": "#459 codegen shipped footprint",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "workspace-codegen-shipped-footprint",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Audit root/planning/memory package build inventories and exclude generated_cli_package metadata modules from shipped wheels/sdists if they are not runtime-required."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/workspace-codegen-shipped-footprint.plan.json",
+    "pyproject.toml",
+    "packages/planning/pyproject.toml",
+    "packages/memory/pyproject.toml",
+    "tests/",
+    "packages/planning/tests/",
+    "packages/memory/tests/",
+    "docs/"
+  ],
+  "invariants": [
+    "Runtime generated command adapters remain shipped when CLIs import them.",
+    "Generated CLI package metadata remains available in the source checkout for maintainer proof.",
+    "Host repos are not asked to understand generator internals."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_contract_tooling.py tests/test_workspace_cli.py -q",
+    "uv run pytest packages/planning/tests/test_packaging.py packages/memory/tests/test_packaging.py -q",
+    "uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/workspace-codegen-shipped-footprint.plan.json pyproject.toml packages/planning/pyproject.toml packages/memory/pyproject.toml tests packages/planning/tests packages/memory/tests docs --format json",
+    "uv run agentic-workspace doctor --target . --modules planning,memory --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "Ordinary installed packages do not include codegen infrastructure unless runtime operation requires it.",
+    "Host repos are not asked to understand generator internals.",
+    "Codegen schemas/tools/proof fixtures are labelled and packaged as development-checkout infrastructure.",
+    "Generated adapters remain usable only where intentionally exposed."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Excluded generated_cli_package metadata from root, planning, and memory wheel/sdist payloads while preserving generated_command_adapters.py as intentional runtime adapter payload.",
+    "validation confirmed": "uv run pytest tests/test_packaging.py packages/planning/tests/test_packaging.py packages/memory/tests/test_packaging.py -q; uv run ruff check tests/test_packaging.py packages/planning/tests/test_packaging.py packages/memory/tests/test_packaging.py; uv run pytest tests/test_contract_tooling.py tests/test_workspace_cli.py tests/test_packaging.py packages/planning/tests/test_packaging.py packages/memory/tests/test_packaging.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .; cd packages/memory && uv run pytest tests/test_installer.py -q; cd packages/memory && uv run ruff check .; uv run agentic-workspace proof --target . --changed ... --format json; uv run agentic-workspace doctor --target . --modules planning,memory --format json",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge",
+    "post-work posterity capture": "Plan closeout records the shipped/source-checkout boundary and package artifact tests now guard it.",
+    "knowledge promoted (Memory/Docs/Config)": "docs/source-payload-operational-install.md now states that generated_cli_package metadata is source-checkout maintainer/proof infrastructure, not shipped runtime payload.",
+    "resume from": "refresh external issue evidence and promote the next #450 child"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": ".agentic-workspace/planning/execplans/workspace-codegen-shipped-footprint.plan.json",
+    "what happened": "Added package metadata excludes and package artifact tests so generated_cli_package development metadata is not shipped in root, planning, or memory package artifacts, while runtime generated command adapters remain included.",
+    "scope touched": "root/planning/memory pyproject package metadata, package artifact tests, source payload docs, and active planning state.",
+    "changed surfaces": "Existing packaging metadata, tests, docs, and planning surfaces were updated; no runtime command path or generated adapter API changed.",
+    "validations run": "uv run pytest tests/test_packaging.py packages/planning/tests/test_packaging.py packages/memory/tests/test_packaging.py -q; uv run ruff check tests/test_packaging.py packages/planning/tests/test_packaging.py packages/memory/tests/test_packaging.py; uv run pytest tests/test_contract_tooling.py tests/test_workspace_cli.py tests/test_packaging.py packages/planning/tests/test_packaging.py packages/memory/tests/test_packaging.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .; cd packages/memory && uv run pytest tests/test_installer.py -q; cd packages/memory && uv run ruff check .; uv run agentic-workspace proof --target . --changed ... --format json; uv run agentic-workspace doctor --target . --modules planning,memory --format json",
+    "result for continuation": "This slice is ready to archive and #459 can close; parent #450 remains open.",
+    "next step": "Refresh external issue evidence and promote the next #450 child."
+  },
+  "finished_run_review": {
+    "review status": "reviewed",
+    "scope respected": "yes; changes are limited to package shipped-footprint boundaries and their proof.",
+    "proof status": "passed",
+    "intent served": "yes; ordinary package artifacts no longer carry generated_cli_package metadata while runtime generated adapters stay available.",
+    "config compliance": "yes; the source checkout keeps maintainer/codegen proof infrastructure and installed packages stay smaller.",
+    "misinterpretation risk": "low; package artifact tests assert include/exclude boundaries for root, planning, and memory.",
+    "follow-on decision": "archive #459 and continue parent #450 through remaining child issues."
+  },
+  "proof_report": {
+    "validation proof": "All selected proof commands passed: package artifact tests, workspace CLI/contract tests, package-local installer tests and ruff, contract tooling check, ruff, maintainer surfaces, planning surfaces, proof selector, and planning/memory doctor.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Root/planning/memory packaging tests passed and built artifacts with generated_command_adapters.py included and generated_cli_package/ excluded; combined targeted workspace test run: 224 passed; planning package installer tests: 127 passed; memory package installer tests: 197 passed; ruff and doctor passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Keep generated CLI package infrastructure out of shipped daily-operation packages.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge activates a fresh bounded slice."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "One-off build artifact inventory paths are not durable beyond the package tests.",
+          "owner": "archive-only",
+          "source": ""
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue the parent #450 feature-tier/surface-merge lane after #459 closeout.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": ""
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "Package artifact tests now guard generated_cli_package as source-checkout infrastructure and generated_command_adapters.py as intentional runtime payload.",
+          "owner": "tests/test_packaging.py; packages/planning/tests/test_packaging.py; packages/memory/tests/test_packaging.py",
+          "source": ""
+        },
+        {
+          "summary": "docs/source-payload-operational-install.md now states that generated_cli_package metadata is source-checkout maintainer/proof infrastructure, not shipped runtime payload.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "Source payload docs now distinguish generated CLI package metadata from runtime generated command adapters.",
+          "owner": "docs/source-payload-operational-install.md",
+          "source": ""
+        },
+        {
+          "summary": "docs/source-payload-operational-install.md now states that generated_cli_package metadata is source-checkout maintainer/proof infrastructure, not shipped runtime payload.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#459 can close after commit/push; parent #450 remains open for remaining children.",
+          "owner": "github",
+          "source": ""
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted after #458 external-work reconciliation closeout."
+  ]
+}

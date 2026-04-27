@@ -51,6 +51,24 @@ def test_memory_wheel_and_sdist_share_the_same_managed_inventory() -> None:
         assert _artifact_inventory(wheel_path) == _artifact_inventory(sdist_path)
 
 
+def test_memory_wheel_excludes_generated_cli_package_metadata() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        wheel_path = _build_artifact("wheel", Path(tmpdir))
+        inventory = _raw_artifact_inventory(wheel_path)
+
+    assert "repo_memory_bootstrap/generated_command_adapters.py" in inventory
+    assert not any("repo_memory_bootstrap/generated_cli_package/" in path for path in inventory)
+
+
+def test_memory_sdist_excludes_generated_cli_package_metadata() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sdist_path = _build_artifact("sdist", Path(tmpdir))
+        inventory = _raw_artifact_inventory(sdist_path)
+
+    assert "src/repo_memory_bootstrap/generated_command_adapters.py" in inventory
+    assert not any("src/repo_memory_bootstrap/generated_cli_package/" in path for path in inventory)
+
+
 def _build_artifact(kind: str, output_dir: Path) -> Path:
     subprocess.run(
         ["uv", "build", f"--{kind}", "-o", str(output_dir)],
@@ -106,3 +124,16 @@ def _sdist_inventory(sdist_path: Path) -> set[str]:
 def _missing_paths(inventory: set[str], required: set[str]) -> str:
     missing = sorted(required - inventory)
     return f"Missing artifact paths: {missing}"
+
+
+def _raw_artifact_inventory(artifact_path: Path) -> set[str]:
+    if artifact_path.suffix == ".whl":
+        with ZipFile(artifact_path) as whl:
+            return {name for name in whl.namelist() if not name.endswith("/")}
+    with tarfile.open(artifact_path, "r:gz") as tar:
+        members = [member for member in tar.getmembers() if member.isfile()]
+    root_dirs = {Path(member.name).parts[0] for member in members if member.name}
+    assert len(root_dirs) == 1, f"Expected exactly 1 root directory in sdist, found {root_dirs}"
+    root_dir = next(iter(root_dirs))
+    prefix = f"{root_dir}/"
+    return {member.name.removeprefix(prefix) for member in members if member.name.startswith(prefix)}
