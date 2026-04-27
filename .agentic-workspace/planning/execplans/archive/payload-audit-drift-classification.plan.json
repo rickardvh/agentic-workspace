@@ -16,16 +16,16 @@
     },
     "execution": {
       "milestone": "payload-audit-drift-classification",
-      "status": "in-progress",
-      "next_step": "Inspect current payload/source install-sync checks and identify where raw mismatches are produced.",
-      "proof": "focused planning payload audit tests plus proof selector"
+      "status": "completed",
+      "next_step": "Promote #447 as the next #442 child slice.",
+      "proof": "source payload checker tests, strict checker run, proof selector, planning doctor, and broadened workspace CLI lane"
     },
     "scope": {
       "touched": [
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans/payload-audit-drift-classification.plan.json",
-        "packages/planning/src/repo_planning_bootstrap/installer.py",
-        "packages/planning/tests/test_installer.py"
+        "scripts/check/check_source_payload_operational_install.py",
+        "tests/test_source_payload_operational_install.py"
       ],
       "invariants": [
         "Classify drift without turning transient/generated artifacts into failing payload drift.",
@@ -51,12 +51,12 @@
     "issues": "#442, #445, #446, #447, #448"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
+    "what this slice enabled": "Source payload audit now separates intentional source extras, ignored transient bytecode/cache files, and unexpected source extras with compact counts and warning pressure only for real drift.",
     "intentionally deferred": "none",
     "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "proof achieved now": "uv run pytest tests/test_source_payload_operational_install.py -q; uv run python scripts/check/check_source_payload_operational_install.py --format json --strict; uv run pytest tests/test_workspace_cli.py tests/test_source_payload_operational_install.py -q; uv run ruff check src tests scripts/check/check_source_payload_operational_install.py; uv run agentic-workspace proof --target . --changed scripts/check/check_source_payload_operational_install.py tests/test_source_payload_operational_install.py .agentic-workspace/planning/execplans/payload-audit-drift-classification.plan.json .agentic-workspace/planning/state.toml --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "validation still needed": "none for this slice",
+    "next likely slice": "#447 CLI authority proof routing"
   },
   "delegated_judgment": {
     "requested outcome": "Classify source payload audit drift instead of reporting raw mismatches.",
@@ -71,7 +71,8 @@
     "pre-work config pull": "uv run agentic-workspace summary --format json",
     "pre-work memory pull": "not needed",
     "tiny resumability note": "Next active issue is #446 payload audit drift classification.",
-    "context-shift triggers": "Before changing payload ownership semantics or broad install behavior."
+    "context-shift triggers": "Before changing payload ownership semantics or broad install behavior.",
+    "resume from": "#447 CLI authority proof routing after this archived closeout"
   },
   "system_intent_alignment": {
     "relevant system intent": "Proof should answer the actual trust question for the bounded slice.",
@@ -114,15 +115,18 @@
   "touched_paths": [
     ".agentic-workspace/planning/state.toml",
     ".agentic-workspace/planning/execplans/payload-audit-drift-classification.plan.json",
-    "packages/planning/src/repo_planning_bootstrap/installer.py",
-    "packages/planning/tests/test_installer.py"
+    "scripts/check/check_source_payload_operational_install.py",
+    "tests/test_source_payload_operational_install.py"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
   ],
   "validation_commands": [
-    "cd packages/planning && uv run pytest tests/test_installer.py -q -k \"payload or drift or source\"",
-    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/payload-audit-drift-classification.plan.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json",
+    "uv run pytest tests/test_source_payload_operational_install.py -q",
+    "uv run python scripts/check/check_source_payload_operational_install.py --format json --strict",
+    "uv run pytest tests/test_workspace_cli.py tests/test_source_payload_operational_install.py -q",
+    "uv run ruff check src tests scripts/check/check_source_payload_operational_install.py",
+    "uv run agentic-workspace proof --target . --changed scripts/check/check_source_payload_operational_install.py tests/test_source_payload_operational_install.py .agentic-workspace/planning/execplans/payload-audit-drift-classification.plan.json .agentic-workspace/planning/state.toml --format json",
     "uv run agentic-workspace doctor --target . --modules planning --format json"
   ],
   "required_tools": [
@@ -135,32 +139,50 @@
     "Tests cover at least one transient file, one intentional source extra, and one real unexpected drift case."
   ],
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "Payload audit drift is now classified before warning pressure: transient bytecode/cache files are ignored, intentional source extras stay current with counts, and unexpected source extras become payload_inventory_drift.",
+    "validation confirmed": "uv run pytest tests/test_source_payload_operational_install.py -q; uv run python scripts/check/check_source_payload_operational_install.py --format json --strict; uv run pytest tests/test_workspace_cli.py tests/test_source_payload_operational_install.py -q; uv run ruff check src tests scripts/check/check_source_payload_operational_install.py; uv run agentic-workspace proof --target . --changed scripts/check/check_source_payload_operational_install.py tests/test_source_payload_operational_install.py .agentic-workspace/planning/execplans/payload-audit-drift-classification.plan.json .agentic-workspace/planning/state.toml --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "follow-on routed to": "#447 CLI authority proof routing",
+    "post-work posterity capture": "Archived execplan records the classification behavior and proof commands.",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": ".agentic-workspace/planning/execplans/cli-authority-proof-routing.plan.json"
   },
   "closure_check": {
-    "slice status": "open",
+    "slice status": "closed",
     "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "Implementation has not started.",
-    "evidence carried forward": "#445 external intent refresh adapter landed and #446 is now active.",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#446 acceptance criteria are covered, but parent #442 still has #447 and #448 open.",
+    "evidence carried forward": "Payload audit output includes missing, unexpected, classification_counts, classified_source_only_or_generated, and ignored_transient_rule fields; tests cover transient ignored files, intentional source extras, and unexpected source extras.",
     "reopen trigger": "payload audit still reports raw mismatches or false-positive drift"
   },
   "closeout_distillation": {
     "buckets": {
       "discard": [],
-      "continuation": [],
+      "continuation": [
+        {
+          "summary": "Promote #447 next in the #442 dogfooding lane.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
       "memory": [],
       "config_check": [],
       "docs": [],
-      "issue_follow_up": []
+      "issue_follow_up": [
+        {
+          "summary": "#446 payload audit drift classification",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/446"
+        },
+        {
+          "summary": "#447 CLI authority proof routing",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/447"
+        }
+      ]
     }
   },
   "drift_log": [
-    "2026-04-27: Promoted after #445 closeout."
+    "2026-04-27: Promoted after #445 closeout.",
+    "2026-04-27: Implementation moved to the root source/payload checker because that is the active payload audit surface."
   ]
 }

@@ -142,10 +142,10 @@ def test_sync_proof_classifies_layers_and_intentional_differences(monkeypatch, t
     planning = proof["packages"][0]
     memory = proof["packages"][1]
     assert planning["source_to_payload_inventory"]["status"] == "current"
-    assert (
-        planning["source_to_payload_inventory"]["classified_source_only_or_generated"][0]["classification"]
-        == "source-only-maintainer-helper"
-    )
+    assert planning["source_to_payload_inventory"]["classified_source_only_or_generated"][0]["classification"] == "intentional-source-extra"
+    assert planning["source_to_payload_inventory"]["classification_counts"] == {"intentional-source-extra": 1}
+    assert planning["source_to_payload_inventory"]["unexpected"] == []
+    assert "Bytecode and cache files" in planning["source_to_payload_inventory"]["ignored_transient_rule"]
     assert all("__pycache__" not in item["path"] for item in planning["source_to_payload_inventory"]["classified_source_only_or_generated"])
     assert memory["source_to_payload_inventory"]["status"] == "current"
     assert memory["source_to_payload_inventory"]["missing"] == []
@@ -170,3 +170,38 @@ def test_sync_proof_warns_on_missing_payload_source(monkeypatch, tmp_path: Path)
 
     assert any(warning.warning_class == "payload_inventory_drift" for warning in warnings)
     assert proof["packages"][0]["source_to_payload_inventory"]["status"] == "drift"
+
+
+def test_sync_proof_warns_on_unclassified_source_extra(monkeypatch, tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_boundary_sync_unexpected_extra")
+    _write_root_surfaces(tmp_path)
+    _write(tmp_path / "packages" / "planning" / "bootstrap" / ".agentic-workspace" / "planning" / "agent-manifest.json", "{}")
+    _write(tmp_path / "packages" / "planning" / "bootstrap" / "unexpected.md", "# unexpected")
+    _write(
+        tmp_path / "packages" / "planning" / "pyproject.toml",
+        """
+        [tool.hatch.build.targets.wheel.force-include]
+        "bootstrap/.agentic-workspace/planning/agent-manifest.json" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/agent-manifest.json"
+        """,
+    )
+    monkeypatch.setattr(mod, "_planning_expected_payload_files", lambda _repo_root: [".agentic-workspace/planning/agent-manifest.json"])
+    monkeypatch.setattr(mod, "_memory_expected_payload_files", lambda _repo_root: [])
+
+    warnings = mod.gather_boundary_warnings(repo_root=tmp_path)
+    proof = mod.gather_sync_proof(repo_root=tmp_path)
+
+    drift_warnings = [warning for warning in warnings if warning.warning_class == "payload_inventory_drift"]
+    assert len(drift_warnings) == 1
+    assert "unexpected source extra(s): unexpected.md" in drift_warnings[0].message
+    inventory = proof["packages"][0]["source_to_payload_inventory"]
+    assert inventory["status"] == "drift"
+    assert inventory["missing"] == []
+    assert inventory["unexpected"] == ["unexpected.md"]
+    assert inventory["classification_counts"] == {"unexpected-source-extra": 1}
+    assert inventory["classified_source_only_or_generated"] == [
+        {
+            "path": "unexpected.md",
+            "classification": "unexpected-source-extra",
+            "rule": "Unexpected bootstrap source extras require classification before they can be treated as intentional.",
+        }
+    ]

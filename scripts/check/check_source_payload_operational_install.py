@@ -152,13 +152,20 @@ def _force_include_covers_bootstrap_path(entries: dict[str, str], relative: str)
 def _payload_inventory_warnings(*, repo_root: Path, package_name: str, expected: list[str]) -> list[BoundaryWarning]:
     actual = _package_payload_files(repo_root, package_name)
     missing = _missing_payload_sources(expected=expected, actual=actual)
-    if not expected or not missing:
+    classified = _classified_source_only_payload_files(package_name=package_name, expected=expected, actual=actual)
+    unexpected = [item["path"] for item in classified if item["classification"] == "unexpected-source-extra"]
+    if not expected or (not missing and not unexpected):
         return []
+    details: list[str] = []
+    if missing:
+        details.append("missing payload file(s): " + ", ".join(missing))
+    if unexpected:
+        details.append("unexpected source extra(s): " + ", ".join(unexpected))
     return [
         BoundaryWarning(
             WARNING_PAYLOAD_INVENTORY_DRIFT,
             f"packages/{package_name}/bootstrap",
-            f"{package_name} bootstrap payload inventory drifted from package source contract; missing payload file(s): " + ", ".join(missing),
+            f"{package_name} bootstrap payload inventory drifted from package source contract; " + "; ".join(details),
         )
     ]
 
@@ -328,8 +335,8 @@ def gather_boundary_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
     }
 
 
-def _status_from_drift(*, missing: list[str], extra: list[str]) -> str:
-    return "current" if not missing else "drift"
+def _status_from_drift(*, missing: list[str], unexpected_extra_count: int = 0) -> str:
+    return "current" if not missing and unexpected_extra_count == 0 else "drift"
 
 
 def _missing_payload_sources(*, expected: list[str], actual: list[str]) -> list[str]:
@@ -348,15 +355,15 @@ def _classified_source_only_payload_files(*, package_name: str, expected: list[s
     extra = sorted(set(actual) - set(expected))
     classified: list[dict[str, str]] = []
     for relative in extra:
-        classification = "package-source-extra"
-        rule = "Extra bootstrap source file is included in the package payload unless the package manifest intentionally excludes it."
+        classification = "unexpected-source-extra"
+        rule = "Unexpected bootstrap source extras require classification before they can be treated as intentional."
         if package_name == "planning" and (
             relative.startswith("scripts/")
             or relative.startswith("tools/")
             or relative.startswith(".agentic-workspace/planning/scripts/")
             or "__pycache__" in relative
         ):
-            classification = "source-only-maintainer-helper"
+            classification = "intentional-source-extra"
             rule = "Planning maintainer helpers are source/bootstrap aids and are intentionally excluded from the packaged wheel payload."
         elif package_name == "memory" and (
             relative == "AGENTS.template.md"
@@ -371,10 +378,19 @@ def _classified_source_only_payload_files(*, package_name: str, expected: list[s
             or relative == ".agentic-workspace/memory/VERSION.md"
             or relative == ".agentic-workspace/memory/repo/current/routing-feedback.md"
         ):
-            classification = "managed-or-optional-memory-payload"
+            classification = "intentional-source-extra"
             rule = "Memory package computes managed entries and optional fragments from bootstrap source; these extras are intentional when list-files/verify-payload stay current."
         classified.append({"path": relative, "classification": classification, "rule": rule})
     return classified
+
+
+def _classification_counts(items: list[dict[str, str]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in items:
+        classification = item.get("classification", "")
+        if classification:
+            counts[classification] = counts.get(classification, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def _root_status(repo_root: Path, sentinels: list[str]) -> dict[str, object]:
@@ -399,6 +415,8 @@ def _package_sync_proof(
     missing = _missing_payload_sources(expected=expected_payload, actual=actual_payload)
     extra = sorted(set(actual_payload) - set(expected_payload))
     classified_source_only = _classified_source_only_payload_files(package_name=package_name, expected=expected_payload, actual=actual_payload)
+    classification_counts = _classification_counts(classified_source_only)
+    unexpected_extra = [item["path"] for item in classified_source_only if item["classification"] == "unexpected-source-extra"]
     force_include = _force_include_entries(repo_root, package_name)
     manifest_missing = sorted(relative for relative in expected_payload if not _force_include_covers_bootstrap_path(force_include, relative))
     root = _root_status(repo_root, root_sentinels)
@@ -409,7 +427,7 @@ def _package_sync_proof(
     ]
     package_local_warning_classes = sorted({warning for warning in package_warnings if warning == WARNING_PACKAGE_LOCAL_INSTALL_DRIFT})
     status = "current"
-    if missing or manifest_missing or root["status"] != "current" or package_local_warning_classes:
+    if missing or unexpected_extra or manifest_missing or root["status"] != "current" or package_local_warning_classes:
         status = "warning"
     return {
         "package": package_name,
@@ -426,11 +444,15 @@ def _package_sync_proof(
             "Treat root operational state as dogfooding state unless a managed payload file is intentionally refreshed.",
         ],
         "source_to_payload_inventory": {
-            "status": _status_from_drift(missing=missing, extra=extra),
+            "status": _status_from_drift(missing=missing, unexpected_extra_count=len(unexpected_extra)),
             "expected_count": len(expected_payload),
             "actual_count": len(actual_payload),
             "missing": missing,
+            "unexpected": unexpected_extra,
+            "extra_count": len(extra),
+            "classification_counts": classification_counts,
             "classified_source_only_or_generated": classified_source_only,
+            "ignored_transient_rule": "Bytecode and cache files under __pycache__ or with a .pyc suffix are ignored before payload classification.",
             "rule": "Missing package-declared payload sources are drift; extra bootstrap files are classified so intentional source-only or computed managed payloads do not look like unowned drift.",
         },
         "packaged_payload_manifest": {

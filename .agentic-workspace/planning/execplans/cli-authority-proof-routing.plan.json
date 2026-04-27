@@ -1,0 +1,164 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "CLI Authority Proof Routing",
+  "goal": [
+    "Implement #447 so proof selection surfaces CLI authority before generated or executable CLI edits."
+  ],
+  "non_goals": [
+    "Do not build the broader CLI code generation roadmap in this slice.",
+    "Do not change CLI implementation ownership semantics unless the proof lane exposes a real inconsistency."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agents touching CLI files can tell whether the file is source, generator, projection, or hand-owned executable code before implementation starts.",
+      "constraints": "Keep this bounded to proof/startup authority routing and tests.",
+      "latitude": "Choose the smallest contract shape that lets proof selection answer direct-edit authority.",
+      "escalation": "Escalate if the change requires replacing the current CLI architecture."
+    },
+    "execution": {
+      "milestone": "cli-authority-proof-routing",
+      "status": "in-progress",
+      "next_step": "Inspect existing proof lane selection and CLI command/contract metadata.",
+      "proof": "focused proof selection tests plus workspace CLI validation"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/cli-authority-proof-routing.plan.json"
+      ],
+      "invariants": [
+        "CLI authority must be visible before edits, not reconstructed after user challenge.",
+        "Generated or projected CLI slices should name source contract and regeneration path before being treated as safe."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#442: make the plan -> implement -> evaluate continuation loop first-class for long lanes.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane long-session-dogfooding-intent-loop"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#448 remains open after this slice, and #442 remains open until the loop itself is first-class.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #447 closeout, promote #448"
+  },
+  "parent_lane": {
+    "id": "#442",
+    "title": "Add an autopilot intent loop for plan, implement, evaluate, and continue",
+    "priority": "1",
+    "issues": "#442, #445, #446, #447, #448"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Surface CLI authority before generated or executable CLI edits.",
+    "hard constraints": "Do not let generated/projection CLI slices look equivalent to hand-owned executable code.",
+    "agent may decide locally": "The exact proof field names and authority categories.",
+    "escalate when": "The implementation requires replacing the CLI architecture or introducing new package-generation machinery."
+  },
+  "context_budget": {
+    "live working set": "state, this execplan, #447 issue, proof selector metadata, CLI command contracts, and workspace CLI tests",
+    "recoverable later": "archived #445 and #446 closeouts",
+    "externalize before shift": "update execution_summary and closure_check",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Next active issue is #447 CLI authority proof routing.",
+    "context-shift triggers": "Before changing CLI ownership semantics or adding generated CLI machinery."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Implementation should start from compact authority surfaces and avoid manual after-the-fact validation.",
+    "slice shaping bias": "Expose authority in existing proof routing rather than adding a new first-contact surface.",
+    "broader-lane validation question": "Did this slice make the package cheaper and safer to use before direct CLI edits?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/447"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/447",
+      "label": "#447 CLI authority proof routing",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/442",
+      "label": "#442 autopilot intent loop",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "cli-authority-proof-routing",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect proof selector lane definitions.",
+    "Inspect CLI command contracts and any generated adapter metadata.",
+    "Add tests for generated/projection and hand-owned CLI path classification."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/cli-authority-proof-routing.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/cli-authority-proof-routing.plan.json --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "agentic-workspace proof --changed <cli paths> selects a CLI authority lane when appropriate.",
+    "The selected proof states whether the changed file is source, generator, projection, or hand-owned code.",
+    "Generated/projection CLI slices fail early unless their source contract and regeneration path are named.",
+    "Tests cover at least one generated CLI path and one hand-owned CLI path."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "closure_check": {
+    "slice status": "open",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "Implementation has not started.",
+    "evidence carried forward": "#445 external intent refresh adapter and #446 payload drift classification landed.",
+    "reopen trigger": "proof selection still does not expose CLI authority before direct CLI edits"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted after #446 closeout."
+  ]
+}
