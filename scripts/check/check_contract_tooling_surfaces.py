@@ -1082,6 +1082,27 @@ def _validate_review_artifacts_not_startup_inputs() -> list[str]:
     return errors
 
 
+def _validate_product_managed_enclave() -> list[str]:
+    descriptors = cli._module_operations()  # type: ignore[attr-defined]
+    ownership = cli._ownership_payload(target_root=REPO_ROOT, descriptors=descriptors)  # type: ignore[attr-defined]
+    payload = cli._product_managed_enclave_payload(  # type: ignore[attr-defined]
+        target_root=REPO_ROOT,
+        ownership_payload=ownership,
+    )
+    errors: list[str] = []
+    if payload.get("managed_root") != ".agentic-workspace/":
+        errors.append("product-managed enclave managed_root drifted from .agentic-workspace/")
+    if payload.get("boundary_leaks"):
+        errors.append(f"product-managed enclave reports boundary leaks: {payload['boundary_leaks']}")
+    local_only = payload.get("local_only_state", {})
+    if not isinstance(local_only, dict) or local_only.get("status") != "non-authoritative":
+        errors.append("product-managed enclave local-only state must stay non-authoritative")
+    startup_quietness = payload.get("startup_quietness", {})
+    if not isinstance(startup_quietness, dict) or startup_quietness.get("status") != "compact":
+        errors.append("product-managed enclave startup quietness must stay compact")
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     checks: list[tuple[str, list[str]]] = [
@@ -1094,6 +1115,7 @@ def main(argv: list[str] | None = None) -> int:
         ("contract_inventory.json", _validate(contract_inventory_manifest(), "contract_inventory.schema.json")),
         ("contract_inventory owner choice", _validate_contract_inventory_owner_choice()),
         ("review artifacts startup hygiene", _validate_review_artifacts_not_startup_inputs()),
+        ("product-managed enclave", _validate_product_managed_enclave()),
         ("compact answer sample", _validate(_sample_compact_answer(), "compact_contract_answer.schema.json")),
         ("workspace report sample", _validate(_sample_report_payload(), "workspace_report.schema.json")),
         ("workspace config sample", _validate(_sample_workspace_config_payload(), "workspace_config.schema.json")),

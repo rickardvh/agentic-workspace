@@ -2609,6 +2609,10 @@ def _run_report_command(
             config=config,
             active_planning_record=_active_planning_record(module_reports=module_reports),
         ),
+        "product_managed_enclave": _product_managed_enclave_payload(
+            target_root=target_root,
+            ownership_payload=_ownership_payload(target_root=target_root, descriptors=descriptors),
+        ),
         "surface_value_guardrail": surface_value_guardrail,
         "effective_authority": _effective_authority_payload(
             target_root=target_root,
@@ -7576,6 +7580,72 @@ def _select_ownership_payload(
             target=payload["target"],
         )
     return payload
+
+
+def _product_managed_enclave_payload(*, target_root: Path, ownership_payload: dict[str, Any]) -> dict[str, Any]:
+    boundary_review = ownership_payload.get("boundary_review", {})
+    package_owned = boundary_review.get("package_owned", {}) if isinstance(boundary_review, dict) else {}
+    middle_ground = boundary_review.get("middle_ground", {}) if isinstance(boundary_review, dict) else {}
+    module_roots = package_owned.get("module_roots", []) if isinstance(package_owned, dict) else []
+    managed_surfaces = package_owned.get("managed_surfaces", []) if isinstance(package_owned, dict) else []
+    managed_fences = middle_ground.get("managed_fences", []) if isinstance(middle_ground, dict) else []
+    boundary_leaks = [
+        surface
+        for surface in managed_surfaces
+        if isinstance(surface, dict)
+        and not str(surface.get("surface", "")).startswith(".agentic-workspace/")
+        and str(surface.get("ownership", "")) != "managed_fence"
+    ]
+    local_only_paths = [
+        ".agentic-workspace/local/",
+        ".agentic-workspace/local-only/",
+        ".agentic-workspace/delegation-outcomes.local.json",
+        WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+        WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH.as_posix(),
+    ]
+    gitignore = target_root / ".gitignore"
+    local_ignore_status = (
+        "tracked-ignore-present"
+        if gitignore.exists() and ".agentic-workspace/local/" in gitignore.read_text(encoding="utf-8")
+        else "not-declared-in-gitignore"
+    )
+    return {
+        "status": "attention-needed" if boundary_leaks or ownership_payload.get("warnings") else "clean",
+        "managed_root": ".agentic-workspace/",
+        "role": "product-managed enclave, not broad repo-owned startup input",
+        "removability": {
+            "rule": "remove managed files only; repo-owned files keep only explicit managed fences as removable package residue",
+            "module_roots": module_roots,
+            "managed_surfaces": managed_surfaces,
+            "managed_fences": managed_fences,
+            "would_affect": [
+                ".agentic-workspace/ workspace, planning, memory, and system-intent managed payloads",
+                "AGENTS.md managed workflow pointer fence only",
+            ],
+            "would_preserve": [
+                "repo-owned startup instructions outside managed fences",
+                "repo docs, source, tests, generated outputs, and ordinary project files",
+            ],
+        },
+        "startup_quietness": {
+            "status": "compact",
+            "rule": "ordinary startup reads AGENTS.md and compact commands; broad enclave scans are only for selected ownership, report, or module operations",
+            "ordinary_entrypoints": [
+                "AGENTS.md",
+                "agentic-workspace preflight --format json",
+                "agentic-workspace summary --format json",
+                "agentic-workspace defaults --section startup --format json",
+            ],
+        },
+        "local_only_state": {
+            "status": "non-authoritative",
+            "paths": local_only_paths,
+            "gitignore_status": local_ignore_status,
+            "rule": "local-only state may tune local runtime behavior but must not become shared workflow, planning, Memory, or contract authority",
+        },
+        "boundary_leaks": boundary_leaks,
+        "review_command": "agentic-workspace ownership --target ./repo --format json",
+    }
 
 
 def _emit_ownership(

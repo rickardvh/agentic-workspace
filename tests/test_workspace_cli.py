@@ -2989,6 +2989,13 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["system_intent_mirror"]["mirror"]["status"] in {"missing", "present"}
     assert payload["workflow_obligations"]["configured_count"] == 0
     assert payload["workflow_obligations"]["relevant_to_current_work"] == []
+    assert "product_managed_enclave" in payload["schema"]["shared_fields"]
+    enclave = payload["product_managed_enclave"]
+    assert enclave["managed_root"] == ".agentic-workspace/"
+    assert enclave["startup_quietness"]["status"] == "compact"
+    assert enclave["local_only_state"]["status"] == "non-authoritative"
+    assert enclave["boundary_leaks"] == []
+    assert "AGENTS.md managed workflow pointer fence only" in enclave["removability"]["would_affect"]
     assert payload["execution_shape"]["status"] == "present"
     assert payload["execution_shape"]["task_shape"]["id"] == "direct-or-no-active-plan"
     assert payload["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
