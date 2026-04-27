@@ -46,7 +46,12 @@ def _python_module(package: dict[str, Any]) -> str:
     )
 
 
-def _typescript_package_json(package: dict[str, Any], target: dict[str, Any], maturity: dict[str, Any]) -> str:
+def _typescript_package_json(
+    package: dict[str, Any],
+    target: dict[str, Any],
+    maturity: dict[str, Any],
+    runtime_binding: dict[str, Any],
+) -> str:
     payload = {
         "name": target["package_name"],
         "version": "0.0.0-generated",
@@ -60,6 +65,7 @@ def _typescript_package_json(package: dict[str, Any], target: dict[str, Any], ma
             "fixtureOnly": True,
             "generationStatus": target["generation_status"],
             "maturity": maturity,
+            "runtimeBinding": runtime_binding,
             "source": "src/agentic_workspace/contracts/command_package_ir.json",
             "program": package["program"],
             "declaredEntrypoints": target["entrypoints"]
@@ -104,13 +110,19 @@ def _typescript_test(package: dict[str, Any]) -> str:
 def _render_outputs(manifest: dict[str, Any]) -> list[tuple[Path, str]]:
     outputs: list[tuple[Path, str]] = []
     maturity_levels = _maturity_levels(manifest)
+    runtime_binding = manifest["generation_policy"]["non_python_runtime_binding"]
     for package in manifest["packages"]:
         for target in package["targets"]:
             root = REPO_ROOT / str(target["generated_root"])
             if target["kind"] == "python":
                 outputs.append((root / "__init__.py", _python_module(package)))
             elif target["kind"] == "typescript":
-                outputs.append((root / "package.json", _typescript_package_json(package, target, maturity_levels[target["maturity_level_ref"]])))
+                outputs.append(
+                    (
+                        root / "package.json",
+                        _typescript_package_json(package, target, maturity_levels[target["maturity_level_ref"]], runtime_binding),
+                    )
+                )
                 outputs.append((root / "src" / "commandPackage.ts", _typescript_module(package)))
                 outputs.append((root / "test" / "command-package.test.mjs", _typescript_test(package)))
     return outputs

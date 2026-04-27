@@ -19,6 +19,36 @@
       "weak_agent_routing": "forbidden"
     },
     "program": "agentic-workspace",
+    "runtimeBinding": {
+      "error_mapping": [
+        "Generated adapter failures before process handoff are adapter failures.",
+        "Non-zero exits returned by the delegated canonical process are runtime failures unless the conformance case expects the error.",
+        "Generation freshness and no-direct-edit failures remain generation-layer failures before runtime execution starts."
+      ],
+      "runtime_owns": [
+        "live workspace inspection",
+        "operation primitive implementation",
+        "payload assembly",
+        "canonical JSON or text output behavior"
+      ],
+      "scope": "Read-only generated non-Python adapters may invoke the existing Python command surface as the runtime boundary; mutation-capable commands remain deferred until lifecycle dry-run, preflight, and refusal conformance are explicit.",
+      "selected_model": "generated parser/help with process handoff to canonical Python CLI",
+      "target_projection_owns": [
+        "target package entrypoint wiring",
+        "argv spelling and help rendering",
+        "subprocess invocation envelope",
+        "stdout and stderr forwarding",
+        "exit-code propagation"
+      ],
+      "universal_contract_owns": [
+        "command identity",
+        "operation reference",
+        "input and output schema references",
+        "effect hints",
+        "runtime primitive reference identity",
+        "conformance references"
+      ]
+    },
     "source": "src/agentic_workspace/contracts/command_package_ir.json"
   },
   "name": "@agentic-workspace/workspace-cli",

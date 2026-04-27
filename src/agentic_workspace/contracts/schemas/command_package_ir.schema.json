@@ -40,7 +40,8 @@
         "custom_codegen_boundary",
         "shell_adapter_policy",
         "direct_cli_edit_policy",
-        "generated_package_maturity"
+        "generated_package_maturity",
+        "non_python_runtime_binding"
       ],
       "properties": {
         "authority_rule": {
@@ -88,6 +89,40 @@
               "items": {
                 "$ref": "#/$defs/maturity_level"
               }
+            }
+          },
+          "additionalProperties": false
+        },
+        "non_python_runtime_binding": {
+          "type": "object",
+          "required": [
+            "selected_model",
+            "scope",
+            "universal_contract_owns",
+            "target_projection_owns",
+            "runtime_owns",
+            "error_mapping"
+          ],
+          "properties": {
+            "selected_model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "scope": {
+              "type": "string",
+              "minLength": 1
+            },
+            "universal_contract_owns": {
+              "$ref": "#/$defs/non_empty_strings"
+            },
+            "target_projection_owns": {
+              "$ref": "#/$defs/non_empty_strings"
+            },
+            "runtime_owns": {
+              "$ref": "#/$defs/non_empty_strings"
+            },
+            "error_mapping": {
+              "$ref": "#/$defs/non_empty_strings"
             }
           },
           "additionalProperties": false

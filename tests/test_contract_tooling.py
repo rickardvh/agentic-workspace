@@ -130,10 +130,15 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     )
     assert manifest["generation_policy"]["test_environment"] == "Generated non-Python package tests run in Docker-selected proof lanes."
     maturity = {level["id"]: level for level in manifest["generation_policy"]["generated_package_maturity"]["levels"]}
+    runtime_binding = manifest["generation_policy"]["non_python_runtime_binding"]
     assert maturity["metadata-proof-fixture"]["runnable"] is False
     assert maturity["metadata-proof-fixture"]["weak_agent_routing"] == "forbidden"
     assert maturity["runnable-read-only-adapter"]["runnable"] is True
     assert "black-box conformance" in " ".join(maturity["runnable-read-only-adapter"]["promotion_requires"])
+    assert runtime_binding["selected_model"] == "generated parser/help with process handoff to canonical Python CLI"
+    assert "operation primitive implementation" in runtime_binding["runtime_owns"]
+    assert "argv spelling and help rendering" in runtime_binding["target_projection_owns"]
+    assert "adapter failures" in " ".join(runtime_binding["error_mapping"])
     assert "must not own runtime primitive behavior" in manifest["generation_policy"]["shell_adapter_policy"]
     assert "direct cli.py edits" in manifest["generation_policy"]["direct_cli_edit_policy"]
 
@@ -274,6 +279,10 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert package_json["agenticWorkspace"]["maturity"]["id"] == "metadata-proof-fixture"
     assert package_json["agenticWorkspace"]["maturity"]["weak_agent_routing"] == "forbidden"
     assert package_json["agenticWorkspace"]["maturity"]["runnable"] is False
+    assert (
+        package_json["agenticWorkspace"]["runtimeBinding"]["selected_model"]
+        == "generated parser/help with process handoff to canonical Python CLI"
+    )
     assert package_json["agenticWorkspace"]["declaredEntrypoints"] == ["agentic-workspace"]
     assert "defaults.report.cli" in source_text
     assert "DO NOT EDIT DIRECTLY" in source_text
