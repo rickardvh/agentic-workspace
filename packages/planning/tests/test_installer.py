@@ -3340,6 +3340,57 @@ def test_planning_summary_accepts_historical_closeout_baseline(tmp_path: Path) -
     assert summary["intent_validation_contract"]["counts"]["closeout_needs_audit_count"] == 0
 
 
+def test_planning_summary_does_not_treat_historical_followups_as_current_work(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "EXT-1",
+                "title": "Closed with historical follow-up",
+                "status": "closed",
+                "kind": "slice",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            },
+        ],
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/reviews/historical-followup.review.json",
+        json.dumps(
+            {
+                "kind": "planning-review/v1",
+                "title": "Historical Follow-up",
+                "issue_classifications": [
+                    {
+                        "id": "EXT-1",
+                        "title": "Closed with historical follow-up",
+                        "classification": "covered_by_open_followup",
+                        "live_state": "closed",
+                        "evidence": "bounded slice landed",
+                        "follow_up": "legacy follow-up recorded for audit",
+                    },
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    contract = summary["intent_validation_contract"]
+
+    assert contract["current_external_work"]["open_count"] == 0
+    assert contract["historical_audit_references"]["follow_up_open_count"] == 1
+    assert contract["closeout_reconciliation"]["counts"]["follow_up_open_count"] == 1
+    assert contract["recommended_next_action"] == "No dangling larger intent or lower-trust closeout signals detected."
+
+
 def test_planning_reconcile_reports_stale_state_from_provider_agnostic_evidence(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(

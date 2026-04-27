@@ -2579,7 +2579,7 @@ def _intent_validation_contract(
         recommended_next_action = "Inspect likely premature closeouts before treating recently closed work as settled."
     elif closeout_reconciliation["counts"]["needs_audit_count"]:
         recommended_next_action = "Audit unreconciled lower-trust closeouts or add a checked-in reconciliation artifact."
-    elif closeout_reconciliation["counts"]["follow_up_open_count"]:
+    elif closeout_reconciliation["counts"]["follow_up_open_count"] and external_open:
         recommended_next_action = "Continue the open follow-ups identified by lower-trust closeout reconciliation."
     elif lower_trust_closeouts:
         recommended_next_action = "Review lower-trust closeout signals before assuming recently closed work is fully evidenced."
