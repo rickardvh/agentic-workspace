@@ -5815,6 +5815,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "uv run python scripts/check/check_generated_command_packages.py",
                 "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
                 "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+                "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
             ],
             "broaden_when": [
                 "the change also alters runtime CLI behavior outside generated metadata",

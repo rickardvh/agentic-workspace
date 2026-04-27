@@ -4573,6 +4573,7 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
         "uv run python scripts/check/check_generated_command_packages.py",
         "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
         "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+        "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
     ]
 
 

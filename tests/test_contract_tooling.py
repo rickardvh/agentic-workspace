@@ -294,6 +294,17 @@ def test_generated_command_package_adapter_conformance_check_passes() -> None:
     assert module.main(["--conformance"]) == 0
 
 
+def test_generated_command_package_docker_conformance_surface_exists() -> None:
+    dockerfile = Path(__file__).resolve().parents[1] / "generated" / "typescript" / "Dockerfile.conformance"
+    text = dockerfile.read_text(encoding="utf-8")
+
+    assert "scripts/check/check_generated_command_packages.py" in text
+    assert "--conformance" in text
+    assert "--require-node" in text
+    assert "COPY src ./src" in text
+    assert "COPY generated/typescript ./generated/typescript" in text
+
+
 def test_generated_python_command_package_metadata_is_current() -> None:
     from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE
 

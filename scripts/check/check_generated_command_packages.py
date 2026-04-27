@@ -203,6 +203,9 @@ def _validate_static_surfaces() -> list[str]:
     dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile"
     if not dockerfile.is_file():
         errors.append("generated/typescript/Dockerfile is missing")
+    conformance_dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile.conformance"
+    if not conformance_dockerfile.is_file():
+        errors.append("generated/typescript/Dockerfile.conformance is missing")
     for package in ("workspace-cli", "planning-cli", "memory-cli"):
         package_root = REPO_ROOT / "generated" / "typescript" / package
         for relative in ("package.json", "src/commandPackage.ts", "test/command-package.test.mjs"):
@@ -229,7 +232,7 @@ def _validate_static_surfaces() -> list[str]:
     return errors
 
 
-def _run_docker(tag: str, *, require_docker: bool) -> int:
+def _run_docker(tag: str, *, dockerfile: str, require_docker: bool) -> int:
     if shutil.which("docker") is None:
         print("docker is not available; cannot run generated TypeScript package container proof")
         return 1 if require_docker else 0
@@ -239,7 +242,6 @@ def _run_docker(tag: str, *, require_docker: bool) -> int:
         suffix = f": {detail[0]}" if detail else ""
         print(f"docker daemon is not available; skipped generated TypeScript package container proof{suffix}")
         return 1 if require_docker else 0
-    dockerfile = "generated/typescript/Dockerfile"
     build = _run(["docker", "build", "-f", dockerfile, "-t", tag, "."])
     if build:
         return build
@@ -252,6 +254,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--docker",
         action="store_true",
         help="Run generated TypeScript package tests inside Docker.",
+    )
+    parser.add_argument(
+        "--docker-conformance",
+        action="store_true",
+        help="Run runnable generated adapter canonical-runtime conformance inside Docker.",
     )
     parser.add_argument(
         "--conformance",
@@ -295,7 +302,17 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print("[ok] generated command package adapter conformance")
     if args.docker:
-        return _run_docker(str(args.tag), require_docker=bool(args.require_docker))
+        return _run_docker(
+            str(args.tag),
+            dockerfile="generated/typescript/Dockerfile",
+            require_docker=bool(args.require_docker),
+        )
+    if args.docker_conformance:
+        return _run_docker(
+            f"{args.tag}-conformance",
+            dockerfile="generated/typescript/Dockerfile.conformance",
+            require_docker=bool(args.require_docker),
+        )
     print("[ok] generated command package static proof")
     return 0
 

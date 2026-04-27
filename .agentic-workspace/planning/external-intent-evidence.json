@@ -1372,10 +1372,24 @@
       "system": "github",
       "id": "#426",
       "title": "[Workspace]: Add Docker-backed canonical conformance for runnable generated adapters",
-      "status": "open",
+      "status": "closed",
       "kind": "task",
       "parent_id": "#423",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "present",
+      "closeout": {
+        "plan": ".agentic-workspace/planning/execplans/archive/docker-backed-generated-adapter-conformance.plan.json",
+        "proof": "`--docker-conformance --require-docker` builds an isolated Node/Python image and runs generated adapter conformance against the canonical Python CLI.",
+        "validation": [
+          "uv run python scripts/check/check_generated_command_packages.py",
+          "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+          "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+          "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+          "uv run pytest tests/test_contract_tooling.py -q -k \"docker_conformance or generated_command_package\"",
+          "uv run pytest tests/test_workspace_cli.py -q -k proof_changed_selector_routes_generated_command_packages",
+          "uv run pytest tests/test_workspace_cli.py -q",
+          "uv run ruff check src tests scripts"
+        ]
+      }
     },
     {
       "system": "github",

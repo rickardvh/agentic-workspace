@@ -1,0 +1,182 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Docker Backed Generated Adapter Conformance",
+  "goal": [
+    "Resolve #426 by adding Docker-backed canonical-runtime conformance for runnable generated adapters."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "A release-like Docker command can prove runnable generated TypeScript adapter behavior against canonical Python CLI runtime behavior.",
+      "constraints": "Keep ordinary static checks free of Docker/Node requirements and do not reimplement Python runtime primitives in TypeScript.",
+      "latitude": "Add an isolated Dockerfile/flag for canonical-runtime conformance and wire proof selection to expose it.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "docker-backed-generated-adapter-conformance",
+      "status": "completed",
+      "next_step": "Archive this plan, update external issue evidence, and close #426 with proof.",
+      "proof": "Run generated package static proof, local Node conformance, Docker package proof, Docker conformance proof, focused tests, workspace tests, ruff, planning doctor, summary, and reconcile."
+    },
+    "scope": {
+      "touched": [
+        "generated/typescript/Dockerfile.conformance",
+        "scripts/check/check_generated_command_packages.py",
+        "src/agentic_workspace/cli.py",
+        "tests/test_contract_tooling.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/execplans/docker-backed-generated-adapter-conformance.plan.json"
+      ],
+      "invariants": [
+        "Local static generated-package checks still work without Docker.",
+        "Docker conformance compares generated adapter behavior to canonical Python CLI behavior.",
+        "Failure output remains classified as generation drift, adapter failure, or runtime primitive failure."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make runnable generated non-Python adapters release-checkable against canonical runtime behavior without expanding ordinary Python development requirements.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Generated package proof can now require Docker-backed canonical-runtime parity for the runnable TypeScript adapter.",
+    "intentionally deferred": "none",
+    "discovered implications": "Proof routing still lives in src/agentic_workspace/cli.py, so the direct CLI edit was reviewed as proof-routing metadata rather than runtime behavior.",
+    "proof achieved now": "Static generated-package proof, local Node conformance, Docker package tests, Docker canonical-runtime conformance, workspace tests, ruff, and planning checks passed.",
+    "validation still needed": "none for #426",
+    "next likely slice": "Refresh summary and promote another explicit child slice."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Add Docker-backed canonical-runtime conformance for runnable generated adapters.",
+    "hard constraints": "No broad generated target parity, no mutation conformance, no TypeScript runtime primitive reimplementation.",
+    "agent may decide locally": "Exact flag and Dockerfile shape as long as the canonical-runtime proof is explicit and isolated.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "docker-backed-generated-adapter-conformance",
+    "status": "completed",
+    "scope": "Generated TypeScript Docker conformance surface, generated-package check script, proof routing, and focused tests.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this plan, update external issue evidence, and close #426 with proof."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "generated/typescript/Dockerfile.conformance",
+    "scripts/check/check_generated_command_packages.py",
+    "src/agentic_workspace/cli.py",
+    "tests/test_contract_tooling.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/execplans/docker-backed-generated-adapter-conformance.plan.json"
+  ],
+  "invariants": [
+    "Local static generated-package checks still work without Docker.",
+    "Docker conformance compares generated adapter behavior to canonical Python CLI behavior.",
+    "Failure output remains classified as generation drift, adapter failure, or runtime primitive failure."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+    "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+    "uv run pytest tests/test_contract_tooling.py -q -k \"docker_conformance or generated_command_package\"",
+    "uv run pytest tests/test_workspace_cli.py -q -k proof_changed_selector_routes_generated_command_packages",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests scripts",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "A Docker-backed conformance command proves runnable generated adapter behavior against canonical Python CLI behavior.",
+    "Existing static and local conformance checks still pass without requiring Docker for ordinary feedback.",
+    "Proof routing advertises the Docker canonical-runtime conformance command for generated package changes."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Added `generated/typescript/Dockerfile.conformance` and `--docker-conformance` so Docker can run the canonical Python runtime parity check for runnable generated TypeScript adapters; proof selection now advertises that command.",
+    "validation confirmed": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run pytest tests/test_contract_tooling.py -q -k \"docker_conformance or generated_command_package\"; uv run pytest tests/test_workspace_cli.py -q -k proof_changed_selector_routes_generated_command_packages; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests scripts",
+    "follow-on routed to": "none for #426.",
+    "post-work posterity capture": ".agentic-workspace/planning/execplans/archive/docker-backed-generated-adapter-conformance.plan.json",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "Refresh summary and select the next explicit child slice."
+  },
+  "proof_report": {
+    "validation proof": "All selected generated package, local conformance, Docker package, Docker canonical-runtime conformance, workspace, lint, and planning proof commands passed.",
+    "proof achieved now": "`--docker-conformance --require-docker` builds `generated/typescript/Dockerfile.conformance` and runs adapter conformance against the canonical Python CLI inside the container.",
+    "evidence for \"proof achieved\" state": "generated/typescript/Dockerfile.conformance; scripts/check/check_generated_command_packages.py; proof selector output includes docker-conformance"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No full generated-target parity or mutation conformance is needed for #426.",
+          "owner": "discard",
+          "source": "issue scope"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "none for #426.",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "none",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "direct_cli_edit_review": {
+    "status": "reviewed",
+    "changed_path": "src/agentic_workspace/cli.py",
+    "why_direct_edit_was_used": "The generated-package proof lane list is currently emitted from the workspace proof/defaults payload in cli.py; this slice changed proof-routing metadata only, not command interface semantics or runtime primitive behavior.",
+    "follow_on_needed": "none for #426; the broader root CLI authority lane remains open in external work evidence."
+  },
+  "intent_satisfaction": {
+    "original intent": "Add Docker-backed canonical-runtime conformance for runnable generated adapters.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded slice and larger intent are both complete.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "None unless new evidence shows the bounded closure was incomplete."
+  }
+}
