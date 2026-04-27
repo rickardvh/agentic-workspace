@@ -163,8 +163,8 @@
             "agentic-workspace"
           ],
           "test_environment": "docker",
-          "maturity_level_ref": "metadata-proof-fixture",
-          "generation_status": "proof-fixture"
+          "maturity_level_ref": "runnable-read-only-adapter",
+          "generation_status": "runnable-read-only-adapter"
         },
         {
           "kind": "bash",

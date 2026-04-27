@@ -231,6 +231,7 @@
           "enum": [
             "supported-now",
             "proof-fixture",
+            "runnable-read-only-adapter",
             "deferred"
           ]
         }

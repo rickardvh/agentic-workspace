@@ -148,7 +148,8 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert root_package["program"] == "agentic-workspace"
     assert targets["python"]["test_environment"] == "python-dev"
     assert targets["typescript"]["test_environment"] == "docker"
-    assert targets["typescript"]["maturity_level_ref"] == "metadata-proof-fixture"
+    assert targets["typescript"]["maturity_level_ref"] == "runnable-read-only-adapter"
+    assert targets["typescript"]["generation_status"] == "runnable-read-only-adapter"
     assert targets["bash"]["generation_status"] == "deferred"
     assert targets["bash"]["maturity_level_ref"] == "deferred"
     assert targets["powershell"]["generation_status"] == "deferred"
@@ -272,13 +273,13 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     test_text = (package_root / "test" / "command-package.test.mjs").read_text(encoding="utf-8")
 
     assert package_json["name"] == "@agentic-workspace/workspace-cli"
-    assert "bin" not in package_json
+    assert package_json["bin"] == {"agentic-workspace": "./src/cli.mjs"}
     assert package_json["agenticWorkspace"]["generated"] is True
-    assert package_json["agenticWorkspace"]["fixtureOnly"] is True
-    assert package_json["agenticWorkspace"]["generationStatus"] == "proof-fixture"
-    assert package_json["agenticWorkspace"]["maturity"]["id"] == "metadata-proof-fixture"
-    assert package_json["agenticWorkspace"]["maturity"]["weak_agent_routing"] == "forbidden"
-    assert package_json["agenticWorkspace"]["maturity"]["runnable"] is False
+    assert package_json["agenticWorkspace"]["fixtureOnly"] is False
+    assert package_json["agenticWorkspace"]["generationStatus"] == "runnable-read-only-adapter"
+    assert package_json["agenticWorkspace"]["maturity"]["id"] == "runnable-read-only-adapter"
+    assert package_json["agenticWorkspace"]["maturity"]["weak_agent_routing"] == "review-required"
+    assert package_json["agenticWorkspace"]["maturity"]["runnable"] is True
     assert (
         package_json["agenticWorkspace"]["runtimeBinding"]["selected_model"]
         == "generated parser/help with process handoff to canonical Python CLI"
@@ -287,6 +288,7 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert "defaults.report.cli" in source_text
     assert "DO NOT EDIT DIRECTLY" in source_text
     assert "generated package metadata exposes expected commands" in test_text
+    assert "generated runnable adapter delegates supported command to runtime process" in test_text
 
 
 def test_generated_command_adapter_module_routes_direct_edits_to_authoritative_sources() -> None:

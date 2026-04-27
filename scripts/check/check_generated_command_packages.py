@@ -33,7 +33,12 @@ def _validate_static_surfaces() -> list[str]:
         if package_json_path.is_file():
             payload = json.loads(package_json_path.read_text(encoding="utf-8"))
             maturity = payload.get("agenticWorkspace", {}).get("maturity", {})
-            if maturity.get("weak_agent_routing") != "forbidden" or maturity.get("runnable") is not False:
+            is_runnable = maturity.get("id") == "runnable-read-only-adapter"
+            if is_runnable and not (package_root / "src" / "cli.mjs").is_file():
+                errors.append(f"generated/typescript/{package}/src/cli.mjs is missing for runnable target")
+            if is_runnable and "bin" not in payload:
+                errors.append(f"generated/typescript/{package}/package.json is missing bin entry for runnable target")
+            if not is_runnable and (maturity.get("weak_agent_routing") != "forbidden" or maturity.get("runnable") is not False):
                 errors.append(f"generated/typescript/{package}/package.json maturity does not mark proof fixture as non-runnable")
     return errors
 

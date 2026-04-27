@@ -23,6 +23,10 @@ def _maturity_levels(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {level["id"]: level for level in policy["levels"]}
 
 
+def _is_runnable_typescript_target(target: dict[str, Any]) -> bool:
+    return target.get("maturity_level_ref") == "runnable-read-only-adapter"
+
+
 def _python_module(package: dict[str, Any]) -> str:
     rendered = _json_block(package)
     return (
@@ -57,12 +61,13 @@ def _typescript_package_json(
         "version": "0.0.0-generated",
         "private": True,
         "type": "module",
+        "bin": {entrypoint: "./src/cli.mjs" for entrypoint in target["entrypoints"]} if _is_runnable_typescript_target(target) else {},
         "scripts": {
             "test": "node --test test/command-package.test.mjs"
         },
         "agenticWorkspace": {
             "generated": True,
-            "fixtureOnly": True,
+            "fixtureOnly": not _is_runnable_typescript_target(target),
             "generationStatus": target["generation_status"],
             "maturity": maturity,
             "runtimeBinding": runtime_binding,
@@ -71,6 +76,8 @@ def _typescript_package_json(
             "declaredEntrypoints": target["entrypoints"]
         }
     }
+    if not payload["bin"]:
+        del payload["bin"]
     return _json_block(payload) + "\n"
 
 
@@ -88,13 +95,66 @@ def _typescript_module(package: dict[str, Any]) -> str:
     )
 
 
-def _typescript_test(package: dict[str, Any]) -> str:
+def _typescript_cli_module(package: dict[str, Any], target: dict[str, Any]) -> str:
+    command_names = sorted(command["command"]["name"] for command in package["commands"])
+    rendered_commands = json.dumps(command_names)
+    return (
+        "#!/usr/bin/env node\n"
+        "// Generated runnable read-only adapter.\n"
+        "// Source: src/agentic_workspace/contracts/command_package_ir.json\n"
+        f"// Program: {package['program']}\n"
+        "// Regenerate with: uv run python scripts/generate/generate_command_packages.py\n"
+        "// DO NOT EDIT DIRECTLY.\n\n"
+        "import { spawnSync } from 'node:child_process';\n\n"
+        f"const supportedCommands = new Set({rendered_commands});\n"
+        "const argv = process.argv.slice(2);\n"
+        "const command = argv[0];\n\n"
+        "if (!command || command === '--help' || command === '-h') {\n"
+        f"  console.log(`Usage: {target['entrypoints'][0]} <command> [options]`);\n"
+        "  console.log(`Supported generated commands: ${Array.from(supportedCommands).join(', ')}`);\n"
+        "  process.exit(0);\n"
+        "}\n\n"
+        "if (!supportedCommands.has(command)) {\n"
+        "  console.error(`Unsupported generated command: ${command}`);\n"
+        "  process.exit(2);\n"
+        "}\n\n"
+        "const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME || 'python -m agentic_workspace.cli';\n"
+        "const result = spawnSync(runtimeCommand, argv, { encoding: 'utf8', shell: true });\n"
+        "if (result.error) {\n"
+        "  console.error(`Adapter runtime handoff failed: ${result.error.message}`);\n"
+        "  process.exit(1);\n"
+        "}\n"
+        "if (result.stdout) process.stdout.write(result.stdout);\n"
+        "if (result.stderr) process.stderr.write(result.stderr);\n"
+        "process.exit(result.status ?? 1);\n"
+    )
+
+
+def _typescript_mock_runtime() -> str:
+    return (
+        "const payload = {\n"
+        "  command: process.argv[2],\n"
+        "  args: process.argv.slice(2),\n"
+        "};\n"
+        "console.log(JSON.stringify(payload));\n"
+    )
+
+
+def _typescript_test(package: dict[str, Any], target: dict[str, Any]) -> str:
     expected_commands = sorted(command["command"]["name"] for command in package["commands"])
     rendered_expected = json.dumps(expected_commands)
-    return (
+    runnable = _is_runnable_typescript_target(target)
+    imports = (
         "import assert from 'node:assert/strict';\n"
         "import test from 'node:test';\n"
-        "import { readFileSync } from 'node:fs';\n"
+    )
+    if runnable:
+        imports += (
+            "import { spawnSync } from 'node:child_process';\n"
+            "import { fileURLToPath } from 'node:url';\n"
+        )
+    imports += "import { readFileSync } from 'node:fs';\n"
+    body = imports + (
         "\n"
         "const source = readFileSync(new URL('../src/commandPackage.ts', import.meta.url), 'utf8');\n"
         "\n"
@@ -105,6 +165,24 @@ def _typescript_test(package: dict[str, Any]) -> str:
         "  }\n"
         "});\n"
     )
+    if runnable:
+        body += (
+            "\n"
+            "test('generated runnable adapter delegates supported command to runtime process', () => {\n"
+            "  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));\n"
+            "  const mockRuntime = fileURLToPath(new URL('./mock-runtime.mjs', import.meta.url));\n"
+            "  const runtime = `\"${process.execPath}\" \"${mockRuntime}\"`;\n"
+            "  const result = spawnSync(process.execPath, [cli, 'defaults', '--format', 'json'], {\n"
+            "    encoding: 'utf8',\n"
+            "    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: runtime },\n"
+            "  });\n"
+            "  assert.equal(result.status, 0);\n"
+            "  const payload = JSON.parse(result.stdout);\n"
+            "  assert.equal(payload.command, 'defaults');\n"
+            "  assert.deepEqual(payload.args, ['defaults', '--format', 'json']);\n"
+            "});\n"
+        )
+    return body
 
 
 def _render_outputs(manifest: dict[str, Any]) -> list[tuple[Path, str]]:
@@ -124,7 +202,10 @@ def _render_outputs(manifest: dict[str, Any]) -> list[tuple[Path, str]]:
                     )
                 )
                 outputs.append((root / "src" / "commandPackage.ts", _typescript_module(package)))
-                outputs.append((root / "test" / "command-package.test.mjs", _typescript_test(package)))
+                outputs.append((root / "test" / "command-package.test.mjs", _typescript_test(package, target)))
+                if _is_runnable_typescript_target(target):
+                    outputs.append((root / "src" / "cli.mjs", _typescript_cli_module(package, target)))
+                    outputs.append((root / "test" / "mock-runtime.mjs", _typescript_mock_runtime()))
     return outputs
 
 
