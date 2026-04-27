@@ -1,0 +1,176 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generated Non Python Maturity Labels",
+  "goal": [
+    "Resolve #408 by making generated non-Python package maturity labels explicit and protected by generated proof."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Reviewers and weak agents can distinguish generated TypeScript proof fixtures from runnable read-only adapters from generated package output and checks.",
+      "constraints": "Do not build new TypeScript runtime primitives, require Node or Docker for ordinary Python development, or hand-edit generated outputs.",
+      "latitude": "Tighten source IR/check/generator/tests and regenerate derived package outputs.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "generated-non-python-maturity-labels",
+      "status": "completed",
+      "next_step": "Archive this plan, update external issue evidence, and close #408 with proof.",
+      "proof": "Run generated command package checks, focused contract tests, workspace tests, ruff, planning doctor, summary, and reconcile."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "scripts/generate/generate_command_packages.py",
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_contract_tooling.py",
+        "generated/typescript/*/package.json",
+        "generated/typescript/*/test/command-package.test.mjs",
+        "src/agentic_workspace/generated_cli_package/__init__.py",
+        "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py",
+        "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py",
+        ".agentic-workspace/planning/execplans/generated-non-python-maturity-labels.plan.json"
+      ],
+      "invariants": [
+        "Generated files are regenerated from the command-package IR.",
+        "Proof fixtures stay non-runnable and forbidden for weak-agent routing.",
+        "Runnable read-only adapters remain review-required until weak-agent-safe criteria are proven."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Keep generated non-Python command packages portable and useful without letting proof fixtures masquerade as weak-agent-safe CLI surfaces.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Generated TypeScript package tests and static checks now prove maturity claims and weak-agent routing status from generated metadata.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "Source-level generator/checks, regenerated TypeScript package tests, Node conformance, and Docker package tests passed.",
+    "validation still needed": "none for #408",
+    "next likely slice": "Refresh summary and promote another explicit child slice from the weak-agent recovery lane."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make generated non-Python package maturity explicit and reviewable.",
+    "hard constraints": "No new runtime primitives, no ordinary-development dependency on Node or Docker, no manual edits to generated outputs.",
+    "agent may decide locally": "Exact generated test and static-check assertions that prove maturity labels and weak-agent routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "generated-non-python-maturity-labels",
+    "status": "completed",
+    "scope": "Command-package IR, generator, generated TypeScript package metadata/tests, static check, and focused contract tests.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this plan, update external issue evidence, and close #408 with proof."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "scripts/generate/generate_command_packages.py",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_contract_tooling.py",
+    "generated/typescript/workspace-cli/test/command-package.test.mjs",
+    "generated/typescript/planning-cli/test/command-package.test.mjs",
+    "generated/typescript/memory-cli/test/command-package.test.mjs",
+    "src/agentic_workspace/generated_cli_package/__init__.py",
+    "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py",
+    "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py",
+    ".agentic-workspace/planning/execplans/generated-non-python-maturity-labels.plan.json"
+  ],
+  "invariants": [
+    "Generated files are regenerated from the command-package IR.",
+    "Proof fixtures stay non-runnable and forbidden for weak-agent routing.",
+    "Runnable read-only adapters remain review-required until weak-agent-safe criteria are proven."
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run pytest tests/test_contract_tooling.py -q -k \"command_package or generated_typescript\"",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests scripts",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Generated TypeScript package tests assert maturity id, generation status, promotion criteria, runnable state, fixtureOnly state, and weak-agent routing.",
+    "Static generated-package checks reject missing maturity vocabulary or weak-agent routing mismatches.",
+    "Generated package output remains fresh from the command-package IR."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Generated TypeScript package tests now assert generation status, maturity id, promotion criteria, runnable state, fixtureOnly state, weak-agent routing, and bin presence/absence; static checks reject missing maturity vocabulary or weak-agent routing mismatches.",
+    "validation confirmed": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_contract_tooling.py -q -k \"command_package or generated_typescript\"; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests scripts",
+    "follow-on routed to": "none for #408; parent weak-agent recovery lane remains open through sibling issues.",
+    "post-work posterity capture": ".agentic-workspace/planning/execplans/archive/generated-non-python-maturity-labels.plan.json",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "Refresh summary and select the next explicit child slice."
+  },
+  "proof_report": {
+    "validation proof": "All selected generated-package, conformance, Docker, workspace, lint, and planning proof commands passed.",
+    "proof achieved now": "Generated non-Python package outputs state maturity and weak-agent routing in package metadata, generated tests assert that status, and the static checker protects the source maturity vocabulary.",
+    "evidence for \"proof achieved\" state": "scripts/generate/generate_command_packages.py; scripts/check/check_generated_command_packages.py; generated/typescript/*/test/command-package.test.mjs; tests/test_contract_tooling.py"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No full TypeScript runtime primitive implementation is needed for #408.",
+          "owner": "discard",
+          "source": "issue scope"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "none for #408; parent weak-agent recovery lane remains open through sibling issues.",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Make generated non-Python package maturity explicit and reviewable.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded slice and larger intent are both complete.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "None unless new evidence shows the bounded closure was incomplete."
+  }
+}

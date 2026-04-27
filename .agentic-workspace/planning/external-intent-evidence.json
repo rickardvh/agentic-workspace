@@ -1197,10 +1197,23 @@
       "system": "github",
       "id": "#408",
       "title": "[Workspace]: Distinguish generated non-Python proof fixtures from usable weak-agent CLI surfaces",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#403",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "present",
+      "closeout": {
+        "plan": ".agentic-workspace/planning/execplans/archive/generated-non-python-maturity-labels.plan.json",
+        "proof": "Generated TypeScript package metadata/tests now assert maturity id, promotion criteria, runnable state, fixtureOnly state, and weak-agent routing; static checks reject missing maturity vocabulary or weak-agent routing mismatches.",
+        "validation": [
+          "uv run python scripts/generate/generate_command_packages.py --check",
+          "uv run python scripts/check/check_generated_command_packages.py",
+          "uv run pytest tests/test_contract_tooling.py -q -k \"command_package or generated_typescript\"",
+          "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+          "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+          "uv run pytest tests/test_workspace_cli.py -q",
+          "uv run ruff check src tests scripts"
+        ]
+      }
     },
     {
       "system": "github",

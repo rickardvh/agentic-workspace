@@ -144,6 +144,8 @@ def _typescript_test(package: dict[str, Any], target: dict[str, Any]) -> str:
     expected_commands = sorted(command["command"]["name"] for command in package["commands"])
     rendered_expected = json.dumps(expected_commands)
     runnable = _is_runnable_typescript_target(target)
+    expected_maturity = target["maturity_level_ref"]
+    expected_generation_status = target["generation_status"]
     imports = (
         "import assert from 'node:assert/strict';\n"
         "import test from 'node:test';\n"
@@ -157,12 +159,39 @@ def _typescript_test(package: dict[str, Any], target: dict[str, Any]) -> str:
     body = imports + (
         "\n"
         "const source = readFileSync(new URL('../src/commandPackage.ts', import.meta.url), 'utf8');\n"
+        "const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));\n"
         "\n"
         "test('generated package metadata exposes expected commands', () => {\n"
         f"  const expected = {rendered_expected};\n"
         "  for (const command of expected) {\n"
         "    assert.match(source, new RegExp(`\\\"name\\\": \\\\\"${command}\\\\\"`));\n"
         "  }\n"
+        "});\n"
+        "\n"
+        "test('generated package metadata exposes maturity and weak-agent routing status', () => {\n"
+        "  const metadata = packageJson.agenticWorkspace;\n"
+        f"  assert.equal(metadata.generationStatus, {expected_generation_status!r});\n"
+        f"  assert.equal(metadata.maturity.id, {expected_maturity!r});\n"
+        "  assert.equal(typeof metadata.maturity.summary, 'string');\n"
+        "  assert.ok(metadata.maturity.summary.length > 0);\n"
+        "  assert.ok(Array.isArray(metadata.maturity.promotion_requires));\n"
+        "  assert.ok(metadata.maturity.promotion_requires.length > 0);\n"
+    )
+    if runnable:
+        body += (
+            "  assert.equal(metadata.fixtureOnly, false);\n"
+            "  assert.equal(metadata.maturity.runnable, true);\n"
+            "  assert.equal(metadata.maturity.weak_agent_routing, 'review-required');\n"
+            "  assert.ok(packageJson.bin);\n"
+        )
+    else:
+        body += (
+            "  assert.equal(metadata.fixtureOnly, true);\n"
+            "  assert.equal(metadata.maturity.runnable, false);\n"
+            "  assert.equal(metadata.maturity.weak_agent_routing, 'forbidden');\n"
+            "  assert.equal(packageJson.bin, undefined);\n"
+        )
+    body += (
         "});\n"
     )
     if runnable:

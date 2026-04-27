@@ -149,6 +149,16 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert manifest["generation_policy"]["test_environment"] == "Generated non-Python package tests run in Docker-selected proof lanes."
     maturity = {level["id"]: level for level in manifest["generation_policy"]["generated_package_maturity"]["levels"]}
     runtime_binding = manifest["generation_policy"]["non_python_runtime_binding"]
+    assert {
+        "metadata-proof-fixture",
+        "parser-help-proof",
+        "runnable-read-only-adapter",
+        "runtime-backed-read-only-adapter",
+        "weak-agent-safe-adapter",
+        "mutation-capable-adapter",
+        "deferred",
+    } <= maturity.keys()
+    assert "Weak agents may use only generated targets" in manifest["generation_policy"]["generated_package_maturity"]["routing_rule"]
     assert maturity["metadata-proof-fixture"]["runnable"] is False
     assert maturity["metadata-proof-fixture"]["weak_agent_routing"] == "forbidden"
     assert maturity["runnable-read-only-adapter"]["runnable"] is True
@@ -307,6 +317,7 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert package_json["agenticWorkspace"]["maturity"]["id"] == "runnable-read-only-adapter"
     assert package_json["agenticWorkspace"]["maturity"]["weak_agent_routing"] == "review-required"
     assert package_json["agenticWorkspace"]["maturity"]["runnable"] is True
+    assert package_json["agenticWorkspace"]["maturity"]["promotion_requires"]
     assert (
         package_json["agenticWorkspace"]["runtimeBinding"]["selected_model"]
         == "generated parser/help with process handoff to canonical Python CLI"
@@ -316,6 +327,23 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert "DO NOT EDIT DIRECTLY" in source_text
     assert "generated package metadata exposes expected commands" in test_text
     assert "generated runnable adapter delegates supported command to runtime process" in test_text
+
+
+def test_generated_typescript_proof_fixture_declares_non_runnable_maturity() -> None:
+    package_root = Path(__file__).resolve().parents[1] / "generated" / "typescript" / "memory-cli"
+    package_json = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
+    test_text = (package_root / "test" / "command-package.test.mjs").read_text(encoding="utf-8")
+
+    assert package_json["name"] == "@agentic-workspace/memory-cli"
+    assert "bin" not in package_json
+    metadata = package_json["agenticWorkspace"]
+    assert metadata["fixtureOnly"] is True
+    assert metadata["generationStatus"] == "proof-fixture"
+    assert metadata["maturity"]["id"] == "metadata-proof-fixture"
+    assert metadata["maturity"]["runnable"] is False
+    assert metadata["maturity"]["weak_agent_routing"] == "forbidden"
+    assert metadata["maturity"]["promotion_requires"]
+    assert "generated package metadata exposes maturity and weak-agent routing status" in test_text
 
 
 def test_generated_command_adapter_module_routes_direct_edits_to_authoritative_sources() -> None:

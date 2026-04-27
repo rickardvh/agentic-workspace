@@ -178,6 +178,28 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
 
 def _validate_static_surfaces() -> list[str]:
     errors: list[str] = []
+    expected_levels = {
+        "metadata-proof-fixture",
+        "parser-help-proof",
+        "runnable-read-only-adapter",
+        "runtime-backed-read-only-adapter",
+        "weak-agent-safe-adapter",
+        "mutation-capable-adapter",
+        "deferred",
+    }
+    ir_path = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json"
+    if not ir_path.is_file():
+        errors.append("src/agentic_workspace/contracts/command_package_ir.json is missing")
+    else:
+        ir = json.loads(ir_path.read_text(encoding="utf-8"))
+        maturity_policy = ir.get("generation_policy", {}).get("generated_package_maturity", {})
+        level_ids = {level.get("id") for level in maturity_policy.get("levels", []) if isinstance(level, dict)}
+        missing = expected_levels - level_ids
+        if missing:
+            errors.append(f"command_package_ir.json missing generated package maturity levels: {sorted(missing)!r}")
+        routing_rule = str(maturity_policy.get("routing_rule", ""))
+        if "Weak agents may use only generated targets" not in routing_rule:
+            errors.append("command_package_ir.json maturity routing rule does not protect weak-agent routing")
     dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile"
     if not dockerfile.is_file():
         errors.append("generated/typescript/Dockerfile is missing")
@@ -189,14 +211,21 @@ def _validate_static_surfaces() -> list[str]:
         package_json_path = package_root / "package.json"
         if package_json_path.is_file():
             payload = json.loads(package_json_path.read_text(encoding="utf-8"))
-            maturity = payload.get("agenticWorkspace", {}).get("maturity", {})
+            metadata = payload.get("agenticWorkspace", {})
+            maturity = metadata.get("maturity", {})
             is_runnable = maturity.get("id") == "runnable-read-only-adapter"
+            if not maturity.get("summary") or not maturity.get("promotion_requires"):
+                errors.append(f"generated/typescript/{package}/package.json maturity is missing summary or promotion criteria")
             if is_runnable and not (package_root / "src" / "cli.mjs").is_file():
                 errors.append(f"generated/typescript/{package}/src/cli.mjs is missing for runnable target")
             if is_runnable and "bin" not in payload:
                 errors.append(f"generated/typescript/{package}/package.json is missing bin entry for runnable target")
+            if is_runnable and maturity.get("weak_agent_routing") != "review-required":
+                errors.append(f"generated/typescript/{package}/package.json runnable target is missing review-required weak-agent routing")
             if not is_runnable and (maturity.get("weak_agent_routing") != "forbidden" or maturity.get("runnable") is not False):
                 errors.append(f"generated/typescript/{package}/package.json maturity does not mark proof fixture as non-runnable")
+            if bool(metadata.get("fixtureOnly")) == is_runnable:
+                errors.append(f"generated/typescript/{package}/package.json fixtureOnly does not match maturity runnable state")
     return errors
 
 
