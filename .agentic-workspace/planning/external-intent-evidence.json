@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-27T23:14:46+00:00",
+  "refreshed_at": "2026-04-27T23:24:10+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-27T23:14:46+00:00",
-    "item_count": 457,
+    "refreshed_at": "2026-04-27T23:24:10+00:00",
+    "item_count": 458,
     "open_count": 19,
-    "closed_count": 438,
+    "closed_count": 439,
     "limit": 600,
     "state": "all",
     "command": "gh issue list --state all --json number,title,state,url,labels,createdAt,updatedAt,body,comments"
@@ -7172,7 +7172,7 @@
       "system": "github",
       "id": "#460",
       "title": "[Workspace]: Audit shipped package payloads against daily-operation necessity",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#450",
       "planning_residue_expected": "optional",
@@ -7182,8 +7182,8 @@
         "planning"
       ],
       "created_at": "2026-04-27T19:35:12Z",
-      "updated_at": "2026-04-27T19:35:12Z",
-      "comments_count": 0
+      "updated_at": "2026-04-27T23:23:52Z",
+      "comments_count": 1
     },
     {
       "system": "github",
@@ -7368,6 +7368,23 @@
       "labels": [],
       "created_at": "2026-04-27T21:23:28Z",
       "updated_at": "2026-04-27T21:23:28Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#472",
+      "title": "[Memory]: Make routing-feedback calibration payload opt-in or source-only",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#460",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/472",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T23:19:19Z",
+      "updated_at": "2026-04-27T23:19:19Z",
       "comments_count": 0
     }
   ]
