@@ -3,13 +3,13 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-27T21:30:58+00:00",
+  "refreshed_at": "2026-04-27T21:36:09+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-27T21:30:58+00:00",
-    "item_count": 30,
-    "open_count": 30,
+    "refreshed_at": "2026-04-27T21:36:09+00:00",
+    "item_count": 28,
+    "open_count": 28,
     "closed_count": 0,
     "limit": 1000,
     "state": "open",
@@ -422,40 +422,6 @@
       ],
       "created_at": "2026-04-27T19:35:12Z",
       "updated_at": "2026-04-27T19:35:12Z",
-      "comments_count": 0
-    },
-    {
-      "system": "github",
-      "id": "#461",
-      "title": "[Planning]: Reclassify planning payload into core, optional extensions, and extraction candidates",
-      "status": "open",
-      "kind": "lane",
-      "parent_id": "#450",
-      "planning_residue_expected": "optional",
-      "url": "https://github.com/rickardvh/agentic-workspace/issues/461",
-      "source_repository": "rickardvh/agentic-workspace",
-      "labels": [
-        "planning"
-      ],
-      "created_at": "2026-04-27T19:43:24Z",
-      "updated_at": "2026-04-27T19:52:11Z",
-      "comments_count": 0
-    },
-    {
-      "system": "github",
-      "id": "#466",
-      "title": "[Planning]: Refresh Agent OS capability map against current module boundaries",
-      "status": "open",
-      "kind": "slice",
-      "parent_id": "#461",
-      "planning_residue_expected": "optional",
-      "url": "https://github.com/rickardvh/agentic-workspace/issues/466",
-      "source_repository": "rickardvh/agentic-workspace",
-      "labels": [
-        "planning"
-      ],
-      "created_at": "2026-04-27T19:51:09Z",
-      "updated_at": "2026-04-27T19:51:09Z",
       "comments_count": 0
     },
     {
