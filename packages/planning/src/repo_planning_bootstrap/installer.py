@@ -2175,6 +2175,8 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "closeout_distillation_contract",
             "intent_validation_contract",
             "finished_work_inspection_contract",
+            "current_execution_pressure",
+            "historical_audit_pressure",
             "system_intent",
             "roadmap",
             "ownership_review",
@@ -2381,6 +2383,12 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             finished_work_inspection_contract,
             fields=("counts", "derived_follow_up_candidates", "detail", "recommended_next_action"),
         ),
+        "current_execution_pressure": _compact_current_execution_pressure(summary),
+        "historical_audit_pressure": _compact_historical_audit_pressure(
+            summary=summary,
+            compact_finished_work_inspection=finished_work_inspection_contract,
+            compact_intent_validation=intent_validation_contract,
+        ),
         "system_intent": {
             key: system_intent[key] for key in ("status", "canonical_doc", "rule", "checked_in_execplan_rule") if key in system_intent
         },
@@ -2399,6 +2407,161 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         "warning_count": summary.get("warning_count", 0),
     }
     return compact_summary
+
+
+def _compact_current_execution_pressure(summary: dict[str, Any]) -> dict[str, Any]:
+    execution_readiness = dict(summary.get("execution_readiness", {}))
+    planning_record = dict(summary.get("planning_record", {}))
+    task = planning_record.get("task", {}) if isinstance(planning_record.get("task"), dict) else {}
+    recommendation = execution_readiness.get("recommendation", {})
+    if not isinstance(recommendation, dict):
+        recommendation = {}
+    next_action = str(planning_record.get("next_action", "") or recommendation.get("next_step", "") or "").strip()
+    active = planning_record.get("status") == "present" or execution_readiness.get("status") in {
+        "planning-backed",
+        "active-item-without-execplan",
+    }
+    if active:
+        status = "active-execution"
+        recommended_next_action = next_action or recommendation.get("next_step", "") or "Continue the active planning record."
+    else:
+        status = str(execution_readiness.get("status", "unknown"))
+        recommended_next_action = recommendation.get("next_step", "") or "No current execution pressure identified."
+    return {
+        "status": status,
+        "recommended_next_action": recommended_next_action,
+        "active_task": {
+            "id": task.get("id", ""),
+            "surface": task.get("surface", ""),
+            "status": task.get("status", ""),
+        },
+        "source": "planning_record" if active else "execution_readiness",
+        "rule": "Prefer current active planning pressure before historical audit backlog unless the active plan points there.",
+    }
+
+
+def _compact_historical_audit_pressure(
+    *,
+    summary: dict[str, Any],
+    compact_finished_work_inspection: dict[str, Any],
+    compact_intent_validation: dict[str, Any],
+) -> dict[str, Any]:
+    active_refs = _active_summary_issue_refs(summary)
+    full_finished_work = summary.get("finished_work_inspection_contract", {})
+    full_candidates = []
+    if isinstance(full_finished_work, dict) and isinstance(full_finished_work.get("derived_follow_up_candidates"), list):
+        full_candidates = [
+            candidate for candidate in full_finished_work.get("derived_follow_up_candidates", []) if isinstance(candidate, dict)
+        ]
+    compact_candidates = compact_finished_work_inspection.get("derived_follow_up_candidates", [])
+    if not isinstance(compact_candidates, list):
+        compact_candidates = []
+    enriched_candidates = _prioritized_historical_candidates(candidates=compact_candidates, active_refs=active_refs)
+    counts = (
+        dict(compact_finished_work_inspection.get("counts", {})) if isinstance(compact_finished_work_inspection.get("counts"), dict) else {}
+    )
+    backlog_count = int(counts.get("derived_follow_up_candidate_count", 0) or 0)
+    intent_counts = compact_intent_validation.get("counts", {}) if isinstance(compact_intent_validation.get("counts", {}), dict) else {}
+    active_execution = summary.get("planning_record", {}).get("status") == "present"
+    if backlog_count and active_execution:
+        status = "backgrounded-by-active-execution"
+        recommendation = (
+            "Continue current_execution_pressure first; inspect historical audit pressure only when the active plan points there."
+        )
+    elif backlog_count:
+        status = "needs-prioritization"
+        recommendation = compact_finished_work_inspection.get(
+            "recommended_next_action",
+            "Promote or explicitly route the highest-priority historical audit candidate.",
+        )
+    else:
+        status = "quiet"
+        recommendation = "No historical audit backlog needs current attention."
+    return {
+        "status": status,
+        "current_lane_refs": sorted(active_refs),
+        "candidate_count": backlog_count,
+        "sample_candidates": enriched_candidates,
+        "omitted_candidate_count": max(backlog_count - len(enriched_candidates), 0),
+        "intent_validation_counts": {
+            "follow_up_open_count": intent_counts.get("closeout_reconciliation", {}).get("follow_up_open_count", 0)
+            if isinstance(intent_counts.get("closeout_reconciliation"), dict)
+            else compact_intent_validation.get("closeout_reconciliation", {}).get("counts", {}).get("follow_up_open_count", 0),
+            "closeout_needs_audit_count": intent_counts.get("closeout_needs_audit_count", 0),
+            "landed_open_issue_count": intent_counts.get("landed_open_issue_count", 0),
+        },
+        "full_profile_candidate_count": len(full_candidates),
+        "recommended_next_action": recommendation,
+        "rule": "Historical audit residue is recoverable evidence; compact summary ranks it behind current execution unless it directly matches the active lane.",
+    }
+
+
+def _active_summary_issue_refs(summary: dict[str, Any]) -> set[str]:
+    refs: set[str] = set()
+    todo = summary.get("todo", {})
+    if isinstance(todo, dict):
+        for item in todo.get("active_items", []):
+            if isinstance(item, dict):
+                refs.update(_issue_refs_from_text(str(item.get("source", ""))))
+                refs.update(_issue_refs_from_text(str(item.get("id", ""))))
+                refs.update(_issue_refs_from_text(str(item.get("why_now", ""))))
+    planning_record = summary.get("planning_record", {})
+    if isinstance(planning_record, dict):
+        for value in planning_record.get("minimal_refs", []):
+            refs.update(_issue_refs_from_text(str(value)))
+        task = planning_record.get("task", {})
+        if isinstance(task, dict):
+            refs.update(_issue_refs_from_text(str(task.get("id", ""))))
+    return refs
+
+
+def _issue_refs_from_text(text: str) -> set[str]:
+    return {match.group(0) for match in re.finditer(r"#\d+", text)}
+
+
+def _prioritized_historical_candidates(*, candidates: list[Any], active_refs: set[str]) -> list[dict[str, Any]]:
+    enriched: list[dict[str, Any]] = []
+    for index, candidate in enumerate(candidate for candidate in candidates if isinstance(candidate, dict)):
+        reference_roles = candidate.get("reference_roles", {})
+        closure_refs: set[str] = set()
+        parent_refs: set[str] = set()
+        if isinstance(reference_roles, dict):
+            closure_refs.update(reference_roles.get("closure_refs", []) or [])
+            by_role = reference_roles.get("by_role", {})
+            if isinstance(by_role, dict):
+                parent_refs.update(by_role.get("parent_intent", []) or [])
+        superseded_by = candidate.get("superseded_by", [])
+        if superseded_by:
+            priority = "superseded"
+            priority_rank = 3
+        elif parent_refs & active_refs:
+            priority = "same-parent-lane"
+            priority_rank = 1
+        elif closure_refs & active_refs:
+            priority = "current-lane-match"
+            priority_rank = 0
+        else:
+            priority = "historical-backlog"
+            priority_rank = 2
+        enriched.append(
+            {
+                "source_plan": candidate.get("source_plan", ""),
+                "title": candidate.get("title", ""),
+                "classification": candidate.get("classification", ""),
+                "priority": priority,
+                "priority_rank": priority_rank,
+                "recency": {
+                    "basis": "source_plan_mtime_desc",
+                    "rank": index + 1,
+                },
+                "owner": candidate.get("recommended_owner", ""),
+                "supersession_status": "superseded" if superseded_by else "active",
+                "superseded_by": superseded_by,
+                "recommended_action": candidate.get("recommended_action", ""),
+            }
+        )
+    enriched.sort(key=lambda item: (item["priority_rank"], item["recency"]["rank"]))
+    return enriched
 
 
 def _compact_closeout_reconciliation(reconciliation: Any) -> dict[str, Any]:

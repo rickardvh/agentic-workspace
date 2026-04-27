@@ -1,0 +1,164 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Autopilot Loop Status",
+  "goal": [
+    "Implement #468 so summary exposes a compact autopilot-loop status for satisfied, continued, blocked, or routed intent."
+  ],
+  "non_goals": [
+    "Do not add a new top-level command unless summary cannot carry the answer.",
+    "Do not automate git, GitHub, or implementation execution inside the package."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "A long lane has one cheap machine-readable loop status that says whether intent is satisfied, continued, blocked, or routed.",
+      "constraints": "Keep the status agent-, repo-, tracker-, and tool-agnostic.",
+      "latitude": "Choose compact field names and derive status from existing planning contracts.",
+      "escalation": "Escalate if this requires host-specific issue tracker behavior."
+    },
+    "execution": {
+      "milestone": "autopilot-loop-status",
+      "status": "in-progress",
+      "next_step": "Inspect summary projections and hierarchy/closure contracts for the smallest status derivation.",
+      "proof": "focused planning summary tests plus package validation"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/autopilot-loop-status.plan.json"
+      ],
+      "invariants": [
+        "Do not add host-specific tracker semantics to core planning.",
+        "Do not expand first-contact output beyond a compact status and routing answer."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#442: make the plan -> implement -> evaluate continuation loop first-class for long lanes.",
+    "this slice completes the larger intended outcome": "maybe",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane long-session-dogfooding-intent-loop"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "review-after-slice",
+    "required follow-on detail": "After #468, reassess whether #442 can close honestly.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #468 closeout, re-run summary/reconcile and decide #442 closure"
+  },
+  "parent_lane": {
+    "id": "#442",
+    "title": "Add an autopilot intent loop for plan, implement, evaluate, and continue",
+    "priority": "1",
+    "issues": "#442, #445, #446, #447, #448, #468"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Expose autopilot loop status for satisfied, continued, blocked, and routed intent.",
+    "hard constraints": "Do not add a new command or host-specific issue behavior unless existing summary cannot carry the answer.",
+    "agent may decide locally": "The exact compact status derivation.",
+    "escalate when": "The implementation would need scheduler behavior or tracker-specific closure automation."
+  },
+  "context_budget": {
+    "live working set": "state, this execplan, #468 issue, summary construction, hierarchy contract, closeout contract, and package tests",
+    "recoverable later": "archived #445-#448 closeouts",
+    "externalize before shift": "update execution_summary and closure_check",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Next active issue is #468 autopilot loop status.",
+    "context-shift triggers": "Before adding a new command or host-specific issue behavior."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make plan -> implement -> evaluate continuation first-class without relying on chat memory.",
+    "slice shaping bias": "Answer loop status through existing summary rather than creating a new surface.",
+    "broader-lane validation question": "After this slice, can #442 close honestly?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/468"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/468",
+      "label": "#468 autopilot loop status",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/442",
+      "label": "#442 autopilot intent loop",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "autopilot-loop-status",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect compact summary projections for existing status sources.",
+    "Derive one autopilot_loop status without adding a new command.",
+    "Add tests for incomplete larger intent that requires another slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/autopilot-loop-status.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "cd packages/planning && uv run pytest tests/test_installer.py -q",
+    "cd packages/planning && uv run ruff check .",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/autopilot-loop-status.plan.json --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Summary exposes one machine-readable autopilot-loop status.",
+    "Status can be one of satisfied, continued, blocked, or routed.",
+    "Tests cover an incomplete larger intent that requires another slice.",
+    "#442 can be honestly closed or remains explicitly routed after this slice."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "closure_check": {
+    "slice status": "open",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "Implementation has not started.",
+    "evidence carried forward": "#445-#448 landed, but #442 still needs explicit loop status.",
+    "reopen trigger": "summary still lacks satisfied/continued/blocked/routed autopilot status"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted after #448 closeout review."
+  ]
+}

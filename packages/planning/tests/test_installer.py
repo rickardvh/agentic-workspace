@@ -3555,6 +3555,97 @@ def test_planning_summary_does_not_treat_historical_followups_as_current_work(tm
     assert contract["recommended_next_action"] == "No dangling larger intent or lower-trust closeout signals detected."
 
 
+def test_planning_summary_prioritizes_current_execution_over_historical_audit_backlog(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "current-lane", status = "in-progress", source = "github:#448", surface = ".agentic-workspace/planning/execplans/current-lane.plan.json", why_now = "current requested lane for #442." }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    current_plan = tmp_path / ".agentic-workspace/planning/execplans/current-lane.plan.json"
+    _write_execplan_record(current_plan, item_id="current-lane", status="in-progress")
+    current_record = json.loads(current_plan.read_text(encoding="utf-8"))
+    current_record["references"] = [
+        {
+            "kind": "github-issue",
+            "target": "https://github.com/example/repo/issues/448",
+            "label": "#448 current lane",
+            "role": "source_intent",
+            "locator": "issue",
+        },
+        {
+            "kind": "github-issue",
+            "target": "https://github.com/example/repo/issues/442",
+            "label": "#442 parent lane",
+            "role": "parent_intent",
+            "locator": "issue",
+        },
+    ]
+    current_record["machine_readable_contract"]["execution"]["next_step"] = "Keep implementing #448."
+    installer_mod._write_execplan_record(record_path=current_plan, record=current_record)
+
+    archive_dir = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    for number in range(441, 447):
+        archived_plan = archive_dir / f"historical-{number}.plan.json"
+        _write_execplan_record(
+            archived_plan,
+            item_id=f"historical-{number}",
+            status="completed",
+            references=[
+                {
+                    "kind": "github-issue",
+                    "target": f"https://github.com/example/repo/issues/{number}",
+                    "label": f"#{number} delivered child",
+                    "role": "closed_item",
+                    "locator": "issue",
+                },
+                {
+                    "kind": "github-issue",
+                    "target": "https://github.com/example/repo/issues/442",
+                    "label": "#442 parent lane",
+                    "role": "parent_intent",
+                    "locator": "issue",
+                },
+            ],
+        )
+        archived_record = json.loads(archived_plan.read_text(encoding="utf-8"))
+        archived_record["title"] = f"Historical {number}"
+        archived_record["intent_satisfaction"]["was original intent fully satisfied?"] = "no"
+        archived_record["closure_check"]["larger-intent status"] = "open"
+        archived_record["closure_check"]["closure decision"] = "archive-but-keep-lane-open"
+        installer_mod._write_execplan_record(record_path=archived_plan, record=archived_record)
+
+    compact = planning_summary(target=tmp_path, profile="compact")
+    full = planning_summary(target=tmp_path, profile="full")
+
+    assert compact["current_execution_pressure"]["status"] == "active-execution"
+    assert compact["current_execution_pressure"]["active_task"]["id"] == "current-lane"
+    assert compact["current_execution_pressure"]["recommended_next_action"] == "add one checker."
+    audit = compact["historical_audit_pressure"]
+    assert audit["status"] == "backgrounded-by-active-execution"
+    assert audit["current_lane_refs"] == ["#442", "#448"]
+    assert audit["candidate_count"] == 6
+    assert audit["omitted_candidate_count"] == 1
+    assert len(audit["sample_candidates"]) == 5
+    first_candidate = audit["sample_candidates"][0]
+    assert first_candidate["priority"] == "same-parent-lane"
+    assert first_candidate["recency"]["basis"] == "source_plan_mtime_desc"
+    assert first_candidate["owner"] == ".agentic-workspace/planning/state.toml"
+    assert first_candidate["supersession_status"] == "active"
+    assert audit["recommended_next_action"].startswith("Continue current_execution_pressure first")
+    assert len(full["finished_work_inspection_contract"]["derived_follow_up_candidates"]) == 6
+
+
 def test_planning_reconcile_reports_stale_state_from_provider_agnostic_evidence(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
