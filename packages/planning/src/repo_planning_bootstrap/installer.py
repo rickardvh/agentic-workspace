@@ -2162,6 +2162,10 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     planning_surface_health = dict(summary.get("planning_surface_health", {}))
     ownership_review = dict(summary.get("ownership_review", {}))
     intent_validation_contract = dict(summary.get("intent_validation_contract", {}))
+    if "historical_audit_references" in intent_validation_contract:
+        intent_validation_contract["historical_audit_references"] = _compact_historical_audit_references(
+            intent_validation_contract["historical_audit_references"]
+        )
     if "closeout_reconciliation" in intent_validation_contract:
         intent_validation_contract["closeout_reconciliation"] = _compact_closeout_reconciliation(
             intent_validation_contract["closeout_reconciliation"]
@@ -2355,13 +2359,33 @@ def _compact_closeout_reconciliation(reconciliation: Any) -> dict[str, Any]:
         action_state = str(item.get("action_state", "")).strip()
         if item_id and action_state in items_by_state:
             items_by_state[action_state].append(item_id)
+    sample_items_by_state = {key: value[:5] for key, value in items_by_state.items() if value}
+    displayed_item_count = sum(len(value) for value in sample_items_by_state.values())
     return {
         "status": reconciliation.get("status", "absent"),
         "source_count": reconciliation.get("source_count", 0),
-        "sources": reconciliation.get("sources", []),
         "item_count": reconciliation.get("item_count", 0),
         "counts": reconciliation.get("counts", {}),
-        "items_by_state": {key: value for key, value in items_by_state.items() if value},
+        "sample_items_by_state": sample_items_by_state,
+        "omitted_item_count": max(0, sum(len(value) for value in items_by_state.values()) - displayed_item_count),
+        "detail": "Use `agentic-workspace summary --format json --profile full` for full reconciliation sources and item ids.",
+    }
+
+
+def _compact_historical_audit_references(historical: Any) -> dict[str, Any]:
+    if not isinstance(historical, dict):
+        return {}
+    source_count = int(historical.get("source_count", 0) or 0)
+    return {
+        "status": historical.get("status", "absent"),
+        "source_count": source_count,
+        "item_count": historical.get("item_count", 0),
+        "follow_up_open_count": historical.get("follow_up_open_count", 0),
+        "needs_audit_count": historical.get("needs_audit_count", 0),
+        "likely_premature_closeout_count": historical.get("likely_premature_closeout_count", 0),
+        "sources_omitted": source_count,
+        "rule": historical.get("rule", ""),
+        "detail": "Use `agentic-workspace summary --format json --profile full` for historical review source paths.",
     }
 
 

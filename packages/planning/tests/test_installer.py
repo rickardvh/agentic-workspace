@@ -3279,11 +3279,12 @@ def test_planning_summary_reconciles_lower_trust_closeouts_from_review_artifact(
     assert reconciliation["counts"]["evidence_present_count"] == 1
     assert reconciliation["counts"]["follow_up_open_count"] == 1
     assert reconciliation["counts"]["needs_audit_count"] == 1
-    assert reconciliation["items_by_state"] == {
+    assert reconciliation["sample_items_by_state"] == {
         "needs-audit": ["EXT-3"],
         "evidence-present": ["EXT-1"],
         "follow-up-open": ["EXT-2"],
     }
+    assert reconciliation["omitted_item_count"] == 0
     assert summary["intent_validation_contract"]["counts"]["closeout_reconciled_count"] == 2
     assert summary["intent_validation_contract"]["counts"]["closeout_needs_audit_count"] == 1
 
@@ -3336,7 +3337,8 @@ def test_planning_summary_accepts_historical_closeout_baseline(tmp_path: Path) -
     assert reconciliation["status"] == "present"
     assert reconciliation["counts"]["historical_baseline_count"] == 1
     assert reconciliation["counts"]["needs_audit_count"] == 0
-    assert reconciliation["items_by_state"] == {"historical-baseline": ["EXT-1"]}
+    assert reconciliation["sample_items_by_state"] == {"historical-baseline": ["EXT-1"]}
+    assert reconciliation["omitted_item_count"] == 0
     assert summary["intent_validation_contract"]["counts"]["closeout_needs_audit_count"] == 0
 
 
@@ -3387,7 +3389,11 @@ def test_planning_summary_does_not_treat_historical_followups_as_current_work(tm
 
     assert contract["current_external_work"]["open_count"] == 0
     assert contract["historical_audit_references"]["follow_up_open_count"] == 1
+    assert "sources" not in contract["historical_audit_references"]
+    assert "full` for historical review source paths" in contract["historical_audit_references"]["detail"]
     assert contract["closeout_reconciliation"]["counts"]["follow_up_open_count"] == 1
+    assert "items_by_state" not in contract["closeout_reconciliation"]
+    assert "full` for full reconciliation sources" in contract["closeout_reconciliation"]["detail"]
     assert contract["recommended_next_action"] == "No dangling larger intent or lower-trust closeout signals detected."
 
 
