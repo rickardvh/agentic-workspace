@@ -4376,7 +4376,8 @@ def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None
     assert "first_compact_queries" in startup
     assert any("agentic-workspace" in q for q in startup["first_compact_queries"])
     assert startup["skill_routing"]["status"] == "advisory"
-    assert startup["skill_routing"]["query"] == 'agentic-workspace skills --target ./repo --task "<task>" --format json'
+    configured_cli = payload["resolved_config"]["workspace_config"]["cli_invoke"]
+    assert startup["skill_routing"]["query"] == f'{configured_cli} skills --target ./repo --task "<task>" --format json'
     assert startup["skill_routing"]["preferred_routes"][0]["skill"] == "planning-autopilot"
 
     # Verify config is present

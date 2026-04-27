@@ -1489,8 +1489,8 @@
       "id": "#430",
       "title": "[Workspace]: Isolate generic command-generation machinery for future extraction",
       "status": "open",
-      "kind": "lane",
-      "parent_id": "",
+      "kind": "issue",
+      "parent_id": "#419",
       "planning_residue_expected": "required"
     },
     {
@@ -1498,7 +1498,7 @@
       "id": "#431",
       "title": "[Workspace]: Create an internal command-generation package boundary",
       "status": "open",
-      "kind": "slice",
+      "kind": "issue",
       "parent_id": "#430",
       "planning_residue_expected": "required"
     },
@@ -1507,7 +1507,7 @@
       "id": "#432",
       "title": "[Workspace]: Separate generic command-package schemas from workspace-specific contracts",
       "status": "open",
-      "kind": "slice",
+      "kind": "issue",
       "parent_id": "#430",
       "planning_residue_expected": "required"
     },
@@ -1516,7 +1516,7 @@
       "id": "#433",
       "title": "[Workspace]: Decouple command-generation code from Agentic Workspace contract tooling",
       "status": "open",
-      "kind": "slice",
+      "kind": "issue",
       "parent_id": "#430",
       "planning_residue_expected": "required"
     },
@@ -1525,7 +1525,7 @@
       "id": "#434",
       "title": "[Workspace]: Keep Agentic Workspace as a consumer of isolated command generation",
       "status": "open",
-      "kind": "slice",
+      "kind": "issue",
       "parent_id": "#430",
       "planning_residue_expected": "required"
     },
@@ -1534,7 +1534,7 @@
       "id": "#435",
       "title": "[Workspace]: Define lift-out criteria for the command-generation package",
       "status": "open",
-      "kind": "slice",
+      "kind": "issue",
       "parent_id": "#430",
       "planning_residue_expected": "required"
     },
@@ -1543,7 +1543,7 @@
       "id": "#436",
       "title": "[Workspace]: Add operational footprint pressure for long-running package artifacts",
       "status": "open",
-      "kind": "lane",
+      "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
     },
@@ -1552,7 +1552,7 @@
       "id": "#437",
       "title": "[Workspace]: Detect and repair stale current-memory against planning state",
       "status": "open",
-      "kind": "slice",
+      "kind": "issue",
       "parent_id": "#436",
       "planning_residue_expected": "required"
     },
@@ -1561,7 +1561,7 @@
       "id": "#438",
       "title": "[Workspace]: Add compact operational footprint reporting by artifact class",
       "status": "open",
-      "kind": "slice",
+      "kind": "issue",
       "parent_id": "#436",
       "planning_residue_expected": "required"
     },
@@ -1570,7 +1570,7 @@
       "id": "#439",
       "title": "[Workspace]: Add retention pressure for archived execplans",
       "status": "open",
-      "kind": "slice",
+      "kind": "issue",
       "parent_id": "#436",
       "planning_residue_expected": "required"
     },
@@ -1579,7 +1579,7 @@
       "id": "#440",
       "title": "[Workspace]: Surface review artifact retention as actionable cleanup",
       "status": "open",
-      "kind": "slice",
+      "kind": "issue",
       "parent_id": "#436",
       "planning_residue_expected": "required"
     },
@@ -1588,7 +1588,7 @@
       "id": "#441",
       "title": "[Workspace]: Classify generated outputs as reproducible footprint in reports",
       "status": "open",
-      "kind": "slice",
+      "kind": "issue",
       "parent_id": "#436",
       "planning_residue_expected": "required"
     },
@@ -1597,7 +1597,7 @@
       "id": "#442",
       "title": "[Planning]: Add an autopilot intent loop for plan, implement, evaluate, and continue",
       "status": "open",
-      "kind": "lane",
+      "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
     },
@@ -1636,8 +1636,8 @@
       "id": "#445",
       "title": "[Planning]: Add a GitHub adapter to refresh provider-agnostic external intent evidence",
       "status": "open",
-      "kind": "slice",
-      "parent_id": "#442",
+      "kind": "issue",
+      "parent_id": "",
       "planning_residue_expected": "required"
     },
     {
@@ -1645,8 +1645,8 @@
       "id": "#446",
       "title": "[Planning]: Classify source payload audit drift instead of reporting raw mismatches",
       "status": "open",
-      "kind": "slice",
-      "parent_id": "#442",
+      "kind": "issue",
+      "parent_id": "",
       "planning_residue_expected": "required"
     },
     {
@@ -1654,8 +1654,8 @@
       "id": "#447",
       "title": "[Planning]: Surface CLI authority before generated or executable CLI edits",
       "status": "open",
-      "kind": "slice",
-      "parent_id": "#442",
+      "kind": "issue",
+      "parent_id": "",
       "planning_residue_expected": "required"
     },
     {
@@ -1663,8 +1663,170 @@
       "id": "#448",
       "title": "[Planning]: Prioritize historical audit pressure by current lane, recency, owner, and supersession",
       "status": "open",
-      "kind": "slice",
-      "parent_id": "#442",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#449",
+      "title": "[Workspace]: Make package use cheaper over time than bypassing it",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#450",
+      "title": "[Workspace]: Make advanced features opt-in through feature tiers and merged surfaces",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#451",
+      "title": "[Workspace]: Define feature tiers and activation criteria",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#450",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#452",
+      "title": "[Workspace]: Make minimal or recommendation-driven setup the default path",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#450",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#453",
+      "title": "[Workspace]: Merge startup, summary, report, defaults, and preflight into a context-router family",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#450",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#454",
+      "title": "[Workspace]: Merge audit, retention, footprint, and closeout residue into one maintenance-pressure view",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#450",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#455",
+      "title": "[Memory]: Remove current-memory as a shared current-state feature",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#450",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#456",
+      "title": "[Workspace]: Mark reviews, codegen, external adapters, and autopilot as advanced opt-in features",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#450",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#457",
+      "title": "[Workspace]: Merge setup findings, dogfooding feedback, and review promotion into improvement intake",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#450",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#458",
+      "title": "[Workspace]: Merge external evidence, closeout reconciliation, and landed-commit checks into external-work reconciliation",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#450",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#459",
+      "title": "[Workspace]: Keep generated CLI package infrastructure out of shipped daily-operation packages",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#450",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#460",
+      "title": "[Workspace]: Audit shipped package payloads against daily-operation necessity",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#450",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#461",
+      "title": "[Planning]: Reclassify planning payload into core, optional extensions, and extraction candidates",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#450",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#462",
+      "title": "[Planning]: Classify planning payload surfaces by core, optional, on-demand, dev-only, and extraction status",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#461",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#463",
+      "title": "[Planning]: Shrink default planning install to core daily-operation surfaces",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#461",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#464",
+      "title": "[Planning]: Move review, intake, recovery, and autopilot surfaces behind config or on-demand discovery",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#461",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#465",
+      "title": "[Planning]: Define extraction candidates for review, intake, reconciliation, and advanced agent-operation capabilities",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#461",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#466",
+      "title": "[Planning]: Refresh Agent OS capability map against current module boundaries",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#461",
       "planning_residue_expected": "required"
     }
   ]
