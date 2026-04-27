@@ -1,0 +1,176 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Long Session Dogfooding Report",
+  "date": "2026-04-27",
+  "classification": "system-intent-dogfooding",
+  "goal": [
+    "Capture improvements discovered during a long multi-issue implementation session, aligned with the planning module's system intent.",
+    "Preserve actionable product feedback outside chat so follow-on work is not lost."
+  ],
+  "scope": [
+    "Long-running issue ingestion, implementation, validation, closeout, commit, and push loops.",
+    "Package dogfooding for intent preservation, continuation routing, finished-work inspection, and external issue evidence.",
+    "Recently closed architecture-boundary slices for root CLI authority audit, source payload sync proof, and parent-lane validation."
+  ],
+  "non_goals": [
+    "Do not reopen the just-closed implementation slices.",
+    "Do not replace external issue state with this report.",
+    "Do not prescribe a single CLI implementation as the source of truth."
+  ],
+  "review_mode": {
+    "mode": "dogfooding",
+    "review_question": "Where did the package fall short of making intent continuity and completion the cheapest reliable path during a long implementation lane?",
+    "default_finding_cap": "bounded to recurring workflow friction observed in this session",
+    "inputs_inspected_first": "agentic-workspace summary, system intent contract, recent closeout evidence, and live session friction"
+  },
+  "review_method": {
+    "commands_used": [
+      "uv run agentic-workspace summary --format json",
+      "Get-Content -Raw .agentic-workspace/docs/system-intent-contract.md",
+      "Get-Content -Raw .agentic-workspace/planning/reviews/TEMPLATE.review.json"
+    ],
+    "evidence_sources": [
+      ".agentic-workspace/docs/system-intent-contract.md",
+      ".agentic-workspace/planning/external-intent-evidence.json",
+      ".agentic-workspace/planning/finished-work-evidence.json",
+      ".agentic-workspace/planning/execplans/archive/root-cli-interface-authority-audit.plan.json",
+      ".agentic-workspace/planning/execplans/archive/source-payload-install-sync-proof.plan.json",
+      ".agentic-workspace/planning/execplans/archive/architecture-boundary-parent-validation.plan.json",
+      "live dogfooding observations from the 2026-04-27 implementation session"
+    ]
+  },
+  "references": [
+    {
+      "kind": "system-intent",
+      "target": ".agentic-workspace/docs/system-intent-contract.md",
+      "label": "System Intent Contract",
+      "role": "alignment contract",
+      "locator": "Core Rule, Recoverability Rule, Checked-In Residue Rule"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run agentic-workspace summary --format json",
+      "label": "Compact planning summary",
+      "role": "current package view",
+      "locator": "execution_readiness, intent_validation_contract, finished_work_inspection_contract"
+    }
+  ],
+  "findings": [
+    {
+      "id": "autopilot-loop-still-needs-manual-orchestration",
+      "title": "Autopilot intent loops still require too much manual sequencing",
+      "summary": "The package preserved enough state to recover intent, but the agent still had to manually sequence issue ingestion, bounded planning, proof, archive wording, GitHub closeout, external evidence refresh, commit, and push for each milestone.",
+      "evidence": "The session repeatedly used the package as the source of truth, but closeout correctness depended on manual command choice and manual judgment about whether the larger intent was satisfied. The compact summary still reports intent-derived continuation pressure even after several child slices were closed.",
+      "risk_if_unchanged": "Long lanes remain dependent on a single agent's discipline. The central system intent, plan -> implement -> evaluate until satisfied, is recoverable but not yet first-class enough to make completion the default path.",
+      "suggested_action": "Promote an autopilot lane runner that executes a bounded loop: load external intent, plan one slice, implement, run proof, evaluate larger intent, archive or keep-lane-open, update external evidence, create required continuation, and stop only when intent is satisfied or explicitly routed.",
+      "confidence": "high",
+      "source": "dogfooding",
+      "promotion_target": "planning CLI and package-owned workflow surfaces",
+      "promoted_issue": "https://github.com/rickardvh/agentic-workspace/issues/442",
+      "promotion_trigger": "Next work on autopilot, issue ingestion, or intent-derived continuation handling",
+      "post_remediation_note_shape": "close when the compact summary can name the active or next continuation without relying on chat memory"
+    },
+    {
+      "id": "continuation-priority-can-point-at-stale-children",
+      "title": "Continuation routing can keep promoting stale child archives",
+      "summary": "After child slices were intentionally archived with larger intent still open, compact execution readiness continued to promote archived child plans instead of cleanly resolving to the current parent lane or external evidence state.",
+      "evidence": "The current summary reports `intent-continuation-needs-promotion` and recommends promoting `.agentic-workspace/planning/execplans/archive/source-payload-install-sync-proof.plan.json`, even though later parent validation work closed the architecture-boundary lane locally.",
+      "risk_if_unchanged": "Agents can spend time re-opening already-followed continuations or asking the user to validate what the package should have reconciled.",
+      "suggested_action": "Teach finished-work inspection to understand continuation supersession: child archive continuations should be suppressed or downgraded when a later parent validation archive, roadmap owner, or refreshed external evidence proves the follow-on path was consumed.",
+      "confidence": "high",
+      "source": "summary-output",
+      "promotion_target": "finished-work inspection and execution readiness",
+      "promoted_issue": "https://github.com/rickardvh/agentic-workspace/issues/443",
+      "promotion_trigger": "Any lane using `archive-but-keep-lane-open` with a later parent closeout",
+      "post_remediation_note_shape": "record the superseding plan or external item that consumed the continuation"
+    },
+    {
+      "id": "reference-roles-need-stronger-semantics",
+      "title": "Issue references need explicit roles during finished-work inspection",
+      "summary": "Closeout wording had to be adjusted so parent or next-lane issue references were not misread as implemented-and-unclosed work.",
+      "evidence": "During architecture-boundary closeout, references to parent and follow-on issues needed careful wording to avoid noisy landed-open or ambiguous-open classification.",
+      "risk_if_unchanged": "The package pressures agents to massage prose instead of recording intent semantics directly. This increases the chance that future summaries either lose a real continuation or invent one from a harmless reference.",
+      "suggested_action": "Add structured reference roles such as `closed_item`, `parent_intent`, `next_lane`, `related_context`, and `not_claimed_closed` to closeout and review evidence, then make inspection consume those roles before scanning prose.",
+      "confidence": "high",
+      "source": "dogfooding",
+      "promotion_target": "closeout schema and finished-work inspection",
+      "promoted_issue": "https://github.com/rickardvh/agentic-workspace/issues/444",
+      "promotion_trigger": "Next closeout-schema or intent-validation change",
+      "post_remediation_note_shape": "show role-aware reference counts in compact summary"
+    },
+    {
+      "id": "external-intent-refresh-is-too-manual",
+      "title": "External tracker state is provider-agnostic but not cheap enough to refresh",
+      "summary": "The provider-agnostic external evidence boundary is correct, but the session still required manual updates after GitHub issue work.",
+      "evidence": "Issue state was reconciled through `.agentic-workspace/planning/external-intent-evidence.json` and GitHub closeout comments separately. The summary correctly consumes provider-agnostic evidence, but the refresh path was not automatic enough for a long lane.",
+      "risk_if_unchanged": "Open issue counts and current work pressure can drift from the real tracker until a human notices. This directly weakens the promise that goals cannot be lost without manual validation.",
+      "suggested_action": "Add or promote an optional GitHub adapter command that imports issue state and closure comments into provider-agnostic external intent evidence, and have autopilot run it at issue-ingest and milestone-close boundaries.",
+      "confidence": "high",
+      "source": "dogfooding",
+      "promotion_target": "optional GitHub adapter and external-intent evidence refresh",
+      "promoted_issue": "https://github.com/rickardvh/agentic-workspace/issues/445",
+      "promotion_trigger": "Any work session that closes or comments on GitHub issues",
+      "post_remediation_note_shape": "compact summary should show last external refresh source and time"
+    },
+    {
+      "id": "payload-boundary-checks-need-classification-not-raw-drift",
+      "title": "Payload boundary checks should classify generated and intentional extras",
+      "summary": "The source-payload sync proof initially risked treating transient files and intentional package-source extras as simple drift.",
+      "evidence": "The source payload slice had to distinguish root/generated/transient files, package-source-only payload, and bytecode artifacts instead of using raw file-list mismatch as intent evidence.",
+      "risk_if_unchanged": "Boundary audits can produce false positives, leading agents to either ignore the checker or make broad cleanup changes unrelated to the requested lane.",
+      "suggested_action": "Standardize payload audit classifications for generated, transient, intentional-source-extra, missing-root, and unexpected-root categories, and require proof to report counts by class.",
+      "confidence": "medium-high",
+      "source": "dogfooding",
+      "promotion_target": "source payload audit and bootstrap installer checks",
+      "promoted_issue": "https://github.com/rickardvh/agentic-workspace/issues/446",
+      "promotion_trigger": "Next generated/source payload integrity improvement",
+      "post_remediation_note_shape": "proof output should show zero unexpected drift while preserving intentional extras"
+    },
+    {
+      "id": "manual-cli-edit-detection-should-be-contract-first",
+      "title": "CLI authority checks should be contract-first, not just edit-detection-first",
+      "summary": "The package did catch the risk that executable CLI code was being edited directly, but the healthier behavior is to make generated or hand-authored CLI authority explicit before implementation starts.",
+      "evidence": "The root CLI authority audit proved the current direct root CLI edit was contract-backed projection work, but that proof came after user challenge rather than as first-contact guidance.",
+      "risk_if_unchanged": "Agents may keep editing executable CLI files directly and rely on after-the-fact detection, which conflicts with the goal of keeping generated CLI code hands-off where generation contracts apply.",
+      "suggested_action": "Expose a root CLI authority audit in startup or preflight when CLI files are touched, and have generated CLI slices fail early unless the source contract, generator, and projection rule are named.",
+      "confidence": "high",
+      "source": "dogfooding",
+      "promotion_target": "startup/preflight and CLI generation contract checks",
+      "promoted_issue": "https://github.com/rickardvh/agentic-workspace/issues/447",
+      "promotion_trigger": "Any future CLI command or generated interface edit",
+      "post_remediation_note_shape": "proof should state whether the edit target is source, generator, or projection"
+    },
+    {
+      "id": "historical-audit-pressure-needs-better-prioritization",
+      "title": "Historical audit pressure is visible but not prioritized enough",
+      "summary": "The compact summary reports lower-trust closeouts, needs-audit items, and derived follow-up candidates, but it does not yet make the current requested lane stand out strongly enough from historical residue.",
+      "evidence": "The summary currently reports 36 derived follow-up candidates and 25 closeouts needing audit while also showing no active execplan. That is honest, but a long session needs clearer priority and age routing.",
+      "risk_if_unchanged": "Agents may chase old historical pressure instead of the current user-requested lane, or ignore the whole section because it feels too broad.",
+      "suggested_action": "Add priority, recency, owner, and supersession grouping to historical audit pressure so compact startup can recommend one current action and keep older audit context available but quiet.",
+      "confidence": "medium-high",
+      "source": "summary-output",
+      "promotion_target": "intent validation summary and finished-work inspection",
+      "promoted_issue": "https://github.com/rickardvh/agentic-workspace/issues/448",
+      "promotion_trigger": "Next compact summary prioritization pass",
+      "post_remediation_note_shape": "summary should separate current execution pressure from historical audit backlog"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote the first four findings as product work because they directly affect the core intent-continuity loop.",
+    "defer": "Defer payload-boundary classification and CLI authority startup surfacing until the next architecture-boundary or CLI-generation slice unless they block current issue work.",
+    "dismiss": "Do not dismiss any finding; each reflects observed friction from this session rather than speculative feature work."
+  },
+  "retention": {
+    "closeout_shape": "keep as checked-in dogfooding evidence and create follow-on issues or roadmap entries from promoted findings",
+    "trigger": "after the user accepts or rejects promoted follow-on work",
+    "proof_surface": "agentic-workspace proof --target . --changed .agentic-workspace/planning/reviews/long-session-dogfooding-report-2026-04-27.review.json --format json"
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/reviews/long-session-dogfooding-report-2026-04-27.review.json --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-04-27: Report created from long-session dogfooding observations and compact system-intent evidence."
+  ]
+}
