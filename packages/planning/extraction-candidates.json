@@ -1,0 +1,172 @@
+{
+  "kind": "planning-extraction-candidates/v1",
+  "issue": "https://github.com/rickardvh/agentic-workspace/issues/465",
+  "parent_issue": "https://github.com/rickardvh/agentic-workspace/issues/461",
+  "purpose": "Define planning-adjacent capability boundaries before any future package extraction work.",
+  "source_inputs": [
+    "docs/agent-os-capabilities.md",
+    "packages/planning/payload-surface-classification.json",
+    "https://github.com/rickardvh/agentic-workspace/issues/461",
+    "https://github.com/rickardvh/agentic-workspace/issues/465"
+  ],
+  "surface_value": {
+    "classification": "maintainer/development only",
+    "installed_by_default": false,
+    "ordinary_startup_surface": false,
+    "owner": "planning package maintainers",
+    "discovery": "Use the active #465 execplan or package tests; ordinary agents should not read this during startup.",
+    "why_it_deserves_to_exist": "It prevents planning from absorbing adjacent capabilities by recording extraction criteria and blockers in one testable package-local artifact."
+  },
+  "extraction_criteria": [
+    "Repeated dogfooding pressure is hard to solve cleanly inside current modules or the workspace layer.",
+    "The contract shape is stable and no longer depends on sibling internals or informal conventions.",
+    "Ownership and boundaries are clear enough for selective adoption.",
+    "A repository can benefit from the capability without adopting the whole current planning stack.",
+    "Extraction would reduce total operating cost rather than create another surface agents must remember."
+  ],
+  "decisions": [
+    {
+      "id": "review-audit-and-improvement-intake",
+      "capability": "Review / audit lane plus review-finding promotion",
+      "current_home": "Optional planning payload and bundled planning review skills",
+      "decision": "extraction candidate",
+      "candidate_boundary": "A provider-agnostic review package could own review modes, review record schemas, finding caps, promotion thresholds, and review-to-follow-up routing.",
+      "why_not_core_planning": "Daily execution planning only needs active state, next action, proof, and archive discipline; review portfolios are useful but separable quality and improvement workflows.",
+      "evidence_required_before_extraction": [
+        "Review records are reused across distinct repo shapes without planning-specific assumptions.",
+        "Finding promotion can target provider-agnostic external work evidence or checked-in planning without assuming GitHub.",
+        "The review schema stays stable across at least one more compression or audit lane."
+      ],
+      "blockers": [
+        "Review skills and docs still refer to planning-specific closeout and roadmap surfaces.",
+        "Promotion behavior is not yet proven as a standalone lifecycle."
+      ],
+      "candidate_surfaces": [
+        "packages/planning/bootstrap/.agentic-workspace/planning/reviews/README.md",
+        "packages/planning/bootstrap/.agentic-workspace/planning/reviews/TEMPLATE.review.json",
+        "packages/planning/skills/planning-review-pass/SKILL.md",
+        "packages/planning/skills/planning-promote-review-findings/SKILL.md"
+      ],
+      "existing_follow_up": [
+        "https://github.com/rickardvh/agentic-workspace/issues/450",
+        "https://github.com/rickardvh/agentic-workspace/issues/451"
+      ]
+    },
+    {
+      "id": "external-work-intake-and-reconciliation",
+      "capability": "External work intake, external intent evidence, and reconciliation",
+      "current_home": "Planning state, external-intent evidence contract, reconcile output, and optional intake skill",
+      "decision": "extraction candidate",
+      "candidate_boundary": "A tracker-agnostic intake package could own external work evidence schemas, intake/refinement rules, stale-state reconciliation, and provider adapter boundaries.",
+      "why_not_core_planning": "Core planning should preserve active execution state without assuming any external tracker; intake and reconciliation are valuable only for repos with external work systems.",
+      "evidence_required_before_extraction": [
+        "The provider-agnostic evidence schema supports at least one non-GitHub adapter or a documented adapter fixture.",
+        "Intake can create or update checked-in planning state without embedding provider-specific semantics.",
+        "Reconciliation proves useful outside long-running dogfooding lanes."
+      ],
+      "blockers": [
+        "The only live adapter is currently GitHub CLI based.",
+        "Intake and reconciliation still depend on planning state shape for closeout and continuation decisions."
+      ],
+      "candidate_surfaces": [
+        "packages/planning/bootstrap/.agentic-workspace/docs/external-intent-evidence-contract.md",
+        "packages/planning/bootstrap/.agentic-workspace/planning/upstream-task-intake.md",
+        "packages/planning/bootstrap/.agentic-workspace/planning/pre-ingestion-refinement.md",
+        "packages/planning/skills/planning-intake-upstream-task/SKILL.md"
+      ],
+      "existing_follow_up": [
+        "https://github.com/rickardvh/agentic-workspace/issues/469"
+      ]
+    },
+    {
+      "id": "advanced-agent-operation",
+      "capability": "Autopilot, bounded delegated judgment, orchestration, and capability-aware execution",
+      "current_home": "Optional planning docs, planning skills, mixed-agent config reporting, and workspace defaults",
+      "decision": "optional extension for now",
+      "candidate_boundary": "A future operation package could own capability-fit rules, delegated judgment packets, autopilot loop semantics, and orchestration handoffs.",
+      "why_not_core_planning": "These workflows can be high leverage, but they depend heavily on agent/runtime availability and should not burden the smallest valid planning install.",
+      "evidence_required_before_extraction": [
+        "Capability and delegation records can stay repo-, agent-, tool-, and language-agnostic.",
+        "The workflow improves total operating cost across multiple agent runtimes.",
+        "Closeout trust and escalation rules stabilize without requiring planning internals."
+      ],
+      "blockers": [
+        "Current dogfooding evidence is mostly from this repo and this agent workflow.",
+        "Delegation and autopilot wording still needs compression before becoming product-general."
+      ],
+      "candidate_surfaces": [
+        "packages/planning/bootstrap/.agentic-workspace/docs/capability-aware-execution.md",
+        "packages/planning/bootstrap/.agentic-workspace/docs/orchestrator-workflow-contract.md",
+        "packages/planning/bootstrap/.agentic-workspace/docs/capability-contract.json",
+        "packages/planning/skills/planning-autopilot/SKILL.md",
+        "packages/planning/skills/planning-orchestrator-workflow/SKILL.md"
+      ],
+      "existing_follow_up": [
+        "https://github.com/rickardvh/agentic-workspace/issues/450",
+        "https://github.com/rickardvh/agentic-workspace/issues/467"
+      ]
+    },
+    {
+      "id": "reporting-signal-and-knowledge-promotion",
+      "capability": "Reporting, signal hygiene, standing intent, and knowledge-promotion workflow",
+      "current_home": "Optional planning docs, workspace reports, and memory/planning coordination",
+      "decision": "optional extension for now",
+      "candidate_boundary": "A future reporting or signal package would own compact report sections, signal routing, and durable-knowledge promotion contracts across modules.",
+      "why_not_core_planning": "Core planning should expose compact active execution state; high-volume reporting and promotion policy should stay behind selectors or module-specific outputs.",
+      "evidence_required_before_extraction": [
+        "Multiple modules need the same report-section schemas and signal-routing rules.",
+        "Knowledge promotion works with and without Agentic Memory installed.",
+        "Default report compactness can be preserved while selectors expose richer detail."
+      ],
+      "blockers": [
+        "Reporting still mixes workspace aggregation, planning state, and memory coordination.",
+        "The feature-tier lane has not yet decided how much advanced reporting belongs in optional tiers."
+      ],
+      "candidate_surfaces": [
+        "packages/planning/bootstrap/.agentic-workspace/docs/reporting-contract.md",
+        "packages/planning/bootstrap/.agentic-workspace/docs/signal-hygiene-contract.md",
+        "packages/planning/bootstrap/.agentic-workspace/docs/knowledge-promotion-workflow.md",
+        "packages/planning/bootstrap/.agentic-workspace/docs/standing-intent-contract.md",
+        "packages/planning/skills/planning-reporting/SKILL.md"
+      ],
+      "existing_follow_up": [
+        "https://github.com/rickardvh/agentic-workspace/issues/450",
+        "https://github.com/rickardvh/agentic-workspace/issues/455"
+      ]
+    },
+    {
+      "id": "generated-surface-trust-and-maintainer-proof",
+      "capability": "Generated-surface trust, maintainer proof, and package helper mirrors",
+      "current_home": "Package-local generated adapters, render/check helpers, proof selectors, and maintainer tests",
+      "decision": "keep internal / maintainer-development only",
+      "candidate_boundary": "Do not extract as a standalone planning-adjacent package now; route generic command-generation work through the existing command-generation extraction lane.",
+      "why_not_core_planning": "These surfaces help maintain the product but should not ship as ordinary target-repo operating input.",
+      "evidence_required_before_extraction": [
+        "A non-planning generated package needs the same provenance and trust contract.",
+        "The command-generation extraction lane proves a reusable generator boundary.",
+        "Generated-surface trust can be expressed without planning payload assumptions."
+      ],
+      "blockers": [
+        "Current helper mirrors are package-maintainer artifacts, not user-facing capability surfaces.",
+        "The broader command-generation extraction boundary is still open."
+      ],
+      "candidate_surfaces": [
+        "packages/planning/bootstrap/tools/AGENT_QUICKSTART.md",
+        "packages/planning/bootstrap/tools/AGENT_ROUTING.md",
+        "packages/planning/bootstrap/tools/agent-manifest.json",
+        "packages/planning/bootstrap/scripts/render_agent_docs.py",
+        "packages/planning/bootstrap/scripts/check/check_planning_surfaces.py",
+        "packages/planning/bootstrap/scripts/check/check_maintainer_surfaces.py"
+      ],
+      "existing_follow_up": [
+        "https://github.com/rickardvh/agentic-workspace/issues/430",
+        "https://github.com/rickardvh/agentic-workspace/issues/431"
+      ]
+    }
+  ],
+  "follow_up_policy": {
+    "created_new_issues": [],
+    "reason": "Existing lanes already cover feature tiers, upstream signal capture, and command-generation extraction; this slice should not create duplicate follow-up issues until #466 refreshes the capability map."
+  },
+  "next_step": "Use #466 to refresh docs/agent-os-capabilities.md against these current module boundaries without turning the doctrine page into a backlog."
+}

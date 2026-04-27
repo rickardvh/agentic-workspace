@@ -18,8 +18,8 @@
     },
     "execution": {
       "milestone": "planning-extraction-candidates",
-      "status": "in-progress",
-      "next_step": "Inspect docs/agent-os-capabilities.md, payload-surface-classification.json, and #465 acceptance criteria to draft the extraction-candidate map.",
+      "status": "completed",
+      "next_step": "Promote #466 to refresh the Agent OS capability map against the candidate boundaries.",
       "proof": "planning package tests if package surfaces change, workspace CLI tests if root query surfaces change, ruff, proof selector, and planning doctor"
     },
     "scope": {
@@ -52,11 +52,11 @@
     "issues": "#461, #465, #466"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
-    "intentionally deferred": "capability-map refresh",
-    "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
+    "what this slice enabled": "Added packages/planning/extraction-candidates.json with explicit decisions, candidate boundaries, evidence requirements, blockers, and existing follow-up routing for planning-adjacent capabilities.",
+    "intentionally deferred": "capability-map refresh remains with #466.",
+    "discovered implications": "Existing #450/#451/#467/#469/#430/#431 lanes already cover follow-up pressure, so #465 did not need duplicate issues.",
+    "proof achieved now": "planning packaging tests, workspace CLI tests, ruff, proof selector, and planning doctor passed.",
+    "validation still needed": "#466 still needs to align docs/agent-os-capabilities.md with the current module boundaries.",
     "next likely slice": "#466 capability-map follow-through"
   },
   "delegated_judgment": {
@@ -112,7 +112,7 @@
   ],
   "active_milestone": {
     "id": "planning-extraction-candidates",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to extraction-candidate definition and follow-up routing.",
     "ready": "ready",
     "blocked": "none",
@@ -149,32 +149,65 @@
     "Follow-up issues are only created when a candidate has stable enough shape."
   ],
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "Added a package-local extraction candidate map that keeps review/audit, external intake/reconciliation, advanced agent operation, reporting/signal, and generated-surface trust boundaries explicit without adding installed startup residue.",
+    "validation confirmed": "cd packages/planning && uv run pytest tests/test_packaging.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests packages/planning/src packages/planning/tests; proof selector; planning doctor.",
+    "follow-on routed to": "#466 capability-map refresh",
+    "post-work posterity capture": "packages/planning/extraction-candidates.json and package tests record the candidate boundaries.",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": "#466 capability-map refresh"
   },
   "closure_check": {
-    "slice status": "open",
+    "slice status": "completed",
     "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "Implementation has not started.",
-    "evidence carried forward": "#465 owns extraction-candidate boundaries after #464 optional enablement.",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Extraction candidates are defined and tested, but #466 still needs to refresh the broader capability doctrine before the parent #461 lane can be trusted as complete.",
+    "evidence carried forward": "packages/planning/extraction-candidates.json defines boundaries, evidence requirements, blockers, and existing follow-up routing without adding an installed startup surface.",
     "reopen trigger": "planning-adjacent capability boundaries stay ambiguous enough that planning keeps absorbing non-core surfaces"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        {
+          "summary": "No duplicate follow-up issues were created because existing lanes already cover stable candidate pressure.",
+          "owner": "discard"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Promote #466 to refresh docs/agent-os-capabilities.md against the current module and extraction boundaries.",
+          "owner": ".agentic-workspace/planning/state.toml"
+        }
+      ],
       "memory": [],
       "config_check": [],
-      "docs": [],
-      "issue_follow_up": []
+      "docs": [
+        {
+          "summary": "Package README routes maintainers to extraction-candidates.json.",
+          "owner": "packages/planning/README.md"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#466 capability-map refresh",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/466"
+        }
+      ]
     }
   },
   "drift_log": [
-    "2026-04-27: Promoted after #464 added explicit optional enablement."
-  ]
+    "2026-04-27: Promoted after #464 added explicit optional enablement.",
+    "2026-04-27: Added package-local extraction candidate map and routed doctrine refresh to #466."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Define extraction candidates for review, intake, reconciliation, and advanced agent-operation capabilities.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The #465 slice is satisfied: packages/planning/extraction-candidates.json defines candidate boundaries, reasons, evidence required before extraction, blockers, candidate surfaces, and existing follow-up lanes. The larger #461 intent still needs #466 doctrine alignment.",
+    "unsolved intent passed to": "#466 capability-map refresh"
+  },
+  "proof_report": {
+    "validation proof": "cd packages/planning && uv run pytest tests/test_packaging.py -q passed with 7 tests; cd packages/planning && uv run pytest tests/test_installer.py -q passed with 127 tests; uv run pytest tests/test_workspace_cli.py -q passed with 179 tests; uv run ruff check src tests packages/planning/src packages/planning/tests passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Proof selector and planning doctor also passed for the changed extraction map, package README/test, state, and execplan surfaces."
+  }
 }

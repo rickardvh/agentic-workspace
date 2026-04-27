@@ -256,6 +256,7 @@ Keep this README as the package entrypoint. Use the installed contracts for deep
 
 Optional packaged contracts remain discoverable through `agentic-planning-bootstrap list-files --format json` when a repo needs capability-aware execution, review promotion, upstream-task intake, richer reporting, or orchestration workflows.
 Use `--include-optional` with `install`, `adopt`, or `upgrade` only when the repo intentionally wants those richer workflow surfaces copied into its checkout.
+Package maintainers can use `extraction-candidates.json` to review which planning-adjacent capabilities should stay internal, remain optional extensions, or wait for future extraction evidence.
 
 Planning is deliberately not a task tracker, backlog manager, knowledge base, documentation system, database-backed planner, or runtime orchestration tool.
 It should preserve active execution state and route durable knowledge to memory or canonical docs.

@@ -1,0 +1,180 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Agent OS Capability Map Refresh",
+  "goal": [
+    "Implement #466 by refreshing docs/agent-os-capabilities.md against current planning, memory, workspace, optional-extension, and extraction-candidate boundaries."
+  ],
+  "non_goals": [
+    "Do not turn the capability map into a backlog.",
+    "Do not rewrite the ecosystem architecture from scratch.",
+    "Do not create new modules in this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Capability categories match current architecture and product-shape intent.",
+      "constraints": "Keep bounded sequencing in state, not in the doctrine page.",
+      "latitude": "Update stale statements directly and route only bounded follow-up outside the doctrine page.",
+      "escalation": "Escalate if the refresh requires new package implementation or a broad roadmap rewrite."
+    },
+    "execution": {
+      "milestone": "agent-os-capability-map-refresh",
+      "status": "in-progress",
+      "next_step": "Compare docs/agent-os-capabilities.md with packages/planning/extraction-candidates.json and current module registry.",
+      "proof": "workspace CLI tests, ruff, proof selector, and planning doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/agent-os-capability-map-refresh.plan.json"
+      ],
+      "invariants": [
+        "Doctrine remains a capability taxonomy, not a queue.",
+        "Planning does not implicitly own adjacent optional capabilities.",
+        "Extraction remains evidence-driven."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#461: make Agentic Planning smaller by default and clearer by boundary.",
+    "this slice completes the larger intended outcome": "maybe",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane planning-payload-boundary"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "maybe",
+    "required follow-on detail": "After #466, validate whether #461 can close or whether a narrow residue remains.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #466 closeout, run summary/proof and decide whether to close #461"
+  },
+  "parent_lane": {
+    "id": "#461",
+    "title": "Reclassify planning payload into core, optional extensions, and extraction candidates",
+    "priority": "1",
+    "issues": "#461, #466"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "parent #461 closure decision",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "validate #461 closure or route narrow residue"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Refresh the Agent OS capability map against current module boundaries.",
+    "hard constraints": "Do not create a backlog inside docs/agent-os-capabilities.md.",
+    "agent may decide locally": "Exact wording changes that align doctrine with current package boundaries.",
+    "escalate when": "The capability map implies new package work that lacks issue-backed scope."
+  },
+  "context_budget": {
+    "live working set": "state, this execplan, #461/#466, docs/agent-os-capabilities.md, packages/planning/extraction-candidates.json, module registry",
+    "recoverable later": "#462-#465 archives and package classification artifacts",
+    "externalize before shift": "record whether #461 can close after doctrine refresh",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Next active issue is #466 capability-map refresh.",
+    "context-shift triggers": "Before creating any new issue or changing roadmap priority."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Make the long-horizon doctrine reflect smaller planning boundaries without creating new ordinary surfaces.",
+    "broader-lane validation question": "Can #461 close after doctrine matches the current payload and extraction boundaries?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/466"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/466",
+      "label": "#466 capability-map refresh",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/461",
+      "label": "#461 planning payload boundary",
+      "role": "parent_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "artifact",
+      "target": "packages/planning/extraction-candidates.json",
+      "label": "#465 extraction candidates",
+      "role": "dependency",
+      "locator": "decisions"
+    },
+    {
+      "kind": "artifact",
+      "target": "docs/agent-os-capabilities.md",
+      "label": "Agent OS capability map",
+      "role": "target",
+      "locator": "capability categories"
+    }
+  ],
+  "active_milestone": {
+    "id": "agent-os-capability-map-refresh",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to doctrine refresh and parent-lane closure decision.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Compare docs/agent-os-capabilities.md with packages/planning/extraction-candidates.json.",
+    "Update stale capability categories and role text without adding backlog semantics."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/agent-os-capability-map-refresh.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan.",
+    "Route bounded follow-up to issues or state, not doctrine prose."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests packages/planning/src packages/planning/tests",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/agent-os-capability-map-refresh.plan.json docs/agent-os-capabilities.md packages/planning/extraction-candidates.json --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "Capability categories match current architecture and product-shape intent.",
+    "Planning no longer implicitly owns capabilities only because the old map placed them near planning.",
+    "Extraction criteria remain evidence-driven.",
+    "Any new bounded work is routed outside the doctrine page."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "closure_check": {
+    "slice status": "open",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "Implementation has not started.",
+    "evidence carried forward": "#466 owns doctrine alignment after #465 candidate map.",
+    "reopen trigger": "docs/agent-os-capabilities.md again implies planning owns optional or extraction-candidate capabilities by inertia"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted after #465 added package-local extraction candidates."
+  ]
+}

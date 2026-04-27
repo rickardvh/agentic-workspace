@@ -16,6 +16,7 @@ from repo_planning_bootstrap import installer
 
 PLANNING_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 CLASSIFICATION_PATH = PLANNING_PACKAGE_ROOT / "payload-surface-classification.json"
+EXTRACTION_CANDIDATES_PATH = PLANNING_PACKAGE_ROOT / "extraction-candidates.json"
 EXPECTED_PAYLOAD_ENTRIES = {path.as_posix() for path in installer.PACKAGE_PAYLOAD_FILES}
 EXPECTED_SKILL_ENTRIES = {
     path.relative_to(installer.PLANNING_SKILLS_MANAGED_ROOT).as_posix() for path in installer.PLANNING_BUNDLED_SKILL_FILES
@@ -27,6 +28,11 @@ ALLOWED_CLASSIFICATIONS = {
     "maintainer/development only",
     "extraction candidate",
     "remove / obsolete",
+}
+ALLOWED_EXTRACTION_DECISIONS = {
+    "extraction candidate",
+    "optional extension for now",
+    "keep internal / maintainer-development only",
 }
 
 
@@ -83,6 +89,15 @@ def _load_payload_surface_classification() -> dict:
     payload = json.loads(CLASSIFICATION_PATH.read_text(encoding="utf-8"))
     assert payload["kind"] == "planning-payload-surface-classification/v1"
     assert set(payload["allowed_classifications"]) == ALLOWED_CLASSIFICATIONS
+    return payload
+
+
+def _load_extraction_candidates() -> dict:
+    payload = json.loads(EXTRACTION_CANDIDATES_PATH.read_text(encoding="utf-8"))
+    assert payload["kind"] == "planning-extraction-candidates/v1"
+    assert payload["issue"].endswith("/465")
+    assert payload["parent_issue"].endswith("/461")
+    assert payload["surface_value"]["ordinary_startup_surface"] is False
     return payload
 
 
@@ -151,3 +166,33 @@ def test_payload_surface_classification_identifies_core_and_follow_up_sets() -> 
     assert classified["packages/planning/bootstrap/tools/AGENT_QUICKSTART.md"] == "maintainer/development only"
     assert any(candidate["next_issue"].endswith("/463") for candidate in payload["compression_candidates"])
     assert any(candidate["next_issue"].endswith("/464") for candidate in payload["compression_candidates"])
+
+
+def test_extraction_candidates_define_boundaries_without_startup_surface() -> None:
+    payload = _load_extraction_candidates()
+    candidates = payload["decisions"]
+
+    assert len(candidates) >= 5
+    assert payload["follow_up_policy"]["created_new_issues"] == []
+    for candidate in candidates:
+        assert candidate["decision"] in ALLOWED_EXTRACTION_DECISIONS
+        assert candidate["candidate_boundary"].strip()
+        assert candidate["why_not_core_planning"].strip()
+        assert candidate["evidence_required_before_extraction"]
+        assert candidate["blockers"]
+        assert candidate["candidate_surfaces"]
+        assert candidate["existing_follow_up"]
+
+
+def test_extraction_candidate_surfaces_exist_or_are_tracked_followups() -> None:
+    payload = _load_extraction_candidates()
+    classified_sources = _classified_source_paths()
+
+    for candidate in payload["decisions"]:
+        for surface in candidate["candidate_surfaces"]:
+            if surface.startswith("packages/planning/"):
+                path = Path(surface.removeprefix("packages/planning/"))
+                assert (PLANNING_PACKAGE_ROOT / path).exists(), f"{candidate['id']} references missing surface {surface}"
+                assert surface in classified_sources, f"{candidate['id']} references unclassified package surface {surface}"
+        for follow_up in candidate["existing_follow_up"]:
+            assert follow_up.startswith("https://github.com/rickardvh/agentic-workspace/issues/")
