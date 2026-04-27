@@ -6319,6 +6319,24 @@ def _defaults_payload() -> dict[str, Any]:
             ),
         },
         {
+            "id": "cli_authority",
+            "when": [
+                "generated, projected, or executable CLI files change",
+                "the trust question is whether direct CLI editing is allowed for this slice",
+            ],
+            "enough_proof": [
+                "agentic-workspace defaults --section root_cli_authority --format json",
+            ],
+            "broaden_when": [
+                "the change also alters command contracts, generated packages, or package payloads",
+            ],
+            "escalate_when": [
+                "the proof output cannot classify the CLI file as source, generator, projection, or hand-owned executable code",
+                "a generated or projection target lacks a named source contract and regeneration path",
+            ],
+            "recovery_signal": "Use cli_authority_review to decide whether the edit is allowed runtime work or must route back to source contracts and regeneration.",
+        },
+        {
             "id": "workspace_cli",
             "when": [
                 "root workspace CLI changes",
@@ -7794,6 +7812,7 @@ def _normalize_changed_paths(paths: list[str]) -> list[str]:
 def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root: Path | None = None) -> dict[str, Any]:
     defaults = _defaults_payload()
     validation_lanes = defaults["validation"]["lanes"]
+    cli_authority_lane = _PROOF_SELECTION_RULES.get("cli_authority", {}).get("lane")
 
     def _lane(lane_id: str) -> dict[str, Any]:
         return next(lane for lane in validation_lanes if lane["id"] == lane_id)
@@ -7815,6 +7834,8 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
                 break
         if not matched_rule:
             _select(str(_PROOF_SELECTION_RULES["fallback_lane"]))
+        if cli_authority_lane and _cli_authority_classification_for_path(changed_path):
+            _select(str(cli_authority_lane))
 
     selected_lanes = [_lane(lane_id) for lane_id in selected_ids]
     required_commands: list[str] = []
@@ -7831,7 +7852,8 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
             if condition not in escalate_when:
                 escalate_when.append(condition)
 
-    if len(selected_lanes) > 1:
+    implementation_lanes = [lane for lane in selected_lanes if lane["id"] != cli_authority_lane]
+    if len(implementation_lanes) > 1:
         escalate_when.insert(0, str(_PROOF_SELECTION_RULES["cross_lane_escalation"]))
 
     proof_selection = {
@@ -7860,7 +7882,71 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
     direct_cli_review = _direct_cli_edit_review_for_changed_paths(changed_paths)
     if direct_cli_review["changed_paths"]:
         proof_selection["direct_cli_edit_review"] = direct_cli_review
+    cli_authority_review = _cli_authority_review_for_changed_paths(changed_paths)
+    if cli_authority_review["changed_paths"]:
+        proof_selection["cli_authority_review"] = cli_authority_review
     return proof_selection
+
+
+def _cli_authority_classification_for_path(changed_path: str) -> dict[str, Any] | None:
+    for classification in _PROOF_SELECTION_RULES.get("cli_authority", {}).get("classifications", []):
+        exact_matches = set(classification.get("exact", []))
+        prefixes = tuple(classification.get("prefixes", []))
+        if changed_path in exact_matches or changed_path.startswith(prefixes):
+            return classification
+    return None
+
+
+def _cli_authority_review_for_changed_paths(changed_paths: list[str]) -> dict[str, Any]:
+    classified_paths: list[dict[str, Any]] = []
+    unresolved_paths: list[str] = []
+    for path in changed_paths:
+        classification = _cli_authority_classification_for_path(path)
+        if not classification:
+            continue
+        role = str(classification["role"])
+        source_contract = str(classification["source_contract"])
+        regeneration_path = classification.get("regeneration_path")
+        direct_edit_allowed = bool(classification["direct_edit_allowed"])
+        has_required_projection_authority = role not in {"generator", "projection"} or bool(source_contract and regeneration_path)
+        if role in {"generator", "projection"} and not has_required_projection_authority:
+            unresolved_paths.append(path)
+        classified_paths.append(
+            {
+                "path": path,
+                "classification_id": classification["id"],
+                "role": role,
+                "direct_edit_allowed": direct_edit_allowed,
+                "source_contract": source_contract,
+                "generator_contract": classification.get("generator_contract"),
+                "regeneration_path": regeneration_path,
+                "edit_policy": classification["edit_policy"],
+                "authority_ready": has_required_projection_authority,
+            }
+        )
+    generated_or_projection = [item for item in classified_paths if item["role"] in {"generator", "projection"}]
+    blocked_direct_edits = [item["path"] for item in generated_or_projection if not item["direct_edit_allowed"]]
+    if unresolved_paths:
+        status = "blocked-missing-authority"
+    elif blocked_direct_edits:
+        status = "blocked-direct-edit-route-to-source"
+    elif classified_paths:
+        status = "review-ready"
+    else:
+        status = "not-applicable"
+    return {
+        "kind": "cli-authority-review/v1",
+        "changed_paths": [item["path"] for item in classified_paths],
+        "status": status,
+        "classifications": classified_paths,
+        "blocked_direct_edit_paths": blocked_direct_edits,
+        "unresolved_authority_paths": unresolved_paths,
+        "rule": (
+            "Generated or projection CLI paths are not direct-edit targets unless their source contract and regeneration path are named; "
+            "hand-owned executable CLI paths still need the root CLI authority audit before interface authority changes."
+        ),
+        "authority_query": "agentic-workspace defaults --section root_cli_authority --format json",
+    }
 
 
 def _direct_cli_edit_review_for_changed_paths(changed_paths: list[str]) -> dict[str, Any]:

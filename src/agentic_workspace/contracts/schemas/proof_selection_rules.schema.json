@@ -62,6 +62,92 @@
     },
     "cross_lane_escalation": {
       "type": "string"
+    },
+    "cli_authority": {
+      "type": "object",
+      "required": [
+        "lane",
+        "classifications"
+      ],
+      "properties": {
+        "lane": {
+          "type": "string"
+        },
+        "classifications": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "role",
+              "direct_edit_allowed",
+              "source_contract",
+              "edit_policy"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "role": {
+                "enum": [
+                  "source",
+                  "generator",
+                  "projection",
+                  "hand-owned-executable"
+                ]
+              },
+              "exact": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "prefixes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "direct_edit_allowed": {
+                "type": "boolean"
+              },
+              "source_contract": {
+                "type": "string"
+              },
+              "generator_contract": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "regeneration_path": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "edit_policy": {
+                "type": "string"
+              }
+            },
+            "anyOf": [
+              {
+                "required": [
+                  "prefixes"
+                ]
+              },
+              {
+                "required": [
+                  "exact"
+                ]
+              }
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

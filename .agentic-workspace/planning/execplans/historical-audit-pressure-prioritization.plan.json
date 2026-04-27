@@ -1,0 +1,164 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Historical Audit Pressure Prioritization",
+  "goal": [
+    "Implement #448 so compact summary separates current execution pressure from historical audit backlog and prioritizes audit residue."
+  ],
+  "non_goals": [
+    "Do not remove historical audit evidence from the full profile.",
+    "Do not close #442 until the parent intent is reassessed after this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Compact summary recommends the current action first and keeps historical audit candidates recoverable but clearly lower priority unless they match the active lane.",
+      "constraints": "Keep the default summary compact and avoid adding another first-contact surface.",
+      "latitude": "Choose the smallest prioritization fields that make current-vs-historical pressure obvious.",
+      "escalation": "Escalate if prioritization requires changing issue tracker semantics or hiding current open work."
+    },
+    "execution": {
+      "milestone": "historical-audit-pressure-prioritization",
+      "status": "in-progress",
+      "next_step": "Inspect summary construction for derived follow-up candidates, closeout audit pressure, and current external work.",
+      "proof": "focused summary tests plus workspace CLI validation"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/historical-audit-pressure-prioritization.plan.json"
+      ],
+      "invariants": [
+        "Compact startup should answer what needs attention now.",
+        "Full profile should still expose the complete historical audit backlog."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#442: make the plan -> implement -> evaluate continuation loop first-class for long lanes.",
+    "this slice completes the larger intended outcome": "maybe",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane long-session-dogfooding-intent-loop"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "review-after-slice",
+    "required follow-on detail": "After #448, reassess whether #442 can close or needs one more follow-up.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #448 closeout, re-run summary/reconcile and decide parent #442 closure honestly"
+  },
+  "parent_lane": {
+    "id": "#442",
+    "title": "Add an autopilot intent loop for plan, implement, evaluate, and continue",
+    "priority": "1",
+    "issues": "#442, #445, #446, #447, #448"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Prioritize historical audit pressure by current lane, recency, owner, and supersession.",
+    "hard constraints": "Do not drown the active lane in historical backlog, and do not hide full audit evidence from full profile.",
+    "agent may decide locally": "The exact prioritization score and compact field shape.",
+    "escalate when": "The implementation would need tracker-specific semantics in core planning."
+  },
+  "context_budget": {
+    "live working set": "state, this execplan, #448 issue, summary construction, finished-work inspection, external-intent evidence, and workspace CLI tests",
+    "recoverable later": "archived #445-#447 closeouts",
+    "externalize before shift": "update execution_summary and closure_check",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Next active issue is #448 historical audit pressure prioritization.",
+    "context-shift triggers": "Before changing external tracker semantics or hiding full-profile audit detail."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Compact startup should answer what needs attention now without making agents chase historical residue.",
+    "slice shaping bias": "Prioritize and group existing summary evidence rather than adding another dashboard.",
+    "broader-lane validation question": "After this slice, can #442 close honestly or is one more continuation needed?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/448"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/448",
+      "label": "#448 historical audit pressure prioritization",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/442",
+      "label": "#442 autopilot intent loop",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "historical-audit-pressure-prioritization",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect summary construction for historical audit and current execution pressure.",
+    "Add compact prioritization fields without expanding full-profile payload by default.",
+    "Add focused tests for active-lane separation, historical candidate metadata, and full-profile backlog preservation."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/historical-audit-pressure-prioritization.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/historical-audit-pressure-prioritization.plan.json --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Compact summary separates current execution pressure from historical audit backlog.",
+    "Historical candidates include priority, age or recency, owner, and supersession status where known.",
+    "Summary recommends one current action when possible.",
+    "Full profile still exposes the complete audit backlog."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "closure_check": {
+    "slice status": "open",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "Implementation has not started.",
+    "evidence carried forward": "#445, #446, and #447 landed; #448 is the remaining planned #442 child.",
+    "reopen trigger": "compact summary still makes agents chase historical audit backlog before current execution pressure"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted after #447 closeout."
+  ]
+}

@@ -17,14 +17,18 @@
     },
     "execution": {
       "milestone": "cli-authority-proof-routing",
-      "status": "in-progress",
-      "next_step": "Inspect existing proof lane selection and CLI command/contract metadata.",
-      "proof": "focused proof selection tests plus workspace CLI validation"
+      "status": "completed",
+      "next_step": "Promote #448 as the next #442 child slice.",
+      "proof": "workspace CLI tests, contract tooling tests, proof selector output, and planning doctor"
     },
     "scope": {
       "touched": [
         ".agentic-workspace/planning/state.toml",
-        ".agentic-workspace/planning/execplans/cli-authority-proof-routing.plan.json"
+        ".agentic-workspace/planning/execplans/cli-authority-proof-routing.plan.json",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/proof_selection_rules.json",
+        "src/agentic_workspace/contracts/schemas/proof_selection_rules.schema.json",
+        "tests/test_workspace_cli.py"
       ],
       "invariants": [
         "CLI authority must be visible before edits, not reconstructed after user challenge.",
@@ -50,12 +54,12 @@
     "issues": "#442, #445, #446, #447, #448"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
-    "intentionally deferred": "none",
-    "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "what this slice enabled": "Proof selection now adds a cli_authority companion lane for generated/projection and hand-owned executable CLI paths and emits a compact cli_authority_review before implementation.",
+    "intentionally deferred": "Broader CLI code generation remains in the separate command-generation roadmap.",
+    "discovered implications": "The authority lane should behave as a companion check rather than creating false cross-lane escalation; this was fixed in the same slice.",
+    "proof achieved now": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run pytest tests/test_contract_tooling.py -q; uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py src/agentic_workspace/contracts/proof_selection_rules.json src/agentic_workspace/contracts/schemas/proof_selection_rules.schema.json tests/test_workspace_cli.py .agentic-workspace/planning/execplans/cli-authority-proof-routing.plan.json .agentic-workspace/planning/state.toml --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "validation still needed": "none for this slice",
+    "next likely slice": "#448 historical audit pressure prioritization"
   },
   "delegated_judgment": {
     "requested outcome": "Surface CLI authority before generated or executable CLI edits.",
@@ -70,7 +74,8 @@
     "pre-work config pull": "uv run agentic-workspace summary --format json",
     "pre-work memory pull": "not needed",
     "tiny resumability note": "Next active issue is #447 CLI authority proof routing.",
-    "context-shift triggers": "Before changing CLI ownership semantics or adding generated CLI machinery."
+    "context-shift triggers": "Before changing CLI ownership semantics or adding generated CLI machinery.",
+    "resume from": "#448 historical audit pressure prioritization after this archived closeout"
   },
   "system_intent_alignment": {
     "relevant system intent": "Implementation should start from compact authority surfaces and avoid manual after-the-fact validation.",
@@ -112,7 +117,11 @@
   ],
   "touched_paths": [
     ".agentic-workspace/planning/state.toml",
-    ".agentic-workspace/planning/execplans/cli-authority-proof-routing.plan.json"
+    ".agentic-workspace/planning/execplans/cli-authority-proof-routing.plan.json",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/proof_selection_rules.json",
+    "src/agentic_workspace/contracts/schemas/proof_selection_rules.schema.json",
+    "tests/test_workspace_cli.py"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
@@ -120,7 +129,8 @@
   "validation_commands": [
     "uv run pytest tests/test_workspace_cli.py -q",
     "uv run ruff check src tests",
-    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/cli-authority-proof-routing.plan.json --format json",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py src/agentic_workspace/contracts/proof_selection_rules.json src/agentic_workspace/contracts/schemas/proof_selection_rules.schema.json tests/test_workspace_cli.py .agentic-workspace/planning/execplans/cli-authority-proof-routing.plan.json .agentic-workspace/planning/state.toml --format json",
     "uv run agentic-workspace doctor --target . --modules planning --format json"
   ],
   "required_tools": [
@@ -133,32 +143,50 @@
     "Tests cover at least one generated CLI path and one hand-owned CLI path."
   ],
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "CLI changed-path proof now selects cli_authority, classifies generated/projection paths with source contract and regeneration path, classifies root/package CLI as hand-owned executable code, and blocks generated direct edits from looking safe.",
+    "validation confirmed": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run pytest tests/test_contract_tooling.py -q; uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py src/agentic_workspace/contracts/proof_selection_rules.json src/agentic_workspace/contracts/schemas/proof_selection_rules.schema.json tests/test_workspace_cli.py .agentic-workspace/planning/execplans/cli-authority-proof-routing.plan.json .agentic-workspace/planning/state.toml --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "follow-on routed to": "#448 historical audit pressure prioritization",
+    "post-work posterity capture": "Archived execplan records the companion-lane behavior and the dogfooding fix for false cross-lane escalation.",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": ".agentic-workspace/planning/execplans/historical-audit-pressure-prioritization.plan.json"
   },
   "closure_check": {
-    "slice status": "open",
+    "slice status": "closed",
     "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "Implementation has not started.",
-    "evidence carried forward": "#445 external intent refresh adapter and #446 payload drift classification landed.",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#447 acceptance criteria are covered, but parent #442 still has #448 open.",
+    "evidence carried forward": "proof --changed generated/typescript/workspace-cli/src/commandPackage.ts reports role=projection, direct_edit_allowed=false, source_contract, and regeneration_path; proof --changed src/agentic_workspace/cli.py reports role=hand-owned-executable.",
     "reopen trigger": "proof selection still does not expose CLI authority before direct CLI edits"
   },
   "closeout_distillation": {
     "buckets": {
       "discard": [],
-      "continuation": [],
+      "continuation": [
+        {
+          "summary": "Promote #448 next in the #442 dogfooding lane.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
       "memory": [],
       "config_check": [],
       "docs": [],
-      "issue_follow_up": []
+      "issue_follow_up": [
+        {
+          "summary": "#447 CLI authority proof routing",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/447"
+        },
+        {
+          "summary": "#448 historical audit pressure prioritization",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/448"
+        }
+      ]
     }
   },
   "drift_log": [
-    "2026-04-27: Promoted after #446 closeout."
+    "2026-04-27: Promoted after #446 closeout.",
+    "2026-04-27: Implemented as a proof-selector companion authority lane backed by proof_selection_rules.json."
   ]
 }

@@ -4654,7 +4654,9 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["proof"]["required_commands"] == [
         "uv run pytest tests/test_workspace_cli.py -q",
         "uv run ruff check src tests",
+        "agentic-workspace defaults --section root_cli_authority --format json",
     ]
+    assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
     assert payload["path_boundaries"] == [
         {
             "path": "src/agentic_workspace/cli.py",
@@ -4708,7 +4710,9 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
         "cd packages/planning && uv run ruff check .",
         "uv run pytest tests/test_workspace_cli.py -q",
         "uv run ruff check src tests",
+        "agentic-workspace defaults --section root_cli_authority --format json",
     ]
+    assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
     assert payload["path_boundaries"][0]["authority"] == "payload"
     assert payload["path_boundaries"][0]["requires_attention"] is True
     assert payload["authority_markers"][0]["safe_to_edit"] is False
@@ -4805,19 +4809,39 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
     assert answer["selected_lanes"][0]["id"] == "generated_command_packages"
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["generated_command_packages", "cli_authority"]
     assert "route back through command-package checks" in answer["selected_lanes"][0]["recovery_signal"]
     assert answer["required_commands"] == [
         "uv run python scripts/check/check_generated_command_packages.py",
         "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
         "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
         "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+        "agentic-workspace defaults --section root_cli_authority --format json",
     ]
+    review = answer["cli_authority_review"]
+    assert review["status"] == "blocked-direct-edit-route-to-source"
+    assert review["blocked_direct_edit_paths"] == ["generated/typescript/workspace-cli/src/commandPackage.ts"]
+    generated = review["classifications"][0]
+    assert generated["role"] == "projection"
+    assert generated["direct_edit_allowed"] is False
+    assert generated["source_contract"] == "src/agentic_workspace/contracts/command_package_ir.json"
+    assert generated["regeneration_path"] == "uv run python scripts/check/check_generated_command_packages.py"
 
 
 def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
     assert cli.main(["proof", "--changed", "src/agentic_workspace/cli.py", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["workspace_cli", "cli_authority"]
+    authority_review = answer["cli_authority_review"]
+    assert authority_review["status"] == "review-ready"
+    assert answer["escalate_when"][0] != "changed paths span multiple validation lanes; run all selected commands or split the work"
+    root_cli = authority_review["classifications"][0]
+    assert root_cli["role"] == "hand-owned-executable"
+    assert root_cli["direct_edit_allowed"] is True
+    assert root_cli["source_contract"].endswith("src/agentic_workspace/contracts/python_runtime_boundary.json")
+    assert authority_review["authority_query"] == "agentic-workspace defaults --section root_cli_authority --format json"
     review = payload["answer"]["direct_cli_edit_review"]
     assert review["status"] == "review-needed"
     assert review["changed_paths"] == ["src/agentic_workspace/cli.py"]
@@ -4843,7 +4867,7 @@ def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
-    assert [lane["id"] for lane in answer["selected_lanes"]] == ["planning_package", "workspace_cli"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["planning_package", "workspace_cli", "cli_authority"]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
 
 

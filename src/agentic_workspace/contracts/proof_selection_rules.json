@@ -62,5 +62,50 @@
     }
   ],
   "fallback_lane": "workspace_cli",
-  "cross_lane_escalation": "changed paths span multiple validation lanes; run all selected commands or split the work"
+  "cross_lane_escalation": "changed paths span multiple validation lanes; run all selected commands or split the work",
+  "cli_authority": {
+    "lane": "cli_authority",
+    "classifications": [
+      {
+        "id": "generated-command-package-output",
+        "role": "projection",
+        "prefixes": [
+          "generated/typescript/",
+          "src/agentic_workspace/generated_cli_package/",
+          "packages/planning/src/repo_planning_bootstrap/generated_cli_package/",
+          "packages/memory/src/repo_memory_bootstrap/generated_cli_package/"
+        ],
+        "direct_edit_allowed": false,
+        "source_contract": "src/agentic_workspace/contracts/command_package_ir.json",
+        "generator_contract": "src/agentic_workspace/contracts/command_adapter_generation.json",
+        "regeneration_path": "uv run python scripts/check/check_generated_command_packages.py",
+        "edit_policy": "Do not hand-edit generated command package outputs; change the command package IR or generator and regenerate/prove the projection."
+      },
+      {
+        "id": "root-workspace-cli-runtime",
+        "role": "hand-owned-executable",
+        "exact": [
+          "src/agentic_workspace/cli.py"
+        ],
+        "direct_edit_allowed": true,
+        "source_contract": "src/agentic_workspace/contracts/operation_contracts.json + src/agentic_workspace/contracts/cli_commands.json + src/agentic_workspace/contracts/python_runtime_boundary.json",
+        "generator_contract": null,
+        "regeneration_path": null,
+        "edit_policy": "Direct edits are allowed only for runtime primitives, live inspection, dispatch glue, or explicit migration exceptions; visible interface authority should route to contracts or generated metadata."
+      },
+      {
+        "id": "package-cli-runtime",
+        "role": "hand-owned-executable",
+        "exact": [
+          "packages/planning/src/repo_planning_bootstrap/cli.py",
+          "packages/memory/src/repo_memory_bootstrap/cli.py"
+        ],
+        "direct_edit_allowed": true,
+        "source_contract": "package-local CLI source plus package bootstrap payload checks",
+        "generator_contract": null,
+        "regeneration_path": null,
+        "edit_policy": "Direct edits are package-source work and may require package payload and install-surface proof before closeout."
+      }
+    ]
+  }
 }
