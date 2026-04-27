@@ -1,0 +1,153 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workspace Context Router Family",
+  "goal": [
+    "Implement #453 by presenting start, summary, report, defaults, and preflight as one context-router family in docs and compact output labels."
+  ],
+  "non_goals": [
+    "Do not break or rename existing commands.",
+    "Do not add a new first-contact surface.",
+    "Do not create a larger command taxonomy."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agents can choose the right compact context-router view without treating each command as a separate product layer.",
+      "constraints": "Keep existing commands and startup compact; no new first-contact surface.",
+      "latitude": "Choose the smallest docs/output labels that make the shared family visible.",
+      "escalation": "Escalate if consolidation requires command behavior changes or new lifecycle machinery."
+    },
+    "execution": {
+      "milestone": "workspace-context-router-family",
+      "status": "in-progress",
+      "next_step": "Inspect README, AGENTS.md, docs/contributor-playbook.md, start/report/defaults/preflight labels, and #453 acceptance criteria.",
+      "proof": "workspace CLI tests, ruff, proof selector, planning doctor, and adapter-surface refresh if startup docs change"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/workspace-context-router-family.plan.json",
+        "README.md",
+        "AGENTS.md",
+        "docs/contributor-playbook.md",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Existing commands stay stable.",
+        "No new first-contact surface is added.",
+        "Startup remains compact."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#454-#460 plus #467/#469/#471 remain in the feature-tier and surface-merge lane.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #453 closeout, promote the next #450 child indicated by validation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Merge compact context commands into a context-router family.",
+    "hard constraints": "Do not add a new first-contact surface or break existing commands.",
+    "agent may decide locally": "Which docs/output labels carry the shared family concept.",
+    "escalate when": "The change needs behavioral command consolidation rather than docs/output compression."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Make compact commands feel like one small router, not several product concepts.",
+    "broader-lane validation question": "Can an agent pick the right context view without reading a separate handbook?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/453"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/453",
+      "label": "#453 context-router family",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "workspace-context-router-family",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect README, AGENTS.md, docs/contributor-playbook.md, start/report/defaults/preflight labels, and #453 acceptance criteria."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/workspace-context-router-family.plan.json",
+    "README.md",
+    "AGENTS.md",
+    "docs/contributor-playbook.md",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Existing commands stay stable.",
+    "No new first-contact surface is added.",
+    "Startup remains compact."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests packages/planning/src packages/planning/tests",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/workspace-context-router-family.plan.json README.md AGENTS.md docs/contributor-playbook.md src/agentic_workspace/cli.py tests/test_workspace_cli.py --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "Docs describe start, summary, report, defaults, and preflight as one context-router family.",
+    "Agents can choose the right view without treating each command as a separate product layer.",
+    "No new first-contact surface is added.",
+    "Startup remains compact."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

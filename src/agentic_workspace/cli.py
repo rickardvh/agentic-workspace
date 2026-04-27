@@ -6758,9 +6758,14 @@ def _defaults_payload() -> dict[str, Any]:
         "install_profiles": {
             "canonical_doc": "docs/which-package.md",
             "command": "agentic-workspace defaults --section install_profiles --format json",
-            "rule": "Use the public workspace entrypoint and choose the preset that matches the repo's main operating problem.",
+            "rule": "Use the public workspace entrypoint and choose the smallest preset that matches the repo's main operating problem.",
             "default_entrypoint": "agentic-workspace",
-            "default_answer": "Use `agentic-workspace` and choose the preset that matches the repo problem.",
+            "default_answer": "Start with `memory` when durable repo knowledge is the main problem; choose `planning` for active execution continuity and `full` only when both are justified.",
+            "recommendation_order": [
+                "memory",
+                "planning",
+                "full",
+            ],
             "profiles": [
                 {
                     "preset": "memory",
@@ -6820,13 +6825,14 @@ def _defaults_payload() -> dict[str, Any]:
             ],
             "lightweight_profile": {
                 "preset": "memory",
-                "summary": "Choose `memory` when you want the smallest useful core.",
+                "summary": "Choose `memory` when you want the smallest useful shared core.",
                 "why": "It keeps the visible surface smaller than `planning` or `full` while still giving the repo durable knowledge and compact routing.",
             },
         },
         "lifecycle": {
             "primary_entrypoint": "agentic-workspace",
             "default_install_command": "agentic-workspace install --target ./repo --preset <memory|planning|full>",
+            "default_setup_posture": "smallest-viable-preset-first",
             "supported_intents": [
                 "set up this repo for Agentic Memory",
                 "set up this repo for Agentic Planning",
@@ -7247,7 +7253,8 @@ def _defaults_payload() -> dict[str, Any]:
             ],
         },
         "combined_install": {
-            "primary": "agentic-workspace install --target ./repo --preset full",
+            "primary": "agentic-workspace install --target ./repo --preset <memory|planning|full>",
+            "full_when": "Use --preset full only when both active-now planning and durable anti-rediscovery memory are worth the shared footprint.",
             "operating_model": [
                 "Planning owns active-now state.",
                 "Memory owns durable anti-rediscovery knowledge.",

@@ -159,11 +159,14 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["operating_questions"]["questions"][2]["then_if_needed"][0] == "agentic-workspace report --target ./repo --format json"
     assert payload["install_profiles"]["canonical_doc"] == "docs/which-package.md"
     assert payload["install_profiles"]["command"] == "agentic-workspace defaults --section install_profiles --format json"
+    assert payload["install_profiles"]["rule"].startswith("Use the public workspace entrypoint and choose the smallest preset")
+    assert payload["install_profiles"]["recommendation_order"] == ["memory", "planning", "full"]
     assert payload["install_profiles"]["profiles"][0]["preset"] == "memory"
     assert payload["install_profiles"]["profiles"][1]["preset"] == "planning"
     assert payload["install_profiles"]["lightweight_profile"]["preset"] == "memory"
     assert payload["lifecycle"]["primary_entrypoint"] == "agentic-workspace"
     assert "agentic-workspace install --target ./repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
+    assert payload["lifecycle"]["default_setup_posture"] == "smallest-viable-preset-first"
     assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
     assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
     assert payload["lifecycle"]["canonical_bootstrap_handoff_record"] == ".agentic-workspace/bootstrap-handoff.json"
@@ -267,7 +270,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["ownership_mapping"]["canonical_doc"] == ".agentic-workspace/docs/ownership-authority-contract.md"
     assert payload["ownership_mapping"]["command"] == "agentic-workspace ownership --target ./repo --format json"
     assert payload["ownership_mapping"]["ledger"] == ".agentic-workspace/OWNERSHIP.toml"
-    assert payload["combined_install"]["primary"] == "agentic-workspace install --target ./repo --preset full"
+    assert payload["combined_install"]["primary"] == "agentic-workspace install --target ./repo --preset <memory|planning|full>"
+    assert payload["combined_install"]["full_when"].startswith("Use --preset full only when both")
     assert payload["recovery"]["canonical_doc"] == "docs/environment-recovery-contract.md"
     assert payload["recovery"]["rule"] == "Inspect state first, refresh contract second, re-run the narrowest proving lane third."
     assert payload["recovery"]["ordered_path"][:2] == [
@@ -1160,6 +1164,8 @@ def test_defaults_install_profiles_section_selector_returns_compact_contract_ans
     assert payload["matched"] is True
     assert payload["answer"]["canonical_doc"] == "docs/which-package.md"
     assert payload["answer"]["default_entrypoint"] == "agentic-workspace"
+    assert payload["answer"]["default_answer"].startswith("Start with `memory`")
+    assert payload["answer"]["recommendation_order"] == ["memory", "planning", "full"]
     assert payload["answer"]["profiles"][0]["preset"] == "memory"
     assert payload["answer"]["profiles"][2]["preset"] == "full"
     assert payload["answer"]["partial_adoption"][1]["combination"] == "planning only"

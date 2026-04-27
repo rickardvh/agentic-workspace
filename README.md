@@ -4,21 +4,21 @@ Agentic Workspace gives a repo a durable operating layer for agents without maki
 
 ## Default path
 
-Choose one preset:
+Choose the smallest preset that matches the repo problem:
 
-- `memory`: durable knowledge without active planning
+- `memory`: durable knowledge without active planning; the smallest useful shared operating layer
 - `planning`: active planning without memory
-- `full`: both together
+- `full`: both together, when the repo needs both durable knowledge and checked-in execution continuity
 
 These presets map to feature tiers. `routing-only` is the smallest footprint when a repo only needs compact startup/config/report routing. `full` means planning plus memory; it does not activate maintainer dogfooding, review intake, extraction, or self-improvement surfaces.
 
 Then run:
 
 ```bash
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target ./repo --preset full
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target ./repo --preset memory
 ```
 
-If you use `pipx` instead of `uvx`, keep the same command shape.
+Use `--preset planning` when active work continuity is the main problem, and `--preset full` only when both memory and planning are justified. If you use `pipx` instead of `uvx`, keep the same command shape.
 
 ## Ordinary work
 

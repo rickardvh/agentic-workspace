@@ -18,8 +18,8 @@
     },
     "execution": {
       "milestone": "workspace-minimal-setup-default",
-      "status": "in-progress",
-      "next_step": "Inspect README setup guidance, init/setup commands, module registry tiers, and #452 acceptance criteria.",
+      "status": "completed",
+      "next_step": "Archive #452 and promote #453 for the context-router family slice.",
       "proof": "README/setup tests as changed, workspace CLI tests, ruff, proof selector, and planning doctor."
     },
     "scope": {
@@ -49,12 +49,12 @@
     "activation trigger": "after #452 closeout, promote the next #450 child indicated by validation"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
-    "intentionally deferred": "none",
-    "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "what this slice enabled": "README now shows memory as the smallest useful preset and frames planning/full as explicit choices; defaults install_profiles now recommends memory/planning/full by problem fit and combined install no longer names full as the primary path.",
+    "intentionally deferred": "#453 should merge compact context commands into a context-router family in docs/output labels.",
+    "discovered implications": "A docs/defaults-only slice was enough; changing install semantics or repo default_preset would add unnecessary migration risk.",
+    "proof achieved now": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests packages/planning/src packages/planning/tests; uv run agentic-workspace proof --target . --changed README.md src/agentic_workspace/cli.py tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/workspace-minimal-setup-default.plan.json --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run python scripts/check/check_planning_surfaces.py",
+    "validation still needed": "none for #452; continue #450 through #453.",
+    "next likely slice": "#453"
   },
   "delegated_judgment": {
     "requested outcome": "Make minimal or recommendation-driven setup the public default path.",
@@ -86,7 +86,7 @@
   ],
   "active_milestone": {
     "id": "workspace-minimal-setup-default",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
     "ready": "ready",
     "blocked": "none",
@@ -126,24 +126,73 @@
     "Full preset is framed as opt-in for repos with both durable-memory and active-planning needs."
   ],
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
-    "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "outcome delivered": "Public setup guidance and defaults now start from the smallest fitting preset and frame full as opt-in when both memory and planning are justified.",
+    "validation confirmed": "CLI tests, ruff, proof selection, planning doctor, root CLI authority review, install-profile defaults dogfooding, and planning-surface checks passed.",
+    "follow-on routed to": "#453 context-router family",
+    "post-work posterity capture": "README and defaults install_profiles carry durable setup guidance; tests guard the recommendation order and full opt-in wording.",
+    "knowledge promoted (Memory/Docs/Config)": "README.md and agentic-workspace defaults install_profiles",
+    "resume from": ".agentic-workspace/planning/state.toml active item for #453"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests packages/planning/src packages/planning/tests; uv run agentic-workspace proof --target . --changed README.md src/agentic_workspace/cli.py tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/workspace-minimal-setup-default.plan.json --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run python scripts/check/check_planning_surfaces.py",
+    "proof achieved now": "Public setup no longer implies full-stack install as the normal default.",
+    "evidence for \"proof achieved\" state": "README uses --preset memory as the smallest useful shared core; defaults install_profiles gives memory/planning/full recommendation order and combined_install no longer names full as primary."
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded #452 slice is complete, but parent #450 remains open for context-router and surface-merge work.",
+    "evidence carried forward": "README uses --preset memory as the smallest useful shared core; defaults install_profiles recommends memory, planning, then full by problem fit.",
+    "reopen trigger": "Public docs or defaults again present --preset full as the normal setup default."
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        {
+          "summary": "No migration note is needed because explicit install semantics did not change.",
+          "owner": "discard",
+          "source": "execution_summary"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Promote #453 to present start, summary, report, defaults, and preflight as one context-router family.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
       "memory": [],
-      "config_check": [],
+      "config_check": [
+        {
+          "summary": "README.md and agentic-workspace defaults install_profiles",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
       "docs": [],
-      "issue_follow_up": []
+      "issue_follow_up": [
+        {
+          "summary": "#452 minimal setup default",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/452"
+        },
+        {
+          "summary": "#450 feature tiers and surface merge",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/450"
+        }
+      ]
     }
   },
   "drift_log": [
-    "2026-04-27: Promoted from TODO direct-task shape into an execplan."
-  ]
+    "2026-04-27: Promoted from TODO direct-task shape into an execplan.",
+    "2026-04-27: Completed #452 with smallest-viable setup guidance in README and defaults install_profiles."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Make minimal or recommendation-driven setup the public default path.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#452 changed README and defaults install_profiles so setup starts from the smallest fitting preset and full is framed as opt-in.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml active item workspace-context-router-family"
+  }
 }
