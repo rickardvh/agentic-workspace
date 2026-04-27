@@ -109,3 +109,64 @@ def test_planning_readme_payload_claim_warning_reports_stale_claims(monkeypatch,
     assert warnings[0].warning_class == "doc_installed_surface_drift"
     assert "missing payload claim(s): .agentic-workspace/planning/agent-manifest.json" in warnings[0].message
     assert "stale payload claim(s): tools/AGENT_QUICKSTART.md" in warnings[0].message
+
+
+def test_sync_proof_classifies_layers_and_intentional_differences(monkeypatch, tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_boundary_sync_proof")
+    _write_root_surfaces(tmp_path)
+    _write(tmp_path / "packages" / "planning" / "bootstrap" / ".agentic-workspace" / "planning" / "agent-manifest.json", "{}")
+    _write(tmp_path / "packages" / "planning" / "bootstrap" / "tools" / "AGENT_QUICKSTART.md", "# source helper")
+    _write(tmp_path / "packages" / "planning" / "bootstrap" / "tools" / "__pycache__" / "helper.pyc", "ignored")
+    _write(tmp_path / "packages" / "memory" / "bootstrap" / "AGENTS.template.md", "# adapter")
+    _write(tmp_path / "packages" / "memory" / "bootstrap" / ".agentic-workspace" / "memory" / "repo" / "index.md", "# index")
+    _write(
+        tmp_path / "packages" / "planning" / "pyproject.toml",
+        """
+        [tool.hatch.build.targets.wheel.force-include]
+        "bootstrap/.agentic-workspace/planning/agent-manifest.json" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/agent-manifest.json"
+        """,
+    )
+    _write(
+        tmp_path / "packages" / "memory" / "pyproject.toml",
+        """
+        [tool.hatch.build.targets.wheel.force-include]
+        "bootstrap" = "src/repo_memory_bootstrap/_payload"
+        """,
+    )
+    monkeypatch.setattr(mod, "_planning_expected_payload_files", lambda _repo_root: [".agentic-workspace/planning/agent-manifest.json"])
+    monkeypatch.setattr(mod, "_memory_expected_payload_files", lambda _repo_root: ["AGENTS.md", ".agentic-workspace/memory/repo/index.md"])
+
+    proof = mod.gather_sync_proof(repo_root=tmp_path)
+
+    assert proof["status"] == "current"
+    planning = proof["packages"][0]
+    memory = proof["packages"][1]
+    assert planning["source_to_payload_inventory"]["status"] == "current"
+    assert (
+        planning["source_to_payload_inventory"]["classified_source_only_or_generated"][0]["classification"]
+        == "source-only-maintainer-helper"
+    )
+    assert all("__pycache__" not in item["path"] for item in planning["source_to_payload_inventory"]["classified_source_only_or_generated"])
+    assert memory["source_to_payload_inventory"]["status"] == "current"
+    assert memory["source_to_payload_inventory"]["missing"] == []
+    assert memory["intentional_differences"][0]["classification"] == "root-operational-memory"
+
+
+def test_sync_proof_warns_on_missing_payload_source(monkeypatch, tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_boundary_sync_missing")
+    _write_root_surfaces(tmp_path)
+    _write(
+        tmp_path / "packages" / "planning" / "pyproject.toml",
+        """
+        [tool.hatch.build.targets.wheel.force-include]
+        "bootstrap/.agentic-workspace/planning/agent-manifest.json" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/agent-manifest.json"
+        """,
+    )
+    monkeypatch.setattr(mod, "_planning_expected_payload_files", lambda _repo_root: [".agentic-workspace/planning/agent-manifest.json"])
+    monkeypatch.setattr(mod, "_memory_expected_payload_files", lambda _repo_root: [])
+
+    warnings = mod.gather_boundary_warnings(repo_root=tmp_path)
+    proof = mod.gather_sync_proof(repo_root=tmp_path)
+
+    assert any(warning.warning_class == "payload_inventory_drift" for warning in warnings)
+    assert proof["packages"][0]["source_to_payload_inventory"]["status"] == "drift"

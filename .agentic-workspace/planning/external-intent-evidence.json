@@ -1277,10 +1277,24 @@
       "system": "github",
       "id": "#411",
       "title": "[Workspace]: Prove source-to-payload-to-installed-surface synchronization",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#409",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "present",
+      "closeout": {
+        "plan": ".agentic-workspace/planning/execplans/archive/source-payload-install-sync-proof.plan.json",
+        "proof": "`scripts/check/check_source_payload_operational_install.py --format json` now emits `sync_proof` for planning and memory with owners, refresh rules, source-to-payload inventory, packaging manifest coverage, root sentinels, intentional differences, and package-local install guard status.",
+        "validation": [
+          "uv run pytest tests/test_source_payload_operational_install.py -q",
+          "uv run python scripts/check/check_source_payload_operational_install.py --format json --strict",
+          "uv run python scripts/check/check_source_payload_operational_install.py --quiet-success",
+          "make maintainer-surfaces",
+          "uv run agentic-workspace proof --target . --changed scripts/check/check_source_payload_operational_install.py tests/test_source_payload_operational_install.py docs/source-payload-operational-install.md .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/source-payload-install-sync-proof.plan.json --format json",
+          "uv run pytest tests/test_workspace_cli.py -q",
+          "uv run ruff check src tests scripts",
+          "uv run agentic-workspace summary --format json"
+        ]
+      }
     },
     {
       "system": "github",

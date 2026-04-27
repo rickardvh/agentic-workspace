@@ -12,8 +12,9 @@ import argparse
 import importlib
 import json
 import sys
+import tomllib
 from pathlib import Path
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -21,6 +22,8 @@ WARNING_PACKAGE_LOCAL_INSTALL_DRIFT = "package_local_install_drift"
 WARNING_ROOT_OPERATIONAL_INSTALL_DRIFT = "root_operational_install_drift"
 WARNING_CONTRACT_DRIFT = "contract_drift"
 WARNING_DOC_INSTALLED_SURFACE_DRIFT = "doc_installed_surface_drift"
+WARNING_PAYLOAD_INVENTORY_DRIFT = "payload_inventory_drift"
+WARNING_PACKAGING_MANIFEST_DRIFT = "packaging_manifest_drift"
 
 
 class BoundaryWarning(NamedTuple):
@@ -77,6 +80,107 @@ def _planning_required_payload_claims(repo_root: Path) -> list[str]:
             sys.path.remove(str(package_src))
         except ValueError:
             pass
+
+
+def _planning_expected_payload_files(repo_root: Path) -> list[str]:
+    package_src = repo_root / "packages" / "planning" / "src"
+    if not package_src.exists():
+        return []
+    sys.path.insert(0, str(package_src))
+    try:
+        installer = importlib.import_module("repo_planning_bootstrap.installer")
+        return sorted(path.as_posix() for path in installer.REQUIRED_PAYLOAD_FILES)
+    finally:
+        try:
+            sys.path.remove(str(package_src))
+        except ValueError:
+            pass
+
+
+def _memory_expected_payload_files(repo_root: Path) -> list[str]:
+    package_src = repo_root / "packages" / "memory" / "src"
+    if not package_src.exists():
+        return []
+    sys.path.insert(0, str(package_src))
+    try:
+        shared = importlib.import_module("repo_memory_bootstrap._installer_shared")
+        return sorted(path.as_posix() for path in shared.PAYLOAD_REQUIRED_FILES)
+    finally:
+        try:
+            sys.path.remove(str(package_src))
+        except ValueError:
+            pass
+
+
+def _package_payload_files(repo_root: Path, package_name: str) -> list[str]:
+    payload_root = repo_root / "packages" / package_name / "bootstrap"
+    if not payload_root.exists():
+        return []
+    return sorted(path.relative_to(payload_root).as_posix() for path in payload_root.rglob("*") if _should_count_bootstrap_file(path))
+
+
+def _should_count_bootstrap_file(path: Path) -> bool:
+    return path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+
+
+def _force_include_entries(repo_root: Path, package_name: str) -> dict[str, str]:
+    pyproject = repo_root / "packages" / package_name / "pyproject.toml"
+    if not pyproject.exists():
+        return {}
+    payload = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+    current: Any = payload
+    for key in ("tool", "hatch", "build", "targets", "wheel", "force-include"):
+        if not isinstance(current, dict):
+            return {}
+        current = current.get(key, {})
+    if not isinstance(current, dict):
+        return {}
+    return {str(source): str(destination) for source, destination in current.items()}
+
+
+def _force_include_covers_bootstrap_path(entries: dict[str, str], relative: str) -> bool:
+    source_path = Path("bootstrap") / relative
+    for source, destination in entries.items():
+        source_prefix = Path(source)
+        destination_prefix = Path(destination)
+        if source_path == source_prefix or source_path.is_relative_to(source_prefix):
+            expected_destination = (destination_prefix / source_path.relative_to(source_prefix)).as_posix()
+            return "_payload" in expected_destination
+    return False
+
+
+def _payload_inventory_warnings(*, repo_root: Path, package_name: str, expected: list[str]) -> list[BoundaryWarning]:
+    actual = _package_payload_files(repo_root, package_name)
+    missing = _missing_payload_sources(expected=expected, actual=actual)
+    if not expected or not missing:
+        return []
+    return [
+        BoundaryWarning(
+            WARNING_PAYLOAD_INVENTORY_DRIFT,
+            f"packages/{package_name}/bootstrap",
+            f"{package_name} bootstrap payload inventory drifted from package source contract; missing payload file(s): " + ", ".join(missing),
+        )
+    ]
+
+
+def _packaging_manifest_warnings(*, repo_root: Path, package_name: str, expected: list[str]) -> list[BoundaryWarning]:
+    if not expected:
+        return []
+    entries = _force_include_entries(repo_root, package_name)
+    missing = [relative for relative in expected if not _force_include_covers_bootstrap_path(entries, relative)]
+    if not missing:
+        return []
+    return [
+        BoundaryWarning(
+            WARNING_PACKAGING_MANIFEST_DRIFT,
+            f"packages/{package_name}/pyproject.toml",
+            (
+                f"{package_name} package manifest does not include required bootstrap payload path(s) in wheel _payload: "
+                + ", ".join(missing[:8])
+                + (" ..." if len(missing) > 8 else "")
+            ),
+        )
+    ]
 
 
 def _readme_payload_claim_warnings(*, repo_root: Path) -> list[BoundaryWarning]:
@@ -140,6 +244,12 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
             )
 
     warnings.extend(_readme_payload_claim_warnings(repo_root=repo_root))
+    planning_expected = _planning_expected_payload_files(repo_root)
+    memory_expected = _memory_expected_payload_files(repo_root)
+    warnings.extend(_payload_inventory_warnings(repo_root=repo_root, package_name="planning", expected=planning_expected))
+    warnings.extend(_payload_inventory_warnings(repo_root=repo_root, package_name="memory", expected=memory_expected))
+    warnings.extend(_packaging_manifest_warnings(repo_root=repo_root, package_name="planning", expected=planning_expected))
+    warnings.extend(_packaging_manifest_warnings(repo_root=repo_root, package_name="memory", expected=memory_expected))
 
     required_root_surfaces = {
         repo_root / ".agentic-workspace" / "memory" / "repo" / "index.md": (
@@ -218,6 +328,190 @@ def gather_boundary_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
     }
 
 
+def _status_from_drift(*, missing: list[str], extra: list[str]) -> str:
+    return "current" if not missing else "drift"
+
+
+def _missing_payload_sources(*, expected: list[str], actual: list[str]) -> list[str]:
+    actual_set = set(actual)
+    missing: list[str] = []
+    for relative in expected:
+        if relative in actual_set:
+            continue
+        if relative == "AGENTS.md" and "AGENTS.template.md" in actual_set:
+            continue
+        missing.append(relative)
+    return sorted(missing)
+
+
+def _classified_source_only_payload_files(*, package_name: str, expected: list[str], actual: list[str]) -> list[dict[str, str]]:
+    extra = sorted(set(actual) - set(expected))
+    classified: list[dict[str, str]] = []
+    for relative in extra:
+        classification = "package-source-extra"
+        rule = "Extra bootstrap source file is included in the package payload unless the package manifest intentionally excludes it."
+        if package_name == "planning" and (
+            relative.startswith("scripts/")
+            or relative.startswith("tools/")
+            or relative.startswith(".agentic-workspace/planning/scripts/")
+            or "__pycache__" in relative
+        ):
+            classification = "source-only-maintainer-helper"
+            rule = "Planning maintainer helpers are source/bootstrap aids and are intentionally excluded from the packaged wheel payload."
+        elif package_name == "memory" and (
+            relative == "AGENTS.template.md"
+            or relative == "README.md"
+            or relative.startswith("optional/")
+            or relative.startswith("scripts/")
+            or relative.startswith(".agentic-workspace/memory/repo/skills/")
+            or relative.startswith(".agentic-workspace/memory/repo/templates/")
+            or relative.startswith(".agentic-workspace/memory/repo/domains/")
+            or relative.startswith(".agentic-workspace/memory/repo/runbooks/")
+            or relative.startswith(".agentic-workspace/memory/repo/decisions/")
+            or relative == ".agentic-workspace/memory/VERSION.md"
+            or relative == ".agentic-workspace/memory/repo/current/routing-feedback.md"
+        ):
+            classification = "managed-or-optional-memory-payload"
+            rule = "Memory package computes managed entries and optional fragments from bootstrap source; these extras are intentional when list-files/verify-payload stay current."
+        classified.append({"path": relative, "classification": classification, "rule": rule})
+    return classified
+
+
+def _root_status(repo_root: Path, sentinels: list[str]) -> dict[str, object]:
+    missing = [relative for relative in sentinels if not (repo_root / relative).exists()]
+    return {
+        "status": "current" if not missing else "missing-root-surface",
+        "sentinels": sentinels,
+        "missing": missing,
+        "rule": "Root operational sentinels prove the installed dogfooding layer exists; root-local content may intentionally differ from shipped payload state.",
+    }
+
+
+def _package_sync_proof(
+    *,
+    repo_root: Path,
+    package_name: str,
+    expected_payload: list[str],
+    root_sentinels: list[str],
+    intentional_differences: list[dict[str, str]],
+) -> dict[str, object]:
+    actual_payload = _package_payload_files(repo_root, package_name)
+    missing = _missing_payload_sources(expected=expected_payload, actual=actual_payload)
+    extra = sorted(set(actual_payload) - set(expected_payload))
+    classified_source_only = _classified_source_only_payload_files(package_name=package_name, expected=expected_payload, actual=actual_payload)
+    force_include = _force_include_entries(repo_root, package_name)
+    manifest_missing = sorted(relative for relative in expected_payload if not _force_include_covers_bootstrap_path(force_include, relative))
+    root = _root_status(repo_root, root_sentinels)
+    package_warnings = [
+        warning.warning_class
+        for warning in gather_boundary_warnings(repo_root=repo_root)
+        if warning.path.startswith(f"packages/{package_name}") or f"packages/{package_name}" in warning.message
+    ]
+    package_local_warning_classes = sorted({warning for warning in package_warnings if warning == WARNING_PACKAGE_LOCAL_INSTALL_DRIFT})
+    status = "current"
+    if missing or manifest_missing or root["status"] != "current" or package_local_warning_classes:
+        status = "warning"
+    return {
+        "package": package_name,
+        "status": status,
+        "owners": {
+            "package_source": f"packages/{package_name}/src",
+            "bootstrap_payload_source": f"packages/{package_name}/bootstrap",
+            "packaging_manifest": f"packages/{package_name}/pyproject.toml",
+            "root_operational_install": ".agentic-workspace/",
+        },
+        "refresh_rules": [
+            "Edit package source and bootstrap payload for distributable behavior.",
+            "Use package upgrade commands to refresh root operational install surfaces.",
+            "Treat root operational state as dogfooding state unless a managed payload file is intentionally refreshed.",
+        ],
+        "source_to_payload_inventory": {
+            "status": _status_from_drift(missing=missing, extra=extra),
+            "expected_count": len(expected_payload),
+            "actual_count": len(actual_payload),
+            "missing": missing,
+            "classified_source_only_or_generated": classified_source_only,
+            "rule": "Missing package-declared payload sources are drift; extra bootstrap files are classified so intentional source-only or computed managed payloads do not look like unowned drift.",
+        },
+        "packaged_payload_manifest": {
+            "status": "current" if not manifest_missing else "drift",
+            "force_include_count": len(force_include),
+            "missing_payload_destinations": manifest_missing,
+            "rule": "Every required bootstrap payload path must be force-included into the package _payload tree.",
+        },
+        "payload_to_root_install": root,
+        "intentional_differences": intentional_differences,
+        "package_local_install_guard": {
+            "status": "current" if not package_local_warning_classes else "warning",
+            "warning_classes": package_local_warning_classes,
+            "rule": "Package-local .agentic-workspace installs are drift; root operational install is the dogfooding layer.",
+        },
+    }
+
+
+def gather_sync_proof(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
+    planning_expected = _planning_expected_payload_files(repo_root)
+    memory_expected = _memory_expected_payload_files(repo_root)
+    proof = [
+        _package_sync_proof(
+            repo_root=repo_root,
+            package_name="planning",
+            expected_payload=planning_expected,
+            root_sentinels=[
+                ".agentic-workspace/planning/state.toml",
+                ".agentic-workspace/planning/execplans/README.md",
+                ".agentic-workspace/planning/agent-manifest.json",
+            ],
+            intentional_differences=[
+                {
+                    "path": ".agentic-workspace/planning/state.toml",
+                    "classification": "root-operational-state",
+                    "rule": "Active planning state is intentionally root-local and must not be shipped as package bootstrap payload.",
+                },
+                {
+                    "path": ".agentic-workspace/planning/execplans/archive/",
+                    "classification": "historical-dogfood-evidence",
+                    "rule": "Root archives may exceed package templates; package payload only owns the reusable guidance and templates.",
+                },
+            ],
+        ),
+        _package_sync_proof(
+            repo_root=repo_root,
+            package_name="memory",
+            expected_payload=memory_expected,
+            root_sentinels=[
+                ".agentic-workspace/memory/repo/index.md",
+                ".agentic-workspace/memory/WORKFLOW.md",
+                ".agentic-workspace/memory/SKILLS.md",
+            ],
+            intentional_differences=[
+                {
+                    "path": ".agentic-workspace/memory/repo/current/",
+                    "classification": "root-operational-memory",
+                    "rule": "Current memory can be root-local and time-sensitive; shipped payload owns only the starter/baseline notes.",
+                },
+                {
+                    "path": ".agentic-workspace/memory/repo/",
+                    "classification": "dogfood-knowledge-growth",
+                    "rule": "Repo memory may grow beyond packaged starter examples without making package payload stale.",
+                },
+            ],
+        ),
+    ]
+    return {
+        "kind": "source-payload-root-sync-proof/v1",
+        "status": "current" if all(item["status"] == "current" for item in proof) else "warning",
+        "packages": proof,
+        "intentional_difference_rule": "Intentional root dogfooding state is classified here and should not be reported as payload drift unless a managed payload file changed without refresh.",
+        "operator_commands": [
+            "uv run python scripts/check/check_source_payload_operational_install.py --format json --strict",
+            "make maintainer-surfaces",
+            "uv run agentic-planning-bootstrap upgrade --target .",
+            "uv run agentic-memory-bootstrap upgrade --target .",
+        ],
+    }
+
+
 def _print_warnings(warnings: list[BoundaryWarning]) -> None:
     print("Source/payload/root-install boundary report")
     if not warnings:
@@ -247,6 +541,7 @@ def main(argv: list[str] | None = None) -> int:
         "warning_count": len(warnings),
         "warnings": [warning._asdict() for warning in warnings],
         "boundary": gather_boundary_summary(repo_root=REPO_ROOT),
+        "sync_proof": gather_sync_proof(repo_root=REPO_ROOT),
     }
 
     if args.format == "json":
@@ -256,6 +551,15 @@ def main(argv: list[str] | None = None) -> int:
             print("[ok] source-payload boundary")
         else:
             _print_warnings(warnings)
+            proof = summary["sync_proof"]
+            print(f"Sync proof: {proof['status']}")
+            for package in proof["packages"]:
+                print(
+                    f"- {package['package']}: {package['status']} "
+                    f"(source/payload {package['source_to_payload_inventory']['status']}; "
+                    f"packaging {package['packaged_payload_manifest']['status']}; "
+                    f"root {package['payload_to_root_install']['status']})"
+                )
 
     return 1 if args.strict and warnings else 0
 

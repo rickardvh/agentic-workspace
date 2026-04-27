@@ -1,0 +1,254 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Source Payload Install Sync Proof",
+  "goal": [
+    "Resolve #411 by making source, packaged payload, and installed root surface synchronization provable with compact classified output."
+  ],
+  "non_goals": [
+    "Do not collapse source, payload, and root install layers.",
+    "Do not remove packaged payloads.",
+    "Do not treat intentional root customization as drift."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Maintainers can prove source/payload/root-install synchronization and see intentional differences without broad manual inspection.",
+      "constraints": "Prefer maintainer-surface checks over new prose; keep package boundaries explicit.",
+      "latitude": "Extend the existing boundary checker and tests with a compact proof section.",
+      "escalation": "Escalate before changing installer ownership, package layout, or upgrade semantics."
+    },
+    "execution": {
+      "milestone": "source-payload-install-sync-proof",
+      "status": "completed",
+      "next_step": "Archive #411 and validate the parent architecture-boundary lane.",
+      "proof": "Run source/payload checker tests, the checker in JSON/text modes, maintainer surfaces, proof selector, summary, reconcile, and doctor."
+    },
+    "scope": {
+      "touched": [
+        "scripts/check/check_source_payload_operational_install.py",
+        "tests/test_source_payload_operational_install.py",
+        "docs/source-payload-operational-install.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/source-payload-install-sync-proof.plan.json"
+      ],
+      "invariants": [
+        "Planning and memory packages keep independent payload contracts and CLI entry points.",
+        "Root operational installs remain dogfooding surfaces, not package-local source truth.",
+        "Intentional root differences are classified separately from drift warnings."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Strengthen architecture boundaries after contract and generated-layer expansion.",
+    "this slice completes the larger intended outcome": "yes if the parent architecture-boundary lane validates after #411",
+    "continuation surface": ".agentic-workspace/planning/state.toml architecture-boundary lane",
+    "parent lane": "architecture-boundary-remaining-slices"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #411 closes, validate and close the parent architecture-boundary lane if all child acceptance is satisfied."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "`check_source_payload_operational_install.py --format json` now emits `sync_proof` for planning and memory, including owners, refresh rules, source-to-payload inventory, packaging manifest coverage, root install sentinels, intentional differences, and package-local install guard status.",
+    "intentionally deferred": "Parent architecture-boundary validation remains after #411.",
+    "discovered implications": "The checker initially treated untracked bytecode and intentional source-only/package-computed files as payload drift; the implementation now ignores bytecode and classifies intentional extras instead of suppressing them.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #411; parent architecture-boundary lane needs final validation.",
+    "next likely slice": "Parent architecture-boundary validation."
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest and implement all issues lane by lane. Commit and push after each milestone. Collect dogfooding evidence.",
+    "inferred intended outcome": "Continue the architecture-boundary lane by landing #411 with checked-in proof and continuation evidence.",
+    "chosen concrete what": "Extend the source/payload/root-install checker to emit a classified proof surface and enforce it with tests.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the check proves planning and memory payload/root sync and classifies intentional differences separately from drift."
+  },
+  "execution_bounds": {
+    "allowed paths": "source/payload boundary checker, focused tests, compact compatibility guide if needed, planning evidence surfaces",
+    "max changed files": "6",
+    "required validation commands": "focused source/payload tests, boundary checker strict JSON/text, maintainer-surfaces, proof selector, summary, reconcile, doctor",
+    "ask-before-refactor threshold": "Any package installer layout or payload ownership change.",
+    "stop before touching": "Package payload contents or generated surfaces unless a check proves they are stale."
+  },
+  "context_budget": {
+    "live working set": "issue #411, source/payload checker, source/payload tests, maintainer-surface command",
+    "recoverable later": "GitHub issue #411 body and parent architecture-boundary lane",
+    "externalize before shift": "Keep this plan updated with proof and closeout state.",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "gh issue view 411 --json number,title,body,state,labels,url,comments",
+    "tiny resumability note": "Active #411: add classified sync proof for source/payload/root-install boundary.",
+    "context-shift triggers": "Need to change installer payload semantics or package layout."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#411",
+      "label": "Prove source-to-payload-to-installed-surface synchronization",
+      "role": "source intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/411"
+    },
+    {
+      "kind": "planning-lane",
+      "target": "architecture-boundary-remaining-slices",
+      "label": "Strengthen architecture boundaries",
+      "role": "parent lane",
+      "locator": ".agentic-workspace/planning/state.toml"
+    }
+  ],
+  "delegated_judgment": {
+    "requested outcome": "Make synchronization proof visible and classified.",
+    "hard constraints": "No package collapse, no payload removal, and no treating intentional root customization as drift.",
+    "agent may decide locally": "The exact proof payload shape and compatibility guide wording.",
+    "escalate when": "The fix requires installer layout changes or changes what payload files are managed."
+  },
+  "active_milestone": {
+    "id": "source-payload-install-sync-proof",
+    "status": "completed",
+    "scope": "Checker proof output plus focused tests.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Extend the source/payload/root-install checker with classified sync proof."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "scripts/check/check_source_payload_operational_install.py",
+    "tests/test_source_payload_operational_install.py",
+    "docs/source-payload-operational-install.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/source-payload-install-sync-proof.plan.json"
+  ],
+  "invariants": [
+    "Planning and memory packages keep independent payload contracts and CLI entry points.",
+    "Root operational installs remain dogfooding surfaces, not package-local source truth.",
+    "Intentional root differences are classified separately from drift warnings."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_source_payload_operational_install.py -q",
+    "uv run python scripts/check/check_source_payload_operational_install.py --format json --strict",
+    "uv run python scripts/check/check_source_payload_operational_install.py --quiet-success",
+    "make maintainer-surfaces",
+    "uv run agentic-workspace proof --target . --changed scripts/check/check_source_payload_operational_install.py tests/test_source_payload_operational_install.py docs/source-payload-operational-install.md .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/source-payload-install-sync-proof.plan.json --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "completion_criteria": [
+    "Maintainers can prove source/payload/root sync without broad manual inspection.",
+    "Intentional differences are classified rather than appearing as drift.",
+    "Package-local installed-surface mistakes are caught or clearly warned."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace summary --format json; gh issue view 411 --json number,title,body,state,labels,url,comments",
+    "what happened": "Extended the existing source/payload/root-install checker with classified sync proof for planning and memory, added focused tests, and restored the compact maintainer guide path referenced by package adapters.",
+    "scope touched": "boundary checker, focused source/payload tests, compatibility guide, and planning evidence surfaces",
+    "changed surfaces": "scripts/check/check_source_payload_operational_install.py; tests/test_source_payload_operational_install.py; docs/source-payload-operational-install.md; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/source-payload-install-sync-proof.plan.json",
+    "validations run": "uv run pytest tests/test_source_payload_operational_install.py -q; uv run python scripts/check/check_source_payload_operational_install.py --format json --strict; uv run python scripts/check/check_source_payload_operational_install.py --quiet-success; make maintainer-surfaces; uv run agentic-workspace proof --target . --changed ... --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests scripts; uv run agentic-workspace summary --format json",
+    "result for continuation": "#411 is satisfied; parent architecture-boundary validation is the next milestone.",
+    "next step": "Archive #411, commit and push, close the GitHub issue, then validate the parent architecture-boundary lane."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; no installer layout or payload ownership semantics changed",
+    "proof status": "passed",
+    "intent served": "yes for #411; parent architecture-boundary lane remains for final validation",
+    "config compliance": "used package summary/proof and maintainer-surface checks; no broad manual inspection substituted for proof",
+    "misinterpretation risk": "low; intentional differences are explicitly classified in sync_proof",
+    "follow-on decision": "validate and close the parent architecture-boundary lane if acceptance is satisfied."
+  },
+  "proof_report": {
+    "validation proof": "Focused checker tests pass; strict JSON checker reports warning_count 0 and sync_proof status current; maintainer-surfaces passes; proof selected workspace_cli, maintainer_surfaces, and planning_surfaces; workspace CLI tests and ruff pass.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "`uv run pytest tests/test_source_payload_operational_install.py -q` passed 6 tests; `uv run python scripts/check/check_source_payload_operational_install.py --format json --strict` returned warning_count 0 with current sync_proof; `make maintainer-surfaces` passed; `uv run pytest tests/test_workspace_cli.py -q` passed 177 tests; `uv run ruff check src tests scripts` passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest and implement all issues lane by lane. Commit and push after each milestone. Collect dogfooding evidence.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#411 landed classified source/payload/root sync proof in the existing checker; parent architecture-boundary validation remains.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml architecture-boundary lane for parent validation"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Keep source, packaged payload, and installed root surfaces distinguishable and cheaply provable.",
+    "slice shaping bias": "Improve a maintainer check instead of adding another durable first-line surface.",
+    "broader-lane validation question": "Can the parent architecture-boundary lane close after #411 without relying on manual inspection?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#411 acceptance is satisfied, but the parent architecture-boundary lane remains open for validation.",
+    "evidence carried forward": "sync_proof current output; focused checker tests; strict checker; maintainer-surfaces; proof selector; workspace tests; ruff.",
+    "reopen trigger": "Reopen #411 if compact sync proof cannot prove source/payload/root alignment, intentional differences are unclassified, or package-local installs are not warned."
+  },
+  "execution_summary": {
+    "outcome delivered": "Source/payload/root-install synchronization proof is now visible and classified for planning and memory.",
+    "validation confirmed": "Focused tests, strict checker, maintainer surfaces, proof selector, workspace CLI tests, ruff, and summary passed.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml architecture-boundary lane for parent validation.",
+    "post-work posterity capture": "The dogfooding catch about untracked bytecode and intentional extras is recorded in this plan.",
+    "knowledge promoted (Memory/Docs/Config)": "The existing checker is the durable owner; a compact docs/source-payload-operational-install.md adapter restores the referenced guide path.",
+    "resume from": "Validate the parent architecture-boundary lane after #411 is committed, pushed, and closed."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Full JSON sync_proof output details beyond pass/fail and key fields.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Validate the architecture-boundary parent lane now that #410 and #411 are satisfied.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "source/payload/root sync proof is enforced by scripts/check/check_source_payload_operational_install.py and maintainer-surfaces.",
+          "owner": "scripts/check/check_source_payload_operational_install.py",
+          "source": "#411"
+        },
+        {
+          "summary": "The existing checker is the durable owner; a compact docs/source-payload-operational-install.md adapter restores the referenced guide path.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "docs/source-payload-operational-install.md is a compact compatibility entrypoint over the canonical extraction-and-discovery contract.",
+          "owner": "docs/source-payload-operational-install.md",
+          "source": "#411"
+        },
+        {
+          "summary": "The existing checker is the durable owner; a compact docs/source-payload-operational-install.md adapter restores the referenced guide path.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "Parent architecture-boundary lane remains open for final validation.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "#411 closeout"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted #411 after #410 closeout because package summary surfaced the unsatisfied continuation.",
+    "2026-04-27: Dogfooding checker initially counted untracked bytecode and intentional package-source extras as drift; fixed by ignoring bytecode and classifying intentional extras."
+  ]
+}
