@@ -6,6 +6,18 @@
     "fixtureOnly": true,
     "generated": true,
     "generationStatus": "proof-fixture",
+    "maturity": {
+      "id": "metadata-proof-fixture",
+      "promotion_requires": [
+        "target package exposes generated parser/help or command invocation glue",
+        "generated metadata remains fresh from command_package_ir.json",
+        "no-direct-edit checks cover generated files"
+      ],
+      "runnable": false,
+      "runtime_backed": false,
+      "summary": "Generated metadata proves projection from the command-package IR but does not provide a runnable CLI entrypoint.",
+      "weak_agent_routing": "forbidden"
+    },
     "program": "agentic-planning-bootstrap",
     "source": "src/agentic_workspace/contracts/command_package_ir.json"
   },

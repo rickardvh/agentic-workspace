@@ -83,6 +83,7 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
       "generated_root": "packages/planning/src/repo_planning_bootstrap/generated_cli_package",
       "generation_status": "supported-now",
       "kind": "python",
+      "maturity_level_ref": "metadata-proof-fixture",
       "package_name": "agentic-planning-bootstrap",
       "test_environment": "python-dev"
     },
@@ -93,6 +94,7 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
       "generated_root": "generated/typescript/planning-cli",
       "generation_status": "proof-fixture",
       "kind": "typescript",
+      "maturity_level_ref": "metadata-proof-fixture",
       "package_name": "@agentic-workspace/planning-cli",
       "test_environment": "docker"
     }

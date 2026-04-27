@@ -39,7 +39,8 @@
         "test_environment",
         "custom_codegen_boundary",
         "shell_adapter_policy",
-        "direct_cli_edit_policy"
+        "direct_cli_edit_policy",
+        "generated_package_maturity"
       ],
       "properties": {
         "authority_rule": {
@@ -69,6 +70,27 @@
         "direct_cli_edit_policy": {
           "type": "string",
           "minLength": 1
+        },
+        "generated_package_maturity": {
+          "type": "object",
+          "required": [
+            "routing_rule",
+            "levels"
+          ],
+          "properties": {
+            "routing_rule": {
+              "type": "string",
+              "minLength": 1
+            },
+            "levels": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/maturity_level"
+              }
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -132,7 +154,8 @@
         "package_name",
         "generated_root",
         "entrypoints",
-        "test_environment"
+        "test_environment",
+        "maturity_level_ref"
       ],
       "properties": {
         "kind": {
@@ -165,12 +188,55 @@
             "docker"
           ]
         },
+        "maturity_level_ref": {
+          "type": "string",
+          "minLength": 1
+        },
         "generation_status": {
           "enum": [
             "supported-now",
             "proof-fixture",
             "deferred"
           ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "maturity_level": {
+      "type": "object",
+      "required": [
+        "id",
+        "summary",
+        "runnable",
+        "runtime_backed",
+        "weak_agent_routing",
+        "promotion_requires"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runnable": {
+          "type": "boolean"
+        },
+        "runtime_backed": {
+          "type": "boolean"
+        },
+        "weak_agent_routing": {
+          "enum": [
+            "forbidden",
+            "review-required",
+            "allowed-read-only",
+            "allowed-mutation-with-review"
+          ]
+        },
+        "promotion_requires": {
+          "$ref": "#/$defs/non_empty_strings"
         }
       },
       "additionalProperties": false

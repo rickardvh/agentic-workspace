@@ -129,6 +129,11 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
         manifest["generation_policy"]["ordinary_development_environment"] == "Python development remains sufficient for ordinary repo work."
     )
     assert manifest["generation_policy"]["test_environment"] == "Generated non-Python package tests run in Docker-selected proof lanes."
+    maturity = {level["id"]: level for level in manifest["generation_policy"]["generated_package_maturity"]["levels"]}
+    assert maturity["metadata-proof-fixture"]["runnable"] is False
+    assert maturity["metadata-proof-fixture"]["weak_agent_routing"] == "forbidden"
+    assert maturity["runnable-read-only-adapter"]["runnable"] is True
+    assert "black-box conformance" in " ".join(maturity["runnable-read-only-adapter"]["promotion_requires"])
     assert "must not own runtime primitive behavior" in manifest["generation_policy"]["shell_adapter_policy"]
     assert "direct cli.py edits" in manifest["generation_policy"]["direct_cli_edit_policy"]
 
@@ -138,7 +143,9 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert root_package["program"] == "agentic-workspace"
     assert targets["python"]["test_environment"] == "python-dev"
     assert targets["typescript"]["test_environment"] == "docker"
+    assert targets["typescript"]["maturity_level_ref"] == "metadata-proof-fixture"
     assert targets["bash"]["generation_status"] == "deferred"
+    assert targets["bash"]["maturity_level_ref"] == "deferred"
     assert targets["powershell"]["generation_status"] == "deferred"
 
 
@@ -264,6 +271,9 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert package_json["agenticWorkspace"]["generated"] is True
     assert package_json["agenticWorkspace"]["fixtureOnly"] is True
     assert package_json["agenticWorkspace"]["generationStatus"] == "proof-fixture"
+    assert package_json["agenticWorkspace"]["maturity"]["id"] == "metadata-proof-fixture"
+    assert package_json["agenticWorkspace"]["maturity"]["weak_agent_routing"] == "forbidden"
+    assert package_json["agenticWorkspace"]["maturity"]["runnable"] is False
     assert package_json["agenticWorkspace"]["declaredEntrypoints"] == ["agentic-workspace"]
     assert "defaults.report.cli" in source_text
     assert "DO NOT EDIT DIRECTLY" in source_text

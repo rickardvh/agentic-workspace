@@ -17,7 +17,96 @@
     "test_environment": "Generated non-Python package tests run in Docker-selected proof lanes.",
     "custom_codegen_boundary": "Custom generation code should stay small: validated IR loading, target rendering, freshness checks, and no-direct-edit sentinels.",
     "shell_adapter_policy": "Bash and PowerShell targets are deferred downstream projections for thin wrappers, help, argument validation, completion metadata, and runtime handoff only; they must not own runtime primitive behavior.",
-    "direct_cli_edit_policy": "Interface shape, generated package metadata, and adapter wiring should move through contracts, IR, and generators; direct cli.py edits are for runtime primitives, migration exceptions, and uncovered urgent fixes."
+    "direct_cli_edit_policy": "Interface shape, generated package metadata, and adapter wiring should move through contracts, IR, and generators; direct cli.py edits are for runtime primitives, migration exceptions, and uncovered urgent fixes.",
+    "generated_package_maturity": {
+      "routing_rule": "Weak agents may use only generated targets whose maturity level explicitly allows weak-agent routing; proof fixtures and parser/help proofs are inspection artifacts, not usable CLI surfaces.",
+      "levels": [
+        {
+          "id": "metadata-proof-fixture",
+          "summary": "Generated metadata proves projection from the command-package IR but does not provide a runnable CLI entrypoint.",
+          "runnable": false,
+          "runtime_backed": false,
+          "weak_agent_routing": "forbidden",
+          "promotion_requires": [
+            "target package exposes generated parser/help or command invocation glue",
+            "generated metadata remains fresh from command_package_ir.json",
+            "no-direct-edit checks cover generated files"
+          ]
+        },
+        {
+          "id": "parser-help-proof",
+          "summary": "Generated target can render command shape or help, but runtime command behavior is not yet callable.",
+          "runnable": false,
+          "runtime_backed": false,
+          "weak_agent_routing": "forbidden",
+          "promotion_requires": [
+            "runtime binding model is declared outside universal command truth",
+            "read-only command invocation has a selected conformance contract",
+            "Docker-selected proof can execute the target package"
+          ]
+        },
+        {
+          "id": "runnable-read-only-adapter",
+          "summary": "Generated target can be invoked for a selected read-only command and returns observable command output.",
+          "runnable": true,
+          "runtime_backed": false,
+          "weak_agent_routing": "review-required",
+          "promotion_requires": [
+            "black-box conformance covers invocation, exit code, output shape, and one failure path",
+            "failure output distinguishes generation drift from adapter and runtime failures",
+            "ordinary Python development remains free of Node or Docker requirements"
+          ]
+        },
+        {
+          "id": "runtime-backed-read-only-adapter",
+          "summary": "Generated target delegates to hand-owned runtime primitives for read-only behavior without reimplementing live inspection.",
+          "runnable": true,
+          "runtime_backed": true,
+          "weak_agent_routing": "review-required",
+          "promotion_requires": [
+            "runtime delegation envelope and error mapping are contract-backed",
+            "selected conformance contract passes against canonical process behavior",
+            "runtime primitive ownership remains explicit"
+          ]
+        },
+        {
+          "id": "weak-agent-safe-adapter",
+          "summary": "Generated target is safe to route to weaker agents for supported read-only commands.",
+          "runnable": true,
+          "runtime_backed": true,
+          "weak_agent_routing": "allowed-read-only",
+          "promotion_requires": [
+            "help, errors, and recovery guidance route weak agents back to compact safe paths",
+            "black-box conformance covers normal and off-happy-path read-only behavior",
+            "proof route advertises the target as weak-agent-safe"
+          ]
+        },
+        {
+          "id": "mutation-capable-adapter",
+          "summary": "Generated target can invoke mutation-capable behavior through guarded runtime primitives.",
+          "runnable": true,
+          "runtime_backed": true,
+          "weak_agent_routing": "allowed-mutation-with-review",
+          "promotion_requires": [
+            "dry-run and apply behavior are separately covered",
+            "preflight and destructive-refusal guards have black-box conformance",
+            "human review requirements are surfaced before unsafe mutation"
+          ]
+        },
+        {
+          "id": "deferred",
+          "summary": "Target is intentionally not generated yet.",
+          "runnable": false,
+          "runtime_backed": false,
+          "weak_agent_routing": "forbidden",
+          "promotion_requires": [
+            "a prior maturity level is proven for Python and TypeScript read-only targets",
+            "target-specific projection requirements are defined",
+            "ordinary development remains independent of target-specific tooling"
+          ]
+        }
+      ]
+    }
   },
   "packages": [
     {
@@ -33,6 +122,7 @@
             "agentic-workspace"
           ],
           "test_environment": "python-dev",
+          "maturity_level_ref": "metadata-proof-fixture",
           "generation_status": "supported-now"
         },
         {
@@ -43,6 +133,7 @@
             "agentic-workspace"
           ],
           "test_environment": "docker",
+          "maturity_level_ref": "metadata-proof-fixture",
           "generation_status": "proof-fixture"
         },
         {
@@ -53,6 +144,7 @@
             "agentic-workspace"
           ],
           "test_environment": "docker",
+          "maturity_level_ref": "deferred",
           "generation_status": "deferred"
         },
         {
@@ -63,6 +155,7 @@
             "agentic-workspace"
           ],
           "test_environment": "docker",
+          "maturity_level_ref": "deferred",
           "generation_status": "deferred"
         }
       ],
@@ -140,6 +233,7 @@
             "agentic-planning-bootstrap"
           ],
           "test_environment": "python-dev",
+          "maturity_level_ref": "metadata-proof-fixture",
           "generation_status": "supported-now"
         },
         {
@@ -150,6 +244,7 @@
             "agentic-planning-bootstrap"
           ],
           "test_environment": "docker",
+          "maturity_level_ref": "metadata-proof-fixture",
           "generation_status": "proof-fixture"
         }
       ],
@@ -222,6 +317,7 @@
             "agentic-memory-bootstrap"
           ],
           "test_environment": "python-dev",
+          "maturity_level_ref": "metadata-proof-fixture",
           "generation_status": "supported-now"
         },
         {
@@ -232,6 +328,7 @@
             "agentic-memory-bootstrap"
           ],
           "test_environment": "docker",
+          "maturity_level_ref": "metadata-proof-fixture",
           "generation_status": "proof-fixture"
         }
       ],

@@ -76,6 +76,7 @@ export const generatedCommandPackage = {
       "generated_root": "src/agentic_workspace/generated_cli_package",
       "generation_status": "supported-now",
       "kind": "python",
+      "maturity_level_ref": "metadata-proof-fixture",
       "package_name": "agentic-workspace",
       "test_environment": "python-dev"
     },
@@ -86,6 +87,7 @@ export const generatedCommandPackage = {
       "generated_root": "generated/typescript/workspace-cli",
       "generation_status": "proof-fixture",
       "kind": "typescript",
+      "maturity_level_ref": "metadata-proof-fixture",
       "package_name": "@agentic-workspace/workspace-cli",
       "test_environment": "docker"
     },
@@ -96,6 +98,7 @@ export const generatedCommandPackage = {
       "generated_root": "generated/shell/bash",
       "generation_status": "deferred",
       "kind": "bash",
+      "maturity_level_ref": "deferred",
       "package_name": "agentic-workspace-shell",
       "test_environment": "docker"
     },
@@ -106,6 +109,7 @@ export const generatedCommandPackage = {
       "generated_root": "generated/shell/powershell",
       "generation_status": "deferred",
       "kind": "powershell",
+      "maturity_level_ref": "deferred",
       "package_name": "AgenticWorkspace.PowerShell",
       "test_environment": "docker"
     }

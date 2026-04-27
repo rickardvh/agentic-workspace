@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
@@ -28,6 +29,12 @@ def _validate_static_surfaces() -> list[str]:
         for relative in ("package.json", "src/commandPackage.ts", "test/command-package.test.mjs"):
             if not (package_root / relative).is_file():
                 errors.append(f"generated/typescript/{package}/{relative} is missing")
+        package_json_path = package_root / "package.json"
+        if package_json_path.is_file():
+            payload = json.loads(package_json_path.read_text(encoding="utf-8"))
+            maturity = payload.get("agenticWorkspace", {}).get("maturity", {})
+            if maturity.get("weak_agent_routing") != "forbidden" or maturity.get("runnable") is not False:
+                errors.append(f"generated/typescript/{package}/package.json maturity does not mark proof fixture as non-runnable")
     return errors
 
 
