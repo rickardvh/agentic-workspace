@@ -34,7 +34,7 @@ Quick state check:
 - agentic-workspace defaults --section startup --format json
 - agentic-workspace config --target ./repo --format json
 - agentic-workspace summary --format json
-- If .agentic-workspace/config.local.toml is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.
+- If .agentic-workspace/config.local.toml is present, use the config report to see local machine/runtime posture without treating it as checked-in repo policy.
 - If the current agent does not natively use `AGENTS.md`, follow the configured startup file from config; if the CLI is unavailable, fall back to `AGENTS.md` or another supported startup file already present in the repo.
 
 Compact routing docs when present:

@@ -6220,7 +6220,7 @@ def _defaults_payload() -> dict[str, Any]:
             "decision_order": [
                 "runtime/task inference",
                 "repo-owned policy",
-                "optional local capability/cost override",
+                "optional local machine/runtime override",
                 "explicit prompting when still unsafe",
             ],
             "repo_policy": {
@@ -8211,7 +8211,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "exists": local_override.exists,
             "applied": local_override.applied,
             "status": "applied" if local_override.applied else "available-not-set",
-            "rule": "local-only capability/cost posture; may not override repo-owned semantics",
+            "rule": "local-only machine/runtime posture; may not override repo-owned semantics",
         },
         "delegation_targets": {
             "supported": True,

@@ -29,7 +29,7 @@ Default startup path for an agent maintainer:
 6. Open `.agentic-workspace/planning/state.toml` only when compact output points there or you are directly maintaining planning state.
 7. If `.agentic-workspace/planning/state.toml` points at an active execplan and the compact surfaces are insufficient, read that plan before editing code.
 8. If you are handing the active slice to another executor, derive the worker contract from `agentic-workspace summary --format json` rather than drafting a fresh ad hoc prompt.
-9. Use `agentic-workspace config --target ./repo --format json` to inspect the effective mixed-agent posture, including the optional local capability/cost override in `.agentic-workspace/config.local.toml`.
+9. Use `agentic-workspace config --target ./repo --format json` to inspect effective mixed-agent posture and local machine/runtime overrides in `.agentic-workspace/config.local.toml`.
 10. Read package-local `AGENTS.md` only for the package you will touch.
 11. Use this playbook to pick the right ownership surface and narrow validation lane.
 

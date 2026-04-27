@@ -18,6 +18,7 @@
   },
   "setup_findings_path": "tools/setup-findings.json",
   "mixed_agent_local_override_fields": [
+    "workspace.cli_invoke",
     "runtime.supports_internal_delegation",
     "runtime.strong_planner_available",
     "runtime.cheap_bounded_executor_available",

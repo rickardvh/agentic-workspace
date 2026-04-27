@@ -23,7 +23,7 @@ Reconciliation is required when:
 
 ### Authority
 - **`.agentic-workspace/config.toml`**: Repo-owned source of truth for module sources, update intent, and shared lifecycle defaults.
-- **`.agentic-workspace/config.local.toml`**: Optional local override for capability/cost posture and agent-posture settings.
+- **`.agentic-workspace/config.local.toml`**: Optional local override for machine-local invocation, capability/cost posture, and agent-posture settings.
 - **`.agentic-workspace/`**: Product-managed module state. This directory should not be edited directly; use the owning package or CLI.
 
 ### Configuration Fields

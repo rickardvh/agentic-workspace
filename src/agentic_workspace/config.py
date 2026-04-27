@@ -158,6 +158,7 @@ class MixedAgentLocalOverride:
     path: Path | None
     exists: bool
     applied: bool
+    cli_invoke: str | None
     supports_internal_delegation: bool | None
     strong_planner_available: bool | None
     cheap_bounded_executor_available: bool | None
@@ -586,6 +587,7 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         path=path,
         exists=exists,
         applied=False,
+        cli_invoke=None,
         supports_internal_delegation=None,
         strong_planner_available=None,
         cheap_bounded_executor_available=None,
@@ -616,10 +618,28 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current local mixed-agent override contract."
         )
 
-    unknown_top_level = sorted(set(payload) - {"schema_version", "runtime", "handoff", "safety", "local_memory", "delegation_targets"})
+    unknown_top_level = sorted(
+        set(payload) - {"schema_version", "workspace", "runtime", "handoff", "safety", "local_memory", "delegation_targets"}
+    )
     if unknown_top_level:
         unknown_text = ", ".join(unknown_top_level)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} contains unsupported top-level field(s): {unknown_text}.")
+
+    raw_workspace = payload.get("workspace", {})
+    if raw_workspace is None:
+        raw_workspace = {}
+    if not isinstance(raw_workspace, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [workspace] section must be a table.")
+    unknown_workspace = sorted(set(raw_workspace) - {"cli_invoke"})
+    if unknown_workspace:
+        unknown_text = ", ".join(unknown_workspace)
+        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [workspace] contains unsupported field(s): {unknown_text}.")
+    raw_cli_invoke = raw_workspace.get("cli_invoke")
+    cli_invoke = None
+    if raw_cli_invoke is not None:
+        if not isinstance(raw_cli_invoke, str) or not raw_cli_invoke.strip():
+            raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} workspace.cli_invoke must be a non-empty string.")
+        cli_invoke = raw_cli_invoke.strip()
 
     raw_runtime = payload.get("runtime", {})
     if raw_runtime is None:
@@ -678,6 +698,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         path=local_path,
         exists=True,
         applied=True,
+        cli_invoke=cli_invoke,
         supports_internal_delegation=require_optional_bool(
             payload=raw_runtime,
             key="supports_internal_delegation",
@@ -777,6 +798,9 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     optimization_bias_source = "product-default"
     cli_invoke = DEFAULT_CLI_INVOKE
     cli_invoke_source = "product-default"
+    if local_override.cli_invoke is not None:
+        cli_invoke = local_override.cli_invoke
+        cli_invoke_source = "local-override"
 
     if not config_path.exists():
         agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = resolve_effective_agent_instructions_file(
@@ -846,7 +870,6 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             "workflow_artifact_profile",
             "improvement_latitude",
             "optimization_bias",
-            "cli_invoke",
         }
     )
     if unknown_workspace:
@@ -873,12 +896,9 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     if raw_optimization_bias is not None:
         optimization_bias = validate_optimization_bias(str(raw_optimization_bias))
         optimization_bias_source = "repo-config"
-    raw_cli_invoke = raw_workspace.get("cli_invoke")
-    if raw_cli_invoke is not None:
-        if not isinstance(raw_cli_invoke, str) or not raw_cli_invoke.strip():
-            raise WorkspaceUsageError(f"{config_path.as_posix()} workspace.cli_invoke must be a non-empty string.")
-        cli_invoke = raw_cli_invoke.strip()
-        cli_invoke_source = "repo-config"
+    if local_override.cli_invoke is not None:
+        cli_invoke = local_override.cli_invoke
+        cli_invoke_source = "local-override"
 
     update_modules = dict(defaults)
     raw_update = payload.get("update", {})

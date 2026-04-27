@@ -280,12 +280,13 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["mixed_agent"]["decision_order"] == [
         "runtime/task inference",
         "repo-owned policy",
-        "optional local capability/cost override",
+        "optional local machine/runtime override",
         "explicit prompting when still unsafe",
     ]
     assert payload["mixed_agent"]["local_override"]["path"] == ".agentic-workspace/config.local.toml"
     assert payload["mixed_agent"]["local_override"]["supported"] is True
     assert payload["mixed_agent"]["local_override"]["supported_fields"] == [
+        "workspace.cli_invoke",
         "runtime.supports_internal_delegation",
         "runtime.strong_planner_available",
         "runtime.cheap_bounded_executor_available",
@@ -4351,7 +4352,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     target.mkdir()
     _init_git_repo(target)
     _write(
-        target / ".agentic-workspace" / "config.toml",
+        target / ".agentic-workspace" / "config.local.toml",
         'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
     )
     _write(
@@ -4399,6 +4400,23 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
             "requires_attention": False,
         }
     ]
+
+
+def test_repo_config_cli_invoke_is_ignored_as_machine_local_policy(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["cli_invoke"] == "agentic-workspace"
+    assert payload["workspace"]["cli_invoke_source"] == "product-default"
+    assert payload["warnings"] == [".agentic-workspace/config.toml [workspace] contains unsupported field(s): cli_invoke."]
 
 
 def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys) -> None:

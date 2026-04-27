@@ -4,7 +4,6 @@ schema_version = 1
 default_preset = "full"
 improvement_latitude = "proactive"
 optimization_bias = "agent-efficiency"
-cli_invoke = "uv run agentic-workspace"
 
 [system_intent]
 sources = ["SYSTEM_INTENT.md", "README.md"]
