@@ -713,6 +713,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = _implement_payload(
             target_root=target_root,
             changed_paths=list(getattr(args, "changed", []) or []),
+            task_text=getattr(args, "task", None),
         )
         _emit_payload(payload=payload, format_name=args.format)
         return 0
@@ -3811,7 +3812,7 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
     return payload
 
 
-def _implement_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
+def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None = None) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
     proof = (
@@ -3822,7 +3823,8 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str]) -> dict[s
     path_boundaries = [_boundary_warning_for_path(path) for path in normalized_paths]
     attention_paths = [item["path"] for item in path_boundaries if item["requires_attention"]]
     inspect_files = normalized_paths or list(implementer_template["default_inspect_files"])
-    return {
+    task_routing = _implementation_task_routing(target_root=target_root, task_text=task_text)
+    payload = {
         "kind": "implementer-context/v1",
         "target": target_root.as_posix(),
         "changed_paths": normalized_paths,
@@ -3839,6 +3841,81 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str]) -> dict[s
             if attention_paths
             else implementer_template["next_allowed_action"]["default"]
         ),
+    }
+    if task_routing is not None:
+        payload["task_routing"] = task_routing
+        if task_routing.get("status") == "needs-planning":
+            payload["next_allowed_action"] = (
+                "Promote/create an active planning record, or narrow to one explicit issue before implementation."
+            )
+            payload["handoff_requirements"]["stop_when"] = [
+                "task routing status is needs-planning for broad external-work ingestion",
+                *payload["handoff_requirements"]["stop_when"],
+            ]
+    return payload
+
+
+def _implementation_task_routing(*, target_root: Path, task_text: str | None) -> dict[str, Any] | None:
+    normalized = " ".join((task_text or "").lower().split())
+    if not normalized:
+        return None
+    issue_refs = sorted(set(re.findall(r"#\d+", task_text or "")))
+    external_terms = ("issue", "issues", "github", "tracker", "ticket", "tickets", "external work", "external-work")
+    broad_terms = ("all", "open", "many", "multiple", "batch", "broad", "lane by lane", "lanes")
+    intake_terms = ("ingest", "intake", "import", "sync", "triage", "implement")
+    is_external_work = any(term in normalized for term in external_terms) or bool(issue_refs)
+    is_broad = any(term in normalized for term in broad_terms) or len(issue_refs) > 1
+    asks_intake_or_implementation = any(term in normalized for term in intake_terms)
+    if not is_external_work or not asks_intake_or_implementation:
+        return {
+            "status": "not-external-work",
+            "task": task_text,
+            "broad_external_work": False,
+            "allowed_next_actions": ["continue with changed-path proof selection"],
+        }
+    if len(issue_refs) == 1 and not is_broad:
+        return {
+            "status": "narrow-external-work",
+            "task": task_text,
+            "issue_refs": issue_refs,
+            "broad_external_work": False,
+            "allowed_next_actions": ["continue if the issue is small enough for direct work or promote it through upstream-task intake"],
+        }
+    planning_status = "unavailable"
+    readiness: dict[str, Any] = {}
+    try:
+        from repo_planning_bootstrap.installer import planning_summary
+
+        summary = planning_summary(target=target_root, profile="compact")
+        planning_record = summary.get("planning_record", {})
+        if isinstance(planning_record, dict):
+            planning_status = str(planning_record.get("status", "unavailable"))
+        raw_readiness = summary.get("execution_readiness", {})
+        if isinstance(raw_readiness, dict):
+            readiness = raw_readiness
+    except ImportError:
+        planning_status = "planning-module-unavailable"
+    if planning_status == "present" or readiness.get("status") == "planning-backed":
+        return {
+            "status": "planning-backed",
+            "task": task_text,
+            "issue_refs": issue_refs,
+            "broad_external_work": True,
+            "planning_readiness": readiness,
+            "allowed_next_actions": ["execute from the active checked-in planning record"],
+        }
+    return {
+        "status": "needs-planning",
+        "task": task_text,
+        "issue_refs": issue_refs,
+        "broad_external_work": True,
+        "planning_status": planning_status,
+        "planning_readiness": readiness,
+        "allowed_next_actions": [
+            "promote/create one active TODO item plus an execplan for the selected lane",
+            "narrow the request to one explicit issue if direct work is truly small",
+        ],
+        "rule": "Broad external-work ingestion is not executable from issue text alone when no active planning record exists.",
     }
 
 

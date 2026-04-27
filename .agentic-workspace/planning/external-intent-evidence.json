@@ -1328,7 +1328,7 @@
       "system": "github",
       "id": "#424",
       "title": "[Workspace]: Require planning-backed route before broad issue ingestion",
-      "status": "open",
+      "status": "closed",
       "kind": "task",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -1376,6 +1376,114 @@
       "status": "closed",
       "kind": "slice",
       "parent_id": "#427",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#430",
+      "title": "[Workspace]: Isolate generic command-generation machinery for future extraction",
+      "status": "open",
+      "kind": "lane",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#431",
+      "title": "[Workspace]: Create an internal command-generation package boundary",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#430",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#432",
+      "title": "[Workspace]: Separate generic command-package schemas from workspace-specific contracts",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#430",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#433",
+      "title": "[Workspace]: Decouple command-generation code from Agentic Workspace contract tooling",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#430",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#434",
+      "title": "[Workspace]: Keep Agentic Workspace as a consumer of isolated command generation",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#430",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#435",
+      "title": "[Workspace]: Define lift-out criteria for the command-generation package",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#430",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#436",
+      "title": "[Workspace]: Add operational footprint pressure for long-running package artifacts",
+      "status": "open",
+      "kind": "lane",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#437",
+      "title": "[Workspace]: Detect and repair stale current-memory against planning state",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#436",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#438",
+      "title": "[Workspace]: Add compact operational footprint reporting by artifact class",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#436",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#439",
+      "title": "[Workspace]: Add retention pressure for archived execplans",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#436",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#440",
+      "title": "[Workspace]: Surface review artifact retention as actionable cleanup",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#436",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#441",
+      "title": "[Workspace]: Classify generated outputs as reproducible footprint in reports",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#436",
       "planning_residue_expected": "required"
     }
   ]

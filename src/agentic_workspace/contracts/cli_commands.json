@@ -93,6 +93,13 @@
           "nargs": "*",
           "default": [],
           "help": "Repo-relative changed paths used to select inspect scope, boundary warnings, and proof commands."
+        },
+        {
+          "name": "task",
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task text used to route broad external-work requests before implementation."
         }
       ]
     },

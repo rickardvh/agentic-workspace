@@ -94,6 +94,9 @@
     },
     "next_allowed_action": {
       "type": "string"
+    },
+    "task_routing": {
+      "type": "object"
     }
   },
   "additionalProperties": false,

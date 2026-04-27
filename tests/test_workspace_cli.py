@@ -4479,6 +4479,41 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
     assert payload["next_allowed_action"] == "Resolve boundary warnings before editing."
 
 
+def test_implement_task_routes_broad_issue_ingestion_to_planning(tmp_path: Path, capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "ingest and implement all open GitHub issues",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["task_routing"]["status"] == "needs-planning"
+    assert payload["task_routing"]["broad_external_work"] is True
+    assert (
+        payload["next_allowed_action"] == "Promote/create an active planning record, or narrow to one explicit issue before implementation."
+    )
+    assert payload["handoff_requirements"]["stop_when"][0] == ("task routing status is needs-planning for broad external-work ingestion")
+
+
+def test_implement_task_allows_narrow_single_issue_context(capsys) -> None:
+    assert cli.main(["implement", "--task", "implement issue #424", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["task_routing"]["status"] == "narrow-external-work"
+    assert payload["task_routing"]["issue_refs"] == ["#424"]
+    assert payload["task_routing"]["broad_external_work"] is False
+    assert payload["next_allowed_action"] == "Inspect only the listed files and run the required validation commands."
+
+
 def test_ownership_path_answer_includes_authority_marker_and_boundary_warning(capsys) -> None:
     assert cli.main(["ownership", "--path", "llms.txt", "--format", "json"]) == 0
 

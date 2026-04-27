@@ -1,0 +1,171 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning Backed Broad Issue Ingestion",
+  "goal": [
+    "Add an operational guardrail so broad issue-ingestion requests route through active planning before implementation."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Current broad issue-ingestion request must be routed through checked-in planning before implementation; source #424.",
+      "constraints": "Keep scope bounded to #424 and the implementer-context command path; preserve direct execution for narrow single-issue work.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "planning-backed-broad-issue-ingestion",
+      "status": "completed",
+      "next_step": "Archive this slice and continue with #425 or the next selected open lane.",
+      "proof": "uv run pytest tests/test_workspace_cli.py -q -k \"implement_task or implement_command\"; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace implement --task \"ingest and implement all open GitHub issues\" --format json; uv run agentic-workspace implement --task \"implement issue #424\" --format json"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/cli_commands.json",
+        "src/agentic_workspace/contracts/operations/implement.context.json",
+        "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/planning-backed-broad-issue-ingestion.plan.json"
+      ],
+      "invariants": [
+        "Broad external-work ingestion must not proceed from issue text alone when no active planning record exists.",
+        "Narrow single-issue task text must remain usable without mandatory broad planning."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Broad issue ingestion and implementation should use checked-in planning as execution authority, while issue trackers remain intake sources.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make broad issue-ingestion requests harder to execute outside the package workflow.",
+    "hard constraints": "Keep scope bounded to #424 and the implementer-context command path; preserve narrow single-issue work.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "planning-backed-broad-issue-ingestion",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add --task routing to implementer context, validate broad-vs-narrow issue behavior, then archive this slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/cli_commands.json",
+    "src/agentic_workspace/contracts/operations/implement.context.json",
+    "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/planning-backed-broad-issue-ingestion.plan.json"
+  ],
+  "invariants": [
+    "Broad external-work ingestion must not proceed from issue text alone when no active planning record exists.",
+    "Narrow single-issue task text must remain usable without mandatory broad planning."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"implement_task or implement_command\"",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run agentic-workspace implement --task \"ingest and implement all open GitHub issues\" --format json",
+    "uv run agentic-workspace implement --task \"implement issue #424\" --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "A compact package command returns a machine-readable needs-planning route for broad issue ingestion without blocking narrow single-issue work."
+  ],
+  "execution_summary": {
+    "outcome delivered": "The implementer context command accepts task text and routes broad external issue ingestion through active planning, returning needs-planning when no active planning record exists while preserving narrow single-issue execution.",
+    "validation confirmed": "uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_generated_command_packages.py; uv run ruff check src tests; make maintainer-surfaces; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+    "follow-on routed to": "#425 remains in the broad issue-ingestion process guardrail lane.",
+    "post-work posterity capture": "Archived execplan plus tests and command contract updates.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "Promote #425 or the next selected open lane from .agentic-workspace/planning/state.toml."
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_generated_command_packages.py; uv run ruff check src tests; make maintainer-surfaces; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+    "proof achieved now": "Broad issue-ingestion task text is classified in implementer context and cannot silently look like ordinary direct work when no active plan exists.",
+    "evidence for \"proof achieved\" state": "Focused tests cover broad no-active-plan and narrow single-issue behavior; dogfood command output showed needs-planning on a temp target with no active plan and planning-backed on this active repo."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#425 remains in the broad issue-ingestion process guardrail lane.",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Make broad issue-ingestion requests harder to execute outside the package workflow.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "implement --task now returns needs-planning for broad external issue ingestion without active planning, planning-backed when active, and narrow-external-work for one explicit issue",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#424 asked for a compact command path that blocks or routes broad issue ingestion when no active planning record exists while preserving narrow direct work; implement --task now supplies that route.",
+    "evidence carried forward": "workspace CLI tests, contract tooling check, generated command package check, ruff, maintainer surfaces, planning doctor, summary, reconcile, and dogfood implement command outputs passed",
+    "reopen trigger": "A broad open-issues ingestion request can again proceed from compact package context without a needs-planning or active planning-backed signal."
+  }
+}
