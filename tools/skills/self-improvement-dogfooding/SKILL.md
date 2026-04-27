@@ -73,15 +73,23 @@ Treat dogfooding friction as product input, but do not derail the active lane. P
 3. Record a review finding when evidence needs later prioritization.
 4. Promote durable repo knowledge to memory only when it will prevent rediscovery.
 
-## Anti-Overfitting Checks
+## Required Anti-Overfitting Review
 
-Before closing a pass, ask:
+Before closing a self-improvement pass, record a compact anti-overfitting review in the execplan closeout, review artifact, or issue-close proof. Do not treat validation success alone as enough to close.
 
-- Did the package make entry, recovery, proof, or closure cheaper?
-- Did this preserve repo-, agent-, tool-, host-, and language-agnostic package behavior?
-- Did this avoid making a repo-local convenience look like shipped package authority?
-- Can a reviewer understand the improvement without reconstructing chat?
-- Is lane satisfaction honest for now, even if broader system intent remains open?
+Answer all four fields:
+
+- `user_agent_value`: What real entry, recovery, proof, closure, handoff, or operating cost became cheaper for agents or users?
+- `surface_pressure`: Did this add a visible surface, and if so which existing surface did it replace, compress, merge, or background?
+- `portability_boundary`: Did this avoid hardening this repo's language, tooling, host, vendor, or agent-runtime assumptions into package contract?
+- `human_intent_preserved`: Where is the human-owned why or larger system intent preserved separately from implementation detail?
+
+Route to a planning review instead of closing when:
+
+- product direction, authority, or portability is ambiguous;
+- the benefit is only package-internal neatness;
+- the change adds a new visible surface without reducing another repeated cost;
+- a reviewer cannot understand the value and boundary from checked-in evidence.
 
 ## Closure Criteria
 

@@ -1,0 +1,165 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Anti Overfitting Self Improvement Review",
+  "goal": [
+    "Resolve #407 by making repo-local self-improvement dogfooding closeout require an explicit anti-overfitting review."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Self-improvement work has a lightweight checked-in anti-overfitting closeout step that separates user/agent value from internal neatness and routes ambiguity to review.",
+      "constraints": "Keep the step repo-local, low-residue, and non-shipped; do not create a heavy score or governance process.",
+      "latitude": "Tighten the existing repo-owned skill and add focused regression coverage for the expected review fields and routing rule.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "anti-overfitting-self-improvement-review",
+      "status": "completed",
+      "next_step": "Archive this plan, update external issue evidence, and close #407 with proof.",
+      "proof": "Run the focused maintainer-surface test, package-selected proof commands, planning doctor, summary, and reconcile."
+    },
+    "scope": {
+      "touched": [
+        "tools/skills/self-improvement-dogfooding/SKILL.md",
+        "tests/test_maintainer_surfaces.py",
+        ".agentic-workspace/planning/execplans/anti-overfitting-self-improvement-review.plan.json"
+      ],
+      "invariants": [
+        "The skill stays repo-owned and non-shipped.",
+        "Anti-overfitting remains a lightweight closeout review, not an automatic score.",
+        "Ambiguous product direction or portability tradeoffs route to planning review instead of issue closure."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Keep repo-local package self-improvement aligned with user value, portability, and human-owned why instead of optimizing for internal artifact neatness.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "Self-improvement dogfooding closeout now requires named anti-overfitting fields and routes unclear value or portability ambiguity to planning review.",
+    "validation still needed": "none for #407",
+    "next likely slice": "Refresh summary and promote another explicit child slice from the weak-agent recovery lane."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Add an explicit anti-overfitting review step to self-improvement dogfooding closeout.",
+    "hard constraints": "Keep it repo-local, low-residue, non-shipped, and review-shaped rather than score-shaped.",
+    "agent may decide locally": "Exact wording and focused regression-test placement.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "anti-overfitting-self-improvement-review",
+    "status": "completed",
+    "scope": "Repo-owned self-improvement skill wording and focused maintainer-surface regression coverage.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this plan, update external issue evidence, and close #407 with proof."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "tools/skills/self-improvement-dogfooding/SKILL.md",
+    "tests/test_maintainer_surfaces.py",
+    ".agentic-workspace/planning/execplans/anti-overfitting-self-improvement-review.plan.json"
+  ],
+  "invariants": [
+    "The skill stays repo-owned and non-shipped.",
+    "Anti-overfitting remains a lightweight closeout review, not an automatic score.",
+    "Ambiguous product direction or portability tradeoffs route to planning review instead of issue closure."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_maintainer_surfaces.py -q -k anti_overfitting",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Self-improvement work has explicit closeout fields for user/agent value, surface pressure, portability boundary, and human-owned intent.",
+    "The closeout rule routes product-direction, authority, portability, unclear value, and additive-surface ambiguity to planning review.",
+    "The requirement remains repo-local and protected by a focused regression test."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Repo-owned self-improvement dogfooding guidance now requires a compact anti-overfitting review before closeout, with explicit fields for user/agent value, surface pressure, portability boundary, and human-owned intent.",
+    "validation confirmed": "uv run pytest tests/test_maintainer_surfaces.py -q -k anti_overfitting; uv run pytest tests/test_maintainer_surfaces.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+    "follow-on routed to": "none for #407; broader weak-agent recovery lane remains open through sibling issues.",
+    "post-work posterity capture": ".agentic-workspace/planning/execplans/archive/anti-overfitting-self-improvement-review.plan.json",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "Refresh summary and select the next explicit child slice."
+  },
+  "anti_overfitting_review": {
+    "user_agent_value": "Self-improvement closeout now has a concrete check that the change reduced real entry, recovery, proof, closure, handoff, or operating cost instead of merely making repo artifacts neater.",
+    "surface_pressure": "No new first-contact or shipped package surface was added; the existing repo-owned self-improvement skill was tightened and a focused regression test protects the requirement.",
+    "portability_boundary": "The guidance explicitly checks repo, language, tooling, host, vendor, and agent-runtime assumptions before treating self-improvement output as package contract.",
+    "human_intent_preserved": "The closeout requires a named human-intent field and this execplan preserves the larger intent separately from implementation details."
+  },
+  "proof_report": {
+    "validation proof": "All package-selected and focused proof commands passed.",
+    "proof achieved now": "The skill requires anti-overfitting closeout fields and planning-review routing for ambiguity, and the focused maintainer-surface test protects those fields.",
+    "evidence for \"proof achieved\" state": "tools/skills/self-improvement-dogfooding/SKILL.md; tests/test_maintainer_surfaces.py; validation commands recorded in execution_summary.validation confirmed"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No additional shipped product workflow or scoring surface is needed for #407.",
+          "owner": "discard",
+          "source": "anti_overfitting_review"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "none for #407; broader weak-agent recovery lane remains open through sibling issues.",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Add an explicit anti-overfitting review step to self-improvement dogfooding closeout.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded slice and larger intent are both complete.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "None unless new evidence shows the bounded closure was incomplete."
+  }
+}

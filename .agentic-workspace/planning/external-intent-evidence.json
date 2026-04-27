@@ -1175,10 +1175,23 @@
       "system": "github",
       "id": "#407",
       "title": "[Workspace]: Add anti-overfitting review for repo-local self-improvement dogfooding",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#403",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "present",
+      "closeout": {
+        "plan": ".agentic-workspace/planning/execplans/archive/anti-overfitting-self-improvement-review.plan.json",
+        "proof": "Self-improvement dogfooding closeout now requires user_agent_value, surface_pressure, portability_boundary, and human_intent_preserved fields and routes ambiguity to planning review.",
+        "validation": [
+          "uv run pytest tests/test_maintainer_surfaces.py -q -k anti_overfitting",
+          "uv run pytest tests/test_maintainer_surfaces.py -q",
+          "uv run pytest tests/test_workspace_cli.py -q",
+          "uv run ruff check src tests",
+          "uv run agentic-workspace doctor --target . --modules planning --format json",
+          "uv run agentic-workspace summary --format json",
+          "uv run agentic-workspace reconcile --format json"
+        ]
+      }
     },
     {
       "system": "github",

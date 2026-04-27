@@ -360,6 +360,20 @@ Keep this page short and decision-shaped; it is not the full changelog, release 
     )
 
 
+def test_self_improvement_skill_requires_anti_overfitting_closeout_review() -> None:
+    skill_text = (WORKSPACE_ROOT / "tools" / "skills" / "self-improvement-dogfooding" / "SKILL.md").read_text(
+        encoding="utf-8",
+    )
+
+    assert "Required Anti-Overfitting Review" in skill_text
+    assert "`user_agent_value`" in skill_text
+    assert "`surface_pressure`" in skill_text
+    assert "`portability_boundary`" in skill_text
+    assert "`human_intent_preserved`" in skill_text
+    assert "Route to a planning review instead of closing" in skill_text
+    assert "only package-internal neatness" in skill_text
+
+
 def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "maintainer_surfaces_valid")
     _write_planning_surfaces(tmp_path)
