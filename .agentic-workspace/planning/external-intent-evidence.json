@@ -3,13 +3,13 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-27T20:15:38+00:00",
+  "refreshed_at": "2026-04-27T20:24:07+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-27T20:15:38+00:00",
-    "item_count": 34,
-    "open_count": 34,
+    "refreshed_at": "2026-04-27T20:24:07+00:00",
+    "item_count": 33,
+    "open_count": 33,
     "closed_count": 0,
     "limit": 1000,
     "state": "open",
@@ -235,23 +235,6 @@
       ],
       "created_at": "2026-04-27T15:07:31Z",
       "updated_at": "2026-04-27T15:07:31Z",
-      "comments_count": 0
-    },
-    {
-      "system": "github",
-      "id": "#446",
-      "title": "[Planning]: Classify source payload audit drift instead of reporting raw mismatches",
-      "status": "open",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "optional",
-      "url": "https://github.com/rickardvh/agentic-workspace/issues/446",
-      "source_repository": "rickardvh/agentic-workspace",
-      "labels": [
-        "planning"
-      ],
-      "created_at": "2026-04-27T15:07:36Z",
-      "updated_at": "2026-04-27T15:07:36Z",
       "comments_count": 0
     },
     {
