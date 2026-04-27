@@ -3567,12 +3567,62 @@ def test_planning_summary_exposes_finished_work_inspection_contract(tmp_path: Pa
     assert contract["counts"]["archived_closeout_count"] == 2
     assert contract["counts"]["likely_premature_closeout_count"] == 1
     assert contract["counts"]["partial_count"] == 1
-    assert contract["counts"]["attention_count"] == 1
+    assert contract["counts"]["derived_follow_up_candidate_count"] == 2
+    assert contract["counts"]["attention_count"] == 2
     assert contract["evidence"]["status"] == "loaded"
     assert contract["evidence"]["item_count"] == 1
-    assert contract["inspections"][0]["classification"] == "partial"
-    assert contract["inspections"][1]["classification"] == "likely_premature_closeout"
-    assert contract["signals"][0]["kind"] == "likely_premature_closeout"
+    assert {inspection["classification"] for inspection in contract["inspections"]} == {
+        "partial",
+        "likely_premature_closeout",
+    }
+    assert {signal["kind"] for signal in contract["signals"]} == {
+        "intent_continuation_required",
+        "likely_premature_closeout",
+    }
+    candidates_by_plan = {candidate["source_plan"]: candidate for candidate in contract["derived_follow_up_candidates"]}
+    partial_candidate = next(
+        candidate for path, candidate in candidates_by_plan.items() if path.endswith("bounded-delegation-and-run-contracts-2026-04-21.md")
+    )
+    reopened_candidate = next(candidate for candidate in candidates_by_plan.values() if candidate["reopened_by"] == ["#260"])
+    assert partial_candidate["kind"] == "intent-derived-continuation"
+    assert reopened_candidate["classification"] == "likely_premature_closeout"
+
+
+def test_planning_summary_inspects_machine_first_archived_execplans_for_required_continuation(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    plan_path = archive_dir / "generated-cli-migration.plan.json"
+    _write_execplan_record(plan_path, item_id="generated-cli-migration", status="completed")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["title"] = "Generated CLI Migration"
+    record["intent_satisfaction"] = {
+        "original intent": "Remove reliance on a single hand-authored CLI implementation.",
+        "was original intent fully satisfied?": "no",
+        "evidence of intent satisfaction": "The first adapter slice landed, but runtime work still depends on hand-authored CLI code.",
+        "unsolved intent passed to": "intent-derived continuation candidate",
+    }
+    record["closure_check"] = {
+        "slice status": "bounded slice complete",
+        "larger-intent status": "open",
+        "closure decision": "archive-but-keep-lane-open",
+        "why this decision is honest": "The slice landed but the larger generated-CLI intent remains open.",
+        "evidence carried forward": "generated adapter proof",
+        "reopen trigger": "future direct CLI edits continue",
+    }
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    contract = summary["finished_work_inspection_contract"]
+
+    assert contract["counts"]["archived_closeout_count"] == 1
+    assert contract["counts"]["partial_count"] == 1
+    assert contract["counts"]["derived_follow_up_candidate_count"] == 1
+    candidate = contract["derived_follow_up_candidates"][0]
+    assert candidate["source_plan"] == ".agentic-workspace/planning/execplans/archive/generated-cli-migration.plan.json"
+    assert candidate["recommended_owner"] == ".agentic-workspace/planning/state.toml"
+    assert summary["execution_readiness"]["status"] == "intent-continuation-needs-promotion"
+    assert summary["execution_readiness"]["recommendation"]["id"] == "promote-intent-derived-continuation"
 
 
 def test_planning_summary_exposes_closeout_distillation_contract(tmp_path: Path) -> None:

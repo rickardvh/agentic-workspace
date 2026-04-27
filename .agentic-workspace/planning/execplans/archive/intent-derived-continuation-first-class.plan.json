@@ -1,0 +1,236 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Intent-Derived Continuation First Class",
+  "goal": [
+    "Make unsatisfied larger intent visible as first-class continuation pressure even when no human-created external issue exists."
+  ],
+  "non_goals": [
+    "Do not complete the full generated CLI migration in this slice.",
+    "Do not introduce host-specific tracker semantics into core planning."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Finished-work inspection and compact summary surface derived follow-up candidates from archived closeouts whose larger intent remains open.",
+      "constraints": "Use checked-in planning/package surfaces first; keep the implementation provider-agnostic and machine-first.",
+      "latitude": "Choose the smallest summary/report behavior that makes unsatisfied intent hard to lose.",
+      "escalation": "Stop before redesigning the full autopilot loop or adding a new workflow subsystem."
+    },
+    "execution": {
+      "milestone": "Expose intent-derived continuation candidates from machine-first archived execplans.",
+      "status": "completed",
+      "next_step": "Archive this slice and promote the next autopilot-loop enforcement slice when selected.",
+      "proof": "packages/planning focused tests, full planning installer tests, planning-surface checks, summary output, and reconcile output."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/intent-derived-continuation-first-class.plan.json"
+      ],
+      "invariants": [
+        "External trackers remain optional evidence, not the source of package continuation truth.",
+        "Archived execplans remain proof/history, but unsatisfied intent derived from them must affect summary guidance.",
+        "No broad implementation should proceed from derived continuation without active planning promotion."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Autopilot and ordinary execution should plan, implement, evaluate, and continue until the user/product intent is satisfied or explicitly routed.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "intent-derived continuation behavior"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After this slice, promote the next bounded autopilot-loop enforcement slice if summary still only reports candidates rather than executing an evaluate/continue loop."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "The package can notice unsatisfied larger intent from its own archived closeout records and surface a concrete next owner.",
+    "intentionally deferred": "Full autopilot loop enforcement, commit blocking for all unsatisfied intent, and generated-CLI migration implementation.",
+    "discovered implications": "Finished-work inspection must inspect machine-first .plan.json archives, not only legacy Markdown archives.",
+    "proof achieved now": "",
+    "validation still needed": "Run focused planning package tests and planning summary/reconcile checks.",
+    "next likely slice": "Harden autopilot so derived continuation candidates are promoted and re-evaluated in a loop."
+  },
+  "intent_interpretation": {
+    "literal request": "Correct. It should be first-class behaviour. Autopilot should plan -> implement -> evaluate in a loop until intent is satisfied. Even without autopilot, the goal must not be allowed to be lost, and should be communicated to the user in some way.",
+    "inferred intended outcome": "Make intent-derived continuation a product behavior rather than a manual review habit.",
+    "chosen concrete what": "Expose derived continuation candidates in finished-work inspection and execution readiness from archived closeouts with unsatisfied larger intent.",
+    "interpretation distance": "medium; this is the first enforceable slice of the broader autopilot loop.",
+    "review guidance": "Check that no external issue is required for the package to communicate unsatisfied intent."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning package summary/inspection implementation and tests; active planning state and this execplan",
+    "max changed files": "Prefer under 8 files before archive",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q -k \"finished_work_inspection or intent_validation or execution_readiness\"; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+    "ask-before-refactor threshold": "Any redesign of archive format, external tracker ingestion, or full autopilot orchestration.",
+    "stop before touching": "generated CLI migration implementation, GitHub host-specific adapters, or broad unrelated roadmap lanes."
+  },
+  "stop_conditions": {
+    "stop when": "Derived continuation candidates are visible in compact summary and narrow tests pass.",
+    "escalate when boundary reached": "The next change requires new autopilot orchestration rather than summary/report pressure.",
+    "escalate on scope drift": "Work expands into all generated CLI migration or all open issue ingestion.",
+    "escalate on proof failure": "Planning summary cannot distinguish partial closeout from fully landed work."
+  },
+  "context_budget": {
+    "live working set": "planning summary, finished-work inspection, execution readiness, focused package tests, active execplan",
+    "recoverable later": "historical archived plans, unrelated roadmap lanes, generated CLI migration implementation details",
+    "externalize before shift": "update execution_run, finished_run_review, intent_satisfaction, closure_check, and execution_summary",
+    "pre-work config pull": "uv run agentic-workspace start --format json; uv run agentic-workspace skills --target . --task ... --format json",
+    "pre-work memory pull": "not needed for this bounded planning package slice",
+    "tiny resumability note": "Continue from this active execplan and the focused tests around finished-work inspection.",
+    "context-shift triggers": "tool failure, package test failure, or need to redesign autopilot"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make unsatisfied intent hard to lose.",
+    "hard constraints": "Provider-agnostic, checked-in, machine-first, no broad redesign.",
+    "agent may decide locally": "Exact field names and compact projection shape.",
+    "escalate when": "Need to change product direction or make autopilot mutate planning automatically."
+  },
+  "references": [
+    {
+      "kind": "user-intent",
+      "target": "current conversation",
+      "label": "intent-derived continuation must be first-class",
+      "role": "source",
+      "locator": ""
+    },
+    {
+      "kind": "package-surface",
+      "target": ".agentic-workspace/planning/finished-work-evidence.json",
+      "label": "finished-work evidence",
+      "role": "related",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "surface-intent-derived-continuation",
+    "status": "completed",
+    "scope": "planning summary and finished-work inspection",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed slice with the larger autopilot loop left open as required continuation."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/intent-derived-continuation-first-class.plan.json"
+  ],
+  "invariants": [
+    "Do not require a human-created issue before unsatisfied intent is visible.",
+    "Do not treat derived candidates as permission for broad work without promotion."
+  ],
+  "contract_decisions_to_freeze": [
+    "derived_follow_up_candidates is advisory execution pressure derived from checked-in closeout evidence."
+  ],
+  "open_questions_to_close": [
+    "Does compact summary communicate the candidate without opening raw archive files?"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"finished_work_inspection or intent_validation or execution_readiness\"",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Machine-first archived .plan.json files are inspected by finished-work inspection.",
+    "Partial or reopened closeouts emit derived follow-up candidates.",
+    "Compact summary includes the candidates and execution readiness prioritizes promotion before unrelated broad work."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "planning-autopilot and self-improvement-dogfooding package skills",
+    "what happened": "Finished-work inspection now reads machine-first archived .plan.json records, emits derived follow-up candidates for partial or reopened closeouts, and compact summary carries a bounded sample plus omitted count.",
+    "scope touched": "planning package summary/inspection implementation, focused planning tests, and planning state",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/intent-derived-continuation-first-class.plan.json",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"finished_work_inspection or intent_validation or execution_readiness\"; uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check packages/planning; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+    "result for continuation": "The package now communicates unsatisfied intent without a human-created issue; full autopilot loop enforcement remains open.",
+    "next step": "Archive this slice and promote the autopilot-loop enforcement follow-on when ready."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "partially; the goal is no longer lost and is communicated by summary, but autopilot still needs loop enforcement.",
+    "config compliance": "used package startup, skills, summary, and planning surfaces before implementation.",
+    "misinterpretation risk": "medium; this is intentionally the first enforceable slice, not the full autopilot implementation.",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check packages/planning; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+    "proof achieved now": "finished-work inspection derives continuation candidates from machine-first archived execplans and compact summary exposes them.",
+    "evidence for \"proof achieved\" state": "Focused tests cover .plan.json archived closeouts, derived candidates, and execution readiness when no active plan is present."
+  },
+  "intent_satisfaction": {
+    "original intent": "Correct. It should be first-class behaviour. Autopilot should plan -> implement -> evaluate in a loop until intent is satisfied. Even without autopilot, the goal must not be allowed to be lost, and should be communicated to the user in some way.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "finished-work inspection derives continuation candidates from machine-first archived closeouts and compact summary communicates them",
+    "unsolved intent passed to": "autopilot loop enforcement follow-on"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Reduce successful-completion cost across restart, handoff, review, proof, and follow-on work.",
+    "slice shaping bias": "Prefer one queryable package surface that communicates required continuation over relying on chat or external issues.",
+    "broader-lane validation question": "Can an agent recover unsatisfied larger intent without a human-created follow-up issue?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "the bounded communication/detection slice landed, but full plan-implement-evaluate autopilot enforcement remains open",
+    "evidence carried forward": "planning package tests, ruff, planning-surface check, summary, and reconcile passed",
+    "reopen trigger": "autopilot proceeds past unsatisfied intent without promotion or summary stops surfacing derived candidates"
+  },
+  "execution_summary": {
+    "outcome delivered": "Finished-work inspection now derives follow-up candidates from machine-first archived closeouts with unsatisfied or reopened larger intent, and compact summary communicates a bounded sample plus omitted count.",
+    "validation confirmed": "uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check packages/planning; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+    "follow-on routed to": "Derived finished-work continuation candidates and the next autopilot-loop enforcement slice.",
+    "post-work posterity capture": "The durable product lesson is encoded in finished-work inspection behavior and this archived closeout; no memory note needed.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "Promote the next bounded autopilot-loop enforcement slice if continuing this larger intent."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Full autopilot plan -> implement -> evaluate loop enforcement remains a follow-on after derived candidates are visible.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "none",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Initial plan created from user feedback that intent-derived continuation must be first-class behavior."
+  ]
+}

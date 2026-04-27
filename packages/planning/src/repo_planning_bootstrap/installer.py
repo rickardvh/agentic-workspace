@@ -1408,6 +1408,13 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
         roadmap_lanes=roadmap_lanes,
     )
     finished_work_inspection_contract = _finished_work_inspection_contract(target_root=target_root)
+    execution_readiness = _execution_readiness_payload(
+        active_items=active_items,
+        active_execplans=active_execplans,
+        roadmap_lanes=roadmap_lanes,
+        roadmap_candidates=roadmap_candidates,
+        finished_work_inspection=finished_work_inspection_contract,
+    )
     hierarchy_contract = _active_hierarchy_contract(
         target_root=target_root,
         planning_record=planning_record,
@@ -1446,12 +1453,7 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
             "archived_count": archived_execplans,
         },
         "machine_first_planning": _machine_first_planning_payload(active_execplans=active_execplans),
-        "execution_readiness": _execution_readiness_payload(
-            active_items=active_items,
-            active_execplans=active_execplans,
-            roadmap_lanes=roadmap_lanes,
-            roadmap_candidates=roadmap_candidates,
-        ),
+        "execution_readiness": execution_readiness,
         "planning_record": planning_record,
         "active_contract": _contract_projection(active_contract, view_name="active_contract"),
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
@@ -1935,6 +1937,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "evidence",
                 "signals",
                 "inspections",
+                "derived_follow_up_candidates",
                 "recommended_next_action",
                 "minimal_refs",
             ],
@@ -2042,7 +2045,13 @@ def _execution_readiness_payload(
     active_execplans: list[dict[str, str]],
     roadmap_lanes: list[dict[str, Any]],
     roadmap_candidates: list[dict[str, str]],
+    finished_work_inspection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    derived_candidates = []
+    if isinstance(finished_work_inspection, dict):
+        raw_candidates = finished_work_inspection.get("derived_follow_up_candidates", [])
+        if isinstance(raw_candidates, list):
+            derived_candidates = [candidate for candidate in raw_candidates if isinstance(candidate, dict)]
     if active_execplans:
         return {
             "status": "planning-backed",
@@ -2070,6 +2079,28 @@ def _execution_readiness_payload(
                 "next_step": "Create or link an execplan when the active item needs milestone sequencing, proof scope, or handoff continuity.",
             },
             "rule": "A TODO row can own narrow direct work, but broad planned work needs an active execplan.",
+        }
+    if derived_candidates:
+        first_candidate = derived_candidates[0]
+        return {
+            "status": "intent-continuation-needs-promotion",
+            "broad_work_allowed": False,
+            "direct_work_allowed": True,
+            "derived_follow_up_candidate_count": len(derived_candidates),
+            "roadmap_candidate_count": len(roadmap_candidates),
+            "recommendation": {
+                "id": "promote-intent-derived-continuation",
+                "summary": "Promote an intent-derived continuation candidate before taking unrelated broad work.",
+                "next_step": (
+                    "Create one active TODO item plus an execplan for "
+                    f"{first_candidate.get('source_plan', 'the selected finished-work inspection candidate')}, "
+                    "then evaluate intent again after implementation."
+                ),
+            },
+            "rule": (
+                "Unsatisfied or reopened larger intent is execution pressure even when no external tracker item exists; "
+                "autopilot should plan, implement, and re-evaluate until intent is satisfied or explicitly routed."
+            ),
         }
     if roadmap_lanes or roadmap_candidates:
         return {
@@ -2171,6 +2202,8 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             intent_validation_contract["closeout_reconciliation"]
         )
     finished_work_inspection_contract = dict(summary.get("finished_work_inspection_contract", {}))
+    if "derived_follow_up_candidates" in finished_work_inspection_contract:
+        finished_work_inspection_contract = _compact_finished_work_inspection(finished_work_inspection_contract)
     system_intent = dict(summary.get("system_intent", {}))
     idle_unavailable_reason = (
         "no active planning record" if todo.get("active_count", 0) == 0 and execplans.get("active_count", 0) == 0 else None
@@ -2208,6 +2241,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "status": execution_readiness.get("status", "unknown"),
             "broad_work_allowed": bool(execution_readiness.get("broad_work_allowed", False)),
             "direct_work_allowed": bool(execution_readiness.get("direct_work_allowed", True)),
+            "derived_follow_up_candidate_count": execution_readiness.get("derived_follow_up_candidate_count", 0),
             "recommendation": execution_readiness.get("recommendation", {}),
             "rule": execution_readiness.get("rule", ""),
         },
@@ -2320,7 +2354,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         ),
         "finished_work_inspection_contract": _compact_projection(
             finished_work_inspection_contract,
-            fields=("counts", "recommended_next_action"),
+            fields=("counts", "derived_follow_up_candidates", "detail", "recommended_next_action"),
         ),
         "system_intent": {
             key: system_intent[key] for key in ("status", "canonical_doc", "rule", "checked_in_execplan_rule") if key in system_intent
@@ -2370,6 +2404,23 @@ def _compact_closeout_reconciliation(reconciliation: Any) -> dict[str, Any]:
         "omitted_item_count": max(0, sum(len(value) for value in items_by_state.values()) - displayed_item_count),
         "detail": "Use `agentic-workspace summary --format json --profile full` for full reconciliation sources and item ids.",
     }
+
+
+def _compact_finished_work_inspection(contract: dict[str, Any]) -> dict[str, Any]:
+    compact = dict(contract)
+    candidates = compact.get("derived_follow_up_candidates", [])
+    if not isinstance(candidates, list):
+        compact["derived_follow_up_candidates"] = []
+        return compact
+    max_items = 5
+    compact["derived_follow_up_candidates"] = candidates[:max_items]
+    omitted_count = max(len(candidates) - max_items, 0)
+    counts = dict(compact.get("counts", {})) if isinstance(compact.get("counts", {}), dict) else {}
+    counts["omitted_derived_follow_up_candidate_count"] = omitted_count
+    compact["counts"] = counts
+    if omitted_count:
+        compact["detail"] = "Use `agentic-workspace summary --format json --profile full` for all derived follow-up candidates."
+    return compact
 
 
 def _compact_historical_audit_references(historical: Any) -> dict[str, Any]:
@@ -2771,15 +2822,12 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
     evidence = _load_finished_work_evidence(target_root)
     signals: list[dict[str, Any]] = []
     inspections: list[dict[str, Any]] = []
+    derived_follow_up_candidates: list[dict[str, Any]] = []
     clearly_landed = 0
     partial = 0
     likely_premature = 0
 
-    archived_paths = (
-        [path for path in sorted(archive_dir.glob("*.md")) if path.exists() and path.is_file() and path.name != "README.md"]
-        if archive_dir.exists()
-        else []
-    )
+    archived_paths = _archived_execplan_paths(archive_dir)
     evidence_items = evidence.get("items", [])
 
     for path in archived_paths:
@@ -2798,6 +2846,17 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
                 "Optional reopening evidence points back at this archived closeout, so treat the original close decision as lower trust."
             )
             likely_premature += 1
+            candidate = _finished_work_follow_up_candidate(
+                target_root=target_root,
+                path=path,
+                classification=classification,
+                reason=reason,
+                issue_refs=issue_refs,
+                reopened_by=reopened_by,
+                closure_check=closure_check,
+                intent_satisfaction=intent_satisfaction,
+            )
+            derived_follow_up_candidates.append(candidate)
             signals.append(
                 {
                     "kind": "likely_premature_closeout",
@@ -2816,6 +2875,32 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
             classification = "partial"
             reason = "Archived residue itself says the bounded slice landed while larger intent or required continuation remained open."
             partial += 1
+            candidate = _finished_work_follow_up_candidate(
+                target_root=target_root,
+                path=path,
+                classification=classification,
+                reason=reason,
+                issue_refs=issue_refs,
+                reopened_by=reopened_by,
+                closure_check=closure_check,
+                intent_satisfaction=intent_satisfaction,
+            )
+            derived_follow_up_candidates.append(candidate)
+            signals.append(
+                {
+                    "kind": "intent_continuation_required",
+                    "severity": "info",
+                    "path": path.relative_to(target_root).as_posix(),
+                    "message": (
+                        f"Archived closeout {path.relative_to(target_root).as_posix()} left larger intent open; "
+                        "route the continuation before treating the goal as settled."
+                    ),
+                    "refs": [
+                        path.relative_to(target_root).as_posix(),
+                        *issue_refs,
+                    ],
+                }
+            )
         else:
             clearly_landed += 1
         inspections.append(
@@ -2843,11 +2928,16 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
             }
         )
 
+    derived_follow_up_candidates.sort(
+        key=lambda candidate: _candidate_source_mtime_ns(target_root=target_root, candidate=candidate),
+        reverse=True,
+    )
     counts = {
         "archived_closeout_count": len(archived_paths),
         "clearly_landed_count": clearly_landed,
         "partial_count": partial,
         "likely_premature_closeout_count": likely_premature,
+        "derived_follow_up_candidate_count": len(derived_follow_up_candidates),
         "attention_count": len(signals),
     }
     recommended_next_action = "No suspicious finished-work signals detected."
@@ -2858,7 +2948,9 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
     elif evidence.get("status") == "invalid":
         recommended_next_action = "Repair optional finished-work evidence or remove it so closeout inspection trust is explicit."
     elif partial:
-        recommended_next_action = "Previously archived partial-intent lanes are visible; verify their continuation owners before assuming historical work was complete."
+        recommended_next_action = (
+            "Promote or explicitly route derived follow-up candidates before assuming archived partial-intent work was complete."
+        )
 
     refs = [".agentic-workspace/planning/execplans/archive/"]
     if evidence.get("path"):
@@ -2884,8 +2976,65 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
         },
         "signals": signals,
         "inspections": inspections,
+        "derived_follow_up_candidates": derived_follow_up_candidates,
         "recommended_next_action": recommended_next_action,
         "minimal_refs": [ref for ref in refs if ref],
+    }
+
+
+def _candidate_source_mtime_ns(*, target_root: Path, candidate: dict[str, Any]) -> int:
+    source_plan = str(candidate.get("source_plan", "")).strip()
+    if not source_plan:
+        return 0
+    try:
+        return (target_root / source_plan).stat().st_mtime_ns
+    except OSError:
+        return 0
+
+
+def _archived_execplan_paths(archive_dir: Path) -> list[Path]:
+    if not archive_dir.exists():
+        return []
+    seen_stems: set[str] = set()
+    paths: list[Path] = []
+    for path in sorted(archive_dir.glob("*.plan.json")):
+        if path.is_file():
+            seen_stems.add(path.name[: -len(".plan.json")])
+            paths.append(path)
+    for path in sorted(archive_dir.glob("*.md")):
+        if not path.is_file() or path.name in {"README.md", "TEMPLATE.md"}:
+            continue
+        if path.stem not in seen_stems:
+            paths.append(path)
+    return paths
+
+
+def _finished_work_follow_up_candidate(
+    *,
+    target_root: Path,
+    path: Path,
+    classification: str,
+    reason: str,
+    issue_refs: list[str],
+    reopened_by: list[dict[str, str]],
+    closure_check: dict[str, str],
+    intent_satisfaction: dict[str, str],
+) -> dict[str, Any]:
+    reopened_refs = [item["id"] for item in reopened_by if item.get("id")]
+    return {
+        "kind": "intent-derived-continuation",
+        "source_plan": path.relative_to(target_root).as_posix(),
+        "title": _execplan_title(path),
+        "classification": classification,
+        "why": reason,
+        "larger_intent_status": closure_check.get("larger-intent status", ""),
+        "closure_decision": closure_check.get("closure decision", ""),
+        "intent_satisfied": intent_satisfaction.get("was original intent fully satisfied?", ""),
+        "unsolved_intent": intent_satisfaction.get("unsolved intent passed to", ""),
+        "tracked_refs": issue_refs,
+        "reopened_by": reopened_refs,
+        "recommended_owner": ".agentic-workspace/planning/state.toml",
+        "recommended_action": "promote to active planning, implement the next bounded slice, then re-run finished-work inspection",
     }
 
 

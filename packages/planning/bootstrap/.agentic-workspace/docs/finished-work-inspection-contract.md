@@ -10,6 +10,7 @@ Use it when you need to verify whether previously closed planning lanes still lo
 - optional reopening evidence may lower trust, but must not replace the archive as source of record
 - the product must work normally when no external or supplementary planning system exists
 - suspicious historical closeout should surface as a compact report signal, not only as a manual audit ritual
+- unsatisfied larger intent should produce an intent-derived continuation candidate, even when no human-created issue or external tracker item exists
 
 ## Primary Surface
 
@@ -56,6 +57,18 @@ The finished-work inspection surface classifies archived closeouts as:
 - `partial`: the archive itself says the bounded slice landed while larger intent or required continuation stayed open
 - `likely_premature_closeout`: optional reopening evidence points back at a supposedly closed archived lane, so the original close decision should be treated as lower trust
 
+## Derived Continuation
+
+When an archived closeout is `partial` or `likely_premature_closeout`, the inspection surface should emit a `derived_follow_up_candidates` item with:
+
+- the source archived plan
+- the closeout classification and reason
+- any tracked refs or reopening evidence
+- the unsolved intent when the archive recorded one
+- `.agentic-workspace/planning/state.toml` as the recommended continuation owner
+
+Compact summary may show only a bounded sample, but it must include counts and an omitted count when more candidates exist. If there is no active plan, execution readiness should treat these candidates as promotion pressure before unrelated broad work.
+
 ## Intended Use
 
 The surface should cheaply answer:
@@ -63,4 +76,5 @@ The surface should cheaply answer:
 - which archived closeouts still look solid from their own residue
 - which archived lanes were honest partial closeouts rather than true completion
 - which previously closed lanes now have explicit evidence that they were closed too early
+- which unsatisfied intents now require continuation, even without external issue intake
 - what a reviewer or agent should inspect next before treating historical work as settled
