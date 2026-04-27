@@ -750,6 +750,39 @@ def _validate_lifecycle_generation_readiness(payload: dict[str, object]) -> list
     return errors
 
 
+def _validate_python_runtime_boundary_authority(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    audit = payload.get("root_cli_authority_audit")
+    if not isinstance(audit, dict):
+        return ["python_runtime_boundary.json missing root_cli_authority_audit"]
+    classes = {
+        str(item.get("id", ""))
+        for item in audit.get("responsibility_classes", [])
+        if isinstance(item, dict)
+    }
+    required_classes = {
+        "runtime-primitives",
+        "derived-renderers",
+        "generated-dispatch-bridges",
+        "remaining-interface-authority",
+    }
+    missing_classes = sorted(required_classes - classes)
+    if missing_classes:
+        errors.append("python_runtime_boundary.json root CLI audit missing responsibility class(es): " + ", ".join(missing_classes))
+    candidates = [item for item in audit.get("next_extraction_or_guard_candidates", []) if isinstance(item, dict)]
+    candidate_types = {str(item.get("candidate_type", "")) for item in candidates}
+    if not {"extract-interface-authority", "add-guard-check"} <= candidate_types:
+        errors.append("python_runtime_boundary.json root CLI audit must name extraction and guard candidates")
+    if not all(str(item.get("tracking_issue", "")).startswith("#") for item in candidates):
+        errors.append("python_runtime_boundary.json root CLI audit candidates must carry tracking issues")
+    routing = audit.get("direct_cli_edit_routing", {})
+    if not isinstance(routing, dict):
+        errors.append("python_runtime_boundary.json root CLI audit missing direct_cli_edit_routing")
+    elif not routing.get("route_to_contract_when") or not routing.get("review_requires"):
+        errors.append("python_runtime_boundary.json root CLI audit must route contract edits and review requirements")
+    return errors
+
+
 def _parser_snapshot(parser) -> list[dict[str, object]]:
     subparsers_action = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
     return [_command_parser_snapshot(subparsers_action.choices[name]) for name in subparsers_action.choices]
@@ -1229,7 +1262,8 @@ def main(argv: list[str] | None = None) -> int:
         ),
         (
             "python runtime boundary",
-            _validate(python_runtime_boundary_manifest(), "python_runtime_boundary.schema.json"),
+            _validate(python_runtime_boundary_manifest(), "python_runtime_boundary.schema.json")
+            + _validate_python_runtime_boundary_authority(python_runtime_boundary_manifest()),
         ),
         (
             "lifecycle generation readiness",

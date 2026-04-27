@@ -1252,10 +1252,26 @@
       "system": "github",
       "id": "#410",
       "title": "[Workspace]: Track and reduce root CLI interface authority",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#409",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "present",
+      "closeout": {
+        "plan": ".agentic-workspace/planning/execplans/archive/root-cli-interface-authority-audit.plan.json",
+        "proof": "python_runtime_boundary now carries root_cli_authority_audit with allowed runtime ownership, remaining interface authority, next extraction/guard candidates, and direct CLI edit routing; `agentic-workspace defaults --section root_cli_authority --format json` exposes the compact audit.",
+        "validation": [
+          "uv run pytest tests/test_contract_tooling.py -q -k \"python_runtime_boundary or root_cli_authority\"",
+          "uv run pytest tests/test_workspace_cli.py -q -k \"root_cli_authority or direct_cli_edit\"",
+          "uv run pytest tests/test_workspace_cli.py -q",
+          "uv run pytest tests/test_contract_tooling.py -q",
+          "uv run python scripts/check/check_contract_tooling_surfaces.py",
+          "uv run agentic-workspace proof --target . --changed src/agentic_workspace/contracts/python_runtime_boundary.json src/agentic_workspace/contracts/schemas/python_runtime_boundary.schema.json src/agentic_workspace/cli.py tests/test_contract_tooling.py tests/test_workspace_cli.py scripts/check/check_contract_tooling_surfaces.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/root-cli-interface-authority-audit.plan.json --format json",
+          "uv run ruff check src tests scripts",
+          "uv run agentic-workspace summary --format json",
+          "uv run agentic-workspace reconcile --format json",
+          "uv run agentic-workspace doctor --target . --modules planning --format json"
+        ]
+      }
     },
     {
       "system": "github",

@@ -79,6 +79,7 @@ from agentic_workspace.contract_tooling import (
     preflight_policy_manifest,
     proof_routes_manifest,
     proof_selection_rules_manifest,
+    python_runtime_boundary_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
     setup_findings_policy_manifest,
@@ -6839,6 +6840,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "Escalate when proof would need broader scope than the current trust question justifies.",
             ],
         },
+        "root_cli_authority": python_runtime_boundary_manifest()["root_cli_authority_audit"],
         "ownership_mapping": {
             "canonical_doc": ".agentic-workspace/docs/ownership-authority-contract.md",
             "command": "agentic-workspace ownership --target ./repo --format json",

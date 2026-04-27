@@ -160,5 +160,109 @@
         }
       ]
     }
-  ]
+  ],
+  "root_cli_authority_audit": {
+    "command": "agentic-workspace defaults --section root_cli_authority --format json",
+    "rule": "Direct root CLI edits are acceptable for runtime primitives and live inspection, but command/interface authority should be contract-backed, generated, or tracked as an extraction/guard candidate.",
+    "responsibility_classes": [
+      {
+        "id": "runtime-primitives",
+        "authority_class": "allowed-root-runtime",
+        "allowed_owner": "src/agentic_workspace/cli.py and runtime helper modules",
+        "route_when": "The behavior performs live repo inspection, subprocess execution, mutation sequencing, preflight token evaluation, or output emission mechanics.",
+        "extract_or_guard_when": "Stable command shape, effect hints, schemas, or reusable wording can be expressed in contracts without owning live behavior."
+      },
+      {
+        "id": "derived-renderers",
+        "authority_class": "derived-renderer",
+        "allowed_owner": "src/agentic_workspace/cli.py as renderer over contract and live module payloads",
+        "route_when": "The output assembles current config, module reports, planning state, or contract manifests into a compact answer.",
+        "extract_or_guard_when": "A rendered field becomes stable enough to require schema, operation contract, or report-contract coverage."
+      },
+      {
+        "id": "generated-dispatch-bridges",
+        "authority_class": "generated-dispatch-bridge",
+        "allowed_owner": "generated adapters and command-package IR",
+        "route_when": "Parser/help/dispatch wiring is already backed by command_adapter_generation.json, command_package_ir.json, operation contracts, and conformance refs.",
+        "extract_or_guard_when": "A direct CLI edit changes command identity, option semantics, effect hints, schema refs, or generated adapter metadata."
+      },
+      {
+        "id": "remaining-interface-authority",
+        "authority_class": "remaining-interface-authority",
+        "allowed_owner": "contracts, schemas, command-package IR, or explicit follow-on issue",
+        "route_when": "The concern is visible command shape, option semantics, stable help/source wording, or reusable interface policy still encoded in root CLI code.",
+        "extract_or_guard_when": "The same shape must be consumed by generated packages, non-Python adapters, weak-agent routing, or contract checks."
+      }
+    ],
+    "current_audit": [
+      {
+        "id": "lifecycle-execution",
+        "responsibility_class": "runtime-primitives",
+        "status": "legitimate-runtime-ownership",
+        "evidence": "install/init/upgrade/uninstall perform dry-run planning, conservative writes, deletion safeguards, local-only preservation, and preflight-gated mutation.",
+        "next_review": "Keep lifecycle command shape and effect hints contract-backed; do not extract mutation primitives without a dedicated lifecycle generation slice."
+      },
+      {
+        "id": "report-status-doctor-assembly",
+        "responsibility_class": "derived-renderers",
+        "status": "legitimate-runtime-ownership",
+        "evidence": "report/status/doctor combine live module detection, resolved config, installed-surface checks, and planning summaries.",
+        "next_review": "Add schema or report-contract coverage when a report section becomes stable cross-adapter authority."
+      },
+      {
+        "id": "parser-and-dispatch",
+        "responsibility_class": "generated-dispatch-bridges",
+        "status": "guarded-interface-authority",
+        "evidence": "cli_commands.json, cli_option_groups.json, command_adapter_generation.json, generated_command_adapters.py, and command package checks cover selected command shapes.",
+        "next_review": "Direct parser changes must prove they are runtime glue or update the command contracts and generated adapters."
+      },
+      {
+        "id": "support-command-surfaces",
+        "responsibility_class": "remaining-interface-authority",
+        "status": "extract-or-guard-candidate",
+        "evidence": "setup, prompt, skills, system-intent, and note-delegation-outcome still have root CLI interface shape or guidance behavior that is not fully represented as generated adapter metadata.",
+        "next_review": "Select the next read-only support command for command_adapter_generation or add a guard that keeps direct edits classified."
+      }
+    ],
+    "next_extraction_or_guard_candidates": [
+      {
+        "id": "support-command-contract-coverage",
+        "candidate_type": "extract-interface-authority",
+        "owner_surface": "src/agentic_workspace/contracts/command_adapter_generation.json",
+        "why": "Support commands are the next visible root CLI surfaces whose command/interface semantics can move out of cli.py without touching runtime primitives.",
+        "tracking_issue": "#410"
+      },
+      {
+        "id": "report-section-schema-guard",
+        "candidate_type": "add-guard-check",
+        "owner_surface": "src/agentic_workspace/contracts/report_contract.json",
+        "why": "New stable report sections should be reviewed as report contract/schema authority instead of becoming hidden interface authority in cli.py.",
+        "tracking_issue": "#410"
+      },
+      {
+        "id": "package-support-command-manifest-pattern",
+        "candidate_type": "expand-generated-adapter",
+        "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json",
+        "why": "Planning and memory package support commands need the same interface-authority routing before broad non-Python generation expands.",
+        "tracking_issue": "#410"
+      }
+    ],
+    "direct_cli_edit_routing": {
+      "allowed_when": [
+        "runtime primitive implementation or live workspace inspection changes",
+        "dispatch glue while a command is not yet covered by generated adapters",
+        "urgent migration exceptions with proof output naming why definitions were insufficient"
+      ],
+      "route_to_contract_when": [
+        "visible command names, option semantics, help text source, effect hints, schema refs, conformance refs, or generated package metadata change",
+        "a stable report/defaults field becomes cross-adapter authority",
+        "a direct edit would be repeated by another generated target"
+      ],
+      "review_requires": [
+        "agentic-workspace proof direct_cli_edit_review for any src/agentic_workspace/cli.py change",
+        "root_cli_authority audit check when the edit changes interface or report authority",
+        "command generation or contract-surface validation when command semantics change"
+      ]
+    }
+  }
 }

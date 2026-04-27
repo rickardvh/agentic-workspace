@@ -1,0 +1,261 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Root Cli Interface Authority Audit",
+  "goal": [
+    "Resolve #410 by making root CLI runtime ownership and remaining interface authority visible through a compact contract-backed audit."
+  ],
+  "non_goals": [
+    "Do not remove Python runtime behavior.",
+    "Do not rewrite all CLI dispatch.",
+    "Do not block urgent runtime fixes."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Root CLI authority is classified by legitimate runtime ownership versus extractable or guardable interface authority.",
+      "constraints": "Prefer contract inventory and checks over broad refactors.",
+      "latitude": "Expose the audit through an existing compact command or contract check if that gives future agents enough routing clarity.",
+      "escalation": "Escalate before changing generated command semantics or runtime primitive ownership."
+    },
+    "execution": {
+      "milestone": "root-cli-interface-authority-audit",
+      "status": "completed",
+      "next_step": "Archive #410 and continue #411 under the architecture-boundary lane.",
+      "proof": "Run focused contract/defaults tests, contract surface check, proof selector, summary, reconcile, and doctor."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/python_runtime_boundary.json",
+        "src/agentic_workspace/contracts/schemas/python_runtime_boundary.schema.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_contract_tooling.py",
+        "tests/test_workspace_cli.py",
+        "scripts/check/check_contract_tooling_surfaces.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/root-cli-interface-authority-audit.plan.json"
+      ],
+      "invariants": [
+        "Runtime primitive behavior remains Python-owned where live inspection or mutation sequencing is required.",
+        "Command/interface semantics route to contracts, IR, generated adapters, or explicit follow-on candidates.",
+        "The audit must name concrete next extraction or guard candidates."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Strengthen architecture boundaries after contract and generated-layer expansion.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml architecture-boundary lane",
+    "parent lane": "architecture-boundary-remaining-slices"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #410 closes, continue #411 and then validate the parent architecture-boundary lane."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Root CLI authority is now queryable through `agentic-workspace defaults --section root_cli_authority --format json`, backed by python_runtime_boundary contract/schema data and enforced by contract tooling checks.",
+    "intentionally deferred": "#411 and the parent architecture-boundary lane remain open.",
+    "discovered implications": "Package proof correctly flagged the direct `src/agentic_workspace/cli.py` edit for review. The edit is accepted as thin projection glue over contract-owned audit data, not as new command/interface authority in cli.py.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #410; #411 remains for source-to-payload-to-installed synchronization proof.",
+    "next likely slice": "#411 source-to-payload-to-installed-surface synchronization proof."
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest and implement all issues lane by lane. Commit and push after each milestone. Collect dogfooding evidence.",
+    "inferred intended outcome": "Continue the architecture-boundary lane by landing #410 with checked-in proof and continuation evidence.",
+    "chosen concrete what": "Implement #410 as a contract-backed root CLI authority audit and compact query.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the audit distinguishes runtime primitive ownership from interface authority and names next candidates."
+  },
+  "execution_bounds": {
+    "allowed paths": "python runtime boundary contract/schema, contract checks/tests, compact defaults output, planning evidence surfaces",
+    "max changed files": "9",
+    "required validation commands": "focused tests, contract surface check, proof selector, summary, reconcile, doctor",
+    "ask-before-refactor threshold": "Any runtime primitive extraction or generated adapter semantic change.",
+    "stop before touching": "Generated outputs unless a generator/check requires them."
+  },
+  "context_budget": {
+    "live working set": "issue #410, python_runtime_boundary contract, contract checks, defaults section tests",
+    "recoverable later": "GitHub issue #410 and the parent architecture-boundary lane body",
+    "externalize before shift": "Keep this plan updated with proof and closeout state.",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "gh issue view 410 --json number,title,body,state,labels,url,comments",
+    "tiny resumability note": "Active #410: add contract-backed root CLI authority audit.",
+    "context-shift triggers": "Need for broad CLI refactor or runtime primitive extraction."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#410",
+      "label": "Track and reduce root CLI interface authority",
+      "role": "source intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/410"
+    },
+    {
+      "kind": "planning-lane",
+      "target": "architecture-boundary-remaining-slices",
+      "label": "Strengthen architecture boundaries",
+      "role": "parent lane",
+      "locator": ".agentic-workspace/planning/state.toml"
+    }
+  ],
+  "delegated_judgment": {
+    "requested outcome": "Make root CLI interface authority visible and reducible.",
+    "hard constraints": "No broad refactor, no runtime primitive removal, and no generated command semantic change.",
+    "agent may decide locally": "The exact contract field and compact query shape.",
+    "escalate when": "The fix requires moving runtime behavior or changing command semantics."
+  },
+  "active_milestone": {
+    "id": "root-cli-interface-authority-audit",
+    "status": "completed",
+    "scope": "Contract-backed audit plus focused checks/tests.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Extend python_runtime_boundary with root CLI authority audit and tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/python_runtime_boundary.json",
+    "src/agentic_workspace/contracts/schemas/python_runtime_boundary.schema.json",
+    "src/agentic_workspace/cli.py",
+    "tests/test_contract_tooling.py",
+    "tests/test_workspace_cli.py",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/root-cli-interface-authority-audit.plan.json"
+  ],
+  "invariants": [
+    "Runtime primitive behavior remains Python-owned where live inspection or mutation sequencing is required.",
+    "Command/interface semantics route to contracts, IR, generated adapters, or explicit follow-on candidates.",
+    "The audit must name concrete next extraction or guard candidates."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_contract_tooling.py -q -k \"python_runtime_boundary or root_cli_authority\"",
+    "uv run pytest tests/test_workspace_cli.py -q -k \"root_cli_authority or direct_cli_edit\"",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed src/agentic_workspace/contracts/python_runtime_boundary.json src/agentic_workspace/contracts/schemas/python_runtime_boundary.schema.json src/agentic_workspace/cli.py tests/test_contract_tooling.py tests/test_workspace_cli.py scripts/check/check_contract_tooling_surfaces.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/root-cli-interface-authority-audit.plan.json --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "completion_criteria": [
+    "The repo can see which root CLI responsibilities are legitimate runtime ownership and which are remaining interface authority.",
+    "At least one next extraction or guard candidate is named.",
+    "Future direct CLI edits have clearer review routing.",
+    "Contract validation covers the audit shape."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace summary --format json; gh issue view 410 --json number,title,body,state,labels,url,comments",
+    "what happened": "Added a contract-backed root CLI authority audit to python_runtime_boundary, exposed it through a compact defaults section, and enforced it with schema, contract tooling, and CLI tests.",
+    "scope touched": "python runtime boundary contract/schema, compact CLI defaults projection, contract tooling check, tests, and planning evidence",
+    "changed surfaces": "src/agentic_workspace/contracts/python_runtime_boundary.json; src/agentic_workspace/contracts/schemas/python_runtime_boundary.schema.json; src/agentic_workspace/cli.py; scripts/check/check_contract_tooling_surfaces.py; tests/test_contract_tooling.py; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/root-cli-interface-authority-audit.plan.json",
+    "validations run": "uv run pytest tests/test_contract_tooling.py -q -k \"python_runtime_boundary or root_cli_authority\"; uv run pytest tests/test_workspace_cli.py -q -k \"root_cli_authority or direct_cli_edit\"; uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace proof --target . --changed ... --format json; uv run ruff check src tests scripts; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "#410 is satisfied; #411 remains the next child slice under the parent architecture-boundary lane.",
+    "next step": "Archive #410, commit and push, close the GitHub issue, then promote #411."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; no runtime primitive extraction or generated command semantic change was made",
+    "proof status": "passed",
+    "intent served": "yes for #410; broader architecture-boundary lane remains open",
+    "config compliance": "used package summary/proof/reconcile/doctor and contract tooling rather than ad hoc closeout",
+    "misinterpretation risk": "low; direct CLI edit was reviewed and limited to contract-backed defaults projection",
+    "follow-on decision": "continue #411, then validate the parent architecture-boundary lane."
+  },
+  "proof_report": {
+    "validation proof": "Focused and full workspace/contract tests passed; contract tooling reported no drift; proof selected workspace_cli and planning_surfaces and flagged direct CLI edit review; summary, reconcile, and doctor were clean for active planning health.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "`uv run pytest tests/test_workspace_cli.py -q` passed 177 tests; `uv run pytest tests/test_contract_tooling.py -q` passed 26 tests; `uv run python scripts/check/check_contract_tooling_surfaces.py` reported no drift warnings; `uv run ruff check src tests scripts` passed; `uv run agentic-workspace doctor --target . --modules planning --format json` reported healthy."
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest and implement all issues lane by lane. Commit and push after each milestone. Collect dogfooding evidence.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#410 landed a contract-backed root_cli_authority audit, compact defaults projection, schema/check enforcement, and tests; the larger architecture-boundary lane remains open because #411 is not done.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml architecture-boundary lane for #411 and parent validation"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Keep one owner per durable concern and make CLI implementation authority explicit rather than implicit in cli.py.",
+    "slice shaping bias": "Prefer contract-backed audit and check over runtime refactor.",
+    "broader-lane validation question": "Can future direct CLI edits route through clearer authority classes?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#410 acceptance is satisfied, but the architecture-boundary lane remains open.",
+    "evidence carried forward": "python_runtime_boundary root_cli_authority_audit; defaults root_cli_authority output; contract tooling check; focused/full tests; proof/summary/reconcile/doctor.",
+    "reopen trigger": "Reopen #410 if root CLI authority changes without updating the contract audit or future direct cli.py edits cannot be classified by the audit."
+  },
+  "execution_summary": {
+    "outcome delivered": "Root CLI runtime ownership versus interface authority is visible through a compact contract-backed audit.",
+    "validation confirmed": "Focused tests, full touched test suites, contract tooling drift check, proof, ruff, summary, reconcile, and doctor passed.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml architecture-boundary lane for #411 and parent validation.",
+    "post-work posterity capture": "The proof-selected direct CLI edit review is recorded as accepted projection glue in this archive.",
+    "knowledge promoted (Memory/Docs/Config)": "Contract/schema/checks are the durable owner; no separate memory or docs surface was needed.",
+    "resume from": "Promote #411 after #410 is committed, pushed, and closed."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "One-off command output details beyond the validation command names and pass/fail results.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue architecture-boundary lane with #411, then validate the parent lane.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Contract/schema/checks are the durable owner; no separate memory or docs surface was needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "Root CLI authority audit and direct CLI edit routing are now enforced by python_runtime_boundary schema and contract tooling.",
+          "owner": "src/agentic_workspace/contracts/python_runtime_boundary.json",
+          "source": "#410"
+        },
+        {
+          "summary": "Contract/schema/checks are the durable owner; no separate memory or docs surface was needed.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "Contract/schema/checks are the durable owner; no separate memory or docs surface was needed.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "Parent architecture-boundary lane remains open until #411 is closed and parent validation is complete.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "#410 closeout"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted #410 as first active child slice under the architecture-boundary lane.",
+    "2026-04-27: Dogfooding proof selected direct_cli_edit_review for src/agentic_workspace/cli.py; accepted because cli.py only projects contract-owned root_cli_authority data."
+  ]
+}

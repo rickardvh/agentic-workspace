@@ -367,6 +367,37 @@ def test_generated_command_adapter_module_routes_direct_edits_to_authoritative_s
     assert "uv run python scripts/generate/generate_command_adapters.py" in generated_text
 
 
+def test_python_runtime_boundary_declares_root_cli_authority_audit() -> None:
+    manifest = contract_tooling.python_runtime_boundary_manifest()
+    audit = manifest["root_cli_authority_audit"]
+
+    assert audit["command"] == "agentic-workspace defaults --section root_cli_authority --format json"
+    classes = {item["id"]: item for item in audit["responsibility_classes"]}
+    assert classes["runtime-primitives"]["authority_class"] == "allowed-root-runtime"
+    assert classes["remaining-interface-authority"]["authority_class"] == "remaining-interface-authority"
+    statuses = {item["status"] for item in audit["current_audit"]}
+    assert "legitimate-runtime-ownership" in statuses
+    assert "extract-or-guard-candidate" in statuses
+    candidates = audit["next_extraction_or_guard_candidates"]
+    assert {candidate["candidate_type"] for candidate in candidates} >= {
+        "extract-interface-authority",
+        "add-guard-check",
+    }
+    assert any(candidate["tracking_issue"] == "#410" for candidate in candidates)
+    assert audit["direct_cli_edit_routing"]["route_to_contract_when"]
+    assert audit["direct_cli_edit_routing"]["review_requires"]
+
+
+def test_contract_tooling_check_enforces_root_cli_authority_audit() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module._validate_python_runtime_boundary_authority(contract_tooling.python_runtime_boundary_manifest()) == []
+
+
 def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
     spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)

@@ -1001,6 +1001,25 @@ def test_defaults_section_selector_returns_effective_authority_view(capsys) -> N
     assert answer["idle_context"][0]["id"] == "no-active-planning-record"
 
 
+def test_defaults_section_selector_returns_root_cli_authority_audit(capsys) -> None:
+    assert cli.main(["defaults", "--section", "root_cli_authority", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "root_cli_authority"}
+    answer = payload["answer"]
+    assert answer["command"] == "agentic-workspace defaults --section root_cli_authority --format json"
+    classes = {item["id"]: item for item in answer["responsibility_classes"]}
+    assert classes["runtime-primitives"]["authority_class"] == "allowed-root-runtime"
+    assert classes["remaining-interface-authority"]["authority_class"] == "remaining-interface-authority"
+    candidates = answer["next_extraction_or_guard_candidates"]
+    assert any(candidate["candidate_type"] == "extract-interface-authority" for candidate in candidates)
+    assert any(candidate["candidate_type"] == "add-guard-check" for candidate in candidates)
+    assert answer["direct_cli_edit_routing"]["route_to_contract_when"]
+    assert answer["direct_cli_edit_routing"]["review_requires"]
+
+
 def test_defaults_section_selector_returns_optimization_bias_answer(capsys) -> None:
     assert cli.main(["defaults", "--section", "optimization_bias", "--format", "json"]) == 0
 
