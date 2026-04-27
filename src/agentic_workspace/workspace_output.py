@@ -205,6 +205,16 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
                     if not isinstance(example, dict):
                         continue
                     print(f"- {example.get('concern', '')}: {example.get('current_owner', '')}")
+    maintenance_pressure = payload.get("maintenance_pressure", {})
+    if isinstance(maintenance_pressure, dict) and maintenance_pressure.get("status"):
+        print("Maintenance pressure:")
+        print(
+            f"- {maintenance_pressure.get('status', 'unknown')} "
+            f"({maintenance_pressure.get('attention_category_count', 0)} attention categories)"
+        )
+        next_action = maintenance_pressure.get("recommended_next_action")
+        if next_action:
+            print(f"  next: {next_action}")
     closeout_trust = payload.get("closeout_trust", {})
     if isinstance(closeout_trust, dict) and closeout_trust.get("status") == "present":
         print("Closeout trust:")

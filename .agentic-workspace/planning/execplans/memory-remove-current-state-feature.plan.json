@@ -1,0 +1,157 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Memory Remove Current State Feature",
+  "goal": [
+    "Implement #455 by removing current-memory as a shared current-state feature while preserving durable memory and migration guidance."
+  ],
+  "non_goals": [
+    "Do not remove durable Memory.",
+    "Do not remove planning current-state ownership.",
+    "Do not preserve stale current-memory through compatibility layers indefinitely."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "New installs do not create shared memory current-state files, existing installs get migration/shrink/delete pressure, and planning remains the shared active-state owner when installed.",
+      "constraints": "Keep Memory focused on durable anti-rediscovery knowledge and keep local-only scratch optional/non-authoritative.",
+      "latitude": "Choose the smallest package changes and tests needed to remove current-memory as a normal shared feature.",
+      "escalation": "Escalate if removal would break durable Memory or require broad compatibility guarantees for stale current state."
+    },
+    "execution": {
+      "milestone": "memory-remove-current-state-feature",
+      "status": "in-progress",
+      "next_step": "Inspect memory payload, installer, docs, current command/report behavior, and #455 acceptance criteria.",
+      "proof": "memory package tests, workspace CLI tests as needed, ruff, proof selector, planning doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/memory-remove-current-state-feature.plan.json",
+        "packages/memory/src/repo_memory_bootstrap/installer.py",
+        "packages/memory/tests/test_installer.py",
+        "packages/memory/bootstrap/.agentic-workspace/memory/",
+        ".agentic-workspace/memory/",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Durable Memory remains installed and useful.",
+        "Planning owns shared active/current state when installed.",
+        "Local-only scratch remains optional and non-authoritative."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#456-#460 plus #467/#469/#471 remain in the feature-tier and surface-merge lane.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #455 closeout, promote the next #450 child indicated by validation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Remove current-memory as a shared current-state feature.",
+    "hard constraints": "Do not remove durable Memory or planning active-state ownership.",
+    "agent may decide locally": "Whether current-memory files should be removed from payloads, flagged for migration, or both.",
+    "escalate when": "Compatibility would require keeping current-memory as an active shared surface."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Remove a competing current-state surface instead of making it more capable.",
+    "broader-lane validation question": "Does this make Memory smaller and planning/current-state ownership clearer?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/455"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/455",
+      "label": "#455 current-memory removal",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "memory-remove-current-state-feature",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect memory payload, installer, docs, current command/report behavior, and #455 acceptance criteria."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/memory-remove-current-state-feature.plan.json",
+    "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "packages/memory/tests/test_installer.py",
+    "packages/memory/bootstrap/.agentic-workspace/memory/",
+    ".agentic-workspace/memory/",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Durable Memory remains installed and useful.",
+    "Planning owns shared active/current state when installed.",
+    "Local-only scratch remains optional and non-authoritative."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/memory/tests -q",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/memory-remove-current-state-feature.plan.json packages/memory/src/repo_memory_bootstrap/installer.py packages/memory/tests/test_installer.py packages/memory/bootstrap/.agentic-workspace/memory src/agentic_workspace/cli.py tests/test_workspace_cli.py --format json",
+    "uv run agentic-workspace doctor --target . --modules planning,memory --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "New memory installs do not create shared current-memory current/task files.",
+    "Existing current-memory files are flagged for migration, shrink, or deletion.",
+    "Planning remains the only shared active-state owner when installed.",
+    "Memory docs no longer describe current-memory as a normal shared feature.",
+    "Tests cover install, doctor, or report behavior without current-memory."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from #455 after #454 maintenance-pressure closeout."
+  ]
+}

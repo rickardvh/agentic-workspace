@@ -3202,20 +3202,36 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert payload["health"] == "healthy"
     assert "module_reports" not in payload
     assert "reports" not in payload
-    assert payload["operational_compression"]["section_command"] == (
-        "agentic-workspace report --target ./repo --section operational_compression --format json"
-    )
-    assert payload["operational_compression"]["hard_failure_count"] == 0
-    assert payload["execution_shape"]["task_shape_recommender"]["status"] == "available"
-    assert payload["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
-    assert payload["external_work_delta"]["section_command"] == (
+    assert "maintenance_pressure" in payload
+    assert "operational_compression" not in payload
+    assert "closeout_trust" not in payload
+    assert "external_work_delta" not in payload
+    maintenance = payload["maintenance_pressure"]
+    assert maintenance["kind"] == "workspace-maintenance-pressure/v1"
+    assert maintenance["current_execution_separate"] is True
+    subcategories = {item["id"]: item for item in maintenance["subcategories"]}
+    assert set(subcategories) >= {
+        "current_state_stale",
+        "historical_audit",
+        "review_retention",
+        "archive_retention",
+        "generated_output_footprint",
+        "external_evidence_stale",
+        "closeout_reconciliation",
+    }
+    assert subcategories["closeout_reconciliation"]["detail_section"] == "closeout_trust"
+    assert subcategories["external_evidence_stale"]["section_command"] == (
         "agentic-workspace report --target ./repo --section external_work_delta --format json"
     )
+    assert payload["execution_shape"]["task_shape_recommender"]["status"] == "available"
+    assert payload["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
     assert payload["surface_value_guardrail"]["first_contact_budget"]["status"] == "active"
     assert payload["deeper_detail"]["high_volume_sections"][0]["section"] == "module_reports"
     section_hints = {item["section"]: item for item in payload["section_hints"]}
     assert section_hints["module_reports"]["volume"] == "high"
     assert "compact router field" in section_hints["module_reports"]["why_now"]
+    assert section_hints["maintenance_pressure"]["volume"] == "normal"
+    assert "residue" in section_hints["maintenance_pressure"]["purpose"]
     assert section_hints["operational_compression"]["volume"] == "normal"
     assert "reducing total work" in section_hints["operational_compression"]["why_now"]
     assert section_hints["external_work_delta"]["volume"] == "normal"
@@ -3224,7 +3240,11 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert section_hints["effective_authority"]["command"] == (
         "agentic-workspace report --target ./repo --section effective_authority --format json"
     )
-    historical_reviews = payload["closeout_trust"]["historical_review_artifacts"]
+    assert any(item["detail_section"] == "closeout_trust" for item in maintenance["subcategories"])
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+    closeout_payload = json.loads(capsys.readouterr().out)
+    historical_reviews = closeout_payload["answer"]["historical_review_artifacts"]
     assert historical_reviews["status"] == "evidence-only"
     assert "not ordinary operating input" in historical_reviews["role"]
     assert "Do not read historical review artifacts during startup" in historical_reviews["rule"]
@@ -3944,9 +3964,9 @@ def test_report_text_surfaces_compact_lower_trust_closeout_summary(tmp_path: Pat
     assert cli.main(["report", "--target", str(target)]) == 0
 
     text = capsys.readouterr().out
-    assert "Closeout trust:" in text
-    assert "lower-trust (1 lower-trust closeout signal(s))" in text
-    assert "Closed external planning item #closed-without-residue" in text
+    assert "Maintenance pressure:" in text
+    assert "attention" in text
+    assert "maintenance-pressure detail" in text
 
 
 def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path, capsys) -> None:

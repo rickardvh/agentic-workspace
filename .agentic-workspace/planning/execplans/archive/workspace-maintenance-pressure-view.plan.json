@@ -1,0 +1,212 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workspace Maintenance Pressure View",
+  "goal": [
+    "Implement #454 by merging audit, retention, footprint, and closeout residue signals into one compact maintenance-pressure view with details behind selectors."
+  ],
+  "non_goals": [
+    "Do not delete artifacts automatically.",
+    "Do not make maintenance pressure part of every startup unless active pressure exists.",
+    "Do not remove detailed proof, review, or closeout sections before the merged view proves useful."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agents see one maintenance-pressure concept first instead of separate audit, retention, footprint, stale-current, external-evidence, and closeout residue concepts.",
+      "constraints": "Keep current execution pressure separate from maintenance residue and keep detailed subcategories selectable.",
+      "latitude": "Choose the smallest report/summary payload and docs wording that merges residue signals without hiding actionable current work.",
+      "escalation": "Escalate if the work requires removing existing detailed sections or changing archive/delete behavior."
+    },
+    "execution": {
+      "milestone": "workspace-maintenance-pressure-view",
+      "status": "completed",
+      "next_step": "Archive this completed slice, close #454, and promote #455 current-memory removal.",
+      "proof": "workspace CLI tests, ruff, proof selector, planning doctor, and report/summary dogfood output"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/workspace-maintenance-pressure-view.plan.json",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/workspace_output.py",
+        "src/agentic_workspace/contracts/report_contract.json",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        "tests/test_workspace_cli.py",
+        "README.md",
+        "docs/contributor-playbook.md"
+      ],
+      "invariants": [
+        "Current execution pressure remains separate from maintenance residue.",
+        "Details remain available through selectors or full profiles.",
+        "Default startup remains compact."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#455-#460 plus #467/#469/#471 remain in the feature-tier and surface-merge lane.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #454 closeout, promote the next #450 child indicated by validation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Default report output now has one maintenance-pressure router that points to existing findings, closeout_trust, external_work_delta, operational_compression, and module_reports detail selectors.",
+    "intentionally deferred": "none",
+    "discovered implications": "The active planning record's package-workflow evidence remains lower-trust until closeout records actual package surfaces used; closeout must keep that evidence current.",
+    "proof achieved now": "workspace CLI tests, focused report tests, ruff, proof selector, report dogfood output, maintenance_pressure selector, planning doctor, root CLI authority query, and maintainer-surface checks passed.",
+    "validation still needed": "none for this bounded slice",
+    "next likely slice": "#455 current-memory removal"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Merge residue signals into one maintenance-pressure view.",
+    "hard constraints": "Do not drown current action, remove detailed selectors, or delete artifacts.",
+    "agent may decide locally": "Which report/summary fields are primary versus detailed selectors.",
+    "escalate when": "The change requires policy decisions about retention or deletion."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Collapse many residue concepts into one low-noise router-shaped maintenance signal.",
+    "broader-lane validation question": "Can an agent understand maintenance residue without scanning several historical/detail sections?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/454"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/454",
+      "label": "#454 maintenance-pressure view",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "workspace-maintenance-pressure-view",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed slice, close #454, and promote #455 current-memory removal."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/workspace-maintenance-pressure-view.plan.json",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/workspace_output.py",
+    "src/agentic_workspace/contracts/report_contract.json",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "tests/test_workspace_cli.py",
+    "README.md",
+    "docs/contributor-playbook.md"
+  ],
+  "invariants": [
+    "Current execution pressure remains separate from maintenance residue.",
+    "Details remain available through selectors or full profiles.",
+    "Default startup remains compact."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q -k \"report\"",
+    "uv run ruff check src tests packages/planning/src packages/planning/tests",
+    "uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py src/agentic_workspace/workspace_output.py src/agentic_workspace/contracts/report_contract.json src/agentic_workspace/contracts/schemas/workspace_report.schema.json tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/workspace-maintenance-pressure-view.plan.json --format json",
+    "uv run agentic-workspace report --target . --format json",
+    "uv run agentic-workspace report --target . --section maintenance_pressure --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "Compact output has one maintenance-pressure block when relevant.",
+    "Historical/audit/retention/footprint details remain behind selectors.",
+    "Recommended current action is not drowned by residue.",
+    "Existing detailed sections are reused, demoted, or clearly marked as detail."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Default report output now carries one maintenance_pressure block for audit, retention, footprint, external-evidence, and closeout residue while detailed sections stay selectable.",
+    "validation confirmed": "Focused report tests, full workspace CLI tests, ruff, proof selection, root CLI authority review, planning doctor, report dogfood output, maintenance_pressure selector, maintainer-surface refresh, and planning-surface check passed.",
+    "follow-on routed to": "#455 current-memory removal remains the next #450 child.",
+    "post-work posterity capture": "Archive plan records #454 as closed while keeping #450 continuation explicit.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": ".agentic-workspace/planning/state.toml after promoting #455"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_cli.py -q -k \"report\"; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests packages/planning/src packages/planning/tests; uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py src/agentic_workspace/workspace_output.py src/agentic_workspace/contracts/report_contract.json src/agentic_workspace/contracts/schemas/workspace_report.schema.json tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/workspace-maintenance-pressure-view.plan.json --format json; uv run agentic-workspace report --target . --format json; uv run agentic-workspace report --target . --section maintenance_pressure --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py",
+    "proof achieved now": "Compact report output exposes one maintenance-pressure block; detailed residue remains behind selectors.",
+    "evidence for \"proof achieved\" state": "Router output no longer includes separate closeout_trust, external_work_delta, or operational_compression blocks and instead includes maintenance_pressure subcategories that link to those sections."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Local validation transcript details beyond commands and pass/fail status.",
+          "owner": "discard",
+          "source": "execution detail"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#455 current-memory removal is the next bounded #450 child.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "Direct report-rendering edits remain allowed runtime/derived-renderer work with root CLI authority proof.",
+          "owner": "root_cli_authority defaults",
+          "source": "proof direct_cli_edit_review"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#454 maintenance-pressure view",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/454"
+        },
+        {
+          "summary": "#450 feature tiers and surface merge",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/450"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted from #454 after #453 context-router closeout.",
+    "2026-04-28: Completed by adding maintenance_pressure as the compact default report residue router."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Merge residue signals into one maintenance-pressure view.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge activates a fresh bounded slice."
+  }
+}

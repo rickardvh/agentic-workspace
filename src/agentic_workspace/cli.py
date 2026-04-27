@@ -2842,6 +2842,11 @@ def _run_report_command(
         findings=aggregated_findings,
         surface_value_guardrail=surface_value_guardrail,
     )
+    payload["maintenance_pressure"] = _maintenance_pressure_payload(
+        report_payload=payload,
+        module_reports=module_reports,
+        findings=aggregated_findings,
+    )
     return payload
 
 
@@ -3031,6 +3036,171 @@ def _operational_compression_payload(
     }
 
 
+def _maintenance_pressure_payload(
+    *,
+    report_payload: dict[str, Any],
+    module_reports: list[dict[str, Any]],
+    findings: list[dict[str, Any]],
+) -> dict[str, Any]:
+    planning_report = next(
+        (report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"),
+        {},
+    )
+    planning_report = planning_report if isinstance(planning_report, dict) else {}
+    closeout_trust = report_payload.get("closeout_trust", {})
+    closeout_trust = closeout_trust if isinstance(closeout_trust, dict) else {}
+    external_work_delta = report_payload.get("external_work_delta", {})
+    external_work_delta = external_work_delta if isinstance(external_work_delta, dict) else {}
+    operational_compression = report_payload.get("operational_compression", {})
+    operational_compression = operational_compression if isinstance(operational_compression, dict) else {}
+    operational_measures = operational_compression.get("measures", {})
+    operational_measures = operational_measures if isinstance(operational_measures, dict) else {}
+
+    intent_validation = planning_report.get("intent_validation", {}) if isinstance(planning_report, dict) else {}
+    intent_counts = intent_validation.get("counts", {}) if isinstance(intent_validation, dict) else {}
+    finished_work = planning_report.get("finished_work_inspection", {}) if isinstance(planning_report, dict) else {}
+    finished_counts = finished_work.get("counts", {}) if isinstance(finished_work, dict) else {}
+    historical_reviews = closeout_trust.get("historical_review_artifacts", {})
+    historical_reviews = historical_reviews if isinstance(historical_reviews, dict) else {}
+    archived_distillation = operational_measures.get("archived_plan_distillation", {})
+    archived_distillation = archived_distillation if isinstance(archived_distillation, dict) else {}
+    adapter_lifecycle = operational_measures.get("adapter_surface_lifecycle", {})
+    adapter_lifecycle = adapter_lifecycle if isinstance(adapter_lifecycle, dict) else {}
+    closeout_check = closeout_trust.get("intent_satisfaction_check", {})
+    closeout_check = closeout_check if isinstance(closeout_check, dict) else {}
+
+    def _category(
+        *,
+        category_id: str,
+        status: str,
+        count: int,
+        summary: str,
+        detail_section: str,
+        selector_hint: str,
+    ) -> dict[str, Any]:
+        return {
+            "id": category_id,
+            "status": status,
+            "count": count,
+            "summary": summary,
+            "detail_section": detail_section,
+            "section_command": f"agentic-workspace report --target ./repo --section {detail_section} --format json",
+            "selector_hint": selector_hint,
+        }
+
+    warning_count = len(findings)
+    historical_attention_count = _as_int(finished_counts.get("attention_count")) + _as_int(intent_counts.get("closeout_needs_audit_count"))
+    review_item_count = _as_int(historical_reviews.get("item_count"))
+    archive_missing_count = _as_int(archived_distillation.get("post_contract_missing_distillation_count"))
+    adapter_missing_count = _as_int(adapter_lifecycle.get("missing_removal_path_count"))
+    external_changed_count = _as_int(external_work_delta.get("changed_count")) + _as_int(external_work_delta.get("closed_count"))
+    lower_trust_count = _as_int(closeout_trust.get("lower_trust_closeout_count"))
+    followup_required = str(closeout_check.get("trust", "")) == "follow-up-required"
+
+    subcategories = [
+        _category(
+            category_id="current_state_stale",
+            status="attention" if warning_count else "quiet",
+            count=warning_count,
+            summary="Current report findings are present." if warning_count else "No current report findings are present.",
+            detail_section="findings",
+            selector_hint="Inspect only when warning_summary or this category is attention.",
+        ),
+        _category(
+            category_id="historical_audit",
+            status="attention" if historical_attention_count else "backgrounded",
+            count=historical_attention_count,
+            summary=(
+                "Historical audit or finished-work inspection has attention signals."
+                if historical_attention_count
+                else "Historical audit detail is backgrounded behind planning module selectors."
+            ),
+            detail_section="module_reports",
+            selector_hint="Use full profile or module reports only for audit work.",
+        ),
+        _category(
+            category_id="review_retention",
+            status="evidence-only" if review_item_count else "quiet",
+            count=review_item_count,
+            summary="Historical review artifacts are evidence/history, not ordinary operating input.",
+            detail_section="closeout_trust",
+            selector_hint="Inspect when a selected issue or audit path asks for review history.",
+        ),
+        _category(
+            category_id="archive_retention",
+            status="attention" if archive_missing_count else "measured",
+            count=archive_missing_count,
+            summary=(
+                "Some post-contract archived execplans lack closeout distillation."
+                if archive_missing_count
+                else "Archive-retention pressure is measured in operational compression detail."
+            ),
+            detail_section="operational_compression",
+            selector_hint="Inspect for archive footprint or retention cleanup work.",
+        ),
+        _category(
+            category_id="generated_output_footprint",
+            status="attention" if adapter_missing_count else "measured",
+            count=adapter_missing_count,
+            summary=(
+                "Some adapter/generated surfaces lack removal-path metadata."
+                if adapter_missing_count
+                else "Generated and adapter surface footprint is measured as detail."
+            ),
+            detail_section="operational_compression",
+            selector_hint="Inspect before expanding generated or adapter surfaces.",
+        ),
+        _category(
+            category_id="external_evidence_stale",
+            status="attention" if external_changed_count else str(external_work_delta.get("status", "unavailable")),
+            count=external_changed_count,
+            summary=(
+                "External-work evidence changed since the previous snapshot."
+                if external_changed_count
+                else "External-work evidence is a routed snapshot/detail signal."
+            ),
+            detail_section="external_work_delta",
+            selector_hint="Inspect when external issue intake, closure, or refresh state matters.",
+        ),
+        _category(
+            category_id="closeout_reconciliation",
+            status="attention" if lower_trust_count or followup_required else "quiet",
+            count=lower_trust_count + (1 if followup_required else 0),
+            summary=(
+                "Closeout reconciliation needs attention before treating broad work as closed."
+                if lower_trust_count or followup_required
+                else "No lower-trust closeout reconciliation signals are present."
+            ),
+            detail_section="closeout_trust",
+            selector_hint="Inspect before broad-work closeout or package-use trust review.",
+        ),
+    ]
+    active = [item for item in subcategories if item["status"] in {"attention", "evidence-only"}]
+    attention_count = sum(1 for item in subcategories if item["status"] == "attention")
+    if attention_count:
+        status = "attention"
+        recommended_next_action = (
+            "Continue current execution first; inspect maintenance-pressure detail only when the active lane needs residue cleanup."
+        )
+    elif active:
+        status = "evidence-only"
+        recommended_next_action = "Treat maintenance residue as background evidence unless the current task selects it."
+    else:
+        status = "quiet"
+        recommended_next_action = "No maintenance-pressure detail is needed for ordinary work."
+    return {
+        "kind": "workspace-maintenance-pressure/v1",
+        "status": status,
+        "rule": "One compact router for audit, retention, footprint, external-evidence, and closeout residue; current execution pressure stays separate.",
+        "current_execution_separate": True,
+        "attention_category_count": attention_count,
+        "active_category_count": len(active),
+        "subcategories": subcategories,
+        "detail_sections": sorted({str(item["detail_section"]) for item in subcategories}),
+        "recommended_next_action": recommended_next_action,
+    }
+
+
 def _missing_metadata_fields(record: dict[str, Any], *, required: tuple[str, ...]) -> list[str]:
     missing: list[str] = []
     for field in required:
@@ -3155,7 +3325,7 @@ def _report_profile_payload() -> dict[str, Any]:
             "section_hints",
             "effective_authority",
             "execution_shape",
-            "operational_compression",
+            "maintenance_pressure",
         ],
         "router_shape_guard": {
             "status": "active",
@@ -3253,9 +3423,7 @@ def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "section_hints": section_hints,
         "effective_authority": _report_router_effective_authority(payload.get("effective_authority", {})),
         "execution_shape": _report_router_execution_shape(payload.get("execution_shape", {})),
-        "closeout_trust": payload.get("closeout_trust", {}),
-        "external_work_delta": _report_router_external_work_delta(payload.get("external_work_delta", {})),
-        "operational_compression": _report_router_operational_compression(payload.get("operational_compression", {})),
+        "maintenance_pressure": _report_router_maintenance_pressure(payload.get("maintenance_pressure", {})),
         "surface_value_guardrail": {
             "command": "agentic-workspace defaults --section surface_value_guardrail --format json",
             "prefer": payload.get("surface_value_guardrail", {}).get("preference_order", [])[:3],
@@ -3266,6 +3434,32 @@ def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "section_command": "agentic-workspace report --target ./repo --section <section> --format json",
             "high_volume_sections": profile_payload.get("high_volume_sections", []),
         },
+    }
+
+
+def _report_router_maintenance_pressure(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    subcategories = [
+        {
+            "id": item.get("id", ""),
+            "status": item.get("status", "unknown"),
+            "count": item.get("count", 0),
+            "detail_section": item.get("detail_section", ""),
+            "section_command": item.get("section_command", ""),
+        }
+        for item in _list_payload(value.get("subcategories"))
+        if isinstance(item, dict)
+    ]
+    return {
+        "kind": value.get("kind", "workspace-maintenance-pressure/v1"),
+        "status": value.get("status", "unknown"),
+        "current_execution_separate": value.get("current_execution_separate", True),
+        "attention_category_count": value.get("attention_category_count", 0),
+        "active_category_count": value.get("active_category_count", 0),
+        "subcategories": subcategories,
+        "detail_sections": value.get("detail_sections", []),
+        "recommended_next_action": value.get("recommended_next_action", ""),
     }
 
 
@@ -3403,6 +3597,7 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
     section_purposes = {
         "effective_authority": "authority, current work, system-intent pressure, idle context, and unresolved gaps",
         "execution_shape": "default execution posture and planning-backed work guidance",
+        "maintenance_pressure": "one compact router for audit, retention, footprint, external-evidence, and closeout residue",
         "operational_compression": "falsifiable advisory measures for whether surfaces reduce total operational cost",
         "findings": "raw warnings and attention signals grouped in router warning_summary",
         "module_reports": "deep planning and memory module reports",
@@ -3424,6 +3619,7 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
     why_now = {
         "effective_authority": ("inspect now if authority, idle state, or unresolved intent pressure affects whether work can proceed"),
         "execution_shape": "inspect now to choose direct work, light planning, or checked-in execplan promotion",
+        "maintenance_pressure": "inspect now only when residue, retention, or closeout pressure affects the active lane",
         "operational_compression": "inspect now when assessing whether package surfaces are reducing total work",
         "findings": "inspect now because warnings are present" if findings else "skip unless diagnosing an absent-warning state",
         "module_reports": "deep detail; inspect only when a compact router field points to planning or memory internals",

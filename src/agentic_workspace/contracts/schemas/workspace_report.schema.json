@@ -22,6 +22,7 @@
     "product_managed_enclave",
     "surface_value_guardrail",
     "effective_authority",
+    "maintenance_pressure",
     "operational_compression",
     "closeout_trust",
     "external_work_delta",
@@ -131,6 +132,9 @@
       "type": "object"
     },
     "operational_compression": {
+      "type": "object"
+    },
+    "maintenance_pressure": {
       "type": "object"
     },
     "closeout_trust": {

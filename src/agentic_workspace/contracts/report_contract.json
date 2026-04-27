@@ -23,6 +23,7 @@
     "surface_value_guardrail",
     "effective_authority",
     "execution_shape",
+    "maintenance_pressure",
     "operational_compression",
     "closeout_trust",
     "external_work_delta",
