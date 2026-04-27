@@ -17,14 +17,16 @@
     },
     "execution": {
       "milestone": "planning-payload-surface-classification",
-      "status": "in-progress",
-      "next_step": "Inventory packages/planning/bootstrap, packages/planning/skills, planning-installed docs, README claims, and pyproject package-data includes.",
+      "status": "completed",
+      "next_step": "Promote #463 to shrink the default planning install using the classification artifact.",
       "proof": "planning package tests, ruff, proof selector, and planning doctor"
     },
     "scope": {
       "touched": [
         ".agentic-workspace/planning/state.toml",
-        ".agentic-workspace/planning/execplans/planning-payload-surface-classification.plan.json"
+        ".agentic-workspace/planning/execplans/planning-payload-surface-classification.plan.json",
+        "packages/planning/payload-surface-classification.json",
+        "packages/planning/tests/test_packaging.py"
       ],
       "invariants": [
         "Classification must make future default-footprint reduction cheaper.",
@@ -50,12 +52,12 @@
     "issues": "#461, #462, #463, #464, #465, #466"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
+    "what this slice enabled": "packages/planning/payload-surface-classification.json now names the core default install, optional/config surfaces, on-demand docs, maintainer-only helpers, and extraction candidates.",
     "intentionally deferred": "default install shrink, config gating, extraction boundaries, and capability map refresh",
-    "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "#463 or #464 depending on classification"
+    "discovered implications": "Review/intake surfaces, skills, generated mirrors, and maintainer helper scripts are separable from the default daily-operation core.",
+    "proof achieved now": "focused packaging classification tests passed; full validation remains to run after closeout updates",
+    "validation still needed": "run the planned package and workspace validation before commit",
+    "next likely slice": "#463 shrink default planning install to core daily-operation surfaces"
   },
   "delegated_judgment": {
     "requested outcome": "Classify planning payload surfaces by core, optional, on-demand, dev-only, and extraction status.",
@@ -96,23 +98,24 @@
   ],
   "active_milestone": {
     "id": "planning-payload-surface-classification",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to classification and preparation for the next #461 child.",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Inventory packages/planning/bootstrap and package-data includes.",
-    "Inventory packages/planning/skills and planning-installed docs.",
-    "Choose or add the compact classification artifact and tests needed for #462 acceptance."
+    "Run validation for the classification artifact and close out #462.",
+    "Promote #463 from the classification result."
   ],
   "blockers": [
     "None."
   ],
   "touched_paths": [
     ".agentic-workspace/planning/state.toml",
-    ".agentic-workspace/planning/execplans/planning-payload-surface-classification.plan.json"
+    ".agentic-workspace/planning/execplans/planning-payload-surface-classification.plan.json",
+    "packages/planning/payload-surface-classification.json",
+    "packages/planning/tests/test_packaging.py"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
@@ -132,32 +135,44 @@
     "Classification names surfaces that should become optional, on-demand, dev-only, or extraction candidates."
   ],
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "Added a compact payload-surface classification artifact covering planning bootstrap files, bundled skills, package README claims, and pyproject force-includes; tests now fail if shipped payload surfaces are unclassified.",
+    "validation confirmed": "pending final validation",
+    "follow-on routed to": "#463 shrink default planning install to core daily-operation surfaces",
+    "post-work posterity capture": "packages/planning/payload-surface-classification.json",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": ".agentic-workspace/planning/execplans/planning-default-core-install.plan.json"
   },
   "closure_check": {
-    "slice status": "open",
+    "slice status": "completed",
     "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "Implementation has not started.",
-    "evidence carried forward": "#462 owns classification before default-footprint changes.",
-    "reopen trigger": "planning payload shrink starts without complete classification"
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#462 classification is complete, but parent #461 still needs default shrink, optionalization, extraction, and capability-map follow-through.",
+    "evidence carried forward": "packages/planning/payload-surface-classification.json and packaging tests",
+    "reopen trigger": "a shipped planning payload surface appears without classification or owner rationale"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        "Raw inventory command output; covered by the checked-in classification artifact and test guardrails."
+      ],
+      "continuation": [
+        "#463 should use smallest_safe_default_install and compression_candidates from packages/planning/payload-surface-classification.json."
+      ],
       "memory": [],
-      "config_check": [],
+      "config_check": [
+        "packages/planning/tests/test_packaging.py now guards classification coverage."
+      ],
       "docs": [],
-      "issue_follow_up": []
+      "issue_follow_up": [
+        "#463",
+        "#464",
+        "#465",
+        "#466"
+      ]
     }
   },
   "drift_log": [
-    "2026-04-27: Promoted after the previous intent-loop lane completed."
+    "2026-04-27: Promoted after the previous intent-loop lane completed.",
+    "2026-04-27: Classified planning payload surfaces and routed default shrink to #463."
   ]
 }

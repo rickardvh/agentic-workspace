@@ -1,0 +1,174 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning Default Core Install",
+  "goal": [
+    "Implement #463 by shrinking new planning installs to the core daily-operation surfaces identified by the payload classification."
+  ],
+  "non_goals": [
+    "Do not delete useful optional planning features entirely.",
+    "Do not expand root workspace surfaces to compensate for planning shrinkage.",
+    "Do not make existing installs lose locally modified files without conservative migration or adopt behavior."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "New planning installs contain only the core daily-operation planning payload while optional surfaces remain discoverable through explicit package/config paths.",
+      "constraints": "Use packages/planning/payload-surface-classification.json as the decision source; keep weak-agent compatibility and existing-install safety.",
+      "latitude": "Choose the smallest installer/package-data changes that make default install cheaper without breaking package tests.",
+      "escalation": "Escalate if a surface classified as non-core still appears required by ordinary start, summary, proof, or archive behavior."
+    },
+    "execution": {
+      "milestone": "planning-default-core-install",
+      "status": "in-progress",
+      "next_step": "Compare REQUIRED_PAYLOAD_FILES and packaging force-includes against smallest_safe_default_install.",
+      "proof": "planning package tests, ruff, workspace proof selector, and planning doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/planning-default-core-install.plan.json"
+      ],
+      "invariants": [
+        "Default planning install becomes smaller.",
+        "Optional surfaces remain reachable without becoming first-contact burden.",
+        "Existing installs remain conservative around local changes."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#461: make Agentic Planning smaller by default and clearer by boundary.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane planning-payload-boundary"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#464-#466 still need optionalization/extraction and capability-map follow-through after the default install shrinks.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #463 closeout, promote #464 or the next #461 child indicated by validation"
+  },
+  "parent_lane": {
+    "id": "#461",
+    "title": "Reclassify planning payload into core, optional extensions, and extraction candidates",
+    "priority": "1",
+    "issues": "#461, #463, #464, #465, #466"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "review/intake extraction, generated-mirror separation, and capability-map refresh",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "#464 or #465 depending on which optional surfaces still ship by default"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Shrink default planning install to core daily-operation surfaces.",
+    "hard constraints": "Preserve conservative migration/adopt behavior and package-agnostic discoverability.",
+    "agent may decide locally": "Exact split between default payload, optional package resources, and package-local maintainer files.",
+    "escalate when": "Shrinking a surface breaks ordinary start, summary, proof, or archive flows."
+  },
+  "context_budget": {
+    "live working set": "state, this execplan, #461/#463, packages/planning/payload-surface-classification.json, installer payload constants, packaging config, and package tests",
+    "recoverable later": "#462 archived classification closeout and optional/extraction follow-up issues",
+    "externalize before shift": "record the default payload set and any migration behavior in execution_summary",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Next active issue is #463 planning default core install.",
+    "context-shift triggers": "Before removing force-includes or changing upgrade/uninstall behavior."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Reduce visible and installed residue; preserve leverage by moving non-core surfaces behind explicit selection.",
+    "broader-lane validation question": "Does a new planning install feel meaningfully smaller without losing daily execution continuity?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/463"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/463",
+      "label": "#463 shrink default planning install",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/461",
+      "label": "#461 planning payload boundary",
+      "role": "parent_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "artifact",
+      "target": "packages/planning/payload-surface-classification.json",
+      "label": "#462 payload classification",
+      "role": "dependency",
+      "locator": "smallest_safe_default_install and compression_candidates"
+    }
+  ],
+  "active_milestone": {
+    "id": "planning-default-core-install",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to default planning payload shrink and conservative migration support.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Compare REQUIRED_PAYLOAD_FILES and wheel force-includes against payload-surface-classification.json.",
+    "Change the default install to copy only core daily-operation surfaces.",
+    "Keep optional surfaces available through an explicit non-default path or package resource."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/planning-default-core-install.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan.",
+    "Use classification evidence rather than ad hoc deletion."
+  ],
+  "validation_commands": [
+    "cd packages/planning && uv run pytest tests/test_packaging.py tests/test_installer.py -q",
+    "cd packages/planning && uv run ruff check .",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/planning-default-core-install.plan.json --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "New planning installs contain only core daily-operation surfaces.",
+    "Package tests assert the smaller default payload.",
+    "Existing installs get conservative migration/adopt/upgrade behavior.",
+    "Agents can still discover optional extensions when needed."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "closure_check": {
+    "slice status": "open",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "Implementation has not started.",
+    "evidence carried forward": "#463 owns the first payload shrink after #462 classification.",
+    "reopen trigger": "default planning install still ships non-core surfaces without opt-in selection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted after #462 classified the planning payload."
+  ]
+}

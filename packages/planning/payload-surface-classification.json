@@ -1,0 +1,447 @@
+{
+  "kind": "planning-payload-surface-classification/v1",
+  "issue": "https://github.com/rickardvh/agentic-workspace/issues/462",
+  "parent_issue": "https://github.com/rickardvh/agentic-workspace/issues/461",
+  "purpose": "Classify the planning package payload before shrinking, moving, or extracting surfaces.",
+  "allowed_classifications": [
+    "core daily-operation planning",
+    "config-enabled extension",
+    "discoverable-on-demand support",
+    "maintainer/development only",
+    "extraction candidate",
+    "remove / obsolete"
+  ],
+  "smallest_safe_default_install": {
+    "rule": "A default planning install should include only the files needed to enter, continue, verify, and archive active work. Optional review, intake, reporting, orchestration, compatibility mirrors, and maintainer helper surfaces should move behind selectors, config, or package-local development paths.",
+    "source_paths": [
+      "packages/planning/bootstrap/AGENTS.template.md",
+      "packages/planning/bootstrap/.agentic-workspace/docs/execution-flow-contract.md",
+      "packages/planning/bootstrap/.agentic-workspace/docs/lifecycle-and-config-contract.md",
+      "packages/planning/bootstrap/.agentic-workspace/docs/minimum-operating-model.md",
+      "packages/planning/bootstrap/.agentic-workspace/docs/routing-contract.md",
+      "packages/planning/bootstrap/.agentic-workspace/docs/system-intent-contract.md",
+      "packages/planning/bootstrap/.agentic-workspace/docs/workspace-config-contract.md",
+      "packages/planning/bootstrap/.agentic-workspace/planning/UPGRADE-SOURCE.toml",
+      "packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md",
+      "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/execplans/archive/README.md"
+    ],
+    "installed_paths": [
+      "AGENTS.md",
+      ".agentic-workspace/docs/execution-flow-contract.md",
+      ".agentic-workspace/docs/lifecycle-and-config-contract.md",
+      ".agentic-workspace/docs/minimum-operating-model.md",
+      ".agentic-workspace/docs/routing-contract.md",
+      ".agentic-workspace/docs/system-intent-contract.md",
+      ".agentic-workspace/docs/workspace-config-contract.md",
+      ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
+      ".agentic-workspace/planning/agent-manifest.json",
+      ".agentic-workspace/planning/execplans/README.md",
+      ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+      ".agentic-workspace/planning/execplans/archive/README.md"
+    ]
+  },
+  "compression_candidates": [
+    {
+      "target": "default payload",
+      "classification": "discoverable-on-demand support",
+      "candidate_paths": [
+        "packages/planning/bootstrap/.agentic-workspace/docs/capability-aware-execution.md",
+        "packages/planning/bootstrap/.agentic-workspace/docs/context-budget-contract.md",
+        "packages/planning/bootstrap/.agentic-workspace/docs/extraction-and-discovery-contract.md",
+        "packages/planning/bootstrap/.agentic-workspace/docs/reporting-contract.md",
+        "packages/planning/bootstrap/.agentic-workspace/docs/signal-hygiene-contract.md"
+      ],
+      "next_issue": "https://github.com/rickardvh/agentic-workspace/issues/463"
+    },
+    {
+      "target": "review and intake payload",
+      "classification": "extraction candidate",
+      "candidate_paths": [
+        "packages/planning/bootstrap/.agentic-workspace/planning/reviews/README.md",
+        "packages/planning/bootstrap/.agentic-workspace/planning/reviews/TEMPLATE.review.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/upstream-task-intake.md",
+        "packages/planning/bootstrap/.agentic-workspace/planning/pre-ingestion-refinement.md",
+        "packages/planning/skills/planning-intake-upstream-task/SKILL.md",
+        "packages/planning/skills/planning-promote-review-findings/SKILL.md",
+        "packages/planning/skills/planning-review-pass/SKILL.md"
+      ],
+      "next_issue": "https://github.com/rickardvh/agentic-workspace/issues/464"
+    },
+    {
+      "target": "generated mirrors and helper scripts",
+      "classification": "maintainer/development only",
+      "candidate_paths": [
+        "packages/planning/bootstrap/tools/AGENT_QUICKSTART.md",
+        "packages/planning/bootstrap/tools/AGENT_ROUTING.md",
+        "packages/planning/bootstrap/tools/agent-manifest.json",
+        "packages/planning/bootstrap/scripts/render_agent_docs.py",
+        "packages/planning/bootstrap/scripts/check/check_planning_surfaces.py",
+        "packages/planning/bootstrap/scripts/check/check_maintainer_surfaces.py"
+      ],
+      "next_issue": "https://github.com/rickardvh/agentic-workspace/issues/465"
+    },
+    {
+      "target": "package claims and force-includes",
+      "classification": "maintainer/development only",
+      "candidate_paths": [
+        "packages/planning/README.md",
+        "packages/planning/pyproject.toml"
+      ],
+      "next_issue": "https://github.com/rickardvh/agentic-workspace/issues/466"
+    }
+  ],
+  "surfaces": [
+    {
+      "source_path": "packages/planning/README.md",
+      "installed_path": null,
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Documents package behavior and claims about installed files; it should constrain payload decisions but is not installed into target repos."
+    },
+    {
+      "source_path": "packages/planning/pyproject.toml",
+      "installed_path": null,
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Defines build and force-include boundaries; it should reflect classification decisions after payload shrinkage."
+    },
+    {
+      "source_path": "packages/planning/src/repo_planning_bootstrap/_ownership.toml",
+      "installed_path": null,
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Package ownership metadata is shipped inside the Python package for package-local checks, not as target-repo operating guidance."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/AGENTS.template.md",
+      "installed_path": "AGENTS.md",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Thin startup adapter that routes ordinary agents to compact commands before raw planning files."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/execution-flow-contract.md",
+      "installed_path": ".agentic-workspace/docs/execution-flow-contract.md",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Defines the minimal execution, continuation, and closeout flow needed for active work."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/system-intent-contract.md",
+      "installed_path": ".agentic-workspace/docs/system-intent-contract.md",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Prevents bounded slices from losing the larger user intent during archive and continuation decisions."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/routing-contract.md",
+      "installed_path": ".agentic-workspace/docs/routing-contract.md",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Defines how active state, execplans, reviews, and compact summaries route ordinary work."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/minimum-operating-model.md",
+      "installed_path": ".agentic-workspace/docs/minimum-operating-model.md",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "States the smallest valid planning loop for repos adopting the package."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/lifecycle-and-config-contract.md",
+      "installed_path": ".agentic-workspace/docs/lifecycle-and-config-contract.md",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Keeps install, adopt, upgrade, and recovery behavior explicit enough for daily operation."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/workspace-config-contract.md",
+      "installed_path": ".agentic-workspace/docs/workspace-config-contract.md",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Defines repo and local configuration authority needed to avoid hard-coded host assumptions."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/extraction-and-discovery-contract.md",
+      "installed_path": ".agentic-workspace/docs/extraction-and-discovery-contract.md",
+      "classification": "discoverable-on-demand support",
+      "owner": "planning package payload",
+      "rationale": "Useful for package evolution and modularization, but ordinary active work should not need it in the default working set."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/reporting-contract.md",
+      "installed_path": ".agentic-workspace/docs/reporting-contract.md",
+      "classification": "discoverable-on-demand support",
+      "owner": "planning package payload",
+      "rationale": "Report shape matters for advanced inspection, but compact commands should hide this detail until requested."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/capability-aware-execution.md",
+      "installed_path": ".agentic-workspace/docs/capability-aware-execution.md",
+      "classification": "discoverable-on-demand support",
+      "owner": "planning package payload",
+      "rationale": "Helps tune delegation and capability fit, but core planning can route by summary and proof without reading it first."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/orchestrator-workflow-contract.md",
+      "installed_path": ".agentic-workspace/docs/orchestrator-workflow-contract.md",
+      "classification": "config-enabled extension",
+      "owner": "planning package payload",
+      "rationale": "Needed when a repo uses orchestrated handoffs, but not required for single-agent daily planning."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/capability-contract.json",
+      "installed_path": ".agentic-workspace/docs/capability-contract.json",
+      "classification": "config-enabled extension",
+      "owner": "planning package payload",
+      "rationale": "Machine-readable capability routing is valuable when enabled, but should not expand the default prose surface."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/signal-hygiene-contract.md",
+      "installed_path": ".agentic-workspace/docs/signal-hygiene-contract.md",
+      "classification": "discoverable-on-demand support",
+      "owner": "planning package payload",
+      "rationale": "Keeps long-running planning clean, but should be reached through warnings or reports rather than first-contact reading."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/knowledge-promotion-workflow.md",
+      "installed_path": ".agentic-workspace/docs/knowledge-promotion-workflow.md",
+      "classification": "config-enabled extension",
+      "owner": "planning package payload",
+      "rationale": "Coordinates with memory or docs when configured; planning must still work without that layer."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/standing-intent-contract.md",
+      "installed_path": ".agentic-workspace/docs/standing-intent-contract.md",
+      "classification": "config-enabled extension",
+      "owner": "planning package payload",
+      "rationale": "Durable standing intent is useful in richer installs, but direct active planning can run without it."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/candidate-lanes-contract.md",
+      "installed_path": ".agentic-workspace/docs/candidate-lanes-contract.md",
+      "classification": "config-enabled extension",
+      "owner": "planning package payload",
+      "rationale": "Roadmap candidate shaping belongs behind broader planning mode rather than the smallest daily-operation core."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/context-budget-contract.md",
+      "installed_path": ".agentic-workspace/docs/context-budget-contract.md",
+      "classification": "discoverable-on-demand support",
+      "owner": "planning package payload",
+      "rationale": "Important during context pressure, but summary and handoff outputs should surface it only when relevant."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/external-intent-evidence-contract.md",
+      "installed_path": ".agentic-workspace/docs/external-intent-evidence-contract.md",
+      "classification": "config-enabled extension",
+      "owner": "planning package payload",
+      "rationale": "External intent evidence is optional and provider-agnostic; ordinary planning should not assume it exists."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/finished-work-inspection-contract.md",
+      "installed_path": ".agentic-workspace/docs/finished-work-inspection-contract.md",
+      "classification": "config-enabled extension",
+      "owner": "planning package payload",
+      "rationale": "Post-closeout inspection is valuable for audit-heavy repos, but it is not needed for the default execution loop."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/installer-behavior.md",
+      "installed_path": ".agentic-workspace/docs/installer-behavior.md",
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Describes package install mechanics and should be package-local or on-demand rather than target-repo operating input."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md",
+      "installed_path": ".agentic-workspace/planning/execplans/README.md",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Explains how active execution plans are created, resumed, completed, and archived."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+      "installed_path": ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Canonical machine-first active plan template for bounded multi-step work."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/execplans/archive/README.md",
+      "installed_path": ".agentic-workspace/planning/execplans/archive/README.md",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Defines archive role so completed plans stop cluttering active state while preserving recovery evidence."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/reviews/README.md",
+      "installed_path": ".agentic-workspace/planning/reviews/README.md",
+      "classification": "extraction candidate",
+      "owner": "planning review extension",
+      "rationale": "Review portfolios are useful but separable from daily execution planning and should move behind an optional extension."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/reviews/TEMPLATE.review.json",
+      "installed_path": ".agentic-workspace/planning/reviews/TEMPLATE.review.json",
+      "classification": "extraction candidate",
+      "owner": "planning review extension",
+      "rationale": "Machine review templates should travel with the optional review workflow rather than core planning."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/upstream-task-intake.md",
+      "installed_path": ".agentic-workspace/planning/upstream-task-intake.md",
+      "classification": "extraction candidate",
+      "owner": "planning intake extension",
+      "rationale": "Upstream task intake is tracker-agnostic but still an optional workflow outside the smallest execution loop."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/pre-ingestion-refinement.md",
+      "installed_path": ".agentic-workspace/planning/pre-ingestion-refinement.md",
+      "classification": "extraction candidate",
+      "owner": "planning intake extension",
+      "rationale": "Pre-ingestion refinement belongs with optional intake rather than default repo bootstrap."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/UPGRADE-SOURCE.toml",
+      "installed_path": ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Records the managed source needed for safe upgrades and recovery."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json",
+      "installed_path": ".agentic-workspace/planning/agent-manifest.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Machine-readable routing manifest used to render thin compatibility adapters."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/scripts/render_agent_docs.py",
+      "installed_path": ".agentic-workspace/planning/scripts/render_agent_docs.py",
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Payload mirror of maintainer rendering helper; target repos should consume rendered adapters or commands instead."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/scripts/check/check_planning_surfaces.py",
+      "installed_path": ".agentic-workspace/planning/scripts/check/check_planning_surfaces.py",
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Payload mirror of a maintainer check; ordinary repos should reach checks through package commands."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py",
+      "installed_path": ".agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py",
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Payload mirror of a maintainer check; it should not be part of the default daily working set."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/scripts/render_agent_docs.py",
+      "installed_path": null,
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Package-local renderer source for generated adapters."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/scripts/check/check_planning_surfaces.py",
+      "installed_path": null,
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Package-local maintainer check source."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/scripts/check/check_maintainer_surfaces.py",
+      "installed_path": null,
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Package-local maintainer check source."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/tools/AGENT_QUICKSTART.md",
+      "installed_path": null,
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Generated compatibility adapter used to prove rendering behavior, not an independent doctrine surface."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/tools/AGENT_ROUTING.md",
+      "installed_path": null,
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Generated compatibility adapter used to prove routing behavior, not an independent doctrine surface."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/tools/agent-manifest.json",
+      "installed_path": null,
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Generated mirror for renderer tests; canonical installed manifest lives under the planning payload."
+    },
+    {
+      "source_path": "packages/planning/skills/README.md",
+      "installed_path": ".agentic-workspace/planning/skills/README.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Skill catalog guidance is useful when skills are installed, but planning should not require skill support."
+    },
+    {
+      "source_path": "packages/planning/skills/REGISTRY.json",
+      "installed_path": ".agentic-workspace/planning/skills/REGISTRY.json",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Machine-readable skill registry should be optional extension metadata."
+    },
+    {
+      "source_path": "packages/planning/skills/bootstrap-upgrade/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md",
+      "classification": "maintainer/development only",
+      "owner": "planning package maintainers",
+      "rationale": "Upgrade workflow skill supports package maintenance and lifecycle work rather than daily repo execution."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-autopilot/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Autopilot execution is useful when an agent supports skills, but core planning must remain agent-agnostic."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-intake-upstream-task/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-intake-upstream-task/SKILL.md",
+      "classification": "extraction candidate",
+      "owner": "planning intake extension",
+      "rationale": "Tracker-agnostic intake can become a separate optional extension without weakening active planning."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-orchestrator-workflow/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-orchestrator-workflow/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Orchestrator workflow should be opt-in for repos and agents that actually delegate."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-promote-review-findings/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-promote-review-findings/SKILL.md",
+      "classification": "extraction candidate",
+      "owner": "planning review extension",
+      "rationale": "Review promotion belongs with optional review workflow rather than the smallest active-planning core."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-reporting/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-reporting/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Reporting workflow is valuable when enabled, but compact summary and proof commands should satisfy normal planning work."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-review-pass/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-review-pass/SKILL.md",
+      "classification": "extraction candidate",
+      "owner": "planning review extension",
+      "rationale": "Review pass workflow is separable from daily active execution and should move with review support."
+    }
+  ]
+}
