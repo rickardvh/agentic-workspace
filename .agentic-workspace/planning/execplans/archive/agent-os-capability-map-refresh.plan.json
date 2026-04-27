@@ -18,8 +18,8 @@
     },
     "execution": {
       "milestone": "agent-os-capability-map-refresh",
-      "status": "in-progress",
-      "next_step": "Compare docs/agent-os-capabilities.md with packages/planning/extraction-candidates.json and current module registry.",
+      "status": "completed",
+      "next_step": "Promote #451 from the next roadmap lane after closing #466/#461.",
       "proof": "workspace CLI tests, ruff, proof selector, and planning doctor"
     },
     "scope": {
@@ -52,12 +52,12 @@
     "issues": "#461, #466"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
-    "intentionally deferred": "parent #461 closure decision",
-    "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "validate #461 closure or route narrow residue"
+    "what this slice enabled": "docs/agent-os-capabilities.md now reflects the smaller planning core, explicit optional extensions, extraction candidates, and maintainer-only generated-surface trust boundary.",
+    "intentionally deferred": "feature-tier and broader product-shape compression continue under #450/#451.",
+    "discovered implications": "#461 can close after #466 because every child acceptance item has landed.",
+    "proof achieved now": "workspace CLI tests, ruff, planning-surface check, maintainer-surfaces, proof selector, and planning doctor passed.",
+    "validation still needed": "close #466 and #461, refresh external evidence, then continue #451.",
+    "next likely slice": "#451 feature tiers"
   },
   "delegated_judgment": {
     "requested outcome": "Refresh the Agent OS capability map against current module boundaries.",
@@ -112,7 +112,7 @@
   ],
   "active_milestone": {
     "id": "agent-os-capability-map-refresh",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to doctrine refresh and parent-lane closure decision.",
     "ready": "ready",
     "blocked": "none",
@@ -149,32 +149,65 @@
     "Any new bounded work is routed outside the doctrine page."
   ],
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "Refreshed docs/agent-os-capabilities.md with a current planning boundary snapshot, updated category stances for bounded delegated judgment, intake, review/audit, external work reconciliation, reporting/signal, and generated-surface trust, and kept extraction criteria evidence-driven.",
+    "validation confirmed": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests packages/planning/src packages/planning/tests; uv run python scripts/check/check_planning_surfaces.py; make maintainer-surfaces; proof selector; planning doctor.",
+    "follow-on routed to": "#451 feature tiers after #461 closure",
+    "post-work posterity capture": "docs/agent-os-capabilities.md now carries the refreshed doctrine; packages/planning/extraction-candidates.json remains the package-local evidence map.",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": "#451 feature tiers"
   },
   "closure_check": {
-    "slice status": "open",
-    "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "Implementation has not started.",
-    "evidence carried forward": "#466 owns doctrine alignment after #465 candidate map.",
+    "slice status": "completed",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#462 classified payloads, #463 shrank default install, #464 added explicit optional enablement, #465 defined extraction candidates, and #466 refreshed doctrine.",
+    "evidence carried forward": "Capability doctrine now matches current module and payload boundaries.",
     "reopen trigger": "docs/agent-os-capabilities.md again implies planning owns optional or extraction-candidate capabilities by inertia"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        {
+          "summary": "No additional doctrine follow-up was created; #450/#451 already own feature-tier compression.",
+          "owner": "discard"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Close #466 and #461, refresh external evidence, then promote #451.",
+          "owner": ".agentic-workspace/planning/state.toml"
+        }
+      ],
       "memory": [],
       "config_check": [],
-      "docs": [],
-      "issue_follow_up": []
+      "docs": [
+        {
+          "summary": "docs/agent-os-capabilities.md updated with current boundaries.",
+          "owner": "docs/agent-os-capabilities.md"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#451 feature tiers",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/451"
+        }
+      ]
     }
   },
   "drift_log": [
-    "2026-04-27: Promoted after #465 added package-local extraction candidates."
-  ]
+    "2026-04-27: Promoted after #465 added package-local extraction candidates.",
+    "2026-04-27: Refreshed capability map against current planning core, optional extensions, extraction candidates, and maintainer-only generated-surface trust boundaries."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Refresh the capability map against current planning, memory, workspace, and emerging optional/extraction boundaries.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "docs/agent-os-capabilities.md now names the current planning boundary snapshot and updates the affected capability categories and promotion stances.",
+    "unsolved intent passed to": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_cli.py -q passed with 179 tests; uv run ruff check src tests packages/planning/src packages/planning/tests passed; uv run python scripts/check/check_planning_surfaces.py passed; make maintainer-surfaces passed; proof selector selected maintainer/planning surfaces; planning doctor was healthy.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "The changed doctrine page, active state, and execplan surfaces validate through the selected maintainer and planning lanes."
+  }
 }

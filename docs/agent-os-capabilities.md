@@ -1,6 +1,6 @@
 # Agent OS Capabilities
 
-Last doctrinal review: 2026-04-10
+Last doctrinal review: 2026-04-27
 
 ## Purpose
 
@@ -83,6 +83,22 @@ The composition layer is intentionally thin. It exists to centralize lifecycle e
 Its shared workspace report now gives a compact combined-state view for installed modules, mixed-agent posture, effective repo output posture, and next-action guidance so agents do not need to inspect raw module files first.
 That output posture is repo-owned through `workspace.optimization_bias`: it should be legible during ordinary recovery and reporting, but it must stay an output/residue preference rather than an execution-routing policy.
 
+## Current Planning Boundary Snapshot
+
+Agentic Planning's core boundary is active execution state: compact startup routing, active state, execplan routing, proof expectations, archive discipline, and lifecycle recovery.
+
+Recent payload compression moved non-core planning-adjacent surfaces out of the default install. They remain available as optional package payload or package-maintainer artifacts, but they should not be treated as ordinary first-contact input.
+
+Current boundary decisions:
+
+- Review / audit and review-finding promotion are extraction candidates, not planning core.
+- External work intake, external intent evidence, and reconciliation are extraction candidates, not planning core.
+- Autopilot, orchestration, bounded delegated judgment, and capability-aware execution are optional extensions for now.
+- Reporting, signal hygiene, standing intent, and knowledge-promotion workflow are optional extensions for now.
+- Generated-surface trust and maintainer proof remain internal maintainer/development machinery unless the command-generation extraction lane proves a broader reusable boundary.
+
+`packages/planning/extraction-candidates.json` records the package-local evidence requirements and blockers behind these decisions. It is maintainer input, not an installed startup surface.
+
 ## Important Internal Capabilities
 
 - Checks / proof surfaces
@@ -97,6 +113,7 @@ That output posture is repo-owned through `workspace.optimization_bias`: it shou
 - Handoff / execution summaries
 
 These capabilities are architecturally important today, but they are not automatically destined to become standalone packages.
+Several are now explicitly optional or extraction candidates rather than planning-core obligations; the category on each capability below is the source of truth for that stance.
 
 ## Capability Descriptions
 
@@ -113,8 +130,8 @@ These capabilities are architecturally important today, but they are not automat
 - Current category: `shipped module`
 - Problem solved: active work drifts, broadens, or becomes hard to resume when execution state is left in chat or implied context
 - Why an agent wants it in checked-in form: bounded active work, clear next actions, explicit validation, and prompt archival make execution cheaper and safer
-- Current home: Agentic Planning as a first-party module
-- What would justify promoting it further: broader reuse of planning-specific sub-capabilities outside the current module boundary
+- Current home: Agentic Planning as a first-party module, with a core default install limited to daily execution state and optional payload available only when explicitly enabled
+- What would justify promoting it further: broader reuse of planning-specific sub-capabilities outside the current module boundary, after optional and extraction-candidate surfaces prove stable enough to stand apart from active execution planning
 
 ### Checks / Proof Surfaces
 
@@ -136,11 +153,11 @@ These capabilities are architecturally important today, but they are not automat
 
 ### Bounded Delegated Judgment
 
-- Current category: `internal capability`
+- Current category: `future candidate`
 - Problem solved: repositories lose efficiency when humans must micromanage routine execution or when agents continue confidently past the point where escalation is warranted
 - Why an agent wants it in checked-in form: explicit decision authority, confidence-sensitive escalation, and constraint-driven execution make it possible for humans to set direction while agents own bounded local judgment
-- Current home: planning and workflow contracts, capability-aware execution guidance, and startup instructions that define when to proceed, when to improve the proposed approach, and when to stop and ask
-- Promotion stance: future candidate, but only if the contract proves stable enough to stand apart from planning rather than duplicating it
+- Current home: optional planning guidance, mixed-agent config reporting, workflow contracts, and startup instructions that define when to proceed, when to improve the proposed approach, and when to stop and ask
+- Promotion stance: optional extension for now; future candidate only if the contract proves stable enough to stand apart from planning rather than duplicating it
 - Evidence required for further promotion: repeated dogfooding showing that task intent, local authority, and escalation boundaries can be expressed portably across repos and tools without vendor-specific routing assumptions
 
 ### Capability / Module Registry
@@ -163,30 +180,48 @@ These capabilities are architecturally important today, but they are not automat
 
 ### Intake / Triage
 
-- Current category: `internal capability`
+- Current category: `extraction candidate`
 - Problem solved: externally tracked tasks, review signals, and friction reports can create noisy parallel planning systems
 - Why an agent wants it in checked-in form: clear intake boundaries keep upstream trackers and ad hoc findings from becoming shadow execution systems
-- Current home: planning skills, review docs, roadmap discipline, and dogfooding guidance
-- Promotion stance: future candidate only if cross-repo intake pressure becomes strong and stable
-- Evidence required for further promotion: repeated dogfooding showing a reusable intake schema and clear selective-adoption value separate from planning itself
+- Current home: optional planning intake docs, external intent evidence, reconciliation output, and intake skills
+- Promotion stance: extraction candidate, provided it remains provider-agnostic and selectively adoptable instead of assuming GitHub or planning-core state
+- Evidence required for further promotion: repeated dogfooding showing a reusable intake schema, at least one non-GitHub adapter or adapter fixture, and clear selective-adoption value separate from planning itself
 
 ### Review / Audit Lane
 
-- Current category: `internal capability`
+- Current category: `extraction candidate`
 - Problem solved: repositories need a disciplined way to capture bounded findings without turning review into permanent management overhead
 - Why an agent wants it in checked-in form: explicit review modes and promotion thresholds keep quality checks useful while containing residue
-- Current home: planning-managed review surfaces and templates
-- Promotion stance: future candidate, but only with strong evidence
-- Evidence required for further promotion: repeated use across distinct repo shapes, stable review schemas, and a contract that does not simply duplicate planning
+- Current home: optional planning-managed review surfaces, review templates, and review/promotion skills
+- Promotion stance: extraction candidate, but only with strong evidence that review records and promotion rules work without planning-specific assumptions
+- Evidence required for further promotion: repeated use across distinct repo shapes, stable review schemas, provider-agnostic finding promotion, and a contract that does not simply duplicate planning
+
+### External Work Intake / Reconciliation
+
+- Current category: `extraction candidate`
+- Problem solved: external trackers and checked-in planning can drift apart or force agents to manually reconcile live work against stale local state
+- Why an agent wants it in checked-in form: provider-agnostic evidence and reconciliation outputs make external intent auditable without making any tracker part of planning core
+- Current home: external intent evidence contracts, reconciliation outputs, optional intake docs, and provider adapters such as the GitHub CLI refresh path
+- Promotion stance: extraction candidate once provider boundaries and update semantics are stable beyond one host
+- Evidence required for further promotion: a non-GitHub adapter or fixture, reusable external-work evidence schema, and proof that reconciliation is useful outside this repo's long-running dogfooding lanes
 
 ### Generated-Surface Trust
 
 - Current category: `internal capability`
 - Problem solved: generated maintainer and routing surfaces become liabilities when they are stale or unclear in origin
 - Why an agent wants it in checked-in form: trusted generated artifacts can reduce orientation cost only when provenance and freshness are explicit
-- Current home: planning-owned manifest, render path, freshness checks, and canonical docs
-- Promotion stance: unlikely to stand alone
-- Evidence required for further promotion: strong cross-module or cross-repo demand for a generic generated-surface trust layer with stable shared rules
+- Current home: package-local generated adapters, render/check helpers, proof selectors, and maintainer tests
+- Promotion stance: keep internal and maintainer/development-only unless generic command-generation work proves a broader reusable boundary
+- Evidence required for further promotion: strong cross-module or cross-repo demand for a generic generated-surface trust layer with stable shared rules that do not assume planning payload internals
+
+### Reporting / Signal Hygiene / Knowledge Promotion
+
+- Current category: `future candidate`
+- Problem solved: long-running work accumulates warnings, historical residue, memory candidates, and report sections that can overwhelm ordinary startup if not routed compactly
+- Why an agent wants it in checked-in form: compact report selectors and explicit promotion rules keep high-volume context useful without making every agent read it
+- Current home: optional planning reporting and signal contracts, workspace reports, and memory/planning coordination
+- Promotion stance: optional extension for now; future candidate only if multiple modules need the same report-section schemas and signal-routing rules
+- Evidence required for further promotion: stable compact/default report split, cross-module reuse, and proof that knowledge promotion works with and without Agentic Memory installed
 
 ### Environment / Recovery Guidance
 
@@ -229,6 +264,7 @@ That requires the ecosystem to encode, cheaply and explicitly:
 
 This is primarily a planning and workflow-contract concern today, not a separate product promise.
 The value of the capability is that it lets humans step back to intent and constraints while keeping agent judgment bounded, auditable, and restartable.
+The current product stance keeps this as optional or future-candidate behavior until it is proven repo-, agent-, tool-, and language-agnostic.
 
 ## Extraction / Productization Criteria
 
