@@ -3,13 +3,13 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-27T21:24:00+00:00",
+  "refreshed_at": "2026-04-27T21:24:48+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-27T21:24:00+00:00",
-    "item_count": 32,
-    "open_count": 32,
+    "refreshed_at": "2026-04-27T21:24:48+00:00",
+    "item_count": 31,
+    "open_count": 31,
     "closed_count": 0,
     "limit": 1000,
     "state": "open",
@@ -439,23 +439,6 @@
       ],
       "created_at": "2026-04-27T19:43:24Z",
       "updated_at": "2026-04-27T19:52:11Z",
-      "comments_count": 0
-    },
-    {
-      "system": "github",
-      "id": "#464",
-      "title": "[Planning]: Move review, intake, recovery, and autopilot surfaces behind config or on-demand discovery",
-      "status": "open",
-      "kind": "slice",
-      "parent_id": "#461",
-      "planning_residue_expected": "optional",
-      "url": "https://github.com/rickardvh/agentic-workspace/issues/464",
-      "source_repository": "rickardvh/agentic-workspace",
-      "labels": [
-        "planning"
-      ],
-      "created_at": "2026-04-27T19:47:10Z",
-      "updated_at": "2026-04-27T19:47:10Z",
       "comments_count": 0
     },
     {
