@@ -849,6 +849,114 @@ def _executable_command_surfaces(command_specs: list[dict[str, object]]) -> set[
     return surfaces
 
 
+def _program_parser(program: str) -> argparse.ArgumentParser | None:
+    if program == "agentic-workspace":
+        return cli.build_parser()
+    if program == "agentic-planning-bootstrap":
+        from repo_planning_bootstrap import cli as planning_cli
+
+        return planning_cli.build_parser()
+    if program == "agentic-memory-bootstrap":
+        from repo_memory_bootstrap import cli as memory_cli
+
+        return memory_cli.build_parser()
+    return None
+
+
+def _subparser_action(parser: argparse.ArgumentParser) -> argparse._SubParsersAction | None:
+    return next((action for action in parser._actions if isinstance(action, argparse._SubParsersAction)), None)
+
+
+def _command_parser(
+    parser: argparse.ArgumentParser,
+    *,
+    command_name: str,
+    subcommand_name: str | None = None,
+) -> argparse.ArgumentParser | None:
+    subparsers_action = _subparser_action(parser)
+    if subparsers_action is None:
+        return None
+    command_parser = subparsers_action.choices.get(command_name)
+    if command_parser is None or subcommand_name is None:
+        return command_parser
+    command_subparsers = _subparser_action(command_parser)
+    if command_subparsers is None:
+        return None
+    return command_subparsers.choices.get(subcommand_name)
+
+
+def _command_option_actions(parser: argparse.ArgumentParser) -> dict[str, argparse.Action]:
+    return {
+        str(action.dest): action
+        for action in parser._actions
+        if action.option_strings and action.dest != "help"
+    }
+
+
+def _validate_generated_adapter_live_cli_parity(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    adapters = payload.get("adapters", [])
+    if not isinstance(adapters, list):
+        return ["generated adapter live CLI parity cannot inspect malformed adapters list"]
+    for raw_adapter in adapters:
+        if not isinstance(raw_adapter, dict) or raw_adapter.get("status") != "generated":
+            continue
+        adapter_id = str(raw_adapter.get("id", ""))
+        command = raw_adapter.get("command", {})
+        operation_ref = raw_adapter.get("operation_ref", {})
+        if not isinstance(command, dict) or not isinstance(operation_ref, dict):
+            continue
+        program = str(command.get("program", ""))
+        command_name = str(command.get("name", ""))
+        subcommand_name = str(command["subcommand"]) if isinstance(command.get("subcommand"), str) else None
+        parser = _program_parser(program)
+        if parser is None:
+            errors.append(f"generated adapter {adapter_id} references unknown live CLI program {program}")
+            continue
+        live_command_parser = _command_parser(parser, command_name=command_name, subcommand_name=subcommand_name)
+        if live_command_parser is None:
+            surface = f"{command_name} {subcommand_name}" if subcommand_name else command_name
+            errors.append(f"generated adapter {adapter_id} command surface {program} {surface} is missing from the live CLI")
+            continue
+        operation = operation_manifest(str(operation_ref.get("path", "")))
+        operation_surface = operation.get("command_surface", {})
+        if operation_surface.get("program", "agentic-workspace") != program:
+            errors.append(f"generated adapter {adapter_id} program drifted from operation command_surface")
+        if operation_surface.get("command") != command_name:
+            errors.append(f"generated adapter {adapter_id} command drifted from operation command_surface")
+        if operation_surface.get("subcommand") != subcommand_name and (
+            operation_surface.get("subcommand") is not None or subcommand_name is not None
+        ):
+            errors.append(f"generated adapter {adapter_id} subcommand drifted from operation command_surface")
+        expected_cli_inputs = {
+            str(input_spec["name"]): bool(input_spec.get("required", False))
+            for input_spec in operation.get("inputs", [])
+            if isinstance(input_spec, dict) and input_spec.get("source") == "cli-option"
+        }
+        live_options = _command_option_actions(live_command_parser)
+        live_option_names = set(live_options)
+        expected_option_names = set(expected_cli_inputs)
+        missing_options = sorted(expected_option_names - live_option_names)
+        extra_options = sorted(live_option_names - expected_option_names)
+        if missing_options:
+            errors.append(
+                f"generated adapter {adapter_id} contract declares CLI option(s) missing from live parser: "
+                + ", ".join(missing_options)
+            )
+        if extra_options:
+            errors.append(
+                f"generated adapter {adapter_id} live parser has CLI option(s) missing from operation contract: "
+                + ", ".join(extra_options)
+            )
+        for option_name, expected_required in expected_cli_inputs.items():
+            action = live_options.get(option_name)
+            if action is None:
+                continue
+            if bool(action.required) != expected_required:
+                errors.append(f"generated adapter {adapter_id} option {option_name} required flag drifted from operation contract")
+    return errors
+
+
 def _expected_authority_marker(marker: dict[str, object], path: str) -> dict[str, object]:
     canonical_source = marker["canonical_source"]
     if not isinstance(canonical_source, dict):
@@ -993,7 +1101,8 @@ def main(argv: list[str] | None = None) -> int:
         (
             "command adapter generation manifest",
             _validate(command_adapter_generation_manifest(), "command_adapter_generation.schema.json")
-            + _validate_command_adapter_generation(command_adapter_generation_manifest()),
+            + _validate_command_adapter_generation(command_adapter_generation_manifest())
+            + _validate_generated_adapter_live_cli_parity(command_adapter_generation_manifest()),
         ),
         (
             "command package IR",

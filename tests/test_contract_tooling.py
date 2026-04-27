@@ -260,7 +260,11 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     test_text = (package_root / "test" / "command-package.test.mjs").read_text(encoding="utf-8")
 
     assert package_json["name"] == "@agentic-workspace/workspace-cli"
+    assert "bin" not in package_json
     assert package_json["agenticWorkspace"]["generated"] is True
+    assert package_json["agenticWorkspace"]["fixtureOnly"] is True
+    assert package_json["agenticWorkspace"]["generationStatus"] == "proof-fixture"
+    assert package_json["agenticWorkspace"]["declaredEntrypoints"] == ["agentic-workspace"]
     assert "defaults.report.cli" in source_text
     assert "DO NOT EDIT DIRECTLY" in source_text
     assert "generated package metadata exposes expected commands" in test_text
@@ -303,6 +307,40 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     assert commands_by_program["agentic-workspace"] == ["defaults"]
     assert commands_by_program["agentic-planning-bootstrap"] == ["status"]
     assert commands_by_program["agentic-memory-bootstrap"] == ["status"]
+
+
+def test_generated_adapter_contracts_match_live_cli_surfaces() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module._validate_generated_adapter_live_cli_parity(contract_tooling.command_adapter_generation_manifest()) == []
+
+
+def test_generated_adapter_live_cli_parity_catches_missing_contract_option(monkeypatch: pytest.MonkeyPatch) -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    memory_adapter = next(
+        adapter for adapter in contract_tooling.command_adapter_generation_manifest()["adapters"] if adapter["id"] == "memory.status.cli"
+    )
+
+    def fake_operation_manifest(_path: str) -> dict[str, object]:
+        return {
+            "command_surface": {"program": "agentic-memory-bootstrap", "command": "status", "format_option": "format"},
+            "inputs": [{"name": "format", "source": "cli-option", "required": False}],
+        }
+
+    monkeypatch.setattr(module, "operation_manifest", fake_operation_manifest)
+
+    errors = module._validate_generated_adapter_live_cli_parity({"adapters": [memory_adapter]})
+
+    assert errors == ["generated adapter memory.status.cli live parser has CLI option(s) missing from operation contract: target"]
 
 
 def test_validated_contract_loader_reports_contract_and_schema(monkeypatch, tmp_path: Path) -> None:

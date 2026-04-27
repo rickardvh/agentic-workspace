@@ -1,11 +1,13 @@
 {
   "agenticWorkspace": {
+    "declaredEntrypoints": [
+      "agentic-planning-bootstrap"
+    ],
+    "fixtureOnly": true,
     "generated": true,
+    "generationStatus": "proof-fixture",
     "program": "agentic-planning-bootstrap",
     "source": "src/agentic_workspace/contracts/command_package_ir.json"
-  },
-  "bin": {
-    "agentic-planning-bootstrap": "./src/commandPackage.ts"
   },
   "name": "@agentic-workspace/planning-cli",
   "private": true,

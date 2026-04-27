@@ -47,14 +47,16 @@ def _typescript_package_json(package: dict[str, Any], target: dict[str, Any]) ->
         "version": "0.0.0-generated",
         "private": True,
         "type": "module",
-        "bin": {entrypoint: "./src/commandPackage.ts" for entrypoint in target["entrypoints"]},
         "scripts": {
             "test": "node --test test/command-package.test.mjs"
         },
         "agenticWorkspace": {
             "generated": True,
+            "fixtureOnly": True,
+            "generationStatus": target["generation_status"],
             "source": "src/agentic_workspace/contracts/command_package_ir.json",
-            "program": package["program"]
+            "program": package["program"],
+            "declaredEntrypoints": target["entrypoints"]
         }
     }
     return _json_block(payload) + "\n"
