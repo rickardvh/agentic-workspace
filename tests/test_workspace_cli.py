@@ -3188,11 +3188,13 @@ def test_report_section_selector_returns_operational_compression_measures(tmp_pa
 
     assert cli.main(["report", "--target", str(target), "--section", "operational_compression", "--format", "json"]) == 0
 
-    payload = json.loads(capsys.readouterr().out)
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
     assert payload["profile"] == "compact-contract-answer/v1"
     assert payload["surface"] == "report"
     assert payload["selector"] == {"section": "operational_compression"}
     assert payload["matched"] is True
+    assert captured.err == ""
     answer = payload["answer"]
     assert answer["kind"] == "workspace-operational-compression/v1"
     assert answer["advisory_only"] is True
