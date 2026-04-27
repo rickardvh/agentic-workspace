@@ -16,9 +16,9 @@
     },
     "execution": {
       "milestone": "external-intent-refresh-adapter",
-      "status": "in-progress",
-      "next_step": "Inspect the current external intent evidence refresh path and design the smallest optional GitHub adapter boundary.",
-      "proof": "focused workspace/planning tests for external intent evidence refresh plus proof selector"
+      "status": "completed",
+      "next_step": "Promote #446 as the next long-session dogfooding slice.",
+      "proof": "focused workspace/planning tests for external intent evidence refresh plus proof selector and planning doctor"
     },
     "scope": {
       "touched": [
@@ -51,12 +51,12 @@
     "issues": "#442, #443, #444, #445, #446, #447, #448"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
-    "intentionally deferred": "none",
-    "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "what this slice enabled": "Agents can refresh GitHub issue state into provider-agnostic external intent evidence with `agentic-workspace external-intent refresh-github`.",
+    "intentionally deferred": "Closed-history/audit refresh is explicit via `--state all`; ordinary refresh stays open-only to keep evidence small.",
+    "discovered implications": "Dogfooding found Windows subprocess UTF-8 decoding, GitHub comments shape, issue-body hierarchy parsing, and evidence bloat risks; all were fixed in this slice.",
+    "proof achieved now": "focused tests, proof selector, planning doctor, and live dogfooding refresh passed",
+    "validation still needed": "full workspace and planning package tests before commit",
+    "next likely slice": "#446 payload audit drift classification"
   },
   "delegated_judgment": {
     "requested outcome": "After #444 made issue-reference roles explicit, #445 is the next #442 slice and should reduce manual tracker refresh work.",
@@ -97,7 +97,7 @@
   ],
   "active_milestone": {
     "id": "external-intent-refresh-adapter",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
     "ready": "ready",
     "blocked": "none",
@@ -133,32 +133,41 @@
     "Agents can refresh provider-agnostic external intent evidence through a bounded adapter instead of manual JSON edits."
   ],
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
-    "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "outcome delivered": "Optional GitHub adapter refreshes provider-agnostic external intent evidence and compact summary/report expose refresh metadata.",
+    "validation confirmed": "focused external-intent tests, planning metadata tests, proof selection, planning doctor, and live adapter dogfooding passed before final full checks.",
+    "follow-on routed to": "#446 payload audit drift classification",
+    "post-work posterity capture": "external intent evidence contract documents refresh metadata and small-default adapter behavior",
+    "knowledge promoted (Memory/Docs/Config)": "contract docs updated; no Memory promotion needed",
+    "resume from": ".agentic-workspace/planning/execplans/payload-audit-drift-classification.plan.json"
   },
   "closure_check": {
-    "slice status": "open",
+    "slice status": "closed",
     "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "Implementation has not started.",
-    "evidence carried forward": "#444 role-aware reference inspection landed and #445 is now active.",
-    "reopen trigger": "manual external intent evidence refresh remains required"
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded #445 outcome is delivered, but #442 still requires #446-#448 follow-through.",
+    "evidence carried forward": "The new adapter command refreshed this repo's external intent evidence during dogfooding and summary/report exposed refresh metadata.",
+    "reopen trigger": "agents again need to patch external intent evidence manually for ordinary GitHub issue refresh"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        "Transient gh CLI JSON shape debugging details were covered by tests and do not need durable memory."
+      ],
+      "continuation": [
+        "#446 remains the next #442 child slice."
+      ],
       "memory": [],
       "config_check": [],
-      "docs": [],
-      "issue_follow_up": []
+      "docs": [
+        ".agentic-workspace/docs/external-intent-evidence-contract.md"
+      ],
+      "issue_follow_up": [
+        "#445 can close after commit lands; #442 stays open."
+      ]
     }
   },
   "drift_log": [
-    "2026-04-27: Promoted from TODO direct-task shape into an execplan."
+    "2026-04-27: Promoted from TODO direct-task shape into an execplan.",
+    "2026-04-27: Completed optional GitHub external intent refresh adapter and routed continuation to #446."
   ]
 }

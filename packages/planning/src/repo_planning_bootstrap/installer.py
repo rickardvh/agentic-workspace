@@ -2669,6 +2669,8 @@ def _intent_validation_contract(
         "path": external_evidence.get("path", ""),
         "kind": external_evidence.get("kind", ""),
         "systems": external_evidence.get("systems", []),
+        "refreshed_at": external_evidence.get("refreshed_at", ""),
+        "refresh_metadata": external_evidence.get("refresh_metadata", {}),
         "item_count": external_evidence.get("item_count", 0),
         "open_count": external_open,
         "closed_count": external_closed,
@@ -3385,6 +3387,9 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
             "items": [],
             "reason": "optional evidence file does not match planning-external-intent-evidence/v1",
         }
+    refresh_metadata = payload.get("refresh_metadata", {})
+    if not isinstance(refresh_metadata, dict):
+        refresh_metadata = {}
     normalized_items: list[dict[str, Any]] = []
     systems: list[str] = []
     for raw in payload.get("items", []):
@@ -3410,6 +3415,16 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
         "path": relative_path,
         "kind": "planning-external-intent-evidence/v1",
         "systems": systems,
+        "refreshed_at": str(payload.get("refreshed_at", "") or refresh_metadata.get("refreshed_at", "")),
+        "refresh_metadata": {
+            "adapter": str(refresh_metadata.get("adapter", "")),
+            "repository": str(refresh_metadata.get("repository", "")),
+            "item_count": refresh_metadata.get("item_count", len(normalized_items)),
+            "open_count": refresh_metadata.get("open_count", 0),
+            "closed_count": refresh_metadata.get("closed_count", 0),
+            "limit": refresh_metadata.get("limit", 0),
+            "state": str(refresh_metadata.get("state", "")),
+        },
         "item_count": len(normalized_items),
         "items": normalized_items,
         "reason": "",

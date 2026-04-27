@@ -23,6 +23,22 @@
       "summary": "Load provider-agnostic planning reconciliation state when the planning module is installed."
     },
     {
+      "id": "external_intent.github.repo.resolve",
+      "summary": "Resolve a GitHub repository for optional external intent refresh from an explicit repo or local gh context."
+    },
+    {
+      "id": "external_intent.github.issues.list",
+      "summary": "Read GitHub issues through the optional gh CLI adapter."
+    },
+    {
+      "id": "external_intent.evidence.normalize",
+      "summary": "Normalize provider-specific issue data into provider-agnostic external intent evidence records."
+    },
+    {
+      "id": "external_intent.evidence.write",
+      "summary": "Write provider-agnostic external intent evidence under the planning evidence surface."
+    },
+    {
       "id": "planning.bootstrap.status.load",
       "summary": "Load package-local planning bootstrap status for a target repository."
     },

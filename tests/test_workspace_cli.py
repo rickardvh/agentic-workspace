@@ -3688,6 +3688,117 @@ def test_report_surfaces_planning_intent_validation_findings(tmp_path: Path, cap
     assert planning_report["intent_validation"]["counts"]["untracked_external_open_count"] == 1
 
 
+def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_path: Path, monkeypatch, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    evidence_path = target / ".agentic-workspace" / "planning" / "external-intent-evidence.json"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "system": "github",
+                        "id": "#1",
+                        "title": "Previous",
+                        "status": "open",
+                        "kind": "issue",
+                        "parent_id": "",
+                        "planning_residue_expected": "required",
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class Result:
+        def __init__(self, stdout: str) -> None:
+            self.returncode = 0
+            self.stdout = stdout
+            self.stderr = ""
+
+    def fake_run(command, cwd, capture_output, text, encoding, check):
+        assert command[:2] == ["gh", "issue"]
+        assert command[command.index("--state") + 1] == "all"
+        assert cwd == target
+        assert capture_output is True
+        assert text is True
+        assert encoding == "utf-8"
+        assert check is False
+        return Result(
+            json.dumps(
+                [
+                    {
+                        "number": 1,
+                        "title": "Open work",
+                        "state": "OPEN",
+                        "url": "https://github.com/acme/project/issues/1",
+                        "labels": [{"name": "planning"}],
+                        "createdAt": "2026-04-01T00:00:00Z",
+                        "updatedAt": "2026-04-27T00:00:00Z",
+                        "body": "## Issue kind\n\nChild slice\n\n## Parent issue or lane\n\n#10\n",
+                        "comments": [{"body": "closeout"}],
+                    },
+                    {
+                        "number": 2,
+                        "title": "Closed work",
+                        "state": "CLOSED",
+                        "url": "https://github.com/acme/project/issues/2",
+                        "labels": [],
+                        "createdAt": "2026-04-01T00:00:00Z",
+                        "updatedAt": "2026-04-26T00:00:00Z",
+                        "body": "",
+                        "comments": 0,
+                    },
+                ]
+            )
+        )
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    assert (
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(target),
+                "--repo",
+                "acme/project",
+                "--state",
+                "all",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "external-intent-refresh/v1"
+    assert payload["written"] is True
+    assert payload["repository"] == "acme/project"
+    assert payload["state"] == "all"
+    assert payload["item_count"] == 2
+    refreshed = json.loads(evidence_path.read_text(encoding="utf-8"))
+    assert refreshed["kind"] == "planning-external-intent-evidence/v1"
+    assert refreshed["refresh_metadata"]["adapter"] == "github-gh-cli"
+    assert refreshed["refresh_metadata"]["repository"] == "acme/project"
+    assert refreshed["refresh_metadata"]["state"] == "all"
+    assert "previous_items" not in refreshed
+    assert refreshed["items"][0]["id"] == "#1"
+    assert refreshed["items"][0]["kind"] == "slice"
+    assert refreshed["items"][0]["parent_id"] == "#10"
+    assert refreshed["items"][0]["labels"] == ["planning"]
+    assert refreshed["items"][1]["status"] == "closed"
+
+
 def test_report_surfaces_finished_work_inspection_findings(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

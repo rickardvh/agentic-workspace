@@ -379,6 +379,66 @@
       ]
     },
     {
+      "name": "external-intent",
+      "help": "Refresh optional provider-agnostic external intent evidence through adapter subcommands.",
+      "subcommand_dest": "external_intent_command",
+      "subcommands": [
+        {
+          "name": "refresh-github",
+          "help": "Refresh external intent evidence from GitHub issues through the optional gh CLI adapter.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path whose external intent evidence should be refreshed."
+            },
+            {
+              "name": "repo",
+              "flags": [
+                "--repo"
+              ],
+              "help": "GitHub repository in owner/name form. Defaults to the gh repository for the target."
+            },
+            {
+              "name": "state",
+              "flags": [
+                "--state"
+              ],
+              "choices": [
+                "open",
+                "closed",
+                "all"
+              ],
+              "default": "open",
+              "help": "GitHub issue state to import. Use all for audit refreshes."
+            },
+            {
+              "name": "limit",
+              "flags": [
+                "--limit"
+              ],
+              "type": "integer",
+              "default": 1000,
+              "help": "Maximum number of GitHub issues to import."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Preview refresh counts without writing external intent evidence."
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "preflight",
       "help": "Get compact takeover-safe context: startup defaults + resolved config + active planning state in one call.",
       "uses_option_groups": [

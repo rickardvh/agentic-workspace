@@ -95,6 +95,12 @@
       "migration_status": "draft-contract-only"
     },
     {
+      "id": "external-intent.refresh-github",
+      "path": "operations/external-intent.refresh-github.json",
+      "command": "external-intent",
+      "migration_status": "draft-contract-only"
+    },
+    {
       "id": "install.lifecycle",
       "path": "operations/install.lifecycle.json",
       "command": "install",

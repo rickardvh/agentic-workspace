@@ -3203,6 +3203,53 @@ candidates = [
     assert contract["signals"][1]["kind"] == "closed_without_planning_residue"
 
 
+def test_planning_summary_surfaces_external_intent_refresh_metadata(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    evidence_path = tmp_path / ".agentic-workspace/planning/external-intent-evidence.json"
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "refreshed_at": "2026-04-27T12:00:00+00:00",
+                "refresh_metadata": {
+                    "adapter": "github-gh-cli",
+                    "repository": "acme/project",
+                    "item_count": 1,
+                    "open_count": 1,
+                    "closed_count": 0,
+                    "limit": 200,
+                },
+                "items": [
+                    {
+                        "system": "github",
+                        "id": "#445",
+                        "title": "Refresh external evidence",
+                        "status": "open",
+                        "kind": "issue",
+                        "parent_id": "",
+                        "planning_residue_expected": "required",
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    current_external_work = summary["intent_validation_contract"]["current_external_work"]
+    assert current_external_work["refreshed_at"] == "2026-04-27T12:00:00+00:00"
+    assert current_external_work["refresh_metadata"]["adapter"] == "github-gh-cli"
+    assert current_external_work["refresh_metadata"]["repository"] == "acme/project"
+
+
 def test_planning_summary_reconciles_lower_trust_closeouts_from_review_artifact(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(

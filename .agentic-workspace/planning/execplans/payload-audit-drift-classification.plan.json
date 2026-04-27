@@ -1,0 +1,166 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Payload Audit Drift Classification",
+  "goal": [
+    "Implement #446 so source payload audit output classifies drift instead of reporting raw mismatches."
+  ],
+  "non_goals": [
+    "Do not broaden into payload slimming or feature-tier work from later lanes."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Payload audit output distinguishes transient/generated/intentional-source-extra/missing-root/unexpected-root/expected-projection drift so proof answers the actual trust question.",
+      "constraints": "Keep scope bounded to package payload audit behavior and tests.",
+      "latitude": "Choose the smallest classification shape that keeps false positives out of failure pressure.",
+      "escalation": "Escalate if the audit needs a broader package payload redesign."
+    },
+    "execution": {
+      "milestone": "payload-audit-drift-classification",
+      "status": "in-progress",
+      "next_step": "Inspect current payload/source install-sync checks and identify where raw mismatches are produced.",
+      "proof": "focused planning payload audit tests plus proof selector"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/payload-audit-drift-classification.plan.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py"
+      ],
+      "invariants": [
+        "Classify drift without turning transient/generated artifacts into failing payload drift.",
+        "Keep package boundaries explicit and avoid adding first-contact surfaces."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#442: make the plan -> implement -> evaluate continuation loop first-class for long lanes.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane long-session-dogfooding-intent-loop"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#447-#448 remain open after this slice, and #442 remains open until the loop itself is first-class.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #446 closeout, promote the next issue in the dogfooding lane"
+  },
+  "parent_lane": {
+    "id": "#442",
+    "title": "Add an autopilot intent loop for plan, implement, evaluate, and continue",
+    "priority": "1",
+    "issues": "#442, #445, #446, #447, #448"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Classify source payload audit drift instead of reporting raw mismatches.",
+    "hard constraints": "Do not make bytecode, generated, or intentional source-only files fail the proof lane.",
+    "agent may decide locally": "The exact classification field names and output shape.",
+    "escalate when": "The implementation requires changing install ownership semantics or the package payload model."
+  },
+  "context_budget": {
+    "live working set": "state, this execplan, #446 issue, package payload audit/check code and tests",
+    "recoverable later": "archived #445 closeout and dogfooding report",
+    "externalize before shift": "update execution_summary and closure_check",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Next active issue is #446 payload audit drift classification.",
+    "context-shift triggers": "Before changing payload ownership semantics or broad install behavior."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Proof should answer the actual trust question for the bounded slice.",
+    "slice shaping bias": "Classify drift narrowly so checks stay useful and cheap.",
+    "broader-lane validation question": "Did this slice reduce false-positive proof friction without expanding default payload surface?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/446"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/446",
+      "label": "#446 payload audit drift classification",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/442",
+      "label": "#442 autopilot intent loop",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "payload-audit-drift-classification",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect current payload/source install-sync checks.",
+    "Find where raw mismatches become warnings or failures.",
+    "Add focused tests for transient, intentional source extra, and unexpected drift."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/payload-audit-drift-classification.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "cd packages/planning && uv run pytest tests/test_installer.py -q -k \"payload or drift or source\"",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/payload-audit-drift-classification.plan.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Payload audit output classifies drift instead of returning only raw mismatches.",
+    "Bytecode and generated/transient artifacts are ignored or classified without failing the lane.",
+    "Intentional package-source extras can be declared and preserved.",
+    "Tests cover at least one transient file, one intentional source extra, and one real unexpected drift case."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "closure_check": {
+    "slice status": "open",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "Implementation has not started.",
+    "evidence carried forward": "#445 external intent refresh adapter landed and #446 is now active.",
+    "reopen trigger": "payload audit still reports raw mismatches or false-positive drift"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted after #445 closeout."
+  ]
+}

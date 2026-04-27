@@ -1,1596 +1,224 @@
 {
   "kind": "planning-external-intent-evidence/v1",
+  "systems": [
+    "github"
+  ],
+  "refreshed_at": "2026-04-27T20:09:04+00:00",
+  "refresh_metadata": {
+    "adapter": "github-gh-cli",
+    "repository": "rickardvh/agentic-workspace",
+    "refreshed_at": "2026-04-27T20:09:04+00:00",
+    "item_count": 35,
+    "open_count": 35,
+    "closed_count": 0,
+    "limit": 1000,
+    "state": "open",
+    "command": "gh issue list --state open --json number,title,state,url,labels,createdAt,updatedAt,body,comments"
+  },
   "items": [
-    {
-      "system": "github",
-      "id": "#206",
-      "title": "[Workspace]: Add a local-only installation mode so agents can use Agentic Workspace in repositories they do not own without requiring checked-in adoption",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#230",
-      "title": "[Workspace]: Strip away visible product residue that is no longer earning its keep so the system becomes easier to enter, recover, and trust without losing real leverage",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#251",
-      "title": "[Workspace]: Design for graceful partial compliance so generic agents still get value from the package, and bypassing it becomes visible and harder to trust",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#252",
-      "title": "[Workspace]: Make the default entry path easier for generic agents to discover and follow so startup compliance does not depend on deep product awareness",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#251",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#253",
-      "title": "[Workspace]: Make core package surfaces cheaper for generic agents to consume so using the package is easier than broad repo scavenging or private reinvention",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#251",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#254",
-      "title": "[Workspace]: Make the default entry path easier for generic agents to discover and follow so startup compliance does not depend on deep product awareness",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#251",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#255",
-      "title": "[Workspace]: Make core package surfaces easier for generic agents to use so package startup and state feel cheaper than ad hoc repo reading",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#251",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#256",
-      "title": "[Review]: Surface lower-trust signals when package use was likely bypassed so review and closure do not silently assume disciplined package usage",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#251",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#257",
-      "title": "[Workspace]: Surface dangling larger intent and lower-trust closeout signals without assuming any external planning system",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#258",
-      "title": "[Workspace]: Reopen declarative portability so stable lifecycle and runtime truth stops depending on large Python-owned implementations",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#259",
-      "title": "[Review]: Reopen delegated-run review so mixed-agent work can show what actually changed without broad diff reconstruction",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#261",
-      "title": "[Planning]: Reopen execplan modernization so machine-readable planning state becomes canonical and human views become derived",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#262",
-      "title": "[Planning]: Surface planning-surface drift immediately at resume/startup so interrupted-work recovery does not waste effort rediscovering template, checker, or contract mismatches",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#263",
-      "title": "[Memory]: Turn unlogged recurring friction into durable improvement pressure so agents do not silently notice the same package failures without collecting evidence or pushing them toward product improvement",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#264",
-      "title": "[Planning]: Add an explicit planning-memory handshake so agents are prompted to pull what they may need before work and preserve what later work may need after finishing",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#265",
-      "title": "[Planning]: Prompt pre-work memory pull explicitly so agents ask what they may need to know, and about which area, before they begin bounded execution",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#264",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#266",
-      "title": "[Planning]: Prompt post-work posterity capture explicitly so agents ask what should be preserved for later recovery, follow-on work, or future improvement pressure after finishing",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#264",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#267",
-      "title": "[Planning]: Add an explicit planning\u2194config handshake so bounded work pulls material config before execution and checks config compliance after finishing",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#268",
-      "title": "[Memory]: Add an explicit memory\u2194config handshake so memory creation asks how current config wants signals, notes, promotion, and cleanup to be treated",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#269",
-      "title": "[Workspace]: Formalize modules and repo-custom workflow extensions in the orchestrator so planning can consume them when relevant",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#270",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#270",
-      "title": "[Workspace]: Build a repo-owned, vendor-independent, structured agent configuration system that planning, memory, and other behavior modules can plug into",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#271",
-      "title": "[Workspace]: Define the structured repo-owned agent configuration model, authority map, and module attachment points",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#270",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#272",
-      "title": "[Workspace]: Design selective loading, compact queries, and lazy discovery for structured repo-owned agent configuration",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#270",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#273",
-      "title": "[Workspace]: Make AGENTS.md, llms.txt, and other prose entry surfaces compatibility adapters over structured agent config rather than the primary authority",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#270",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#274",
-      "title": "[Workspace]: Make system intent shape slice implementation tradeoffs, review, and aligned follow-on work rather than acting only as high-level directional prose",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#270",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#275",
-      "title": "[Workspace]: Slim the shipped root AGENTS entrypoint so installs converge on the thin startup contract",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#276",
-      "title": "[Workspace]: Add a package-owned mirrored system-intent contract with source declaration and sync",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#277",
-      "title": "Improve takeover robustness with preflight-first workflow gates",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#251",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#278",
-      "title": "[Workspace]: Replace markdown-first workflow contracts with a stricter, composable workflow definition format that stays flexible inside each component step",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#270",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#279",
-      "title": "[Planning]: Take relevant system intent into explicit account when shaping slices and validating intent satisfaction for broader lanes",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#270",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#280",
-      "title": "[Planning]: Add a multi-level structured reference model so execplans and higher-level planning surfaces can point explicitly to relevant issues, files, ranges, URLs, images, and other artifacts",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#261",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#281",
-      "title": "[Workspace]: Replace generated compatibility artefacts with minimal static routing tables so canonical workflows stay discoverable without creating extra mutable surfaces",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#273",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#282",
-      "title": "[Planning]: Define proportional retention for planning review artifacts so review history stays useful without becoming a parallel archive",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#261",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#285",
-      "title": "[Workspace]: Resolve portable execplan semantics against local execution posture so the current environment can optimize quality, cost, and delegation behavior",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#286",
-      "title": "[Workspace]: Add a first preflight/runtime-resolution slice that turns portable work semantics plus local config into actionable delegation and handoff guidance",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#285",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#287",
-      "title": "[Workspace]: Add a local-only agent integration area for vendor/runtime-specific shortcuts, bridge files, and shims that help agents reach canonical repo-native outcomes without becoming shared workflow state",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#288",
-      "title": "[Workspace]: Define the first local integration root, vendor subfolder convention, and boundary rules for local-only agent/runtime bridges",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#287",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#289",
-      "title": "[Workspace]: Add a compact handoff/prompt-generation slice for strong general-purpose reasoning so high-judgment questions can be escalated cheaply without moving the whole tranche",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#285",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#290",
-      "title": "[Workspace]: Add preparatory refinement templates for strong general-purpose reasoning so issues and candidate work can be clarified before coding-agent ingestion",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#291",
-      "title": "[Workspace]: Delegate system-intent extraction to agents",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#292",
-      "title": "Review friction: reduce competing first-contact surfaces",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#251",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#293",
-      "title": "Direction / proposal: diff-path-based proof selector command",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#251",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#295",
-      "title": "Review friction: adapter vs canonical surface ambiguity",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#251",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#296",
-      "title": "Direction / proposal: minimum-safe-read startup command",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#251",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#297",
-      "title": "Review friction: package boundary confusion (source vs payload vs installed)",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#251",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#298",
-      "title": "Direction / proposal: cheap-implementer mode for bounded agents",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#251",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#299",
-      "title": "Direction / proposal: extract CLI command and option manifests",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#258",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#300",
-      "title": "Direction / proposal: extract module registry metadata from Python",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#258",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#301",
-      "title": "Direction / proposal: extract CLI policy payloads (defaults surfaces)",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#258",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#302",
-      "title": "Direction / proposal: extract setup findings and preflight policy",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#258",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#303",
-      "title": "Direction / proposal: extract workspace surface and path manifests",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#258",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#305",
-      "title": "[Draft][Workspace]: Define implementation-independent operation contracts",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#309",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#306",
-      "title": "[Draft][Workspace]: Add black-box conformance contracts for generated tools",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#305",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#307",
-      "title": "[Draft][Workspace]: Distill durable lane learning before archiving execplans",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#309",
-      "title": "[Workspace]: Complete Python-consumable contract extraction",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#258",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#310",
-      "title": "[Workspace]: Audit remaining Python-owned extractable contract content",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#309",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#311",
-      "title": "[Workspace]: Extract input/output and result schemas for Python consumption",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#309",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#312",
-      "title": "[Workspace]: Extract static data, text, and rendering templates from Python",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#309",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#313",
-      "title": "[Workspace]: Complete operation-contract coverage for every CLI command",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#309",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#314",
-      "title": "[Workspace]: Wire Python loaders and schema-derived models for extracted contracts",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#309",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#315",
-      "title": "[Workspace]: Add extraction parity checks and Python-consumed contract conformance",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#309",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#316",
-      "title": "[Workspace]: Classify remaining Python-owned procedural logic after extraction",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#309",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#330",
-      "title": "[Review]: Make promote-to-plan support compact TOML active items",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#337",
-      "title": "[Workspace]: Close the gap between system intent and operating reality",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#338",
-      "title": "[Workspace]: Add surface-sprawl guardrails for new contract, memory, and report surfaces",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#337",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#339",
-      "title": "[Workspace]: Add a compact effective authority and system-intent embodiment view",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#337",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#341",
-      "title": "[Review]: Make the default workspace report a router instead of an encyclopedia",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#342",
-      "title": "[Workspace]: Turn the surface-value guardrail into an ordinary review gate for durable surfaces",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#343",
-      "title": "[Planning]: Add closeout distillation so archived execplans stop being the durable-learning carrier",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#344",
-      "title": "[Memory]: Shrink ordinary Memory pulls through structured durable-fact routing",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#345",
-      "title": "[Workspace]: Add selector and size discipline for high-volume report sections",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#346",
-      "title": "[Workspace]: Make operational-compression measures falsifiable without adding dashboards",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#347",
-      "title": "[Review]: Distinguish legacy archive-distillation debt from new regressions in operational-compression reporting",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#348",
-      "title": "[Bug]: Generated llms.txt adapter repeats startup and success guidance",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#349",
-      "title": "[Review]: Make broad-work closeout show package dogfooding evidence",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#350",
-      "title": "[Review]: Add branch-continuity guardrails for workflow-changing git actions",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#351",
-      "title": "[Review]: Resolve or baseline remaining historical closeout-audit debt",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#352",
-      "title": "[Workspace]: Inventory the current visible product surface before the next subtraction slice",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#353",
-      "title": "[Workspace]: Compress generated adapter surfaces behind contract-backed renderers",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#354",
-      "title": "[Workspace]: Prove the compact report remains a router after the contract and memory tranche",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#355",
-      "title": "[Workspace]: Reduce validation-driven repair loops with simpler command and schema shapes",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#356",
-      "title": "[Workspace]: Generate shipped CLI adapters from authoritative package definitions",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#357",
-      "title": "[Workspace]: Audit remaining hand-authored CLI authority",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#356",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#358",
-      "title": "[Workspace]: Define the canonical command adapter generation contract",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#356",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#359",
-      "title": "[Workspace]: Generate the first read-only CLI adapter slice",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#356",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#360",
-      "title": "[Workspace]: Add conformance and drift checks for generated CLI adapters",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#356",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#361",
-      "title": "[Workspace]: Add no-direct-edit guardrails for generated CLI surfaces",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#356",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#362",
-      "title": "[Workspace]: Extend generated adapter migration to planning and memory command surfaces",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#356",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#363",
-      "title": "[Workspace]: Define multi-adapter projection requirements for generated command surfaces",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#356",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#364",
-      "title": "[Review]: Derive validated contract-consumption parity from declared loader use",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#356",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#365",
-      "title": "[Draft][Workspace]: Reassess lifecycle tools as generated-adapter-safe orchestration primitives",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#356",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#366",
-      "title": "[Draft][Workspace]: Map lifecycle command tasks and phases before generation",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#365",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#367",
-      "title": "[Draft][Workspace]: Define lifecycle risk and effect matrix",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#365",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#368",
-      "title": "[Draft][Workspace]: Review lifecycle primitives and output contracts",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#365",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#369",
-      "title": "[Draft][Workspace]: Plan lifecycle conformance fixtures before adapter generation",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#365",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#370",
-      "title": "[Review]: Verify post-generation CLI and lifecycle authority boundaries",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#371",
-      "title": "[Workspace]: Compress first-contact adapter surfaces into one ordinary startup path",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#372",
-      "title": "[Workspace]: Convert remaining durable artifact authoring paths to valid-by-construction commands",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#373",
-      "title": "[Workspace]: Make generated CLI adapter status a non-regression check",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#374",
-      "title": "[Workspace]: Make lifecycle dry-run plans the ordinary safe interface",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#375",
-      "title": "[Review]: Reassess whether product-compression intent in #230 is satisfied",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#376",
-      "title": "[Review]: Verify post-compression generated-adapter baseline remains clean",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#377",
-      "title": "[Workspace]: Generate the next read-only package command adapter",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#376",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#378",
-      "title": "[Workspace]: Make lifecycle dry-run plans conformance-backed",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#376",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#379",
-      "title": "[Workspace]: Add a repo-local self-improvement skill for system-intent-driven dogfooding",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#380",
-      "title": "[Workspace]: Add a cheap friction-capture path",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#381",
-      "title": "[Workspace]: Report external-work ingest deltas compactly",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#382",
-      "title": "[Workspace]: Warn when new surfaces expand first-contact burden",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#383",
-      "title": "[Review]: Strengthen task-shape recommender for direct vs planned work",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#384",
-      "title": "[Review]: Expose package-use proof in broad-work closeout",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#385",
-      "title": "[Review]: Add closeout intent-satisfaction check",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#386",
-      "title": "[Review]: Make narrow-work fast path explicit",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#230",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#388",
-      "title": "[Review]: Add ordinary agent path summary",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#389",
-      "title": "[Review]: Mark historical reviews as evidence-only unless selected",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#390",
-      "title": "[Review]: Explain why report sections matter now",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#391",
-      "title": "[Review]: Quiet idle planning projections further",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#392",
-      "title": "[Review]: Normalize agent feedback artifacts",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#393",
-      "title": "[Workspace]: Generate multi-language CLI packages from implementation-independent definitions",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#394",
-      "title": "[Workspace]: Audit CLI generation gaps for multi-language packages",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#393",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#395",
-      "title": "[Workspace]: Choose an off-the-shelf-first CLI generation strategy",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#393",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#396",
-      "title": "[Workspace]: Define the canonical command-package IR for generated CLIs",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#393",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#397",
-      "title": "[Workspace]: Generate the Python CLI package from canonical definitions",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#393",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#398",
-      "title": "[Workspace]: Generate the TypeScript CLI package from the same definitions",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#393",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#399",
-      "title": "[Workspace]: Add Docker-isolated conformance tests for generated CLI packages",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#393",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#400",
-      "title": "[Workspace]: Define shell adapter feasibility for bash and PowerShell",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#393",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#401",
-      "title": "[Workspace]: Migrate implementation work away from direct CLI edits",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#393",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#403",
-      "title": "[Workspace]: Improve weak-agent recovery and strong-agent leverage from current package state",
-      "status": "closed",
-      "kind": "lane",
-      "parent_id": "",
-      "planning_residue_expected": "present",
-      "closeout": {
-        "plan": ".agentic-workspace/planning/execplans/archive/weak-agent-parent-lane-review.plan.json",
-        "proof": "#403 intended outcome names five actionable gaps; each maps to a closed child issue with checked-in closeout evidence: #404, #405, #406, #407, and #408.",
-        "validation": [
-          "gh issue view 403 --json number,title,body,state,labels,url,comments",
-          "gh issue view 404 --json number,state,title,url; gh issue view 405 --json number,state,title,url; gh issue view 406 --json number,state,title,url; gh issue view 407 --json number,state,title,url; gh issue view 408 --json number,state,title,url",
-          "uv run agentic-workspace summary --format json",
-          "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/weak-agent-parent-lane-review.plan.json --format json",
-          "uv run agentic-workspace doctor --target . --modules planning --format json"
-        ]
-      }
-    },
-    {
-      "system": "github",
-      "id": "#404",
-      "title": "[Workspace]: Test weak-agent off-happy-path recovery from package misuse",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#403",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#405",
-      "title": "[Workspace]: Expand lifecycle mutation safety before weak-agent use",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#403",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#406",
-      "title": "[Workspace]: Make validation-vs-intent satisfaction explicit in broad work closeout",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#403",
-      "planning_residue_expected": "present",
-      "closeout": {
-        "plan": ".agentic-workspace/planning/execplans/archive/broad-closeout-validation-intent-separation.plan.json",
-        "proof": "closeout_trust.intent_satisfaction_check.closure_scope now separates validation_proof, requested_slice, lane_or_system_intent, and larger_intent_closure, with a non-substitution rule that validation success alone is not closure evidence.",
-        "validation": [
-          "uv run pytest tests/test_workspace_cli.py -q -k \"closeout_trust or intent_satisfaction or report_surfaces_package_workflow_evidence\"",
-          "uv run agentic-workspace proof --target . --changed tests/test_workspace_cli.py src/agentic_workspace/cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/broad-closeout-validation-intent-separation.plan.json --format json",
-          "uv run pytest tests/test_workspace_cli.py -q",
-          "uv run ruff check src tests",
-          "uv run agentic-workspace doctor --target . --modules planning --format json",
-          "uv run agentic-workspace summary --format json",
-          "uv run agentic-workspace reconcile --format json"
-        ]
-      }
-    },
-    {
-      "system": "github",
-      "id": "#407",
-      "title": "[Workspace]: Add anti-overfitting review for repo-local self-improvement dogfooding",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#403",
-      "planning_residue_expected": "present",
-      "closeout": {
-        "plan": ".agentic-workspace/planning/execplans/archive/anti-overfitting-self-improvement-review.plan.json",
-        "proof": "Self-improvement dogfooding closeout now requires user_agent_value, surface_pressure, portability_boundary, and human_intent_preserved fields and routes ambiguity to planning review.",
-        "validation": [
-          "uv run pytest tests/test_maintainer_surfaces.py -q -k anti_overfitting",
-          "uv run pytest tests/test_maintainer_surfaces.py -q",
-          "uv run pytest tests/test_workspace_cli.py -q",
-          "uv run ruff check src tests",
-          "uv run agentic-workspace doctor --target . --modules planning --format json",
-          "uv run agentic-workspace summary --format json",
-          "uv run agentic-workspace reconcile --format json"
-        ]
-      }
-    },
-    {
-      "system": "github",
-      "id": "#408",
-      "title": "[Workspace]: Distinguish generated non-Python proof fixtures from usable weak-agent CLI surfaces",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#403",
-      "planning_residue_expected": "present",
-      "closeout": {
-        "plan": ".agentic-workspace/planning/execplans/archive/generated-non-python-maturity-labels.plan.json",
-        "proof": "Generated TypeScript package metadata/tests now assert maturity id, promotion criteria, runnable state, fixtureOnly state, and weak-agent routing; static checks reject missing maturity vocabulary or weak-agent routing mismatches.",
-        "validation": [
-          "uv run python scripts/generate/generate_command_packages.py --check",
-          "uv run python scripts/check/check_generated_command_packages.py",
-          "uv run pytest tests/test_contract_tooling.py -q -k \"command_package or generated_typescript\"",
-          "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
-          "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
-          "uv run pytest tests/test_workspace_cli.py -q",
-          "uv run ruff check src tests scripts"
-        ]
-      }
-    },
-    {
-      "system": "github",
-      "id": "#409",
-      "title": "[Workspace]: Strengthen architecture boundaries after contract and generated-layer expansion",
-      "status": "closed",
-      "kind": "lane",
-      "parent_id": "",
-      "planning_residue_expected": "present",
-      "closeout": {
-        "plan": ".agentic-workspace/planning/execplans/archive/architecture-boundary-parent-validation.plan.json",
-        "proof": "Parent acceptance mapped to closed children: #410 root CLI authority audit, #411 source/payload/root sync proof, #412 enclave removability/quietness, #413 historical review artifact routing, #414 one-owner-per-concern authority, and #415-#418 documentation/stale-surface lane.",
-        "validation": [
-          "gh issue view 409 --json number,title,body,state,labels,url,comments",
-          "gh issue view 410 --json number,title,state,url; gh issue view 411 --json number,title,state,url; gh issue view 412 --json number,title,state,url; gh issue view 413 --json number,title,state,url; gh issue view 414 --json number,title,state,url; gh issue view 415 --json number,title,state,url; gh issue view 416 --json number,title,state,url; gh issue view 417 --json number,title,state,url; gh issue view 418 --json number,title,state,url",
-          "uv run agentic-workspace summary --format json",
-          "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/external-intent-evidence.json .agentic-workspace/planning/execplans/architecture-boundary-parent-validation.plan.json --format json",
-          "uv run agentic-workspace reconcile --format json",
-          "uv run agentic-workspace doctor --target . --modules planning --format json"
-        ]
-      }
-    },
-    {
-      "system": "github",
-      "id": "#410",
-      "title": "[Workspace]: Track and reduce root CLI interface authority",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#409",
-      "planning_residue_expected": "present",
-      "closeout": {
-        "plan": ".agentic-workspace/planning/execplans/archive/root-cli-interface-authority-audit.plan.json",
-        "proof": "python_runtime_boundary now carries root_cli_authority_audit with allowed runtime ownership, remaining interface authority, next extraction/guard candidates, and direct CLI edit routing; `agentic-workspace defaults --section root_cli_authority --format json` exposes the compact audit.",
-        "validation": [
-          "uv run pytest tests/test_contract_tooling.py -q -k \"python_runtime_boundary or root_cli_authority\"",
-          "uv run pytest tests/test_workspace_cli.py -q -k \"root_cli_authority or direct_cli_edit\"",
-          "uv run pytest tests/test_workspace_cli.py -q",
-          "uv run pytest tests/test_contract_tooling.py -q",
-          "uv run python scripts/check/check_contract_tooling_surfaces.py",
-          "uv run agentic-workspace proof --target . --changed src/agentic_workspace/contracts/python_runtime_boundary.json src/agentic_workspace/contracts/schemas/python_runtime_boundary.schema.json src/agentic_workspace/cli.py tests/test_contract_tooling.py tests/test_workspace_cli.py scripts/check/check_contract_tooling_surfaces.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/root-cli-interface-authority-audit.plan.json --format json",
-          "uv run ruff check src tests scripts",
-          "uv run agentic-workspace summary --format json",
-          "uv run agentic-workspace reconcile --format json",
-          "uv run agentic-workspace doctor --target . --modules planning --format json"
-        ]
-      }
-    },
-    {
-      "system": "github",
-      "id": "#411",
-      "title": "[Workspace]: Prove source-to-payload-to-installed-surface synchronization",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#409",
-      "planning_residue_expected": "present",
-      "closeout": {
-        "plan": ".agentic-workspace/planning/execplans/archive/source-payload-install-sync-proof.plan.json",
-        "proof": "`scripts/check/check_source_payload_operational_install.py --format json` now emits `sync_proof` for planning and memory with owners, refresh rules, source-to-payload inventory, packaging manifest coverage, root sentinels, intentional differences, and package-local install guard status.",
-        "validation": [
-          "uv run pytest tests/test_source_payload_operational_install.py -q",
-          "uv run python scripts/check/check_source_payload_operational_install.py --format json --strict",
-          "uv run python scripts/check/check_source_payload_operational_install.py --quiet-success",
-          "make maintainer-surfaces",
-          "uv run agentic-workspace proof --target . --changed scripts/check/check_source_payload_operational_install.py tests/test_source_payload_operational_install.py docs/source-payload-operational-install.md .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/source-payload-install-sync-proof.plan.json --format json",
-          "uv run pytest tests/test_workspace_cli.py -q",
-          "uv run ruff check src tests scripts",
-          "uv run agentic-workspace summary --format json"
-        ]
-      }
-    },
-    {
-      "system": "github",
-      "id": "#412",
-      "title": "[Workspace]: Verify product-managed enclave removability and quietness",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#409",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#413",
-      "title": "[Workspace]: Keep review artifacts historical and out of ordinary startup",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#409",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#414",
-      "title": "[Workspace]: Add one-owner-per-concern architecture check",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#409",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#415",
-      "title": "[Docs]: Tighten documentation structure and stale-surface controls",
-      "status": "closed",
-      "kind": "lane",
-      "parent_id": "#409",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#416",
-      "title": "[Docs]: Compress and correct the planning package README",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#415",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#417",
-      "title": "[Docs]: Add a compact documentation role map",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#415",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#418",
-      "title": "[Docs]: Add a stale installed-surface documentation check",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#415",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#419",
-      "title": "[Workspace]: Promote generated command packages from metadata proof to runnable read-only adapters",
-      "status": "closed",
-      "kind": "lane",
-      "parent_id": "#408",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#420",
-      "title": "[Workspace]: Define generated package maturity levels and routing rules",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#419",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#421",
-      "title": "[Workspace]: Define runtime binding model for generated non-Python read-only adapters",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#419",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#422",
-      "title": "[Workspace]: Promote one TypeScript package to a runnable read-only adapter",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#419",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#423",
-      "title": "[Workspace]: Add black-box conformance for runnable generated read-only adapters",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#419",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#424",
-      "title": "[Workspace]: Require planning-backed route before broad issue ingestion",
-      "status": "closed",
-      "kind": "task",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#425",
-      "title": "[Workspace]: Add landed-commit to open-issue reconciliation check",
-      "status": "closed",
-      "kind": "task",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#426",
-      "title": "[Workspace]: Add Docker-backed canonical conformance for runnable generated adapters",
-      "status": "closed",
-      "kind": "task",
-      "parent_id": "#423",
-      "planning_residue_expected": "present",
-      "closeout": {
-        "plan": ".agentic-workspace/planning/execplans/archive/docker-backed-generated-adapter-conformance.plan.json",
-        "proof": "`--docker-conformance --require-docker` builds an isolated Node/Python image and runs generated adapter conformance against the canonical Python CLI.",
-        "validation": [
-          "uv run python scripts/check/check_generated_command_packages.py",
-          "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
-          "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
-          "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
-          "uv run pytest tests/test_contract_tooling.py -q -k \"docker_conformance or generated_command_package\"",
-          "uv run pytest tests/test_workspace_cli.py -q -k proof_changed_selector_routes_generated_command_packages",
-          "uv run pytest tests/test_workspace_cli.py -q",
-          "uv run ruff check src tests scripts"
-        ]
-      }
-    },
-    {
-      "system": "github",
-      "id": "#427",
-      "title": "[Workspace]: Make skills the preferred operating layer for package workflows",
-      "status": "closed",
-      "kind": "lane",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#428",
-      "title": "[Workspace]: Advertise task-shaped package skills in startup output",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#427",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#429",
-      "title": "[Workspace]: Keep WORKFLOW.md as a thin fallback while skills carry operations",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#427",
-      "planning_residue_expected": "required"
-    },
     {
       "system": "github",
       "id": "#430",
       "title": "[Workspace]: Isolate generic command-generation machinery for future extraction",
       "status": "open",
-      "kind": "issue",
+      "kind": "lane",
       "parent_id": "#419",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/430",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T12:33:30Z",
+      "updated_at": "2026-04-27T12:38:00Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#431",
       "title": "[Workspace]: Create an internal command-generation package boundary",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#430",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/431",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T12:33:58Z",
+      "updated_at": "2026-04-27T12:33:58Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#432",
       "title": "[Workspace]: Separate generic command-package schemas from workspace-specific contracts",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#430",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/432",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T12:34:32Z",
+      "updated_at": "2026-04-27T12:34:32Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#433",
       "title": "[Workspace]: Decouple command-generation code from Agentic Workspace contract tooling",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#430",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/433",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T12:35:02Z",
+      "updated_at": "2026-04-27T12:35:02Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#434",
       "title": "[Workspace]: Keep Agentic Workspace as a consumer of isolated command generation",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#430",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/434",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T12:35:52Z",
+      "updated_at": "2026-04-27T12:35:52Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#435",
       "title": "[Workspace]: Define lift-out criteria for the command-generation package",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#430",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/435",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T12:36:53Z",
+      "updated_at": "2026-04-27T12:36:53Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#436",
       "title": "[Workspace]: Add operational footprint pressure for long-running package artifacts",
       "status": "open",
-      "kind": "issue",
+      "kind": "lane",
       "parent_id": "",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/436",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T12:47:33Z",
+      "updated_at": "2026-04-27T12:52:16Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#437",
       "title": "[Workspace]: Detect and repair stale current-memory against planning state",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#436",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/437",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T12:48:02Z",
+      "updated_at": "2026-04-27T12:48:02Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#438",
       "title": "[Workspace]: Add compact operational footprint reporting by artifact class",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#436",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/438",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T12:48:37Z",
+      "updated_at": "2026-04-27T12:48:37Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#439",
       "title": "[Workspace]: Add retention pressure for archived execplans",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#436",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/439",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T12:49:12Z",
+      "updated_at": "2026-04-27T12:49:12Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#440",
       "title": "[Workspace]: Surface review artifact retention as actionable cleanup",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#436",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/440",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T12:49:54Z",
+      "updated_at": "2026-04-27T12:49:54Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#441",
       "title": "[Workspace]: Classify generated outputs as reproducible footprint in reports",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#436",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/441",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T12:51:12Z",
+      "updated_at": "2026-04-27T12:51:12Z",
+      "comments_count": 0
     },
     {
       "system": "github",
@@ -1599,37 +227,15 @@
       "status": "open",
       "kind": "issue",
       "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#443",
-      "title": "[Planning]: Suppress stale child continuations after parent validation consumes them",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#442",
-      "planning_residue_expected": "present",
-      "closeout": {
-        "plan": ".agentic-workspace/planning/execplans/archive/stale-child-continuation-suppression.plan.json",
-        "proof": "Finished-work inspection now marks consumed child continuations as superseded_partial, counts superseded_continuation_count, removes superseded child candidates from current execution pressure, and preserves superseded_by history.",
-        "validation": [
-          "uv run pytest packages/planning/tests/test_installer.py -q -k \"finished_work_inspection\"",
-          "cd packages/planning && uv run pytest tests/test_installer.py",
-          "cd packages/planning && uv run ruff check .",
-          "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/external-intent-evidence.json .agentic-workspace/planning/execplans/stale-child-continuation-suppression.plan.json .agentic-workspace/planning/reviews/long-session-dogfooding-report-2026-04-27.review.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json",
-          "uv run agentic-workspace doctor --target . --modules planning --format json",
-          "uv run agentic-workspace summary --format json"
-        ]
-      }
-    },
-    {
-      "system": "github",
-      "id": "#444",
-      "title": "[Planning]: Add structured reference roles for closeout and review evidence",
-      "status": "closed",
-      "kind": "slice",
-      "parent_id": "#442",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/442",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T15:07:31Z",
+      "updated_at": "2026-04-27T15:07:31Z",
+      "comments_count": 0
     },
     {
       "system": "github",
@@ -1638,7 +244,15 @@
       "status": "open",
       "kind": "issue",
       "parent_id": "",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/445",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T15:07:35Z",
+      "updated_at": "2026-04-27T15:07:35Z",
+      "comments_count": 0
     },
     {
       "system": "github",
@@ -1647,7 +261,15 @@
       "status": "open",
       "kind": "issue",
       "parent_id": "",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/446",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T15:07:36Z",
+      "updated_at": "2026-04-27T15:07:36Z",
+      "comments_count": 0
     },
     {
       "system": "github",
@@ -1656,7 +278,15 @@
       "status": "open",
       "kind": "issue",
       "parent_id": "",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/447",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T15:07:37Z",
+      "updated_at": "2026-04-27T15:07:37Z",
+      "comments_count": 0
     },
     {
       "system": "github",
@@ -1665,169 +295,321 @@
       "status": "open",
       "kind": "issue",
       "parent_id": "",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/448",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T15:07:39Z",
+      "updated_at": "2026-04-27T15:07:39Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#449",
       "title": "[Workspace]: Make package use cheaper over time than bypassing it",
       "status": "open",
-      "kind": "issue",
+      "kind": "lane",
       "parent_id": "",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/449",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:14:46Z",
+      "updated_at": "2026-04-27T19:14:46Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#450",
       "title": "[Workspace]: Make advanced features opt-in through feature tiers and merged surfaces",
       "status": "open",
-      "kind": "issue",
+      "kind": "lane",
       "parent_id": "",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:22:14Z",
+      "updated_at": "2026-04-27T19:30:18Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#451",
       "title": "[Workspace]: Define feature tiers and activation criteria",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#450",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/451",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:23:23Z",
+      "updated_at": "2026-04-27T19:23:23Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#452",
       "title": "[Workspace]: Make minimal or recommendation-driven setup the default path",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#450",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/452",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:24:43Z",
+      "updated_at": "2026-04-27T19:24:43Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#453",
       "title": "[Workspace]: Merge startup, summary, report, defaults, and preflight into a context-router family",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#450",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/453",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:25:15Z",
+      "updated_at": "2026-04-27T19:25:15Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#454",
       "title": "[Workspace]: Merge audit, retention, footprint, and closeout residue into one maintenance-pressure view",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#450",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/454",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:26:09Z",
+      "updated_at": "2026-04-27T19:26:09Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#455",
       "title": "[Memory]: Remove current-memory as a shared current-state feature",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#450",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/455",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:26:45Z",
+      "updated_at": "2026-04-27T19:26:45Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#456",
       "title": "[Workspace]: Mark reviews, codegen, external adapters, and autopilot as advanced opt-in features",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#450",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/456",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:27:25Z",
+      "updated_at": "2026-04-27T19:27:25Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#457",
       "title": "[Workspace]: Merge setup findings, dogfooding feedback, and review promotion into improvement intake",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#450",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/457",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:28:01Z",
+      "updated_at": "2026-04-27T19:28:01Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#458",
       "title": "[Workspace]: Merge external evidence, closeout reconciliation, and landed-commit checks into external-work reconciliation",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#450",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/458",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:28:50Z",
+      "updated_at": "2026-04-27T19:28:50Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#459",
       "title": "[Workspace]: Keep generated CLI package infrastructure out of shipped daily-operation packages",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#450",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/459",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:29:35Z",
+      "updated_at": "2026-04-27T19:33:21Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#460",
       "title": "[Workspace]: Audit shipped package payloads against daily-operation necessity",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#450",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/460",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:35:12Z",
+      "updated_at": "2026-04-27T19:35:12Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#461",
       "title": "[Planning]: Reclassify planning payload into core, optional extensions, and extraction candidates",
       "status": "open",
-      "kind": "issue",
+      "kind": "lane",
       "parent_id": "#450",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/461",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:43:24Z",
+      "updated_at": "2026-04-27T19:52:11Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#462",
       "title": "[Planning]: Classify planning payload surfaces by core, optional, on-demand, dev-only, and extraction status",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#461",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/462",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:45:44Z",
+      "updated_at": "2026-04-27T19:45:44Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#463",
       "title": "[Planning]: Shrink default planning install to core daily-operation surfaces",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#461",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/463",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:46:23Z",
+      "updated_at": "2026-04-27T19:46:23Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#464",
       "title": "[Planning]: Move review, intake, recovery, and autopilot surfaces behind config or on-demand discovery",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#461",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/464",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:47:10Z",
+      "updated_at": "2026-04-27T19:47:10Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#465",
       "title": "[Planning]: Define extraction candidates for review, intake, reconciliation, and advanced agent-operation capabilities",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#461",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/465",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:49:42Z",
+      "updated_at": "2026-04-27T19:49:42Z",
+      "comments_count": 0
     },
     {
       "system": "github",
       "id": "#466",
       "title": "[Planning]: Refresh Agent OS capability map against current module boundaries",
       "status": "open",
-      "kind": "issue",
+      "kind": "slice",
       "parent_id": "#461",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/466",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-27T19:51:09Z",
+      "updated_at": "2026-04-27T19:51:09Z",
+      "comments_count": 0
     }
   ]
 }

@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 import shutil
+import subprocess
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, replace
@@ -816,6 +817,23 @@ def main(argv: list[str] | None = None) -> int:
             _emit_system_intent(format_name=args.format, target_root=target_root, config=config, sync=bool(args.sync))
             return 0
         except (ModuleSelectionError, WorkspaceUsageError) as exc:
+            parser.error(str(exc))
+
+    if args.command == "external-intent":
+        try:
+            target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+            _validate_target_root(command_name="external-intent", target_root=target_root)
+            if args.external_intent_command == "refresh-github":
+                payload = _refresh_github_external_intent_evidence(
+                    target_root=target_root,
+                    repo=getattr(args, "repo", None),
+                    limit=int(getattr(args, "limit", 1000)),
+                    state=str(getattr(args, "state", "open")),
+                    dry_run=bool(getattr(args, "dry_run", False)),
+                )
+                _emit_payload(payload=payload, format_name=args.format)
+                return 0
+        except WorkspaceUsageError as exc:
             parser.error(str(exc))
 
     if args.command in {"install", "init"}:
@@ -3192,6 +3210,8 @@ def _report_router_external_work_delta(value: Any) -> dict[str, Any]:
     return {
         "status": value.get("status", "unknown"),
         "provider_rule": value.get("provider_rule", ""),
+        "refreshed_at": value.get("refreshed_at", ""),
+        "refresh_metadata": value.get("refresh_metadata", {}),
         "open_count": value.get("open_count", 0),
         "changed_count": value.get("changed_count", 0),
         "closed_count": value.get("closed_count", 0),
@@ -3634,6 +3654,7 @@ def _external_work_delta_payload(*, target_root: Path) -> dict[str, Any]:
         }
     items = [item for item in _list_payload(payload.get("items")) if isinstance(item, dict)]
     previous_items = [item for item in _list_payload(payload.get("previous_items")) if isinstance(item, dict)]
+    refresh_metadata = payload.get("refresh_metadata", {}) if isinstance(payload.get("refresh_metadata"), dict) else {}
     open_items = [item for item in items if str(item.get("status", "")).lower() == "open"]
     previous_by_id = {str(item.get("id", "")): item for item in previous_items if str(item.get("id", ""))}
     current_by_id = {str(item.get("id", "")): item for item in items if str(item.get("id", ""))}
@@ -3652,6 +3673,14 @@ def _external_work_delta_payload(*, target_root: Path) -> dict[str, Any]:
         "status": status,
         "provider_rule": provider_rule,
         "source": ".agentic-workspace/planning/external-intent-evidence.json",
+        "refreshed_at": str(payload.get("refreshed_at", "") or refresh_metadata.get("refreshed_at", "")),
+        "refresh_metadata": {
+            "adapter": str(refresh_metadata.get("adapter", "")),
+            "repository": str(refresh_metadata.get("repository", "")),
+            "item_count": int(refresh_metadata.get("item_count", len(items)) or 0),
+            "open_count": int(refresh_metadata.get("open_count", len(open_items)) or 0),
+            "closed_count": int(refresh_metadata.get("closed_count", 0) or 0),
+        },
         "item_count": len(items),
         "open_count": len(open_items),
         "new_count": len(new_items) if previous_items else 0,
@@ -3672,6 +3701,227 @@ def _external_work_summary(item: dict[str, Any]) -> dict[str, Any]:
         "status": str(item.get("status", "")),
         "kind": str(item.get("kind", "")),
         "parent_id": str(item.get("parent_id", "")),
+    }
+
+
+def _external_intent_evidence_path(target_root: Path) -> Path:
+    return target_root / ".agentic-workspace" / "planning" / "external-intent-evidence.json"
+
+
+def _run_gh_json(args: list[str], *, cwd: Path) -> Any:
+    command = ["gh", *args]
+    try:
+        result = subprocess.run(command, cwd=cwd, capture_output=True, text=True, encoding="utf-8", check=False)
+    except FileNotFoundError as exc:
+        raise WorkspaceUsageError("GitHub external-intent refresh requires the optional `gh` CLI to be installed.") from exc
+    if result.returncode != 0:
+        stderr = result.stderr.strip() or result.stdout.strip() or f"`gh {' '.join(args)}` failed"
+        raise WorkspaceUsageError(stderr)
+    try:
+        return json.loads(result.stdout or "null")
+    except json.JSONDecodeError as exc:
+        raise WorkspaceUsageError(f"`gh {' '.join(args)}` did not return valid JSON: {exc}") from exc
+
+
+def _resolve_github_repo_for_external_intent(*, target_root: Path, repo: str | None) -> str:
+    if repo and repo.strip():
+        return repo.strip()
+    payload = _run_gh_json(["repo", "view", "--json", "nameWithOwner"], cwd=target_root)
+    if isinstance(payload, dict) and isinstance(payload.get("nameWithOwner"), str) and payload["nameWithOwner"].strip():
+        return str(payload["nameWithOwner"]).strip()
+    raise WorkspaceUsageError("Could not resolve GitHub repository; pass --repo owner/name.")
+
+
+def _github_label_names(raw_labels: Any) -> list[str]:
+    labels: list[str] = []
+    for raw_label in _list_payload(raw_labels):
+        if isinstance(raw_label, dict):
+            name = str(raw_label.get("name", "")).strip()
+        else:
+            name = str(raw_label).strip()
+        if name and name not in labels:
+            labels.append(name)
+    return labels
+
+
+def _github_comments_count(raw_comments: Any) -> int:
+    if isinstance(raw_comments, list):
+        return len(raw_comments)
+    try:
+        return int(raw_comments or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _github_planning_residue_expected(labels: list[str]) -> str:
+    normalized = {label.lower() for label in labels}
+    if normalized & {"planning-residue-required", "requires-planning-residue"}:
+        return "required"
+    if normalized & {"planning-residue-none", "no-planning-residue"}:
+        return "none"
+    return "optional"
+
+
+def _markdown_section_value(body: str, heading: str) -> str:
+    lines = body.splitlines()
+    heading_normalized = heading.strip().lower()
+    for index, line in enumerate(lines):
+        stripped = line.strip().lstrip("#").strip().lower()
+        if stripped != heading_normalized:
+            continue
+        values: list[str] = []
+        for candidate in lines[index + 1 :]:
+            candidate_stripped = candidate.strip()
+            if candidate_stripped.startswith("##"):
+                break
+            if candidate_stripped:
+                values.append(candidate_stripped)
+        return "\n".join(values).strip()
+    return ""
+
+
+def _infer_external_issue_kind(*, body: str) -> str:
+    issue_kind = _markdown_section_value(body, "Issue kind").lower()
+    if "child" in issue_kind or "slice" in issue_kind:
+        return "slice"
+    if "parent" in issue_kind or "lane" in issue_kind:
+        return "lane"
+    return "issue"
+
+
+def _infer_external_issue_parent_id(body: str) -> str:
+    section_value = _markdown_section_value(body, "Parent issue or lane")
+    section_match = re.search(r"#(\d+)\b", section_value)
+    if section_match:
+        return f"#{section_match.group(1)}"
+    for pattern in (
+        r"(?im)^\s*parent(?:\s+issue|\s+lane)?\s*[:#]\s*#?(\d+)\b",
+        r"(?im)^\s*belongs\s+to\s*[:#]?\s*#?(\d+)\b",
+    ):
+        match = re.search(pattern, body)
+        if match:
+            return f"#{match.group(1)}"
+    return ""
+
+
+def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -> dict[str, Any] | None:
+    number = issue.get("number")
+    try:
+        issue_number = int(number)
+    except (TypeError, ValueError):
+        return None
+    state = str(issue.get("state", "")).strip().lower()
+    if state not in {"open", "closed"}:
+        state = "closed" if bool(issue.get("closed")) else "open"
+    labels = _github_label_names(issue.get("labels"))
+    body = str(issue.get("body", "") or "")
+    return {
+        "system": "github",
+        "id": f"#{issue_number}",
+        "title": str(issue.get("title", "")).strip(),
+        "status": state,
+        "kind": _infer_external_issue_kind(body=body),
+        "parent_id": _infer_external_issue_parent_id(body),
+        "planning_residue_expected": _github_planning_residue_expected(labels),
+        "url": str(issue.get("url", "")).strip(),
+        "source_repository": repo,
+        "labels": labels,
+        "created_at": str(issue.get("createdAt", "")).strip(),
+        "updated_at": str(issue.get("updatedAt", "")).strip(),
+        "comments_count": _github_comments_count(issue.get("comments")),
+    }
+
+
+def _load_existing_external_intent_evidence(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {"kind": "planning-external-intent-evidence/v1", "items": []}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError(f"Cannot refresh invalid external intent evidence at {path.as_posix()}: {exc}") from exc
+    if not isinstance(payload, dict) or payload.get("kind") != "planning-external-intent-evidence/v1":
+        raise WorkspaceUsageError(f"{path.as_posix()} must contain kind planning-external-intent-evidence/v1.")
+    return payload
+
+
+def _refresh_github_external_intent_evidence(
+    *,
+    target_root: Path,
+    repo: str | None,
+    limit: int,
+    state: str,
+    dry_run: bool,
+) -> dict[str, Any]:
+    if limit <= 0:
+        raise WorkspaceUsageError("--limit must be greater than 0.")
+    if state not in {"open", "closed", "all"}:
+        raise WorkspaceUsageError("--state must be one of: open, closed, all.")
+    resolved_repo = _resolve_github_repo_for_external_intent(target_root=target_root, repo=repo)
+    raw_issues = _run_gh_json(
+        [
+            "issue",
+            "list",
+            "--repo",
+            resolved_repo,
+            "--state",
+            state,
+            "--limit",
+            str(limit),
+            "--json",
+            "number,title,state,url,labels,createdAt,updatedAt,body,comments",
+        ],
+        cwd=target_root,
+    )
+    if not isinstance(raw_issues, list):
+        raise WorkspaceUsageError("GitHub issue list did not return a JSON list.")
+    items = [
+        item
+        for item in (
+            _github_issue_to_external_intent_item(issue=issue, repo=resolved_repo) for issue in raw_issues if isinstance(issue, dict)
+        )
+        if item is not None
+    ]
+    items.sort(key=lambda item: int(str(item["id"]).lstrip("#") or "0"))
+    evidence_path = _external_intent_evidence_path(target_root)
+    previous_payload = _load_existing_external_intent_evidence(evidence_path)
+    previous_count = len([item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)])
+    refreshed_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    next_payload = {
+        "kind": "planning-external-intent-evidence/v1",
+        "systems": ["github"],
+        "refreshed_at": refreshed_at,
+        "refresh_metadata": {
+            "adapter": "github-gh-cli",
+            "repository": resolved_repo,
+            "refreshed_at": refreshed_at,
+            "item_count": len(items),
+            "open_count": sum(1 for item in items if item["status"] == "open"),
+            "closed_count": sum(1 for item in items if item["status"] == "closed"),
+            "limit": limit,
+            "state": state,
+            "command": f"gh issue list --state {state} --json number,title,state,url,labels,createdAt,updatedAt,body,comments",
+        },
+        "items": items,
+    }
+    if not dry_run:
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text(json.dumps(next_payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    return {
+        "kind": "external-intent-refresh/v1",
+        "provider": "github",
+        "adapter": "github-gh-cli",
+        "target": target_root.as_posix(),
+        "path": ".agentic-workspace/planning/external-intent-evidence.json",
+        "dry_run": dry_run,
+        "written": not dry_run,
+        "repository": resolved_repo,
+        "refreshed_at": refreshed_at,
+        "item_count": len(items),
+        "open_count": next_payload["refresh_metadata"]["open_count"],
+        "closed_count": next_payload["refresh_metadata"]["closed_count"],
+        "previous_item_count": previous_count,
+        "state": state,
+        "provider_rule": "Core planning consumes only provider-agnostic external intent evidence; GitHub access stays in this optional adapter.",
     }
 
 
