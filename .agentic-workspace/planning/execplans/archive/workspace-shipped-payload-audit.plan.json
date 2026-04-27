@@ -1,0 +1,254 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workspace Shipped Payload Audit",
+  "goal": [
+    "Implement #460 by auditing root, planning, memory, and installed host-repo payloads against daily-operation necessity, then remove or route unnecessary shipped surfaces without weakening lifecycle operation."
+  ],
+  "non_goals": [
+    "Do not remove useful daily-operation or required lifecycle surfaces.",
+    "Do not remove maintainer tooling from the source checkout.",
+    "Do not broaden code-generation extraction work beyond the audit and small obvious cleanup slices."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "A reviewer can see which package and installed payload surfaces are daily-operation required, lifecycle required, optional advanced feature, maintainer/development only, generated/proof-only, or obsolete.",
+      "constraints": "Keep host repos functional after install/adopt/upgrade and keep package-local tests authoritative for shipped payload boundaries.",
+      "latitude": "Remove or exclude obvious development/proof-only shipped surfaces when the change is small and well-covered; otherwise create follow-up issues.",
+      "escalation": "Escalate if a candidate removal has unclear runtime or migration impact."
+    },
+    "execution": {
+      "milestone": "workspace-shipped-payload-audit",
+      "status": "completed",
+      "next_step": "Archive this completed slice, close #460, refresh external issue evidence, then promote the next #450 child indicated by refreshed planning state.",
+      "proof": "package build inventory tests, installer/workspace tests as touched, contract tooling, ruff, maintainer/planning surfaces, proof selector, doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/workspace-shipped-payload-audit.plan.json",
+        "pyproject.toml",
+        "packages/planning/pyproject.toml",
+        "packages/memory/pyproject.toml",
+        "tests/",
+        "packages/planning/tests/",
+        "packages/memory/tests/",
+        "docs/",
+        ".agentic-workspace/docs/"
+      ],
+      "invariants": [
+        "Installed host repos are not forced to understand maintainer/development internals.",
+        "Runtime command adapters remain available where imported by package CLIs.",
+        "Audit residue stays compact and queryable rather than becoming ordinary startup input."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#467/#469/#471 remain after this slice unless validation proves they are satisfied or superseded. #472 was created as a shipped-footprint follow-up for optional memory routing-feedback payload.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #460 closeout, refresh external evidence and promote the next #450 child indicated by validation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A compact shipped-payload audit now classifies root, planning, memory, and installed host-repo payload groups by daily-operation necessity, and memory packaging tests now assert the current-memory required baseline is empty.",
+    "intentionally deferred": "none",
+    "discovered implications": "#472 tracks the optional routing-feedback calibration seed as a likely opt-in/source-only payload candidate.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this bounded slice",
+    "next likely slice": "promote the next #450 child after external issue evidence refresh"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Audit shipped package payloads against daily-operation necessity.",
+    "hard constraints": "Keep daily operation and lifecycle package behavior intact.",
+    "agent may decide locally": "Which surfaces are obvious development/proof-only payloads versus required lifecycle payloads.",
+    "escalate when": "A removal needs migration semantics or could break installed host repos."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Classify and shrink shipped/default footprint before adding capability.",
+    "broader-lane validation question": "Does this make ordinary installed and shipped package surfaces smaller or at least visibly justified?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/460"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/460",
+      "label": "#460 shipped payload audit",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "workspace-shipped-payload-audit",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Build artifact inventories and classify shipped/runtime-installed payload surfaces by necessity."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/workspace-shipped-payload-audit.plan.json",
+    "pyproject.toml",
+    "packages/planning/pyproject.toml",
+    "packages/memory/pyproject.toml",
+    "tests/",
+    "packages/planning/tests/",
+    "packages/memory/tests/",
+    "docs/",
+    ".agentic-workspace/docs/"
+  ],
+  "invariants": [
+    "Installed host repos are not forced to understand maintainer/development internals.",
+    "Runtime command adapters remain available where imported by package CLIs.",
+    "Audit residue stays compact and queryable rather than becoming ordinary startup input."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_packaging.py tests/test_workspace_cli.py tests/test_contract_tooling.py -q",
+    "uv run pytest packages/planning/tests/test_packaging.py packages/memory/tests/test_packaging.py packages/planning/tests/test_installer.py packages/memory/tests/test_installer.py -q",
+    "uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "rg -n \"REQUIRED_MANAGED_PATHS|required shipped current-memory|required current-memory|current-memory required|routing-feedback.md\" packages/memory/tests/test_packaging.py docs/reviews/shipped-package-payload-audit-2026-04-28.md packages/memory/src/repo_memory_bootstrap packages/memory/tests/test_installer.py packages/memory/README.md packages/memory/bootstrap/README.md .agentic-workspace/memory/WORKFLOW.md",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/workspace-shipped-payload-audit.plan.json pyproject.toml packages/planning/pyproject.toml packages/memory/pyproject.toml tests packages/planning/tests packages/memory/tests docs .agentic-workspace/docs --format json",
+    "uv run agentic-workspace doctor --target . --modules planning,memory --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "A compact audit lists shipped surfaces by necessity class.",
+    "Development/proof/codegen surfaces are not shipped unless runtime operation needs them.",
+    "Current-memory required payload expectations are removed or confirmed already routed through #455.",
+    "Unnecessary shipped surfaces have follow-up cleanup issues or implementation slices."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Added a compact shipped package payload audit, kept it as review evidence rather than startup input, and tightened memory packaging tests so current-memory has no required shipped baseline.",
+    "validation confirmed": "uv run pytest tests/test_packaging.py tests/test_workspace_packaging.py tests/test_workspace_cli.py tests/test_contract_tooling.py -q; uv run pytest packages/planning/tests/test_packaging.py packages/memory/tests/test_packaging.py packages/memory/tests/test_installer.py -q; uv run ruff check packages/memory/tests/test_packaging.py; uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; uv run python scripts/check/check_contract_tooling_surfaces.py; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; rg -n \"REQUIRED_MANAGED_PATHS|required shipped current-memory|required current-memory|current-memory required|routing-feedback.md\" packages/memory/tests/test_packaging.py docs/reviews/shipped-package-payload-audit-2026-04-28.md packages/memory/src/repo_memory_bootstrap packages/memory/tests/test_installer.py packages/memory/README.md packages/memory/bootstrap/README.md .agentic-workspace/memory/WORKFLOW.md; uv run agentic-workspace proof --target . --changed ... --format json; cd packages/memory && uv run pytest tests/test_installer.py -q; cd packages/memory && uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning,memory --format json",
+    "follow-on routed to": "#472 and .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge",
+    "post-work posterity capture": "docs/reviews/shipped-package-payload-audit-2026-04-28.md records classification, implemented slice, and follow-up candidates.",
+    "knowledge promoted (Memory/Docs/Config)": "Memory packaging tests now encode that current-memory required baseline is empty; audit records routing-feedback as optional shipped-footprint follow-up.",
+    "resume from": "refresh external issue evidence and promote the next #450 child"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": ".agentic-workspace/planning/execplans/workspace-shipped-payload-audit.plan.json",
+    "what happened": "Classified shipped package and installed payload groups in a compact review artifact, created #472 for optional memory routing-feedback payload reduction, and changed memory packaging tests so current-memory routing-feedback is no longer asserted as required core payload.",
+    "scope touched": "active planning state, execplan closeout, shipped payload audit doc, memory packaging tests, and external issue creation.",
+    "changed surfaces": "Review evidence and tests changed; no runtime package behavior changed in this slice.",
+    "validations run": "uv run pytest tests/test_packaging.py tests/test_workspace_packaging.py tests/test_workspace_cli.py tests/test_contract_tooling.py -q; uv run pytest packages/planning/tests/test_packaging.py packages/memory/tests/test_packaging.py packages/memory/tests/test_installer.py -q; uv run ruff check packages/memory/tests/test_packaging.py; uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; uv run python scripts/check/check_contract_tooling_surfaces.py; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; rg -n \"REQUIRED_MANAGED_PATHS|required shipped current-memory|required current-memory|current-memory required|routing-feedback.md\" packages/memory/tests/test_packaging.py docs/reviews/shipped-package-payload-audit-2026-04-28.md packages/memory/src/repo_memory_bootstrap packages/memory/tests/test_installer.py packages/memory/README.md packages/memory/bootstrap/README.md .agentic-workspace/memory/WORKFLOW.md; uv run agentic-workspace proof --target . --changed ... --format json; cd packages/memory && uv run pytest tests/test_installer.py -q; cd packages/memory && uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning,memory --format json",
+    "result for continuation": "This slice is ready to archive and #460 can close; parent #450 remains open.",
+    "next step": "Refresh external issue evidence and promote the next #450 child."
+  },
+  "finished_run_review": {
+    "review status": "reviewed",
+    "scope respected": "yes; the slice produced evidence and a small packaging-test correction without changing lifecycle behavior.",
+    "proof status": "passed",
+    "intent served": "yes; shipped surfaces are classified by necessity, generated/proof-only boundaries are accounted for, and current-memory required payload expectations are explicitly empty.",
+    "config compliance": "yes; the audit is review evidence/history and not ordinary startup input.",
+    "misinterpretation risk": "medium; the routing-feedback file still ships as optional payload, so #472 carries the next implementation question.",
+    "follow-on decision": "archive #460, close it, refresh evidence, and continue #450 through remaining children and #472 when prioritized."
+  },
+  "proof_report": {
+    "validation proof": "All selected proof commands passed: packaging/workspace/contract tests, package-local memory installer tests and ruff, broader ruff, contract tooling check, maintainer surfaces, planning surfaces, proof selector, and planning/memory doctor.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Targeted root/workspace tests: 211 passed; planning/memory package tests: 212 passed; package-local memory installer tests: 197 passed; ruff, contract tooling, maintainer surfaces, planning surfaces, proof selector, and doctor passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Audit shipped package payloads against daily-operation necessity.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge activates a fresh bounded slice."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Raw package artifact inventory details are covered by packaging tests and do not need to be copied into planning state.",
+          "owner": "archive-only",
+          "source": ""
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue the parent #450 feature-tier/surface-merge lane after #460 closeout.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": ""
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Memory packaging tests now encode that current-memory required baseline is empty; audit records routing-feedback as optional shipped-footprint follow-up.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "Memory packaging tests now assert no required shipped current-memory baseline.",
+          "owner": "packages/memory/tests/test_packaging.py",
+          "source": ""
+        },
+        {
+          "summary": "Memory packaging tests now encode that current-memory required baseline is empty; audit records routing-feedback as optional shipped-footprint follow-up.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "Shipped package payload audit records package and installed payload necessity classes without becoming startup input.",
+          "owner": "docs/reviews/shipped-package-payload-audit-2026-04-28.md",
+          "source": ""
+        },
+        {
+          "summary": "Memory packaging tests now encode that current-memory required baseline is empty; audit records routing-feedback as optional shipped-footprint follow-up.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#472 tracks making memory routing-feedback calibration payload opt-in or source-only.",
+          "owner": "github",
+          "source": ""
+        },
+        {
+          "summary": "#460 can close after commit/push; parent #450 remains open for remaining children.",
+          "owner": "github",
+          "source": ""
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted after #459 generated CLI metadata shipped-footprint closeout."
+  ]
+}

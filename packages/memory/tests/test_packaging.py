@@ -8,14 +8,19 @@ import tempfile
 from pathlib import Path
 from zipfile import ZipFile
 
+from repo_memory_bootstrap._installer_shared import (
+    CURRENT_MEMORY_BASELINE,
+    OPTIONAL_CURRENT_MEMORY_FILES,
+    PAYLOAD_REQUIRED_FILES,
+)
+
 MEMORY_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 
-REQUIRED_MANAGED_PATHS = {
+EXPECTED_CORE_MANAGED_PATHS = {
     "bootstrap/AGENTS.template.md",
     "bootstrap/README.md",
     "bootstrap/.agentic-workspace/memory/repo/index.md",
     "bootstrap/.agentic-workspace/memory/repo/manifest.toml",
-    "bootstrap/.agentic-workspace/memory/repo/current/routing-feedback.md",
     "bootstrap/.agentic-workspace/memory/repo/mistakes/recurring-failures.md",
     "bootstrap/.agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md",
     "bootstrap/.agentic-workspace/memory/repo/skills/README.md",
@@ -31,7 +36,7 @@ def test_memory_wheel_contains_required_payload_files_and_skills() -> None:
         wheel_path = _build_artifact("wheel", Path(tmpdir))
         inventory = _artifact_inventory(wheel_path)
 
-        assert REQUIRED_MANAGED_PATHS <= inventory, _missing_paths(inventory, REQUIRED_MANAGED_PATHS)
+        assert EXPECTED_CORE_MANAGED_PATHS <= inventory, _missing_paths(inventory, EXPECTED_CORE_MANAGED_PATHS)
 
 
 def test_memory_sdist_contains_required_payload_files_and_skills() -> None:
@@ -39,7 +44,7 @@ def test_memory_sdist_contains_required_payload_files_and_skills() -> None:
         sdist_path = _build_artifact("sdist", Path(tmpdir))
         inventory = _artifact_inventory(sdist_path)
 
-        assert REQUIRED_MANAGED_PATHS <= inventory, _missing_paths(inventory, REQUIRED_MANAGED_PATHS)
+        assert EXPECTED_CORE_MANAGED_PATHS <= inventory, _missing_paths(inventory, EXPECTED_CORE_MANAGED_PATHS)
 
 
 def test_memory_wheel_and_sdist_share_the_same_managed_inventory() -> None:
@@ -49,6 +54,12 @@ def test_memory_wheel_and_sdist_share_the_same_managed_inventory() -> None:
         sdist_path = _build_artifact("sdist", tmpdir_path)
 
         assert _artifact_inventory(wheel_path) == _artifact_inventory(sdist_path)
+
+
+def test_current_memory_has_no_required_shipped_baseline() -> None:
+    assert CURRENT_MEMORY_BASELINE == ()
+    assert Path(".agentic-workspace/memory/repo/current/routing-feedback.md") in OPTIONAL_CURRENT_MEMORY_FILES
+    assert all(not path.as_posix().startswith(".agentic-workspace/memory/repo/current/") for path in PAYLOAD_REQUIRED_FILES)
 
 
 def test_memory_wheel_excludes_generated_cli_package_metadata() -> None:

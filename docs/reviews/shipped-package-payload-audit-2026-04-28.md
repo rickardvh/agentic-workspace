@@ -1,0 +1,52 @@
+# Shipped Package Payload Audit - 2026-04-28
+
+## Surface Value
+
+This is evidence/history for #460, not ordinary operating input. It exists to make the shipped/default footprint reviewable without asking agents to scan package build metadata, bootstrap payload trees, and installer tests.
+
+## Classification
+
+| Surface | Necessity class | Shipped shape | Decision |
+| --- | --- | --- | --- |
+| Root Python package code under `src/agentic_workspace/` | daily operation required | root wheel/sdist | Keep; this is the command runtime and contract reader. |
+| Root contracts under `src/agentic_workspace/contracts/` | lifecycle required | root wheel/sdist | Keep; commands use them as machine-readable authority rather than prose adapters. |
+| Root managed payload under `src/agentic_workspace/_payload/` | lifecycle required | root wheel/sdist/install target | Keep small; currently limited to workspace ownership, workflow, and system-intent workflow surfaces. |
+| Root `generated_command_adapters.py` | daily operation required | root wheel/sdist | Keep; runtime CLI dispatch imports it. |
+| Root `generated_cli_package/` | generated/proof-only | source checkout only | Already excluded by package artifact tests from #459. |
+| Planning required payload | daily operation required | planning package payload/install target | Keep; smallest safe core is AGENTS adapter, execution/routing/config/system-intent docs, execplan template/readmes, upgrade source, and agent manifest. |
+| Planning optional payload | optional advanced feature | planning package payload, installed only with optional payload selection | Keep as optional while #450 continues; review/intake/external/reconciliation surfaces should not become default startup input. |
+| Planning bundled skills | optional advanced feature / maintainer workflow | planning package payload | Keep behind skill discovery; not required for generic package use. |
+| Planning `generated_command_adapters.py` | daily operation required | planning wheel/sdist | Keep; package CLI imports it. |
+| Planning `generated_cli_package/` | generated/proof-only | source checkout only | Already excluded by package artifact tests from #459. |
+| Memory required payload | daily operation / lifecycle required | memory package payload/install target | Keep; repo memory index, manifest, workflow, metadata docs, upgrade source, seed directories, and lifecycle skills support install and recovery. |
+| Memory current-memory baseline | obsolete as required payload | no required current baseline | Keep empty; packaging tests now assert no required shipped current-memory baseline. |
+| Memory routing-feedback seed | optional advanced calibration | memory package payload/install target | Keep temporarily as optional calibration; candidate for unshipping or opt-in install because its existing cases are externalized. |
+| Memory bootstrap helper skills | lifecycle required | memory package payload | Keep for install/adopt/upgrade/uninstall recovery. |
+| Memory optional fragments | optional advanced feature | memory package sdist/source payload, applied only by optional paths | Keep optional; not daily startup input. |
+| Memory `generated_command_adapters.py` | daily operation required | memory wheel/sdist | Keep; package CLI imports it. |
+| Memory `generated_cli_package/` | generated/proof-only | source checkout only | Already excluded by package artifact tests from #459. |
+
+## Implemented In This Slice
+
+- Added an explicit packaging assertion that memory has no required shipped current-memory baseline.
+- Removed the optional `routing-feedback.md` seed from the memory packaging test's required core payload set.
+- Kept #459's generated CLI package metadata excludes as the package artifact boundary.
+
+## Follow-Up Candidates
+
+| Candidate | Why not finished in #460 | Owner |
+| --- | --- | --- |
+| Unship or opt-in install of memory `routing-feedback.md` | It is still optional calibration payload, but current seed content says its cases have been externalized. Removing it touches install, route-review, freshness, manifest, and migration tests and deserves a focused slice. | #472 |
+| Planning optional payload shrinkage | Existing classification already names optional docs, review/intake, and skills as candidates; #450 should continue through #467/#469/#471 before larger removal decisions. | #450 and existing follow-ups |
+| Historical audit noise while continuing parent lanes | Dogfooding still sees archived child slices as promotion candidates until the active continuation is clear. | #470 |
+
+## Proof Surfaces
+
+- `tests/test_packaging.py`
+- `tests/test_workspace_packaging.py`
+- `packages/planning/tests/test_packaging.py`
+- `packages/memory/tests/test_packaging.py`
+- `packages/memory/tests/test_installer.py`
+- `pyproject.toml`
+- `packages/planning/pyproject.toml`
+- `packages/memory/pyproject.toml`
