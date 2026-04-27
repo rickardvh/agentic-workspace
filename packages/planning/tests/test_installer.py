@@ -3279,11 +3279,12 @@ def test_planning_summary_reconciles_lower_trust_closeouts_from_review_artifact(
     assert reconciliation["counts"]["evidence_present_count"] == 1
     assert reconciliation["counts"]["follow_up_open_count"] == 1
     assert reconciliation["counts"]["needs_audit_count"] == 1
-    assert reconciliation["items_by_state"] == {
+    assert reconciliation["sample_items_by_state"] == {
         "needs-audit": ["EXT-3"],
         "evidence-present": ["EXT-1"],
         "follow-up-open": ["EXT-2"],
     }
+    assert reconciliation["omitted_item_count"] == 0
     assert summary["intent_validation_contract"]["counts"]["closeout_reconciled_count"] == 2
     assert summary["intent_validation_contract"]["counts"]["closeout_needs_audit_count"] == 1
 
@@ -3336,8 +3337,64 @@ def test_planning_summary_accepts_historical_closeout_baseline(tmp_path: Path) -
     assert reconciliation["status"] == "present"
     assert reconciliation["counts"]["historical_baseline_count"] == 1
     assert reconciliation["counts"]["needs_audit_count"] == 0
-    assert reconciliation["items_by_state"] == {"historical-baseline": ["EXT-1"]}
+    assert reconciliation["sample_items_by_state"] == {"historical-baseline": ["EXT-1"]}
+    assert reconciliation["omitted_item_count"] == 0
     assert summary["intent_validation_contract"]["counts"]["closeout_needs_audit_count"] == 0
+
+
+def test_planning_summary_does_not_treat_historical_followups_as_current_work(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "EXT-1",
+                "title": "Closed with historical follow-up",
+                "status": "closed",
+                "kind": "slice",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            },
+        ],
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/reviews/historical-followup.review.json",
+        json.dumps(
+            {
+                "kind": "planning-review/v1",
+                "title": "Historical Follow-up",
+                "issue_classifications": [
+                    {
+                        "id": "EXT-1",
+                        "title": "Closed with historical follow-up",
+                        "classification": "covered_by_open_followup",
+                        "live_state": "closed",
+                        "evidence": "bounded slice landed",
+                        "follow_up": "legacy follow-up recorded for audit",
+                    },
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    contract = summary["intent_validation_contract"]
+
+    assert contract["current_external_work"]["open_count"] == 0
+    assert contract["historical_audit_references"]["follow_up_open_count"] == 1
+    assert "sources" not in contract["historical_audit_references"]
+    assert "full` for historical review source paths" in contract["historical_audit_references"]["detail"]
+    assert contract["closeout_reconciliation"]["counts"]["follow_up_open_count"] == 1
+    assert "items_by_state" not in contract["closeout_reconciliation"]
+    assert "full` for full reconciliation sources" in contract["closeout_reconciliation"]["detail"]
+    assert contract["recommended_next_action"] == "No dangling larger intent or lower-trust closeout signals detected."
 
 
 def test_planning_reconcile_reports_stale_state_from_provider_agnostic_evidence(tmp_path: Path) -> None:
@@ -3641,6 +3698,19 @@ def test_planning_summary_exposes_closure_evidence(tmp_path: Path) -> None:
     assert "proof_report" in summary["schema"]["view_fields"]["planning_record"]
     assert "intent_satisfaction" in summary["schema"]["view_fields"]["planning_record"]
     assert "closure_check" in summary["schema"]["view_fields"]["planning_record"]
+
+
+def test_planning_summary_dedupes_unavailable_projection_reason_fragments(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    assert summary["projection_state"]["status"] == "idle"
+    assert summary["projection_state"]["reason"] == "no active planning record"
+    assert "projection_state" in summary["schema"]["shared_fields"]
+    assert summary["hierarchy_contract"]["reason"] == "no active planning record"
+    assert summary["hierarchy_contract"]["reason_code"] == "idle-no-active-planning-record"
+    assert summary["handoff_contract"]["reason_code"] == "idle-no-active-planning-record"
 
 
 def test_planning_report_prints_closure_evidence(tmp_path: Path, capsys) -> None:

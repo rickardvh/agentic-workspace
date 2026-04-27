@@ -1,0 +1,106 @@
+{
+  "kind": "planning-review/v1",
+  "title": "System-Wide Self-Improvement Review",
+  "date": "2026-04-26",
+  "scope": [
+    "workspace CLI report and skill routing",
+    "planning summary projections",
+    "Memory/report friction signals",
+    "system-intent fit for ordinary entry, recovery, proof, and quiet operation"
+  ],
+  "classification": "system-wide",
+  "goal": [
+    "Review the system as a whole and drive bounded self-improvement from actionable findings."
+  ],
+  "non_goals": [
+    "Do not add a new first-line surface.",
+    "Do not reopen historical lanes that have no current regression signal.",
+    "Do not hard-code repo-, host-, language-, tool-, or agent-specific behavior into shipped package contracts."
+  ],
+  "review_mode": {
+    "mode": "system-wide self-improvement",
+    "review_question": "Where does the current package still make ordinary self-improvement, recovery, routing, or proof more expensive than the system intent allows?",
+    "finding_policy": "capture only findings that are actionable in this branch or explicitly defer them with a bounded promotion trigger",
+    "inputs_inspected_first": [
+      "agentic-workspace summary --format json",
+      "agentic-workspace report --target . --format json",
+      "agentic-workspace skills --target . --task <current task> --format json",
+      "agentic-workspace report --target . --section repo_friction --format json",
+      "agentic-workspace report --target . --section operational_compression --format json",
+      "SYSTEM_INTENT.md",
+      ".agentic-workspace/system-intent/intent.toml"
+    ]
+  },
+  "findings": [
+    {
+      "id": "self-improvement-skill-under-ranked-for-drive-prompt",
+      "title": "Self-improvement skill is discoverable but under-ranked for system-wide self-improvement prompts",
+      "action_state": "addressed",
+      "confidence": "high",
+      "source_class": "friction-confirmed",
+      "evidence": "For the task 'make a full review of the system as a whole to drive self-improvement', skills output ranked planning-review-pass above self-improvement-dogfooding even though the prompt explicitly included self-improvement and requested implementation follow-through.",
+      "promotion_target": "workspace skill recommendation scoring and CLI tests",
+      "promotion_trigger": "Addressed now because this is the current dogfooding entry route.",
+      "resolution": "Skill recommendation now gives an explicit hint score when a multi-token prefix of the skill id appears in the normalized task text, so self-improvement prompts route to self-improvement-dogfooding before generic review.",
+      "system_intent_pressure": [
+        "Make the package the cheapest path for improving itself.",
+        "Reduce repeated human steering.",
+        "Keep repo-local dogfooding discoverable without making it shipped package authority."
+      ]
+    },
+    {
+      "id": "planning-summary-duplicates-unavailable-reasons",
+      "title": "Planning summary duplicates unavailable-reason fragments across projected contracts",
+      "action_state": "addressed",
+      "confidence": "high",
+      "source_class": "analysis-confirmed",
+      "evidence": "summary --format json emits hierarchy_contract.reason with repeated fragments such as 'requires exactly one active execplan and at most one active TODO item' and 'requires one active execplan with a present active intent contract'.",
+      "promotion_target": "planning summary reason normalization and package tests",
+      "promotion_trigger": "Addressed now because this is compact-output quality, not new capability.",
+      "resolution": "Planning hierarchy unavailable reasons now split composite reasons into fragments before deduping, preserving distinct blockers while removing repeated text.",
+      "system_intent_pressure": [
+        "Prefer compact queryable state over prose-first operation.",
+        "Reduce scan cost and repeated rereading.",
+        "Keep ordinary recovery quiet."
+      ]
+    },
+    {
+      "id": "effective-authority-section-hint-still-says-unresolved-gaps",
+      "title": "Effective-authority section hint still frames the view around unresolved gaps",
+      "action_state": "addressed",
+      "confidence": "medium",
+      "source_class": "analysis-confirmed",
+      "evidence": "After no-active-planning-record moved into idle_context, the default report section hint still describes effective_authority as 'authority, current work, system-intent pressure, and unresolved gaps'. The wording overstates gap pressure for a clean idle workspace.",
+      "promotion_target": "workspace report router section hints and CLI tests",
+      "promotion_trigger": "Addressed now because it is a small quietness/wording correction on a first-contact router surface.",
+      "resolution": "The default report section hint now names idle context alongside unresolved gaps.",
+      "system_intent_pressure": [
+        "Stay quiet and low-residue.",
+        "Do not make ordinary idle work feel like review debt.",
+        "Keep compact reports decision-grade."
+      ]
+    }
+  ],
+  "recommendation": {
+    "promote": "All three findings were addressed in this branch.",
+    "defer": "Large file hotspots remain repo-friction evidence but require separate bounded extraction lanes; do not expand this pass into large refactors.",
+    "dismiss": "No current finding requires new commands, new first-line surfaces, host-tracker assumptions, or broader roadmap reopening."
+  },
+  "retention": {
+    "closeout_shape": "keep as compact review evidence for the branch; mark findings addressed after proof",
+    "trigger": "all findings addressed and validation passes",
+    "proof_surface": "agentic-workspace proof --target . --changed <paths> --format json"
+  },
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"self_improvement or default_profile_returns_router\"",
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"dedupes_unavailable_projection_reason_fragments\"",
+    "uv run ruff check src tests packages/planning/src packages/planning/tests",
+    "uv run agentic-workspace skills --target . --task \"make a full review of the system as a whole to drive self-improvement\" --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace report --target . --format json"
+  ],
+  "drift_log": [
+    "2026-04-26: Full-system review created after the earlier narrow review was insufficient for the user's intent.",
+    "2026-04-26: All three actionable findings were marked addressed after targeted tests and live command verification."
+  ]
+}

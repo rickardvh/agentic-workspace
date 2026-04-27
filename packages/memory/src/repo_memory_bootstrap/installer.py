@@ -1922,12 +1922,14 @@ def _durable_fact_routing_view(
 ) -> dict[str, object]:
     summary = route_snapshot.route_report_summary or {}
     fixture_results_obj = route_snapshot.route_report_fixture_results or []
-    fixture_results = [item for item in fixture_results_obj if isinstance(item, dict)]
+    fixture_results = [cast(dict[str, Any], item) for item in fixture_results_obj if isinstance(item, dict)]
     matched_counts: list[int] = []
     matched_cases: list[dict[str, object]] = []
     for item in fixture_results:
-        files = [str(value) for value in item.get("files", [])] if isinstance(item.get("files"), list) else []
-        surfaces = [str(value) for value in item.get("surfaces", [])] if isinstance(item.get("surfaces"), list) else []
+        files_obj = item.get("files", [])
+        surfaces_obj = item.get("surfaces", [])
+        files = [str(value) for value in files_obj] if isinstance(files_obj, list) else []
+        surfaces = [str(value) for value in surfaces_obj] if isinstance(surfaces_obj, list) else []
         matches = _route_durable_facts(manifest=manifest, files=files, surfaces=surfaces)
         matched_counts.append(len(matches))
         if matches:

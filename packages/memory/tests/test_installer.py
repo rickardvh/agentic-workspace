@@ -57,6 +57,45 @@ def test_memory_contract_file_shortlist_is_explicit() -> None:
     assert set(MEMORY_COMPATIBILITY_CONTRACT_FILES) | set(MEMORY_LOWER_STABILITY_HELPER_FILES) == set(PAYLOAD_REQUIRED_FILES)
 
 
+def test_doctor_ignores_nested_repositories_inside_uv_caches(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / ".uv-cache" / "sdists-v9" / "pkg" / ".git").mkdir(parents=True)
+    (target / "vendor" / "nested" / ".git").mkdir(parents=True)
+
+    result = installer.doctor_bootstrap(target=target)
+
+    nested_warnings = [
+        action.path.relative_to(target).as_posix()
+        for action in result.actions
+        if action.detail == "nested repository detected under target; installer will not recurse into repo roots automatically"
+    ]
+    assert ".uv-cache/sdists-v9/pkg" not in nested_warnings
+    assert nested_warnings == ["vendor/nested"]
+
+
+def test_doctor_does_not_warn_about_parent_repo_for_explicit_git_root(tmp_path: Path) -> None:
+    parent = tmp_path / "parent"
+    target = parent / "repo"
+    (parent / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True)
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert not any(action.detail.startswith("target is inside parent repository") for action in result.actions)
+
+
+def test_doctor_warns_about_parent_repo_when_target_has_no_git_boundary(tmp_path: Path) -> None:
+    parent = tmp_path / "parent"
+    target = parent / "repo"
+    (parent / ".git").mkdir(parents=True)
+    target.mkdir(parents=True)
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(action.detail.startswith("target is inside parent repository") for action in result.actions)
+
+
 def _memory_index_text() -> str:
     if MEMORY_INDEX_TEMPLATE.exists():
         return MEMORY_INDEX_TEMPLATE.read_text(encoding="utf-8")

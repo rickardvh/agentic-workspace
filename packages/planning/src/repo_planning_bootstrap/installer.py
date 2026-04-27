@@ -8,7 +8,7 @@ import tomllib
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from repo_planning_bootstrap import __version__
 from repo_planning_bootstrap._ownership import module_root
@@ -2115,6 +2115,7 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "machine_first_planning",
             "execution_readiness",
             "planning_surface_health",
+            "projection_state",
             "planning_record",
             "active_contract",
             "resumable_contract",
@@ -2132,11 +2133,19 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
     }
 
 
-def _compact_projection(payload: dict[str, Any], *, fields: tuple[str, ...]) -> dict[str, Any]:
+def _compact_projection(
+    payload: dict[str, Any],
+    *,
+    fields: tuple[str, ...],
+    idle_unavailable_reason: str | None = None,
+) -> dict[str, Any]:
     projected: dict[str, Any] = {}
     for key in ("status", "reason", "view_role", "view", "view_of"):
         if key in payload:
             projected[key] = payload[key]
+    if payload.get("status") != "present" and idle_unavailable_reason:
+        projected["reason"] = idle_unavailable_reason
+        projected["reason_code"] = "idle-no-active-planning-record"
     if payload.get("status") == "present":
         for field in fields:
             if field in payload:
@@ -2153,12 +2162,19 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     planning_surface_health = dict(summary.get("planning_surface_health", {}))
     ownership_review = dict(summary.get("ownership_review", {}))
     intent_validation_contract = dict(summary.get("intent_validation_contract", {}))
+    if "historical_audit_references" in intent_validation_contract:
+        intent_validation_contract["historical_audit_references"] = _compact_historical_audit_references(
+            intent_validation_contract["historical_audit_references"]
+        )
     if "closeout_reconciliation" in intent_validation_contract:
         intent_validation_contract["closeout_reconciliation"] = _compact_closeout_reconciliation(
             intent_validation_contract["closeout_reconciliation"]
         )
     finished_work_inspection_contract = dict(summary.get("finished_work_inspection_contract", {}))
     system_intent = dict(summary.get("system_intent", {}))
+    idle_unavailable_reason = (
+        "no active planning record" if todo.get("active_count", 0) == 0 and execplans.get("active_count", 0) == 0 else None
+    )
 
     compact_summary: dict[str, Any] = {
         "kind": summary.get("kind", "planning-summary/v1"),
@@ -2201,6 +2217,11 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "recommended_next_action": planning_surface_health.get("recommended_next_action", ""),
             "warnings": planning_surface_health.get("warnings", []),
         },
+        "projection_state": {
+            "status": "idle" if idle_unavailable_reason else "active-or-needs-review",
+            "reason": idle_unavailable_reason or "active planning projections may carry contract-specific reasons",
+            "rule": "Idle summaries state the absent active plan once; individual unavailable contracts keep short machine-readable reasons.",
+        },
         "planning_record": _compact_projection(
             dict(summary.get("planning_record", {})),
             fields=(
@@ -2216,10 +2237,12 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "stop_conditions",
                 "minimal_refs",
             ),
+            idle_unavailable_reason=idle_unavailable_reason,
         ),
         "active_contract": _compact_projection(
             dict(summary.get("active_contract", {})),
             fields=("todo_item", "intent", "touched_scope", "proof_expectations", "tool_verification", "minimal_refs"),
+            idle_unavailable_reason=idle_unavailable_reason,
         ),
         "resumable_contract": _compact_projection(
             dict(summary.get("resumable_contract", {})),
@@ -2233,6 +2256,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "blockers",
                 "minimal_refs",
             ),
+            idle_unavailable_reason=idle_unavailable_reason,
         ),
         "hierarchy_contract": _compact_projection(
             dict(summary.get("hierarchy_contract", {})),
@@ -2247,6 +2271,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "closure_check",
                 "minimal_refs",
             ),
+            idle_unavailable_reason=idle_unavailable_reason,
         ),
         "handoff_contract": _compact_projection(
             dict(summary.get("handoff_contract", {})),
@@ -2268,6 +2293,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "return_with",
                 "worker_contract",
             ),
+            idle_unavailable_reason=idle_unavailable_reason,
         ),
         "closeout_distillation_contract": _compact_projection(
             dict(summary.get("closeout_distillation_contract", {})),
@@ -2280,6 +2306,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "recommended_next_action",
                 "minimal_refs",
             ),
+            idle_unavailable_reason=idle_unavailable_reason,
         ),
         "intent_validation_contract": _compact_projection(
             intent_validation_contract,
@@ -2332,13 +2359,33 @@ def _compact_closeout_reconciliation(reconciliation: Any) -> dict[str, Any]:
         action_state = str(item.get("action_state", "")).strip()
         if item_id and action_state in items_by_state:
             items_by_state[action_state].append(item_id)
+    sample_items_by_state = {key: value[:5] for key, value in items_by_state.items() if value}
+    displayed_item_count = sum(len(value) for value in sample_items_by_state.values())
     return {
         "status": reconciliation.get("status", "absent"),
         "source_count": reconciliation.get("source_count", 0),
-        "sources": reconciliation.get("sources", []),
         "item_count": reconciliation.get("item_count", 0),
         "counts": reconciliation.get("counts", {}),
-        "items_by_state": {key: value for key, value in items_by_state.items() if value},
+        "sample_items_by_state": sample_items_by_state,
+        "omitted_item_count": max(0, sum(len(value) for value in items_by_state.values()) - displayed_item_count),
+        "detail": "Use `agentic-workspace summary --format json --profile full` for full reconciliation sources and item ids.",
+    }
+
+
+def _compact_historical_audit_references(historical: Any) -> dict[str, Any]:
+    if not isinstance(historical, dict):
+        return {}
+    source_count = int(historical.get("source_count", 0) or 0)
+    return {
+        "status": historical.get("status", "absent"),
+        "source_count": source_count,
+        "item_count": historical.get("item_count", 0),
+        "follow_up_open_count": historical.get("follow_up_open_count", 0),
+        "needs_audit_count": historical.get("needs_audit_count", 0),
+        "likely_premature_closeout_count": historical.get("likely_premature_closeout_count", 0),
+        "sources_omitted": source_count,
+        "rule": historical.get("rule", ""),
+        "detail": "Use `agentic-workspace summary --format json --profile full` for historical review source paths.",
     }
 
 
@@ -2556,7 +2603,7 @@ def _intent_validation_contract(
         recommended_next_action = "Inspect likely premature closeouts before treating recently closed work as settled."
     elif closeout_reconciliation["counts"]["needs_audit_count"]:
         recommended_next_action = "Audit unreconciled lower-trust closeouts or add a checked-in reconciliation artifact."
-    elif closeout_reconciliation["counts"]["follow_up_open_count"]:
+    elif closeout_reconciliation["counts"]["follow_up_open_count"] and external_open:
         recommended_next_action = "Continue the open follow-ups identified by lower-trust closeout reconciliation."
     elif lower_trust_closeouts:
         recommended_next_action = "Review lower-trust closeout signals before assuming recently closed work is fully evidenced."
@@ -3995,6 +4042,16 @@ def _dedupe_distillation_items(items: list[dict[str, str]]) -> list[dict[str, st
     return deduped
 
 
+def _unavailable_reason_fragments(*contracts: dict[str, Any], extra: Iterable[str] = ()) -> str:
+    reasons: list[str] = []
+    for contract in contracts:
+        if contract.get("status") != "present":
+            raw_reason = str(contract.get("reason", "required planning contract unavailable")).strip()
+            reasons.extend(part.strip() for part in raw_reason.split(";") if part.strip())
+    reasons.extend(part.strip() for part in extra if part.strip())
+    return "; ".join(_dedupe(reasons))
+
+
 def _active_hierarchy_contract(
     *,
     target_root: Path,
@@ -4014,15 +4071,17 @@ def _active_hierarchy_contract(
         or context_budget_contract.get("status") != "present"
         or len(active_execplans) != 1
     ):
-        reasons: list[str] = []
-        for contract in (planning_record, active_contract, resumable_contract, follow_through_contract, context_budget_contract):
-            if contract.get("status") != "present":
-                reasons.append(contract.get("reason", "required planning contract unavailable"))
-        if len(active_execplans) != 1:
-            reasons.append("requires exactly one active execplan")
+        extra = ["requires exactly one active execplan"] if len(active_execplans) != 1 else []
         return {
             "status": "unavailable",
-            "reason": "; ".join(_dedupe(reasons)),
+            "reason": _unavailable_reason_fragments(
+                planning_record,
+                active_contract,
+                resumable_contract,
+                follow_through_contract,
+                context_budget_contract,
+                extra=extra,
+            ),
         }
 
     plan_path = _resolve_execplan_path(target_root, active_execplans[0]["path"])
@@ -5206,7 +5265,7 @@ def format_actions(actions: list[Action], target_root: Path) -> list[str]:
 
 
 def format_result_json(result: InstallResult) -> str:
-    payload = {
+    payload: dict[str, Any] = {
         "target_root": str(result.target_root),
         "message": result.message,
         "dry_run": result.dry_run,
