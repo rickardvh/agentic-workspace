@@ -1350,6 +1350,33 @@
       "kind": "task",
       "parent_id": "#423",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#427",
+      "title": "[Workspace]: Make skills the preferred operating layer for package workflows",
+      "status": "open",
+      "kind": "lane",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#428",
+      "title": "[Workspace]: Advertise task-shaped package skills in startup output",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#427",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#429",
+      "title": "[Workspace]: Keep WORKFLOW.md as a thin fallback while skills carry operations",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#427",
+      "planning_residue_expected": "required"
     }
   ]
 }
