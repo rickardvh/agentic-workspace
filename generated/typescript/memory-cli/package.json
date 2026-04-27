@@ -1,0 +1,19 @@
+{
+  "agenticWorkspace": {
+    "declaredEntrypoints": [
+      "agentic-memory-bootstrap"
+    ],
+    "fixtureOnly": true,
+    "generated": true,
+    "generationStatus": "proof-fixture",
+    "program": "agentic-memory-bootstrap",
+    "source": "src/agentic_workspace/contracts/command_package_ir.json"
+  },
+  "name": "@agentic-workspace/memory-cli",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/command-package.test.mjs"
+  },
+  "type": "module",
+  "version": "0.0.0-generated"
+}

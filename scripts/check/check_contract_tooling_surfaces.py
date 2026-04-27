@@ -14,6 +14,7 @@ from agentic_workspace.contract_tooling import (
     cli_commands_manifest,
     cli_option_groups_manifest,
     command_adapter_generation_manifest,
+    command_package_ir_manifest,
     compact_contract_manifest,
     conformance_contract_manifest,
     conformance_contracts_manifest,
@@ -460,6 +461,87 @@ def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str
     return errors
 
 
+def _validate_command_package_ir(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    if payload.get("schema_version") != "agentic-workspace/command-package-ir/v1":
+        return ["command_package_ir.json has unexpected schema_version"]
+    adapters = {adapter["id"]: adapter for adapter in command_adapter_generation_manifest()["adapters"]}
+    operations = {operation["id"]: operation for operation in operation_contracts_manifest()["operations"]}
+    conformance_refs = {contract["id"] for contract in conformance_contracts_manifest()["contracts"]}
+    primitive_refs = {primitive["id"] for primitive in operation_primitives_manifest()["primitives"]}
+    packages = payload.get("packages", [])
+    if not isinstance(packages, list):
+        return ["command_package_ir.json packages must be a list"]
+    seen_adapter_ids: set[str] = set()
+    for package_index, package in enumerate(packages):
+        if not isinstance(package, dict):
+            errors.append(f"command_package_ir package {package_index} must be an object")
+            continue
+        program = str(package.get("program", ""))
+        targets = package.get("targets", [])
+        commands = package.get("commands", [])
+        if not isinstance(targets, list) or not isinstance(commands, list):
+            errors.append(f"command_package_ir package {program} targets and commands must be lists")
+            continue
+        target_kinds = {str(target.get("kind", "")) for target in targets if isinstance(target, dict)}
+        if "python" not in target_kinds:
+            errors.append(f"command_package_ir package {program} must declare a python target")
+        if "typescript" not in target_kinds:
+            errors.append(f"command_package_ir package {program} must declare a typescript target")
+        for command in commands:
+            if not isinstance(command, dict):
+                errors.append(f"command_package_ir package {program} command entry must be an object")
+                continue
+            adapter_id = str(command.get("adapter_id", ""))
+            seen_adapter_ids.add(adapter_id)
+            adapter = adapters.get(adapter_id)
+            if adapter is None:
+                errors.append(f"command_package_ir command {adapter_id} does not reference a known generated adapter")
+                continue
+            if adapter["command"]["program"] != program:
+                errors.append(f"command_package_ir command {adapter_id} program drifted from command_adapter_generation.json")
+            operation_ref = command.get("operation_ref", {})
+            runtime_binding = command.get("runtime_binding", {})
+            if not isinstance(operation_ref, dict) or not isinstance(runtime_binding, dict):
+                errors.append(f"command_package_ir command {adapter_id} has malformed operation or runtime binding")
+                continue
+            operation_id = str(operation_ref.get("id", ""))
+            operation = operations.get(operation_id)
+            if operation is None:
+                errors.append(f"command_package_ir command {adapter_id} references unknown operation {operation_id}")
+            elif operation.get("path") != operation_ref.get("path"):
+                errors.append(f"command_package_ir command {adapter_id} operation path drifted from registry")
+            expected_operation_ref = {"id": adapter["operation_ref"]["id"], "path": adapter["operation_ref"]["path"]}
+            if operation_ref != expected_operation_ref:
+                errors.append(f"command_package_ir command {adapter_id} operation ref drifted from command_adapter_generation.json")
+            if runtime_binding != adapter["runtime_binding"]:
+                errors.append(f"command_package_ir command {adapter_id} runtime binding drifted from command_adapter_generation.json")
+            unknown_primitives = sorted(set(runtime_binding.get("primitive_refs", [])) - primitive_refs)
+            if unknown_primitives:
+                errors.append(
+                    f"command_package_ir command {adapter_id} references unknown primitive(s): "
+                    + ", ".join(str(item) for item in unknown_primitives)
+                )
+            if command.get("effect_hints") != adapter["effect_hints"]:
+                errors.append(f"command_package_ir command {adapter_id} effect hints drifted from command_adapter_generation.json")
+            if command.get("schemas") != adapter["schemas"]:
+                errors.append(f"command_package_ir command {adapter_id} schema refs drifted from command_adapter_generation.json")
+            command_conformance_refs = command.get("conformance_refs", [])
+            if command_conformance_refs != adapter["conformance_refs"]:
+                errors.append(f"command_package_ir command {adapter_id} conformance refs drifted from command_adapter_generation.json")
+            unknown_conformance = sorted(set(command_conformance_refs) - conformance_refs) if isinstance(command_conformance_refs, list) else []
+            if unknown_conformance:
+                errors.append(
+                    f"command_package_ir command {adapter_id} references unknown conformance ref(s): "
+                    + ", ".join(str(item) for item in unknown_conformance)
+                )
+    generated_adapter_ids = {adapter["id"] for adapter in adapters.values() if adapter.get("status") == "generated"}
+    missing_generated = sorted(generated_adapter_ids - seen_adapter_ids)
+    if missing_generated:
+        errors.append("command_package_ir.json missing generated adapter(s): " + ", ".join(missing_generated))
+    return errors
+
+
 def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list[str]]:
     statuses: list[dict[str, object]] = []
     errors: list[str] = []
@@ -531,6 +613,22 @@ def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list
 
 def _validate_generated_command_adapter_output() -> list[str]:
     return _generated_command_adapter_statuses()[1]
+
+
+def _validate_generated_command_package_output() -> list[str]:
+    repo_root = Path(__file__).resolve().parents[2]
+    generator_path = repo_root / "scripts" / "generate" / "generate_command_packages.py"
+    spec = importlib.util.spec_from_file_location("generate_command_packages", generator_path)
+    if spec is None or spec.loader is None:
+        return [f"generated package layer: cannot load {generator_path.relative_to(repo_root).as_posix()}"]
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    stale_outputs: list[str] = []
+    for output_path, rendered in module._render_outputs(command_package_ir_manifest()):
+        current = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
+        if current != rendered:
+            stale_outputs.append(output_path.relative_to(repo_root).as_posix())
+    return [f"generated package layer: {output} is stale; run uv run python scripts/generate/generate_command_packages.py" for output in stale_outputs]
 
 
 def _validate_python_contract_consumption_policy(payload: dict[str, object]) -> list[str]:
@@ -751,6 +849,114 @@ def _executable_command_surfaces(command_specs: list[dict[str, object]]) -> set[
     return surfaces
 
 
+def _program_parser(program: str) -> argparse.ArgumentParser | None:
+    if program == "agentic-workspace":
+        return cli.build_parser()
+    if program == "agentic-planning-bootstrap":
+        from repo_planning_bootstrap import cli as planning_cli
+
+        return planning_cli.build_parser()
+    if program == "agentic-memory-bootstrap":
+        from repo_memory_bootstrap import cli as memory_cli
+
+        return memory_cli.build_parser()
+    return None
+
+
+def _subparser_action(parser: argparse.ArgumentParser) -> argparse._SubParsersAction | None:
+    return next((action for action in parser._actions if isinstance(action, argparse._SubParsersAction)), None)
+
+
+def _command_parser(
+    parser: argparse.ArgumentParser,
+    *,
+    command_name: str,
+    subcommand_name: str | None = None,
+) -> argparse.ArgumentParser | None:
+    subparsers_action = _subparser_action(parser)
+    if subparsers_action is None:
+        return None
+    command_parser = subparsers_action.choices.get(command_name)
+    if command_parser is None or subcommand_name is None:
+        return command_parser
+    command_subparsers = _subparser_action(command_parser)
+    if command_subparsers is None:
+        return None
+    return command_subparsers.choices.get(subcommand_name)
+
+
+def _command_option_actions(parser: argparse.ArgumentParser) -> dict[str, argparse.Action]:
+    return {
+        str(action.dest): action
+        for action in parser._actions
+        if action.option_strings and action.dest != "help"
+    }
+
+
+def _validate_generated_adapter_live_cli_parity(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    adapters = payload.get("adapters", [])
+    if not isinstance(adapters, list):
+        return ["generated adapter live CLI parity cannot inspect malformed adapters list"]
+    for raw_adapter in adapters:
+        if not isinstance(raw_adapter, dict) or raw_adapter.get("status") != "generated":
+            continue
+        adapter_id = str(raw_adapter.get("id", ""))
+        command = raw_adapter.get("command", {})
+        operation_ref = raw_adapter.get("operation_ref", {})
+        if not isinstance(command, dict) or not isinstance(operation_ref, dict):
+            continue
+        program = str(command.get("program", ""))
+        command_name = str(command.get("name", ""))
+        subcommand_name = str(command["subcommand"]) if isinstance(command.get("subcommand"), str) else None
+        parser = _program_parser(program)
+        if parser is None:
+            errors.append(f"generated adapter {adapter_id} references unknown live CLI program {program}")
+            continue
+        live_command_parser = _command_parser(parser, command_name=command_name, subcommand_name=subcommand_name)
+        if live_command_parser is None:
+            surface = f"{command_name} {subcommand_name}" if subcommand_name else command_name
+            errors.append(f"generated adapter {adapter_id} command surface {program} {surface} is missing from the live CLI")
+            continue
+        operation = operation_manifest(str(operation_ref.get("path", "")))
+        operation_surface = operation.get("command_surface", {})
+        if operation_surface.get("program", "agentic-workspace") != program:
+            errors.append(f"generated adapter {adapter_id} program drifted from operation command_surface")
+        if operation_surface.get("command") != command_name:
+            errors.append(f"generated adapter {adapter_id} command drifted from operation command_surface")
+        if operation_surface.get("subcommand") != subcommand_name and (
+            operation_surface.get("subcommand") is not None or subcommand_name is not None
+        ):
+            errors.append(f"generated adapter {adapter_id} subcommand drifted from operation command_surface")
+        expected_cli_inputs = {
+            str(input_spec["name"]): bool(input_spec.get("required", False))
+            for input_spec in operation.get("inputs", [])
+            if isinstance(input_spec, dict) and input_spec.get("source") == "cli-option"
+        }
+        live_options = _command_option_actions(live_command_parser)
+        live_option_names = set(live_options)
+        expected_option_names = set(expected_cli_inputs)
+        missing_options = sorted(expected_option_names - live_option_names)
+        extra_options = sorted(live_option_names - expected_option_names)
+        if missing_options:
+            errors.append(
+                f"generated adapter {adapter_id} contract declares CLI option(s) missing from live parser: "
+                + ", ".join(missing_options)
+            )
+        if extra_options:
+            errors.append(
+                f"generated adapter {adapter_id} live parser has CLI option(s) missing from operation contract: "
+                + ", ".join(extra_options)
+            )
+        for option_name, expected_required in expected_cli_inputs.items():
+            action = live_options.get(option_name)
+            if action is None:
+                continue
+            if bool(action.required) != expected_required:
+                errors.append(f"generated adapter {adapter_id} option {option_name} required flag drifted from operation contract")
+    return errors
+
+
 def _expected_authority_marker(marker: dict[str, object], path: str) -> dict[str, object]:
     canonical_source = marker["canonical_source"]
     if not isinstance(canonical_source, dict):
@@ -895,11 +1101,21 @@ def main(argv: list[str] | None = None) -> int:
         (
             "command adapter generation manifest",
             _validate(command_adapter_generation_manifest(), "command_adapter_generation.schema.json")
-            + _validate_command_adapter_generation(command_adapter_generation_manifest()),
+            + _validate_command_adapter_generation(command_adapter_generation_manifest())
+            + _validate_generated_adapter_live_cli_parity(command_adapter_generation_manifest()),
+        ),
+        (
+            "command package IR",
+            _validate(command_package_ir_manifest(), "command_package_ir.schema.json")
+            + _validate_command_package_ir(command_package_ir_manifest()),
         ),
         (
             "generated command adapter output",
             _validate_generated_command_adapter_output(),
+        ),
+        (
+            "generated command package output",
+            _validate_generated_command_package_output(),
         ),
         (
             "operation primitives registry",

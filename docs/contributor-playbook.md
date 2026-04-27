@@ -58,6 +58,7 @@ The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`,
 - Keep the root `agentic-workspace` CLI thin; push module-specific lifecycle logic back into the module packages.
 - Treat `.agentic-workspace/` module trees as product-managed surfaces; change them through the owning package or managed source rather than as freehand repo docs.
 - Treat `tools/` agent docs as generated mirrors; change `.agentic-workspace/planning/agent-manifest.json` and rerender instead of editing them directly.
+- Treat CLI interface authoring as definition-owned during the generated-package migration. Change command shape, option semantics, generated package metadata, operation refs, primitive refs, schemas, and conformance refs in contracts or generators; use direct `cli.py` edits for runtime primitives, live inspection, dispatch migration glue, or explicitly justified uncovered fixes.
 - In checked-in human-facing docs, prefer clickable Markdown links for navigation, but keep the target paths repo-relative. Do not introduce absolute filesystem paths into links or prose unless the absolute external path is itself the documented subject.
 
 As a maintainer rule of thumb:
@@ -101,6 +102,7 @@ Use `agentic-workspace defaults --format json` first when you need the structure
 - Maintainer-surface, generated-doc, or installed-contract payload changes: `make maintainer-surfaces`
 - Planning-surface changes only: `make planning-surfaces`; rerun `make render-agent-docs` when the planning manifest or generated routing docs change
 - Declarative contract manifests or schemas for workspace proof/report/selectors: `uv run python scripts/check/check_contract_tooling_surfaces.py`
+- Generated command package outputs or command-package IR changes: `uv run python scripts/check/check_generated_command_packages.py`, then `uv run python scripts/check/check_generated_command_packages.py --docker` when Docker is available
 - Memory note/current-state changes: `uv run agentic-workspace doctor --target . --format json` and `uv run agentic-workspace report --target . --format json`
 - Absolute-path hygiene across tracked files: `make absolute-paths`
 

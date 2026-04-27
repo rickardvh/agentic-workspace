@@ -1,0 +1,267 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Multi-Language CLI Generation",
+  "goal": [
+    "Implement #393 by moving CLI package authoring toward implementation-independent definitions, off-the-shelf-first generation, generated Python and TypeScript proof slices, Docker-isolated generated-package tests, shell feasibility notes, and direct-CLI-edit guardrails."
+  ],
+  "non_goals": [
+    "Move runtime primitive behavior into generated code.",
+    "Require Node, shell-specific tooling, or Docker for ordinary Python development.",
+    "Assume host repositories use GitHub or any specific external tracker.",
+    "Generate lifecycle mutation commands before read-only conformance is mature.",
+    "Build a large bespoke generator when standard schema/tooling can carry the work."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Command/interface changes should be made in canonical package definitions rather than direct CLI implementation code, with Python and TypeScript generated package targets as the first portability proof.",
+      "constraints": "Keep the package repo-, agent-, tool-, and language-agnostic; prefer off-the-shelf generation; keep custom codegen minimal; isolate generated-package tests in Docker.",
+      "latitude": "Add compact contracts, generated proof fixtures, docs, checks, tests, and proof routing needed to make the roadmap operational.",
+      "escalation": "Stop before broad lifecycle mutation generation, broad runtime rewrites, or introducing ordinary non-Python development requirements."
+    },
+    "execution": {
+      "milestone": "multilang-cli-generation-2026-04-27",
+      "status": "completed",
+      "next_step": "Create the pull request for review.",
+      "proof": "Use agentic-workspace proof --changed, focused contract tests, generated-package checks, maintainer surfaces, planning checks, and root CLI tests as selected."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json",
+        "docs/",
+        "src/agentic_workspace/contracts/",
+        "scripts/",
+        "tests/"
+      ],
+      "invariants": [
+        "Preserve runtime primitive ownership.",
+        "Keep ordinary development Python-centered.",
+        "Keep host-specific issue tracker behavior outside core package semantics.",
+        "Commit after each milestone."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Generated multi-language CLI packages from implementation-independent definitions.",
+    "this slice completes the larger intended outcome": "yes if all #393 child issues are satisfied and linked back to the PR",
+    "continuation surface": "#393",
+    "parent lane": "#393"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes until all child issues #394-#401 are implemented or explicitly split into new issues",
+    "owner surface": "#393",
+    "activation trigger": "This active implementation branch."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A durable migration path from hand-authored CLI surfaces to generated Python and TypeScript package adapters.",
+    "intentionally deferred": "Full lifecycle mutation generation and broad shell implementation.",
+    "discovered implications": "The existing generated-adapter contract is adapter-centric; multi-language packages need one compact command-package view that joins command shape, operation refs, primitive bindings, target outputs, and conformance refs.",
+    "proof achieved now": "#394/#395 audit/strategy artifacts are present; #396 command-package IR validates; #397/#398 Python and TypeScript package proof fixtures generate from the IR and are freshness-checked; #399 adds a generated-package proof lane with Docker-isolated TypeScript checks.",
+    "validation still needed": "None for this planned slice.",
+    "next likely slice": "Review the PR and decide whether to expand generated runtime adapter coverage."
+  },
+  "intent_interpretation": {
+    "literal request": "Create a branch, ingest issues, plan and implement the work end-to-end, commit after each milestone, create a PR, and dogfood the package with new issues for actionable improvement lanes.",
+    "inferred intended outcome": "A PR that makes the generated CLI package roadmap executable rather than only planned.",
+    "chosen concrete what": "Start from the active issues, add planning residue, then implement compact contracts, generation proof targets, Docker proof routing, and migration guardrails.",
+    "interpretation distance": "medium because the full roadmap is large; implementation will stay bounded to thin proof slices and contract scaffolding rather than rewriting every CLI.",
+    "review guidance": "Review whether each change makes direct CLI authoring less necessary without adding a new visible product maze."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning state/evidence/execplan, docs/reviews or docs, src/agentic_workspace/contracts, scripts/check or scripts/generate, tests, generated proof fixture directories if needed, and directly required maintainer surfaces.",
+    "max changed files": "broad but milestone-bounded",
+    "required validation commands": "Use agentic-workspace proof --changed for each milestone; run selected tests and checks.",
+    "ask-before-refactor threshold": "Any rewrite of root src/agentic_workspace/cli.py or package CLI runtime behavior beyond thin generated-adapter routing.",
+    "stop before touching": "Runtime primitive semantics for lifecycle mutation commands; external tracker-specific core behavior."
+  },
+  "stop_conditions": {
+    "stop when": "All child issues are implemented or remaining work is honestly split into new issues with acceptance evidence.",
+    "escalate when boundary reached": "A required generator choice would add a permanent non-Python ordinary development dependency.",
+    "escalate on scope drift": "The work starts turning operation contracts into a runtime workflow engine.",
+    "escalate on proof failure": "If selected package proof cannot pass after a bounded fix."
+  },
+  "context_budget": {
+    "live working set": "#393-#401, current contracts, current generator/check scripts, this execplan.",
+    "recoverable later": "Historical #356-#363 reviews and archive plans.",
+    "externalize before shift": "Update this plan after every milestone and commit.",
+    "pre-work config pull": "uv run agentic-workspace start --target . --format json",
+    "pre-work memory pull": "No broad memory pull; use compact summary and issue bodies.",
+    "tiny resumability note": "Work from #393 child order: audit/strategy, IR, Python/TS proof, Docker proof, shell/direct-edit guardrails.",
+    "context-shift triggers": "Before branch push/PR or after any failed proof."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make implementation-independent multi-language CLI generation real enough to review.",
+    "hard constraints": "Off-the-shelf-first; minimal custom codegen; Docker-isolated generated package tests; ordinary repo remains Python-centered; package stays agnostic.",
+    "agent may decide locally": "Exact IR shape, first safe generated target, and proof lane details.",
+    "escalate when": "The work would require committing to a large custom generator or changing runtime primitive ownership."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#393",
+      "label": "multi-language CLI generation parent",
+      "role": "parent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/393"
+    },
+    {
+      "kind": "issue",
+      "target": "#394-#401",
+      "label": "child issues",
+      "role": "children",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/393"
+    }
+  ],
+  "active_milestone": {
+    "id": "shell-and-direct-cli-guardrails",
+    "status": "completed",
+    "scope": "#400/#401",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Create the pull request for review."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json",
+    "docs/reviews/multi-language-cli-generation-gap-audit-2026-04-27.md",
+    "docs/reviews/generated-cli-package-strategy-2026-04-27.md",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/schemas/command_package_ir.schema.json",
+    "src/agentic_workspace/contract_tooling.py",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "tests/test_contract_tooling.py",
+    "scripts/generate/generate_command_packages.py",
+    "src/agentic_workspace/generated_cli_package/__init__.py",
+    "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py",
+    "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py",
+    "generated/typescript/",
+    "generated/typescript/Dockerfile",
+    "scripts/check/check_generated_command_packages.py",
+    "src/agentic_workspace/contracts/proof_selection_rules.json",
+    "src/agentic_workspace/cli.py"
+  ],
+  "invariants": [
+    "Preserve runtime primitive ownership.",
+    "Do not create ordinary non-Python development requirements.",
+    "Keep host-specific workflow out of core package definitions."
+  ],
+  "contract_decisions_to_freeze": [
+    "Generated adapters own command/interface wiring; runtime primitives own behavior."
+  ],
+  "open_questions_to_close": [
+    "Which off-the-shelf tools should be preferred for schema/model generation?",
+    "Is a new command-package IR necessary or can it be derived from existing contracts?",
+    "What is the smallest Python/TypeScript generated package proof?"
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "GitHub CLI for issue/PR lifecycle.",
+    "Docker only for the generated-package proof lane."
+  ],
+  "completion_criteria": [
+    "#394-#401 are either closed with implementation evidence or split into new follow-up issues.",
+    "The branch contains a PR-ready implementation of the roadmap's first generated package path.",
+    "Package-selected proof passes.",
+    "A PR is created."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "#393-#401",
+    "what happened": "Created branch, ingested issue bodies, added #394/#395 audit/strategy artifacts, added the #396 command-package IR, generated #397/#398 Python/TypeScript package proof fixtures, added #399 Docker-isolated proof routing, and added #400/#401 shell feasibility plus direct CLI edit guardrails.",
+    "scope touched": "planning state/evidence/execplan, review artifacts, contributor guidance, contracts, generator, generated package fixtures, generated package checker, Dockerfile, proof selector, and focused tests",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json; docs/contributor-playbook.md; docs/reviews/multi-language-cli-generation-gap-audit-2026-04-27.md; docs/reviews/generated-cli-package-strategy-2026-04-27.md; docs/reviews/shell-adapter-feasibility-2026-04-27.md; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/schemas/command_package_ir.schema.json; src/agentic_workspace/contracts/contract_inventory.json; src/agentic_workspace/contracts/python_contract_consumption.json; src/agentic_workspace/contracts/proof_selection_rules.json; src/agentic_workspace/contract_tooling.py; src/agentic_workspace/cli.py; scripts/check/check_contract_tooling_surfaces.py; scripts/check/check_generated_command_packages.py; scripts/generate/generate_command_packages.py; generated/typescript/; generated Python package metadata; tests/test_contract_tooling.py; tests/test_workspace_cli.py",
+    "validations run": "contract tooling check, generated package checks, generated package Docker proof command with local daemon-unavailable skip, focused contract/workspace CLI tests, focused ruff, maintainer surfaces, planning doctor, proof selector query",
+    "result for continuation": "All child issues #394-#401 are implemented; create PR.",
+    "next step": "Push branch and create PR."
+  },
+  "finished_run_review": {
+    "review status": "finished",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "package dogfooding started with start, summary, ownership, and checked-in planning",
+    "misinterpretation risk": "medium; keep each milestone bounded and evidence-backed",
+    "follow-on decision": "no required follow-up created; PR review may choose the next generated runtime coverage slice"
+  },
+  "proof_report": {
+    "validation proof": "Focused contract/workspace tests, contract tooling, generated package checks, maintainer surfaces, planning doctor, and proof selector output passed.",
+    "proof achieved now": "#394-#401 implemented.",
+    "evidence for \"proof achieved\" state": "Commits 9c0de66, fd69249, 2518fa1, e0df5b6, and final guardrail commit."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a branch, ingest issues, plan and implement the work end-to-end, commit after each milestone, create a PR, and dogfood the package with new issues for actionable improvement lanes.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#394-#401 implemented and closed or ready to close with commits; generated package IR, Python/TypeScript fixtures, Docker proof routing, shell feasibility, and direct CLI edit guardrails are checked in.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Do not let this repo's current language, tooling, structure, or agent preferences become hidden universal product assumptions.",
+    "slice shaping bias": "Implementation-independent definitions first; generated targets as proof, not product sprawl.",
+    "broader-lane validation question": "Does this make generated CLI work easier to enter, verify, and trust without turning code generation into a new visible framework?",
+    "intent evidence source": ".agentic-workspace/system-intent/intent.toml"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "All planned child slices in #393 are implemented on this branch and have proof coverage.",
+    "evidence carried forward": "Focused contract/workspace tests, contract tooling checks, generated package checks, maintainer surfaces, planning doctor, and proof selector output passed.",
+    "reopen trigger": "Reopen if command/interface changes again require normal direct CLI implementation instead of definition or generated package changes."
+  },
+  "execution_summary": {
+    "outcome delivered": "Implementation-independent command-package IR, generated Python/TypeScript package proof fixtures, Docker-selected generated-package proof, shell feasibility decision, and direct CLI edit guardrails.",
+    "validation confirmed": "Focused tests, ruff, contract tooling, generated package checks, maintainer surfaces, planning doctor, and proof selector query.",
+    "follow-on routed to": "PR review; no new issue required from current dogfooding.",
+    "post-work posterity capture": "Archive this execplan after final commit.",
+    "knowledge promoted (Memory/Docs/Config)": "Contributor playbook, command-package IR policy, shell feasibility review.",
+    "resume from": "Review PR."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Execution sequencing details and transient Docker daemon availability.",
+          "owner": "",
+          "source": ""
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "PR review; no new issue required from current dogfooding.",
+          "owner": "#393",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "multi-language CLI generation parent",
+          "owner": "issue",
+          "source": "#393"
+        },
+        {
+          "summary": "child issues",
+          "owner": "issue",
+          "source": "#394-#401"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Created active plan from #393-#401 after branch creation."
+  ]
+}

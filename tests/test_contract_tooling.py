@@ -121,6 +121,47 @@ def test_command_adapter_generation_contract_records_multi_target_requirements()
     assert target_kinds["local-mcp-tool"]["status"] == "requirements-baseline"
 
 
+def test_command_package_ir_declares_python_and_typescript_targets() -> None:
+    manifest = contract_tooling.command_package_ir_manifest()
+    packages = {package["id"]: package for package in manifest["packages"]}
+
+    assert (
+        manifest["generation_policy"]["ordinary_development_environment"] == "Python development remains sufficient for ordinary repo work."
+    )
+    assert manifest["generation_policy"]["test_environment"] == "Generated non-Python package tests run in Docker-selected proof lanes."
+    assert "must not own runtime primitive behavior" in manifest["generation_policy"]["shell_adapter_policy"]
+    assert "direct cli.py edits" in manifest["generation_policy"]["direct_cli_edit_policy"]
+
+    root_package = packages["root-workspace"]
+    targets = {target["kind"]: target for target in root_package["targets"]}
+
+    assert root_package["program"] == "agentic-workspace"
+    assert targets["python"]["test_environment"] == "python-dev"
+    assert targets["typescript"]["test_environment"] == "docker"
+    assert targets["bash"]["generation_status"] == "deferred"
+    assert targets["powershell"]["generation_status"] == "deferred"
+
+
+def test_command_package_ir_reuses_generated_adapter_truth() -> None:
+    package_ir = contract_tooling.command_package_ir_manifest()
+    adapter_manifest = contract_tooling.command_adapter_generation_manifest()
+    adapters = {adapter["id"]: adapter for adapter in adapter_manifest["adapters"]}
+    commands = {command["adapter_id"]: command for package in package_ir["packages"] for command in package["commands"]}
+
+    assert set(commands) == {"defaults.report.cli", "planning.status.cli", "memory.status.cli"}
+    defaults_command = commands["defaults.report.cli"]
+    defaults_adapter = adapters["defaults.report.cli"]
+
+    assert defaults_command["operation_ref"] == {
+        "id": defaults_adapter["operation_ref"]["id"],
+        "path": defaults_adapter["operation_ref"]["path"],
+    }
+    assert defaults_command["runtime_binding"] == defaults_adapter["runtime_binding"]
+    assert defaults_command["effect_hints"] == defaults_adapter["effect_hints"]
+    assert defaults_command["conformance_refs"] == defaults_adapter["conformance_refs"]
+    assert "parser library" in defaults_command["projection_boundary"]["target_specific"]
+
+
 def test_python_contract_consumption_declares_validated_loader_bindings() -> None:
     manifest = contract_tooling.python_contract_consumption_manifest()
     entries = manifest["validated_at_consumption"]
@@ -142,6 +183,7 @@ def test_python_contract_consumption_declares_validated_loader_bindings() -> Non
             "command_adapter_generation_manifest",
         )
     }
+    assert any(entry["loader"] == "command_package_ir_manifest" for entry in entries)
     assert any(entry["loader"] == "lifecycle_generation_readiness_manifest" for entry in entries)
 
 
@@ -184,6 +226,50 @@ def test_generated_command_adapter_module_is_current() -> None:
     assert module.main(["--check"]) == 0
 
 
+def test_generated_command_package_files_are_current() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_packages.py"
+    spec = importlib.util.spec_from_file_location("generate_command_packages", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.main(["--check"]) == 0
+
+
+def test_generated_command_package_check_surface_is_current() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_generated_command_packages.py"
+    spec = importlib.util.spec_from_file_location("check_generated_command_packages", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.main([]) == 0
+
+
+def test_generated_python_command_package_metadata_is_current() -> None:
+    from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE
+
+    assert GENERATED_COMMAND_PACKAGE["program"] == "agentic-workspace"
+    assert {command["adapter_id"] for command in GENERATED_COMMAND_PACKAGE["commands"]} == {"defaults.report.cli"}
+    target_kinds = {target["kind"] for target in GENERATED_COMMAND_PACKAGE["targets"]}
+    assert {"python", "typescript", "bash", "powershell"} <= target_kinds
+
+
+def test_generated_typescript_command_package_fixture_is_current() -> None:
+    package_root = Path(__file__).resolve().parents[1] / "generated" / "typescript" / "workspace-cli"
+    package_json = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
+    source_text = (package_root / "src" / "commandPackage.ts").read_text(encoding="utf-8")
+    test_text = (package_root / "test" / "command-package.test.mjs").read_text(encoding="utf-8")
+
+    assert package_json["name"] == "@agentic-workspace/workspace-cli"
+    assert "bin" not in package_json
+    assert package_json["agenticWorkspace"]["generated"] is True
+    assert package_json["agenticWorkspace"]["fixtureOnly"] is True
+    assert package_json["agenticWorkspace"]["generationStatus"] == "proof-fixture"
+    assert package_json["agenticWorkspace"]["declaredEntrypoints"] == ["agentic-workspace"]
+    assert "defaults.report.cli" in source_text
+    assert "DO NOT EDIT DIRECTLY" in source_text
+    assert "generated package metadata exposes expected commands" in test_text
+
+
 def test_generated_command_adapter_module_routes_direct_edits_to_authoritative_sources() -> None:
     generated_path = Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "generated_command_adapters.py"
     generated_text = generated_path.read_text(encoding="utf-8")
@@ -221,6 +307,40 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     assert commands_by_program["agentic-workspace"] == ["defaults"]
     assert commands_by_program["agentic-planning-bootstrap"] == ["status"]
     assert commands_by_program["agentic-memory-bootstrap"] == ["status"]
+
+
+def test_generated_adapter_contracts_match_live_cli_surfaces() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module._validate_generated_adapter_live_cli_parity(contract_tooling.command_adapter_generation_manifest()) == []
+
+
+def test_generated_adapter_live_cli_parity_catches_missing_contract_option(monkeypatch: pytest.MonkeyPatch) -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    memory_adapter = next(
+        adapter for adapter in contract_tooling.command_adapter_generation_manifest()["adapters"] if adapter["id"] == "memory.status.cli"
+    )
+
+    def fake_operation_manifest(_path: str) -> dict[str, object]:
+        return {
+            "command_surface": {"program": "agentic-memory-bootstrap", "command": "status", "format_option": "format"},
+            "inputs": [{"name": "format", "source": "cli-option", "required": False}],
+        }
+
+    monkeypatch.setattr(module, "operation_manifest", fake_operation_manifest)
+
+    errors = module._validate_generated_adapter_live_cli_parity({"adapters": [memory_adapter]})
+
+    assert errors == ["generated adapter memory.status.cli live parser has CLI option(s) missing from operation contract: target"]
 
 
 def test_validated_contract_loader_reports_contract_and_schema(monkeypatch, tmp_path: Path) -> None:

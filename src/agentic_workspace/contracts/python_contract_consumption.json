@@ -45,6 +45,12 @@
       "consumer": "scripts/check/check_contract_tooling_surfaces.py"
     },
     {
+      "contract": "command_package_ir.json",
+      "schema": "command_package_ir.schema.json",
+      "loader": "command_package_ir_manifest",
+      "consumer": "scripts/check/check_contract_tooling_surfaces.py"
+    },
+    {
       "contract": "workflow_definition_format.json",
       "schema": "workflow_definition_format.schema.json",
       "loader": "workflow_definition_format_manifest",

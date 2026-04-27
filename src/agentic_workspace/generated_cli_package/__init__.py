@@ -1,0 +1,127 @@
+"""Generated command package metadata.
+
+Source: src/agentic_workspace/contracts/command_package_ir.json
+Program: agentic-workspace
+Regenerate with: uv run python scripts/generate/generate_command_packages.py
+"""
+
+from __future__ import annotations
+
+import json
+from typing import Any
+
+# DO NOT EDIT DIRECTLY.
+# Command/package interface changes belong in src/agentic_workspace/contracts/command_package_ir.json.
+# Runtime behavior changes belong in hand-written operation/primitive implementation code.
+# Regenerate with: uv run python scripts/generate/generate_command_packages.py
+GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
+    r"""
+{
+  "commands": [
+    {
+      "adapter_id": "defaults.report.cli",
+      "command": {
+        "manifest_ref": "cli_commands.json",
+        "name": "defaults"
+      },
+      "conformance_refs": [
+        "defaults.report.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "operation_ref": {
+        "id": "defaults.report",
+        "path": "operations/defaults.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "defaults payload assembly",
+          "section selection",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "schema refs",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.defaults.load",
+          "workspace.defaults.select",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "status": "generated"
+    }
+  ],
+  "id": "root-workspace",
+  "package_role": "root-workspace-cli",
+  "program": "agentic-workspace",
+  "targets": [
+    {
+      "entrypoints": [
+        "agentic-workspace"
+      ],
+      "generated_root": "src/agentic_workspace/generated_cli_package",
+      "generation_status": "supported-now",
+      "kind": "python",
+      "package_name": "agentic-workspace",
+      "test_environment": "python-dev"
+    },
+    {
+      "entrypoints": [
+        "agentic-workspace"
+      ],
+      "generated_root": "generated/typescript/workspace-cli",
+      "generation_status": "proof-fixture",
+      "kind": "typescript",
+      "package_name": "@agentic-workspace/workspace-cli",
+      "test_environment": "docker"
+    },
+    {
+      "entrypoints": [
+        "agentic-workspace"
+      ],
+      "generated_root": "generated/shell/bash",
+      "generation_status": "deferred",
+      "kind": "bash",
+      "package_name": "agentic-workspace-shell",
+      "test_environment": "docker"
+    },
+    {
+      "entrypoints": [
+        "agentic-workspace"
+      ],
+      "generated_root": "generated/shell/powershell",
+      "generation_status": "deferred",
+      "kind": "powershell",
+      "package_name": "AgenticWorkspace.PowerShell",
+      "test_environment": "docker"
+    }
+  ]
+}
+"""
+)
