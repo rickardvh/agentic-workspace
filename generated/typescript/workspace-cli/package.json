@@ -1,0 +1,17 @@
+{
+  "agenticWorkspace": {
+    "generated": true,
+    "program": "agentic-workspace",
+    "source": "src/agentic_workspace/contracts/command_package_ir.json"
+  },
+  "bin": {
+    "agentic-workspace": "./src/commandPackage.ts"
+  },
+  "name": "@agentic-workspace/workspace-cli",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/command-package.test.mjs"
+  },
+  "type": "module",
+  "version": "0.0.0-generated"
+}

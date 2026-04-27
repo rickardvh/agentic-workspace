@@ -21,7 +21,7 @@
     "execution": {
       "milestone": "multilang-cli-generation-2026-04-27",
       "status": "active",
-      "next_step": "Generate Python and TypeScript proof package slices for #397/#398.",
+      "next_step": "Add Docker-isolated generated-package conformance for #399.",
       "proof": "Use agentic-workspace proof --changed, focused contract tests, generated-package checks, maintainer surfaces, planning checks, and root CLI tests as selected."
     },
     "scope": {
@@ -57,9 +57,9 @@
     "what this slice enabled": "A durable migration path from hand-authored CLI surfaces to generated Python and TypeScript package adapters.",
     "intentionally deferred": "Full lifecycle mutation generation and broad shell implementation.",
     "discovered implications": "The existing generated-adapter contract is adapter-centric; multi-language packages need one compact command-package view that joins command shape, operation refs, primitive bindings, target outputs, and conformance refs.",
-    "proof achieved now": "#394/#395 audit/strategy artifacts are present; #396 command-package IR validates and is checked against adapter, operation, primitive, and conformance refs.",
-    "validation still needed": "Generated Python/TypeScript package target proofs and Docker routing.",
-    "next likely slice": "#397/#398 generated package proof."
+    "proof achieved now": "#394/#395 audit/strategy artifacts are present; #396 command-package IR validates; #397/#398 Python and TypeScript package proof fixtures generate from the IR and are freshness-checked.",
+    "validation still needed": "Docker-isolated generated-package conformance routing.",
+    "next likely slice": "#399 Docker-isolated generated package proof."
   },
   "intent_interpretation": {
     "literal request": "Create a branch, ingest issues, plan and implement the work end-to-end, commit after each milestone, create a PR, and dogfood the package with new issues for actionable improvement lanes.",
@@ -113,15 +113,15 @@
     }
   ],
   "active_milestone": {
-    "id": "generated-python-typescript-proof",
+    "id": "docker-generated-package-proof",
     "status": "active",
-    "scope": "#397/#398",
+    "scope": "#399",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Generate Python and TypeScript proof package slices from the command-package IR."
+    "Add Docker-isolated generated-package conformance routing for #399."
   ],
   "blockers": [
     "None."
@@ -138,6 +138,12 @@
     "src/agentic_workspace/contract_tooling.py",
     "scripts/check/check_contract_tooling_surfaces.py",
     "tests/test_contract_tooling.py"
+    ,
+    "scripts/generate/generate_command_packages.py",
+    "src/agentic_workspace/generated_cli_package/__init__.py",
+    "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py",
+    "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py",
+    "generated/typescript/"
   ],
   "invariants": [
     "Preserve runtime primitive ownership.",
@@ -171,12 +177,12 @@
     "run status": "active",
     "executor": "Codex",
     "handoff source": "#393-#401",
-    "what happened": "Created branch, ingested issue bodies, added the #394/#395 audit/strategy artifacts, and added the #396 command-package IR with schema, loader, checker parity, and tests.",
-    "scope touched": "planning state/evidence/execplan, review artifacts, contracts, checker, and focused tests",
-    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json; docs/reviews/multi-language-cli-generation-gap-audit-2026-04-27.md; docs/reviews/generated-cli-package-strategy-2026-04-27.md; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/schemas/command_package_ir.schema.json; src/agentic_workspace/contracts/contract_inventory.json; src/agentic_workspace/contracts/python_contract_consumption.json; src/agentic_workspace/contract_tooling.py; scripts/check/check_contract_tooling_surfaces.py; tests/test_contract_tooling.py",
-    "validations run": "contract tooling check, focused contract tests, focused ruff",
-    "result for continuation": "#396 IR is present and checked; continue to #397/#398.",
-    "next step": "Generate Python and TypeScript proof package slices."
+    "what happened": "Created branch, ingested issue bodies, added the #394/#395 audit/strategy artifacts, added the #396 command-package IR, and generated Python/TypeScript package proof fixtures from that IR.",
+    "scope touched": "planning state/evidence/execplan, review artifacts, contracts, generator, generated package fixtures, checker, and focused tests",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json; docs/reviews/multi-language-cli-generation-gap-audit-2026-04-27.md; docs/reviews/generated-cli-package-strategy-2026-04-27.md; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/schemas/command_package_ir.schema.json; src/agentic_workspace/contracts/contract_inventory.json; src/agentic_workspace/contracts/python_contract_consumption.json; src/agentic_workspace/contract_tooling.py; scripts/check/check_contract_tooling_surfaces.py; scripts/generate/generate_command_packages.py; generated/typescript/; generated Python package metadata; tests/test_contract_tooling.py",
+    "validations run": "generated package freshness check, contract tooling check, focused contract tests, focused ruff",
+    "result for continuation": "#397/#398 generated package proof fixtures are present and checked; continue to #399.",
+    "next step": "Add Docker proof routing."
   },
   "finished_run_review": {
     "review status": "not-finished",
@@ -218,7 +224,7 @@
     "follow-on routed to": "",
     "post-work posterity capture": "",
     "knowledge promoted (Memory/Docs/Config)": "",
-    "resume from": "Continue with active_milestone generated-python-typescript-proof."
+    "resume from": "Continue with active_milestone docker-generated-package-proof."
   },
   "closeout_distillation": {
     "buckets": {

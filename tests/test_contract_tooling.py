@@ -224,6 +224,37 @@ def test_generated_command_adapter_module_is_current() -> None:
     assert module.main(["--check"]) == 0
 
 
+def test_generated_command_package_files_are_current() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_packages.py"
+    spec = importlib.util.spec_from_file_location("generate_command_packages", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.main(["--check"]) == 0
+
+
+def test_generated_python_command_package_metadata_is_current() -> None:
+    from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE
+
+    assert GENERATED_COMMAND_PACKAGE["program"] == "agentic-workspace"
+    assert {command["adapter_id"] for command in GENERATED_COMMAND_PACKAGE["commands"]} == {"defaults.report.cli"}
+    target_kinds = {target["kind"] for target in GENERATED_COMMAND_PACKAGE["targets"]}
+    assert {"python", "typescript", "bash", "powershell"} <= target_kinds
+
+
+def test_generated_typescript_command_package_fixture_is_current() -> None:
+    package_root = Path(__file__).resolve().parents[1] / "generated" / "typescript" / "workspace-cli"
+    package_json = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
+    source_text = (package_root / "src" / "commandPackage.ts").read_text(encoding="utf-8")
+    test_text = (package_root / "test" / "command-package.test.mjs").read_text(encoding="utf-8")
+
+    assert package_json["name"] == "@agentic-workspace/workspace-cli"
+    assert package_json["agenticWorkspace"]["generated"] is True
+    assert "defaults.report.cli" in source_text
+    assert "DO NOT EDIT DIRECTLY" in source_text
+    assert "generated package metadata exposes expected commands" in test_text
+
+
 def test_generated_command_adapter_module_routes_direct_edits_to_authoritative_sources() -> None:
     generated_path = Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "generated_command_adapters.py"
     generated_text = generated_path.read_text(encoding="utf-8")

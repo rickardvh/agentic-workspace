@@ -615,6 +615,22 @@ def _validate_generated_command_adapter_output() -> list[str]:
     return _generated_command_adapter_statuses()[1]
 
 
+def _validate_generated_command_package_output() -> list[str]:
+    repo_root = Path(__file__).resolve().parents[2]
+    generator_path = repo_root / "scripts" / "generate" / "generate_command_packages.py"
+    spec = importlib.util.spec_from_file_location("generate_command_packages", generator_path)
+    if spec is None or spec.loader is None:
+        return [f"generated package layer: cannot load {generator_path.relative_to(repo_root).as_posix()}"]
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    stale_outputs: list[str] = []
+    for output_path, rendered in module._render_outputs(command_package_ir_manifest()):
+        current = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
+        if current != rendered:
+            stale_outputs.append(output_path.relative_to(repo_root).as_posix())
+    return [f"generated package layer: {output} is stale; run uv run python scripts/generate/generate_command_packages.py" for output in stale_outputs]
+
+
 def _validate_python_contract_consumption_policy(payload: dict[str, object]) -> list[str]:
     errors: list[str] = []
     entries = payload.get("validated_at_consumption", [])
@@ -987,6 +1003,10 @@ def main(argv: list[str] | None = None) -> int:
         (
             "generated command adapter output",
             _validate_generated_command_adapter_output(),
+        ),
+        (
+            "generated command package output",
+            _validate_generated_command_package_output(),
         ),
         (
             "operation primitives registry",
