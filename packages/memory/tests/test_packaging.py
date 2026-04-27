@@ -37,6 +37,7 @@ def test_memory_wheel_contains_required_payload_files_and_skills() -> None:
         inventory = _artifact_inventory(wheel_path)
 
         assert EXPECTED_CORE_MANAGED_PATHS <= inventory, _missing_paths(inventory, EXPECTED_CORE_MANAGED_PATHS)
+        assert "bootstrap/.agentic-workspace/memory/repo/current/routing-feedback.md" not in inventory
 
 
 def test_memory_sdist_contains_required_payload_files_and_skills() -> None:
@@ -45,6 +46,7 @@ def test_memory_sdist_contains_required_payload_files_and_skills() -> None:
         inventory = _artifact_inventory(sdist_path)
 
         assert EXPECTED_CORE_MANAGED_PATHS <= inventory, _missing_paths(inventory, EXPECTED_CORE_MANAGED_PATHS)
+        assert "bootstrap/.agentic-workspace/memory/repo/current/routing-feedback.md" not in inventory
 
 
 def test_memory_wheel_and_sdist_share_the_same_managed_inventory() -> None:

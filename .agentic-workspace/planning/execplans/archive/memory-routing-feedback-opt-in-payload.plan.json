@@ -1,0 +1,236 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Memory Routing Feedback Opt-In Payload",
+  "goal": [
+    "Implement #472 by making the memory routing-feedback calibration note absent from ordinary shipped installs unless a repo explicitly creates or opts into it, while keeping route-review and freshness checks useful when the note exists."
+  ],
+  "non_goals": [
+    "Do not remove routing-feedback support entirely.",
+    "Do not reintroduce current-memory as active shared state.",
+    "Do not weaken hygiene checks when a repo already has routing-feedback."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Ordinary memory install no longer creates routing-feedback by default, and absence is normal for doctor/report/route-review paths.",
+      "constraints": "Existing repos with routing-feedback keep safe migration and hygiene behavior.",
+      "latitude": "Choose the smallest installer, payload, docs, and tests change that makes routing-feedback opt-in/on-demand.",
+      "escalation": "Escalate if removing the seed would break core memory routing or package install."
+    },
+    "execution": {
+      "milestone": "memory-routing-feedback-opt-in-payload",
+      "status": "completed",
+      "next_step": "Archive this completed slice, close #472, refresh external issue evidence, then promote the next #450 child indicated by refreshed planning state.",
+      "proof": "memory package installer/packaging tests, workspace package tests as touched, ruff, proof selector, maintainer surfaces, doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/memory-routing-feedback-opt-in-payload.plan.json",
+        "packages/memory/bootstrap/",
+        "packages/memory/src/repo_memory_bootstrap/",
+        "packages/memory/tests/",
+        "docs/reviews/shipped-package-payload-audit-2026-04-28.md"
+      ],
+      "invariants": [
+        "Routing-feedback remains supported when a repo has concrete calibration cases.",
+        "Absence of routing-feedback is normal after ordinary install.",
+        "Required current-memory baseline stays empty."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#467/#469/#471 remain after this slice unless validation proves they are satisfied or superseded.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #472 closeout, refresh external evidence and promote the next #450 child indicated by validation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Ordinary memory installs no longer seed routing-feedback by default; package artifacts exclude the note, while route-review and hygiene support remain available when a repo creates it.",
+    "intentionally deferred": "none",
+    "discovered implications": "The root repo still has its own checked-in routing-feedback note as repo-local calibration state; that is not package payload.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this bounded slice",
+    "next likely slice": "promote the next #450 child after external issue evidence refresh"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make routing-feedback calibration payload opt-in or source-only.",
+    "hard constraints": "Keep route-review behavior for repos with existing routing-feedback.",
+    "agent may decide locally": "Whether to remove the seed file, keep a source-only template, or gate creation behind an existing command.",
+    "escalate when": "Core install or route-review requires the seed to exist."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Remove optional calibration residue from ordinary installed payload.",
+    "broader-lane validation question": "Does this lower default installed footprint while preserving routing-feedback leverage for repos that need it?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/472"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/472",
+      "label": "#472 routing-feedback opt-in payload",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "memory-routing-feedback-opt-in-payload",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect memory routing-feedback installer, payload, and tests, then remove default seed creation while preserving absent-file behavior."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/memory-routing-feedback-opt-in-payload.plan.json",
+    "packages/memory/bootstrap/",
+    "packages/memory/src/repo_memory_bootstrap/",
+    "packages/memory/tests/",
+    "docs/reviews/shipped-package-payload-audit-2026-04-28.md"
+  ],
+  "invariants": [
+    "Routing-feedback remains supported when a repo has concrete calibration cases.",
+    "Absence of routing-feedback is normal after ordinary install.",
+    "Required current-memory baseline stays empty."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/memory/tests/test_installer.py packages/memory/tests/test_packaging.py -q",
+    "cd packages/memory && uv run pytest tests/test_installer.py tests/test_packaging.py -q",
+    "cd packages/memory && uv run ruff check .",
+    "uv run ruff check packages/memory/src packages/memory/tests",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "make maintainer-surfaces",
+    "rg -n \"required current-memory|current-memory required|required shipped current-memory|routing-feedback.md.*compatibility contract|routing-feedback.md.*required|routing-feedback.md.*ordinary install|routing-feedback.md.*default\" packages/memory README.md docs .agentic-workspace packages/memory/tests packages/memory/src",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/memory-routing-feedback-opt-in-payload.plan.json packages/memory/bootstrap packages/memory/src/repo_memory_bootstrap packages/memory/tests docs/reviews/shipped-package-payload-audit-2026-04-28.md --format json",
+    "uv run agentic-workspace doctor --target . --modules memory,planning --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "Ordinary memory install no longer creates routing-feedback by default, or the file is explicitly gated behind an opt-in lifecycle/config path.",
+    "Doctor/report/route-review handle absence as normal, not drift.",
+    "Existing repos with the file keep safe migration guidance.",
+    "Tests prove required current-memory baseline remains empty."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Removed the memory routing-feedback seed from packaged bootstrap payload and manifest, updated route-review so absence is a normal current state, updated package docs/audit, and tightened packaging/install tests around absent default current-memory payload.",
+    "validation confirmed": "uv run pytest packages/memory/tests/test_packaging.py packages/memory/tests/test_installer.py -q; uv run ruff check packages/memory/src packages/memory/tests; cd packages/memory && uv run pytest tests/test_installer.py tests/test_packaging.py -q; cd packages/memory && uv run ruff check .; make maintainer-surfaces; uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/check/check_contract_tooling_surfaces.py; rg -n \"required current-memory|current-memory required|required shipped current-memory|routing-feedback.md.*compatibility contract|routing-feedback.md.*required|routing-feedback.md.*ordinary install|routing-feedback.md.*default\" packages/memory README.md docs .agentic-workspace packages/memory/tests packages/memory/src; uv run agentic-workspace proof --target . --changed ... --format json; uv run agentic-workspace doctor --target . --modules memory,planning --format json",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge",
+    "post-work posterity capture": "docs/reviews/shipped-package-payload-audit-2026-04-28.md now records routing-feedback as opt-in repo-created calibration rather than shipped default payload.",
+    "knowledge promoted (Memory/Docs/Config)": "packages/memory/README.md now treats repo-created routing-feedback as a lower-stability helper, not a compatibility contract surface.",
+    "resume from": "refresh external issue evidence and promote the next #450 child"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": ".agentic-workspace/planning/execplans/memory-routing-feedback-opt-in-payload.plan.json",
+    "what happened": "Removed the shipped routing-feedback seed file and manifest entry, changed route-review missing-note output from manual review to current/safe default guidance, updated README/audit wording, and changed tests to prove ordinary package/install payloads do not include current-memory seed notes.",
+    "scope touched": "memory bootstrap payload, memory installer route-review behavior, memory tests, memory README, shipped payload audit, and planning state.",
+    "changed surfaces": "Package payload shrank; feature behavior remains available for repos that create routing-feedback.",
+    "validations run": "uv run pytest packages/memory/tests/test_packaging.py packages/memory/tests/test_installer.py -q; uv run ruff check packages/memory/src packages/memory/tests; cd packages/memory && uv run pytest tests/test_installer.py tests/test_packaging.py -q; cd packages/memory && uv run ruff check .; make maintainer-surfaces; uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/check/check_contract_tooling_surfaces.py; rg -n \"required current-memory|current-memory required|required shipped current-memory|routing-feedback.md.*compatibility contract|routing-feedback.md.*required|routing-feedback.md.*ordinary install|routing-feedback.md.*default\" packages/memory README.md docs .agentic-workspace packages/memory/tests packages/memory/src; uv run agentic-workspace proof --target . --changed ... --format json; uv run agentic-workspace doctor --target . --modules memory,planning --format json",
+    "result for continuation": "This slice is ready to archive and #472 can close; parent #450 remains open.",
+    "next step": "Refresh external issue evidence and promote the next #450 child."
+  },
+  "finished_run_review": {
+    "review status": "reviewed",
+    "scope respected": "yes; changes remove default payload residue without removing routing-feedback support.",
+    "proof status": "passed",
+    "intent served": "yes; ordinary memory install no longer creates routing-feedback by default and absence is normal in route-review.",
+    "config compliance": "yes; routing-feedback remains repo-created optional calibration rather than shared current state.",
+    "misinterpretation risk": "low; tests cover absent default payload and existing note behavior remains tested.",
+    "follow-on decision": "archive #472 and continue #450 through remaining #467/#469/#471 slices."
+  },
+  "proof_report": {
+    "validation proof": "All selected proof commands passed: memory package tests and ruff, package-local memory tests and ruff, maintainer surfaces, broader ruff, planning/contract surface checks, stale-reference sweep, proof selector, and planning/memory doctor.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Memory package targeted tests: 203 passed; package-local memory tests: 203 passed; ruff, maintainer surfaces, planning surfaces, contract tooling, proof selector, stale-reference sweep, and doctor passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Make routing-feedback calibration payload opt-in or source-only.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge activates a fresh bounded slice."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "The old seed note content was externalized and deleted from package payload; no separate archive is needed.",
+          "owner": "archive-only",
+          "source": ""
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue the parent #450 feature-tier/surface-merge lane after #472 closeout.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": ""
+        }
+      ],
+      "memory": [
+        {
+          "summary": "packages/memory/README.md now treats repo-created routing-feedback as a lower-stability helper, not a compatibility contract surface.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "Memory package tests now prove routing-feedback is absent from default package/install payload while remaining supported when repo-created.",
+          "owner": "packages/memory/tests/test_packaging.py and packages/memory/tests/test_installer.py",
+          "source": ""
+        }
+      ],
+      "docs": [
+        {
+          "summary": "Memory README and shipped payload audit now classify routing-feedback as repo-created optional calibration.",
+          "owner": "packages/memory/README.md and docs/reviews/shipped-package-payload-audit-2026-04-28.md",
+          "source": ""
+        },
+        {
+          "summary": "packages/memory/README.md now treats repo-created routing-feedback as a lower-stability helper, not a compatibility contract surface.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#472 can close after commit/push; parent #450 remains open for remaining children.",
+          "owner": "github",
+          "source": ""
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted after #460 shipped payload audit identified optional routing-feedback as installed-footprint residue."
+  ]
+}

@@ -71,14 +71,13 @@ Treat these files as the current memory compatibility contract surfaces that sho
 - `.agentic-workspace/memory/repo/manifest.toml`
 - `.agentic-workspace/memory/SKILLS.md`
 - `.agentic-workspace/memory/WORKFLOW.md`
-- `.agentic-workspace/memory/repo/current/routing-feedback.md`
 - `.agentic-workspace/memory/repo/domains/README.md`
 - `.agentic-workspace/memory/repo/invariants/README.md`
 - `.agentic-workspace/memory/repo/runbooks/README.md`
 - `.agentic-workspace/memory/repo/mistakes/recurring-failures.md`
 - `.agentic-workspace/memory/repo/decisions/README.md`
 
-Treat upgrade metadata, audit scripts, bootstrap workspace files, and shipped shared skills as lower-stability helpers unless a stricter promise is stated later. Those helper surfaces matter operationally, but they remain easier to refine than the core installed memory contract above.
+Treat upgrade metadata, audit scripts, bootstrap workspace files, shipped shared skills, and repo-created routing-feedback calibration as lower-stability helpers unless a stricter promise is stated later. Those helper surfaces matter operationally, but they remain easier to refine than the core installed memory contract above.
 
 Generated or derived guidance should only inherit stability from its canonical source when that relationship is explicit. A helper may remain upgrade-replaceable even when the memory note tree it supports is part of the compatibility contract.
 

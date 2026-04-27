@@ -436,7 +436,7 @@ def test_payload_entries_do_not_include_todo_stub() -> None:
     assert all(entry.relative_path != Path(".agentic-workspace/memory/repo/current/active-decisions.md") for entry in entries)
     assert all(entry.relative_path != Path(".agentic-workspace/memory/repo/current/project-state.md") for entry in entries)
     assert all(entry.relative_path != Path(".agentic-workspace/memory/repo/current/task-context.md") for entry in entries)
-    assert any(entry.relative_path == Path(".agentic-workspace/memory/repo/current/routing-feedback.md") for entry in entries)
+    assert all(entry.relative_path != Path(".agentic-workspace/memory/repo/current/routing-feedback.md") for entry in entries)
     assert any(entry.relative_path == Path(".agentic-workspace/memory/repo/manifest.toml") for entry in entries)
     assert any(entry.relative_path == Path(".agentic-workspace/memory/SKILLS.md") for entry in entries)
     assert any(entry.relative_path == Path(".agentic-workspace/memory/UPGRADE-SOURCE.toml") for entry in entries)
@@ -448,7 +448,7 @@ def test_payload_entries_do_not_include_todo_stub() -> None:
     assert all(entry.relative_path != Path(".agentic-workspace/memory/bootstrap/skills/upgrade/agents/openai.yaml") for entry in entries)
 
 
-def test_payload_current_files_include_optional_routing_feedback() -> None:
+def test_payload_current_files_are_empty_by_default() -> None:
     entries = installer._payload_entries(installer.payload_root())
 
     current_paths = {
@@ -457,7 +457,7 @@ def test_payload_current_files_include_optional_routing_feedback() -> None:
         if entry.relative_path.as_posix().startswith(".agentic-workspace/memory/repo/current/")
     }
 
-    assert current_paths == {".agentic-workspace/memory/repo/current/routing-feedback.md"}
+    assert current_paths == set()
 
 
 def test_list_bundled_skills_only_includes_bootstrap_skills() -> None:
@@ -1060,7 +1060,7 @@ def test_list_payload_files_excludes_agent_work_templates_and_gitignore_append(
     )
 
 
-def test_install_dry_run_includes_current_memory_baseline(tmp_path: Path) -> None:
+def test_install_dry_run_excludes_current_memory_baseline(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
 
@@ -1069,13 +1069,13 @@ def test_install_dry_run_includes_current_memory_baseline(tmp_path: Path) -> Non
     planned_copies = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "would copy"}
 
     assert ".agentic-workspace/memory/repo/current/project-state.md" not in planned_copies
-    assert ".agentic-workspace/memory/repo/current/routing-feedback.md" in planned_copies
+    assert ".agentic-workspace/memory/repo/current/routing-feedback.md" not in planned_copies
     assert ".agentic-workspace/memory/repo/current/task-context.md" not in planned_copies
     assert ".agentic-workspace/memory/bootstrap/README.md" in planned_copies
     assert ".agentic-workspace/memory/repo/current/active-decisions.md" not in planned_copies
 
 
-def test_install_writes_audit_clean_current_memory_seed_dates(tmp_path: Path) -> None:
+def test_install_does_not_write_current_memory_seed_notes(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
 
@@ -1086,12 +1086,7 @@ def test_install_writes_audit_clean_current_memory_seed_dates(tmp_path: Path) ->
         ".agentic-workspace/memory/repo/current/routing-feedback.md",
         ".agentic-workspace/memory/repo/current/task-context.md",
     ):
-        if relative != ".agentic-workspace/memory/repo/current/routing-feedback.md":
-            assert not (target / relative).exists()
-            continue
-        text = (target / relative).read_text(encoding="utf-8")
-        assert "<LAST_CONFIRMED_DATE>" not in text
-        assert "## Last confirmed\n\n20" in text
+        assert not (target / relative).exists()
 
 
 def test_install_writes_audit_clean_recurring_failures_seed_date(
@@ -3447,8 +3442,8 @@ def test_route_review_handles_missing_feedback_note(tmp_path: Path) -> None:
 
     assert any(
         action.path == target / ".agentic-workspace" / "memory" / "repo" / "current" / "routing-feedback.md"
-        and action.kind == "manual review"
-        and "routing feedback note is absent" in action.detail
+        and action.kind == "current"
+        and "absent by default" in action.detail
         for action in result.actions
     )
 

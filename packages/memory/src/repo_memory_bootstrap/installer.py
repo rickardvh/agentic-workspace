@@ -1130,17 +1130,17 @@ def review_routes(*, target: str | Path | None = None) -> InstallResult:
     feedback_path = target_root / ".agentic-workspace/memory/repo/current/routing-feedback.md"
     if not feedback_path.exists():
         result.add(
-            "manual review",
+            "current",
             feedback_path,
             (
-                "routing feedback note is absent; create "
+                "routing feedback note is absent by default; create "
                 ".agentic-workspace/memory/repo/current/routing-feedback.md when you have concrete "
                 "missed-note or over-routing cases to calibrate"
             ),
             role="route-review",
-            safety="manual",
+            safety="safe",
             source=feedback_path.relative_to(target_root).as_posix(),
-            category="manual-review",
+            category="safe-update",
         )
         return result
 

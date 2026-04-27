@@ -20,7 +20,7 @@ This is evidence/history for #460, not ordinary operating input. It exists to ma
 | Planning `generated_cli_package/` | generated/proof-only | source checkout only | Already excluded by package artifact tests from #459. |
 | Memory required payload | daily operation / lifecycle required | memory package payload/install target | Keep; repo memory index, manifest, workflow, metadata docs, upgrade source, seed directories, and lifecycle skills support install and recovery. |
 | Memory current-memory baseline | obsolete as required payload | no required current baseline | Keep empty; packaging tests now assert no required shipped current-memory baseline. |
-| Memory routing-feedback seed | optional advanced calibration | memory package payload/install target | Keep temporarily as optional calibration; candidate for unshipping or opt-in install because its existing cases are externalized. |
+| Memory routing-feedback seed | optional advanced calibration | opt-in repo-created note | #472 removed it from ordinary package/install payload; keep route-review and hygiene support when a repo creates the note. |
 | Memory bootstrap helper skills | lifecycle required | memory package payload | Keep for install/adopt/upgrade/uninstall recovery. |
 | Memory optional fragments | optional advanced feature | memory package sdist/source payload, applied only by optional paths | Keep optional; not daily startup input. |
 | Memory `generated_command_adapters.py` | daily operation required | memory wheel/sdist | Keep; package CLI imports it. |
@@ -36,7 +36,7 @@ This is evidence/history for #460, not ordinary operating input. It exists to ma
 
 | Candidate | Why not finished in #460 | Owner |
 | --- | --- | --- |
-| Unship or opt-in install of memory `routing-feedback.md` | It is still optional calibration payload, but current seed content says its cases have been externalized. Removing it touches install, route-review, freshness, manifest, and migration tests and deserves a focused slice. | #472 |
+| Unship or opt-in install of memory `routing-feedback.md` | Implemented by #472; ordinary installs no longer seed the note, while route-review and hygiene still support repos that create it. | #472 |
 | Planning optional payload shrinkage | Existing classification already names optional docs, review/intake, and skills as candidates; #450 should continue through #467/#469/#471 before larger removal decisions. | #450 and existing follow-ups |
 | Historical audit noise while continuing parent lanes | Dogfooding still sees archived child slices as promotion candidates until the active continuation is clear. | #470 |
 

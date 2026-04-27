@@ -19,7 +19,7 @@ It is intended to be copied into an existing repository to provide:
 - `.agentic-workspace/memory/WORKFLOW.md` as the shared reusable memory workflow rules
 - `.agentic-workspace/memory/SKILLS.md` as the shared skill-boundary guidance
 - `.agentic-workspace/memory/VERSION.md` as the installed bootstrap version marker
-- `.agentic-workspace/memory/repo/current/routing-feedback.md` as optional routing calibration
+- create `.agentic-workspace/memory/repo/current/routing-feedback.md` only when you have concrete missed-note or over-routing cases to calibrate
 - `.agentic-workspace/memory/repo/templates/` as starter note templates for the first real repo-specific notes
 - an advisory memory freshness audit
 - optional workflow fragments for common contribution flows
