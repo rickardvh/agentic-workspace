@@ -27,9 +27,7 @@ It helps the agent load memory selectively instead of scanning the whole reposit
    - when `.agentic-workspace/memory/repo/manifest.toml` exists, trust its note records first and use `.agentic-workspace/memory/repo/index.md` as the compact fallback routing layer
    - treat `.agentic-workspace/memory/WORKFLOW.md` as reference policy only when the task touches the memory contract or policy boundary
 4. Load only the suggested notes that are relevant to the actual task.
-5. Pull in current-state notes only when they reduce re-orientation cost:
-   - `.agentic-workspace/memory/repo/current/project-state.md` for overview-level context
-   - `.agentic-workspace/memory/repo/current/task-context.md` only for active continuation state
+5. Pull in `.agentic-workspace/memory/repo/current/routing-feedback.md` only when calibrating routing against a concrete missed-note or over-routing case. Treat legacy `project-state.md` or `task-context.md` files as migration residue, not active-state inputs.
 6. If the routing seems weak or outdated, inspect `.agentic-workspace/memory/repo/index.md`, `.agentic-workspace/memory/repo/manifest.toml`, and create a repo-specific routing skill if the repeated need is local rather than shared.
 
 ## Selection rules

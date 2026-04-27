@@ -18,6 +18,7 @@ from repo_memory_bootstrap._installer_shared import (
     CURRENT_TASK_MAX_LINES,
     CURRENT_TASK_STALE_DAYS,
     DATE_RE,
+    DEPRECATED_CURRENT_MEMORY_FILES,
     EMBEDDED_WORKFLOW_HEADINGS,
     LEGACY_BOOTSTRAP_AGENTS_PHRASES,
     LEGACY_UPGRADE_SOURCE_PATH,
@@ -152,7 +153,7 @@ def _infer_action_category(*, kind: str, path: Path, detail: str, role: str, saf
         return "customisation-present"
     if "placeholder" in detail_lower:
         return "placeholder-review"
-    if any(path_str.endswith(current_path.as_posix()) for current_path in CURRENT_MEMORY_BASELINE):
+    if any(path_str.endswith(current_path.as_posix()) for current_path in (*CURRENT_MEMORY_BASELINE, *DEPRECATED_CURRENT_MEMORY_FILES)):
         if kind in {"missing", "manual review", "consider"}:
             return "current-memory-review"
     if role in {"payload-contract", "local-entrypoint"} or role.startswith("shared-"):

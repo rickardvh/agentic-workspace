@@ -29,8 +29,8 @@ It is an execution layer for applying the memory system. The installed files rem
    - keep the task system external to the installed memory contract
    - preserve repo-specific scope and commands
 7. Run `agentic-workspace doctor --target <repo> --format json` and `agentic-workspace report --target <repo> --format json` when you need post-install memory health or recurring-friction visibility.
-8. If adoption created fresh current-memory files, offer `bootstrap-populate` as the next conservative step so those files are populated from existing repo docs and visible repo state instead of being left as starter notes.
-9. When the CLI can help, prefer the installed `agentic-memory-bootstrap` command. Otherwise use the runner source recorded in `.agentic-workspace/memory/UPGRADE-SOURCE.toml` to print the follow-up `prompt populate` command.
+8. If adoption finds legacy current-memory files, treat them as migration residue: durable facts move into normal memory notes or canonical docs, active state moves into planning/status, and transient context moves into local-only scratch.
+9. When the CLI can help, prefer the installed `agentic-memory-bootstrap` command. Otherwise use the runner source recorded in `.agentic-workspace/memory/UPGRADE-SOURCE.toml` to print the relevant follow-up command.
 
 ## Guardrails
 
@@ -45,6 +45,5 @@ It is an execution layer for applying the memory system. The installed files rem
 - a bootstrap doctor summary
 - safe install or adopt actions applied
 - manually aligned `AGENTS.md` and memory guidance where necessary
-- a clear note about the overview, task-context, and durable-memory surfaces
-- an offer to populate new current-memory files conservatively when adoption created them
-- the exact `prompt populate` follow-up using either the installed CLI or the runner source recorded in `.agentic-workspace/memory/UPGRADE-SOURCE.toml`, when it is relevant
+- a clear note about durable-memory surfaces and any legacy current-memory migration residue
+- the exact follow-up using either the installed CLI or the runner source recorded in `.agentic-workspace/memory/UPGRADE-SOURCE.toml`, when it is relevant

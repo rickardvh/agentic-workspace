@@ -1,3 +1,0 @@
-description: Populate new current-memory files from the repo's temporary bootstrap workspace.
-prompt:
-  default_prompt: "Use $populate from the repo's `.agentic-workspace/memory/bootstrap/skills/` path to populate newly created current-memory files conservatively."

@@ -26,7 +26,7 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
    - when `.agentic-workspace/memory/repo/manifest.toml` exists, prefer manifest-triggered note matches as the first stale-memory candidates
    - treat `.agentic-workspace/memory/WORKFLOW.md` as reference policy only when the task touches the memory contract or policy boundary
 4. Load only the affected notes.
-5. Pull in `.agentic-workspace/memory/repo/current/project-state.md` or `.agentic-workspace/memory/repo/current/task-context.md` only when the change materially affects shared orientation or active continuation context.
+5. Pull in `.agentic-workspace/memory/repo/current/routing-feedback.md` only when the change materially affects routing calibration. Treat legacy `project-state.md` or `task-context.md` files as migration residue.
 6. For each affected note, decide the smallest correct action:
    - `review` if the note should be checked manually
    - `update` if it is now partly wrong or incomplete
@@ -34,7 +34,7 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
    - `deprecate/remove` if the note no longer applies
    - `update index` if routing changed
 7. Apply the minimal checked-in edits needed.
-8. If current shared orientation changed, refresh `.agentic-workspace/memory/repo/current/project-state.md` or `.agentic-workspace/memory/repo/current/task-context.md`.
+8. If active state changed, keep it in planning/status or local-only scratch. If routing calibration changed, update `.agentic-workspace/memory/repo/current/routing-feedback.md`.
 9. If the repeated procedure is repository-specific, create a new sibling skill under `.agentic-workspace/memory/repo/skills/` instead of expanding this shared core skill.
 10. Run the memory freshness audit when available.
 11. If a note is acting as an improvement signal, run `agentic-memory-bootstrap promotion-report --notes <note>` and prefer the smallest justified post-remediation memory shape: keep the note only if it still saves rediscovery cost, otherwise shrink it to a stub or remove it.
@@ -50,7 +50,7 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
 
 - Do not edit memory speculatively when there is no durable impact.
 - Do not treat changed code as a reason to bulk-refresh all of `/memory`.
-- Keep current-memory notes concise and oriented toward fast continuation.
+- Do not use current-memory notes as shared active-state or continuation surfaces.
 - Preserve one-home discipline: avoid duplicating the same rule across multiple notes.
 
 ## Typical outputs

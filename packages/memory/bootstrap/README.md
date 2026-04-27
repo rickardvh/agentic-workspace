@@ -1,6 +1,6 @@
 # Bootstrap Package
 
-This package ships the installed Agentic Memory contract for target repositories: anti-rediscovery knowledge, route metadata, current-note guidance, freshness auditing, and the managed workflow surfaces that support them.
+This package ships the installed Agentic Memory contract for target repositories: anti-rediscovery knowledge, route metadata, optional routing-calibration guidance, freshness auditing, and the managed workflow surfaces that support them.
 
 Memory owns durable repo knowledge. The repository's active planning/status surface owns active intent and sequencing. Memory complements planning by preserving durable lessons and reducing re-orientation cost, but it must never compete with the planning surface for ownership of active work.
 Good memory systems should help an agent read less, not more.
@@ -19,8 +19,7 @@ It is intended to be copied into an existing repository to provide:
 - `.agentic-workspace/memory/WORKFLOW.md` as the shared reusable memory workflow rules
 - `.agentic-workspace/memory/SKILLS.md` as the shared skill-boundary guidance
 - `.agentic-workspace/memory/VERSION.md` as the installed bootstrap version marker
-- `.agentic-workspace/memory/repo/current/project-state.md` as a weak-authority current overview
-- `.agentic-workspace/memory/repo/current/task-context.md` as optional weak-authority continuation compression
+- `.agentic-workspace/memory/repo/current/routing-feedback.md` as optional routing calibration
 - `.agentic-workspace/memory/repo/templates/` as starter note templates for the first real repo-specific notes
 - an advisory memory freshness audit
 - optional workflow fragments for common contribution flows
@@ -31,7 +30,7 @@ Repeatable workflow-like actions should live in optional skills rather than expa
 
 Temporary bootstrap workspace files are part of the payload so install and adopt can hand off to repo-local lifecycle skills. They are meant to be removed after bootstrap work is complete.
 
-The CLI around this payload can also inspect the current-memory surface, route through manifest metadata and the shipped memory skills, resolve upgrade source from the product-managed `.agentic-workspace/memory/UPGRADE-SOURCE.toml` record, and verify payload consistency for maintainers and agent workflows.
+The CLI around this payload can also inspect legacy current-memory residue, route through manifest metadata and the shipped memory skills, resolve upgrade source from the product-managed `.agentic-workspace/memory/UPGRADE-SOURCE.toml` record, and verify payload consistency for maintainers and agent workflows.
 
 Treat the packaged memory notes as a starting cache of reusable operating knowledge, not an archive to expand without limit.
 Use them when they save rediscovery cost; avoid adding notes that merely restate code or transient task chatter.
@@ -70,7 +69,7 @@ Do not install maintainer-only repo docs or implementation notes by default.
 ## Recommended installation order
 
 1. Copy `AGENTS.md`.
-2. Copy `.agentic-workspace/memory/repo/`, including `.agentic-workspace/memory/repo/current/project-state.md` and `.agentic-workspace/memory/repo/current/task-context.md`.
+2. Copy `.agentic-workspace/memory/repo/`, including optional routing calibration under `.agentic-workspace/memory/repo/current/`.
 3. Copy `.agentic-workspace/memory/`.
 4. Optionally merge the workflow fragments.
 5. Run `agentic-workspace doctor --target ./repo --format json`.
@@ -96,7 +95,7 @@ When replacing those starter examples or adding the first repo-specific note of 
 `AGENTS.md` should stay short and point to `.agentic-workspace/memory/WORKFLOW.md` for the shared operating model.
 Bootstrap should modify `AGENTS.md` only through the managed workflow pointer block. Repo-specific `AGENTS.md` prose outside that block is repo-owned and should not be treated as shared upgradeable guidance.
 
-This bootstrap is planning-system agnostic. The installed `.agentic-workspace/memory/repo/` tree owns durable repo knowledge, `.agentic-workspace/memory/repo/current/project-state.md` is the overview note, `.agentic-workspace/memory/repo/current/task-context.md` is optional checked-in continuation compression, repo-specific memory skills can live under `.agentic-workspace/memory/repo/skills/`, and `.agentic-workspace/memory/` is the bootstrap-managed surface for shared workflow rules, shipped skills, and temporary bootstrap workspace files. Keep the managed package home concentrated there instead of spreading package-managed machinery through wider repo roots.
+This bootstrap is planning-system agnostic. The installed `.agentic-workspace/memory/repo/` tree owns durable repo knowledge, `.agentic-workspace/memory/repo/current/` is optional routing calibration and legacy current-memory migration review, repo-specific memory skills can live under `.agentic-workspace/memory/repo/skills/`, and `.agentic-workspace/memory/` is the bootstrap-managed surface for shared workflow rules, shipped skills, and temporary bootstrap workspace files. Keep the managed package home concentrated there instead of spreading package-managed machinery through wider repo roots.
 When planning is installed too, the combined install should be cheaper than either one alone: planning should borrow durable context from memory, and completed planning work should promote durable residue back into memory or canonical docs instead of re-explaining it forever.
 
 Bundled product skills should stay limited to bootstrap lifecycle operations. Repo-local memory procedures should live in repo-owned `.agentic-workspace/memory/repo/skills/`. General non-memory skills should not.
@@ -106,7 +105,7 @@ Ownership split:
 - bootstrap-managed and upgrade-replaceable: the workflow pointer block in `AGENTS.md`, `.agentic-workspace/memory/`, and other shared replaceable payload files
 - repo-owned and expected to diverge: `AGENTS.md` content outside the managed pointer block, repo-added sibling skills under `.agentic-workspace/memory/repo/skills/`, and ordinary notes outside the product-managed shared directories
 
-`.agentic-workspace/memory/repo/current/project-state.md` should stay aggressively summary-shaped and weak-authority: current focus, recent meaningful progress, blockers, and a few high-value notes are usually enough. If it starts carrying explicit planning-state residue such as an active execplan pointer, move that ownership back to the planning surface and leave only re-orientation context here. If a fact becomes durable, move it into a primary home and leave only a short pointer or remove it.
+Legacy `.agentic-workspace/memory/repo/current/project-state.md` and `task-context.md` files should be migrated out of shared memory: durable facts move into primary memory notes or canonical docs, active state moves back to planning/status, and transient context moves to local-only scratch.
 
 Small routing layers work better than summary-heavy indexes. A good `.agentic-workspace/memory/repo/index.md` points to a few likely-relevant notes rather than trying to restate them.
 Treat `.agentic-workspace/memory/skills/memory-router/` as the normal entrypoint for day-to-day note selection, with `.agentic-workspace/memory/repo/index.md` and `.agentic-workspace/memory/repo/manifest.toml` providing the visible routing contract behind it.
@@ -118,7 +117,7 @@ Use `.agentic-workspace/memory/repo/manifest.toml` to make that improvement pres
 
 Common task bundles:
 
-- current-state refresh: `.agentic-workspace/memory/repo/current/project-state.md` plus `.agentic-workspace/memory/repo/current/task-context.md` only when active continuation context is genuinely needed
+- current-state refresh: use the repo's planning/status surface, not shared memory
 - live decision review: the active planning slice plus `.agentic-workspace/memory/repo/decisions/README.md`
 - runtime or deployment change: `.agentic-workspace/memory/repo/domains/<runtime-or-deployment-note>.md` plus `.agentic-workspace/memory/repo/runbooks/<relevant-operator-runbook>.md`
 - API or interface change: `.agentic-workspace/memory/repo/domains/<api-or-interface-note>.md` plus `.agentic-workspace/memory/repo/invariants/<response-or-contract-note>.md`

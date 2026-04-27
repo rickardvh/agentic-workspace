@@ -102,7 +102,6 @@ The payload may create a temporary bootstrap workspace under `.agentic-workspace
 Bundled product skills should stay limited to bootstrap lifecycle operations:
 
 - `bootstrap-adoption`
-- `bootstrap-populate`
 - `bootstrap-upgrade`
 - `bootstrap-uninstall`
 

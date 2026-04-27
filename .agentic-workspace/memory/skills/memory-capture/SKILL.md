@@ -42,7 +42,7 @@ It operates on durable memory files. It does not create a separate storage layer
 7. If the note set changed materially, update `.agentic-workspace/memory/repo/index.md`.
 8. If the repeated procedure is repo-specific rather than a durable fact, create a new repo-specific checked-in skill under `.agentic-workspace/memory/repo/skills/` instead of growing this core skill.
 9. Treat `.agentic-workspace/memory/WORKFLOW.md` as reference policy only when the capture touches the memory contract or policy boundary.
-10. Update `.agentic-workspace/memory/repo/current/project-state.md` or `.agentic-workspace/memory/repo/current/task-context.md` only when the new memory changes current shared orientation.
+10. Do not capture active state into shared current-memory notes. Put durable facts in the selected memory note, active state in planning/status, and transient context in local-only scratch.
 11. If the lesson is better understood as friction than durable truth, record that with manifest metadata and prefer an upstream remediation target over training contributors to depend on an ever-growing note.
 
 ## Capture test
@@ -62,7 +62,7 @@ If not, leave it out of `/memory`.
 - Do not create a new note when an existing note can be tightened instead.
 - Do not put task state, backlog items, or one-off implementation history into memory.
 - Mark uncertain claims `Needs verification` instead of presenting them as settled.
-- Keep `project-state.md` and `task-context.md` short; they are shared orientation notes, not archives.
+- Treat legacy `project-state.md` and `task-context.md` files as migration residue, not normal capture targets.
 
 ## Typical outputs
 

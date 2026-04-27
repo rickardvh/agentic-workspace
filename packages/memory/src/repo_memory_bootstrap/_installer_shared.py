@@ -29,7 +29,8 @@ LEGACY_BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
 SHIPPED_SKILLS_ROOT = MANAGED_ROOT / "skills"
 LEGACY_SHIPPED_SKILLS_ROOT = Path("memory/skills")
 
-CURRENT_MEMORY_BASELINE = (
+CURRENT_MEMORY_BASELINE: tuple[Path, ...] = ()
+DEPRECATED_CURRENT_MEMORY_FILES = (
     Path(".agentic-workspace/memory/repo/current/project-state.md"),
     Path(".agentic-workspace/memory/repo/current/task-context.md"),
 )
@@ -45,8 +46,6 @@ BOOTSTRAP_WORKSPACE_FILES = (
     BOOTSTRAP_WORKSPACE_ROOT / "README.md",
     BOOTSTRAP_WORKSPACE_ROOT / "skills/install/SKILL.md",
     BOOTSTRAP_WORKSPACE_ROOT / "skills/install/agents/openai.yaml",
-    BOOTSTRAP_WORKSPACE_ROOT / "skills/populate/SKILL.md",
-    BOOTSTRAP_WORKSPACE_ROOT / "skills/populate/agents/openai.yaml",
     BOOTSTRAP_WORKSPACE_ROOT / "skills/cleanup/SKILL.md",
     BOOTSTRAP_WORKSPACE_ROOT / "skills/cleanup/agents/openai.yaml",
 )
@@ -71,8 +70,6 @@ PAYLOAD_REQUIRED_FILES = (
     MANAGED_ROOT / "SKILLS.md",
     WORKFLOW_PATH,
     UPGRADE_SOURCE_PATH,
-    Path(".agentic-workspace/memory/repo/current/project-state.md"),
-    Path(".agentic-workspace/memory/repo/current/task-context.md"),
     Path(".agentic-workspace/memory/repo/domains/README.md"),
     *STARTER_EXAMPLE_FILES,
     Path(".agentic-workspace/memory/repo/invariants/README.md"),
@@ -90,8 +87,6 @@ MEMORY_COMPATIBILITY_CONTRACT_FILES = (
     MANIFEST_PATH,
     MANAGED_ROOT / "SKILLS.md",
     WORKFLOW_PATH,
-    Path(".agentic-workspace/memory/repo/current/project-state.md"),
-    Path(".agentic-workspace/memory/repo/current/task-context.md"),
     Path(".agentic-workspace/memory/repo/domains/README.md"),
     Path(".agentic-workspace/memory/repo/invariants/README.md"),
     Path(".agentic-workspace/memory/repo/runbooks/README.md"),
@@ -184,7 +179,6 @@ NOTE_TYPE_LINE_LIMITS = {
 ALWAYS_READ_SURFACE = (Path(".agentic-workspace/memory/repo/index.md"),)
 ALLOWED_HIGH_LEVEL_NOTES = {
     Path(".agentic-workspace/memory/repo/index.md"),
-    Path(".agentic-workspace/memory/repo/current/project-state.md"),
 }
 
 WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"

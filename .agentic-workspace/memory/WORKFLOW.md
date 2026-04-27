@@ -12,9 +12,8 @@ Keep it concise, repo-agnostic, and non-procedural.
 - repository planning/status surface = external owner of active execution state
 - built-in agent planning = short-horizon planning and execution
 - checked-in docs outside `/memory` = canonical repo docs and user-facing engineering guidance
-- `/memory` = anti-rediscovery knowledge and lightweight shared context, not backlog state or broad fallback documentation
-- `.agentic-workspace/memory/repo/current/project-state.md` = lightweight repo overview
-- `.agentic-workspace/memory/repo/current/task-context.md` = optional checked-in continuation compression
+- `/memory` = anti-rediscovery knowledge, not backlog state, active task state, or broad fallback documentation
+- planning/status surfaces = shared active/current execution state
 - `.agentic-workspace/memory/repo/current/routing-feedback.md` = optional routing calibration note for concrete missed-note or over-routing cases
 - skills = optional repeatable procedures over checked-in knowledge
 - local notes = optional scratch context only
@@ -24,7 +23,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Memory owns durable repo knowledge: invariants, authority boundaries, recurring failure modes, routing hints, and operator runbooks.
 - The repository's active planning/status surface owns active intent and sequencing: current goal, next action, done criteria, milestone status, and backlog state.
 - `.agentic-workspace/memory/repo/mistakes/recurring-failures.md` is anti-trap memory for repeated or high-likelihood mistakes, not issue tracking or bug triage.
-- Memory may keep a small continuation note for interrupted multi-session work, but that note is only re-orientation support for the next session.
+- Memory should not keep shared current task state; use planning/status surfaces for shared continuation and local-only scratch for transient machine-local context.
 - Memory complements planning by reducing re-orientation cost and preserving durable lessons; it must never compete with the planning system for ownership of active work.
 - Memory is also a pressure layer: if a note exists because the repo is awkward to understand, operate, or change safely, use the note to suggest the code, docs, tooling, test, or refactor change that would let the note shrink, move, or disappear.
 - When planning is installed too, memory should help plans stay smaller by holding durable context that execplans can reference instead of repeating.
@@ -93,15 +92,12 @@ Keep it concise, repo-agnostic, and non-procedural.
 
 ## Current-context files
 
-- `.agentic-workspace/memory/repo/current/project-state.md` is a short overview only.
-- `.agentic-workspace/memory/repo/current/task-context.md` is optional continuation compression only.
+- Shared `project-state.md` and `task-context.md` current-memory files are deprecated migration residue, not normal Memory features.
+- New installs should not create shared current-state files.
+- Existing `project-state.md` or `task-context.md` files should be migrated: durable facts move into normal memory notes or canonical docs, active state moves into planning/status, and transient context moves into local-only scratch.
 - `.agentic-workspace/memory/repo/current/routing-feedback.md` is optional routing calibration only.
 - Do not treat routing-feedback as durable knowledge; it is temporary calibration input and should be compressed or removed once the route is tuned.
-- Neither file should become a task list, detailed plan, journal, backlog, ledger, tranche history, or duplicated memory summary.
-- A good `project-state.md` normally covers current focus, recent meaningful progress, blockers, and a few high-value notes only.
-- Keep `project-state.md` aggressively summary-shaped; if it starts reading like a changelog, history log, or backlog, compress it.
-- A good `task-context.md` normally covers status, scope, active goal, touched surfaces, blocking assumptions, next validation, resume cues, and last confirmed only.
-- Do not let `task-context.md` become a shadow task board, execution log, sequencing surface, or duplicate planner.
+- No shared current-memory file should become a task list, detailed plan, journal, backlog, ledger, tranche history, or duplicated memory summary.
 - Keep `routing-feedback.md` compact and review-shaped: record only concrete missed-note or over-routing cases, then compress or remove resolved entries.
 - Bias calibration toward missed-note capture first; over-routing cases are useful, but they are more subjective and should stay especially high-signal.
 - Treat planner-like headings such as backlog, roadmap, completed tasks, timeline, sprint, action items, or next steps as suspicion signals that the current note may be drifting.
@@ -131,10 +127,10 @@ Keep it concise, repo-agnostic, and non-procedural.
 ## Stale-note pressure
 
 - Review notes not only by age, but also when they become large, frequently touched, cross-domain, or hard to route cleanly.
-- Pay extra attention to oversized or stale current-state surfaces such as `.agentic-workspace/memory/repo/current/project-state.md` and `.agentic-workspace/memory/repo/current/task-context.md`.
+- Pay extra attention to legacy current-memory files such as `.agentic-workspace/memory/repo/current/project-state.md` and `.agentic-workspace/memory/repo/current/task-context.md`; migrate or delete them instead of normalizing shared active-state storage.
 - Freshness review should consider semantic drift as well as age: linked code, commands, authority boundaries, or expected routing surfaces may have changed even when metadata still looks current.
 - If a note keeps growing through unrelated edits, split it by primary home or move repeated procedure into a skill.
-- Use note-type-aware size pressure: keep invariants especially tight, keep runbooks procedural, and keep current-context files very small.
+- Use note-type-aware size pressure: keep invariants especially tight, keep runbooks procedural, and keep optional routing calibration very small.
 - Watch for multi-home drift early: procedures do not belong in domain notes, invariants do not belong in runbooks, and durable rationale should not stay buried in operational checklists.
 
 ## Capture threshold
@@ -204,6 +200,6 @@ Keep it concise, repo-agnostic, and non-procedural.
 ## Before ending a task
 
 1. Update or remove stale memory in the same change.
-2. Update `.agentic-workspace/memory/repo/current/project-state.md` only if the shared overview changed materially.
-3. Refresh `.agentic-workspace/memory/repo/current/task-context.md` only if it will reduce re-orientation cost for the next session.
+2. Keep active shared state in planning/status and transient handoff context in local-only scratch.
+3. Update `.agentic-workspace/memory/repo/current/routing-feedback.md` only for concrete routing calibration.
 4. If repeated friction appeared during the work, capture or update the smallest dated entry in `.agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md` before ending the task.

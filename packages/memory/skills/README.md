@@ -14,9 +14,6 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
 
 - `bootstrap-adoption`
   - introduce the memory bootstrap into an existing repository conservatively
-- `bootstrap-populate`
-  - populate new current-memory files conservatively after adoption
-  - leave `task-context.md` minimal when there is no clear active work worth preserving
 - `bootstrap-upgrade`
   - upgrade memory for an already bootstrapped repository safely
   - determine the installation source automatically
@@ -34,7 +31,6 @@ When both a checked-in repo skill and a runtime-local mirrored copy exist, treat
 If your runtime does not auto-discover packaged skills, install them manually with your runtime's preferred skill mechanism:
 
 - install `skills/bootstrap-adoption/`
-- install `skills/bootstrap-populate/`
 - install `skills/bootstrap-upgrade/`
 - install `skills/bootstrap-uninstall/`
 

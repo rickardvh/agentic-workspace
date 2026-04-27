@@ -2,7 +2,7 @@ version = 1
 
 [rules]
 routing_only = [".agentic-workspace/memory/repo/index.md"]
-high_level = [".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/current/project-state.md"]
+high_level = [".agentic-workspace/memory/repo/index.md"]
 canonical_dirs = [
   ".agentic-workspace/memory/repo/domains",
   ".agentic-workspace/memory/repo/invariants",
@@ -49,32 +49,6 @@ routes_from = ["AGENTS.md", ".agentic-workspace/memory/repo/**/*.md"]
 stale_when = [".agentic-workspace/memory/repo/**/*.md"]
 routing_only = true
 high_level = true
-
-[notes.".agentic-workspace/memory/repo/current/project-state.md"]
-note_type = "current-overview"
-canonical_home = ".agentic-workspace/memory/repo/current/project-state.md"
-authority = "advisory"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["current-context"]
-surfaces = []
-routes_from = ["README.md", ".agentic-workspace/memory/**/*.md", "bootstrap/**/*.md"]
-stale_when = ["README.md", ".agentic-workspace/memory/**/*.md", "bootstrap/**/*.md"]
-
-[notes.".agentic-workspace/memory/repo/current/task-context.md"]
-note_type = "current-context"
-canonical_home = ".agentic-workspace/memory/repo/current/task-context.md"
-authority = "advisory"
-audience = "agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["current-context"]
-surfaces = []
-routes_from = []
-stale_when = []
-# Use this note only for optional continuation compression:
-# active goal, touched surfaces, blocking assumptions, and next validation.
 
 [notes.".agentic-workspace/memory/repo/current/routing-feedback.md"]
 note_type = "routing-feedback"

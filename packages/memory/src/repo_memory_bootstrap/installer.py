@@ -91,6 +91,7 @@ from repo_memory_bootstrap._installer_shared import (
     CURRENT_MEMORY_BASELINE,
     CURRENT_PROJECT_STATE_MAX_LINES,
     CURRENT_TASK_MAX_LINES,
+    DEPRECATED_CURRENT_MEMORY_FILES,
     FORBIDDEN_PAYLOAD_FILES,
     FORBIDDEN_PAYLOAD_PREFIXES,
     LEGACY_BOOTSTRAP_WORKSPACE_ROOT,
@@ -460,6 +461,7 @@ def upgrade_bootstrap(
         target_layout=target_layout,
     )
     _plan_obsolete_shared_files(target_root=target_root, result=result, apply=not dry_run)
+    result.actions.extend(check_current_memory(target=target_root).actions)
     _apply_policy_profile(
         target_root=target_root,
         result=result,
@@ -717,6 +719,7 @@ def doctor_bootstrap(
         result=result,
         force_enforcement=strict_doc_ownership,
     )
+    result.actions.extend(check_current_memory(target=target_root).actions)
     _audit_routing_feedback_note(target_root=target_root, result=result)
     routing_feedback_path = target_root / ".agentic-workspace/memory/repo/current/routing-feedback.md"
     if routing_feedback_path.exists():
@@ -845,7 +848,7 @@ def show_current_memory(target: str | Path | None = None) -> CurrentViewResult:
         target_root=target_root,
         detected_version=_read_installed_version(_existing_version_path(target_root)),
     )
-    for relative_path in CURRENT_MEMORY_BASELINE:
+    for relative_path in (*CURRENT_MEMORY_BASELINE, *DEPRECATED_CURRENT_MEMORY_FILES, *OPTIONAL_CURRENT_MEMORY_FILES):
         note_path = target_root / relative_path
         result.notes.append(
             CurrentNoteView(
@@ -860,9 +863,11 @@ def show_current_memory(target: str | Path | None = None) -> CurrentViewResult:
 def check_current_memory(target: str | Path | None = None) -> InstallResult:
     target_root = resolve_target_root(target)
     result = _new_result(target_root, dry_run=True, message="Current-memory check")
-    for relative_path in CURRENT_MEMORY_BASELINE:
+    for relative_path in (*CURRENT_MEMORY_BASELINE, *DEPRECATED_CURRENT_MEMORY_FILES):
         note_path = target_root / relative_path
         if not note_path.exists():
+            if relative_path in DEPRECATED_CURRENT_MEMORY_FILES:
+                continue
             result.add(
                 "missing",
                 note_path,
@@ -874,6 +879,16 @@ def check_current_memory(target: str | Path | None = None) -> InstallResult:
             )
             continue
         text = note_path.read_text(encoding="utf-8")
+        if relative_path in DEPRECATED_CURRENT_MEMORY_FILES:
+            result.add(
+                "manual review",
+                note_path,
+                "deprecated shared current-memory note; migrate durable facts to Memory or docs, active state to planning/status, and transient context to local-only scratch before deleting",
+                role="current-memory-migration",
+                safety="manual",
+                source=relative_path.as_posix(),
+                category="current-memory-review",
+            )
         has_placeholders = _has_placeholders(text)
         result.add(
             "manual review" if has_placeholders else "current",
@@ -3101,5 +3116,8 @@ def uninstall_bootstrap(
         managed_paths=managed_paths,
         removable_paths=removable_paths,
         result=result,
+    )
+    result.actions.extend(
+        action for action in check_current_memory(target=target_root).actions if action.role == "current-memory-migration"
     )
     return result

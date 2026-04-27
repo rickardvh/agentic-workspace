@@ -68,7 +68,7 @@ The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`,
 
 - Use root planning surfaces for active work, roadmap candidates, and execplans.
 - Use memory notes for durable repo knowledge, decisions, and recurring failure modes.
-- Treat `.agentic-workspace/memory/repo/current/` as weak-authority current context: concise re-orientation only, not the durable home for facts.
+- Treat `.agentic-workspace/memory/repo/current/` as optional routing calibration and legacy migration residue: durable facts belong in memory/docs, active state belongs in planning/status, and transient context belongs in local-only scratch.
 - Use `.agentic-workspace/docs/extraction-and-discovery-contract.md` when one change spans package source, packaged payload, and the root installed surfaces.
 - Leave touched surfaces cleaner than you found them, and route broader cleanup as follow-up instead of treating it as invisible task residue.
 - Use `.agentic-workspace/docs/compatibility-policy.md` for surface-stability questions before deciding whether a doc, manifest, or managed mirror is safe to change directly.

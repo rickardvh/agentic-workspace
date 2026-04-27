@@ -127,7 +127,10 @@ def _project_state_text() -> str:
     payload_note = installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md"
     if payload_note.exists():
         return payload_note.read_text(encoding="utf-8")
-    return (PACKAGE_ROOT / "memory" / "current" / "project-state.md").read_text(encoding="utf-8")
+    package_note = PACKAGE_ROOT / "memory" / "current" / "project-state.md"
+    if package_note.exists():
+        return package_note.read_text(encoding="utf-8")
+    return "# Project State\n\n## Last confirmed\n\n2026-04-13\n"
 
 
 def _task_context_text() -> str:
@@ -137,7 +140,12 @@ def _task_context_text() -> str:
     payload_note = installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md"
     if payload_note.exists():
         return payload_note.read_text(encoding="utf-8")
-    return (PACKAGE_ROOT / "memory" / "current" / "task-context.md").read_text(encoding="utf-8")
+    package_note = PACKAGE_ROOT / "memory" / "current" / "task-context.md"
+    if package_note.exists():
+        return package_note.read_text(encoding="utf-8")
+    return (
+        "# Task Context\n\n## Active goal\n\n- Legacy fixture.\n\n## Next validation\n\n- Run tests.\n\n## Last confirmed\n\n2026-04-13\n"
+    )
 
 
 def _load_routing_fixture(name: str) -> dict[str, object]:
@@ -426,7 +434,9 @@ def test_payload_entries_do_not_include_todo_stub() -> None:
     assert all(entry.relative_path != Path("TODO.md") for entry in entries)
     assert all(".agent-work" not in entry.relative_path.as_posix() for entry in entries)
     assert all(entry.relative_path != Path(".agentic-workspace/memory/repo/current/active-decisions.md") for entry in entries)
-    assert any(entry.relative_path == Path(".agentic-workspace/memory/repo/current/task-context.md") for entry in entries)
+    assert all(entry.relative_path != Path(".agentic-workspace/memory/repo/current/project-state.md") for entry in entries)
+    assert all(entry.relative_path != Path(".agentic-workspace/memory/repo/current/task-context.md") for entry in entries)
+    assert any(entry.relative_path == Path(".agentic-workspace/memory/repo/current/routing-feedback.md") for entry in entries)
     assert any(entry.relative_path == Path(".agentic-workspace/memory/repo/manifest.toml") for entry in entries)
     assert any(entry.relative_path == Path(".agentic-workspace/memory/SKILLS.md") for entry in entries)
     assert any(entry.relative_path == Path(".agentic-workspace/memory/UPGRADE-SOURCE.toml") for entry in entries)
@@ -447,11 +457,7 @@ def test_payload_current_files_include_optional_routing_feedback() -> None:
         if entry.relative_path.as_posix().startswith(".agentic-workspace/memory/repo/current/")
     }
 
-    assert current_paths == {
-        ".agentic-workspace/memory/repo/current/project-state.md",
-        ".agentic-workspace/memory/repo/current/routing-feedback.md",
-        ".agentic-workspace/memory/repo/current/task-context.md",
-    }
+    assert current_paths == {".agentic-workspace/memory/repo/current/routing-feedback.md"}
 
 
 def test_list_bundled_skills_only_includes_bootstrap_skills() -> None:
@@ -461,7 +467,6 @@ def test_list_bundled_skills_only_includes_bootstrap_skills() -> None:
 
     assert bundled == {
         "bootstrap-adoption",
-        "bootstrap-populate",
         "bootstrap-upgrade",
         "bootstrap-uninstall",
     }
@@ -475,7 +480,6 @@ def test_dev_bundled_skills_tree_only_contains_bootstrap_skill_directories() -> 
 
     assert skill_dirs == {
         "bootstrap-adoption",
-        "bootstrap-populate",
         "bootstrap-upgrade",
         "bootstrap-uninstall",
     }
@@ -641,7 +645,8 @@ def test_upgrade_replaces_shared_files_without_todo_manual_review(
         for action in result.actions
     )
     assert any(
-        action.path == target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md" and action.kind == "would replace"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md"
+        and action.role == "current-memory-migration"
         for action in result.actions
     )
 
@@ -657,9 +662,7 @@ def test_doctor_reports_customised_seed_notes_as_expected_customisation(
 
     result = installer.doctor_bootstrap(target=target)
 
-    assert any(
-        action.path == note_path and action.kind == "customised" and action.category == "customisation-present" for action in result.actions
-    )
+    assert any(action.path == note_path and action.role == "current-memory-migration" for action in result.actions)
 
 
 def test_memory_status_does_not_flag_absent_optional_append_targets_in_clean_repo(tmp_path: Path) -> None:
@@ -982,13 +985,7 @@ def test_upgrade_reports_customised_seed_notes_as_expected_customisation(
 
     result = installer.upgrade_bootstrap(target=target)
 
-    assert any(
-        action.path == note_path
-        and action.kind == "customised"
-        and action.category == "customisation-present"
-        and "preserving repo-local customisation during upgrade" in action.detail
-        for action in result.actions
-    )
+    assert any(action.path == note_path and action.role == "current-memory-migration" for action in result.actions)
 
 
 def test_upgrade_preserves_customised_recurring_friction_ledger(tmp_path: Path) -> None:
@@ -1071,9 +1068,9 @@ def test_install_dry_run_includes_current_memory_baseline(tmp_path: Path) -> Non
 
     planned_copies = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "would copy"}
 
-    assert ".agentic-workspace/memory/repo/current/project-state.md" in planned_copies
+    assert ".agentic-workspace/memory/repo/current/project-state.md" not in planned_copies
     assert ".agentic-workspace/memory/repo/current/routing-feedback.md" in planned_copies
-    assert ".agentic-workspace/memory/repo/current/task-context.md" in planned_copies
+    assert ".agentic-workspace/memory/repo/current/task-context.md" not in planned_copies
     assert ".agentic-workspace/memory/bootstrap/README.md" in planned_copies
     assert ".agentic-workspace/memory/repo/current/active-decisions.md" not in planned_copies
 
@@ -1089,6 +1086,9 @@ def test_install_writes_audit_clean_current_memory_seed_dates(tmp_path: Path) ->
         ".agentic-workspace/memory/repo/current/routing-feedback.md",
         ".agentic-workspace/memory/repo/current/task-context.md",
     ):
+        if relative != ".agentic-workspace/memory/repo/current/routing-feedback.md":
+            assert not (target / relative).exists()
+            continue
         text = (target / relative).read_text(encoding="utf-8")
         assert "<LAST_CONFIRMED_DATE>" not in text
         assert "## Last confirmed\n\n20" in text
@@ -1184,6 +1184,7 @@ def test_current_show_reports_missing_notes(tmp_path: Path) -> None:
     assert [note.path.as_posix() for note in result.notes] == [
         ".agentic-workspace/memory/repo/current/project-state.md",
         ".agentic-workspace/memory/repo/current/task-context.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
     ]
     assert all(not note.exists for note in result.notes)
 
@@ -1843,7 +1844,7 @@ def test_verify_payload_reports_contract_surface_shortlists(tmp_path: Path) -> N
         and action.role == "payload-contract"
         and "compatibility contract files:" in action.detail
         and ".agentic-workspace/memory/repo/index.md" in action.detail
-        and ".agentic-workspace/memory/repo/current/project-state.md" in action.detail
+        and ".agentic-workspace/memory/repo/current/project-state.md" not in action.detail
         for action in result.actions
     )
     assert any(
@@ -2752,11 +2753,12 @@ def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() 
     assert "live decision review: the active planning slice plus `.agentic-workspace/memory/repo/decisions/README.md`" in text
 
 
-def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -> None:
+def test_bootstrap_readme_includes_optional_patterns_and_current_memory_migration_shape() -> None:
     text = (installer.payload_root() / "README.md").read_text(encoding="utf-8")
 
     assert "Optional repo pattern only" in text
-    assert "current focus, recent meaningful progress, blockers" in text
+    assert "legacy current-memory migration review" in text
+    assert "durable facts move into primary memory notes or canonical docs" in text
     assert "Memory owns durable repo knowledge" in text
     assert "anti-trap memory for repeated or high-likelihood mistakes" in text
     assert "When to write to memory" in text
@@ -2810,13 +2812,8 @@ def test_memory_note_template_includes_improvement_signal_metadata() -> None:
     assert "`config_note`" in text
 
 
-def test_bootstrap_task_context_starter_is_continuation_only() -> None:
-    text = (installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").read_text(encoding="utf-8")
-
-    assert "Optional checked-in continuation compression" in text
-    assert "## Blocking assumptions" in text
-    assert "## Resume cues" in text
-    assert "Do not turn it into a task list, backlog, execution log, roadmap, or sequencing surface." in text
+def test_bootstrap_task_context_starter_is_not_shipped() -> None:
+    assert not (installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").exists()
 
 
 def test_current_task_staleness_reason_mentions_planner_spillover() -> None:
@@ -3082,7 +3079,7 @@ def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
     assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap adopt --target ./repo" in prompt
     assert "`install` skill at `./repo/.agentic-workspace/memory/bootstrap/skills`" in prompt
-    assert "`populate` from the same path" in prompt
+    assert "`populate` from the same path" not in prompt
     assert "bootstrap-cleanup --target ./repo" in prompt
     assert ".agentic-workspace/memory/" in prompt
     assert "memory notes stay under `.agentic-workspace/memory/repo/`" in prompt
@@ -3094,9 +3091,8 @@ def test_build_populate_prompt_mentions_task_context_heuristic(monkeypatch) -> N
     prompt = cli._build_agent_prompt("populate", target="./repo")
 
     assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap current show --target ./repo" in prompt
-    assert "`populate` skill at `./repo/.agentic-workspace/memory/bootstrap/skills`" in prompt
-    assert "overview note only" in prompt
-    assert "task-context.md" in prompt
+    assert "migration residue" in prompt
+    assert "active state into planning/status" in prompt
     assert "./repo" in prompt
 
 
@@ -3280,7 +3276,7 @@ def test_install_summary_mentions_populate_next_step_when_current_notes_created(
     assert "install or adopt lifecycle work" in output
     assert "bootstrap-cleanup" in output
     assert "install or upgrade review" not in output
-    assert "`populate` skill" in output
+    assert "`populate` skill" not in output
     assert "memory-router" in output
     assert "memory-refresh" in output
     assert "bootstrap-managed" in output

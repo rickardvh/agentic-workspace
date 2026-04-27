@@ -17,19 +17,6 @@
       }
     },
     {
-      "id": "bootstrap-populate",
-      "path": "bootstrap-populate/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "populate the initial memory note set during bootstrap",
-      "activation_hints": {
-        "verbs": ["populate", "seed", "bootstrap"],
-        "nouns": ["initial memory", "starter notes", "bootstrap note set"],
-        "phrases": ["populate initial memory", "seed starter notes"],
-        "when": ["first install", "bootstrap seeding"]
-      }
-    },
-    {
       "id": "bootstrap-uninstall",
       "path": "bootstrap-uninstall/SKILL.md",
       "scope": "bundled",

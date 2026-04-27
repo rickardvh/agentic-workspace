@@ -23,7 +23,7 @@ When invoked, run the packaged upgrade flow for the current repo and stop there 
 
 ## Guardrails
 
-- Do not rewrite repo-owned notes such as `.agentic-workspace/memory/repo/current/project-state.md` or `.agentic-workspace/memory/repo/current/task-context.md` unless the user explicitly asks for that follow-up.
+- Do not rewrite legacy repo-owned current-memory notes such as `.agentic-workspace/memory/repo/current/project-state.md` or `.agentic-workspace/memory/repo/current/task-context.md` unless the user explicitly asks for migration follow-up.
 - Do not broaden the task into package-manager investigation when the repo already has an installed memory scaffold.
 - Do not stop only because the global CLI is unavailable; prefer a runner command from the recorded source before considering any local-checkout-specific fallback.
 - Preserve repo-local customisation in `AGENTS.md` and other repo-owned files.

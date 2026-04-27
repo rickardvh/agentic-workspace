@@ -148,12 +148,12 @@ def build_parser() -> argparse.ArgumentParser:
     prompt_uninstall_parser = prompt_subparsers.add_parser("uninstall", help="Print the canonical uninstall prompt.")
     _add_target_arguments(prompt_uninstall_parser)
 
-    current_parser = subparsers.add_parser("current", help="Inspect or check the current-memory surface.")
+    current_parser = subparsers.add_parser("current", help="Inspect or check legacy current-memory migration residue.")
     current_subparsers = current_parser.add_subparsers(dest="current_command", required=True)
-    current_show_parser = current_subparsers.add_parser("show", help="Show current-memory notes.")
+    current_show_parser = current_subparsers.add_parser("show", help="Show legacy current-memory notes when present.")
     _add_target_arguments(current_show_parser)
     _add_format_argument(current_show_parser)
-    current_check_parser = current_subparsers.add_parser("check", help="Check current-memory notes.")
+    current_check_parser = current_subparsers.add_parser("check", help="Check legacy current-memory notes for migration pressure.")
     _add_target_arguments(current_check_parser)
     _add_format_argument(current_check_parser)
 
@@ -790,7 +790,6 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             "Do not ask the user to install or clone anything locally first. "
             f"Run `{runner} init{target_args}`. "
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
-            "If new current-memory files were created, use `populate` from the same path before cleanup. "
             f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
             f"that `{target_root}/.agentic-workspace/memory/` is the bootstrap-managed surface while repo-specific "
             "memory notes stay under `.agentic-workspace/memory/repo/`."
@@ -800,7 +799,6 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             "Do not ask the user to install or clone anything locally first. "
             f"Run `{runner} adopt{target_args}`. "
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
-            "If new current-memory files were created, use `populate` from the same path before cleanup. "
             f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
             f"that `{target_root}/.agentic-workspace/memory/` is the bootstrap-managed surface while repo-specific "
             "memory notes stay under `.agentic-workspace/memory/repo/`."
@@ -808,11 +806,9 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
     if command == "populate":
         return (
             f"Run `{runner} current show{target_args}`. "
-            f"Next, use the `populate` skill at `{bootstrap_skills}` to fill the current-memory notes "
-            "conservatively from existing repo docs and visible repo state. Keep `.agentic-workspace/memory/repo/current/project-state.md` as "
-            "an overview note only, and treat `.agentic-workspace/memory/repo/current/task-context.md` as optional continuation compression. "
-            "Populate `.agentic-workspace/memory/repo/current/task-context.md` only when there is clearly active work worth "
-            "preserving across sessions as brief continuation compression."
+            "Treat any shared `project-state.md` or `task-context.md` output as migration residue. "
+            "Move durable facts into normal Memory notes or canonical docs, active state into planning/status, "
+            "and transient context into local-only scratch before deleting those legacy files."
         )
     if command == "upgrade":
         return (
