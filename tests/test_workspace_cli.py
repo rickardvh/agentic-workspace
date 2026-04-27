@@ -3292,6 +3292,10 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     ]
     assert intake["advanced_review_route"]["enabled"] is False
     assert "improvement_intake" in payload["report_profile"]["decision_grade_fields"]
+    reconciliation = payload["external_work_reconciliation"]
+    assert reconciliation["kind"] == "planning-external-work-reconciliation/v1"
+    assert "provider-agnostic" in reconciliation["provider_rule"]
+    assert "external_work_reconciliation" in payload["report_profile"]["decision_grade_fields"]
     assert payload["surface_value_guardrail"]["first_contact_budget"]["status"] == "active"
     assert payload["deeper_detail"]["high_volume_sections"][0]["section"] == "module_reports"
     section_hints = {item["section"]: item for item in payload["section_hints"]}
@@ -3301,6 +3305,8 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "residue" in section_hints["maintenance_pressure"]["purpose"]
     assert section_hints["improvement_intake"]["volume"] == "normal"
     assert "improvement signal" in section_hints["improvement_intake"]["why_now"]
+    assert section_hints["external_work_reconciliation"]["volume"] == "normal"
+    assert "external-work" in section_hints["external_work_reconciliation"]["purpose"]
     assert "operational_compression" not in section_hints
     assert "external_work_delta" not in section_hints
     assert "idle context" in section_hints["effective_authority"]["purpose"]
@@ -3490,6 +3496,46 @@ def test_report_section_selector_returns_external_work_delta(tmp_path: Path, cap
     assert answer["changed_count"] == 1
     assert answer["closed_count"] == 1
     assert answer["recommended_next_lane"]["id"] == "TASK-2"
+
+
+def test_report_section_selector_returns_external_work_reconciliation(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "external-intent-evidence.json",
+        {
+            "kind": "planning-external-intent-evidence/v1",
+            "refreshed_at": "2026-04-27T12:00:00+00:00",
+            "refresh_metadata": {"adapter": "manual-fixture", "item_count": 1, "open_count": 1, "closed_count": 0},
+            "items": [
+                {
+                    "system": "manual",
+                    "id": "TASK-1",
+                    "title": "External follow-up",
+                    "status": "open",
+                    "kind": "task",
+                    "parent_id": "",
+                    "planning_residue_expected": "optional",
+                }
+            ],
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "external_work_reconciliation", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "report"
+    assert payload["selector"] == {"section": "external_work_reconciliation"}
+    answer = payload["answer"]
+    assert answer["kind"] == "planning-external-work-reconciliation/v1"
+    assert answer["freshness"]["fresh_enough_to_trust"] is True
+    assert answer["freshness"]["refresh_metadata"]["adapter"] == "manual-fixture"
+    assert answer["external_work_state"]["open_count"] == 1
+    assert answer["workspace_report_view"]["delta_section"] == "external_work_delta"
 
 
 def test_report_routes_roadmap_backed_work_to_planning_before_broad_execution(tmp_path: Path, capsys) -> None:

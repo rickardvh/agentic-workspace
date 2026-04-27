@@ -1,0 +1,235 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workspace External Work Reconciliation",
+  "goal": [
+    "Implement #458 by grouping external intent evidence freshness, closeout reconciliation, landed/open issue checks, and provider refresh metadata under one provider-agnostic external_work_reconciliation concept."
+  ],
+  "non_goals": [
+    "Do not make GitHub required.",
+    "Do not automatically close external issues.",
+    "Do not replace human acceptance review."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agents see one external-work reconciliation status before provider-specific details.",
+      "constraints": "Keep provider-specific refresh logic optional and keep checked-in planning state primary.",
+      "latitude": "Choose the smallest summary/report/contract/test changes that merge the routing concept.",
+      "escalation": "Escalate if provider-specific assumptions would leak into core planning."
+    },
+    "execution": {
+      "milestone": "workspace-external-work-reconciliation",
+      "status": "completed",
+      "next_step": "Archive this completed slice, close #458, refresh external issue evidence, then promote the next #450 child indicated by refreshed planning state.",
+      "proof": "workspace/planning tests, contract tooling, ruff, maintainer surfaces, proof selector, workspace doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/workspace-external-work-reconciliation.plan.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/",
+        "tests/test_workspace_cli.py",
+        "docs/",
+        ".agentic-workspace/docs/"
+      ],
+      "invariants": [
+        "Provider adapters remain optional.",
+        "Core reconciliation consumes provider-agnostic evidence.",
+        "External tracker state does not override checked-in planning truth."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#459-#460 plus #467/#469/#471 remain after this slice unless validation proves they are satisfied or superseded.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #458 closeout, refresh external evidence and promote the next #450 child indicated by validation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Planning summary and workspace report now expose one provider-agnostic external_work_reconciliation answer for evidence freshness, current external state, closeout reconciliation, and landed-open checks.",
+    "intentionally deferred": "none",
+    "discovered implications": "#470 already tracks archived-child continuation noise.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this bounded slice",
+    "next likely slice": "promote the next #450 child after external issue evidence refresh"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Merge external evidence, closeout reconciliation, and landed-commit checks into external-work reconciliation.",
+    "hard constraints": "Keep GitHub optional and provider-agnostic core evidence primary.",
+    "agent may decide locally": "Whether the shared route belongs in planning summary, workspace report, or both.",
+    "escalate when": "A change would require provider-specific logic in core planning."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Merge related trust/reconciliation concepts instead of adding a new operating layer.",
+    "broader-lane validation question": "Does this make external-work trust cheaper to answer without increasing ordinary startup burden?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/458"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/458",
+      "label": "#458 external-work reconciliation",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "workspace-external-work-reconciliation",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add a provider-agnostic reconciliation summary to planning summary and workspace report, then update schemas/tests/docs."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/workspace-external-work-reconciliation.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/",
+    "tests/test_workspace_cli.py",
+    "docs/",
+    ".agentic-workspace/docs/"
+  ],
+  "invariants": [
+    "Provider adapters remain optional.",
+    "Core reconciliation consumes provider-agnostic evidence.",
+    "External tracker state does not override checked-in planning truth."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py packages/planning/tests/test_installer.py tests/test_workspace_summary_cli.py -q",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/workspace-external-work-reconciliation.plan.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py src/agentic_workspace/cli.py src/agentic_workspace/contracts tests/test_workspace_cli.py tests/test_workspace_summary_cli.py docs .agentic-workspace/docs --format json",
+    "uv run agentic-workspace doctor --target . --modules planning,memory --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "Agents see one external-work reconciliation status before provider-specific details.",
+    "GitHub refresh remains an optional adapter.",
+    "Landed commit evidence, external issue state, and closeout evidence can be compared through one route.",
+    "Summary can say whether external work state is fresh enough to trust."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": ".agentic-workspace/planning/execplans/workspace-external-work-reconciliation.plan.json",
+    "what happened": "Added external_work_reconciliation to planning summary, planning report data, workspace report/router output, report contracts, tests, and docs.",
+    "scope touched": "planning summary/report implementation and tests, workspace report implementation/contracts/tests, external-intent evidence docs, planning README, and active planning state.",
+    "changed surfaces": "Existing summary/report/contract/docs/test/planning surfaces were updated; no provider-specific dependency or new top-level command was added.",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py tests/test_workspace_summary_cli.py tests/test_workspace_cli.py tests/test_contract_tooling.py -q; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed ... --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning,memory --format json",
+    "result for continuation": "This slice is ready to archive and #458 can close; parent #450 remains open.",
+    "next step": "Refresh external issue evidence and promote the next #450 child."
+  },
+  "finished_run_review": {
+    "review status": "reviewed",
+    "scope respected": "yes; changes merged existing external-work trust signals through existing planning/report surfaces.",
+    "proof status": "passed",
+    "intent served": "yes; agents now see one external-work reconciliation answer before provider-specific details.",
+    "config compliance": "yes; GitHub remains an optional adapter and core output is provider-agnostic.",
+    "misinterpretation risk": "low; tests cover summary/report projection and contract schema acceptance.",
+    "follow-on decision": "archive #458 and continue parent #450 through remaining child issues."
+  },
+  "proof_report": {
+    "validation proof": "All selected proof commands passed: workspace/planning tests, contract tooling tests/check, ruff, maintainer surfaces, planning surfaces, proof selector, root CLI authority query, and planning/memory doctor.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Combined targeted test run: 339 passed; package-local planning tests: 127 passed; contract tooling check: no drift warnings; ruff: all checks passed; maintainer surfaces and planning surfaces: ok; proof selector matched planning/workspace/CLI authority lanes; doctor health: healthy."
+  },
+  "intent_satisfaction": {
+    "original intent": "Merge external evidence, closeout reconciliation, and landed-commit checks into external-work reconciliation.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Added planning-external-work-reconciliation/v1 to planning summary and workspace report, kept provider refresh metadata optional/provider-agnostic, exposed the report section and router field, updated report contracts/schemas, and documented the compact first answer.",
+    "validation confirmed": "uv run pytest packages/planning/tests/test_installer.py tests/test_workspace_summary_cli.py tests/test_workspace_cli.py tests/test_contract_tooling.py -q; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed ... --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning,memory --format json",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge",
+    "post-work posterity capture": "Plan closeout records that #470 already covers archived-child continuation noise.",
+    "knowledge promoted (Memory/Docs/Config)": ".agentic-workspace/docs/external-intent-evidence-contract.md and packages/planning/README.md now name external_work_reconciliation as the compact first answer.",
+    "resume from": "refresh external issue evidence and promote the next #450 child"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "One-off implementation detail about assertion wording is not durable beyond the commit.",
+          "owner": "archive-only",
+          "source": ""
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue the parent #450 feature-tier/surface-merge lane after #458 closeout.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": ""
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "external_work_reconciliation is now report-contract backed and tested in planning/workspace outputs.",
+          "owner": "src/agentic_workspace/contracts/report_contract.json",
+          "source": ""
+        }
+      ],
+      "docs": [
+        {
+          "summary": "External-intent evidence docs and planning README now route to external_work_reconciliation first.",
+          "owner": ".agentic-workspace/docs/external-intent-evidence-contract.md and packages/planning/README.md",
+          "source": ""
+        },
+        {
+          "summary": ".agentic-workspace/docs/external-intent-evidence-contract.md and packages/planning/README.md now name external_work_reconciliation as the compact first answer.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#458 can close after commit/push; parent #450 remains open for remaining children.",
+          "owner": "github",
+          "source": ""
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted after #457 improvement-intake closeout."
+  ]
+}

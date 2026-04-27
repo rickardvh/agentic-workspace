@@ -3290,6 +3290,14 @@ candidates = [
     assert contract["current_external_work"]["open_count"] == 2
     assert contract["current_external_work"]["closed_count"] == 1
     assert "provider-agnostic" in contract["current_external_work"]["provider_rule"]
+    reconciliation = contract["external_work_reconciliation"]
+    assert reconciliation["kind"] == "planning-external-work-reconciliation/v1"
+    assert reconciliation["status"] == "attention"
+    assert reconciliation["provider_rule"].startswith("Core planning consumes provider-agnostic")
+    assert reconciliation["freshness"]["fresh_enough_to_trust"] is True
+    assert reconciliation["external_work_state"]["untracked_open_count"] == 1
+    assert reconciliation["closeout_state"]["needs_audit_count"] == 1
+    assert reconciliation["landed_open_state"]["implemented_and_unclosed_count"] == 0
     assert contract["historical_audit_references"]["status"] == "needs-audit"
     assert "not current external-work state" in contract["historical_audit_references"]["rule"]
     assert contract["counts"]["tracked_external_open_count"] == 1
@@ -3345,6 +3353,9 @@ def test_planning_summary_surfaces_external_intent_refresh_metadata(tmp_path: Pa
     assert current_external_work["refreshed_at"] == "2026-04-27T12:00:00+00:00"
     assert current_external_work["refresh_metadata"]["adapter"] == "github-gh-cli"
     assert current_external_work["refresh_metadata"]["repository"] == "acme/project"
+    reconciliation = summary["intent_validation_contract"]["external_work_reconciliation"]
+    assert reconciliation["freshness"]["refreshed_at"] == "2026-04-27T12:00:00+00:00"
+    assert reconciliation["freshness"]["refresh_metadata"]["adapter"] == "github-gh-cli"
 
 
 def test_planning_summary_reconciles_lower_trust_closeouts_from_review_artifact(tmp_path: Path) -> None:

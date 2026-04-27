@@ -70,6 +70,8 @@ The intent-validation surface may use this artifact to answer:
 - which closed external items have lower-trust closeout because expected checked-in residue is missing
 - whether the repo looks quiet only because larger intent fell out of visible planning state
 
+Use `external_work_reconciliation` in `agentic-workspace summary --format json` or `agentic-workspace report --target ./repo --section external_work_reconciliation --format json` as the first compact answer. It groups evidence freshness, current external work state, closeout reconciliation, and landed-open checks before provider-specific detail.
+
 ## Non-Authority Rule
 
 This artifact must not replace checked-in planning ownership.

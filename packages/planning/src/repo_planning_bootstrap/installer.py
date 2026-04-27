@@ -2483,6 +2483,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             intent_validation_contract,
             fields=(
                 "counts",
+                "external_work_reconciliation",
                 "current_external_work",
                 "historical_audit_references",
                 "closeout_reconciliation",
@@ -2991,6 +2992,55 @@ def _intent_validation_contract(
     elif internal_signals:
         recommended_next_action = "Restore missing checked-in continuation ownership for partially archived intent."
 
+    external_work_reconciliation = {
+        "kind": "planning-external-work-reconciliation/v1",
+        "status": (
+            "attention"
+            if untracked_open
+            or landed_open_issue_reconciliation["counts"]["implemented_and_unclosed_count"]
+            or closeout_reconciliation["counts"]["likely_premature_closeout_count"]
+            or closeout_reconciliation["counts"]["needs_audit_count"]
+            else "ready"
+            if external_evidence.get("status") == "loaded"
+            else str(external_evidence.get("status", "absent"))
+        ),
+        "primary_owner": ".agentic-workspace/planning/state.toml",
+        "provider_rule": (
+            "Core planning consumes provider-agnostic external work evidence; provider-specific refresh belongs in optional adapters."
+        ),
+        "freshness": {
+            "status": external_evidence.get("status", "absent"),
+            "path": external_evidence.get("path", ""),
+            "refreshed_at": external_evidence.get("refreshed_at", ""),
+            "refresh_metadata": external_evidence.get("refresh_metadata", {}),
+            "fresh_enough_to_trust": external_evidence.get("status") == "loaded",
+        },
+        "external_work_state": {
+            "open_count": external_open,
+            "closed_count": external_closed,
+            "tracked_open_count": tracked_open,
+            "untracked_open_count": untracked_open,
+        },
+        "closeout_state": {
+            "status": closeout_reconciliation.get("status", "absent"),
+            "reconciled_count": closeout_reconciliation["counts"]["reconciled_count"],
+            "needs_audit_count": closeout_reconciliation["counts"]["needs_audit_count"],
+            "follow_up_open_count": closeout_reconciliation["counts"]["follow_up_open_count"],
+            "likely_premature_closeout_count": closeout_reconciliation["counts"]["likely_premature_closeout_count"],
+        },
+        "landed_open_state": {
+            "status": landed_open_issue_reconciliation.get("status", "absent"),
+            "implemented_and_unclosed_count": landed_open_issue_reconciliation["counts"]["implemented_and_unclosed_count"],
+            "ambiguous_open_reference_count": landed_open_issue_reconciliation["counts"]["ambiguous_open_reference_count"],
+        },
+        "detail_sections": [
+            "current_external_work",
+            "closeout_reconciliation",
+            "landed_open_issue_reconciliation",
+        ],
+        "recommended_next_action": recommended_next_action,
+    }
+
     refs = [
         ".agentic-workspace/planning/state.toml",
         *([str(external_evidence.get("path", ""))] if external_evidence.get("path") else []),
@@ -3021,6 +3071,7 @@ def _intent_validation_contract(
             "item_count": external_evidence.get("item_count", 0),
             "reason": external_evidence.get("reason", ""),
         },
+        "external_work_reconciliation": external_work_reconciliation,
         "current_external_work": current_external_work,
         "historical_audit_references": historical_audit_references,
         "counts": counts,

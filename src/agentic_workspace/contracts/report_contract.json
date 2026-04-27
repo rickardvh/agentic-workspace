@@ -26,6 +26,7 @@
     "maintenance_pressure",
     "operational_compression",
     "closeout_trust",
+    "external_work_reconciliation",
     "external_work_delta",
     "findings",
     "next_action",
@@ -47,6 +48,7 @@
     "surface effective standing intent with source provenance instead of leaving it implicit in chat",
     "surface one default execution-shaping answer when planning state and local posture together make it cheap to do so",
     "surface compact provider-agnostic external-work deltas when prior evidence is available",
+    "surface one provider-agnostic external-work reconciliation answer before provider-specific details",
     "let optimization bias change rendering density, not canonical truth or execution method",
     "route improvement signals through one intake model before promoting them to work, memory, docs, checks, or dismissal"
   ]

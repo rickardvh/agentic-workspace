@@ -116,3 +116,50 @@ candidates = []
     assert payload["kind"] == "planning-reconcile/v1"
     assert payload["external_work_state"]["closed_count"] == 1
     assert payload["stale_forward_state"]["closed_roadmap_lanes"][0]["id"] == "closed-lane"
+
+
+def test_workspace_summary_json_surfaces_external_work_reconciliation(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "refreshed_at": "2026-04-27T12:00:00+00:00",
+                "refresh_metadata": {"adapter": "manual-fixture", "item_count": 1, "open_count": 1, "closed_count": 0},
+                "items": [
+                    {
+                        "system": "manual",
+                        "id": "EXT-1",
+                        "title": "Open elsewhere",
+                        "status": "open",
+                        "kind": "task",
+                        "planning_residue_expected": "optional",
+                    }
+                ],
+            },
+            indent=2,
+        ),
+    )
+
+    exit_code = cli.main(["summary", "--target", str(tmp_path), "--format", "json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    reconciliation = payload["intent_validation_contract"]["external_work_reconciliation"]
+    assert reconciliation["kind"] == "planning-external-work-reconciliation/v1"
+    assert reconciliation["freshness"]["fresh_enough_to_trust"] is True
+    assert reconciliation["freshness"]["refresh_metadata"]["adapter"] == "manual-fixture"
+    assert reconciliation["external_work_state"]["open_count"] == 1

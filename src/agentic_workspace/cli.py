@@ -2921,6 +2921,10 @@ def _run_report_command(
     closeout_trust = _report_closeout_trust_payload(module_reports=module_reports)
     surface_value_guardrail = _surface_value_guardrail_payload()
     external_work_delta = _external_work_delta_payload(target_root=target_root)
+    external_work_reconciliation = _external_work_reconciliation_payload(
+        module_reports=module_reports,
+        external_work_delta=external_work_delta,
+    )
     payload = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -2974,6 +2978,7 @@ def _run_report_command(
         ),
         "findings": aggregated_findings,
         "closeout_trust": closeout_trust,
+        "external_work_reconciliation": external_work_reconciliation,
         "external_work_delta": external_work_delta,
         "next_action": next_action,
         "discovery": discovery,
@@ -3475,6 +3480,7 @@ def _report_profile_payload() -> dict[str, Any]:
             "effective_authority",
             "execution_shape",
             "improvement_intake",
+            "external_work_reconciliation",
             "maintenance_pressure",
         ],
         "router_shape_guard": {
@@ -3587,6 +3593,7 @@ def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "effective_authority": _report_router_effective_authority(payload.get("effective_authority", {})),
         "execution_shape": _report_router_execution_shape(payload.get("execution_shape", {})),
         "improvement_intake": _report_router_improvement_intake(payload.get("improvement_intake", {})),
+        "external_work_reconciliation": _report_router_external_work_reconciliation(payload.get("external_work_reconciliation", {})),
         "surface_value_guardrail": {
             "command": "agentic-workspace defaults --section surface_value_guardrail --format json",
             "prefer": payload.get("surface_value_guardrail", {}).get("preference_order", [])[:3],
@@ -3614,6 +3621,24 @@ def _report_router_improvement_intake(value: Any) -> dict[str, Any]:
         "allowed_destinations": value.get("allowed_destinations", []),
         "setup_findings": value.get("setup_findings", {}),
         "advanced_review_route": value.get("advanced_review_route", {}),
+    }
+
+
+def _report_router_external_work_reconciliation(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    return {
+        "kind": value.get("kind", "planning-external-work-reconciliation/v1"),
+        "status": value.get("status", "unknown"),
+        "primary_owner": value.get("primary_owner", ".agentic-workspace/planning/state.toml"),
+        "provider_rule": value.get("provider_rule", ""),
+        "freshness": value.get("freshness", {}),
+        "external_work_state": value.get("external_work_state", {}),
+        "closeout_state": value.get("closeout_state", {}),
+        "landed_open_state": value.get("landed_open_state", {}),
+        "detail_sections": value.get("detail_sections", []),
+        "recommended_next_action": value.get("recommended_next_action", ""),
+        "section_command": "agentic-workspace report --target ./repo --section external_work_reconciliation --format json",
     }
 
 
@@ -3784,6 +3809,7 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
         "reports": "workspace lifecycle report detail",
         "surface_value_guardrail": "surface growth review pressure",
         "closeout_trust": "closeout trust and lower-trust residue signals",
+        "external_work_reconciliation": "one provider-agnostic external-work route for evidence freshness, closeout reconciliation, and landed-open checks",
         "external_work_delta": "provider-agnostic external-work snapshot or delta from prior evidence when available",
         "discovery": "setup discovery and candidate surfaces",
         "standing_intent": "effective standing intent and stronger-home guidance",
@@ -3807,6 +3833,7 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
         "reports": "deep lifecycle detail; inspect only for report/debug work",
         "surface_value_guardrail": "inspect before adding or expanding a visible surface",
         "closeout_trust": "inspect before closing broad work or auditing package-use evidence",
+        "external_work_reconciliation": "inspect when deciding whether checked-in planning, external work state, and landed evidence agree",
         "external_work_delta": "inspect when external-work intake or closure state is part of the task",
         "discovery": "inspect during setup, bootstrap, or missing-surface diagnosis",
         "standing_intent": "inspect when product direction or stronger-home placement is the question",
@@ -4196,6 +4223,49 @@ def _external_work_delta_payload(*, target_root: Path) -> dict[str, Any]:
         "recommended_next_lane": _external_work_summary(recommended) if recommended else {},
         "delta_rule": "When previous_items is present, compare provider-agnostic item ids and statuses; otherwise report a compact current snapshot only.",
     }
+
+
+def _external_work_reconciliation_payload(
+    *,
+    module_reports: list[dict[str, Any]],
+    external_work_delta: dict[str, Any],
+) -> dict[str, Any]:
+    planning_report = next(
+        (report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"),
+        {},
+    )
+    intent_validation = planning_report.get("intent_validation", {}) if isinstance(planning_report, dict) else {}
+    planning_reconciliation = intent_validation.get("external_work_reconciliation", {}) if isinstance(intent_validation, dict) else {}
+    if isinstance(planning_reconciliation, dict) and planning_reconciliation:
+        payload = copy.deepcopy(planning_reconciliation)
+    else:
+        payload = {
+            "kind": "planning-external-work-reconciliation/v1",
+            "status": "unavailable",
+            "primary_owner": ".agentic-workspace/planning/state.toml",
+            "provider_rule": "Core planning consumes provider-agnostic external work evidence; provider-specific refresh belongs in optional adapters.",
+            "recommended_next_action": "Install or run planning summary before trusting external-work reconciliation.",
+        }
+    payload["workspace_report_view"] = {
+        "kind": "workspace-external-work-reconciliation-view/v1",
+        "section_command": "agentic-workspace report --target ./repo --section external_work_reconciliation --format json",
+        "delta_section": "external_work_delta",
+        "delta_status": external_work_delta.get("status", "unavailable"),
+        "delta_counts": {
+            "new_count": external_work_delta.get("new_count", 0),
+            "changed_count": external_work_delta.get("changed_count", 0),
+            "closed_count": external_work_delta.get("closed_count", 0),
+        },
+    }
+    payload.setdefault(
+        "detail_sections",
+        [
+            "current_external_work",
+            "closeout_reconciliation",
+            "landed_open_issue_reconciliation",
+        ],
+    )
+    return payload
 
 
 def _external_work_summary(item: dict[str, Any]) -> dict[str, Any]:
