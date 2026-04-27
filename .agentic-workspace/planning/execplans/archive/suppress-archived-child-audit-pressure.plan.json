@@ -1,0 +1,230 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Suppress Archived Child Audit Pressure",
+  "goal": [
+    "Implement #470 so finished-work inspection and compact summary stop recommending promotion of an archived child slice when a live active plan already owns the continuation for the same parent lane."
+  ],
+  "non_goals": [
+    "Do not delete archived closeout evidence.",
+    "Do not hide genuinely dangling partial closeouts.",
+    "Do not add host-specific tracker assumptions."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Archived child continuations that are already routed to an active same-parent plan are marked as routed historical evidence instead of active promotion candidates.",
+      "constraints": "Keep full/audit evidence available and preserve promotion pressure for dangling continuation records.",
+      "latitude": "Add a narrow active-continuation detector using checked-in plan references and existing role-aware issue refs.",
+      "escalation": "Escalate if suppression cannot distinguish same-parent active continuation from unrelated active work."
+    },
+    "execution": {
+      "milestone": "suppress-archived-child-audit-pressure",
+      "status": "completed",
+      "next_step": "Archive this completed slice and continue with the next #450 child lane.",
+      "proof": "planning package tests, ruff, planning surface check, proof selector, planning doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/suppress-archived-child-audit-pressure.plan.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py"
+      ],
+      "invariants": [
+        "Archived evidence remains inspectable in full/audit views.",
+        "Dangling partial continuations still produce derived follow-up candidates.",
+        "The compact summary should prefer current active execution over historical child residue."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#469/#467 remain after this slice unless validation proves they are satisfied or superseded.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #470 closeout, refresh external evidence and promote the next #450 child indicated by validation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Finished-work inspection now marks archived child continuations as routed when a live active plan owns the same parent lane, removing them from compact promotion pressure.",
+    "intentionally deferred": "#469/#467 remain separate #450 child lanes.",
+    "discovered implications": "This reduces autopilot churn from recently archived child slices without deleting audit evidence.",
+    "proof achieved now": "yes; planning package tests, ruff, planning-surface checks, proof selection, and planning doctor passed.",
+    "validation still needed": "none for this bounded slice",
+    "next likely slice": "refresh external evidence, then promote the next #450 child indicated by open issue state"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Suppress archived child audit pressure when continuation is already active.",
+    "hard constraints": "Do not hide genuinely dangling partial closeouts or remove audit evidence.",
+    "agent may decide locally": "How to detect active same-parent continuation from checked-in references.",
+    "escalate when": "The active plan cannot be linked to the archived child continuation without guessing."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Reduce noisy compact routing rather than adding new workflow surfaces.",
+    "broader-lane validation question": "Does compact summary route to the next real active lane instead of archived child residue?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/470"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/470",
+      "label": "#470 archived child audit pressure",
+      "role": "source_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "suppress-archived-child-audit-pressure",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive the completed plan, refresh external evidence, and promote the next #450 child lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/suppress-archived-child-audit-pressure.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "invariants": [
+    "Archived evidence remains inspectable in full/audit views.",
+    "Dangling partial continuations still produce derived follow-up candidates.",
+    "The compact summary should prefer current active execution over historical child residue."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "cd packages/planning && uv run pytest tests/test_installer.py -q",
+    "cd packages/planning && uv run ruff check .",
+    "uv run ruff check packages/planning/src packages/planning/tests",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/suppress-archived-child-audit-pressure.plan.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "Compact summary does not recommend promoting archived completed children when a live active plan owns the same parent continuation.",
+    "Full/audit inspection still exposes routed archived evidence.",
+    "Dangling partial closeouts still produce promotion candidates.",
+    "Tests cover active-routed and dangling cases."
+  ],
+  "execution_summary": {
+    "outcome delivered": "finished-work inspection suppresses archived child continuation candidates when a live active plan already owns the same parent continuation.",
+    "validation confirmed": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .; uv run ruff check packages/planning/src packages/planning/tests; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/suppress-archived-child-audit-pressure.plan.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge",
+    "post-work posterity capture": "No Memory or docs promotion needed; tests and archived closeout carry the reusable behavior.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next #450 child lane after external evidence refresh"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "codex",
+    "handoff source": ".agentic-workspace/planning/execplans/suppress-archived-child-audit-pressure.plan.json",
+    "what happened": "Added active-continuation suppression for finished-work derived candidates and covered routed and dangling continuation behavior in planning tests.",
+    "scope touched": "packages/planning finished-work inspection plus focused tests and planning surfaces",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/suppress-archived-child-audit-pressure.plan.json",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .; uv run ruff check packages/planning/src packages/planning/tests; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/suppress-archived-child-audit-pressure.plan.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "#470 is complete; #469/#467 remain under #450.",
+    "next step": "archive this plan, close #470, refresh external evidence, then continue the next open child lane"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed inside planning inspection behavior, focused tests, and planning state.",
+    "proof status": "validation and closure checks passed for the bounded slice.",
+    "intent served": "yes; compact summary no longer re-promotes already-routed #450 child residue while #470 is active.",
+    "config compliance": "yes; compact package commands and checked-in planning surfaces drove execution.",
+    "misinterpretation risk": "low; suppression requires an explicit unsolved intent plus same-parent active plan and does not affect dangling continuations.",
+    "follow-on decision": "archive-but-keep-lane-open for #450; continue #469/#467 separately."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-level execution detail is preserved only in the archived proof record.",
+          "owner": "discard",
+          "source": "execution_summary"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#469/#467 remain open under #450 after #470 closes.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "none",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "none",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#470 archived child audit pressure",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/470"
+        },
+        {
+          "summary": "#450 feature tiers and surface merge",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/450"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted after #471 closeout because compact summary still pointed at the just-archived child continuation."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Suppress archived child audit pressure when continuation is already active.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge activates a fresh bounded slice."
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .; uv run ruff check packages/planning/src packages/planning/tests; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/suppress-archived-child-audit-pressure.plan.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "proof achieved now": "yes; planning package tests, ruff, planning-surface checks, proof selection, and planning doctor passed.",
+    "evidence for \"proof achieved\" state": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .; uv run ruff check packages/planning/src packages/planning/tests; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/suppress-archived-child-audit-pressure.plan.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json; uv run agentic-workspace doctor --target . --modules planning --format json"
+  }
+}

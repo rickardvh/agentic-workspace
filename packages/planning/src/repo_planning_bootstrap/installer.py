@@ -3462,6 +3462,35 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
         ]
     derived_follow_up_candidates = active_derived_follow_up_candidates
 
+    routed_source_plans: set[str] = set()
+    active_routed_follow_up_candidates: list[dict[str, Any]] = []
+    routed_continuation = 0
+    for candidate in derived_follow_up_candidates:
+        routed_by = _finished_work_continuation_routed_by_active_plan(target_root=target_root, candidate=candidate)
+        if routed_by:
+            routed_continuation += 1
+            source_plan = str(candidate.get("source_plan", ""))
+            routed_source_plans.add(source_plan)
+            candidate["routed_by"] = routed_by
+            candidate["recommended_action"] = "no promotion; continuation is already active in checked-in planning"
+            for inspection in inspections:
+                if inspection.get("plan") == source_plan:
+                    inspection["classification"] = "routed_partial"
+                    inspection["routed_by"] = routed_by
+                    inspection["reason"] = (
+                        "Archived residue left larger intent open, but a live checked-in plan already owns the same parent continuation."
+                    )
+                    break
+            continue
+        active_routed_follow_up_candidates.append(candidate)
+    if routed_source_plans:
+        signals = [
+            signal
+            for signal in signals
+            if not (signal.get("kind") == "intent_continuation_required" and signal.get("path") in routed_source_plans)
+        ]
+    derived_follow_up_candidates = active_routed_follow_up_candidates
+
     if evidence.get("status") == "invalid":
         signals.append(
             {
@@ -3483,6 +3512,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
         "partial_count": partial,
         "likely_premature_closeout_count": likely_premature,
         "superseded_continuation_count": superseded_continuation,
+        "routed_continuation_count": routed_continuation,
         "role_aware_reference_plan_count": role_aware_reference_plan_count,
         "non_closure_reference_count": non_closure_reference_count,
         "derived_follow_up_candidate_count": len(derived_follow_up_candidates),
@@ -3495,7 +3525,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
         )
     elif evidence.get("status") == "invalid":
         recommended_next_action = "Repair optional finished-work evidence or remove it so closeout inspection trust is explicit."
-    elif partial:
+    elif derived_follow_up_candidates:
         recommended_next_action = (
             "Promote or explicitly route derived follow-up candidates before assuming archived partial-intent work was complete."
         )
@@ -3538,6 +3568,52 @@ def _candidate_source_mtime_ns(*, target_root: Path, candidate: dict[str, Any]) 
         return (target_root / source_plan).stat().st_mtime_ns
     except OSError:
         return 0
+
+
+def _finished_work_continuation_routed_by_active_plan(*, target_root: Path, candidate: dict[str, Any]) -> list[str]:
+    unsolved_intent = str(candidate.get("unsolved_intent", "")).strip().lower()
+    if not unsolved_intent or unsolved_intent in {"none", "n/a", "none yet"}:
+        return []
+    reference_roles = candidate.get("reference_roles", {})
+    if not isinstance(reference_roles, dict):
+        return []
+    by_role = reference_roles.get("by_role", {})
+    parent_refs = set(by_role.get("parent_intent", []) or []) if isinstance(by_role, dict) else set()
+    closure_refs = set(reference_roles.get("closure_refs", []) or [])
+    if not parent_refs:
+        return []
+
+    routed_by: list[str] = []
+    execplan_dir = target_root / ".agentic-workspace" / "planning" / "execplans"
+    if not execplan_dir.exists():
+        return []
+    for path in _live_execplan_paths(execplan_dir):
+        status = _execplan_status(path)
+        if not status or status in {"completed", "done", "closed", "planned", "pending", "not-started"}:
+            continue
+        active_roles = _execplan_issue_reference_roles(path)
+        active_by_role = active_roles.get("by_role", {}) if isinstance(active_roles, dict) else {}
+        active_parent_refs = set(active_by_role.get("parent_intent", []) or []) if isinstance(active_by_role, dict) else set()
+        active_closure_refs = set(active_roles.get("closure_refs", []) or []) if isinstance(active_roles, dict) else set()
+        if parent_refs & active_parent_refs and not (closure_refs & active_closure_refs):
+            routed_by.append(path.relative_to(target_root).as_posix())
+    return routed_by
+
+
+def _live_execplan_paths(execplan_dir: Path) -> list[Path]:
+    seen_stems: set[str] = set()
+    paths: list[Path] = []
+    for path in sorted(execplan_dir.glob("*.plan.json")):
+        if path.name == "TEMPLATE.plan.json":
+            continue
+        seen_stems.add(path.name[: -len(".plan.json")])
+        paths.append(path)
+    for path in sorted(execplan_dir.glob("*.md")):
+        if path.name in {"README.md", "TEMPLATE.md"}:
+            continue
+        if path.stem not in seen_stems:
+            paths.append(path)
+    return paths
 
 
 def _finished_work_continuation_superseded_by(

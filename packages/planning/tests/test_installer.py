@@ -4145,6 +4145,89 @@ def test_planning_summary_suppresses_child_continuation_consumed_by_later_parent
     assert summary["execution_readiness"]["status"] == "narrow-direct-ready"
 
 
+def test_planning_summary_suppresses_archived_child_when_continuation_is_active(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "active-follow-on", status = "in-progress", source = "github:#463", surface = ".agentic-workspace/planning/execplans/active-follow-on.plan.json", why_now = "active continuation for #461" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    active_path = tmp_path / ".agentic-workspace/planning/execplans/active-follow-on.plan.json"
+    _write_execplan_record(
+        active_path,
+        item_id="active-follow-on",
+        status="in-progress",
+        references=[
+            {
+                "kind": "github-issue",
+                "target": "#463",
+                "label": "active follow-on",
+                "role": "source_intent",
+                "locator": "issue",
+            },
+            {
+                "kind": "github-issue",
+                "target": "#461",
+                "label": "parent lane",
+                "role": "parent_intent",
+                "locator": "issue",
+            },
+        ],
+    )
+
+    archive_dir = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    child_path = archive_dir / "completed-child.plan.json"
+    _write_execplan_record(
+        child_path,
+        item_id="completed-child",
+        status="completed",
+        references=[
+            {
+                "kind": "github-issue",
+                "target": "#462",
+                "label": "completed child",
+                "role": "closed_item",
+                "locator": "issue",
+            },
+            {
+                "kind": "github-issue",
+                "target": "#461",
+                "label": "parent lane",
+                "role": "parent_intent",
+                "locator": "issue",
+            },
+        ],
+    )
+    child_record = json.loads(child_path.read_text(encoding="utf-8"))
+    child_record["intent_satisfaction"]["was original intent fully satisfied?"] = "no"
+    child_record["intent_satisfaction"]["unsolved intent passed to"] = ".agentic-workspace/planning/state.toml active continuation for #461"
+    child_record["closure_check"]["larger-intent status"] = "open"
+    child_record["closure_check"]["closure decision"] = "archive-but-keep-lane-open"
+    installer_mod._write_execplan_record(record_path=child_path, record=child_record)
+
+    summary = planning_summary(target=tmp_path)
+    contract = summary["finished_work_inspection_contract"]
+
+    assert contract["counts"]["partial_count"] == 1
+    assert contract["counts"]["routed_continuation_count"] == 1
+    assert contract["counts"]["derived_follow_up_candidate_count"] == 0
+    inspection = contract["inspections"][0]
+    assert inspection["classification"] == "routed_partial"
+    assert inspection["routed_by"] == [".agentic-workspace/planning/execplans/active-follow-on.plan.json"]
+    assert contract["derived_follow_up_candidates"] == []
+    assert summary["execution_readiness"]["status"] == "planning-backed"
+
+
 def test_planning_summary_uses_reference_roles_before_prose_issue_refs(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
