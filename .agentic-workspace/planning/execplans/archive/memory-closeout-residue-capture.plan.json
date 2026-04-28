@@ -1,0 +1,285 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Memory Closeout Residue Capture",
+  "goal": [
+    "Make Memory guidance and templates capture useful closeout-derived durable residue without absorbing plan history."
+  ],
+  "non_goals": [
+    "Do not reintroduce current-memory.",
+    "Do not copy archived plans into Memory.",
+    "Do not make Memory authoritative over active planning or canonical docs."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Closeout can route useful but not-yet-canonical motivation, constraints, and lessons into compact Memory notes.",
+      "constraints": "Memory remains anti-rediscovery knowledge, not plan history, backlog, validation logs, or active execution state.",
+      "latitude": "Update memory workflow, templates, payload mirrors, and focused tests.",
+      "escalation": "Escalate if implementation requires changing Memory authority semantics or broad manifest schema behavior."
+    },
+    "execution": {
+      "milestone": "#493",
+      "status": "completed",
+      "next_step": "Archive this plan, close #493, refresh external evidence, then promote the next durable-residue-routing slice.",
+      "proof": "Memory package tests, workspace CLI tests, ruff checks, memory/planning doctor, proof selector, and planning-surface check passed."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/memory/WORKFLOW.md",
+        ".agentic-workspace/memory/repo/templates/memory-note-template.md",
+        "packages/memory/bootstrap/.agentic-workspace/memory/WORKFLOW.md",
+        "packages/memory/bootstrap/.agentic-workspace/memory/repo/templates/memory-note-template.md",
+        "packages/memory/memory/templates/memory-note-template.md",
+        "packages/memory/tests/test_installer.py"
+      ],
+      "invariants": [
+        "Memory captures compact durable residue only when future work should not rediscover it.",
+        "Planning remains the owner of active/current execution state.",
+        "Canonical docs/contracts/checks remain stronger homes after promotion."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Route durable motivation and lessons out of planning archives.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane durable-residue-routing",
+    "parent lane": "durable-residue-routing (#491)"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #493 closes, promote the next open durable-residue-routing issue."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Planning closeout can route durable residue into Memory without relying on archived plan prose.",
+    "intentionally deferred": "Docs/contracts/checks promotion routing and archive retention summaries.",
+    "discovered implications": "",
+    "proof achieved now": "Memory workflow and note templates now define closeout-derived residue fields, promotion target/trigger, retention-after-promotion, and anti-plan-history guardrails.",
+    "validation still needed": "Package proof and closeout checks passed.",
+    "next likely slice": "#494"
+  },
+  "intent_interpretation": {
+    "literal request": "Repeat until done.",
+    "inferred intended outcome": "Continue implementing planned lanes in priority order while dogfooding package workflow.",
+    "chosen concrete what": "Implement #493, the next open issue in the active durable-residue-routing lane.",
+    "interpretation distance": "low",
+    "review guidance": "Check that Memory receives compact durable residue fields and explicit anti-plan-history guidance."
+  },
+  "execution_bounds": {
+    "allowed paths": "Memory workflow/template payloads, focused package memory tests, this execplan, and planning state.",
+    "max changed files": "about 10",
+    "required validation commands": "uv run pytest packages/memory/tests/test_installer.py -q; cd packages/memory; uv run ruff check .; uv run agentic-workspace proof --target . --changed <paths> --format json; uv run agentic-workspace doctor --target . --modules memory --format json; uv run python scripts/check/check_planning_surfaces.py",
+    "ask-before-refactor threshold": "Any broad installer refactor or manifest schema migration.",
+    "stop before touching": "Runtime CLI behavior unrelated to memory package payload or tests."
+  },
+  "stop_conditions": {
+    "stop when": "Acceptance criteria for #493 are met, validated, archived, committed, pushed, and the issue is closed.",
+    "escalate when boundary reached": "If Memory needs to become authoritative for active planning or canonical docs.",
+    "escalate on scope drift": "If changes spill into unrelated planning-state maturity or schema-validation lanes.",
+    "escalate on proof failure": "If proof points to a larger package regression beyond #493."
+  },
+  "context_budget": {
+    "live working set": "Memory workflow, memory-note template mirrors, memory installer tests, active execplan.",
+    "recoverable later": "Issue body #493 and archived closeout for #492.",
+    "externalize before shift": "Keep this execplan updated with next action and proof.",
+    "pre-work config pull": "agentic-workspace summary/report already run.",
+    "pre-work memory pull": "memory-capture skill selected for this task.",
+    "tiny resumability note": "Implementing #493 closeout-derived durable residue fields in Memory guidance/templates.",
+    "context-shift triggers": "Before moving to #494 or after validation failure."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement remaining planned work lane by lane.",
+    "hard constraints": "Dogfood package; commit/push per milestone; preserve repo-/agent-/tool-/language-agnostic shipped package behavior.",
+    "agent may decide locally": "Exact wording and template section shape.",
+    "escalate when": "Authority model, broad surface footprint, or package architecture would change."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#493",
+      "label": "Capture useful but not-yet-canonical motivation from completed work",
+      "role": "source_intent",
+      "locator": "GitHub issue #493"
+    },
+    {
+      "kind": "issue",
+      "target": "#491",
+      "label": "durable residue routing parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue #491"
+    },
+    {
+      "kind": "issue",
+      "target": "#492",
+      "label": "durable residue closeout gate",
+      "role": "prerequisite",
+      "locator": "GitHub issue #492"
+    }
+  ],
+  "active_milestone": {
+    "id": "memory-closeout-residue-capture",
+    "status": "completed",
+    "scope": "Memory workflow/templates/tests for closeout-derived durable residue",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Patch Memory workflow and templates with closeout-derived durable residue fields and anti-plan-history guardrails."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/memory-closeout-residue-capture.plan.json"
+  ],
+  "invariants": [
+    "Memory is durable repo knowledge, not active planning state.",
+    "Closeout-derived Memory notes capture compact lessons, not archived plan history.",
+    "Promotion target and post-promotion retention are explicit."
+  ],
+  "contract_decisions_to_freeze": [
+    "Closeout-derived Memory note fields should include motivation, why it matters, load/use routing, promotion target, promotion trigger, and retention-after-promotion."
+  ],
+  "open_questions_to_close": [
+    "Which exact template section names best support future capture without growing notes into reports?"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/memory/tests/test_installer.py -q",
+    "cd packages/memory; uv run ruff check .",
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run agentic-workspace doctor --target . --modules memory --format json",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Memory workflow clearly describes closeout-derived durable residue.",
+    "Memory note template supports promotion target and retention-after-promotion.",
+    "Planning closeout can route useful but not-canonical learning to Memory.",
+    "Tests or docs prevent plan-history dumps into Memory."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "repeat until done",
+    "what happened": "Added closeout-derived residue guidance to Memory workflow and note templates, mirrored it into the shipped memory payload, aligned the package source template, and added package tests for the fields and anti-plan-history guardrail.",
+    "scope touched": "Memory workflow/template payloads, memory package template, package tests, planning state and active execplan",
+    "changed surfaces": ".agentic-workspace/memory/WORKFLOW.md; .agentic-workspace/memory/repo/templates/memory-note-template.md; packages/memory/bootstrap/.agentic-workspace/memory/WORKFLOW.md; packages/memory/bootstrap/.agentic-workspace/memory/repo/templates/memory-note-template.md; packages/memory/memory/templates/memory-note-template.md; packages/memory/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/memory-closeout-residue-capture.plan.json",
+    "validations run": "uv run pytest packages/memory/tests/test_installer.py -q; cd packages/memory; uv run ruff check .; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed <paths> --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace doctor --target . --modules memory --format json",
+    "result for continuation": "#493 acceptance is satisfied; #494 and #495 remain in durable-residue-routing.",
+    "next step": "Archive this plan with cleanup and continue #494."
+  },
+  "finished_run_review": {
+    "review status": "reviewed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "Package summary/report used before promotion; memory-capture skill selected; proof selector and doctor checks used for validation.",
+    "misinterpretation risk": "low",
+    "follow-on decision": "Archive #493 but keep #491 lane open for #494 and #495."
+  },
+  "proof_report": {
+    "validation proof": "Passed: uv run pytest packages/memory/tests/test_installer.py -q; cd packages/memory; uv run ruff check .; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed <paths> --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace doctor --target . --modules memory --format json.",
+    "proof achieved now": "Memory workflow clearly describes closeout-derived durable residue; note templates support source closeout, motivation, why-it-matters, use-when routing, promotion target/trigger, and retention-after-promotion; tests assert the shipped payload and anti-plan-history guardrail.",
+    "evidence for \"proof achieved\" state": "packages/memory/tests/test_installer.py asserts workflow and template fields; package and workspace tests pass; memory/planning doctors report healthy."
+  },
+  "intent_satisfaction": {
+    "original intent": "#493 acceptance criteria",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Memory workflow and note templates now define closeout-derived residue fields, promotion target/trigger, retention-after-promotion, and anti-plan-history guardrails; package tests assert the shipped payload.",
+    "unsolved intent passed to": "#494 and #495 remain in .agentic-workspace/planning/state.toml roadmap lane durable-residue-routing"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package cheaper to use while preserving recoverable intent and proof.",
+    "slice shaping bias": "Add compact routing fields, not new broad reading surfaces.",
+    "broader-lane validation question": "Can durable lessons leave archived plans without turning Memory into plan history?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#493 is a bounded slice of #491; Memory capture guidance landed, while docs/contracts/checks promotion and retention-summary slices remain open.",
+    "evidence carried forward": "uv run pytest packages/memory/tests/test_installer.py -q; cd packages/memory; uv run ruff check .; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace doctor --target . --modules memory --format json; uv run python scripts/check/check_planning_surfaces.py",
+    "reopen trigger": "A closeout-derived Memory note cannot record motivation, why-it-matters, use-when routing, promotion target/trigger, and retention-after-promotion without dumping plan history."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout-derived lessons need an owner and promotion path so archived plans do not become the only durable source.",
+    "motivation worth preserving": "Memory should carry compact anti-rediscovery knowledge from completed work while preserving planning/docs/contracts as stronger homes.",
+    "canonical owner now": ".agentic-workspace/planning/state.toml roadmap lane durable-residue-routing",
+    "promotion trigger": "After #493 lands, continue #494/#495 for docs/contracts/checks and retention summaries.",
+    "retention after promotion": "shrink"
+  },
+  "execution_summary": {
+    "outcome delivered": "Closeout-derived durable residue can now be captured in compact Memory notes without absorbing plan history.",
+    "validation confirmed": "Memory package tests, workspace CLI tests, ruff checks, proof selector, memory/planning doctor, and planning-surface check passed.",
+    "follow-on routed to": "#494 and #495 in durable-residue-routing",
+    "post-work posterity capture": "No new Memory note required; the durable lesson was promoted into the Memory workflow and template contract.",
+    "knowledge promoted (Memory/Docs/Config)": "Memory workflow and memory-note template",
+    "resume from": ".agentic-workspace/planning/execplans/memory-closeout-residue-capture.plan.json"
+  },
+  "improvement_signal_review": {
+    "status": "none",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Discard implementation transcript, command output detail, and plan-history narration.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#494 and #495 remain in durable-residue-routing.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Closeout-derived residue belongs in compact Memory fields only when it preserves future-relevant motivation, constraint, or lesson without plan history.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "Memory workflow and memory-note template",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Capture useful but not-yet-canonical motivation from completed work",
+          "owner": "issue",
+          "source": "#493"
+        },
+        {
+          "summary": "durable residue routing parent",
+          "owner": "issue",
+          "source": "#491"
+        },
+        {
+          "summary": "durable residue closeout gate",
+          "owner": "issue",
+          "source": "#492"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #493 into active planning.",
+    "2026-04-28: Implemented and validated Memory closeout-derived residue guidance."
+  ]
+}

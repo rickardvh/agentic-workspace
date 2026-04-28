@@ -2791,6 +2791,12 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
     assert "memory should help plans stay smaller by holding durable context that execplans can reference instead of repeating" in text
     assert "Repeated plan re-explanation or restart friction is a missing-synergy signal" in text
     assert "do not absorb plan history or milestone narration into memory" in text
+    assert "## Closeout-derived residue" in text
+    assert (
+        "Do not paste plan history, milestone logs, validation transcripts, backlog state, or archived-plan narration into memory" in text
+    )
+    assert "`promotion_target`" in text
+    assert "`retention_after_promotion`" in text
     assert "## Starter templates" in text
     assert ".agentic-workspace/memory/repo/templates/memory-note-template.md" in text
     assert "## Improvement metadata quick reference" in text
@@ -2868,6 +2874,15 @@ def test_memory_note_template_includes_improvement_signal_metadata() -> None:
     assert "`elimination_target`" in text
     assert "`config_treatment`" in text
     assert "`config_note`" in text
+    assert "## Closeout-derived residue" in text
+    assert "`source_closeout`" in text
+    assert "`motivation`" in text
+    assert "`why_it_matters`" in text
+    assert "`use_when`" in text
+    assert "`promotion_target`" in text
+    assert "`promotion_trigger`" in text
+    assert "`retention_after_promotion`" in text
+    assert "Do not paste plan history, milestone logs, validation transcripts, backlog state, or archived-plan narration here." in text
 
 
 def test_bootstrap_task_context_starter_is_not_shipped() -> None:

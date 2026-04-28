@@ -22,10 +22,28 @@ Optional when the note exists because of repo friction rather than durable truth
 - `memory_role`: `durable_truth` or `improvement_signal`
 - `preferred_remediation`: `docs` | `skill` | `script` | `test` | `validation` | `refactor` | `code`
 - `elimination_target`: `shrink` | `promote` | `automate` | `refactor_away`
+- `config_treatment`: `promote` | `cleanup` | `retain` | `no_action`
+- `config_note`: short note describing which current config rule or posture shaped that treatment
 
 Use these when you want the package to recommend an upstream improvement that should reduce the note later.
 Prefer a concrete remediation target and an explicit post-remediation memory shape over vague prose.
 If the likely post-remediation shape is "delete this note", say so explicitly instead of assuming the note will continue by default.
+Use `config_treatment = "no_action"` with a short `config_note` when current config does not materially change treatment but you still need that non-effect to be explicit.
+
+## Closeout-derived residue
+
+Use this section only when the note is created from completed work or planning closeout:
+
+- `source_closeout`: issue, plan, PR, commit, or other closeout surface
+- `motivation`: compact motivation, constraint, or lesson worth preserving
+- `why_it_matters`: why future work should act differently because this exists
+- `use_when`: when an agent should load or apply this residue
+- `promotion_target`: likely canonical owner, such as docs, contracts, checks, code, or planning
+- `promotion_trigger`: concrete signal that should move the truth to the stronger home
+- `retention_after_promotion`: retain | shrink | stub | delete
+
+Do not paste plan history, milestone logs, validation transcripts, backlog state, or archived-plan narration here.
+If the residue is already canonical elsewhere, update that owner first and keep this note as a compact routing stub only when it still saves rediscovery.
 
 ## Scope
 

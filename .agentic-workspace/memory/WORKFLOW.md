@@ -53,6 +53,14 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Ask what repo change would eliminate or shrink the note: canonical docs, stronger tests, validation, a script, a skill, or a clearer design boundary.
 - Ask whether the note should still exist at all after that repo change; prefer a stub, short residue note, or deletion over carrying full prose forward by default.
 
+## Closeout-derived residue
+
+- A closeout-derived memory note captures only the compact motivation, constraint, or lesson that future work should not rediscover.
+- Do not paste plan history, milestone logs, validation transcripts, backlog state, or archived-plan narration into memory.
+- Include why the lesson matters for future work, when to load or use it, its likely canonical owner or promotion target, the promotion trigger, and the intended post-promotion note shape: retain, shrink, stub, or delete.
+- If the residue already has a stronger home in docs, contracts, checks, code, or planning state, update that home first and leave only a short memory stub when routing value remains.
+- If no future work would act differently because of the residue, discard it instead of creating a note.
+
 ## Metadata
 
 - Keep strong note metadata so routing and future skills remain reliable.
@@ -80,6 +88,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - `elimination_target` should describe the intended post-remediation shape: shrink, promote, automate, or refactor away.
 - `config_treatment` and `config_note` should always be present for `improvement_signal` notes, even when the answer is `no_action`, so config-shaped treatment does not stay implicit.
 - `retention_justification` is the fallback when a note remains justified even though it is also an improvement signal.
+- Closeout-derived notes should also name `source_closeout`, `promotion_target`, `promotion_trigger`, and `retention_after_promotion` when those are known.
 - Use the quick reminder in `.agentic-workspace/memory/repo/templates/memory-note-template.md` when you are writing the note itself and the fuller workflow below when deciding how to route follow-through.
 
 ## Canonical-doc boundary
