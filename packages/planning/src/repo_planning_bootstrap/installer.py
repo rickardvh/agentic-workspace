@@ -24,6 +24,7 @@ PLANNING_SKILLS_MANAGED_ROOT = PLANNING_MANAGED_ROOT / "skills"
 PLANNING_MANIFEST_PATH = PLANNING_MANAGED_ROOT / "agent-manifest.json"
 PLANNING_STATE_PATH = PLANNING_MANAGED_ROOT / "state.toml"
 PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "external-intent-evidence.json"
+PLANNING_EXTERNAL_INTENT_CACHE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 PLANNING_FINISHED_WORK_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "finished-work-evidence.json"
 PLANNING_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
 PLANNING_STATE_KIND = "agentic-planning-state"
@@ -3381,6 +3382,7 @@ def _intent_validation_contract(
     current_external_work = {
         "status": external_evidence.get("status", "absent"),
         "path": external_evidence.get("path", ""),
+        "storage": external_evidence.get("storage", ""),
         "kind": external_evidence.get("kind", ""),
         "systems": external_evidence.get("systems", []),
         "refreshed_at": external_evidence.get("refreshed_at", ""),
@@ -4462,17 +4464,25 @@ def _is_live_planning_tracking_ref(relative_path: str) -> bool:
 
 
 def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
-    path = target_root / PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH
-    relative_path = PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH.as_posix()
+    cache_path = target_root / PLANNING_EXTERNAL_INTENT_CACHE_PATH
+    if cache_path.exists():
+        path = cache_path
+        relative_path = PLANNING_EXTERNAL_INTENT_CACHE_PATH.as_posix()
+        storage_class = "cache"
+    else:
+        path = target_root / PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH
+        relative_path = PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH.as_posix()
+        storage_class = "planning-legacy"
     if not path.exists():
         return {
             "status": "absent",
             "path": relative_path,
+            "storage": "cache",
             "kind": "planning-external-intent-evidence/v1",
             "systems": [],
             "item_count": 0,
             "items": [],
-            "reason": "optional evidence file not present",
+            "reason": "optional external intent cache not present",
         }
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -4480,6 +4490,7 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
         return {
             "status": "invalid",
             "path": relative_path,
+            "storage": storage_class,
             "kind": "planning-external-intent-evidence/v1",
             "systems": [],
             "item_count": 0,
@@ -4490,6 +4501,7 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
         return {
             "status": "invalid",
             "path": relative_path,
+            "storage": storage_class,
             "kind": "planning-external-intent-evidence/v1",
             "systems": [],
             "item_count": 0,
@@ -4522,6 +4534,7 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
     return {
         "status": "loaded",
         "path": relative_path,
+        "storage": storage_class,
         "kind": "planning-external-intent-evidence/v1",
         "systems": systems,
         "refreshed_at": str(payload.get("refreshed_at", "") or refresh_metadata.get("refreshed_at", "")),

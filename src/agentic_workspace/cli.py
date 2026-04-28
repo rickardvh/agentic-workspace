@@ -1129,6 +1129,7 @@ def main(argv: list[str] | None = None) -> int:
                     repo=getattr(args, "repo", None),
                     limit=getattr(args, "limit", None),
                     state=getattr(args, "state", None),
+                    storage=str(getattr(args, "storage", "cache") or "cache"),
                     dry_run=bool(getattr(args, "dry_run", False)),
                 )
                 _emit_payload(payload=payload, format_name=args.format)
@@ -1197,6 +1198,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("The planning module must be installed to use the reconcile command.")
         except WorkspaceUsageError as exc:
             parser.error(str(exc))
+        _ensure_external_intent_cache_if_available(target_root=target_root)
         payload = planning_reconcile(target=target_root)
         if args.format == "json":
             _emit_payload(payload=payload, format_name=args.format)
@@ -1241,6 +1243,8 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             except WorkspaceUsageError as exc:
                 parser.error(str(exc))
+        if getattr(args, "section", None) in {"external_work_reconciliation", "external_work_delta"}:
+            _ensure_external_intent_cache_if_available(target_root=target_root)
         payload = _run_report_command(
             target_root=target_root,
             selected_modules=selected_modules,
@@ -1809,6 +1813,8 @@ def _write_generated_text(*, destination: Path, text: str, dry_run: bool) -> Non
 
 
 LOCAL_ONLY_INSTALL_ROOT = Path(".agentic-workspace") / "local-only"
+EXTERNAL_INTENT_CACHE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
+EXTERNAL_INTENT_PLANNING_RELATIVE_PATH = Path(".agentic-workspace") / "planning" / "external-intent-evidence.json"
 LOCAL_ONLY_IGNORE_BLOCK = "# Agentic Workspace local-only storage\n.agentic-workspace/\n"
 LOCAL_ONLY_STATE_FILE = Path("LOCAL-ONLY.toml")
 
@@ -5061,13 +5067,14 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any]) -> di
 
 
 def _external_work_delta_payload(*, target_root: Path) -> dict[str, Any]:
-    evidence_path = target_root / ".agentic-workspace" / "planning" / "external-intent-evidence.json"
+    evidence_path, evidence_relative_path, evidence_storage = _external_intent_evidence_read_location(target_root)
     provider_rule = "Core planning consumes provider-agnostic external work evidence; provider adapters may refresh it."
     if not evidence_path.is_file():
         return {
             "status": "unavailable",
-            "reason": "external intent evidence is absent",
+            "reason": "external intent evidence cache is absent",
             "provider_rule": provider_rule,
+            "storage": evidence_storage,
             "open_count": 0,
             "changed_count": 0,
             "closed_count": 0,
@@ -5080,6 +5087,7 @@ def _external_work_delta_payload(*, target_root: Path) -> dict[str, Any]:
             "status": "invalid",
             "reason": str(exc),
             "provider_rule": provider_rule,
+            "storage": evidence_storage,
             "open_count": 0,
             "changed_count": 0,
             "closed_count": 0,
@@ -5105,7 +5113,8 @@ def _external_work_delta_payload(*, target_root: Path) -> dict[str, Any]:
     return {
         "status": status,
         "provider_rule": provider_rule,
-        "source": ".agentic-workspace/planning/external-intent-evidence.json",
+        "source": evidence_relative_path,
+        "storage": evidence_storage,
         "refreshed_at": str(payload.get("refreshed_at", "") or refresh_metadata.get("refreshed_at", "")),
         "refresh_metadata": {
             "adapter": str(refresh_metadata.get("adapter", "")),
@@ -5181,7 +5190,49 @@ def _external_work_summary(item: dict[str, Any]) -> dict[str, Any]:
 
 
 def _external_intent_evidence_path(target_root: Path) -> Path:
-    return target_root / ".agentic-workspace" / "planning" / "external-intent-evidence.json"
+    return target_root / EXTERNAL_INTENT_CACHE_RELATIVE_PATH
+
+
+def _external_intent_planning_evidence_path(target_root: Path) -> Path:
+    return target_root / EXTERNAL_INTENT_PLANNING_RELATIVE_PATH
+
+
+def _external_intent_evidence_write_location(target_root: Path, storage: str) -> tuple[Path, str, str]:
+    if storage == "cache":
+        return target_root / EXTERNAL_INTENT_CACHE_RELATIVE_PATH, EXTERNAL_INTENT_CACHE_RELATIVE_PATH.as_posix(), "cache"
+    if storage == "planning":
+        return target_root / EXTERNAL_INTENT_PLANNING_RELATIVE_PATH, EXTERNAL_INTENT_PLANNING_RELATIVE_PATH.as_posix(), "planning"
+    raise WorkspaceUsageError("--storage must be one of: cache, planning.")
+
+
+def _external_intent_evidence_read_location(target_root: Path) -> tuple[Path, str, str]:
+    cache_path = target_root / EXTERNAL_INTENT_CACHE_RELATIVE_PATH
+    if cache_path.exists():
+        return cache_path, EXTERNAL_INTENT_CACHE_RELATIVE_PATH.as_posix(), "cache"
+    planning_path = target_root / EXTERNAL_INTENT_PLANNING_RELATIVE_PATH
+    return planning_path, EXTERNAL_INTENT_PLANNING_RELATIVE_PATH.as_posix(), "planning-legacy"
+
+
+def _ensure_external_intent_cache_if_available(target_root: Path) -> dict[str, Any]:
+    cache_path = target_root / EXTERNAL_INTENT_CACHE_RELATIVE_PATH
+    if cache_path.exists():
+        return {"status": "present", "path": EXTERNAL_INTENT_CACHE_RELATIVE_PATH.as_posix()}
+    try:
+        return _refresh_github_external_intent_evidence(
+            target_root=target_root,
+            repo=None,
+            limit=None,
+            state=None,
+            storage="cache",
+            dry_run=False,
+        )
+    except WorkspaceUsageError as exc:
+        return {
+            "status": "unavailable",
+            "reason": str(exc),
+            "path": EXTERNAL_INTENT_CACHE_RELATIVE_PATH.as_posix(),
+            "provider_rule": "GitHub reconstruction is optional; missing gh leaves offline planning usable.",
+        }
 
 
 def _run_gh_json(args: list[str], *, cwd: Path) -> Any:
@@ -5326,27 +5377,25 @@ def _refresh_github_external_intent_evidence(
     repo: str | None,
     limit: int | None,
     state: str | None,
+    storage: str,
     dry_run: bool,
 ) -> dict[str, Any]:
-    evidence_path = _external_intent_evidence_path(target_root)
+    evidence_path, evidence_relative_path, storage_class = _external_intent_evidence_write_location(target_root, storage)
     previous_payload = _load_existing_external_intent_evidence(evidence_path)
-    previous_metadata = previous_payload.get("refresh_metadata", {}) if isinstance(previous_payload, dict) else {}
-    previous_state = str(previous_metadata.get("state", "")).strip() if isinstance(previous_metadata, dict) else ""
-    previous_limit = previous_metadata.get("limit") if isinstance(previous_metadata, dict) else None
 
     resolved_state = str(state).strip() if state is not None else ""
     state_source = "explicit" if resolved_state else "default"
     if not resolved_state:
-        resolved_state = previous_state if previous_state in {"open", "closed", "all"} else "open"
-        state_source = "previous_evidence" if previous_state in {"open", "closed", "all"} else "product_default"
+        resolved_state = "open"
+        state_source = "product_default"
     if resolved_state not in {"open", "closed", "all"}:
         raise WorkspaceUsageError("--state must be one of: open, closed, all.")
 
     resolved_limit = limit
     limit_source = "explicit" if resolved_limit is not None else "default"
     if resolved_limit is None:
-        resolved_limit = previous_limit if isinstance(previous_limit, int) and previous_limit > 0 else 1000
-        limit_source = "previous_evidence" if isinstance(previous_limit, int) and previous_limit > 0 else "product_default"
+        resolved_limit = 1000
+        limit_source = "product_default"
     if resolved_limit <= 0:
         raise WorkspaceUsageError("--limit must be greater than 0.")
     resolved_repo = _resolve_github_repo_for_external_intent(target_root=target_root, repo=repo)
@@ -5404,7 +5453,8 @@ def _refresh_github_external_intent_evidence(
         "provider": "github",
         "adapter": "github-gh-cli",
         "target": target_root.as_posix(),
-        "path": ".agentic-workspace/planning/external-intent-evidence.json",
+        "storage": storage_class,
+        "path": evidence_relative_path,
         "dry_run": dry_run,
         "written": not dry_run,
         "repository": resolved_repo,

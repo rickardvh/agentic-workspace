@@ -1,19 +1,21 @@
 # External Intent Evidence Contract
 
-This contract defines the optional external-planning evidence artifact consumed by planning intent-validation surfaces.
+This contract defines the optional external-planning evidence payload consumed by planning intent-validation surfaces.
 
 Use it when a repo has planning evidence outside the checked-in planning state and wants the product to reconcile that evidence without making any external system authoritative.
 
 ## Rule
 
 - checked-in planning state remains primary
-- external evidence is optional
+- external evidence is optional and reconstructable
 - absence of external evidence must not break summary or report
 - invalid external evidence should reduce trust visibly instead of silently failing
+- ordinary provider refreshes should write ignored local cache, not checked-in history mirrors
 
 ## Artifact Path
 
-- `.agentic-workspace/planning/external-intent-evidence.json`
+- `.agentic-workspace/local/cache/external-intent-evidence.json` for ordinary ignored cache
+- `.agentic-workspace/planning/external-intent-evidence.json` only as a legacy/manual compatibility input
 
 ## Accepted Shape
 
@@ -59,7 +61,7 @@ Use it when a repo has planning evidence outside the checked-in planning state a
   - `none`: do not treat missing checked-in residue as suspicious by itself
 - `refreshed_at`: optional timestamp for the evidence refresh run
 - `refresh_metadata`: optional compact adapter metadata; consumers may surface it to show whether evidence may be stale
-- provider adapters should keep ordinary refreshes small; for example, a GitHub adapter may default to open issues and require an explicit audit mode for all closed history
+- provider adapters should keep ordinary refreshes small; for example, a GitHub adapter defaults to open issues and requires explicit `--state all` for closed-history audits
 - `url`, `source_repository`, `labels`, and timestamp fields: optional provider details retained as evidence, not authority
 
 ## Intended Use

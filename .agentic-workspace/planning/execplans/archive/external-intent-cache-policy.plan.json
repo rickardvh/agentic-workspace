@@ -1,0 +1,256 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Treat external intent evidence as reconstructable cache",
+  "goal": [
+    "Implement #536 by making ordinary GitHub external intent refresh produce ignored reconstructable cache state rather than checked-in full-history snapshots.",
+    "Prevent previous state=all audit scope from becoming the default refresh scope."
+  ],
+  "non_goals": [
+    "Do not remove provider-agnostic reconciliation behavior.",
+    "Do not make GitHub required for the core package.",
+    "Do not implement #537, #538, #539, or #540 in this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "external work evidence is cache-like and reconstructable by default",
+      "constraints": "host-agnostic core, GitHub optional adapter, offline fallback remains readable",
+      "latitude": "may alter refresh command defaults, cache path, ignore rules, tests, inventory, and repo evidence state",
+      "escalation": "stop if ordinary summary/reconcile must require network access"
+    },
+    "execution": {
+      "milestone": "#536",
+      "status": "completed",
+      "next_step": "archive this slice and promote #537",
+      "proof": "uv run pytest tests/test_workspace_cli.py -q (207 passed); uv run ruff check src tests (passed); uv run agentic-workspace defaults --section root_cli_authority --format json (review-ready); cd packages/planning; uv run pytest tests/test_installer.py (151 passed); cd packages/planning; uv run ruff check . (passed); uv run agentic-workspace doctor --target . --modules planning --format json (healthy); uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success (passed); uv run python scripts/check/check_planning_surfaces.py (passed); uv run python scripts/check/check_structured_file_inventory.py --quiet-success (passed)"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/cli_commands.json",
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_summary_cli.py",
+        ".gitignore",
+        ".agentic-workspace/planning/state.toml",
+        "src/agentic_workspace/contracts/structured_file_inventory.json"
+      ],
+      "invariants": [
+        "GitHub remains an optional adapter",
+        "checked-in planning state stores routing decisions, not raw external issue mirrors",
+        "missing gh produces a clear optional-adapter failure path"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "stop checking in reconstructable artifact residue",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "reconstructable-artifact-policy"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#537, #538, #539, and #540 remain after #536.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #536 lands"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "external intent refresh no longer makes tracked snapshots the easy path",
+    "intentionally deferred": "#537 #538 #539 #540",
+    "discovered implications": "",
+    "proof achieved now": "",
+    "validation still needed": "",
+    "next likely slice": "#537"
+  },
+  "intent_interpretation": {
+    "literal request": "Finish the current reconstructable-artifact lane, then stop.",
+    "inferred intended outcome": "complete the active product-shape compression lane without switching to new review findings",
+    "chosen concrete what": "implement #536 as the next lane slice",
+    "interpretation distance": "low",
+    "review guidance": "verify default behavior is cache/local and explicit writes remain opt-in"
+  },
+  "execution_bounds": {
+    "allowed paths": "external intent refresh/read paths, tests, inventory, planning state, ignore rules",
+    "max changed files": "10",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "broad planning package extraction or mandatory network reconciliation",
+    "stop before touching": "unrelated startup review findings"
+  },
+  "stop_conditions": {
+    "stop when": "ordinary refresh writes ignored cache and tracked snapshot is removed",
+    "escalate when boundary reached": "offline reconcile cannot remain functional",
+    "escalate on scope drift": "work starts compressing archives/reviews/generated mirrors",
+    "escalate on proof failure": "selected validation cannot pass"
+  },
+  "context_budget": {
+    "live working set": "issue #536, external intent refresh functions/tests, summary/reconcile evidence loading",
+    "recoverable later": "full #541 archive and child issues",
+    "externalize before shift": "active execplan and state.toml",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "finish #536 cache path and refresh defaults",
+    "context-shift triggers": "before commit or after validation failure"
+  },
+  "delegated_judgment": {
+    "requested outcome": "read-only recommendation on cache/reconstruction approach",
+    "hard constraints": "do not edit, keep package host-agnostic",
+    "agent may decide locally": "field names and flags",
+    "escalate when": "recommendation requires mandatory GitHub in core"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#536",
+      "label": "external intent cache",
+      "role": "active slice",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/536"
+    }
+  ],
+  "active_milestone": {
+    "id": "#536",
+    "status": "completed",
+    "scope": "external intent evidence storage/defaults",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "subagent read-only reviews"
+  },
+  "immediate_next_action": [
+    "Move default refresh writes to an ignored cache path and update tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/cli_commands.json",
+    "tests/test_workspace_cli.py",
+    "tests/test_workspace_summary_cli.py",
+    ".gitignore",
+    ".agentic-workspace/planning/state.toml",
+    "src/agentic_workspace/contracts/structured_file_inventory.json"
+  ],
+  "invariants": [
+    "No GitHub requirement in core package behavior.",
+    "Provider-specific refresh remains optional adapter behavior.",
+    "Checked-in full-history evidence is not the default persistence layer."
+  ],
+  "contract_decisions_to_freeze": [
+    "Default refresh state is open and default limit is product-owned, not inherited from prior evidence.",
+    "Ordinary refresh writes local ignored cache unless explicitly asked to write the legacy checked path."
+  ],
+  "open_questions_to_close": [
+    "How should existing absent-cache summary behave?"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py tests/test_structured_file_inventory.py -q",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Refresh defaults no longer inherit state=all/limit from previous evidence.",
+    "Default refresh output path is ignored/local cache.",
+    "Tracked external-intent-evidence snapshot is removed from the repo.",
+    "Tests cover default cache write and missing gh fallback."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with two read-only subagent reviews",
+    "handoff source": "issue #536 and active checked-in execplan",
+    "what happened": "Default GitHub external intent refresh now writes ignored local cache, no longer inherits previous all-history audit scope, removes the checked-in evidence snapshot, and lets reconcile/report section reconstruct cache when gh is available while falling back cleanly when it is not.",
+    "scope touched": "workspace CLI external intent adapter, planning evidence loader, docs/contracts/tests, ignore rules, and planning state",
+    "changed surfaces": "removed tracked .agentic-workspace/planning/external-intent-evidence.json; added cache storage semantics to existing commands/contracts",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q (207 passed); uv run ruff check src tests (passed); uv run agentic-workspace defaults --section root_cli_authority --format json (review-ready); cd packages/planning; uv run pytest tests/test_installer.py (151 passed); cd packages/planning; uv run ruff check . (passed); uv run agentic-workspace doctor --target . --modules planning --format json (healthy); uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success (passed); uv run python scripts/check/check_planning_surfaces.py (passed); uv run python scripts/check/check_structured_file_inventory.py --quiet-success (passed)",
+    "result for continuation": "#536 complete; #537 remains next in reconstructable-artifact-policy lane",
+    "next step": "#537"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no mandatory GitHub dependency was added to core planning",
+    "proof status": "passed",
+    "intent served": "yes; raw external issue snapshots are no longer tracked durable state by default",
+    "config compliance": "used summary/proof/doctor and checked-in execplan",
+    "misinterpretation risk": "medium-low; explicit legacy planning storage remains for compatibility but is ignored by git",
+    "follow-on decision": "continue parent lane with #537"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_cli.py -q (207 passed); uv run ruff check src tests (passed); uv run agentic-workspace defaults --section root_cli_authority --format json (review-ready); cd packages/planning; uv run pytest tests/test_installer.py (151 passed); cd packages/planning; uv run ruff check . (passed); uv run agentic-workspace doctor --target . --modules planning --format json (healthy); uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success (passed); uv run python scripts/check/check_planning_surfaces.py (passed); uv run python scripts/check/check_structured_file_inventory.py --quiet-success (passed)",
+    "proof achieved now": "cache path/default-scope behavior, missing-gh fallback, package planner cache load, docs/contracts, and inventory all validated",
+    "evidence for \"proof achieved\" state": "selected proof commands passed"
+  },
+  "intent_satisfaction": {
+    "original intent": "Treat external intent evidence as reconstructable cache, not checked-in state.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "tracked external-intent-evidence snapshot was removed; refresh defaults write ignored cache and state=all is explicit only",
+    "unsolved intent passed to": "#537 #538 #539 #540"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve only context that is expensive to rediscover and necessary for safe continuation.",
+    "slice shaping bias": "local/cache over checked-in mirrors",
+    "broader-lane validation question": "Does external issue evidence stop adding durable product residue?",
+    "intent evidence source": ".agentic-workspace/system-intent/intent.toml"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#536 is complete, but the reconstructable-artifact lane still has finished-work evidence, audit artifacts, generated mirrors, and duplicate payload copies to compress",
+    "evidence carried forward": ".gitignore, CLI cache behavior, package loader path, docs/contracts, and tests",
+    "reopen trigger": "ordinary external refresh again writes or requires tracked raw issue snapshots"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "external issue snapshots are reconstructable cache, not durable repo state",
+    "motivation worth preserving": "reduce checked-in evidence mirrors",
+    "canonical owner now": ".agentic-workspace/planning/state.toml",
+    "promotion trigger": "external evidence refresh behavior changes",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "external intent evidence is reconstructable ignored cache by default, not checked-in state",
+    "validation confirmed": "uv run pytest tests/test_workspace_cli.py -q (207 passed); uv run ruff check src tests (passed); uv run agentic-workspace defaults --section root_cli_authority --format json (review-ready); cd packages/planning; uv run pytest tests/test_installer.py (151 passed); cd packages/planning; uv run ruff check . (passed); uv run agentic-workspace doctor --target . --modules planning --format json (healthy); uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success (passed); uv run python scripts/check/check_planning_surfaces.py (passed); uv run python scripts/check/check_structured_file_inventory.py --quiet-success (passed)",
+    "follow-on routed to": "#537 #538 #539 #540",
+    "post-work posterity capture": "archived execplan and state.toml lane routing",
+    "knowledge promoted (Memory/Docs/Config)": "docs/contracts and .gitignore; no Memory promotion needed",
+    "resume from": ".agentic-workspace/planning/state.toml suggested_first_slice #537"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "subagents noted docs and operation contracts also needed cache semantics; implemented in this slice"
+    ],
+    "signals fixed": [
+      "previous state=all sticky default",
+      "tracked full-history external evidence snapshot"
+    ],
+    "signals routed": [
+      "#537",
+      "#538",
+      "#539",
+      "#540"
+    ],
+    "signals dismissed": [
+      "mandatory GitHub calls inside core planning"
+    ],
+    "next owner": ".agentic-workspace/planning/state.toml"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "#537",
+        "#538",
+        "#539",
+        "#540"
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #536 from reconstructable-artifact-policy lane."
+  ]
+}

@@ -30,6 +30,11 @@
       "required": false
     },
     {
+      "name": "storage",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "dry_run",
       "source": "cli-option",
       "required": false
@@ -47,7 +52,7 @@
     "read_only": false,
     "destructive": false,
     "idempotent": true,
-    "writes_repo_state": true,
+    "writes_repo_state": false,
     "requires_preflight_gate": false
   },
   "locality": {
@@ -57,8 +62,13 @@
   },
   "reads": [
     {
-      "surface": ".agentic-workspace/planning/external-intent-evidence.json",
+      "surface": ".agentic-workspace/local/cache/external-intent-evidence.json",
       "required": false
+    },
+    {
+      "surface": ".agentic-workspace/planning/external-intent-evidence.json",
+      "required": false,
+      "when": "legacy planning storage is explicitly selected"
     },
     {
       "surface": "GitHub issues via optional gh CLI",
@@ -67,9 +77,14 @@
   ],
   "writes": [
     {
+      "surface": ".agentic-workspace/local/cache/external-intent-evidence.json",
+      "required": false,
+      "when": "dry_run is false and storage is cache"
+    },
+    {
       "surface": ".agentic-workspace/planning/external-intent-evidence.json",
       "required": false,
-      "when": "dry_run is false"
+      "when": "dry_run is false and storage is planning"
     }
   ],
   "steps": [
@@ -109,7 +124,8 @@
     "Core planning must continue to consume only provider-agnostic evidence.",
     "GitHub-specific behavior must stay inside this optional adapter path.",
     "Ordinary refresh should stay small; closed-history audit refresh requires explicit --state all.",
-    "Do not write secrets, tokens, or gh authentication data into checked-in evidence."
+    "Default writes go to ignored local cache, not checked-in planning state.",
+    "Do not write secrets, tokens, or gh authentication data into evidence."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",

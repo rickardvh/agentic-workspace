@@ -456,7 +456,7 @@
                 "closed",
                 "all"
               ],
-              "help": "GitHub issue state to import. Defaults to the previous evidence state when present, otherwise open."
+              "help": "GitHub issue state to import. Defaults to open; closed or all are explicit audit scopes."
             },
             {
               "name": "limit",
@@ -464,7 +464,19 @@
                 "--limit"
               ],
               "type": "integer",
-              "help": "Maximum number of GitHub issues to import. Defaults to the previous evidence limit when present, otherwise 1000."
+              "help": "Maximum number of GitHub issues to import. Defaults to 1000."
+            },
+            {
+              "name": "storage",
+              "flags": [
+                "--storage"
+              ],
+              "choices": [
+                "cache",
+                "planning"
+              ],
+              "default": "cache",
+              "help": "Where to write refreshed evidence. Defaults to ignored local cache; planning writes the legacy planning evidence path explicitly."
             },
             {
               "name": "dry_run",

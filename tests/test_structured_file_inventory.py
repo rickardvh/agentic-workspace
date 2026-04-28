@@ -51,13 +51,7 @@ def test_inventory_routes_known_schema_gaps() -> None:
 def test_inventory_routes_reconstructable_storage_cleanup_children() -> None:
     inventory = check_structured_file_inventory.load_inventory()
 
-    assert check_structured_file_inventory.routed_storage_cleanup_issues(inventory) >= {
-        "#536",
-        "#537",
-        "#538",
-        "#539",
-        "#540",
-    }
+    assert check_structured_file_inventory.routed_storage_cleanup_issues(inventory) >= {"#537", "#538", "#539", "#540"}
 
 
 def test_generated_adapter_requires_regeneration_source() -> None:

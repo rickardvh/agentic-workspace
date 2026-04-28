@@ -90,7 +90,7 @@ candidates = []
 """,
     )
     _write(
-        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
         json.dumps(
             {
                 "kind": "planning-external-intent-evidence/v1",
@@ -118,6 +118,63 @@ candidates = []
     assert payload["stale_forward_state"]["closed_roadmap_lanes"][0]["id"] == "closed-lane"
 
 
+def test_workspace_reconcile_reconstructs_external_cache_when_gh_is_available(tmp_path: Path, monkeypatch, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    class Result:
+        def __init__(self, stdout: str) -> None:
+            self.returncode = 0
+            self.stdout = stdout
+            self.stderr = ""
+
+    def fake_run(command, cwd, capture_output, text, encoding, check):
+        if command[:3] == ["gh", "repo", "view"]:
+            return Result(json.dumps({"nameWithOwner": "acme/project"}))
+        assert command[:3] == ["gh", "issue", "list"]
+        assert command[command.index("--state") + 1] == "open"
+        return Result(
+            json.dumps(
+                [
+                    {
+                        "number": 7,
+                        "title": "Open external work",
+                        "state": "OPEN",
+                        "url": "https://github.com/acme/project/issues/7",
+                        "labels": [],
+                        "createdAt": "2026-04-28T00:00:00Z",
+                        "updatedAt": "2026-04-28T00:00:00Z",
+                        "body": "",
+                        "comments": 0,
+                    }
+                ]
+            )
+        )
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    exit_code = cli.main(["reconcile", "--target", str(tmp_path), "--format", "json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["external_work_state"]["open_count"] == 1
+    cache_path = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
+    assert cache_path.exists()
+    cache_payload = json.loads(cache_path.read_text(encoding="utf-8"))
+    assert cache_payload["refresh_metadata"]["state"] == "open"
+
+
 def test_workspace_summary_json_surfaces_external_work_reconciliation(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(
@@ -133,7 +190,7 @@ candidates = []
 """,
     )
     _write(
-        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
         json.dumps(
             {
                 "kind": "planning-external-intent-evidence/v1",
@@ -162,4 +219,5 @@ candidates = []
     assert reconciliation["kind"] == "planning-external-work-reconciliation/v1"
     assert reconciliation["freshness"]["fresh_enough_to_trust"] is True
     assert reconciliation["freshness"]["refresh_metadata"]["adapter"] == "manual-fixture"
+    assert reconciliation["freshness"]["path"] == ".agentic-workspace/local/cache/external-intent-evidence.json"
     assert reconciliation["external_work_state"]["open_count"] == 1

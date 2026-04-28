@@ -3743,7 +3743,7 @@ def test_planning_summary_surfaces_external_intent_refresh_metadata(tmp_path: Pa
         tmp_path / ".agentic-workspace/planning/state.toml",
         "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
     )
-    evidence_path = tmp_path / ".agentic-workspace/planning/external-intent-evidence.json"
+    evidence_path = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
     evidence_path.parent.mkdir(parents=True, exist_ok=True)
     evidence_path.write_text(
         json.dumps(
@@ -3779,6 +3779,8 @@ def test_planning_summary_surfaces_external_intent_refresh_metadata(tmp_path: Pa
     summary = planning_summary(target=tmp_path)
 
     current_external_work = summary["intent_validation_contract"]["current_external_work"]
+    assert current_external_work["path"] == ".agentic-workspace/local/cache/external-intent-evidence.json"
+    assert current_external_work["storage"] == "cache"
     assert current_external_work["refreshed_at"] == "2026-04-27T12:00:00+00:00"
     assert current_external_work["refresh_metadata"]["adapter"] == "github-gh-cli"
     assert current_external_work["refresh_metadata"]["repository"] == "acme/project"

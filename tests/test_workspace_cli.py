@@ -4268,7 +4268,8 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
     _init_git_repo(target)
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
-    evidence_path = target / ".agentic-workspace" / "planning" / "external-intent-evidence.json"
+    evidence_path = target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
     evidence_path.write_text(
         json.dumps(
             {
@@ -4358,6 +4359,8 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
     assert payload["kind"] == "external-intent-refresh/v1"
     assert payload["written"] is True
     assert payload["repository"] == "acme/project"
+    assert payload["storage"] == "cache"
+    assert payload["path"] == ".agentic-workspace/local/cache/external-intent-evidence.json"
     assert payload["state"] == "all"
     assert payload["state_source"] == "explicit"
     assert payload["limit_source"] == "product_default"
@@ -4376,13 +4379,14 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
     assert refreshed["items"][1]["status"] == "closed"
 
 
-def test_external_intent_refresh_github_preserves_existing_scope_by_default(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_external_intent_refresh_github_uses_product_defaults_instead_of_previous_audit_scope(tmp_path: Path, monkeypatch, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
-    evidence_path = target / ".agentic-workspace" / "planning" / "external-intent-evidence.json"
+    evidence_path = target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
     evidence_path.write_text(
         json.dumps(
             {
@@ -4434,17 +4438,17 @@ def test_external_intent_refresh_github_preserves_existing_scope_by_default(tmp_
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert observed_commands[-1][observed_commands[-1].index("--state") + 1] == "all"
-    assert observed_commands[-1][observed_commands[-1].index("--limit") + 1] == "600"
-    assert payload["state"] == "all"
-    assert payload["limit"] == 600
-    assert payload["state_source"] == "previous_evidence"
-    assert payload["limit_source"] == "previous_evidence"
+    assert observed_commands[-1][observed_commands[-1].index("--state") + 1] == "open"
+    assert observed_commands[-1][observed_commands[-1].index("--limit") + 1] == "1000"
+    assert payload["state"] == "open"
+    assert payload["limit"] == 1000
+    assert payload["state_source"] == "product_default"
+    assert payload["limit_source"] == "product_default"
     refreshed = json.loads(evidence_path.read_text(encoding="utf-8"))
-    assert refreshed["refresh_metadata"]["state"] == "all"
-    assert refreshed["refresh_metadata"]["limit"] == 600
-    assert refreshed["refresh_metadata"]["state_source"] == "previous_evidence"
-    assert refreshed["refresh_metadata"]["limit_source"] == "previous_evidence"
+    assert refreshed["refresh_metadata"]["state"] == "open"
+    assert refreshed["refresh_metadata"]["limit"] == 1000
+    assert refreshed["refresh_metadata"]["state_source"] == "product_default"
+    assert refreshed["refresh_metadata"]["limit_source"] == "product_default"
 
     assert (
         cli.main(
@@ -4471,6 +4475,37 @@ def test_external_intent_refresh_github_preserves_existing_scope_by_default(tmp_
     assert observed_commands[-1][observed_commands[-1].index("--limit") + 1] == "50"
     assert payload["state_source"] == "explicit"
     assert payload["limit_source"] == "explicit"
+
+
+def test_external_intent_refresh_github_missing_gh_fails_without_snapshot_write(tmp_path: Path, monkeypatch, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    def fake_run(command, cwd, capture_output, text, encoding, check):
+        raise FileNotFoundError("gh")
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(target),
+                "--repo",
+                "acme/project",
+                "--format",
+                "json",
+            ]
+        )
+
+    assert excinfo.value.code == 2
+    assert not (target / ".agentic-workspace" / "planning" / "external-intent-evidence.json").exists()
+    assert not (target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json").exists()
 
 
 def test_report_surfaces_finished_work_inspection_findings(tmp_path: Path, capsys) -> None:

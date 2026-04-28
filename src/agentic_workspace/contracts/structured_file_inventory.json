@@ -260,33 +260,6 @@
       }
     },
     {
-      "pattern": ".agentic-workspace/planning/external-intent-evidence.json",
-      "format": "json",
-      "owner": "planning-evidence",
-      "status": "freeform-prohibited-gap",
-      "schema_or_validator": "external intent evidence schema pending",
-      "editable_by_agents": true,
-      "generated": false,
-      "routed_to": "#506",
-      "notes": "External intent evidence needs a dedicated schema.",
-      "storage_class": "reconstructable-external-snapshot",
-      "checked_in_justification": "Temporary checked-in evidence snapshot retained for planning continuity while cleanup migrates to compact refs or regeneration.",
-      "reconstructable_from": [
-        "external work provider query recorded in refresh_metadata.command",
-        "issue or tracker URLs carried by each item"
-      ],
-      "guardrails": {
-        "max_items": 600,
-        "max_bytes": 400000,
-        "preferred_refs": [
-          "provider item ids",
-          "provider URLs",
-          "refresh command"
-        ],
-        "routed_to": "#536"
-      }
-    },
-    {
       "pattern": ".agentic-workspace/planning/finished-work-evidence.json",
       "format": "json",
       "owner": "planning-evidence",
