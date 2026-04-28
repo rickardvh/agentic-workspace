@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-27T23:54:23+00:00",
+  "refreshed_at": "2026-04-28T00:01:37+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-27T23:54:23+00:00",
+    "refreshed_at": "2026-04-28T00:01:37+00:00",
     "item_count": 458,
-    "open_count": 15,
-    "closed_count": 443,
+    "open_count": 14,
+    "closed_count": 444,
     "limit": 600,
     "state": "all",
     "command": "gh issue list --state all --json number,title,state,url,labels,createdAt,updatedAt,body,comments"
@@ -7291,7 +7291,7 @@
       "system": "github",
       "id": "#467",
       "title": "[Workspace]: Make self-improvement detect and reduce total operating cost",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#379",
       "planning_residue_expected": "optional",
@@ -7301,8 +7301,8 @@
         "planning"
       ],
       "created_at": "2026-04-27T20:33:58Z",
-      "updated_at": "2026-04-27T20:36:29Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T00:01:16Z",
+      "comments_count": 1
     },
     {
       "system": "github",
