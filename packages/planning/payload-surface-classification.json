@@ -27,6 +27,8 @@
       "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/execplans/archive/README.md",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json"
     ],
     "installed_paths": [
@@ -43,6 +45,8 @@
       ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
       ".agentic-workspace/planning/execplans/archive/README.md",
       ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+      ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
+      ".agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
       ".agentic-workspace/planning/schemas/planning-review.schema.json"
     ]
   },
@@ -284,6 +288,20 @@
       "classification": "core daily-operation planning",
       "owner": "planning package payload",
       "rationale": "Schema for canonical execplan records so active and archived planning state can be validated without relying on prose convention."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
+      "installed_path": ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Schema for optional provider-agnostic external intent evidence so reconciliation inputs can be validated without provider-specific assumptions."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
+      "installed_path": ".agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Schema for optional finished-work reopening evidence so stale-closeout checks reject malformed inputs instead of silently normalizing them."
     },
     {
       "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json",

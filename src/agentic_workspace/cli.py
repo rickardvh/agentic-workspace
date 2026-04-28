@@ -5093,6 +5093,19 @@ def _external_work_delta_payload(*, target_root: Path) -> dict[str, Any]:
             "closed_count": 0,
             "recommended_next_lane": {},
         }
+    schema_findings = _external_intent_evidence_schema_findings(target_root=target_root, payload=payload)
+    if schema_findings:
+        return {
+            "status": "invalid",
+            "reason": "external intent evidence schema validation failed: " + "; ".join(schema_findings),
+            "schema_findings": schema_findings,
+            "provider_rule": provider_rule,
+            "storage": evidence_storage,
+            "open_count": 0,
+            "changed_count": 0,
+            "closed_count": 0,
+            "recommended_next_lane": {},
+        }
     items = [item for item in _list_payload(payload.get("items")) if isinstance(item, dict)]
     previous_items = [item for item in _list_payload(payload.get("previous_items")) if isinstance(item, dict)]
     refresh_metadata = payload.get("refresh_metadata", {}) if isinstance(payload.get("refresh_metadata"), dict) else {}
@@ -5381,7 +5394,39 @@ def _load_existing_external_intent_evidence(path: Path) -> dict[str, Any]:
         raise WorkspaceUsageError(f"Cannot refresh invalid external intent evidence at {path.as_posix()}: {exc}") from exc
     if not isinstance(payload, dict) or payload.get("kind") != "planning-external-intent-evidence/v1":
         raise WorkspaceUsageError(f"{path.as_posix()} must contain kind planning-external-intent-evidence/v1.")
+    schema_findings = _external_intent_evidence_schema_findings(target_root=_workspace_root_for_evidence_path(path), payload=payload)
+    if schema_findings:
+        raise WorkspaceUsageError(f"Cannot refresh invalid external intent evidence at {path.as_posix()}: " + "; ".join(schema_findings))
     return payload
+
+
+def _workspace_root_for_evidence_path(path: Path) -> Path:
+    for parent in path.parents:
+        if parent.name == ".agentic-workspace":
+            return parent.parent
+    return path.parent
+
+
+def _external_intent_evidence_schema_findings(*, target_root: Path, payload: object) -> list[str]:
+    if not isinstance(payload, dict):
+        return ["external intent evidence must be a JSON object"]
+    schema_path = target_root / ".agentic-workspace" / "planning" / "schemas" / "planning-external-intent-evidence.schema.json"
+    if not schema_path.exists():
+        return []
+    try:
+        from jsonschema import Draft202012Validator
+    except ImportError:
+        return []
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"schema is missing or invalid JSON: {exc}"]
+    errors = sorted(Draft202012Validator(schema).iter_errors(payload), key=lambda error: list(error.path))
+    findings: list[str] = []
+    for error in errors:
+        location = ".".join(str(part) for part in error.path) or "<root>"
+        findings.append(f"{location}: {error.message}")
+    return findings
 
 
 def _refresh_github_external_intent_evidence(

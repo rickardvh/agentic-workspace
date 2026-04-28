@@ -199,9 +199,61 @@
       "schema_or_validator": "JSON Schema draft 2020-12",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Planning record schemas are the package-owned validation authority for execplan and review JSON records.",
+      "notes": "Planning schemas are the package-owned validation authority for planning records and evidence files.",
       "storage_class": "source-of-truth",
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
+      "pattern": ".agentic-workspace/planning/external-intent-evidence.json",
+      "format": "json",
+      "owner": "planning-evidence",
+      "status": "schema-backed",
+      "schema_or_validator": ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Legacy checked-in external evidence validates against the provider-agnostic external intent evidence schema when present; local cache is preferred for refreshed snapshots.",
+      "storage_class": "reconstructable-external-snapshot",
+      "checked_in_justification": "Temporary external evidence snapshots are reconstructable and should stay bounded when checked in.",
+      "reconstructable_from": [
+        "provider query",
+        "agentic-workspace external-intent refresh-* command"
+      ],
+      "storage_routed_to": "#536",
+      "guardrails": {
+        "max_items": 1000,
+        "preferred_refs": [
+          "external work ids",
+          "provider-neutral statuses",
+          "refresh metadata"
+        ],
+        "routed_to": "#536"
+      }
+    },
+    {
+      "pattern": ".agentic-workspace/planning/finished-work-evidence.json",
+      "format": "json",
+      "owner": "planning-evidence",
+      "status": "schema-backed",
+      "schema_or_validator": ".agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Legacy finished-work reopening evidence validates against the provider-agnostic finished-work evidence schema when present.",
+      "storage_class": "reconstructable-external-snapshot",
+      "checked_in_justification": "Temporary external evidence snapshots are reconstructable and should stay bounded when checked in.",
+      "reconstructable_from": [
+        "provider query",
+        "source-owned external work references"
+      ],
+      "storage_routed_to": "#536",
+      "guardrails": {
+        "max_items": 1000,
+        "preferred_refs": [
+          "external work ids",
+          "reopens refs",
+          "provider-neutral statuses"
+        ],
+        "routed_to": "#536"
+      }
     },
     {
       "pattern": ".agentic-workspace/planning/execplans/*.plan.json",

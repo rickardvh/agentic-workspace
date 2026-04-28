@@ -41,6 +41,14 @@ def _install_planning_record_schemas(target: Path) -> None:
         destination.write_text((schema_root / name).read_text(encoding="utf-8"), encoding="utf-8")
 
 
+def _install_planning_evidence_schemas(target: Path) -> None:
+    schema_root = WORKSPACE_ROOT / ".agentic-workspace" / "planning" / "schemas"
+    for name in ("planning-external-intent-evidence.schema.json", "planning-finished-work-evidence.schema.json"):
+        destination = target / ".agentic-workspace" / "planning" / "schemas" / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text((schema_root / name).read_text(encoding="utf-8"), encoding="utf-8")
+
+
 def _minimal_execplan(*, status: str = "in-progress") -> str:
     execution_run = (
         "- Run status: completed\n"
@@ -1133,6 +1141,50 @@ def test_planning_surface_checker_validates_review_json_schema(tmp_path: Path) -
     assert any(
         warning.warning_class == "planning_record_schema_drift" and "surprise_machine_field" in warning.message for warning in warnings
     )
+
+
+def test_planning_surface_checker_validates_external_intent_evidence_schema(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_evidence_schema_external")
+    _install_planning_evidence_schemas(tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "external-intent-evidence.json"
+    record_path.parent.mkdir(parents=True, exist_ok=True)
+    record_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [{"system": "manual", "id": "", "status": "open"}],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+
+    assert any(warning.warning_class == "planning_evidence_schema_drift" and "items.0.id" in warning.message for warning in warnings)
+
+
+def test_planning_surface_checker_validates_finished_work_evidence_schema(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_evidence_schema_finished")
+    _install_planning_evidence_schemas(tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "finished-work-evidence.json"
+    record_path.parent.mkdir(parents=True, exist_ok=True)
+    record_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-finished-work-evidence/v1",
+                "items": [{"system": "manual", "id": "", "status": "open"}],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+
+    assert any(warning.warning_class == "planning_evidence_schema_drift" and "items.0.id" in warning.message for warning in warnings)
 
 
 def test_main_json_format_outputs_payload(tmp_path: Path, capsys) -> None:

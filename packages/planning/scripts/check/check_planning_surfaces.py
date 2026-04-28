@@ -72,6 +72,7 @@ WARNING_EXECPLAN_ACTIVE_SET_PRESSURE = "execplan_active_set_pressure"
 WARNING_EXECPLAN_PROOF_DRIFT = "execplan_proof_drift"
 WARNING_EXECPLAN_INTENT_SATISFACTION_DRIFT = "execplan_intent_satisfaction_drift"
 WARNING_PLANNING_RECORD_SCHEMA_DRIFT = "planning_record_schema_drift"
+WARNING_PLANNING_EVIDENCE_SCHEMA_DRIFT = "planning_evidence_schema_drift"
 WARNING_ROADMAP_EXECUTION_DRIFT = "roadmap_execution_drift"
 WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL = "roadmap_missing_promotion_signal"
 WARNING_ROADMAP_MISSING_REOPEN_SIGNAL = "roadmap_missing_reopen_signal"
@@ -247,31 +248,38 @@ def _load_json(path: Path) -> object | None:
         return None
 
 
-def _schema_record_warnings(*, record_path: Path, schema_path: Path, expected_kind: str) -> list[PlanningWarning]:
+def _schema_record_warnings(
+    *,
+    record_path: Path,
+    schema_path: Path,
+    expected_kind: str,
+    warning_class: str = WARNING_PLANNING_RECORD_SCHEMA_DRIFT,
+    record_label: str = "planning record",
+) -> list[PlanningWarning]:
     payload = _load_json(record_path)
     if not isinstance(payload, dict):
         return [
             PlanningWarning(
-                WARNING_PLANNING_RECORD_SCHEMA_DRIFT,
+                warning_class,
                 _render_path(record_path),
-                "planning record must be valid JSON object",
+                f"{record_label} must be valid JSON object",
             )
         ]
     if payload.get("kind") != expected_kind:
         return [
             PlanningWarning(
-                WARNING_PLANNING_RECORD_SCHEMA_DRIFT,
+                warning_class,
                 _render_path(record_path),
-                f"planning record kind must be {expected_kind}",
+                f"{record_label} kind must be {expected_kind}",
             )
         ]
     schema = _load_json(schema_path)
     if not isinstance(schema, dict):
         return [
             PlanningWarning(
-                WARNING_PLANNING_RECORD_SCHEMA_DRIFT,
+                warning_class,
                 _render_path(schema_path),
-                "planning record schema is missing or invalid JSON",
+                f"{record_label} schema is missing or invalid JSON",
             )
         ]
     errors = sorted(Draft202012Validator(schema).iter_errors(payload), key=lambda error: list(error.path))
@@ -280,11 +288,50 @@ def _schema_record_warnings(*, record_path: Path, schema_path: Path, expected_ki
         location = ".".join(str(part) for part in error.path) or "<root>"
         warnings.append(
             PlanningWarning(
-                WARNING_PLANNING_RECORD_SCHEMA_DRIFT,
+                warning_class,
                 _render_path(record_path),
                 f"{location}: {error.message}",
             )
         )
+    return warnings
+
+
+def _check_planning_evidence_schemas(repo_root: Path) -> list[PlanningWarning]:
+    schema_dir = repo_root / ".agentic-workspace" / "planning" / "schemas"
+    external_schema_path = schema_dir / "planning-external-intent-evidence.schema.json"
+    finished_schema_path = schema_dir / "planning-finished-work-evidence.schema.json"
+    checks = [
+        (
+            repo_root / ".agentic-workspace" / "planning" / "external-intent-evidence.json",
+            external_schema_path,
+            "planning-external-intent-evidence/v1",
+            "planning external intent evidence",
+        ),
+        (
+            repo_root / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+            external_schema_path,
+            "planning-external-intent-evidence/v1",
+            "planning external intent evidence",
+        ),
+        (
+            repo_root / ".agentic-workspace" / "planning" / "finished-work-evidence.json",
+            finished_schema_path,
+            "planning-finished-work-evidence/v1",
+            "planning finished-work evidence",
+        ),
+    ]
+    warnings: list[PlanningWarning] = []
+    for record_path, schema_path, expected_kind, record_label in checks:
+        if record_path.exists():
+            warnings.extend(
+                _schema_record_warnings(
+                    record_path=record_path,
+                    schema_path=schema_path,
+                    expected_kind=expected_kind,
+                    warning_class=WARNING_PLANNING_EVIDENCE_SCHEMA_DRIFT,
+                    record_label=record_label,
+                )
+            )
     return warnings
 
 
@@ -2239,6 +2286,7 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
     warnings.extend(_check_active_surface_hygiene(repo_root))
     warnings.extend(_check_generated_agent_docs(repo_root))
     warnings.extend(_check_planning_record_schemas(repo_root))
+    warnings.extend(_check_planning_evidence_schemas(repo_root))
     return warnings
 
 

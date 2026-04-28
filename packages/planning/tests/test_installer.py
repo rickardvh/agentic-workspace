@@ -498,6 +498,10 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     refinement_doc_path = tmp_path / ".agentic-workspace" / "planning" / "pre-ingestion-refinement.md"
     execplan_schema_path = tmp_path / ".agentic-workspace" / "planning" / "schemas" / "planning-execplan.schema.json"
     review_schema_path = tmp_path / ".agentic-workspace" / "planning" / "schemas" / "planning-review.schema.json"
+    external_evidence_schema_path = (
+        tmp_path / ".agentic-workspace" / "planning" / "schemas" / "planning-external-intent-evidence.schema.json"
+    )
+    finished_evidence_schema_path = tmp_path / ".agentic-workspace" / "planning" / "schemas" / "planning-finished-work-evidence.schema.json"
 
     assert (tmp_path / "AGENTS.md").exists()
     assert (tmp_path / ".agentic-workspace/planning/state.toml").exists()
@@ -518,6 +522,8 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "TEMPLATE.plan.json").exists()
     assert execplan_schema_path.exists()
     assert review_schema_path.exists()
+    assert external_evidence_schema_path.exists()
+    assert finished_evidence_schema_path.exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert not (tmp_path / ".agentic-workspace" / "planning" / "scripts").exists()
     assert not skill_readme_path.exists()
@@ -3823,6 +3829,41 @@ def test_planning_summary_surfaces_external_intent_refresh_metadata(tmp_path: Pa
     reconciliation = summary["intent_validation_contract"]["external_work_reconciliation"]
     assert reconciliation["freshness"]["refreshed_at"] == "2026-04-27T12:00:00+00:00"
     assert reconciliation["freshness"]["refresh_metadata"]["adapter"] == "github-gh-cli"
+
+
+def test_planning_summary_rejects_schema_invalid_external_intent_evidence(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[{"system": "manual", "id": "", "status": "open"}],
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    external_evidence = summary["intent_validation_contract"]["external_evidence"]
+    assert external_evidence["status"] == "invalid"
+    assert "schema validation failed" in external_evidence["reason"]
+    assert any("items.0.id" in finding for finding in external_evidence["schema_findings"])
+    assert summary["intent_validation_contract"]["current_external_work"]["status"] == "invalid"
+
+
+def test_finished_work_inspection_rejects_schema_invalid_finished_work_evidence(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write_finished_work_evidence(
+        tmp_path / ".agentic-workspace/planning/finished-work-evidence.json",
+        items=[{"system": "manual", "id": "", "status": "open"}],
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    evidence = summary["finished_work_inspection_contract"]["evidence"]
+    assert evidence["status"] == "invalid"
+    assert "schema validation failed" in evidence["reason"]
+    assert any("items.0.id" in finding for finding in evidence["schema_findings"])
 
 
 def test_planning_summary_reconciles_lower_trust_closeouts_from_review_artifact(tmp_path: Path) -> None:

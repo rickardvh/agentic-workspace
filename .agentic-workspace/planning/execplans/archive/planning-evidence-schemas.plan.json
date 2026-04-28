@@ -1,0 +1,368 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Add schemas for external intent and finished-work evidence",
+  "goal": [
+    "Implement #506 by adding explicit schemas or schema-backed validation for planning external-intent and finished-work evidence records.",
+    "Use the schemas in reconciliation/report/summary loading paths where feasible so invalid evidence produces actionable diagnostics instead of silent misrouting.",
+    "Update structured-file inventory so evidence JSON files are no longer freeform-prohibited gaps."
+  ],
+  "non_goals": [
+    "Do not make GitHub or any provider mandatory.",
+    "Do not auto-close or mutate external tracker items.",
+    "Do not preserve obsolete provider-specific shapes unless current compatibility tests prove they are still consumed.",
+    "Do not turn ignored local cache files into checked-in authoritative state."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "external intent and finished-work evidence records have explicit schemas or schema-backed validators, and invalid evidence is reported with actionable diagnostics",
+      "constraints": "repo/tool/language agnostic; provider-agnostic evidence shape; local cache remains optional and advisory; keep #502 open for remaining child issues",
+      "latitude": "may add schema files, validator helpers, checker integration, loader diagnostics, inventory updates, and focused tests",
+      "escalation": "stop if acceptance requires provider-specific required fields or a broad rewrite of reconciliation storage"
+    },
+    "execution": {
+      "milestone": "#506",
+      "status": "completed",
+      "next_step": "archive this slice, close #506, refresh external evidence, then continue #508/#509 under #502",
+      "proof": "passed"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/planning-evidence-schemas.plan.json",
+        ".agentic-workspace/planning/schemas/",
+        "packages/planning/bootstrap/.agentic-workspace/planning/schemas/",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "packages/planning/scripts/check/check_planning_surfaces.py",
+        "packages/planning/tests/test_check_planning_surfaces.py",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_summary_cli.py",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        "tests/test_structured_file_inventory.py"
+      ],
+      "invariants": [
+        "external evidence remains provider-agnostic and optional",
+        "ignored local cache remains non-authoritative and reconstructable",
+        "missing evidence remains valid offline behavior",
+        "invalid evidence should become a diagnostic, not stale-state authority"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "all machine-readable files are schema-backed, typed-validator-backed, generated/derived, or explicitly classified diagnostics",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "structured-file-contract"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #506 closes, continue #508/#509"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "schema-backed evidence validation for planning reconciliation inputs",
+    "intentionally deferred": "#508 root contract manifests; #509 package-local classification/extraction schemas",
+    "discovered implications": "schema-backed construction currently requires parallel root/bootstrap schema copies and inventory classification updates; existing #526 owns helper/scaffold follow-up",
+    "proof achieved now": "root CLI, planning package, structured inventory, planning-surface, doctor, proof-selected, and ruff checks passed",
+    "validation still needed": "none for #506; #508/#509 continue the parent structured-file-contract lane",
+    "next likely slice": "#508"
+  },
+  "intent_interpretation": {
+    "literal request": "Continue backlog lane-by-lane while dogfooding the package and creating issues for actionable improvement signals.",
+    "inferred intended outcome": "complete the next #502 child without expanding product residue or provider coupling",
+    "chosen concrete what": "schema-backed validation for external-intent and finished-work evidence",
+    "interpretation distance": "low",
+    "review guidance": "verify invalid evidence cannot silently act as current reconciliation state"
+  },
+  "execution_bounds": {
+    "allowed paths": "planning schemas, planning installer/checker/tests, root CLI evidence loader/tests, structured-file inventory/tests, active plan/state",
+    "max changed files": "about 18 unless proof reveals a narrow additional owner",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py tests/test_structured_file_inventory.py -q; cd packages/planning && uv run pytest tests/test_installer.py tests/test_check_planning_surfaces.py -q; ruff and relevant checks",
+    "ask-before-refactor threshold": "before replacing the evidence model or moving cache authority",
+    "stop before touching": "provider-specific adapter requirements beyond optional refresh metadata"
+  },
+  "stop_conditions": {
+    "stop when": "the schema would require a provider-specific field for ordinary operation",
+    "escalate when boundary reached": "schema validation cannot preserve existing optional/missing evidence semantics",
+    "escalate on scope drift": "changes spill into unrelated report or lifecycle behavior",
+    "escalate on proof failure": "tests reveal historical evidence shape currently needed but incompatible with a bounded schema"
+  },
+  "context_budget": {
+    "live working set": "issue #506, active plan, summary, evidence loader code/tests, structured inventory",
+    "recoverable later": "historical archive references to evidence files",
+    "externalize before shift": "update this plan with chosen schema boundaries and proof",
+    "pre-work config pull": "uv run agentic-workspace config --target . --format json",
+    "pre-work memory pull": "none unless compact commands point there",
+    "tiny resumability note": "schemas and loaders are the core; cache remains optional",
+    "context-shift triggers": "before broad CLI loader refactor or if invalid-evidence handling changes report contracts"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the bounded #506 slice with explicit evidence schema validation.",
+    "hard constraints": "Preserve provider-agnostic behavior, optional evidence semantics, and local-cache non-authority.",
+    "agent may decide locally": "Schema field permissiveness, validator helper placement, focused tests, and inventory wording.",
+    "escalate when": "Existing validation hooks cannot report invalid evidence without changing public report semantics."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#506",
+      "label": "Planning evidence schema child issue",
+      "role": "source",
+      "locator": "GitHub issue #506"
+    },
+    {
+      "kind": "issue",
+      "target": "#502",
+      "label": "Structured-file contract parent lane",
+      "role": "parent",
+      "locator": "GitHub issue #502"
+    }
+  ],
+  "active_milestone": {
+    "id": "#506",
+    "status": "completed",
+    "scope": "external intent and finished-work evidence schemas, validation, diagnostics, and inventory status",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "read-only subagent inspection"
+  },
+  "immediate_next_action": [
+    "Archive this plan, close #506, refresh external evidence, then promote the next prioritized structured-file-contract slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/planning-evidence-schemas.plan.json"
+  ],
+  "invariants": [
+    "evidence remains optional",
+    "cache remains local-only/reconstructable",
+    "provider-specific refresh metadata remains optional"
+  ],
+  "contract_decisions_to_freeze": [
+    "schema location and validation hook",
+    "invalid evidence diagnostic shape"
+  ],
+  "open_questions_to_close": [
+    "whether root CLI and planning package should share schema files or keep parallel validation wrappers",
+    "whether local cache validation belongs only in loaders or also in planning surface checks"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py tests/test_structured_file_inventory.py -q",
+    "cd packages/planning && uv run pytest tests/test_installer.py tests/test_check_planning_surfaces.py -q",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "cd packages/planning && uv run ruff check .",
+    "uv run ruff check src tests scripts packages/planning/src packages/planning/scripts packages/planning/tests"
+  ],
+  "required_tools": [
+    "uv",
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "External intent evidence validates against an explicit schema or schema-backed validator.",
+    "Finished-work evidence validates against an explicit schema or schema-backed validator.",
+    "Reconcile/report/summary use validated loading where feasible.",
+    "Invalid evidence produces actionable diagnostics rather than silent misrouting.",
+    "Tests cover valid, invalid, stale, and missing evidence cases.",
+    "Structured-file inventory marks evidence JSON files schema-backed or typed-validator-backed instead of freeform-prohibited gaps."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": ".agentic-workspace/planning/execplans/planning-evidence-schemas.plan.json",
+    "what happened": "Added explicit JSON schemas for planning external-intent evidence and finished-work evidence, installed them in root and planning package bootstrap payloads, wired schema validation into planning loaders/checkers and root external-work-delta loading, and updated inventory/tests so evidence files are schema-backed.",
+    "scope touched": "planning schemas and bootstrap mirrors; planning installer/checker/tests; root CLI evidence loading/tests; structured-file inventory/tests; README/classification; active plan/state",
+    "changed surfaces": ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json; .agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json; package bootstrap copies; installer/checker/test surfaces; src/agentic_workspace/cli.py; structured_file_inventory.json",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_workspace_summary_cli.py -q; uv run pytest tests/test_structured_file_inventory.py -q; cd packages/planning && uv run pytest tests/test_installer.py tests/test_check_planning_surfaces.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json; uv run ruff check src tests scripts packages/planning/src packages/planning/scripts packages/planning/tests; cd packages/planning && uv run ruff check .; proof-selected commands all passed",
+    "result for continuation": "#506 complete; #502 remains open for #508/#509 structured-file contract children",
+    "next step": "archive plan and close #506 after commit"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed in evidence schemas, validation hooks, inventory/classification, focused tests, and active planning surfaces",
+    "proof status": "passed",
+    "intent served": "yes for #506; evidence records now have explicit schemas and invalid evidence is diagnostic",
+    "config compliance": "used compact startup/summary/report/proof/reconcile/skills surfaces, root_cli_authority defaults for direct CLI edits, and closeout_trust workflow evidence",
+    "misinterpretation risk": "low; schema keeps provider fields optional and preserves missing-evidence offline behavior",
+    "follow-on decision": "continue #508/#509 under #502 rather than expanding this slice"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "all selected root CLI, planning package, inventory, planning-surface, doctor, and ruff commands passed",
+    "evidence for \"proof achieved\" state": "proof --changed selected workspace_cli, planning_package, planning_surfaces, cli_authority, and contract_tooling lanes; each selected command was run successfully"
+  },
+  "intent_satisfaction": {
+    "original intent": "#506: add schemas for external intent and finished-work evidence, with actionable invalid evidence diagnostics.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#506 delivered schema-backed validation for external-intent and finished-work evidence, invalid-evidence diagnostics, checker coverage, inventory classification, and proof-selected tests.",
+    "unsolved intent passed to": "#508/#509 remain open under #502 for remaining structured-file contract work."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "prefer explicit schema validation over larger prose guidance or provider-specific behavior",
+    "broader-lane validation question": "Does this reduce machine-readable ambiguity without adding first-contact burden?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Bounded #506 is complete; parent #502 remains open for remaining structured-file contract children.",
+    "evidence carried forward": "Proof-selected workspace_cli, planning_package, planning_surfaces, cli_authority, and contract_tooling commands passed, including root CLI tests, planning package tests, structured inventory checks, planning surface checks, doctor, and ruff.",
+    "reopen trigger": "Reopen #506 if external-intent or finished-work evidence can again be malformed without a schema diagnostic, or if evidence schema payloads stop installing."
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "planning evidence schemas must stay provider-agnostic, optional for offline operation, and diagnostic rather than authoritative when invalid",
+    "motivation worth preserving": "schema-backed evidence makes reconciliation and closeout trust cheaper without making agents read raw evidence by default",
+    "canonical owner now": "contracts/checks: planning evidence schemas, planning loaders, structured-file inventory, and planning-surface checker",
+    "promotion trigger": "if another evidence JSON surface needs schema backing, reuse #526 helper/scaffold work rather than hand-copying root/bootstrap/schema/inventory boilerplate",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "external-intent and finished-work evidence records are now schema-backed and invalid evidence produces diagnostics",
+    "validation confirmed": "root CLI, planning package, inventory, planning-surface, doctor, and ruff proof passed",
+    "follow-on routed to": "#508/#509 under #502",
+    "post-work posterity capture": "durable constraints live in schemas/checks/inventory and this archived execplan",
+    "knowledge promoted (Memory/Docs/Config)": "no Memory promotion; existing contracts/checks are the durable owner",
+    "resume from": "refresh external evidence and promote the next open structured-file-contract child"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "manual schema-backed artifact creation still requires duplicated root/bootstrap schema files and inventory/classification updates",
+      "closeout_trust is useful but expects plan execution evidence to be filled before it stops reporting missing workflow surfaces",
+      "improvement_intake still reports large-file hotspots in root CLI, planning installer, and test modules"
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "#526 owns helper/scaffold support for schema-backed artifact creation",
+      "#531/#532/#534/#535/#515 own structured closeout/prose-helper and workflow-evidence friction",
+      "#410 and the existing large-surface backlog own CLI/package extraction pressure",
+      "#509 owns remaining package-local classification/schema extraction work"
+    ],
+    "signals dismissed": [
+      "no new issue for #506-specific friction because existing issues cover each durable signal"
+    ],
+    "next owner": "#508/#509 after #506 closeout"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "detailed subagent discovery transcripts and raw command output",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#508 root contract manifests",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#509 package-local classification/extraction schemas",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "none; the lesson is contract/check-owned rather than a durable human note",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "no Memory promotion; existing contracts/checks are the durable owner",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "planning evidence schemas",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "schema validation in loaders/checkers",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "structured-file inventory entries",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "no Memory promotion; existing contracts/checks are the durable owner",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "packages/planning/README.md payload list updated",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#526",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#531",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#532",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#534",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#535",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#515",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#410",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#508",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#509",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #506 after closing #505."
+  ]
+}

@@ -85,6 +85,22 @@ def test_planning_record_entries_are_schema_backed() -> None:
         assert "routed_to" not in entry
 
 
+def test_planning_evidence_entries_are_schema_backed() -> None:
+    inventory = check_structured_file_inventory.load_inventory()
+    evidence_patterns = {
+        ".agentic-workspace/planning/external-intent-evidence.json": "planning-external-intent-evidence.schema.json",
+        ".agentic-workspace/planning/finished-work-evidence.json": "planning-finished-work-evidence.schema.json",
+    }
+    entries = {entry["pattern"]: entry for entry in inventory["entries"] if entry["pattern"] in evidence_patterns}
+
+    assert set(entries) == set(evidence_patterns)
+    for pattern, schema_name in evidence_patterns.items():
+        entry = entries[pattern]
+        assert entry["status"] == "schema-backed"
+        assert schema_name in entry["schema_or_validator"]
+        assert "routed_to" not in entry
+
+
 def test_inventory_routes_reconstructable_storage_cleanup_children() -> None:
     inventory = check_structured_file_inventory.load_inventory()
 

@@ -3908,6 +3908,29 @@ def test_report_section_selector_returns_external_work_delta(tmp_path: Path, cap
     assert answer["recommended_next_lane"]["id"] == "TASK-2"
 
 
+def test_report_section_selector_rejects_schema_invalid_external_work_delta(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "external-intent-evidence.json",
+        {
+            "kind": "planning-external-intent-evidence/v1",
+            "items": [{"system": "manual", "id": "", "status": "open"}],
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "external_work_delta", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert answer["status"] == "invalid"
+    assert "schema validation failed" in answer["reason"]
+    assert any("items.0.id" in finding for finding in answer["schema_findings"])
+
+
 def test_report_section_selector_returns_external_work_reconciliation(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

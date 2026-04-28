@@ -31,6 +31,8 @@ PLANNING_FINISHED_WORK_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "finished-work-ev
 PLANNING_SCHEMA_ROOT = PLANNING_MANAGED_ROOT / "schemas"
 EXECPLAN_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-execplan.schema.json"
 REVIEW_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-review.schema.json"
+EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-external-intent-evidence.schema.json"
+FINISHED_WORK_EVIDENCE_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-finished-work-evidence.schema.json"
 SOURCE_PLANNING_CHECKER_SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "check" / "check_planning_surfaces.py"
 PLANNING_STATE_KIND = "agentic-planning-state"
 PLANNING_STATE_SCHEMA_VERSION = "planning-state/v1"
@@ -58,6 +60,8 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
     EXECPLAN_RECORD_SCHEMA_PATH,
     REVIEW_RECORD_SCHEMA_PATH,
+    EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH,
+    FINISHED_WORK_EVIDENCE_SCHEMA_PATH,
     UPGRADE_SOURCE_PATH,
     PLANNING_MANIFEST_PATH,
 )
@@ -97,6 +101,8 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
     EXECPLAN_RECORD_SCHEMA_PATH,
     REVIEW_RECORD_SCHEMA_PATH,
+    EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH,
+    FINISHED_WORK_EVIDENCE_SCHEMA_PATH,
     PLANNING_MANIFEST_PATH,
 )
 
@@ -311,6 +317,28 @@ def planning_record_schema_findings(record_path: Path) -> list[str]:
     if kind == REVIEW_RECORD_KIND:
         return _json_schema_findings(payload=payload, schema_path=REVIEW_RECORD_SCHEMA_PATH)
     return [f"unsupported planning record kind: {kind!r}"]
+
+
+def _evidence_schema_invalid_payload(
+    *,
+    relative_path: str,
+    storage_class: str | None = None,
+    kind: str,
+    findings: list[str],
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "status": "invalid",
+        "path": relative_path,
+        "kind": kind,
+        "systems": [],
+        "item_count": 0,
+        "items": [],
+        "reason": "optional evidence schema validation failed: " + "; ".join(findings),
+        "schema_findings": findings,
+    }
+    if storage_class is not None:
+        payload["storage"] = storage_class
+    return payload
 
 
 def _detect_payload_drift(target_root: Path) -> list[dict[str, str]]:
@@ -3551,6 +3579,7 @@ def _intent_validation_contract(
             "systems": external_evidence.get("systems", []),
             "item_count": external_evidence.get("item_count", 0),
             "reason": external_evidence.get("reason", ""),
+            "schema_findings": external_evidence.get("schema_findings", []),
         },
         "external_work_reconciliation": external_work_reconciliation,
         "current_external_work": current_external_work,
@@ -4132,6 +4161,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
             "systems": evidence.get("systems", []),
             "item_count": evidence.get("item_count", 0),
             "reason": evidence.get("reason", ""),
+            "schema_findings": evidence.get("schema_findings", []),
         },
         "signals": signals,
         "inspections": inspections,
@@ -4551,6 +4581,14 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
             "items": [],
             "reason": "optional evidence file does not match planning-external-intent-evidence/v1",
         }
+    schema_findings = _json_schema_findings(payload=payload, schema_path=EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH)
+    if schema_findings:
+        return _evidence_schema_invalid_payload(
+            relative_path=relative_path,
+            storage_class=storage_class,
+            kind="planning-external-intent-evidence/v1",
+            findings=schema_findings,
+        )
     refresh_metadata = payload.get("refresh_metadata", {})
     if not isinstance(refresh_metadata, dict):
         refresh_metadata = {}
@@ -4632,6 +4670,13 @@ def _load_finished_work_evidence(target_root: Path) -> dict[str, Any]:
             "items": [],
             "reason": "optional evidence file does not match planning-finished-work-evidence/v1",
         }
+    schema_findings = _json_schema_findings(payload=payload, schema_path=FINISHED_WORK_EVIDENCE_SCHEMA_PATH)
+    if schema_findings:
+        return _evidence_schema_invalid_payload(
+            relative_path=relative_path,
+            kind="planning-finished-work-evidence/v1",
+            findings=schema_findings,
+        )
     normalized_items: list[dict[str, Any]] = []
     systems: list[str] = []
     for raw in payload.get("items", []):
