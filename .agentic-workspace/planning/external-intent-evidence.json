@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T09:43:10+00:00",
+  "refreshed_at": "2026-04-28T09:54:48+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T09:43:10+00:00",
-    "item_count": 501,
-    "open_count": 30,
-    "closed_count": 471,
+    "refreshed_at": "2026-04-28T09:54:48+00:00",
+    "item_count": 507,
+    "open_count": 35,
+    "closed_count": 472,
     "limit": 600,
     "state": "all",
     "state_source": "previous_evidence",
@@ -7610,7 +7610,7 @@
       "system": "github",
       "id": "#486",
       "title": "[Workspace]: Audit root command surface for daily-operation necessity",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#485",
       "planning_residue_expected": "optional",
@@ -7620,8 +7620,8 @@
         "planning"
       ],
       "created_at": "2026-04-28T06:14:52Z",
-      "updated_at": "2026-04-28T06:14:52Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T09:54:21Z",
+      "comments_count": 1
     },
     {
       "system": "github",
@@ -8114,6 +8114,108 @@
       ],
       "created_at": "2026-04-28T09:41:36Z",
       "updated_at": "2026-04-28T09:41:36Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#516",
+      "title": "[Workspace]: Add a lightweight lifecycle for agent-created reusable aids",
+      "status": "open",
+      "kind": "lane",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/516",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:48:50Z",
+      "updated_at": "2026-04-28T09:54:00Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#517",
+      "title": "[Workspace]: Define storage and ownership boundaries for agent-created aids",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#516",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/517",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:49:25Z",
+      "updated_at": "2026-04-28T09:49:25Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#518",
+      "title": "[Workspace]: Add a schema-backed manifest for checked-in agent aids",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#516",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/518",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:49:58Z",
+      "updated_at": "2026-04-28T09:49:58Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#519",
+      "title": "[Workspace]: Add portability and safety rules for executable agent aids",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#516",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/519",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:50:41Z",
+      "updated_at": "2026-04-28T09:50:41Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#520",
+      "title": "[Workspace]: Make agent-created aids discoverable without broad file search",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#516",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/520",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:51:28Z",
+      "updated_at": "2026-04-28T09:51:28Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#521",
+      "title": "[Workspace]: Promote proven validation aids into repo-native platform-independent checks",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#516",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/521",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:52:06Z",
+      "updated_at": "2026-04-28T09:52:06Z",
       "comments_count": 0
     }
   ]
