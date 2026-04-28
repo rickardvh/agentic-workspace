@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T09:30:38+00:00",
+  "refreshed_at": "2026-04-28T09:43:10+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T09:30:38+00:00",
-    "item_count": 495,
-    "open_count": 25,
-    "closed_count": 470,
+    "refreshed_at": "2026-04-28T09:43:10+00:00",
+    "item_count": 501,
+    "open_count": 30,
+    "closed_count": 471,
     "limit": 600,
     "state": "all",
     "state_source": "previous_evidence",
@@ -7661,7 +7661,7 @@
       "system": "github",
       "id": "#489",
       "title": "[Workspace]: Separate reusable target-repo diagnostics from source-checkout-only maintainer tooling",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#485",
       "planning_residue_expected": "optional",
@@ -7671,8 +7671,8 @@
         "planning"
       ],
       "created_at": "2026-04-28T06:16:58Z",
-      "updated_at": "2026-04-28T06:16:58Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T09:42:50Z",
+      "comments_count": 1
     },
     {
       "system": "github",
@@ -8012,6 +8012,108 @@
       ],
       "created_at": "2026-04-28T09:09:48Z",
       "updated_at": "2026-04-28T09:09:48Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#510",
+      "title": "[Workspace]: Align generic module manifests with MCP-style resources, tools, prompts, and structured results",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#490",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/510",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:31:50Z",
+      "updated_at": "2026-04-28T09:35:46Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#511",
+      "title": "[Workspace]: Define module component vocabulary for resources, tools, prompts, and schemas",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#510",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/511",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:32:30Z",
+      "updated_at": "2026-04-28T09:32:30Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#512",
+      "title": "[Workspace]: Map current root, planning, and memory surfaces to MCP-style components",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#510",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/512",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:33:18Z",
+      "updated_at": "2026-04-28T09:33:18Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#513",
+      "title": "[Workspace]: Add safety and structured-result metadata for module tools",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#510",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/513",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:34:04Z",
+      "updated_at": "2026-04-28T09:34:04Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#514",
+      "title": "[Workspace]: Define a future MCP adapter boundary without adding runtime dependency",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#510",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/514",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:35:05Z",
+      "updated_at": "2026-04-28T09:35:05Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#515",
+      "title": "[Review]: Make execplan scaffolds projection-complete by default",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/515",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "review/friction"
+      ],
+      "created_at": "2026-04-28T09:41:36Z",
+      "updated_at": "2026-04-28T09:41:36Z",
       "comments_count": 0
     }
   ]
