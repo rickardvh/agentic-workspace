@@ -3355,6 +3355,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
     signals: list[dict[str, Any]] = []
     inspections: list[dict[str, Any]] = []
     derived_follow_up_candidates: list[dict[str, Any]] = []
+    archive_only_durable_residue: list[dict[str, Any]] = []
     clearly_landed = 0
     partial = 0
     likely_premature = 0
@@ -3374,9 +3375,18 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
         reopened_by = _finished_work_reopeners(issue_refs=issue_refs, evidence_items=evidence_items)
         closure_check = _execplan_closure_check(path)
         intent_satisfaction = _execplan_intent_satisfaction(path)
+        durable_residue = _execplan_durable_residue(path)
         closure_decision = str(closure_check.get("closure decision", "")).strip().lower()
         larger_intent_status = str(closure_check.get("larger-intent status", "")).strip().lower()
         intent_satisfied = str(intent_satisfaction.get("was original intent fully satisfied?", "")).strip().lower()
+        archive_only_residue_signal = _archive_only_durable_residue_signal(
+            target_root=target_root,
+            path=path,
+            durable_residue=durable_residue,
+        )
+        if archive_only_residue_signal:
+            archive_only_durable_residue.append(archive_only_residue_signal)
+            signals.append(archive_only_residue_signal)
         classification = "clearly_landed"
         reason = "Archived closeout reports fully satisfied intent and no reopening evidence points back at it."
         if reopened_by:
@@ -3456,6 +3466,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
                 "reference_roles": reference_roles,
                 "non_closure_refs": reference_roles["non_closure_refs"],
                 "reopened_by": reopened_by,
+                "durable_residue": _compact_durable_residue_for_inspection(durable_residue),
                 "reason": reason,
                 "superseded_by": [],
             }
@@ -3546,6 +3557,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
         "likely_premature_closeout_count": likely_premature,
         "superseded_continuation_count": superseded_continuation,
         "routed_continuation_count": routed_continuation,
+        "archive_only_durable_residue_count": len(archive_only_durable_residue),
         "role_aware_reference_plan_count": role_aware_reference_plan_count,
         "non_closure_reference_count": non_closure_reference_count,
         "derived_follow_up_candidate_count": len(derived_follow_up_candidates),
@@ -3561,6 +3573,10 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
     elif derived_follow_up_candidates:
         recommended_next_action = (
             "Promote or explicitly route derived follow-up candidates before assuming archived partial-intent work was complete."
+        )
+    elif archive_only_durable_residue:
+        recommended_next_action = (
+            "Route archive-only durable residue to Memory, docs, contracts, checks, or planning instead of relying on archive lookup."
         )
 
     refs = [".agentic-workspace/planning/execplans/archive/"]
@@ -3587,10 +3603,74 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
         },
         "signals": signals,
         "inspections": inspections,
+        "archive_only_durable_residue": archive_only_durable_residue,
         "derived_follow_up_candidates": derived_follow_up_candidates,
         "recommended_next_action": recommended_next_action,
         "minimal_refs": [ref for ref in refs if ref],
     }
+
+
+def _compact_durable_residue_for_inspection(durable_residue: dict[str, str]) -> dict[str, str]:
+    if not durable_residue:
+        return {}
+    return {
+        "status": durable_residue.get("status", "").strip(),
+        "canonical_owner_now": durable_residue.get("canonical owner now", "").strip(),
+        "promotion_trigger": durable_residue.get("promotion trigger", "").strip(),
+        "retention_after_promotion": durable_residue.get("retention after promotion", "").strip(),
+    }
+
+
+def _archive_only_durable_residue_signal(
+    *,
+    target_root: Path,
+    path: Path,
+    durable_residue: dict[str, str],
+) -> dict[str, Any] | None:
+    status = durable_residue.get("status", "").strip().lower()
+    learned_constraint = durable_residue.get("learned constraint", "").strip()
+    motivation = durable_residue.get("motivation worth preserving", "").strip()
+    owner = durable_residue.get("canonical owner now", "").strip()
+    owner_normalized = owner.lower()
+
+    if not learned_constraint and not motivation:
+        return None
+    if _durable_residue_text_says_no_future_relevance(learned_constraint) and _durable_residue_text_says_no_future_relevance(motivation):
+        return None
+    if status in {"none"}:
+        return None
+    if status != "evidence_only" and owner and owner_normalized not in EXECPLAN_DURABLE_RESIDUE_OWNER_VALUES:
+        return None
+
+    relative_path = path.relative_to(target_root).as_posix()
+    return {
+        "kind": "archive_only_durable_residue",
+        "severity": "info",
+        "path": relative_path,
+        "message": (
+            f"Archived closeout {relative_path} carries future-relevant durable residue without a non-archive owner; "
+            "route the residue to Memory, docs, contracts, checks, or planning instead of relying on archive lookup."
+        ),
+        "refs": [relative_path],
+        "durable_residue": {
+            "status": status or "missing",
+            "canonical_owner_now": owner,
+            "learned_constraint_present": bool(learned_constraint),
+            "motivation_present": bool(motivation),
+        },
+        "recommended_action": "route residue to Memory, docs, contracts, checks, or planning",
+    }
+
+
+def _durable_residue_text_says_no_future_relevance(value: str) -> bool:
+    normalized = value.strip().lower()
+    return (
+        not normalized
+        or normalized == "none"
+        or normalized.startswith("none beyond")
+        or normalized.startswith("no future-relevant")
+        or normalized.startswith("no durable")
+    )
 
 
 def _candidate_source_mtime_ns(*, target_root: Path, candidate: dict[str, Any]) -> int:

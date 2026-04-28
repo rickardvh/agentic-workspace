@@ -3905,6 +3905,7 @@ def _maintenance_pressure_payload(
 
     warning_count = len(findings)
     historical_attention_count = _as_int(finished_counts.get("attention_count")) + _as_int(intent_counts.get("closeout_needs_audit_count"))
+    archive_only_residue_count = _as_int(finished_counts.get("archive_only_durable_residue_count"))
     review_item_count = _as_int(historical_reviews.get("item_count"))
     review_retention = historical_reviews.get("retention_policy", {})
     review_retention = review_retention if isinstance(review_retention, dict) else {}
@@ -3935,6 +3936,18 @@ def _maintenance_pressure_payload(
             ),
             detail_section="module_reports",
             selector_hint="Use full profile or module reports only for audit work.",
+        ),
+        _category(
+            category_id="archive_only_residue",
+            status="attention" if archive_only_residue_count else "quiet",
+            count=archive_only_residue_count,
+            summary=(
+                "Archived closeout residue needs routing to Memory, docs, contracts, checks, or planning."
+                if archive_only_residue_count
+                else "No archive-only durable residue signals are present."
+            ),
+            detail_section="module_reports",
+            selector_hint="Route residue to a stronger owner instead of reading more archive history.",
         ),
         _category(
             category_id="review_retention",

@@ -3441,12 +3441,14 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert set(subcategories) >= {
         "current_state_stale",
         "historical_audit",
+        "archive_only_residue",
         "review_retention",
         "archive_retention",
         "generated_output_footprint",
         "external_evidence_stale",
         "closeout_reconciliation",
     }
+    assert subcategories["archive_only_residue"]["detail_section"] == "module_reports"
     assert subcategories["closeout_reconciliation"]["detail_section"] == "closeout_trust"
     assert subcategories["external_evidence_stale"]["section_command"] == (
         "agentic-workspace report --target ./repo --section external_work_delta --format json"

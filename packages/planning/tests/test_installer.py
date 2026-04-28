@@ -4159,6 +4159,43 @@ def test_planning_summary_inspects_machine_first_archived_execplans_for_required
     assert summary["execution_readiness"]["recommendation"]["id"] == "promote-intent-derived-continuation"
 
 
+def test_planning_summary_warns_when_durable_residue_is_archive_only(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[],
+    )
+    archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    plan_path = archive_dir / "archive-only-residue.plan.json"
+    _write_execplan_record(plan_path, item_id="archive-only-residue", status="completed")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["title"] = "Archive Only Residue"
+    record["durable_residue"] = {
+        "status": "evidence_only",
+        "learned constraint": "Agents should not rely on archived plans as the only home for product-shape motivation.",
+        "motivation worth preserving": "Future work should route durable intent to a stronger owner instead of rediscovering it from archives.",
+        "canonical owner now": "archive",
+        "promotion trigger": "next residue-routing pass",
+        "retention after promotion": "shrink",
+    }
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+
+    summary = planning_summary(target=tmp_path)
+    contract = summary["finished_work_inspection_contract"]
+
+    assert contract["counts"]["archive_only_durable_residue_count"] == 1
+    assert contract["counts"]["attention_count"] == 1
+    assert contract["archive_only_durable_residue"][0]["kind"] == "archive_only_durable_residue"
+    assert contract["archive_only_durable_residue"][0]["recommended_action"] == (
+        "route residue to Memory, docs, contracts, checks, or planning"
+    )
+    assert contract["signals"][0]["message"].endswith(
+        "route the residue to Memory, docs, contracts, checks, or planning instead of relying on archive lookup."
+    )
+    assert summary["execution_readiness"]["status"] == "narrow-direct-ready"
+
+
 def test_planning_summary_keeps_historical_archive_pressure_audit_only_when_current_work_is_quiet(
     tmp_path: Path,
 ) -> None:

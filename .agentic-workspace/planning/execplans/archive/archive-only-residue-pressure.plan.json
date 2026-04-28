@@ -1,0 +1,241 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Archive Only Residue Pressure",
+  "goal": [
+    "Surface archive-only future-relevant residue as a routing problem without making archive reading part of ordinary startup."
+  ],
+  "non_goals": [
+    "Do not auto-promote archive content.",
+    "Do not treat all archived plans as suspect.",
+    "Do not add broad full-text archive scans to first-contact startup."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Summary/report/doctor pressure identifies archived durable residue that points nowhere or remains evidence-only.",
+      "constraints": "Scan compact archive metadata only and recommend routing residue to Memory/docs/contracts/checks/planning.",
+      "latitude": "Add planning-package inspection fields and root report maintenance pressure if needed.",
+      "escalation": "Escalate if the implementation requires broad archive text mining or startup expansion."
+    },
+    "execution": {
+      "milestone": "#494",
+      "status": "completed",
+      "next_step": "Archive this plan, close #494, refresh external evidence, then promote #495.",
+      "proof": "Planning package tests, workspace CLI tests, ruff checks, proof selector, planning doctor, root CLI authority review, planning-surface check, and maintenance-pressure report inspection passed."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Historical archives remain evidence, not ordinary operating input.",
+        "Recommended action is to route residue, not read more archives.",
+        "Quiet ordinary state is not blocked unless archive-only residue is selected/current or maintenance pressure is explicitly inspected."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Route durable motivation and lessons out of planning archives.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane durable-residue-routing",
+    "parent lane": "durable-residue-routing (#491)"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #494 closes, promote #495 if still open."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Archive-only residue becomes visible as a routing signal.",
+    "intentionally deferred": "Self-improvement closeout residue routing (#495).",
+    "discovered implications": "",
+    "proof achieved now": "Finished-work inspection now detects archive-only durable residue and workspace maintenance pressure exposes an archive_only_residue category.",
+    "validation still needed": "Proof-selected checks passed.",
+    "next likely slice": "#495"
+  },
+  "intent_interpretation": {
+    "literal request": "Repeat until done.",
+    "inferred intended outcome": "Continue the durable-residue-routing lane in order.",
+    "chosen concrete what": "Implement #494 after #493 landed.",
+    "interpretation distance": "low",
+    "review guidance": "Verify the warning points to residue routing rather than archive reading."
+  },
+  "execution_bounds": {
+    "allowed paths": "Planning finished-work inspection, root report maintenance-pressure routing if needed, focused tests, planning state/execplan.",
+    "max changed files": "about 8",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning; uv run ruff check .; uv run pytest tests/test_workspace_cli.py -q if workspace report changes; uv run ruff check src tests if workspace code changes; uv run python scripts/check/check_planning_surfaces.py",
+    "ask-before-refactor threshold": "Any broad report/summary rewrite or archive full-text index.",
+    "stop before touching": "Memory package behavior unless proof shows #494 requires it."
+  },
+  "stop_conditions": {
+    "stop when": "#494 acceptance is met, validated, archived, committed, pushed, closed, and external evidence refreshed.",
+    "escalate when boundary reached": "If archive-only residue detection would require reading arbitrary archived prose by default.",
+    "escalate on scope drift": "If the work turns into #495 self-improvement closeout policy.",
+    "escalate on proof failure": "If selected proof points outside planning/report routing."
+  },
+  "context_budget": {
+    "live working set": "planning installer finished-work inspection, maintenance-pressure report code, focused tests, active execplan.",
+    "recoverable later": "Issue #494 and archived #493 closeout.",
+    "externalize before shift": "Update this execplan with proof and closeout.",
+    "pre-work config pull": "summary/report already run.",
+    "pre-work memory pull": "not needed unless compact output points there.",
+    "tiny resumability note": "Implement #494 archive-only durable residue pressure.",
+    "context-shift triggers": "Before moving to #495 or after proof failure."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement remaining planned work lane by lane.",
+    "hard constraints": "Dogfood package; commit/push per milestone; preserve repo-/agent-/tool-/language-agnostic shipped package behavior.",
+    "agent may decide locally": "Exact warning field names and where to surface the compact pressure.",
+    "escalate when": "Archive scanning becomes broad or startup-heavy."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#494",
+      "label": "archive-only durable residue pressure",
+      "role": "source_intent",
+      "locator": "GitHub issue #494"
+    },
+    {
+      "kind": "issue",
+      "target": "#491",
+      "label": "durable residue routing parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue #491"
+    }
+  ],
+  "active_milestone": {
+    "id": "archive-only-residue-pressure",
+    "status": "completed",
+    "scope": "Planning/report warning for archive-only future-relevant residue",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect finished-work inspection and maintenance-pressure code paths, then add compact archive-only residue signal and tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/archive-only-residue-pressure.plan.json"
+  ],
+  "invariants": [
+    "Archives are historical evidence, not ordinary startup input.",
+    "Archive-only durable residue should route to a stronger owner.",
+    "Warnings should stay compact and selector-driven."
+  ],
+  "contract_decisions_to_freeze": [
+    "Archive-only durable residue means compact archived durable_residue metadata declares future relevance while the canonical owner is missing, none, archive-only, or evidence-only."
+  ],
+  "open_questions_to_close": [
+    "Should the signal live in planning finished-work inspection only, or also become a first-class maintenance-pressure category?"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "cd packages/planning; uv run ruff check .",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Archive-only future-relevant intent is visible as a warning or maintenance-pressure signal.",
+    "The recommended action is to route residue, not read more archives.",
+    "Ordinary quiet state is not blocked by historical archive evidence unless the residue is selected/current.",
+    "Tests cover an archive-only durable-residue warning."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "repeat until done",
+    "what happened": "Added a finished-work inspection signal for archive-only durable residue, surfaced it as a workspace maintenance-pressure category, and covered both the signal and router shape in tests.",
+    "scope touched": "planning finished-work inspection, workspace maintenance-pressure report routing, focused tests, planning state and active execplan",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/archive-only-residue-pressure.plan.json",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q; uv run pytest tests/test_workspace_cli.py -q; cd packages/planning; uv run ruff check .; uv run ruff check src tests; uv run agentic-workspace proof --target . --changed <paths> --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace report --target . --section maintenance_pressure --format json",
+    "result for continuation": "#494 acceptance is satisfied; #495 remains in durable-residue-routing.",
+    "next step": "Archive this plan with cleanup and continue #495."
+  },
+  "finished_run_review": {
+    "review status": "reviewed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "summary/report used before promotion; proof selector, planning doctor, root CLI authority review, and maintenance-pressure report used during validation",
+    "misinterpretation risk": "low",
+    "follow-on decision": "Archive #494 but keep #491 lane open for #495."
+  },
+  "proof_report": {
+    "validation proof": "Passed: uv run pytest packages/planning/tests/test_installer.py -q; uv run pytest tests/test_workspace_cli.py -q; cd packages/planning; uv run ruff check .; uv run ruff check src tests; uv run agentic-workspace proof --target . --changed <paths> --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace report --target . --section maintenance_pressure --format json.",
+    "proof achieved now": "Archive-only future-relevant durable residue is visible as a finished-work inspection signal and maintenance-pressure category, with recommendations to route residue rather than read archives.",
+    "evidence for \"proof achieved\" state": "packages/planning/tests/test_installer.py covers the archive-only durable-residue warning; tests/test_workspace_cli.py covers the maintenance-pressure router category."
+  },
+  "intent_satisfaction": {
+    "original intent": "#494 acceptance criteria",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Finished-work inspection emits archive_only_durable_residue signals from compact durable_residue metadata; workspace maintenance pressure exposes archive_only_residue and points to stronger ownership.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane durable-residue-routing"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package cheaper to enter and recover from while preserving leverage.",
+    "slice shaping bias": "Surface routing pressure without expanding startup archive reading.",
+    "broader-lane validation question": "Can archives stop being the only place future-relevant motivation lives?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#494 is complete, but #491 still has #495 open for self-improvement closeout routing.",
+    "evidence carried forward": "archive_only_durable_residue finished-work signal, archive_only_residue maintenance-pressure category, and focused tests.",
+    "reopen trigger": "Archive-only future-relevant residue is not surfaced as a routing problem or the recommendation tells agents to read archives instead of route residue."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Archive-only durable residue should become routing pressure instead of normalizing archive dredging.",
+    "motivation worth preserving": "The package should make the cheaper path be routing residue to an owner, not teaching agents to search old plans.",
+    "canonical owner now": ".agentic-workspace/planning/state.toml roadmap lane durable-residue-routing",
+    "promotion trigger": "After #494 lands, continue #495 for self-improvement closeout enforcement.",
+    "retention after promotion": "shrink"
+  },
+  "execution_summary": {
+    "outcome delivered": "Archive-only future-relevant residue is now visible as selector-driven routing pressure.",
+    "validation confirmed": "Planning package tests, workspace CLI tests, ruff checks, proof selector, planning doctor, root CLI authority review, planning-surface check, and maintenance-pressure report inspection passed.",
+    "follow-on routed to": "#495 in durable-residue-routing",
+    "post-work posterity capture": "No new Memory note required; the durable lesson is encoded in checks/report routing.",
+    "knowledge promoted (Memory/Docs/Config)": "Planning finished-work inspection and workspace maintenance-pressure report routing",
+    "resume from": ".agentic-workspace/planning/execplans/archive-only-residue-pressure.plan.json"
+  },
+  "improvement_signal_review": {
+    "status": "none",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "#495 remains in durable-residue-routing."
+      ],
+      "memory": [],
+      "config_check": [
+        "archive_only_durable_residue signal and archive_only_residue maintenance-pressure category"
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #494 into active planning.",
+    "2026-04-28: Implemented and validated archive-only durable residue pressure."
+  ]
+}
