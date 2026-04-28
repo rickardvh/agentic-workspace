@@ -11,12 +11,15 @@ from pathlib import Path
 from zipfile import ZipFile
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from repo_planning_bootstrap import installer
 
 PLANNING_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 CLASSIFICATION_PATH = PLANNING_PACKAGE_ROOT / "payload-surface-classification.json"
 EXTRACTION_CANDIDATES_PATH = PLANNING_PACKAGE_ROOT / "extraction-candidates.json"
+CLASSIFICATION_SCHEMA_PATH = PLANNING_PACKAGE_ROOT / "schemas" / "payload-surface-classification.schema.json"
+EXTRACTION_CANDIDATES_SCHEMA_PATH = PLANNING_PACKAGE_ROOT / "schemas" / "extraction-candidates.schema.json"
 EXPECTED_PAYLOAD_ENTRIES = {path.as_posix() for path in installer.PACKAGE_PAYLOAD_FILES}
 EXPECTED_SKILL_ENTRIES = {
     path.relative_to(installer.PLANNING_SKILLS_MANAGED_ROOT).as_posix() for path in installer.PLANNING_BUNDLED_SKILL_FILES
@@ -99,6 +102,7 @@ def _assert_contract_inventory(artifact: Path) -> None:
 
 def _load_payload_surface_classification() -> dict:
     payload = json.loads(CLASSIFICATION_PATH.read_text(encoding="utf-8"))
+    _assert_schema_valid(payload, CLASSIFICATION_SCHEMA_PATH)
     assert payload["kind"] == "planning-payload-surface-classification/v1"
     assert set(payload["allowed_classifications"]) == ALLOWED_CLASSIFICATIONS
     return payload
@@ -106,11 +110,23 @@ def _load_payload_surface_classification() -> dict:
 
 def _load_extraction_candidates() -> dict:
     payload = json.loads(EXTRACTION_CANDIDATES_PATH.read_text(encoding="utf-8"))
+    _assert_schema_valid(payload, EXTRACTION_CANDIDATES_SCHEMA_PATH)
     assert payload["kind"] == "planning-extraction-candidates/v1"
     assert payload["issue"].endswith("/465")
     assert payload["parent_issue"].endswith("/461")
     assert payload["surface_value"]["ordinary_startup_surface"] is False
     return payload
+
+
+def _assert_schema_valid(payload: dict, schema_path: Path) -> None:
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    errors = sorted(Draft202012Validator(schema).iter_errors(payload), key=lambda error: list(error.path))
+    assert not errors, f"{schema_path.name} validation failed at {list(errors[0].path)}: {errors[0].message}"
+
+
+def test_package_local_artifact_schemas_validate_current_records() -> None:
+    _load_payload_surface_classification()
+    _load_extraction_candidates()
 
 
 def _classified_source_paths() -> set[str]:

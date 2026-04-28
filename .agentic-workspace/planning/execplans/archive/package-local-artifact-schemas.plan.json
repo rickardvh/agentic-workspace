@@ -1,0 +1,272 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Add schemas for package-local planning artifacts",
+  "goal": [
+    "Implement #509 by adding explicit schemas for package-local planning classification artifacts.",
+    "Validate payload-surface classification and extraction-candidates JSON in package tests.",
+    "Update structured-file inventory so these artifacts are no longer freeform-prohibited gaps."
+  ],
+  "non_goals": [
+    "Do not ship maintainer-only classification artifacts to host repos.",
+    "Do not turn package-local classification artifacts into ordinary startup input.",
+    "Do not replace existing package-boundary tests that check semantic coverage.",
+    "Do not broaden into executable inventory-claim validation; #544 owns that follow-up."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "package-local classification and extraction JSON artifacts have explicit schemas and are validated by package tests",
+      "constraints": "repo/tool/language agnostic; package-local only; no new first-line surfaces; keep #502 open for #544",
+      "latitude": "may add package-local schema files, package tests, inventory updates, and focused docs comments if needed",
+      "escalation": "stop if validation requires changing package payload semantics or shipping maintainer-only artifacts"
+    },
+    "execution": {
+      "milestone": "#509",
+      "status": "completed",
+      "next_step": "archive #509 and continue #544 unless refreshed evidence reprioritizes the lane",
+      "proof": "passed"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/package-local-artifact-schemas.plan.json",
+        "packages/planning/schemas/",
+        "packages/planning/payload-surface-classification.json",
+        "packages/planning/extraction-candidates.json",
+        "packages/planning/tests/test_packaging.py",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        "tests/test_structured_file_inventory.py"
+      ],
+      "invariants": [
+        "classification artifacts remain package-local maintainer/development inputs",
+        "schemas validate shape while existing tests keep semantic coverage",
+        "ordinary host-repo startup remains unchanged",
+        "inventory must not route these files to #509 after completion"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "all machine-readable files are schema-backed, typed-validator-backed, generated/derived, or explicitly classified diagnostics",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "structured-file-contract"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #509 closes, continue #544 or refreshed higher-priority issue"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "schema-backed package-local classification artifacts",
+    "intentionally deferred": "#544 executable inventory-claim validation",
+    "discovered implications": "structured inventory schema_or_validator claims remain metadata-only unless executable validation checks them; this is already routed to #544",
+    "proof achieved now": "package-local schema validation, package packaging tests, inventory tests/checks, contract tooling checks, ruff, planning doctor, and planning-surface checks passed",
+    "validation still needed": "#544 should make inventory schema/validator claims executable",
+    "next likely slice": "#544"
+  },
+  "intent_interpretation": {
+    "literal request": "Continue backlog lane-by-lane while dogfooding the package and creating issues for actionable improvement signals.",
+    "inferred intended outcome": "remove package-local freeform JSON gaps without adding host-repo residue",
+    "chosen concrete what": "schemas and package tests for payload-surface-classification and extraction-candidates",
+    "interpretation distance": "low",
+    "review guidance": "verify the artifacts remain package-local and not shipped as target-repo operation surfaces"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the bounded #509 slice with explicit schemas and tests for package-local planning classification artifacts.",
+    "hard constraints": "Keep artifacts package-local and maintainer/development only; do not add host-repo startup or shipped payload burden.",
+    "agent may decide locally": "Schema strictness, helper placement, focused test names, and inventory wording.",
+    "escalate when": "The slice cannot be proven without changing package payload semantics or shipping maintainer-only artifacts."
+  },
+  "execution_bounds": {
+    "allowed paths": "package-local schemas/tests/artifacts, structured-file inventory/tests, active plan/state",
+    "max changed files": "about 10 unless proof reveals a narrow additional owner",
+    "required validation commands": "cd packages/planning && uv run pytest tests/test_packaging.py -q; uv run pytest tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py --strict; uv run ruff check packages/planning/tests tests src/agentic_workspace/contracts",
+    "ask-before-refactor threshold": "before moving artifacts or changing package payload semantics",
+    "stop before touching": "host-repo installed payload shape or new startup/report surfaces"
+  },
+  "stop_conditions": {
+    "stop when": "schema validation would force changing existing package classification semantics",
+    "escalate when boundary reached": "package-local artifacts must become shipped payload to prove the slice",
+    "escalate on scope drift": "changes spill into optional extension extraction decisions",
+    "escalate on proof failure": "existing tests show schema is too strict for maintained artifact shape"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#509",
+      "label": "Package-local artifact schema child issue",
+      "role": "source",
+      "locator": "GitHub issue #509"
+    },
+    {
+      "kind": "issue",
+      "target": "#502",
+      "label": "Structured-file contract parent lane",
+      "role": "parent",
+      "locator": "GitHub issue #502"
+    },
+    {
+      "kind": "issue",
+      "target": "#544",
+      "label": "Executable inventory-claim follow-up",
+      "role": "continuation",
+      "locator": "GitHub issue #544"
+    }
+  ],
+  "active_milestone": {
+    "id": "#509",
+    "status": "completed",
+    "scope": "package-local classification/extraction schemas, tests, and inventory status",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "read-only subagent inspection"
+  },
+  "immediate_next_action": [
+    "Add package-local schemas and focused tests for payload-surface-classification and extraction-candidates."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/package-local-artifact-schemas.plan.json"
+  ],
+  "invariants": [
+    "package-local artifacts stay maintainer/development only",
+    "schemas are package-local validation machinery",
+    "semantic coverage tests remain in place"
+  ],
+  "validation_commands": [
+    "cd packages/planning && uv run pytest tests/test_packaging.py -q",
+    "uv run pytest tests/test_structured_file_inventory.py -q",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "uv run ruff check packages/planning/tests tests src/agentic_workspace/contracts"
+  ],
+  "required_tools": [
+    "uv",
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "payload-surface-classification.json validates against an explicit package-local schema.",
+    "extraction-candidates.json validates against an explicit package-local schema.",
+    "Existing package tests validate full artifact shape before semantic assertions.",
+    "Structured-file inventory marks both artifacts schema-backed or explicitly typed-validator-backed with no #509 route.",
+    "Proof-selected validation passes."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": ".agentic-workspace/planning/execplans/package-local-artifact-schemas.plan.json",
+    "what happened": "Added explicit package-local schemas for payload-surface-classification.json and extraction-candidates.json; updated package tests to validate both records before semantic assertions; updated structured-file inventory and tests so both artifacts are schema-backed rather than routed freeform gaps.",
+    "scope touched": "package-local planning schemas/tests plus root structured-file inventory/tests and active planning state",
+    "changed surfaces": "packages/planning/schemas/payload-surface-classification.schema.json; packages/planning/schemas/extraction-candidates.schema.json; packages/planning/tests/test_packaging.py; src/agentic_workspace/contracts/structured_file_inventory.json; tests/test_structured_file_inventory.py; active plan/state",
+    "validations run": "cd packages/planning && uv run pytest tests/test_packaging.py -q; uv run pytest tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check packages/planning/tests tests src/agentic_workspace/contracts; uv run agentic-workspace proof --target . --changed <slice paths> --format json; uv run agentic-workspace doctor --target . --modules planning --format json; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
+    "result for continuation": "#509 is complete; #544 remains under #502 for executable validation of structured inventory schema/validator claims.",
+    "next step": "archive this plan, commit/push, close #509, refresh evidence, then continue #544 or the refreshed top priority"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; maintainer/development artifacts stayed package-local and no host-repo startup payload changed",
+    "proof status": "passed",
+    "intent served": "yes; the two #509 artifacts are schema-backed and validated in package tests",
+    "config compliance": "used compact summary/proof/doctor/report/reconcile/skills surfaces and package-local validation",
+    "misinterpretation risk": "low; #544 explicitly owns the separate executable inventory-claim validation concern",
+    "follow-on decision": "keep parent #502 open and continue #544 after #509 closes"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "schema validation and selected planning/package/contract checks passed",
+    "evidence for \"proof achieved\" state": "tests/test_packaging.py and tests/test_structured_file_inventory.py passed; structured inventory and contract tooling checks passed; proof-selected package installer and ruff lanes passed; planning doctor passed"
+  },
+  "intent_satisfaction": {
+    "original intent": "#509: add schemas for package-local classification and extraction artifacts.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#509 delivered package-local schemas for payload-surface-classification.json and extraction-candidates.json, package tests validate them, and structured inventory no longer routes them as freeform gaps.",
+    "unsolved intent passed to": "#544 remains open under #502 for executable structured-inventory schema/validator claim validation."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "prefer package-local schema validation over new host-repo surfaces",
+    "broader-lane validation question": "Does this reduce freeform package-local JSON without increasing shipped default footprint?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Bounded #509 slice is complete while parent #502 remains open for #544.",
+    "evidence carried forward": "Package tests, inventory tests/checks, contract tooling checks, ruff, planning doctor, and planning-surface checks passed.",
+    "reopen trigger": "Reopen #509 if either package-local artifact changes shape without schema coverage or becomes shipped host-repo payload."
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "maintainer-only classification artifacts can be schema-backed without becoming first-contact or host-repo surfaces",
+    "motivation worth preserving": "reduce freeform JSON while preserving product-shape compression and weak-agent compatibility",
+    "canonical owner now": "packages/planning/schemas plus package tests and structured-file inventory",
+    "promotion trigger": "promote to docs only if future package maintainers need human-facing guidance beyond the tests",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "explicit schemas for package-local classification and extraction artifacts",
+    "validation confirmed": "package tests, inventory tests/checks, contract tooling checks, ruff, and planning doctor passed",
+    "follow-on routed to": "#544 under #502",
+    "post-work posterity capture": "plan closeout records the package-local boundary and proof",
+    "knowledge promoted (Memory/Docs/Config)": "none; checks and schemas are sufficient durable residue",
+    "resume from": ".agentic-workspace/planning/state.toml after archive"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [
+      "#544 covers the discovered need to make structured inventory schema_or_validator claims executable instead of metadata-only."
+    ],
+    "signals dismissed": [
+      "No new issue for package-local schema placement; existing package tests and inventory checks made the path cheap enough."
+    ],
+    "next owner": "#544"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "raw command output and subagent read-only inspection details after proof was recorded",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#544: make structured inventory schema/validator claims executable",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "no host-repo startup or package payload semantics changed",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "none; checks and schemas are sufficient durable residue",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#544",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #509 after closing #508."
+  ]
+}

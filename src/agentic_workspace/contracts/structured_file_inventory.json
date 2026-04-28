@@ -537,12 +537,11 @@
       "pattern": "packages/planning/payload-surface-classification.json",
       "format": "json",
       "owner": "planning-package",
-      "status": "freeform-prohibited-gap",
-      "schema_or_validator": "package-local classification schema pending",
+      "status": "schema-backed",
+      "schema_or_validator": "packages/planning/schemas/payload-surface-classification.schema.json",
       "editable_by_agents": true,
       "generated": false,
-      "routed_to": "#509",
-      "notes": "Package-local classification artifact needs schema coverage.",
+      "notes": "Package-local maintainer/development artifact validated by planning package tests; not installed into host repos.",
       "storage_class": "removable-duplicate",
       "checked_in_justification": "Duplicate or candidate payload metadata retained only while routed to collapse behind one source plus generated outputs.",
       "reconstructable_from": [
@@ -556,12 +555,11 @@
       "pattern": "packages/planning/extraction-candidates.json",
       "format": "json",
       "owner": "planning-package",
-      "status": "freeform-prohibited-gap",
-      "schema_or_validator": "package-local extraction schema pending",
+      "status": "schema-backed",
+      "schema_or_validator": "packages/planning/schemas/extraction-candidates.schema.json",
       "editable_by_agents": true,
       "generated": false,
-      "routed_to": "#509",
-      "notes": "Package-local extraction artifact needs schema coverage.",
+      "notes": "Package-local maintainer/development artifact validated by planning package tests; not installed into host repos.",
       "storage_class": "removable-duplicate",
       "checked_in_justification": "Duplicate or candidate payload metadata retained only while routed to collapse behind one source plus generated outputs.",
       "reconstructable_from": [
@@ -570,6 +568,18 @@
         "git history"
       ],
       "storage_routed_to": "#540"
+    },
+    {
+      "pattern": "packages/planning/schemas/*.schema.json",
+      "format": "json",
+      "owner": "planning-package",
+      "status": "schema-backed",
+      "schema_or_validator": "JSON Schema draft 2020-12 and planning package tests",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Package-local schemas validate planning package maintainer/development artifacts; not installed into host repos.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "packages/*/pyproject.toml",

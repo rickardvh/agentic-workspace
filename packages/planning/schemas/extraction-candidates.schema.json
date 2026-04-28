@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-planning-bootstrap/extraction-candidates.schema.json",
+  "title": "Planning Package Extraction Candidates",
+  "type": "object",
+  "required": [
+    "kind",
+    "issue",
+    "parent_issue",
+    "purpose",
+    "source_inputs",
+    "surface_value",
+    "extraction_criteria",
+    "decisions",
+    "follow_up_policy",
+    "next_step"
+  ],
+  "properties": {
+    "kind": {
+      "const": "planning-extraction-candidates/v1"
+    },
+    "issue": {
+      "type": "string",
+      "format": "uri"
+    },
+    "parent_issue": {
+      "type": "string",
+      "format": "uri"
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_inputs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "surface_value": {
+      "type": "object",
+      "required": [
+        "classification",
+        "installed_by_default",
+        "ordinary_startup_surface",
+        "owner",
+        "discovery",
+        "why_it_deserves_to_exist"
+      ],
+      "properties": {
+        "classification": {
+          "type": "string",
+          "minLength": 1
+        },
+        "installed_by_default": {
+          "type": "boolean"
+        },
+        "ordinary_startup_surface": {
+          "type": "boolean"
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "discovery": {
+          "type": "string",
+          "minLength": 1
+        },
+        "why_it_deserves_to_exist": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "extraction_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "capability",
+          "current_home",
+          "decision",
+          "candidate_boundary",
+          "why_not_core_planning",
+          "evidence_required_before_extraction",
+          "blockers",
+          "candidate_surfaces",
+          "existing_follow_up"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "capability": {
+            "type": "string",
+            "minLength": 1
+          },
+          "current_home": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "candidate_boundary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "why_not_core_planning": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_required_before_extraction": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "candidate_surfaces": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "existing_follow_up": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "follow_up_policy": {
+      "type": "object",
+      "required": [
+        "created_new_issues",
+        "reason"
+      ],
+      "properties": {
+        "created_new_issues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "next_step": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": false
+}

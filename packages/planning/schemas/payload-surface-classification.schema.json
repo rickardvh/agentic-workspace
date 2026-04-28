@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-planning-bootstrap/payload-surface-classification.schema.json",
+  "title": "Planning Package Payload Surface Classification",
+  "type": "object",
+  "required": [
+    "kind",
+    "issue",
+    "parent_issue",
+    "purpose",
+    "allowed_classifications",
+    "smallest_safe_default_install",
+    "compression_candidates",
+    "surfaces"
+  ],
+  "properties": {
+    "kind": {
+      "const": "planning-payload-surface-classification/v1"
+    },
+    "issue": {
+      "type": "string",
+      "format": "uri"
+    },
+    "parent_issue": {
+      "type": "string",
+      "format": "uri"
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "allowed_classifications": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "smallest_safe_default_install": {
+      "type": "object",
+      "required": [
+        "rule",
+        "source_paths",
+        "installed_paths"
+      ],
+      "properties": {
+        "rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "installed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "compression_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "target",
+          "classification",
+          "candidate_paths",
+          "next_issue"
+        ],
+        "properties": {
+          "target": {
+            "type": "string",
+            "minLength": 1
+          },
+          "classification": {
+            "type": "string",
+            "minLength": 1
+          },
+          "candidate_paths": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "next_issue": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "source_path",
+          "installed_path",
+          "classification",
+          "owner",
+          "rationale"
+        ],
+        "properties": {
+          "source_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "installed_path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "classification": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

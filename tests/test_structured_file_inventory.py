@@ -44,9 +44,7 @@ def test_inventory_routes_known_schema_gaps() -> None:
     inventory = check_structured_file_inventory.load_inventory()
     gap_entries = [entry for entry in inventory["entries"] if entry["status"] == "freeform-prohibited-gap"]
 
-    assert {entry["routed_to"] for entry in gap_entries} >= {"#509"}
-    assert "#508" not in {entry["routed_to"] for entry in gap_entries}
-    assert all(entry["generated"] is False for entry in gap_entries)
+    assert gap_entries == []
 
 
 def test_root_contract_manifests_are_typed_validator_backed() -> None:
@@ -106,6 +104,22 @@ def test_planning_evidence_entries_are_schema_backed() -> None:
 
     assert set(entries) == set(evidence_patterns)
     for pattern, schema_name in evidence_patterns.items():
+        entry = entries[pattern]
+        assert entry["status"] == "schema-backed"
+        assert schema_name in entry["schema_or_validator"]
+        assert "routed_to" not in entry
+
+
+def test_package_local_planning_artifacts_are_schema_backed() -> None:
+    inventory = check_structured_file_inventory.load_inventory()
+    artifact_patterns = {
+        "packages/planning/payload-surface-classification.json": "payload-surface-classification.schema.json",
+        "packages/planning/extraction-candidates.json": "extraction-candidates.schema.json",
+    }
+    entries = {entry["pattern"]: entry for entry in inventory["entries"] if entry["pattern"] in artifact_patterns}
+
+    assert set(entries) == set(artifact_patterns)
+    for pattern, schema_name in artifact_patterns.items():
         entry = entries[pattern]
         assert entry["status"] == "schema-backed"
         assert schema_name in entry["schema_or_validator"]
