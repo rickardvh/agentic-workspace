@@ -33,6 +33,14 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text.strip() + "\n", encoding="utf-8")
 
 
+def _install_planning_record_schemas(target: Path) -> None:
+    schema_root = WORKSPACE_ROOT / ".agentic-workspace" / "planning" / "schemas"
+    for name in ("planning-execplan.schema.json", "planning-review.schema.json"):
+        destination = target / ".agentic-workspace" / "planning" / "schemas" / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text((schema_root / name).read_text(encoding="utf-8"), encoding="utf-8")
+
+
 def _minimal_execplan(*, status: str = "in-progress") -> str:
     execution_run = (
         "- Run status: completed\n"
@@ -1070,6 +1078,61 @@ def test_completed_execplan_with_partial_archive_decision_requires_open_larger_i
 
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     assert any(warning.warning_class == "execplan_closure_drift" for warning in warnings)
+
+
+def test_planning_surface_checker_validates_execplan_json_schema(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_record_schema_execplan")
+    _install_planning_record_schemas(tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    record_path.parent.mkdir(parents=True, exist_ok=True)
+    record_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "title": "Plan Alpha",
+                "goal": ["do one thing"],
+                "non_goals": ["avoid broad work"],
+                "active_milestone": {"status": "active"},
+                "validation_commands": ["uv run pytest"],
+                "completion_criteria": ["schema check passes"],
+                "surprise_machine_field": "not in the schema",
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+
+    assert any(
+        warning.warning_class == "planning_record_schema_drift" and "surprise_machine_field" in warning.message for warning in warnings
+    )
+
+
+def test_planning_surface_checker_validates_review_json_schema(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_record_schema_review")
+    _install_planning_record_schemas(tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "review-alpha.review.json"
+    record_path.parent.mkdir(parents=True, exist_ok=True)
+    record_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-review/v1",
+                "title": "Review Alpha",
+                "surprise_machine_field": "not in the schema",
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+
+    assert any(
+        warning.warning_class == "planning_record_schema_drift" and "surprise_machine_field" in warning.message for warning in warnings
+    )
 
 
 def test_main_json_format_outputs_payload(tmp_path: Path, capsys) -> None:

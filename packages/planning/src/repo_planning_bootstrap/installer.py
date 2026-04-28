@@ -10,6 +10,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Iterable
 
+from jsonschema import Draft202012Validator
+
 from repo_planning_bootstrap import __version__
 from repo_planning_bootstrap._ownership import module_root
 from repo_planning_bootstrap._render import (
@@ -26,6 +28,9 @@ PLANNING_STATE_PATH = PLANNING_MANAGED_ROOT / "state.toml"
 PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "external-intent-evidence.json"
 PLANNING_EXTERNAL_INTENT_CACHE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 PLANNING_FINISHED_WORK_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "finished-work-evidence.json"
+PLANNING_SCHEMA_ROOT = PLANNING_MANAGED_ROOT / "schemas"
+EXECPLAN_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-execplan.schema.json"
+REVIEW_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-review.schema.json"
 SOURCE_PLANNING_CHECKER_SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "check" / "check_planning_surfaces.py"
 PLANNING_STATE_KIND = "agentic-planning-state"
 PLANNING_STATE_SCHEMA_VERSION = "planning-state/v1"
@@ -51,6 +56,8 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/planning/execplans/README.md"),
     Path(".agentic-workspace/planning/execplans/TEMPLATE.plan.json"),
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
+    EXECPLAN_RECORD_SCHEMA_PATH,
+    REVIEW_RECORD_SCHEMA_PATH,
     UPGRADE_SOURCE_PATH,
     PLANNING_MANIFEST_PATH,
 )
@@ -88,6 +95,8 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path(".agentic-workspace/planning/execplans/README.md"),
     Path(".agentic-workspace/planning/execplans/TEMPLATE.plan.json"),
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
+    EXECPLAN_RECORD_SCHEMA_PATH,
+    REVIEW_RECORD_SCHEMA_PATH,
     PLANNING_MANIFEST_PATH,
 )
 
@@ -271,6 +280,37 @@ def payload_root() -> Path:
     if packaged.exists():
         return packaged
     return Path(__file__).resolve().parents[2] / "bootstrap"
+
+
+def _payload_schema(relative: Path) -> dict[str, Any]:
+    return json.loads((payload_root() / relative).read_text(encoding="utf-8"))
+
+
+def _json_schema_findings(*, payload: dict[str, Any], schema_path: Path) -> list[str]:
+    schema = _payload_schema(schema_path)
+    errors = sorted(Draft202012Validator(schema).iter_errors(payload), key=lambda error: list(error.path))
+    findings: list[str] = []
+    for error in errors:
+        location = ".".join(str(part) for part in error.path) or "<root>"
+        findings.append(f"{location}: {error.message}")
+    return findings
+
+
+def planning_record_schema_findings(record_path: Path) -> list[str]:
+    """Return JSON Schema validation findings for planning execplan/review records."""
+
+    try:
+        payload = json.loads(record_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"invalid JSON: {exc}"]
+    if not isinstance(payload, dict):
+        return ["planning record must be a JSON object"]
+    kind = payload.get("kind")
+    if kind == EXECPLAN_RECORD_KIND:
+        return _json_schema_findings(payload=payload, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
+    if kind == REVIEW_RECORD_KIND:
+        return _json_schema_findings(payload=payload, schema_path=REVIEW_RECORD_SCHEMA_PATH)
+    return [f"unsupported planning record kind: {kind!r}"]
 
 
 def _detect_payload_drift(target_root: Path) -> list[dict[str, str]]:
@@ -6557,6 +6597,23 @@ def archive_execplan(
         )
         if not prepared or dry_run:
             return result
+    record_path = _canonical_execplan_record_path(plan_path)
+    schema_findings = planning_record_schema_findings(record_path) if record_path.exists() else []
+    if schema_findings:
+        for finding in schema_findings:
+            result.warnings.append(
+                {
+                    "warning_class": "archive_execplan_schema_drift",
+                    "path": record_path.relative_to(target_root).as_posix(),
+                    "message": finding,
+                }
+            )
+        result.add(
+            "manual review",
+            record_path,
+            "execplan record must validate against planning-execplan.schema.json before archiving",
+        )
+        return result
     intent_continuity = _execplan_intent_continuity(plan_path)
     completes_larger_outcome = intent_continuity.get("this slice completes the larger intended outcome", "").strip().lower()
     continuation_surface = intent_continuity.get("continuation surface", "").strip()

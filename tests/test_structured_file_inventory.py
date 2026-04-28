@@ -44,7 +44,7 @@ def test_inventory_routes_known_schema_gaps() -> None:
     inventory = check_structured_file_inventory.load_inventory()
     gap_entries = [entry for entry in inventory["entries"] if entry["status"] == "freeform-prohibited-gap"]
 
-    assert {entry["routed_to"] for entry in gap_entries} >= {"#505", "#508", "#509"}
+    assert {entry["routed_to"] for entry in gap_entries} >= {"#508", "#509"}
     assert all(entry["generated"] is False for entry in gap_entries)
 
 
@@ -63,6 +63,25 @@ def test_memory_manifest_entries_are_typed_validator_backed() -> None:
     for entry in manifest_entries:
         assert entry["status"] == "typed-validator-backed"
         assert "_memory_manifest_typed_validator_findings" in entry["schema_or_validator"]
+        assert "routed_to" not in entry
+
+
+def test_planning_record_entries_are_schema_backed() -> None:
+    inventory = check_structured_file_inventory.load_inventory()
+    planning_patterns = {
+        ".agentic-workspace/planning/execplans/*.plan.json": "planning-execplan.schema.json",
+        ".agentic-workspace/planning/execplans/archive/*.plan.json": "planning-execplan.schema.json",
+        ".agentic-workspace/planning/reviews/*.review.json": "planning-review.schema.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/execplans/*.plan.json": "planning-execplan.schema.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/reviews/*.review.json": "planning-review.schema.json",
+    }
+    entries = {entry["pattern"]: entry for entry in inventory["entries"] if entry["pattern"] in planning_patterns}
+
+    assert set(entries) == set(planning_patterns)
+    for pattern, schema_name in planning_patterns.items():
+        entry = entries[pattern]
+        assert entry["status"] == "schema-backed"
+        assert schema_name in entry["schema_or_validator"]
         assert "routed_to" not in entry
 
 

@@ -496,6 +496,8 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     review_record_template_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.review.json"
     intake_doc_path = tmp_path / ".agentic-workspace" / "planning" / "upstream-task-intake.md"
     refinement_doc_path = tmp_path / ".agentic-workspace" / "planning" / "pre-ingestion-refinement.md"
+    execplan_schema_path = tmp_path / ".agentic-workspace" / "planning" / "schemas" / "planning-execplan.schema.json"
+    review_schema_path = tmp_path / ".agentic-workspace" / "planning" / "schemas" / "planning-review.schema.json"
 
     assert (tmp_path / "AGENTS.md").exists()
     assert (tmp_path / ".agentic-workspace/planning/state.toml").exists()
@@ -514,6 +516,8 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert not intake_doc_path.exists()
     assert not refinement_doc_path.exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "TEMPLATE.plan.json").exists()
+    assert execplan_schema_path.exists()
+    assert review_schema_path.exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert not (tmp_path / ".agentic-workspace" / "planning" / "scripts").exists()
     assert not skill_readme_path.exists()
@@ -540,6 +544,38 @@ def test_install_bootstrap_include_optional_copies_optional_payload_and_skills(t
         action.kind == "copied" and action.path == tmp_path / ".agentic-workspace" / "planning" / "reviews" / "README.md"
         for action in result.actions
     )
+
+
+def test_planning_record_schemas_validate_templates() -> None:
+    payload = installer_mod.payload_root()
+
+    assert installer_mod.planning_record_schema_findings(payload / ".agentic-workspace/planning/execplans/TEMPLATE.plan.json") == []
+    assert installer_mod.planning_record_schema_findings(payload / ".agentic-workspace/planning/reviews/TEMPLATE.review.json") == []
+
+
+def test_planning_record_schema_rejects_unknown_execplan_fields(tmp_path: Path) -> None:
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path)
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["surprise_machine_field"] = "not in the schema"
+    record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+
+    findings = installer_mod.planning_record_schema_findings(record_path)
+
+    assert any("surprise_machine_field" in finding for finding in findings)
+
+
+def test_archive_execplan_rejects_schema_invalid_json_record(tmp_path: Path) -> None:
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["surprise_machine_field"] = "not in the schema"
+    record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert any(action.kind == "manual review" and "planning-execplan.schema.json" in action.detail for action in result.actions)
+    assert any(warning["warning_class"] == "archive_execplan_schema_drift" for warning in result.warnings)
 
 
 def test_install_dry_run_json_includes_compact_lifecycle_plan(tmp_path: Path, capsys) -> None:

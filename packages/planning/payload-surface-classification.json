@@ -25,7 +25,9 @@
       "packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md",
       "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json",
-      "packages/planning/bootstrap/.agentic-workspace/planning/execplans/archive/README.md"
+      "packages/planning/bootstrap/.agentic-workspace/planning/execplans/archive/README.md",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json"
     ],
     "installed_paths": [
       "AGENTS.md",
@@ -39,7 +41,9 @@
       ".agentic-workspace/planning/agent-manifest.json",
       ".agentic-workspace/planning/execplans/README.md",
       ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
-      ".agentic-workspace/planning/execplans/archive/README.md"
+      ".agentic-workspace/planning/execplans/archive/README.md",
+      ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+      ".agentic-workspace/planning/schemas/planning-review.schema.json"
     ]
   },
   "compression_candidates": [
@@ -273,6 +277,20 @@
       "classification": "core daily-operation planning",
       "owner": "planning package payload",
       "rationale": "Defines archive role so completed plans stop cluttering active state while preserving recovery evidence."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
+      "installed_path": ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Schema for canonical execplan records so active and archived planning state can be validated without relying on prose convention."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json",
+      "installed_path": ".agentic-workspace/planning/schemas/planning-review.schema.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Schema for review records so optional review artifacts remain machine-validatable when present."
     },
     {
       "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/reviews/README.md",

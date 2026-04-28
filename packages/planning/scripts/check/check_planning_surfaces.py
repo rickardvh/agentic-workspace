@@ -16,6 +16,8 @@ import tomllib
 from pathlib import Path
 from typing import NamedTuple
 
+from jsonschema import Draft202012Validator
+
 
 def _find_repo_root() -> Path:
     """Find repo root based on script location (canonical or bootstrap)."""
@@ -41,6 +43,9 @@ STATE_TOML_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "state.toml"
 LEGACY_TODO_PATH = REPO_ROOT / "TODO.md"
 LEGACY_ROADMAP_PATH = REPO_ROOT / "ROADMAP.md"
 EXECPLAN_DIR = REPO_ROOT / ".agentic-workspace" / "planning" / "execplans"
+PLANNING_SCHEMA_DIR = REPO_ROOT / ".agentic-workspace" / "planning" / "schemas"
+EXECPLAN_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_DIR / "planning-execplan.schema.json"
+REVIEW_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_DIR / "planning-review.schema.json"
 
 TODO_MAX_LINES = 150
 TODO_MAX_NOW_ITEMS = 3
@@ -66,6 +71,7 @@ WARNING_EXECPLAN_CLOSURE_DRIFT = "execplan_closure_drift"
 WARNING_EXECPLAN_ACTIVE_SET_PRESSURE = "execplan_active_set_pressure"
 WARNING_EXECPLAN_PROOF_DRIFT = "execplan_proof_drift"
 WARNING_EXECPLAN_INTENT_SATISFACTION_DRIFT = "execplan_intent_satisfaction_drift"
+WARNING_PLANNING_RECORD_SCHEMA_DRIFT = "planning_record_schema_drift"
 WARNING_ROADMAP_EXECUTION_DRIFT = "roadmap_execution_drift"
 WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL = "roadmap_missing_promotion_signal"
 WARNING_ROADMAP_MISSING_REOPEN_SIGNAL = "roadmap_missing_reopen_signal"
@@ -232,6 +238,91 @@ def _read_lines(path: Path) -> list[str]:
     if not path.exists():
         return []
     return path.read_text(encoding="utf-8").splitlines()
+
+
+def _load_json(path: Path) -> object | None:
+    try:
+        return json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _schema_record_warnings(*, record_path: Path, schema_path: Path, expected_kind: str) -> list[PlanningWarning]:
+    payload = _load_json(record_path)
+    if not isinstance(payload, dict):
+        return [
+            PlanningWarning(
+                WARNING_PLANNING_RECORD_SCHEMA_DRIFT,
+                _render_path(record_path),
+                "planning record must be valid JSON object",
+            )
+        ]
+    if payload.get("kind") != expected_kind:
+        return [
+            PlanningWarning(
+                WARNING_PLANNING_RECORD_SCHEMA_DRIFT,
+                _render_path(record_path),
+                f"planning record kind must be {expected_kind}",
+            )
+        ]
+    schema = _load_json(schema_path)
+    if not isinstance(schema, dict):
+        return [
+            PlanningWarning(
+                WARNING_PLANNING_RECORD_SCHEMA_DRIFT,
+                _render_path(schema_path),
+                "planning record schema is missing or invalid JSON",
+            )
+        ]
+    errors = sorted(Draft202012Validator(schema).iter_errors(payload), key=lambda error: list(error.path))
+    warnings: list[PlanningWarning] = []
+    for error in errors:
+        location = ".".join(str(part) for part in error.path) or "<root>"
+        warnings.append(
+            PlanningWarning(
+                WARNING_PLANNING_RECORD_SCHEMA_DRIFT,
+                _render_path(record_path),
+                f"{location}: {error.message}",
+            )
+        )
+    return warnings
+
+
+def _check_planning_record_schemas(repo_root: Path) -> list[PlanningWarning]:
+    execplan_dir = repo_root / ".agentic-workspace" / "planning" / "execplans"
+    review_dir = repo_root / ".agentic-workspace" / "planning" / "reviews"
+    schema_dir = repo_root / ".agentic-workspace" / "planning" / "schemas"
+    execplan_schema_path = schema_dir / "planning-execplan.schema.json"
+    review_schema_path = schema_dir / "planning-review.schema.json"
+    warnings: list[PlanningWarning] = []
+    for record_path in sorted(execplan_dir.glob("*.plan.json")):
+        warnings.extend(
+            _schema_record_warnings(
+                record_path=record_path,
+                schema_path=execplan_schema_path,
+                expected_kind="planning-execplan/v1",
+            )
+        )
+    archive_dir = execplan_dir / "archive"
+    if archive_dir.exists():
+        for record_path in sorted(archive_dir.glob("*.plan.json")):
+            warnings.extend(
+                _schema_record_warnings(
+                    record_path=record_path,
+                    schema_path=execplan_schema_path,
+                    expected_kind="planning-execplan/v1",
+                )
+            )
+    if review_dir.exists():
+        for record_path in sorted(review_dir.glob("*.review.json")):
+            warnings.extend(
+                _schema_record_warnings(
+                    record_path=record_path,
+                    schema_path=review_schema_path,
+                    expected_kind="planning-review/v1",
+                )
+            )
+    return warnings
 
 
 def _read_state_toml(path: Path = STATE_TOML_PATH) -> dict[str, object] | None:
@@ -2147,6 +2238,7 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
     warnings.extend(_check_docs_surface_roles(repo_root))
     warnings.extend(_check_active_surface_hygiene(repo_root))
     warnings.extend(_check_generated_agent_docs(repo_root))
+    warnings.extend(_check_planning_record_schemas(repo_root))
     return warnings
 
 

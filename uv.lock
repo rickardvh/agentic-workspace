@@ -30,6 +30,12 @@ source = { editable = "packages/memory" }
 name = "agentic-planning-bootstrap"
 version = "0.1.2"
 source = { editable = "packages/planning" }
+dependencies = [
+    { name = "jsonschema" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "jsonschema", specifier = ">=4.0" }]
 
 [[package]]
 name = "agentic-workspace"

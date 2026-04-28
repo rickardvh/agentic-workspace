@@ -1,0 +1,222 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Add schemas for execplan and review JSON records",
+  "goal": [
+    "Implement #505 by adding explicit schemas or schema-backed validation for planning execplan and review JSON records.",
+    "Enforce completed/closed closeout and durable-residue fields through planning checks instead of convention-only parsing.",
+    "Update structured-file inventory so planning record JSON files are no longer routed as freeform-prohibited gaps."
+  ],
+  "non_goals": [
+    "Do not make archived records ordinary startup input.",
+    "Do not require Markdown derived views to be schema-backed.",
+    "Do not add host-repo or GitHub-specific shipped behavior.",
+    "Do not rewrite the planning package around a new framework unless existing schema tooling cannot carry the slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "planning execplan and review JSON records have explicit schemas or schema-backed validators, with closeout/durable-residue requirements enforced for completed records",
+      "constraints": "repo/tool/language agnostic; prefer existing JSON Schema tooling and planning checks; keep archives deep evidence, not first-contact input",
+      "latitude": "may add schema files, validator helpers, check integration, template metadata, inventory updates, and focused tests",
+      "escalation": "stop if acceptance requires a new storage format or a broad migration of all historical archives"
+    },
+    "execution": {
+      "milestone": "#505",
+      "status": "completed",
+      "next_step": "archive this slice, close #505, then continue the remaining #502 child issues",
+      "proof": "passed"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/planning-record-schemas.plan.json",
+        ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+        ".agentic-workspace/planning/reviews/TEMPLATE.review.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "packages/planning/scripts/check/check_planning_surfaces.py",
+        "packages/planning/tests/test_check_planning_surfaces.py",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        "tests/test_structured_file_inventory.py"
+      ],
+      "invariants": [
+        "planning records remain JSON",
+        "schema validation should support future cross-language generation",
+        "completed records must carry enough closeout evidence for restart and audit without forcing archive reads during startup"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "all machine-readable files are schema-backed, typed-validator-backed, generated/derived, or explicitly diagnostic",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "structured-file-contract"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #505 closes, continue #506/#508/#509"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the bounded #505 slice with explicit planning record schema validation.",
+    "hard constraints": "Preserve package boundaries, avoid host-specific shipped behavior, avoid broad archive migration unless tests prove it necessary, and keep #502 open for remaining child issues.",
+    "agent may decide locally": "Schema file location, validator helper names, focused test coverage, inventory wording, and proof breadth.",
+    "escalate when": "Existing JSON Schema/check paths cannot express the completed-record rules without adding a separate custom validation layer."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#505",
+      "label": "Planning record schema child issue",
+      "role": "source",
+      "locator": "GitHub issue #505"
+    },
+    {
+      "kind": "issue",
+      "target": "#502",
+      "label": "Structured-file contract parent lane",
+      "role": "parent",
+      "locator": "GitHub issue #502"
+    }
+  ],
+  "active_milestone": {
+    "id": "#505",
+    "status": "completed",
+    "scope": "planning execplan/review JSON schemas and inventory status",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "read-only subagent inspection"
+  },
+  "immediate_next_action": [
+    "Archive this completed slice and continue #506 unless refreshed external evidence reprioritizes the structured-file-contract lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_structured_file_inventory.py -q",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "cd packages/planning && uv run pytest tests/test_installer.py tests/test_check_planning_surfaces.py -q",
+    "cd packages/planning && uv run ruff check .",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "completion_criteria": [
+    "Execplan records validate against an explicit schema or schema-backed validator.",
+    "Review records validate against an explicit schema or schema-backed validator.",
+    "Completed/closed records require closeout and durable-residue fields through validation/checks.",
+    "Invalid record tests fail with actionable diagnostics.",
+    "Structured-file inventory marks planning record JSON files schema-backed or typed-validator-backed instead of freeform-prohibited gaps."
+  ],
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "Planning execplan and review JSON records are schema-backed via planning package payload schemas, and the planning surface checker now validates live and archived records against those schemas.",
+    "motivation worth preserving": "Planning records are restart and audit surfaces; arbitrary field drift makes recovery and future code generation harder.",
+    "canonical owner now": ".agentic-workspace/planning/schemas/ and packages/planning/bootstrap/.agentic-workspace/planning/schemas/",
+    "promotion trigger": "when planning record shape, archive closeout requirements, or review artifact structure changes",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Added JSON Schema definitions for planning execplan and review records, installed them through the planning package payload, enforced them in planning checks/archive validation, and updated structured-file inventory so planning record files are schema-backed.",
+    "validation confirmed": "pytest and ruff passed for workspace CLI, structured-file inventory, and planning package tests; planning surface and contract inventory checks passed.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml keeps #502 open with #506/#508/#509 remaining.",
+    "post-work posterity capture": "The schemas, checker integration, tests, and inventory entries are durable checked-in owners; the archive is proof/evidence only.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory promotion needed; package README and payload classification were updated because shipped payload changed.",
+    "resume from": "Refresh external evidence, close #505, then continue #506 unless summary reprioritizes."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [
+      "Payload inventory warnings around optional planning payload extras remain under the existing structured-file/package classification work rather than a new issue.",
+      "Subagent code/inventory mapping reduced main-thread discovery; no package change needed beyond continuing to use checked-in handoff and summary surfaces."
+    ],
+    "signals dismissed": [
+      "The root and package-bootstrap schema copies are duplicate-looking, but they are required by the existing package payload/install model and covered by maintainer-surface checks."
+    ],
+    "next owner": ".agentic-workspace/planning/state.toml"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Detailed command output and subagent exploration notes are not durable operating knowledge beyond the validation list.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue #506/#508/#509 under the #502 structured-file-contract parent lane.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No Memory promotion needed; package README and payload classification were updated because shipped payload changed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "planning surface checker validates planning record schemas for live and archived records",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "No Memory promotion needed; package README and payload classification were updated because shipped payload changed.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "packages/planning/README.md now lists the shipped schema payload files",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#506",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#508",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#509",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #505 from structured-file-contract after #504 closed.",
+    "2026-04-28: Completed #505 with schema-backed planning records, checker/archive validation, inventory updates, and focused proof."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Complete the bounded #505 slice with explicit planning record schema validation.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#505 delivered schema-backed execplan and review record validation, planning checker/archive validation, package payload schema installation, inventory updates, and passing proof.",
+    "unsolved intent passed to": "#506/#508/#509 remain open under #502 for remaining structured-file contract work."
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Bounded #505 slice is complete; #502 parent lane remains open for remaining child issues.",
+    "evidence carried forward": "uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; cd packages/planning && uv run pytest tests/test_installer.py tests/test_check_planning_surfaces.py -q; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "reopen trigger": "Reopen #505 if planning .plan.json/.review.json records stop validating through package-shipped schemas, arbitrary top-level fields become accepted without schema support, or completed planning records can bypass closeout evidence checks."
+  },
+  "proof_report": {
+    "validation proof": "pytest and ruff passed for workspace CLI, structured-file inventory, and planning package tests; planning surface and contract inventory checks passed.",
+    "proof achieved now": "yes; validation evidence is recorded in execution summary.",
+    "evidence for \"proof achieved\" state": "pytest and ruff passed for workspace CLI, structured-file inventory, and planning package tests; planning surface and contract inventory checks passed."
+  }
+}

@@ -264,7 +264,9 @@ Required continuation for an unfinished larger intended outcome must be routed i
 
 ## What the Package Installs
 
-The default install writes only the core daily-operation payload:
+The default install writes only the core daily-operation payload.
+
+The package ships these payload files:
 
 - `AGENTS.template.md`
 - `.agentic-workspace/docs/execution-flow-contract.md`
@@ -278,6 +280,8 @@ The default install writes only the core daily-operation payload:
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/planning/execplans/archive/README.md`
+- `.agentic-workspace/planning/schemas/planning-execplan.schema.json`
+- `.agentic-workspace/planning/schemas/planning-review.schema.json`
 
 The package also ships optional payload files that are not copied by default. Use `--include-optional` with `install`, `adopt`, or `upgrade` to copy them on purpose:
 
