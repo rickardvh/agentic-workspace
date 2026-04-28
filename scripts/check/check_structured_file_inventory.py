@@ -15,6 +15,19 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 INVENTORY_PATH = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "structured_file_inventory.json"
 SCHEMA_PATH = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "schemas" / "structured_file_inventory.schema.json"
 STRUCTURED_SUFFIXES = frozenset({".json", ".toml", ".yaml", ".yml"})
+GENERATED_MIRROR_REQUIRED_PATHS = frozenset(
+    {
+        "llms.txt",
+        "tools/agent-manifest.json",
+        "tools/AGENT_QUICKSTART.md",
+        "tools/AGENT_ROUTING.md",
+        "packages/planning/bootstrap/tools/agent-manifest.json",
+        "packages/planning/bootstrap/tools/AGENT_QUICKSTART.md",
+        "packages/planning/bootstrap/tools/AGENT_ROUTING.md",
+        ".agentic-workspace/planning/agent-manifest.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json",
+    }
+)
 RECONSTRUCTABLE_CLASSES = frozenset(
     {
         "generated-required-adapter",
@@ -88,7 +101,7 @@ def validate_inventory_shape(inventory: dict[str, Any]) -> list[Finding]:
     return findings
 
 
-def tracked_structured_files(root: Path = REPO_ROOT) -> list[str]:
+def _tracked_files(root: Path = REPO_ROOT) -> list[str]:
     result = subprocess.run(
         ["git", "ls-files"],
         cwd=root,
@@ -96,7 +109,11 @@ def tracked_structured_files(root: Path = REPO_ROOT) -> list[str]:
         capture_output=True,
         text=True,
     )
-    files = [_as_posix(line.strip()) for line in result.stdout.splitlines() if line.strip()]
+    return sorted(_as_posix(line.strip()) for line in result.stdout.splitlines() if line.strip())
+
+
+def tracked_structured_files(root: Path = REPO_ROOT) -> list[str]:
+    files = _tracked_files(root)
     return sorted(path for path in files if PurePosixPath(path).suffix.lower() in STRUCTURED_SUFFIXES)
 
 
@@ -146,6 +163,10 @@ def unmatched_structured_files(paths: list[str], inventory: dict[str, Any]) -> l
 
 def _matched_files(paths: list[str], entry: dict[str, Any]) -> list[str]:
     return sorted(path for path in paths if _entry_matches(path, entry))
+
+
+def _generated_mirror_matches(path: str, mirror: dict[str, Any]) -> bool:
+    return _match_path_pattern(path, mirror["pattern"])
 
 
 def _json_item_count(path: Path) -> int | None:
@@ -272,13 +293,59 @@ def storage_policy_findings(paths: list[str], inventory: dict[str, Any]) -> list
     return findings
 
 
+def generated_mirror_policy_findings(paths: list[str], inventory: dict[str, Any]) -> list[Finding]:
+    mirrors = inventory.get("generated_mirrors", [])
+    findings: list[Finding] = []
+    if not isinstance(mirrors, list):
+        return [Finding(path=INVENTORY_PATH.relative_to(REPO_ROOT).as_posix(), message="generated_mirrors must be a list")]
+
+    covered_paths: set[str] = set()
+    for index, mirror in enumerate(mirrors):
+        location = f"{INVENTORY_PATH.relative_to(REPO_ROOT).as_posix()}#generated_mirrors[{index}]"
+        matched = [path for path in paths if _generated_mirror_matches(path, mirror)]
+        if not matched:
+            findings.append(Finding(path=location, message="generated mirror declaration matches no tracked file"))
+            continue
+        covered_paths.update(matched)
+        max_bytes = mirror.get("max_bytes")
+        if isinstance(max_bytes, int):
+            for path in matched:
+                full_path = REPO_ROOT / path
+                if full_path.exists() and full_path.stat().st_size > max_bytes:
+                    findings.append(Finding(path=path, message=f"generated mirror exceeds max_bytes={max_bytes}"))
+
+    tracked_required_paths = GENERATED_MIRROR_REQUIRED_PATHS.intersection(paths)
+    missing_required = sorted(path for path in tracked_required_paths if path not in covered_paths)
+    findings.extend(
+        Finding(path=path, message="generated mirror must declare source command, named consumer, freshness check, and demotion path")
+        for path in missing_required
+    )
+
+    structured_generated_paths: set[str] = set()
+    for entry in inventory["entries"]:
+        if entry["storage_class"] != "generated-required-adapter":
+            continue
+        structured_generated_paths.update(_matched_files(paths, entry))
+    missing_structured = sorted(path for path in structured_generated_paths if path not in covered_paths and path not in tracked_required_paths)
+    findings.extend(
+        Finding(path=path, message="generated-required-adapter inventory entry needs matching generated_mirrors metadata")
+        for path in missing_structured
+    )
+    return findings
+
+
 def inventory_findings(paths: list[str] | None = None) -> list[Finding]:
     inventory = load_inventory()
     findings = validate_inventory_shape(inventory)
     if findings:
         return findings
     checked_paths = tracked_structured_files() if paths is None else paths
-    return unmatched_structured_files(checked_paths, inventory) + storage_policy_findings(checked_paths, inventory)
+    checked_all_paths = _tracked_files() if paths is None else checked_paths
+    return (
+        unmatched_structured_files(checked_paths, inventory)
+        + storage_policy_findings(checked_paths, inventory)
+        + generated_mirror_policy_findings(checked_all_paths, inventory)
+    )
 
 
 def routed_storage_cleanup_issues(inventory: dict[str, Any]) -> set[str]:

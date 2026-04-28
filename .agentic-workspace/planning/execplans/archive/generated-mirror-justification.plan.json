@@ -1,0 +1,250 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Require generated mirrors to justify checked-in paths",
+  "goal": [
+    "Implement #539 by making generated/reconstructable mirrors declare why they stay checked in, how they are regenerated, and where ordinary agents should route instead.",
+    "Preserve weak-agent compatibility while preventing generated mirrors from becoming independent doctrine."
+  ],
+  "non_goals": [
+    "Do not delete weak-agent adapter files before proving their consumers are gone.",
+    "Do not implement duplicate planning checker collapse from #540 in this slice.",
+    "Do not create a new top-level command or repo-specific GitHub dependency."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "checked-in generated mirrors have explicit source command, named consumer, freshness check, and removal/demotion path",
+      "constraints": "repo/tool/language agnostic; prefer existing inventory/checks; keep ordinary agents routed to compact canonical commands",
+      "latitude": "may update structured inventory schema/data/checks/tests and planning state",
+      "escalation": "stop if satisfying the issue requires deleting compatibility adapters or adding a new permanent surface"
+    },
+    "execution": {
+      "milestone": "#539",
+      "status": "completed",
+      "next_step": "archive #539 and continue by ingesting #543 before returning to #540",
+      "proof": "passed: structured inventory check, focused inventory tests, maintainer surfaces, planning surfaces, planning doctor, workspace CLI tests, ruff, contract tooling"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/generated-mirror-justification.plan.json",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        "src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json",
+        "scripts/check/check_structured_file_inventory.py",
+        "tests/test_structured_file_inventory.py"
+      ],
+      "invariants": [
+        "ordinary startup remains AGENTS.md -> start/summary/proof",
+        "generated mirrors are compatibility/support surfaces, not canonical authority",
+        "freshness stays behind existing render/check commands"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "stop checking in reconstructable artifact residue",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "reconstructable-artifact-policy"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#540 remains after #539.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #539 lands"
+  },
+  "delegated_judgment": {
+    "requested outcome": "bounded inspection of generated mirror consumers and checks",
+    "hard constraints": "do not edit; preserve weak-agent compatibility; do not delete mirrors prematurely",
+    "agent may decide locally": "which existing inventory/check surface should carry generated mirror justification",
+    "escalate when": "implementation requires a new command or removing a stable-path consumer"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "generated mirrors can stay only when a stable consumer, regeneration path, freshness check, and demotion path are explicit",
+    "intentionally deferred": "#540",
+    "discovered implications": "Proof selection over-selected broad workspace CLI tests for a contract/check-only change; routed to #543.",
+    "proof achieved now": "Generated mirror metadata is declared inside the existing structured inventory, covers JSON and Markdown adapter mirrors, and checks require generated-required-adapter entries to have matching mirror metadata.",
+    "validation still needed": "None for #539; #543 was added as dogfooding friction and #540 remains in the reconstructable-artifact-policy lane.",
+    "next likely slice": "#540"
+  },
+  "intent_interpretation": {
+    "literal request": "Resume and dogfood after each slice.",
+    "inferred intended outcome": "continue reconstructable-artifact compression while extracting package improvement signals",
+    "chosen concrete what": "implement #539 after #538",
+    "interpretation distance": "low",
+    "review guidance": "verify generated mirrors route more than they teach"
+  },
+  "execution_bounds": {
+    "allowed paths": "structured inventory schema/data/checks/tests plus planning state",
+    "max changed files": "8",
+    "required validation commands": "uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run pytest tests/test_structured_file_inventory.py -q; uv run ruff check scripts/check/check_structured_file_inventory.py tests/test_structured_file_inventory.py; make maintainer-surfaces",
+    "ask-before-refactor threshold": "new command or generated adapter deletion",
+    "stop before touching": "planning checker duplicate source collapse"
+  },
+  "stop_conditions": {
+    "stop when": "generated mirror metadata is encoded, checked, and tested",
+    "escalate when boundary reached": "a declared mirror has no defensible stable-path consumer",
+    "escalate on scope drift": "work starts implementing #540",
+    "escalate on proof failure": "selected validation cannot pass"
+  },
+  "context_budget": {
+    "live working set": "#539, generated mirror inventory/check, maintainer surfaces",
+    "recoverable later": "#541, #536, #537, #538 archives",
+    "externalize before shift": "this execplan",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "continue #539 from generated mirror metadata checks",
+    "context-shift triggers": "before commit or after validation failure"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#539",
+      "label": "generated mirror justification",
+      "role": "active slice",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/539"
+    }
+  ],
+  "active_milestone": {
+    "id": "#539",
+    "status": "completed",
+    "scope": "generated mirror metadata guardrails",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "subagent read-only inspection"
+  },
+  "immediate_next_action": [
+    "Ingest and consider #543 before returning to #540."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/structured_file_inventory.json",
+    "src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json",
+    "scripts/check/check_structured_file_inventory.py",
+    "tests/test_structured_file_inventory.py",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "Do not route ordinary agents to generated mirrors before compact canonical queries.",
+    "Do not make host-specific tracker assumptions in shipped package policy.",
+    "Prefer existing checks and inventory over a new durable surface."
+  ],
+  "contract_decisions_to_freeze": [
+    "Generated mirrors are acceptable checked-in artifacts only when a stable-path consumer and freshness check are explicit."
+  ],
+  "open_questions_to_close": [
+    "Can the existing structured inventory carry generated mirror policy without adding another surface?"
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run pytest tests/test_structured_file_inventory.py -q",
+    "uv run ruff check scripts/check/check_structured_file_inventory.py tests/test_structured_file_inventory.py",
+    "make maintainer-surfaces"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Generated/reconstructable mirrors declare source command, named consumer, checked-in justification, freshness check, ordinary route, and demotion path.",
+    "Generated JSON adapter inventory entries are covered by generated mirror metadata.",
+    "Markdown generated adapters are covered despite not being structured files.",
+    "Checks verify the declared mirrors exist, are small, and have complete metadata.",
+    "#539 closes and parent lane routes to #540."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "#539 and active checked-in execplan",
+    "what happened": "Extended the existing structured-file inventory with generated_mirrors metadata and added checks for source command, named consumer, freshness check, ordinary route, demotion path, size, and generated-required-adapter coverage.",
+    "scope touched": "structured inventory schema/data/checker/tests and planning state",
+    "changed surfaces": "generated mirror policy now lives inside the existing inventory instead of a new surface",
+    "validations run": "uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run pytest tests/test_structured_file_inventory.py -q; uv run ruff check scripts/check/check_structured_file_inventory.py tests/test_structured_file_inventory.py; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests scripts/check/check_structured_file_inventory.py; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "result for continuation": "#539 complete; #543 was created and ingested as a proof-selection dogfooding issue; #540 remains after that.",
+    "next step": "archive plan, close #539, commit, then evaluate #543 priority before #540"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used compact summary/proof and reused existing inventory/check surfaces before adding a new surface",
+    "misinterpretation risk": "low",
+    "follow-on decision": "route dogfooding friction to #543 and keep #540 for duplicate checker payload collapse"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "structured inventory check, focused tests, maintainer surfaces, planning surfaces, planning doctor, workspace CLI tests, ruff, and contract tooling passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Require checked-in generated mirrors to justify why regeneration is not enough.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "generated/reconstructable mirror metadata names source commands, consumers, justifications, freshness checks, ordinary routes, demotion paths, and size limits; checks cover JSON and Markdown mirrors",
+    "unsolved intent passed to": "#540 for duplicate planning checker payload copies; #543 for proof selector friction discovered while closing this slice"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve only context that is expensive to rediscover and necessary for safe continuation.",
+    "slice shaping bias": "justify retained generated mirrors before deleting them",
+    "broader-lane validation question": "Do generated mirrors remain compatibility adapters rather than product doctrine?",
+    "intent evidence source": ".agentic-workspace/system-intent/intent.toml"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#539 justifies generated mirrors, but #540 still needs duplicate planning checker payload collapse; #543 is separate workflow friction.",
+    "evidence carried forward": ".agentic-workspace/planning/state.toml routes #543 in workflow-friction-polish and leaves reconstructable-artifact-policy at #540.",
+    "reopen trigger": "new checked-in generated mirrors appear without source command, named consumer, freshness check, ordinary route, and demotion path"
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "generated mirrors need stable consumer, regeneration, freshness, and demotion metadata to justify checked-in state",
+    "motivation worth preserving": "reduce generated adapter residue while preserving weak-agent compatibility",
+    "canonical owner now": "src/agentic_workspace/contracts/structured_file_inventory.json",
+    "promotion trigger": "generated mirror consumers or regeneration paths change",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Generated mirrors now need explicit checked-in justification and reconstruction/freshness metadata.",
+    "validation confirmed": "structured inventory check, focused tests, maintainer surfaces, planning surfaces, planning doctor, workspace CLI tests, ruff, and contract tooling passed",
+    "follow-on routed to": "#543 then #540",
+    "post-work posterity capture": "archive proof plus structured inventory contract/check updates",
+    "knowledge promoted (Memory/Docs/Config)": "structured inventory schema/data/checks updated; no Memory promotion needed",
+    "resume from": ".agentic-workspace/planning/state.toml suggested_first_slice #543 in workflow-friction-polish, then #540 in reconstructable-artifact-policy"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Proof selection over-selected broad workspace CLI validation for contract/check-only changes under src/agentic_workspace."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "#543"
+    ],
+    "signals dismissed": [
+      "Manual execplan promotion remains covered by existing #515/#531 rather than a new issue."
+    ],
+    "next owner": "#543"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        "transient validation output"
+      ],
+      "continuation": [
+        "#543",
+        "#540"
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "#543",
+        "#540"
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #539 from reconstructable-artifact-policy lane."
+  ]
+}

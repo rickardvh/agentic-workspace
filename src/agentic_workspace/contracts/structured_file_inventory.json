@@ -617,6 +617,108 @@
       "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools."
     }
   ],
+  "generated_mirrors": [
+    {
+      "pattern": "llms.txt",
+      "source_command": "make render-external-agent-handoff",
+      "named_consumer": "external agents and runtimes that look for the conventional llms.txt handoff file",
+      "checked_in_justification": "Stable compatibility entrypoint for agents that cannot run package discovery before first contact.",
+      "freshness_check": "make maintainer-surfaces",
+      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --format json -> summary/proof as needed",
+      "removal_or_demotion_path": "remove when external-agent handoff conventions no longer require a stable root file",
+      "max_bytes": 4000
+    },
+    {
+      "pattern": ".agentic-workspace/planning/agent-manifest.json",
+      "source_command": "uv run agentic-planning-bootstrap doctor --target . --format json",
+      "named_consumer": "installed planning module lifecycle and root maintainer-surface renderers",
+      "checked_in_justification": "Installed planning payload manifest used as the local source for generated weak-agent adapters.",
+      "freshness_check": "uv run agentic-workspace doctor --target . --modules planning --format json",
+      "ordinary_agent_route": "agentic-workspace start --format json or summary --format json",
+      "removal_or_demotion_path": "demote when installed planning lifecycle can reconstruct adapter metadata without a stable manifest path",
+      "max_bytes": 20000
+    },
+    {
+      "pattern": "tools/agent-manifest.json",
+      "source_command": "make render-agent-docs",
+      "named_consumer": "weak-agent and source-checkout compatibility readers under tools/",
+      "checked_in_justification": "Compatibility mirror for agents that inspect tools/ before package commands are available.",
+      "freshness_check": "make maintainer-surfaces",
+      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --format json",
+      "removal_or_demotion_path": "remove when tools/ weak-agent adapters are no longer a supported first-contact shape",
+      "max_bytes": 20000
+    },
+    {
+      "pattern": "tools/AGENT_QUICKSTART.md",
+      "source_command": "make render-agent-docs",
+      "named_consumer": "weak-agent static quickstart readers",
+      "checked_in_justification": "Small generated compatibility adapter for agents that need a Markdown route before running commands.",
+      "freshness_check": "make maintainer-surfaces",
+      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --format json",
+      "removal_or_demotion_path": "remove when AGENTS.md plus compact commands cover weak-agent startup without a tools quickstart",
+      "max_bytes": 5000
+    },
+    {
+      "pattern": "tools/AGENT_ROUTING.md",
+      "source_command": "make render-agent-docs",
+      "named_consumer": "secondary weak-agent static routing readers",
+      "checked_in_justification": "Small generated compatibility adapter for agents that need a Markdown route map after quickstart.",
+      "freshness_check": "make maintainer-surfaces",
+      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --format json",
+      "removal_or_demotion_path": "merge into or remove after AGENT_QUICKSTART if secondary routing stops lowering startup cost",
+      "max_bytes": 6000
+    },
+    {
+      "pattern": "packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json",
+      "source_command": "uv run agentic-planning-bootstrap doctor --target <repo> --format json",
+      "named_consumer": "planning package bootstrap payload installation",
+      "checked_in_justification": "Package payload source needed to install the planning manifest into target repos.",
+      "freshness_check": "make maintainer-surfaces",
+      "ordinary_agent_route": "package consumers should use installed AGENTS.md and agentic-workspace start, not this payload path",
+      "removal_or_demotion_path": "demote only if package install can generate the manifest from packaged contracts without a checked-in payload copy",
+      "max_bytes": 20000
+    },
+    {
+      "pattern": "packages/planning/bootstrap/tools/agent-manifest.json",
+      "source_command": "make render-agent-docs",
+      "named_consumer": "planning source-checkout diagnostics and package maintainer tests",
+      "checked_in_justification": "Source-checkout mirror proves package-maintainer adapter rendering without requiring install into a temp repo.",
+      "freshness_check": "make maintainer-surfaces",
+      "ordinary_agent_route": "installed repo AGENTS.md -> agentic-workspace start --format json",
+      "removal_or_demotion_path": "remove when maintainer tests can reconstruct this mirror from the package payload source on demand",
+      "max_bytes": 20000
+    },
+    {
+      "pattern": "packages/planning/bootstrap/tools/AGENT_QUICKSTART.md",
+      "source_command": "make render-agent-docs",
+      "named_consumer": "planning source-checkout diagnostics and package maintainer tests",
+      "checked_in_justification": "Source-checkout generated Markdown mirror for package maintainer compatibility checks.",
+      "freshness_check": "make maintainer-surfaces",
+      "ordinary_agent_route": "installed repo AGENTS.md -> agentic-workspace start --format json",
+      "removal_or_demotion_path": "remove when package maintainer checks render the Markdown adapter only in temporary output",
+      "max_bytes": 5000
+    },
+    {
+      "pattern": "packages/planning/bootstrap/tools/AGENT_ROUTING.md",
+      "source_command": "make render-agent-docs",
+      "named_consumer": "planning source-checkout diagnostics and package maintainer tests",
+      "checked_in_justification": "Source-checkout generated Markdown mirror for package maintainer compatibility checks.",
+      "freshness_check": "make maintainer-surfaces",
+      "ordinary_agent_route": "installed repo AGENTS.md -> agentic-workspace start --format json",
+      "removal_or_demotion_path": "remove when package maintainer checks render the Markdown adapter only in temporary output",
+      "max_bytes": 6000
+    },
+    {
+      "pattern": "generated/typescript/*/package.json",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated TypeScript package tests and package publishing preparation",
+      "checked_in_justification": "Generated package metadata is kept as a reviewable adapter output while multi-language generation matures.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote to generated-on-demand once publishing no longer requires checked-in generated package metadata",
+      "max_bytes": 5000
+    }
+  ],
   "storage_classes": [
     "source-of-truth",
     "non-reconstructable-decision",

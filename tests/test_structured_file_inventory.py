@@ -111,6 +111,54 @@ def test_generated_adapter_requires_regeneration_source() -> None:
     assert "reconstructable_from" in findings[0].message
 
 
+def test_generated_adapter_requires_matching_mirror_metadata() -> None:
+    inventory = {
+        "entries": [
+            {
+                "pattern": "tools/agent-manifest.json",
+                "format": "json",
+                "owner": "planning-payload",
+                "status": "generated-derived",
+                "schema_or_validator": "planning payload render/check surfaces",
+                "storage_class": "generated-required-adapter",
+                "checked_in_justification": "compatibility",
+                "reconstructable_from": ["renderer"],
+                "editable_by_agents": False,
+                "generated": True,
+                "notes": "Generated manifest.",
+            }
+        ],
+        "generated_mirrors": [],
+    }
+
+    findings = check_structured_file_inventory.generated_mirror_policy_findings(["tools/agent-manifest.json"], inventory)
+
+    assert len(findings) == 1
+    assert "generated mirror must declare" in findings[0].message
+
+
+def test_generated_mirror_metadata_accepts_markdown_adapter() -> None:
+    inventory = {
+        "entries": [],
+        "generated_mirrors": [
+            {
+                "pattern": "tools/AGENT_QUICKSTART.md",
+                "source_command": "make render-agent-docs",
+                "named_consumer": "weak-agent readers",
+                "checked_in_justification": "compatibility",
+                "freshness_check": "make maintainer-surfaces",
+                "ordinary_agent_route": "AGENTS.md -> start",
+                "removal_or_demotion_path": "remove when no longer needed",
+                "max_bytes": 10000,
+            }
+        ],
+    }
+
+    findings = check_structured_file_inventory.generated_mirror_policy_findings(["tools/AGENT_QUICKSTART.md"], inventory)
+
+    assert findings == []
+
+
 def test_reconstructable_snapshot_requires_size_or_count_guardrail() -> None:
     inventory = {
         "entries": [

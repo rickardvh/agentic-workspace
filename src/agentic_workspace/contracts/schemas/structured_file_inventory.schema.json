@@ -197,6 +197,57 @@
         ],
         "additionalProperties": false
       }
+    },
+    "generated_mirrors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "pattern",
+          "source_command",
+          "named_consumer",
+          "checked_in_justification",
+          "freshness_check",
+          "ordinary_agent_route",
+          "removal_or_demotion_path",
+          "max_bytes"
+        ],
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_command": {
+            "type": "string",
+            "minLength": 1
+          },
+          "named_consumer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "checked_in_justification": {
+            "type": "string",
+            "minLength": 1
+          },
+          "freshness_check": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ordinary_agent_route": {
+            "type": "string",
+            "minLength": 1
+          },
+          "removal_or_demotion_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "max_bytes": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false
