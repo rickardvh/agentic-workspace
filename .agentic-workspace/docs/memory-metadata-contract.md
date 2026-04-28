@@ -14,12 +14,16 @@ Every memory note MUST be declared in `.agentic-workspace/memory/repo/manifest.t
 | `canonical_home` | string | Required path to the note's canonical home. Use the note path unless the manifest explicitly routes to a canonical non-memory document. |
 | `authority` | string | `canonical` (source of truth), `advisory` (helpful guidance), `supporting` (context). |
 | `audience` | string | `human`, `agent`, or `human+agent`. |
+| `summary` | string | Optional compact routing or durable-fact summary. |
 | `canonicality` | string | `agent_only`, `candidate_for_promotion`, `canonical_elsewhere`, or `deprecated`. |
 | `task_relevance` | string | `required` (always read for related tasks) or `optional` (load on demand). |
 | `subsystems` | list[string] | Package, subsystem, or domain labels for routing. |
 | `surfaces` | list[string] | Key terms or subsystems that trigger routing to this note. |
+| `applies_to` | list[string] | Paths, subsystems, commands, or surfaces this note covers. |
+| `use_when` | list[string] | Conditions under which an agent should load or apply this note. |
 | `routes_from` | list[string] | Glob patterns (files/dirs) that trigger routing. |
 | `stale_when` | list[string] | Glob patterns that indicate the note might need review if changed. |
+| `evidence` | list[string] | Source files, checks, commits, or docs that ground the note. |
 | `related_validations` | list[string] | Commands or checks that support the note's trust boundary. |
 | `memory_role` | string | `durable_truth` or `improvement_signal`. |
 
@@ -34,6 +38,9 @@ Used when a note exists because the repo is missing something better than memory
 | `improvement_candidate` | boolean | Marks the note as a candidate for future promotion, automation, or deletion. |
 | `improvement_note` | string | Concrete action needed in the codebase. |
 | `elimination_target` | string | The goal: `shrink`, `promote`, `automate`, or `refactor_away`. |
+| `promotion_target` | string | Stronger canonical owner, if known. |
+| `promotion_trigger` | string | Concrete signal that should move the note to the stronger owner. |
+| `retention_after_promotion` | string | Intended post-promotion memory shape: `retain`, `shrink`, `stub`, or `delete`. |
 | `retention_justification` | string | Required alternative when the note is an improvement signal but no remediation metadata is available yet. |
 | `config_treatment` | string | One of `promote`, `cleanup`, `retain`, or `no_action`. |
 | `config_note` | string | Short explanation of the config or posture cue behind `config_treatment`. |

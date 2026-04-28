@@ -1,0 +1,260 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Structured Memory Note Metadata",
+  "goal": [
+    "structured-first-operating-updates next child after #534; Memory notes still carry recurring routing and promotion facts that should have structured homes."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "structured-first-operating-updates next child after #534; Memory notes still carry recurring routing and promotion facts that should have structured homes.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "structured-memory-note-metadata",
+      "status": "completed",
+      "next_step": "Archive the completed plan and continue with the refreshed backlog.",
+      "proof": "Memory package tests, workspace CLI tests, ruff checks, memory/planning doctors, planning-surface check, and proof selector for touched paths."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/memory/WORKFLOW.md",
+        ".agentic-workspace/memory/repo/templates/memory-note-template.md",
+        ".agentic-workspace/memory/repo/manifest.toml",
+        ".agentic-workspace/docs/memory-metadata-contract.md",
+        "packages/memory/memory/templates/memory-note-template.md",
+        "packages/memory/memory/manifest.toml",
+        "packages/memory/bootstrap/.agentic-workspace/docs/memory-metadata-contract.md",
+        "packages/memory/bootstrap/.agentic-workspace/memory/WORKFLOW.md",
+        "packages/memory/bootstrap/.agentic-workspace/memory/repo/manifest.toml",
+        "packages/memory/bootstrap/.agentic-workspace/memory/repo/templates/memory-note-template.md",
+        "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+        "packages/memory/src/repo_memory_bootstrap/_installer_memory.py",
+        "packages/memory/src/repo_memory_bootstrap/installer.py",
+        "packages/memory/tests/test_installer.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "structured-first-operating-updates next child after #534; Memory notes still carry recurring routing and promotion facts that should have structured homes.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Memory routing and promotion facts can be queried from structured manifest/report fields instead of rediscovered from prose notes.",
+    "intentionally deferred": "none",
+    "discovered implications": "Plan touched-path synchronization remains a recurring manual step and should be handled by the existing scaffold/writer-helper backlog.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice",
+    "next likely slice": "refresh the backlog and continue the next open structured-first item"
+  },
+  "intent_interpretation": {
+    "literal request": "Structured Memory Note Metadata",
+    "inferred intended outcome": "structured-first-operating-updates next child after #534; Memory notes still carry recurring routing and promotion facts that should have structured homes.",
+    "chosen concrete what": "Fill the execution contract and begin the first bounded implementation step.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Existing Memory workflow/template/manifest/metadata-contract surfaces, memory manifest typed records/validator, memory package tests, and this execplan/state.",
+    "max changed files": "about 12",
+    "required validation commands": "uv run pytest packages/memory/tests/test_installer.py -q; uv run agentic-workspace doctor --target . --modules memory --format json; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill the execution contract and begin the first bounded implementation step.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "structured-first-operating-updates next child after #534; Memory notes still carry recurring routing and promotion facts that should have structured homes.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "structured-memory-note-metadata",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive the completed plan and continue with the refreshed backlog."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/memory/WORKFLOW.md",
+    ".agentic-workspace/memory/repo/templates/memory-note-template.md",
+    ".agentic-workspace/memory/repo/manifest.toml",
+    ".agentic-workspace/docs/memory-metadata-contract.md",
+    "packages/memory/memory/templates/memory-note-template.md",
+    "packages/memory/memory/manifest.toml",
+    "packages/memory/bootstrap/.agentic-workspace/docs/memory-metadata-contract.md",
+    "packages/memory/bootstrap/.agentic-workspace/memory/WORKFLOW.md",
+    "packages/memory/bootstrap/.agentic-workspace/memory/repo/manifest.toml",
+    "packages/memory/bootstrap/.agentic-workspace/memory/repo/templates/memory-note-template.md",
+    "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+    "packages/memory/src/repo_memory_bootstrap/_installer_memory.py",
+    "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "packages/memory/tests/test_installer.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/memory/tests/test_installer.py -q",
+    "uv run agentic-workspace doctor --target . --modules memory --format json",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "uv run agentic-workspace proof --target . --changed <paths> --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "TODO item `structured-memory-note-metadata` is implemented, validated, and can leave the active queue."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Added optional structured Memory note metadata fields for routing, evidence, and promotion/retention; exposed them in compact state-model output; updated templates/docs/validators/tests.",
+    "scope touched": "Memory manifest contract, Memory workflow/template/payload mirrors, memory report state model, and package tests.",
+    "changed surfaces": "existing Memory contract, manifest, template, workflow, bootstrap payload, installer validation/reporting, and tests",
+    "validations run": "uv run pytest packages/memory/tests/test_installer.py -q; uv run ruff check packages/memory/src packages/memory/tests; uv run agentic-workspace doctor --target . --modules memory --format json; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace proof --target . --changed <paths> --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json; cd packages/memory && uv run pytest tests/test_installer.py; cd packages/memory && uv run ruff check .",
+    "result for continuation": "slice complete; archive and continue the backlog",
+    "next step": "Archive the completed plan and close #535."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "no new issue; touched-path helper friction is covered by existing scaffold/writer-helper backlog"
+  },
+  "proof_report": {
+    "validation proof": "Memory package tests, workspace CLI tests, ruff checks, memory/planning doctors, planning-surface check, and proof selection passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "202 passed in packages/memory, 220 passed in tests/test_workspace_cli.py, ruff passed for root and memory package, doctors healthy, planning-surface check clean, proof selector accepted the touched durable surfaces."
+  },
+  "intent_satisfaction": {
+    "original intent": "structured-first-operating-updates next child after #534; Memory notes still carry recurring routing and promotion facts that should have structured homes.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Memory manifest records now carry structured routing and promotion metadata, templates/docs describe the fields, validators enforce shape/enums, and memory reports expose the fields compactly.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Structured Memory note metadata replaced repeated explanatory prose for routing and promotion facts.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none; #535 is complete and adjacent scaffold friction remains with #526/#528/#525",
+    "post-work posterity capture": "contract/template/tests carry the durable behavior",
+    "knowledge promoted (Memory/Docs/Config)": "Memory metadata contract and templates",
+    "resume from": "refreshed backlog"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The slice replaced repeated prose routing/promotion facts with structured manifest fields without adding a new first-line surface.",
+    "evidence carried forward": "Validated with memory package tests, workspace CLI tests, ruff, memory/planning doctors, planning surface check, and proof selection.",
+    "reopen trigger": "Reopen if agents still need to open Memory prose to answer routing or promotion-target questions that manifest/report metadata should answer."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Plan touched-path synchronization remains manual after implementation changes."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "Existing scaffold/writer-helper backlog (#526/#528/#525) already covers correct-by-design artifact construction and validation-repair loops."
+    ],
+    "signals dismissed": [],
+    "next owner": "#526/#528/#525"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Discard local execution detail; durable behavior lives in manifest contract, templates, validators, report output, and tests.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "none; #535 is complete and adjacent scaffold friction remains with #526/#528/#525",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Memory metadata contract and templates",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "Memory metadata contract and templates",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-29: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: structured-first-operating-updates next child after #534; Memory notes still carry recurring routing and promotion facts that should have structured homes.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Memory package tests, workspace CLI tests, ruff checks, memory/planning doctors, planning-surface check, and proof selection passed.\nChanged surfaces: existing Memory contract, manifest, template, workflow, bootstrap payload, installer validation/reporting, and tests\nDurable residue: none (none)\nFollow-up: none; #535 is complete and adjacent scaffold friction remains with #526/#528/#525"
+  }
+}

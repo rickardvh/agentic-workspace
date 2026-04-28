@@ -15,6 +15,21 @@ Use `candidate_for_promotion` when the note is stabilising into normal repo docs
 Use `canonical_elsewhere` when checked-in docs already own the truth and this note is only residue, routing help, or a stub.
 Keep the note short when it is `agent_only`: prefer lessons, pitfalls, and residue over full handbook prose.
 
+## Structured manifest metadata
+
+Prefer `.agentic-workspace/memory/repo/manifest.toml` for recurring routing and promotion facts:
+
+- `summary`: compact note summary
+- `applies_to`: paths, subsystems, commands, or surfaces this note covers
+- `use_when`: when an agent should load or apply this note
+- `stale_when`: files or surfaces that should trigger review
+- `evidence`: source files, checks, commits, or docs that ground this note
+- `promotion_target`: stronger canonical owner, if known
+- `promotion_trigger`: signal that should move this note to the stronger owner
+- `retention_after_promotion`: retain | shrink | stub | delete
+
+Keep prose below for durable explanation only.
+
 ## Improvement signal metadata
 
 Required when the note exists because of repo friction rather than durable truth:

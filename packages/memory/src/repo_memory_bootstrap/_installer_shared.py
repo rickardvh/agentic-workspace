@@ -257,6 +257,7 @@ VALID_MEMORY_ROLE_VALUES = {"durable_truth", "improvement_signal"}
 VALID_DURABLE_FACT_STATUS_VALUES = {"active", "candidate", "deprecated"}
 VALID_DURABLE_FACT_AUTHORITY_VALUES = {"canonical", "advisory", "supporting"}
 VALID_CONFIG_TREATMENT_VALUES = {"promote", "cleanup", "retain", "no_action"}
+VALID_RETENTION_AFTER_PROMOTION_VALUES = {"retain", "shrink", "stub", "delete"}
 VALID_SYMPTOM_OF_VALUES = {
     "workflow_friction",
     "guidance_drift",
@@ -451,12 +452,16 @@ class MemoryNoteRecord:
     canonical_home: Path
     authority: str
     audience: str
+    summary: str = ""
     canonicality: str = "agent_only"
     task_relevance: str = "optional"
     subsystems: tuple[str, ...] = ()
     surfaces: tuple[str, ...] = ()
+    applies_to: tuple[str, ...] = ()
+    use_when: tuple[str, ...] = ()
     routes_from: tuple[str, ...] = ()
     stale_when: tuple[str, ...] = ()
+    evidence: tuple[str, ...] = ()
     related_validations: tuple[str, ...] = ()
     routing_only: bool = False
     high_level: bool = False
@@ -469,6 +474,9 @@ class MemoryNoteRecord:
     retention_justification: str = ""
     config_treatment: str = ""
     config_note: str = ""
+    promotion_target: str = ""
+    promotion_trigger: str = ""
+    retention_after_promotion: str = ""
 
 
 @dataclass(frozen=True, slots=True)

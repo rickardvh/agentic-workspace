@@ -20,13 +20,22 @@ forbid_core_docs_depend_on_memory = false
 # - shared_invariant
 # Existing repos may keep their current audience values; these labels are guidance only.
 # Optional improvement-pressure fields:
+# - summary = "compact routing or durable-fact summary"
+# - applies_to = ["paths, subsystems, commands, or surfaces this note covers"]
+# - use_when = ["when an agent should load or apply this note"]
+# - evidence = ["source files, checks, commits, or docs that ground this note"]
 # - memory_role = "durable_truth" | "improvement_signal"
 # - symptom_of = "workflow_friction" | "guidance_drift" | "missing_guardrail" | "architecture_friction" | "operator_complexity"
 # - preferred_remediation = "docs" | "skill" | "script" | "test" | "validation" | "refactor" | "code"
 # - improvement_candidate = true
 # - improvement_note = "short advisory hint"
 # - elimination_target = "shrink" | "promote" | "automate" | "refactor_away"
+# - promotion_target = "stronger canonical owner, if known"
+# - promotion_trigger = "signal that should move this note to the stronger owner"
+# - retention_after_promotion = "retain" | "shrink" | "stub" | "delete"
 # - retention_justification = "short reason the note should remain despite being an improvement signal"
+# - config_treatment = "promote" | "cleanup" | "retain" | "no_action"
+# - config_note = "short note describing which current config rule or posture shaped that treatment, or explicitly that current config does not materially change it"
 # Existing `routes_from`, `stale_when`, and `related_validations` fields also act as
 # the first evidence-backed trust anchors for durable notes: they say what currently
 # grounds the note and what should make it questionable or stale when repo evidence changes.

@@ -2797,10 +2797,15 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
     )
     assert "`promotion_target`" in text
     assert "`retention_after_promotion`" in text
+    assert "`summary`" in text
+    assert "`applies_to`" in text
+    assert "`use_when`" in text
+    assert "`evidence`" in text
     assert "## Starter templates" in text
     assert ".agentic-workspace/memory/repo/templates/memory-note-template.md" in text
     assert "## Improvement metadata quick reference" in text
     assert "`retention_justification`" in text
+    assert "`summary`, `applies_to`, `use_when`, and `evidence`" in text
 
 
 def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() -> None:
@@ -2870,6 +2875,11 @@ def test_memory_note_template_includes_improvement_signal_metadata() -> None:
     )
 
     assert "## Improvement signal metadata" in text
+    assert "## Structured manifest metadata" in text
+    assert "`summary`: compact note summary" in text
+    assert "`applies_to`: paths, subsystems, commands, or surfaces this note covers" in text
+    assert "`use_when`: when an agent should load or apply this note" in text
+    assert "`evidence`: source files, checks, commits, or docs that ground this note" in text
     assert "`preferred_remediation`" in text
     assert "`elimination_target`" in text
     assert "`config_treatment`" in text
@@ -4193,6 +4203,7 @@ memory_role = "weird"
 symptom_of = "bad"
 preferred_remediation = "robot"
 elimination_target = "gone"
+retention_after_promotion = "forever"
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -4204,6 +4215,78 @@ elimination_target = "gone"
     assert any("manifest symptom_of must be one of" in action.detail for action in result.actions)
     assert any("manifest preferred_remediation must be one of" in action.detail for action in result.actions)
     assert any("manifest elimination_target must be one of" in action.detail for action in result.actions)
+    assert any("manifest retention_after_promotion must be one of" in action.detail for action in result.actions)
+
+
+def test_manifest_loads_structured_note_routing_and_promotion_metadata(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.toml"
+    manifest_path.write_text(
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/runbooks/api-routing.md"]
+note_type = "runbook"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/api-routing.md"
+authority = "canonical"
+audience = "human+agent"
+summary = "API routing lesson."
+canonicality = "agent_only"
+task_relevance = "optional"
+applies_to = ["src/api/**"]
+use_when = ["touching API routing"]
+routes_from = ["src/api/**"]
+stale_when = ["src/api/**"]
+evidence = ["tests/test_api.py"]
+memory_role = "improvement_signal"
+preferred_remediation = "docs"
+improvement_note = "Move stable API routing guidance into docs."
+elimination_target = "promote"
+promotion_target = "docs/api-routing.md"
+promotion_trigger = "API routing guidance stabilises."
+retention_after_promotion = "stub"
+config_treatment = "promote"
+config_note = "Current config favours canonical docs for stable API policy."
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    manifest = installer._load_memory_manifest(manifest_path)
+
+    assert manifest is not None
+    note = manifest.notes[0]
+    assert note.summary == "API routing lesson."
+    assert note.applies_to == ("src/api/**",)
+    assert note.use_when == ("touching API routing",)
+    assert note.evidence == ("tests/test_api.py",)
+    assert note.promotion_target == "docs/api-routing.md"
+    assert note.promotion_trigger == "API routing guidance stabilises."
+    assert note.retention_after_promotion == "stub"
+
+    recommendation = installer._build_remediation_recommendation(
+        note,
+        note_path=Path(".agentic-workspace/memory/repo/runbooks/api-routing.md"),
+        text="# API routing\n\nDurable API routing lesson.\n",
+        for_report=False,
+    )
+    assert recommendation is not None
+    assert recommendation.target_path_hint == "docs/api-routing.md"
+
+    state_model = installer._memory_state_model_view(
+        manifest=manifest,
+        trust_items=[{"path": note.path.as_posix(), "state": "supported"}],
+    )
+    manifest_record = next(record for record in state_model["records"] if record["note_type"] == "manifest")
+    note_record = next(record for record in state_model["records"] if record["path"] == note.path.as_posix())
+    assert "summary" in manifest_record["queryable_fields"]
+    assert "promotion_target" in manifest_record["queryable_fields"]
+    assert note_record["summary"] == "API routing lesson."
+    assert note_record["applies_to"] == ["src/api/**"]
+    assert note_record["use_when"] == ["touching API routing"]
+    assert note_record["evidence"] == ["tests/test_api.py"]
+    assert note_record["promotion_target"] == "docs/api-routing.md"
+    assert note_record["promotion_trigger"] == "API routing guidance stabilises."
+    assert note_record["retention_after_promotion"] == "stub"
 
 
 def test_doctor_reports_invalid_manifest_toml(tmp_path: Path) -> None:
@@ -4248,6 +4331,9 @@ audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "optional"
 routes_from = "README.md"
+use_when = "touching API code"
+evidence = "README.md"
+retention_after_promotion = ""
 improvement_candidate = "true"
 
 [notes.".agentic-workspace/memory/repo/domains/missing-fields.md"]
@@ -4274,6 +4360,9 @@ status = "active"
     assert "manifest rules.routing_only must be an array of strings" in details
     assert "manifest rules.forbid_core_docs_depend_on_memory must be a boolean" in details
     assert any("routes_from must be an array of strings" in detail for detail in details)
+    assert any("use_when must be an array of strings" in detail for detail in details)
+    assert any("evidence must be an array of strings" in detail for detail in details)
+    assert any("retention_after_promotion must be a non-empty string when present" in detail for detail in details)
     assert any("improvement_candidate must be a boolean" in detail for detail in details)
     assert any("missing-fields.md.note_type must be a non-empty string" in detail for detail in details)
     assert any("missing-fields.md.authority must be a non-empty string" in detail for detail in details)

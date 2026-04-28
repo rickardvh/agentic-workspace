@@ -31,6 +31,7 @@ from repo_memory_bootstrap._installer_shared import (
     VALID_ELIMINATION_TARGET_VALUES,
     VALID_MEMORY_ROLE_VALUES,
     VALID_PREFERRED_REMEDIATION_VALUES,
+    VALID_RETENTION_AFTER_PROMOTION_VALUES,
     VALID_SYMPTOM_OF_VALUES,
     VALID_TASK_RELEVANCE_VALUES,
     DurableFactRecord,
@@ -116,12 +117,16 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 canonical_home=Path(str(raw.get("canonical_home", note_path))),
                 authority=str(raw.get("authority", "supporting")),
                 audience=str(raw.get("audience", "human+agent")),
+                summary=str(raw.get("summary", "") or "").strip(),
                 canonicality=str(raw.get("canonicality", "agent_only")),
                 task_relevance=str(raw.get("task_relevance", "optional")),
                 subsystems=tuple(_string_list(raw.get("subsystems"))),
                 surfaces=tuple(_normalise_surface_name(value) for value in _string_list(raw.get("surfaces"))),
+                applies_to=tuple(_string_list(raw.get("applies_to"))),
+                use_when=tuple(_string_list(raw.get("use_when"))),
                 routes_from=tuple(_string_list(raw.get("routes_from"))),
                 stale_when=tuple(_string_list(raw.get("stale_when"))),
+                evidence=tuple(_string_list(raw.get("evidence"))),
                 related_validations=tuple(_string_list(raw.get("related_validations"))),
                 routing_only=bool(raw.get("routing_only", False)),
                 high_level=bool(raw.get("high_level", False)),
@@ -134,6 +139,9 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 retention_justification=str(raw.get("retention_justification", "") or "").strip(),
                 config_treatment=str(raw.get("config_treatment", "") or "").strip(),
                 config_note=str(raw.get("config_note", "") or "").strip(),
+                promotion_target=str(raw.get("promotion_target", "") or "").strip(),
+                promotion_trigger=str(raw.get("promotion_trigger", "") or "").strip(),
+                retention_after_promotion=str(raw.get("retention_after_promotion", "") or "").strip(),
             )
         )
 
@@ -215,9 +223,21 @@ def _memory_manifest_typed_validator_findings(path: Path) -> list[str]:
             for field in ("note_type", "canonical_home", "authority", "audience", "canonicality", "task_relevance"):
                 if field not in raw or not isinstance(raw[field], str) or not raw[field].strip():
                     findings.append(f"manifest notes.{note_path}.{field} must be a non-empty string")
-            for field in ("subsystems", "surfaces", "routes_from", "stale_when", "related_validations"):
+            for field in (
+                "subsystems",
+                "surfaces",
+                "applies_to",
+                "use_when",
+                "routes_from",
+                "stale_when",
+                "evidence",
+                "related_validations",
+            ):
                 if field in raw and not _is_string_array(raw[field]):
                     findings.append(f"manifest notes.{note_path}.{field} must be an array of strings")
+            for field in ("summary", "promotion_target", "promotion_trigger", "retention_after_promotion"):
+                if field in raw and (not isinstance(raw[field], str) or not raw[field].strip()):
+                    findings.append(f"manifest notes.{note_path}.{field} must be a non-empty string when present")
             for field in ("routing_only", "high_level", "improvement_candidate"):
                 if field in raw and not isinstance(raw[field], bool):
                     findings.append(f"manifest notes.{note_path}.{field} must be a boolean")
@@ -500,6 +520,16 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 "manual review",
                 target_root / note.path,
                 "manifest config_treatment must be one of: promote, cleanup, retain, no_action",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+        if note.retention_after_promotion and note.retention_after_promotion not in VALID_RETENTION_AFTER_PROMOTION_VALUES:
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "manifest retention_after_promotion must be one of: retain, shrink, stub, delete",
                 role="memory-manifest",
                 safety="manual",
                 source=note.path.as_posix(),
@@ -1449,6 +1479,7 @@ def _explicit_remediation_recommendation(
     if not kind:
         return None
 
+    explicit_target = note.promotion_target.strip()
     target_map = {
         "docs": _infer_docs_target(note, note_path),
         "skill": _infer_skill_target(note, note_path),
@@ -1471,7 +1502,7 @@ def _explicit_remediation_recommendation(
         return None
     return RemediationRecommendation(
         kind=kind,
-        target_path_hint=target_map[kind],
+        target_path_hint=explicit_target or target_map[kind],
         reason=reason_map[kind],
         confidence=confidence,
         memory_action=note.elimination_target or ("promote" if kind == "docs" else memory_action),

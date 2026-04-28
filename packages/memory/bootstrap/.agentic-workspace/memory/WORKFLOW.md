@@ -58,6 +58,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - A closeout-derived memory note captures only the compact motivation, constraint, or lesson that future work should not rediscover.
 - Do not paste plan history, milestone logs, validation transcripts, backlog state, or archived-plan narration into memory.
 - Include why the lesson matters for future work, when to load or use it, its likely canonical owner or promotion target, the promotion trigger, and the intended post-promotion note shape: retain, shrink, stub, or delete.
+- Put recurring routing and promotion facts in manifest fields such as `summary`, `applies_to`, `use_when`, `evidence`, `promotion_target`, `promotion_trigger`, and `retention_after_promotion` instead of repeating that boilerplate in prose.
 - If the residue already has a stronger home in docs, contracts, checks, code, or planning state, update that home first and leave only a short memory stub when routing value remains.
 - If no future work would act differently because of the residue, discard it instead of creating a note.
 
@@ -89,6 +90,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - `config_treatment` and `config_note` should always be present for `improvement_signal` notes, even when the answer is `no_action`, so config-shaped treatment does not stay implicit.
 - `retention_justification` is the fallback when a note remains justified even though it is also an improvement signal.
 - Closeout-derived notes should also name `source_closeout`, `promotion_target`, `promotion_trigger`, and `retention_after_promotion` when those are known.
+- Use `summary`, `applies_to`, `use_when`, and `evidence` in the manifest for routine note routing; leave note prose for the durable explanation an agent cannot infer from metadata.
 - Use the quick reminder in `.agentic-workspace/memory/repo/templates/memory-note-template.md` when you are writing the note itself and the fuller workflow below when deciding how to route follow-through.
 
 ## Canonical-doc boundary

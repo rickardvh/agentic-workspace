@@ -1926,7 +1926,7 @@ def promotion_report(
 
 def _memory_evidence_anchors(note: MemoryNoteRecord) -> list[str]:
     anchors: list[str] = []
-    for value in (*note.stale_when, *note.routes_from, *note.related_validations):
+    for value in (*note.evidence, *note.applies_to, *note.stale_when, *note.routes_from, *note.related_validations):
         if value and value not in anchors:
             anchors.append(value)
     return anchors
@@ -2269,11 +2269,18 @@ def _memory_state_model_view(
                 "note_type",
                 "authority",
                 "memory_role",
+                "summary",
+                "applies_to",
+                "use_when",
                 "routes_from",
                 "stale_when",
+                "evidence",
                 "related_validations",
                 "improvement_candidate",
                 "durable_facts",
+                "promotion_target",
+                "promotion_trigger",
+                "retention_after_promotion",
             ],
         }
     ]
@@ -2301,20 +2308,33 @@ def _memory_state_model_view(
         surface_class = _memory_surface_class(note)
         class_counts[surface_class] = class_counts.get(surface_class, 0) + 1
         trust_item = trust_by_path.get(note.path.as_posix(), {})
-        records.append(
-            {
-                "path": note.path.as_posix(),
-                "surface_class": surface_class,
-                "note_type": note.note_type,
-                "authority": note.authority,
-                "memory_role": note.memory_role or "unclassified",
-                "advisory_only": True,
-                "provenance": list(note.routes_from or note.stale_when or note.related_validations),
-                "confidence": _memory_state_confidence(note=note, trust_item=trust_item),
-                "trust_state": trust_item.get("state", "unknown"),
-                "promotion_status": "candidate" if note.improvement_candidate else "none",
-            }
-        )
+        record: dict[str, object] = {
+            "path": note.path.as_posix(),
+            "surface_class": surface_class,
+            "note_type": note.note_type,
+            "authority": note.authority,
+            "memory_role": note.memory_role or "unclassified",
+            "advisory_only": True,
+            "provenance": list(note.evidence or note.routes_from or note.stale_when or note.related_validations),
+            "confidence": _memory_state_confidence(note=note, trust_item=trust_item),
+            "trust_state": trust_item.get("state", "unknown"),
+            "promotion_status": "candidate" if note.improvement_candidate else "none",
+        }
+        if note.summary:
+            record["summary"] = note.summary
+        if note.applies_to:
+            record["applies_to"] = list(note.applies_to)
+        if note.use_when:
+            record["use_when"] = list(note.use_when)
+        if note.evidence:
+            record["evidence"] = list(note.evidence)
+        if note.promotion_target:
+            record["promotion_target"] = note.promotion_target
+        if note.promotion_trigger:
+            record["promotion_trigger"] = note.promotion_trigger
+        if note.retention_after_promotion:
+            record["retention_after_promotion"] = note.retention_after_promotion
+        records.append(record)
 
     current_context = [record["path"] for record in records if record["note_type"] in {"current-overview", "current-context"}]
     improvement_candidates = [record["path"] for record in records if record.get("promotion_status") == "candidate"]
