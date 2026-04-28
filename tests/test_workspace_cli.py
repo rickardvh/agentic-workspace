@@ -3645,6 +3645,10 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert section_hints["effective_authority"]["command"] == (
         "agentic-workspace report --target ./repo --section effective_authority --format json"
     )
+    assert section_hints["prose_surface_inventory"]["command"] == (
+        "agentic-workspace report --target ./repo --section prose_surface_inventory --format json"
+    )
+    assert "prose-heavy" in section_hints["prose_surface_inventory"]["purpose"]
     assert any(item["detail_section"] == "closeout_trust" for item in maintenance["subcategories"])
 
     assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
@@ -3727,6 +3731,31 @@ def test_report_section_agent_aids_discovers_checked_in_and_local_aids(tmp_path:
     assert [entry["id"] for entry in answer["recommended_actions"]] == ["workspace-validation-wrapper"]
     assert answer["local_only"]["entries"][0]["id"] == "codex"
     assert answer["local_only"]["entries"][0]["authority"] == "none"
+
+
+def test_report_section_prose_surface_inventory_routes_follow_up_work(capsys) -> None:
+    assert cli.main(["report", "--section", "prose_surface_inventory", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["surface"] == "report"
+    assert payload["selector"] == {"section": "prose_surface_inventory"}
+    answer = payload["answer"]
+    assert answer["kind"] == "workspace-prose-surface-inventory/v1"
+    assert answer["command"] == "agentic-workspace report --target ./repo --section prose_surface_inventory --format json"
+    assert answer["summary"]["entry_count"] >= 8
+    assert answer["summary"]["ordinary_startup_count"] == 1
+    assert answer["summary"]["target_status_counts"]["generate"] >= 2
+    assert {candidate["issue"] for candidate in answer["top_follow_up_candidates"]} == {"#532", "#534", "#535"}
+    entries = {entry["id"]: entry for entry in answer["entries"]}
+    assert entries["execplan-closeout"]["target_status"] == "generate"
+    assert entries["memory-notes"]["target_status"] == "structure"
+    assert answer["ordinary_startup_entries"] == [
+        {
+            "id": "startup-adapters",
+            "surface": "AGENTS.md, llms.txt, tools/AGENT_QUICKSTART.md, tools/AGENT_ROUTING.md",
+            "target_status": "shrink",
+        }
+    ]
 
 
 def test_report_improvement_intake_keeps_dogfooding_source_checkout_only(tmp_path: Path, capsys) -> None:

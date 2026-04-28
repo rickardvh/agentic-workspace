@@ -1,0 +1,292 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Prose Heavy Surface Inventory",
+  "goal": [
+    "structured-first-operating-updates first child; inventory recurring prose-writing surfaces before replacing, constraining, generating, structuring, shrinking, or removing them."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "structured-first-operating-updates first child; inventory recurring prose-writing surfaces before replacing, constraining, generating, structuring, shrinking, or removing them.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "prose-heavy-surface-inventory",
+      "status": "completed",
+      "next_step": "Archive this plan, close #531, and continue with #532.",
+      "proof": "Contract tooling, structured-file inventory, focused contract/workspace tests, report section proof, ruff, root CLI authority, planning strict check, planning doctor, and proof selector passed."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/prose_surface_inventory.json",
+        "src/agentic_workspace/contracts/schemas/prose_surface_inventory.schema.json",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        "src/agentic_workspace/contracts/python_contract_consumption.json",
+        "src/agentic_workspace/contracts/contract_inventory.json",
+        "src/agentic_workspace/contracts/report_contract.json",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        "src/agentic_workspace/contract_tooling.py",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/reporting_support.py",
+        "tests/test_contract_tooling.py",
+        "tests/test_structured_file_inventory.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/prose-heavy-surface-inventory.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "structured-first-operating-updates first child; inventory recurring prose-writing surfaces before replacing, constraining, generating, structuring, shrinking, or removing them.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A schema-backed prose-surface inventory now classifies recurring operating prose and exposes it through report --section prose_surface_inventory.",
+    "intentionally deferred": "none",
+    "discovered implications": "Subagent review and dogfooding confirmed that closeout generation (#532), constrained templates (#534), and structured Memory metadata (#535) already cover the next opportunities; no new issue was needed.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice",
+    "next likely slice": "#532"
+  },
+  "intent_interpretation": {
+    "literal request": "Prose Heavy Surface Inventory",
+    "inferred intended outcome": "structured-first-operating-updates first child; inventory recurring prose-writing surfaces before replacing, constraining, generating, structuring, shrinking, or removing them.",
+    "chosen concrete what": "Add a schema-backed prose-heavy surface inventory and expose it behind the existing report section selector.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Prose inventory contract/schema, structured-file and contract consumption/owner inventories, report contract/schema, report payload assembly, report section hints, focused tests, planning state, and this execplan.",
+    "max changed files": "15 active files plus archive output at closeout.",
+    "required validation commands": "uv run pytest tests/test_contract_tooling.py tests/test_structured_file_inventory.py tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src tests scripts; uv run agentic-workspace report --target . --section prose_surface_inventory --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "archive prose inventory slice and continue with #532.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "structured-first-operating-updates first child; inventory recurring prose-writing surfaces before replacing, constraining, generating, structuring, shrinking, or removing them.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#531",
+      "label": "closed prose inventory slice",
+      "role": "closed_item",
+      "locator": "GitHub issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#530",
+      "label": "structured-first operating updates parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#532",
+      "label": "generated closeout prose follow-up",
+      "role": "next_lane",
+      "locator": "GitHub issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#534",
+      "label": "constrained template follow-up",
+      "role": "next_lane",
+      "locator": "GitHub issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#535",
+      "label": "structured memory metadata follow-up",
+      "role": "next_lane",
+      "locator": "GitHub issue"
+    }
+  ],
+  "active_milestone": {
+    "id": "prose-heavy-surface-inventory",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this plan and close #531."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/prose_surface_inventory.json",
+    "src/agentic_workspace/contracts/schemas/prose_surface_inventory.schema.json",
+    "src/agentic_workspace/contracts/structured_file_inventory.json",
+    "src/agentic_workspace/contracts/python_contract_consumption.json",
+    "src/agentic_workspace/contracts/contract_inventory.json",
+    "src/agentic_workspace/contracts/report_contract.json",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "src/agentic_workspace/contract_tooling.py",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/reporting_support.py",
+    "tests/test_contract_tooling.py",
+    "tests/test_structured_file_inventory.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/prose-heavy-surface-inventory.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_contract_tooling.py tests/test_structured_file_inventory.py tests/test_workspace_cli.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check src tests scripts",
+    "uv run agentic-workspace report --target . --section prose_surface_inventory --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Prose-heavy surfaces are inventoried with owner and purpose.",
+    "Each recurring prose pattern has a target status: keep, constrain, generate, structure, shrink, remove, or archive-only.",
+    "Top follow-up candidates are routed to implementation issues.",
+    "Inventory links to structured-file inventory where relevant.",
+    "The inventory is discoverable without broad file search."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with Curie and Hilbert read-only subagent review",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Created a schema-backed prose surface inventory, added a validated contract loader, registered the contract in structured-file, contract-consumption, owner, and report contracts, and exposed a compact report section for follow-up routing.",
+    "scope touched": "workspace contracts/schemas, contract tooling loader, report payload/section hints, focused tests, and planning state.",
+    "changed surfaces": "prose_surface_inventory contract/schema, structured_file_inventory, python_contract_consumption, contract_inventory, report_contract, workspace_report schema, cli report payload, reporting_support, tests, and planning state.",
+    "validations run": "uv run pytest tests/test_contract_tooling.py tests/test_structured_file_inventory.py tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src tests scripts; uv run agentic-workspace report --target . --section prose_surface_inventory --format json; uv run agentic-workspace proof --target . --changed ... --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json.",
+    "result for continuation": "Continue #530 with #532 closeout/archive prose generation first, then #534 and #535.",
+    "next step": "Archive this plan and close #531."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "close #531 and continue #532."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Focused contract/workspace tests, contract tooling, structured-file inventory, ruff, report section output, root CLI authority, planning strict check, planning doctor, and proof selector passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "structured-first-operating-updates first child; inventory recurring prose-writing surfaces before replacing, constraining, generating, structuring, shrinking, or removing them.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The prose_surface_inventory contract classifies eight operating surface families by owner, purpose, classification, target status, recurring patterns, structured owner, prose role, validation refs, and follow-up issues; report --section prose_surface_inventory exposes the map.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml work_items lane structured-first-operating-updates"
+  },
+  "execution_summary": {
+    "outcome delivered": "schema-backed prose-heavy operating surface inventory with compact report discovery",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#532, #534, #535",
+    "post-work posterity capture": "prose_surface_inventory contract and archived execplan",
+    "knowledge promoted (Memory/Docs/Config)": "src/agentic_workspace/contracts/prose_surface_inventory.json",
+    "resume from": "#532"
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "Recurring operating prose should be classified by target status and routed to structured owners before adding templates or generators.",
+    "motivation worth preserving": "The system feels smaller when agents can query prose burden and follow-up routing instead of rereading archives, templates, Memory notes, and review docs.",
+    "canonical owner now": "src/agentic_workspace/contracts/prose_surface_inventory.json",
+    "promotion trigger": "when recurring prose-authoring surfaces, classifications, or structured-first follow-up issues change",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "partial",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#531 inventories and routes the prose burden, while #530 still needs #532, #534, and #535 implementation slices.",
+    "evidence carried forward": "prose_surface_inventory contract, report section output, contract tooling tests, structured-file inventory entry, and follow-up issues #532, #534, and #535 under parent #530",
+    "reopen trigger": "a recurring prose-heavy operating surface lacks classification, target status, owner, or follow-up route"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Subagents accelerated inventory verification and found missing registration/report-discovery hardening.",
+      "Proof selector surfaced direct CLI authority review for the report section payload.",
+      "The inventory itself should be discoverable through an existing report section rather than another startup doc."
+    ],
+    "signals fixed": [
+      "Registered the inventory as schema-backed, contract-consumed, owner-classified, and report-discoverable.",
+      "Used existing report section selector instead of adding a new command."
+    ],
+    "signals routed": [
+      "#532 for generated closeout/archive prose.",
+      "#534 for constrained review, handoff, and self-improvement templates.",
+      "#535 for structured Memory note metadata.",
+      "#526/#528 continue to own helper/scaffold and validation-friction routing patterns."
+    ],
+    "signals dismissed": [],
+    "next owner": "#532"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "#532",
+        "#534",
+        "#535"
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "#532",
+        "#534",
+        "#535"
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

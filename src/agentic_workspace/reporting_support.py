@@ -464,6 +464,7 @@ def report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
         "standing_intent": "effective standing intent and stronger-home guidance",
         "improvement_intake": "unified routing for setup findings, review findings, validation friction, and memory improvement signals",
         "repo_friction": "repo-friction and improvement pressure evidence",
+        "prose_surface_inventory": "prose-heavy operating surface classifications and structured-first follow-up routing",
         "config": "resolved workspace config and local posture",
         "registry": "module registry and lifecycle metadata",
     }
@@ -488,6 +489,7 @@ def report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
         "standing_intent": "inspect when product direction or stronger-home placement is the question",
         "improvement_intake": "inspect when a product or workflow improvement signal needs routing, dismissal, or durable ownership",
         "repo_friction": "inspect when choosing or routing improvement targets",
+        "prose_surface_inventory": "inspect when reducing repeated plan, closeout, review, handoff, Memory, or adapter prose",
         "config": "deep detail; inspect only when resolved config, posture, or obligations matter",
         "registry": "deep detail; inspect only when module metadata or lifecycle registration matters",
     }

@@ -56,6 +56,17 @@ def test_agent_aid_manifest_is_schema_backed() -> None:
     assert entry["storage_class"] == "source-of-truth"
 
 
+def test_prose_surface_inventory_is_schema_backed() -> None:
+    inventory = check_structured_file_inventory.load_inventory()
+    entry = next(
+        entry for entry in inventory["entries"] if entry["pattern"] == "src/agentic_workspace/contracts/prose_surface_inventory.json"
+    )
+
+    assert entry["status"] == "schema-backed"
+    assert entry["schema_or_validator"] == "src/agentic_workspace/contracts/schemas/prose_surface_inventory.schema.json"
+    assert entry["storage_class"] == "source-of-truth"
+
+
 def test_agent_aid_manifest_is_classified_but_other_structured_aid_files_are_not_freeform() -> None:
     inventory = check_structured_file_inventory.load_inventory()
 

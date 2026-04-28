@@ -17,6 +17,7 @@
     "branch_workflow_posture",
     "local_memory",
     "agent_aids",
+    "prose_surface_inventory",
     "agent_configuration_system",
     "agent_configuration_queries",
     "workflow_obligations",
@@ -114,6 +115,9 @@
       "type": "object"
     },
     "agent_aids": {
+      "type": "object"
+    },
+    "prose_surface_inventory": {
       "type": "object"
     },
     "agent_configuration_system": {

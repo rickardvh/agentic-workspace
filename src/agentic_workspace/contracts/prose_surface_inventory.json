@@ -1,0 +1,250 @@
+{
+  "kind": "agentic-workspace/prose-surface-inventory/v1",
+  "schema_version": "prose-surface-inventory/v1",
+  "rule": "Agents should author structured intent, evidence, decisions, and routing first. Prose remains only when it explains judgment, adapts structured state for people, or preserves audit evidence.",
+  "classifications": [
+    "essential-explanatory-prose",
+    "constrained-template-prose",
+    "generated-prose-adapter",
+    "structured-field-replacement-candidate",
+    "archive-evidence-only",
+    "remove-or-shrink"
+  ],
+  "target_statuses": [
+    "keep",
+    "constrain",
+    "generate",
+    "structure",
+    "shrink",
+    "remove",
+    "archive-only"
+  ],
+  "entries": [
+    {
+      "id": "execplan-closeout",
+      "surface": ".agentic-workspace/planning/execplans/*.plan.json and archive/*.plan.json",
+      "owner": "planning",
+      "purpose": "Carry bounded execution intent, proof, closeout, residue, and continuation state.",
+      "ordinary_startup": false,
+      "classification": "structured-field-replacement-candidate",
+      "target_status": "generate",
+      "recurring_patterns": [
+        "execution_run narrative",
+        "finished_run_review status prose",
+        "proof_report evidence summary",
+        "intent_satisfaction explanation",
+        "closure_check rationale"
+      ],
+      "structured_owner": "planning execplan JSON fields and closeout_distillation buckets",
+      "prose_role": "Generated adapter text should summarize the structured fields for humans and external trackers.",
+      "follow_up_issues": [
+        "#532"
+      ],
+      "validation_refs": [
+        "uv run python scripts/check/check_planning_surfaces.py --strict"
+      ]
+    },
+    {
+      "id": "external-closeout-comments",
+      "surface": "Issue and pull-request closeout comments",
+      "owner": "external tracker adapter",
+      "purpose": "Tell an external work tracker what changed and what proof ran.",
+      "ordinary_startup": false,
+      "classification": "generated-prose-adapter",
+      "target_status": "generate",
+      "recurring_patterns": [
+        "implemented in commit",
+        "delivered bullet list",
+        "proof run list",
+        "remaining risk"
+      ],
+      "structured_owner": "execplan execution_summary, proof_report, durable_residue, and follow_up fields",
+      "prose_role": "Adapter output only; it must not become the source of closeout state.",
+      "follow_up_issues": [
+        "#532"
+      ],
+      "validation_refs": [
+        "agentic-workspace summary --format json"
+      ]
+    },
+    {
+      "id": "review-records",
+      "surface": ".agentic-workspace/planning/reviews/ and docs/reviews/",
+      "owner": "planning review evidence",
+      "purpose": "Preserve bounded findings, evidence, impact, and recommendation when analysis should outlive chat.",
+      "ordinary_startup": false,
+      "classification": "constrained-template-prose",
+      "target_status": "constrain",
+      "recurring_patterns": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "structured_owner": "planning review schema and review template records",
+      "prose_role": "Explain judgment and evidence without inventing new section shapes.",
+      "follow_up_issues": [
+        "#534"
+      ],
+      "validation_refs": [
+        "uv run python scripts/check/check_planning_surfaces.py --strict"
+      ]
+    },
+    {
+      "id": "memory-notes",
+      "surface": ".agentic-workspace/memory/repo/**/*.md and .agentic-workspace/memory/repo/manifest.toml",
+      "owner": "memory",
+      "purpose": "Preserve durable anti-rediscovery knowledge, routing, promotion, and staleness metadata.",
+      "ordinary_startup": false,
+      "classification": "structured-field-replacement-candidate",
+      "target_status": "structure",
+      "recurring_patterns": [
+        "summary",
+        "use_when",
+        "applies_to",
+        "stale_when",
+        "promotion target",
+        "retention after promotion",
+        "preferred remediation"
+      ],
+      "structured_owner": "memory manifest metadata and note templates",
+      "prose_role": "Keep only the durable explanation that cannot be recovered from metadata.",
+      "follow_up_issues": [
+        "#535"
+      ],
+      "validation_refs": [
+        "agentic-workspace doctor --target ./repo --modules memory --format json"
+      ]
+    },
+    {
+      "id": "handoff-summaries",
+      "surface": "Planning handoff output and interruption/resume summaries",
+      "owner": "planning",
+      "purpose": "Recover current intent, constraints, touched surfaces, proof expectations, and next action across agents.",
+      "ordinary_startup": false,
+      "classification": "constrained-template-prose",
+      "target_status": "constrain",
+      "recurring_patterns": [
+        "current intent",
+        "hard constraints",
+        "relevant durable context",
+        "proof expectations",
+        "immediate next action"
+      ],
+      "structured_owner": "planning handoff_contract and active execplan fields",
+      "prose_role": "Compact handoff prose should be rendered from the same fields rather than improvised.",
+      "follow_up_issues": [
+        "#534"
+      ],
+      "validation_refs": [
+        "agentic-workspace summary --format json"
+      ]
+    },
+    {
+      "id": "self-improvement-reports",
+      "surface": "Self-improvement and dogfooding review reports",
+      "owner": "workspace self-improvement",
+      "purpose": "Record outcome, quality, efficiency, cognitive load, anti-overfitting review, and routed improvement signals.",
+      "ordinary_startup": false,
+      "classification": "constrained-template-prose",
+      "target_status": "constrain",
+      "recurring_patterns": [
+        "outcome",
+        "quality",
+        "efficiency",
+        "cognitive load",
+        "signals consumed",
+        "follow-up routed"
+      ],
+      "structured_owner": "agent feedback schema, improvement signal contract, and execplan improvement_signal_review",
+      "prose_role": "Explain tradeoffs after structured impacts and routing are captured.",
+      "follow_up_issues": [
+        "#528",
+        "#534"
+      ],
+      "validation_refs": [
+        "uv run pytest tests/test_contract_tooling.py -q"
+      ]
+    },
+    {
+      "id": "startup-adapters",
+      "surface": "AGENTS.md, llms.txt, tools/AGENT_QUICKSTART.md, tools/AGENT_ROUTING.md",
+      "owner": "workspace adapter surfaces",
+      "purpose": "Give weak or generic agents a minimal route into compact commands.",
+      "ordinary_startup": true,
+      "classification": "generated-prose-adapter",
+      "target_status": "shrink",
+      "recurring_patterns": [
+        "read this first",
+        "run start",
+        "run summary",
+        "run proof",
+        "open raw surfaces only when compact output points there"
+      ],
+      "structured_owner": "workspace config, defaults startup section, and generated adapter renderer",
+      "prose_role": "Thin compatibility adapter over structured startup routes.",
+      "follow_up_issues": [],
+      "validation_refs": [
+        "make maintainer-surfaces"
+      ]
+    },
+    {
+      "id": "historical-audit-artifacts",
+      "surface": "Archived execplans and historical review artifacts",
+      "owner": "planning historical evidence",
+      "purpose": "Preserve evidence for audit and reconciliation without becoming ordinary operating input.",
+      "ordinary_startup": false,
+      "classification": "archive-evidence-only",
+      "target_status": "archive-only",
+      "recurring_patterns": [
+        "why this decision was honest",
+        "evidence carried forward",
+        "reopen trigger",
+        "review findings"
+      ],
+      "structured_owner": "finished-work inspection, closeout reconciliation, and explicit residue routing",
+      "prose_role": "Audit evidence only; compact reports should surface derived signals instead of asking agents to read archives.",
+      "follow_up_issues": [
+        "#532"
+      ],
+      "validation_refs": [
+        "agentic-workspace summary --format json"
+      ]
+    }
+  ],
+  "top_follow_up_candidates": [
+    {
+      "issue": "#532",
+      "intent": "Generate closeout and archive prose from structured fields.",
+      "surface_ids": [
+        "execplan-closeout",
+        "external-closeout-comments",
+        "historical-audit-artifacts"
+      ],
+      "preferred_remedy": "generate-from-structured-state",
+      "why_first": "Closeout prose is high-frequency, proof-sensitive, and already has structured fields that can own the truth."
+    },
+    {
+      "issue": "#534",
+      "intent": "Add constrained templates for review, handoff, and self-improvement prose.",
+      "surface_ids": [
+        "review-records",
+        "handoff-summaries",
+        "self-improvement-reports"
+      ],
+      "preferred_remedy": "constrain-template",
+      "why_first": "These surfaces still need judgment prose, but recurring section shapes should not be improvised."
+    },
+    {
+      "issue": "#535",
+      "intent": "Prefer structured note metadata over repeated explanatory prose.",
+      "surface_ids": [
+        "memory-notes"
+      ],
+      "preferred_remedy": "add-structured-metadata",
+      "why_first": "Memory metadata repeats routing and promotion facts that can be validated without making agents read full notes."
+    }
+  ]
+}

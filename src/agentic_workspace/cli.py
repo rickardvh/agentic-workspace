@@ -84,6 +84,7 @@ from agentic_workspace.contract_tooling import (
     preflight_policy_manifest,
     proof_routes_manifest,
     proof_selection_rules_manifest,
+    prose_surface_inventory_manifest,
     python_runtime_boundary_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
@@ -123,6 +124,7 @@ _IMPROVEMENT_LATITUDE_POLICY = improvement_latitude_policy_manifest()
 _IMPROVEMENT_SIGNAL_CONTRACT = improvement_signal_contract_manifest()
 _OPTIMIZATION_BIAS_POLICY = optimization_bias_policy_manifest()
 _REPO_FRICTION_POLICY = repo_friction_policy_manifest()
+_PROSE_SURFACE_INVENTORY = prose_surface_inventory_manifest()
 _PREFLIGHT_POLICY = preflight_policy_manifest()
 _PROOF_SELECTION_RULES = proof_selection_rules_manifest()
 _CONTEXT_TEMPLATES = context_templates_manifest()
@@ -355,6 +357,44 @@ def _agent_aids_report_payload(*, target_root: Path) -> dict[str, Any]:
             "retired aids remain visible for audit but are not recommended actions",
             "local-only aids are advisory machine-local context and not shared workflow authority",
             "discovery reads only known aid roots and manifest files",
+        ],
+    }
+
+
+def _prose_surface_inventory_report_payload() -> dict[str, Any]:
+    manifest = copy.deepcopy(_PROSE_SURFACE_INVENTORY)
+    entries = [entry for entry in manifest.get("entries", []) if isinstance(entry, dict)]
+    classification_counts: dict[str, int] = {}
+    target_status_counts: dict[str, int] = {}
+    for entry in entries:
+        classification = str(entry.get("classification", "unknown"))
+        target_status = str(entry.get("target_status", "unknown"))
+        classification_counts[classification] = classification_counts.get(classification, 0) + 1
+        target_status_counts[target_status] = target_status_counts.get(target_status, 0) + 1
+    return {
+        "kind": "workspace-prose-surface-inventory/v1",
+        "status": "available",
+        "command": "agentic-workspace report --target ./repo --section prose_surface_inventory --format json",
+        "contract": "src/agentic_workspace/contracts/prose_surface_inventory.json",
+        "schema": "src/agentic_workspace/contracts/schemas/prose_surface_inventory.schema.json",
+        "rule": manifest["rule"],
+        "summary": {
+            "entry_count": len(entries),
+            "ordinary_startup_count": sum(1 for entry in entries if entry.get("ordinary_startup") is True),
+            "classification_counts": classification_counts,
+            "target_status_counts": target_status_counts,
+        },
+        "top_follow_up_candidates": manifest["top_follow_up_candidates"],
+        "ordinary_startup_entries": [
+            {"id": entry["id"], "surface": entry["surface"], "target_status": entry["target_status"]}
+            for entry in entries
+            if entry.get("ordinary_startup") is True
+        ],
+        "entries": entries,
+        "rules": [
+            "prose inventory is a routing map, not ordinary startup reading",
+            "structured fields own recurring state; prose explains judgment or adapts state for humans",
+            "historical artifacts remain evidence-only unless compact reports surface a current signal",
         ],
     }
 
@@ -3809,6 +3849,7 @@ def _run_report_command(
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
         "agent_aids": _agent_aids_report_payload(target_root=target_root),
+        "prose_surface_inventory": _prose_surface_inventory_report_payload(),
         "execution_shape": execution_shape,
         "agent_configuration_system": _agent_configuration_report_payload(
             config=config,

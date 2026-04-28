@@ -90,6 +90,20 @@ def test_agent_feedback_schema_validates_normalized_feedback_artifact() -> None:
     assert errors == []
 
 
+def test_prose_surface_inventory_routes_recurring_prose_work() -> None:
+    manifest = contract_tooling.prose_surface_inventory_manifest()
+    entries = {entry["id"]: entry for entry in manifest["entries"]}
+
+    assert manifest["rule"].startswith("Agents should author structured intent")
+    assert entries["execplan-closeout"]["target_status"] == "generate"
+    assert entries["execplan-closeout"]["follow_up_issues"] == ["#532"]
+    assert entries["memory-notes"]["target_status"] == "structure"
+    assert entries["memory-notes"]["follow_up_issues"] == ["#535"]
+    assert entries["review-records"]["classification"] == "constrained-template-prose"
+    assert entries["startup-adapters"]["ordinary_startup"] is True
+    assert {candidate["issue"] for candidate in manifest["top_follow_up_candidates"]} == {"#532", "#534", "#535"}
+
+
 def test_command_adapter_generation_contract_identifies_defaults_candidate() -> None:
     manifest = contract_tooling.command_adapter_generation_manifest()
     adapters = {adapter["id"]: adapter for adapter in manifest["adapters"]}

@@ -47,6 +47,18 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": "src/agentic_workspace/contracts/prose_surface_inventory.json",
+      "format": "json",
+      "owner": "workspace-contracts",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/prose_surface_inventory.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Prose-heavy operating surface inventory is a contract-backed routing map for structured-first follow-up work.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used to route recurring prose-authoring burden into generated, constrained, structured, or shrink/remove follow-up work."
+    },
+    {
       "pattern": "src/agentic_workspace/contracts/conformance/*.json",
       "format": "json",
       "owner": "workspace-contracts",
