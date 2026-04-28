@@ -22,6 +22,92 @@
       "planning and memory as first-party examples of the same module contract third parties use"
     ]
   },
+  "component_model": {
+    "schema_version": "agentic-workspace/module-components/v1",
+    "alignment": "mcp-style-adapter-ready",
+    "runtime_dependency": "none",
+    "source_of_truth": "module_registry.json",
+    "rule": "Module components are declarative projection metadata. A future adapter may project them to MCP resources, tools, prompts, schemas, and roots, but core package operation must not require an MCP runtime.",
+    "component_classes": [
+      {
+        "id": "resource",
+        "maps_to": "mcp.resource",
+        "semantics": "read-only queryable context, state, or report output",
+        "required_fields": [
+          "uri",
+          "description",
+          "read_only",
+          "result_schema"
+        ]
+      },
+      {
+        "id": "tool",
+        "maps_to": "mcp.tool",
+        "semantics": "executable operation, including mutating lifecycle work",
+        "required_fields": [
+          "name",
+          "description",
+          "read_only",
+          "destructive",
+          "idempotent",
+          "requires_dry_run",
+          "input_schema",
+          "result_schema",
+          "safety"
+        ]
+      },
+      {
+        "id": "prompt",
+        "maps_to": "mcp.prompt",
+        "semantics": "reusable skill, handoff, or operating template",
+        "required_fields": [
+          "name",
+          "description",
+          "template"
+        ]
+      },
+      {
+        "id": "schema",
+        "maps_to": "mcp.schema",
+        "semantics": "input, output, or structured-result contract referenced by resources and tools",
+        "required_fields": [
+          "id",
+          "path",
+          "schema_kind"
+        ]
+      },
+      {
+        "id": "root",
+        "maps_to": "mcp.root",
+        "semantics": "owned path or boundary used to scope resources and tools",
+        "required_fields": [
+          "id",
+          "path",
+          "ownership"
+        ]
+      }
+    ],
+    "adapter_boundary": {
+      "future_adapter": "optional separate adapter package or wrapper",
+      "adapter_consumes": [
+        "module_registry.component_model",
+        "modules[*].components",
+        "component schema references",
+        "tool safety metadata",
+        "owned roots and path boundaries"
+      ],
+      "adapter_must_not": [
+        "become the source of truth for module behavior",
+        "add FastMCP or MCP runtime dependencies to the core package",
+        "expose source-checkout-only maintainer tooling as host-repo components by default"
+      ],
+      "blocking_prerequisites": [
+        "stable component vocabulary",
+        "schema or typed-validator coverage for referenced structured results",
+        "explicit safety metadata for mutating tools"
+      ]
+    }
+  },
   "module_profiles": [
     {
       "id": "routing-only",
@@ -198,6 +284,134 @@
       ],
       "dependencies": [],
       "conflicts": [],
+      "components": {
+        "resources": [
+          {
+            "uri": "planning://state",
+            "description": "Current planning state, active items, queued items, and roadmap lanes.",
+            "read_only": true,
+            "source": ".agentic-workspace/planning/state.toml",
+            "command": "agentic-workspace summary --format json",
+            "result_schema": "typed-validator:planning-summary"
+          },
+          {
+            "uri": "planning://summary",
+            "description": "Compact current-work and execution-readiness projection.",
+            "read_only": true,
+            "source": "agentic-workspace summary",
+            "command": "agentic-workspace summary --format json",
+            "result_schema": "typed-validator:planning-summary"
+          },
+          {
+            "uri": "planning://execplans",
+            "description": "Active and archived execution plans, opened only when compact state points there.",
+            "read_only": true,
+            "source": ".agentic-workspace/planning/execplans",
+            "command": "agentic-workspace summary --profile full --format json",
+            "result_schema": "typed-validator:planning-execplan"
+          }
+        ],
+        "tools": [
+          {
+            "name": "planning.install",
+            "description": "Install planning bootstrap surfaces in a host repository.",
+            "command": "agentic-workspace install --modules planning --target <repo> --dry-run",
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "requires_dry_run": true,
+            "input_schema": "typed-validator:lifecycle-command-options",
+            "result_schema": "workspace-module-report/v1",
+            "safety": {
+              "requires_approval_when": [
+                "ambiguous_ownership",
+                "manual_review"
+              ],
+              "owned_paths": [
+                ".agentic-workspace/planning/**",
+                "managed AGENTS.md fences"
+              ],
+              "dry_run_command": "agentic-workspace install --modules planning --target <repo> --dry-run --format json"
+            }
+          },
+          {
+            "name": "planning.upgrade",
+            "description": "Refresh managed planning bootstrap surfaces.",
+            "command": "agentic-workspace upgrade --modules planning --target <repo> --dry-run",
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "requires_dry_run": true,
+            "input_schema": "typed-validator:lifecycle-command-options",
+            "result_schema": "workspace-module-report/v1",
+            "safety": {
+              "requires_approval_when": [
+                "ambiguous_ownership",
+                "manual_review"
+              ],
+              "owned_paths": [
+                ".agentic-workspace/planning/**",
+                "managed AGENTS.md fences"
+              ],
+              "dry_run_command": "agentic-workspace upgrade --modules planning --target <repo> --dry-run --format json"
+            }
+          },
+          {
+            "name": "planning.doctor",
+            "description": "Inspect planning surface health.",
+            "command": "agentic-workspace doctor --modules planning --target <repo> --format json",
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "requires_dry_run": false,
+            "input_schema": "typed-validator:lifecycle-command-options",
+            "result_schema": "workspace-module-report/v1",
+            "safety": {
+              "requires_approval_when": [],
+              "owned_paths": [],
+              "dry_run_command": ""
+            }
+          }
+        ],
+        "prompts": [
+          {
+            "name": "planning.autopilot",
+            "description": "Execute one bounded planning milestone from checked-in planning surfaces.",
+            "template": ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md",
+            "prompt_kind": "skill"
+          },
+          {
+            "name": "planning.reporting",
+            "description": "Report active planning state and proof expectations from summary JSON.",
+            "template": ".agentic-workspace/planning/skills/planning-reporting/SKILL.md",
+            "prompt_kind": "skill"
+          }
+        ],
+        "schemas": [
+          {
+            "id": "planning-execplan",
+            "path": ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+            "schema_kind": "template-backed-json"
+          },
+          {
+            "id": "planning-summary",
+            "path": "typed-validator:agentic-workspace summary",
+            "schema_kind": "typed-validator"
+          }
+        ],
+        "roots": [
+          {
+            "id": "planning-root",
+            "path": ".agentic-workspace/planning",
+            "ownership": "module-managed"
+          },
+          {
+            "id": "planning-managed-fences",
+            "path": "AGENTS.md#agentic-workspace:workflow",
+            "ownership": "managed-fence-in-repo-owned-file"
+          }
+        ]
+      },
       "result_contract": {
         "schema_version": "workspace-module-report/v1",
         "guaranteed_fields": [
@@ -256,6 +470,134 @@
       ],
       "dependencies": [],
       "conflicts": [],
+      "components": {
+        "resources": [
+          {
+            "uri": "memory://index",
+            "description": "Routed durable repository knowledge index.",
+            "read_only": true,
+            "source": ".agentic-workspace/memory/repo/index.md",
+            "command": "agentic-workspace report --target <repo> --section module_reports --format json",
+            "result_schema": "typed-validator:memory-report"
+          },
+          {
+            "uri": "memory://manifest",
+            "description": "Memory repository manifest and routing metadata.",
+            "read_only": true,
+            "source": ".agentic-workspace/memory/repo/manifest.toml",
+            "command": "agentic-workspace report --target <repo> --section module_reports --format json",
+            "result_schema": "typed-validator:memory-manifest"
+          },
+          {
+            "uri": "memory://freshness",
+            "description": "Freshness and routing health for durable knowledge notes.",
+            "read_only": true,
+            "source": "memory module report",
+            "command": "agentic-workspace report --target <repo> --section module_reports --format json",
+            "result_schema": "typed-validator:memory-freshness"
+          }
+        ],
+        "tools": [
+          {
+            "name": "memory.install",
+            "description": "Install memory bootstrap surfaces in a host repository.",
+            "command": "agentic-workspace install --modules memory --target <repo> --dry-run",
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "requires_dry_run": true,
+            "input_schema": "typed-validator:lifecycle-command-options",
+            "result_schema": "workspace-module-report/v1",
+            "safety": {
+              "requires_approval_when": [
+                "ambiguous_ownership",
+                "manual_review"
+              ],
+              "owned_paths": [
+                ".agentic-workspace/memory/**",
+                "managed AGENTS.md fences"
+              ],
+              "dry_run_command": "agentic-workspace install --modules memory --target <repo> --dry-run --format json"
+            }
+          },
+          {
+            "name": "memory.upgrade",
+            "description": "Refresh managed memory bootstrap surfaces.",
+            "command": "agentic-workspace upgrade --modules memory --target <repo> --dry-run",
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "requires_dry_run": true,
+            "input_schema": "typed-validator:lifecycle-command-options",
+            "result_schema": "workspace-module-report/v1",
+            "safety": {
+              "requires_approval_when": [
+                "ambiguous_ownership",
+                "manual_review"
+              ],
+              "owned_paths": [
+                ".agentic-workspace/memory/**",
+                "managed AGENTS.md fences"
+              ],
+              "dry_run_command": "agentic-workspace upgrade --modules memory --target <repo> --dry-run --format json"
+            }
+          },
+          {
+            "name": "memory.status",
+            "description": "Inspect installed memory bootstrap state.",
+            "command": "agentic-workspace status --modules memory --target <repo> --format json",
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "requires_dry_run": false,
+            "input_schema": "typed-validator:lifecycle-command-options",
+            "result_schema": "workspace-module-report/v1",
+            "safety": {
+              "requires_approval_when": [],
+              "owned_paths": [],
+              "dry_run_command": ""
+            }
+          }
+        ],
+        "prompts": [
+          {
+            "name": "memory.router",
+            "description": "Route to the narrowest relevant checked-in memory notes.",
+            "template": ".agentic-workspace/memory/skills/memory-router/SKILL.md",
+            "prompt_kind": "skill"
+          },
+          {
+            "name": "memory.capture",
+            "description": "Capture durable repo knowledge into checked-in memory.",
+            "template": ".agentic-workspace/memory/skills/memory-capture/SKILL.md",
+            "prompt_kind": "skill"
+          }
+        ],
+        "schemas": [
+          {
+            "id": "memory-manifest",
+            "path": ".agentic-workspace/memory/repo/manifest.toml",
+            "schema_kind": "typed-validator"
+          },
+          {
+            "id": "memory-report",
+            "path": "typed-validator:memory-report",
+            "schema_kind": "typed-validator"
+          }
+        ],
+        "roots": [
+          {
+            "id": "memory-root",
+            "path": ".agentic-workspace/memory",
+            "ownership": "module-managed"
+          },
+          {
+            "id": "memory-managed-fences",
+            "path": "AGENTS.md#agentic-memory:workflow",
+            "ownership": "managed-fence-in-repo-owned-file"
+          }
+        ]
+      },
       "result_contract": {
         "schema_version": "workspace-module-report/v1",
         "guaranteed_fields": [

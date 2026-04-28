@@ -177,6 +177,7 @@ _IMPROVEMENT_LATITUDE_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for ite
 _OPTIMIZATION_BIAS_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for item in _OPTIMIZATION_BIAS_POLICY["modes"]}
 _MODULE_REGISTRY_ENTRIES = {str(item["name"]): copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST["modules"]}
 _PACKAGE_FOOTPRINT = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("package_footprint", {}))
+_MODULE_COMPONENT_MODEL = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("component_model", {}))
 _MODULE_PROFILE_ENTRIES = tuple(copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("module_profiles", []))
 _FEATURE_TIER_ENTRIES = tuple(copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("feature_tiers", []))
 _ADVANCED_FEATURE_ENTRIES = tuple(copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("advanced_features", []))
@@ -7720,6 +7721,7 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     payload = {
         "package_footprint": copy.deepcopy(_PACKAGE_FOOTPRINT),
+        "component_model": copy.deepcopy(_MODULE_COMPONENT_MODEL),
         "module_profiles": copy.deepcopy(list(_MODULE_PROFILE_ENTRIES)),
         "feature_tiers": copy.deepcopy(list(_FEATURE_TIER_ENTRIES)),
         "feature_tiers_compatibility": {
@@ -7744,6 +7746,7 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
                 "capabilities": list(entry.capabilities),
                 "dependencies": list(entry.dependencies),
                 "conflicts": list(entry.conflicts),
+                "components": copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(entry.name, {}).get("components", {})),
                 "result_contract": {
                     "schema_version": entry.result_contract.schema_version,
                     "guaranteed_fields": list(entry.result_contract.guaranteed_fields),

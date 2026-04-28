@@ -86,6 +86,17 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert "unconditionally" in footprint["python_package_dependency_model"]
     assert "not Python package dependencies" in footprint["repo_footprint_rule"]
     assert footprint["bounded_by"] == ["#490", "#510"]
+    component_model = payload["component_model"]
+    assert component_model["schema_version"] == "agentic-workspace/module-components/v1"
+    assert component_model["runtime_dependency"] == "none"
+    assert {entry["id"] for entry in component_model["component_classes"]} == {
+        "resource",
+        "tool",
+        "prompt",
+        "schema",
+        "root",
+    }
+    assert "FastMCP or MCP runtime dependencies" in " ".join(component_model["adapter_boundary"]["adapter_must_not"])
     full_tier = next(entry for entry in payload["feature_tiers"] if entry["id"] == "full")
     assert full_tier["modules"] == ["planning", "memory"]
     assert "does not imply source-checkout maintainer tooling" in full_tier["cost_model"]
@@ -133,6 +144,21 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     ]
     assert planning_module["dependencies"] == []
     assert planning_module["conflicts"] == []
+    planning_components = planning_module["components"]
+    assert {resource["uri"] for resource in planning_components["resources"]} >= {
+        "planning://state",
+        "planning://summary",
+    }
+    planning_install = next(tool for tool in planning_components["tools"] if tool["name"] == "planning.install")
+    assert planning_install["read_only"] is False
+    assert planning_install["requires_dry_run"] is True
+    assert planning_install["result_schema"] == "workspace-module-report/v1"
+    assert "ambiguous_ownership" in planning_install["safety"]["requires_approval_when"]
+    assert {prompt["name"] for prompt in planning_components["prompts"]} >= {
+        "planning.autopilot",
+        "planning.reporting",
+    }
+    assert {root["id"] for root in planning_components["roots"]} >= {"planning-root"}
     assert planning_module["result_contract"]["schema_version"] == "workspace-module-report/v1"
     assert planning_module["lifecycle_hook_expectations"] == [
         "adopt",
@@ -142,6 +168,20 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
         "uninstall",
         "upgrade",
     ]
+    memory_module = next(entry for entry in payload["modules"] if entry["name"] == "memory")
+    memory_components = memory_module["components"]
+    assert {resource["uri"] for resource in memory_components["resources"]} >= {
+        "memory://index",
+        "memory://manifest",
+    }
+    memory_upgrade = next(tool for tool in memory_components["tools"] if tool["name"] == "memory.upgrade")
+    assert memory_upgrade["read_only"] is False
+    assert memory_upgrade["requires_dry_run"] is True
+    assert memory_upgrade["safety"]["dry_run_command"].startswith("agentic-workspace upgrade --modules memory")
+    assert {prompt["name"] for prompt in memory_components["prompts"]} >= {
+        "memory.router",
+        "memory.capture",
+    }
     assert planning_module["command_args"]["install"] == ["target", "dry_run", "force"]
     assert planning_module["command_args"]["doctor"] == ["target"]
 

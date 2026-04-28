@@ -12,6 +12,8 @@ Choose the smallest preset that matches the repo problem:
 
 These presets map to generic module profiles. `routing-only` is the smallest checked-in repo footprint when a repo only needs compact startup/config/report routing. The current root Python package still bundles the first-party planning and memory packages so the root lifecycle command stays simple; routing-only does not mean a smaller Python dependency install. `full` is an installer profile that selects planning plus memory; it does not activate source-checkout maintainer tooling, package extraction, codegen development, or self-improvement surfaces.
 
+Module manifests also declare adapter-ready components: read-only resources, mutating tools, prompt-like skills, schemas, and owned roots. This keeps future MCP-style adapters thin without adding an MCP runtime dependency to the core package.
+
 Then run:
 
 ```bash

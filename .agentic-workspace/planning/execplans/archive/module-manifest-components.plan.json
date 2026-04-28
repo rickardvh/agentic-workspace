@@ -1,0 +1,291 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Module Manifest Components",
+  "goal": [
+    "Align generic module manifests with MCP-style resource, tool, prompt, schema, and root component classes without adding an MCP runtime dependency."
+  ],
+  "non_goals": [
+    "Do not build an MCP server in this slice.",
+    "Do not expose source-checkout-only maintainer or dogfooding helpers as shipped host-repo components.",
+    "Do not broaden into all schema-inventory or planning-state-maturity issues."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "module manifests can declare adapter-ready components generically",
+      "constraints": "core package remains MCP/FastMCP dependency-free; contracts stay schema-backed",
+      "latitude": "field names and exact component payload shape may be chosen locally if they preserve the issue acceptance signals",
+      "escalation": "escalate if satisfying #510 would require building runtime adapter code or changing package dependency policy"
+    },
+    "execution": {
+      "milestone": "#510 component contract foundation",
+      "status": "completed",
+      "next_step": "Archive this slice and continue with the remaining module-boundary child work.",
+      "proof": "contract schema checks, full workspace CLI tests, root CLI authority query, ruff, proof selection, and planning doctor"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/module_registry.json",
+        "src/agentic_workspace/contracts/schemas/module_registry.schema.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        "README.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/module-manifest-components.plan.json"
+      ],
+      "invariants": [
+        "root orchestrator remains generic",
+        "planning and memory are first-party modules using the same component model",
+        "manifest is adapter-ready but MCP runtime-independent"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#485 compresses the root package around generic module contracts; #510 makes module manifests future-adapter-ready.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression",
+    "parent lane": "module-boundary-compression"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "GitHub issue #512 and .agentic-workspace/planning/state.toml roadmap lane module-boundary-compression",
+    "activation trigger": "after #510 foundation lands; continue with #512 root-surface mapping before closing the parent #485 lane"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "module manifests can describe resources, tools, prompts, schemas, roots, safety, and adapter mapping from one canonical contract",
+    "intentionally deferred": "actual MCP server/package generation and broader structured-file inventory",
+    "discovered implications": "",
+    "proof achieved now": "",
+    "validation still needed": "focused tests and contract checks",
+    "next likely slice": "#511 or #512 if their detailed acceptance remains open"
+  },
+  "intent_interpretation": {
+    "literal request": "repeat until done",
+    "inferred intended outcome": "continue open issue execution lane by lane using package dogfooding",
+    "chosen concrete what": "promote and implement #510 as the next priority-3 module-boundary milestone",
+    "interpretation distance": "low",
+    "review guidance": "review that the manifest model is generic and dependency-free rather than MCP-specific runtime work"
+  },
+  "execution_bounds": {
+    "allowed paths": "module registry contract/schema, module CLI exposure/tests/docs, active planning records",
+    "max changed files": "about 8 before reassessing scope",
+    "required validation commands": "schema/check_contract_tooling_surfaces, focused pytest, proof, doctor",
+    "ask-before-refactor threshold": "broad CLI extraction, new package dependencies, or new top-level command",
+    "stop before touching": "package install bootstrap payloads unless generated output is required by tests"
+  },
+  "stop_conditions": {
+    "stop when": "component model foundation lands and proof passes, or schema/runtime dependency boundary becomes ambiguous",
+    "escalate when boundary reached": "if issue requires an MCP implementation, TypeScript generation, or Docker changes",
+    "escalate on scope drift": "if root CLI generation roadmap or planning maturity work becomes necessary",
+    "escalate on proof failure": "if contract checks reveal existing registry shape is incompatible with the proposed component model"
+  },
+  "context_budget": {
+    "live working set": "#510-#514 issue bodies, module registry contract/schema, module CLI tests",
+    "recoverable later": "archived #486/#487/#488/#490 plans and broader roadmap",
+    "externalize before shift": "keep this execplan updated with validation and continuation state",
+    "pre-work config pull": "agentic-workspace report/summary already run",
+    "pre-work memory pull": "not needed unless proof routes to memory-specific behavior",
+    "tiny resumability note": "implement module component contract foundation",
+    "context-shift triggers": "before closing #510 or any child issue"
+  },
+  "delegated_judgment": {
+    "requested outcome": "complete the next issue lane while dogfooding planning surfaces",
+    "hard constraints": "no MCP runtime dependency; preserve generic module boundaries; commit and push milestone",
+    "agent may decide locally": "schema field names, compact docs wording, and focused tests",
+    "escalate when": "a future adapter implementation or dependency decision is required"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#510",
+      "label": "MCP-style generic module manifests",
+      "role": "closed_item",
+      "locator": "GitHub issue #510"
+    },
+    {
+      "kind": "issue",
+      "target": "#511",
+      "label": "component vocabulary child",
+      "role": "closed_item",
+      "locator": "GitHub issue #511"
+    },
+    {
+      "kind": "issue",
+      "target": "#512",
+      "label": "current surface mapping child",
+      "role": "next_lane",
+      "locator": "GitHub issue #512"
+    },
+    {
+      "kind": "issue",
+      "target": "#513",
+      "label": "tool safety metadata child",
+      "role": "closed_item",
+      "locator": "GitHub issue #513"
+    },
+    {
+      "kind": "issue",
+      "target": "#514",
+      "label": "future MCP adapter boundary child",
+      "role": "closed_item",
+      "locator": "GitHub issue #514"
+    },
+    {
+      "kind": "issue",
+      "target": "#485",
+      "label": "root orchestrator parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue #485"
+    }
+  ],
+  "active_milestone": {
+    "id": "component-contract-foundation",
+    "status": "completed",
+    "scope": "schema-backed component declarations in module registry plus CLI/test/docs exposure",
+    "ready": "issue detail ingested and existing module registry/test surfaces identified",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect module registry/schema and module CLI tests, then add the component model contract."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/module-manifest-components.plan.json"
+  ],
+  "invariants": [
+    "No MCP or FastMCP runtime dependency.",
+    "Adapter mapping is contract metadata, not a new server.",
+    "Default startup/report paths stay compact."
+  ],
+  "contract_decisions_to_freeze": [
+    "Use resources/tools/prompts/schemas/roots as the generic module component vocabulary.",
+    "Declare safety metadata on tool components."
+  ],
+  "open_questions_to_close": [
+    "Does this slice fully satisfy #511-#514 or only #510 foundation?"
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_workspace_cli.py -q -k modules",
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "gh",
+    "uv"
+  ],
+  "completion_criteria": [
+    "Module registry schema accepts explicit component classes.",
+    "Current root/planning/memory module surfaces are mapped as components.",
+    "Tool components carry safety and structured-result metadata.",
+    "Future MCP adapter boundary is visible without adding runtime dependencies.",
+    "Tests and proof pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "GitHub issue #510 and planning summary",
+    "what happened": "Added schema-backed module component model metadata to module_registry.json, exposed it through the modules command, covered it in module CLI tests, and recorded the contract in contract_inventory.json.",
+    "scope touched": "module registry contract/schema, modules command rendering, focused tests, README, planning closeout surfaces",
+    "changed surfaces": "src/agentic_workspace/contracts/module_registry.json; src/agentic_workspace/contracts/schemas/module_registry.schema.json; src/agentic_workspace/cli.py; scripts/check/check_contract_tooling_surfaces.py; tests/test_workspace_cli.py; README.md",
+    "validations run": "uv run python scripts/check/check_contract_tooling_surfaces.py; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "result for continuation": "#510 foundation is complete; #512 remains open for root-surface mapping and #485 remains the broader parent lane.",
+    "next step": "Archive this plan, close satisfied issues, refresh external evidence, then continue with the next open issue."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; no MCP server, runtime dependency, or new command was added.",
+    "proof status": "passed",
+    "intent served": "yes for #510 foundation and child slices #511, #513, and #514; #512 remains partially open because root workspace surfaces were not fully modeled as components.",
+    "config compliance": "used summary, report, skills, proof, doctor, reconcile, and archive helper surfaces.",
+    "misinterpretation risk": "low; the manifest is adapter-ready metadata rather than MCP runtime implementation.",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_contract_tooling_surfaces.py; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "proof achieved now": "validation and closure checks passed for the bounded slice.",
+    "evidence for \"proof achieved\" state": "Contract tooling reported no drift, full workspace CLI tests passed, ruff passed, root CLI authority classified the CLI edit as allowed derived/runtime work, and planning doctor reported healthy."
+  },
+  "intent_satisfaction": {
+    "original intent": "#510 align generic module manifests with MCP-style resources, tools, prompts, schemas, and structured results",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "Module registry now schema-validates resources, tools, prompts, schemas, roots, tool safety metadata, and adapter boundary; tests and contract checks pass.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression (#512 remains open for root-surface mapping)"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Keep the package streamlined, modular, and small while preserving leverage; canonical authority belongs in contracts/config/planning/memory/checks rather than prose adapters.",
+    "slice shaping bias": "contract metadata over new runtime surface",
+    "broader-lane validation question": "Does this make future adapters cheaper without making ordinary package entry heavier?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The #510 foundation is implemented, while the broader module-boundary lane remains open for child-specific root-surface mapping and later compression work.",
+    "evidence carried forward": "Contract tooling passed; tests/test_workspace_cli.py passed; ruff passed; root_cli_authority and planning doctor passed.",
+    "reopen trigger": "Reopen if module components cannot project to a future adapter without adding core MCP runtime dependency, or if #512 finds missing root mapping that invalidates the component contract."
+  },
+  "execution_summary": {
+    "outcome delivered": "Generic module manifests now carry schema-backed component declarations and an MCP-style future adapter boundary without adding a runtime dependency.",
+    "validation confirmed": "contract tooling, full workspace CLI tests, ruff, root CLI authority, proof selection, planning doctor, and reconcile passed.",
+    "follow-on routed to": "#512 and .agentic-workspace/planning/state.toml roadmap lane module-boundary-compression.",
+    "post-work posterity capture": "archive this execplan after closeout.",
+    "knowledge promoted (Memory/Docs/Config)": "contract_inventory.json and README were updated; no memory capture needed.",
+    "resume from": "Refresh external evidence after closing satisfied issues, then continue with #512."
+  },
+  "improvement_signal_review": {
+    "status": "none",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command output and validation detail stay in git history and archived proof.",
+          "owner": "discard",
+          "source": "closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue with #512 and the module-boundary-compression roadmap lane.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "#512"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "contract_inventory.json and README were updated; no memory capture needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "README now notes module manifests declare adapter-ready components without an MCP runtime dependency.",
+          "owner": "README.md",
+          "source": "#510"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#512 remains open for root workspace surface mapping.",
+          "owner": "GitHub issue #512",
+          "source": "#512"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #510 from module-boundary-compression into active planning after refreshing open external issues and package summary."
+  ]
+}

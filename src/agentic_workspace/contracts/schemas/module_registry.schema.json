@@ -5,6 +5,7 @@
   "required": [
     "schema_version",
     "package_footprint",
+    "component_model",
     "module_profiles",
     "feature_tiers",
     "advanced_features",
@@ -74,6 +75,110 @@
           "items": {
             "type": "string"
           }
+        }
+      },
+      "additionalProperties": false
+    },
+    "component_model": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "alignment",
+        "runtime_dependency",
+        "source_of_truth",
+        "rule",
+        "component_classes",
+        "adapter_boundary"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "agentic-workspace/module-components/v1"
+        },
+        "alignment": {
+          "type": "string"
+        },
+        "runtime_dependency": {
+          "const": "none"
+        },
+        "source_of_truth": {
+          "type": "string"
+        },
+        "rule": {
+          "type": "string"
+        },
+        "component_classes": {
+          "type": "array",
+          "minItems": 5,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "maps_to",
+              "semantics",
+              "required_fields"
+            ],
+            "properties": {
+              "id": {
+                "enum": [
+                  "resource",
+                  "tool",
+                  "prompt",
+                  "schema",
+                  "root"
+                ]
+              },
+              "maps_to": {
+                "type": "string"
+              },
+              "semantics": {
+                "type": "string"
+              },
+              "required_fields": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "adapter_boundary": {
+          "type": "object",
+          "required": [
+            "future_adapter",
+            "adapter_consumes",
+            "adapter_must_not",
+            "blocking_prerequisites"
+          ],
+          "properties": {
+            "future_adapter": {
+              "type": "string"
+            },
+            "adapter_consumes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            },
+            "adapter_must_not": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            },
+            "blocking_prerequisites": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -240,6 +345,7 @@
           "capabilities",
           "dependencies",
           "conflicts",
+          "components",
           "result_contract"
         ],
         "properties": {
@@ -330,6 +436,9 @@
               "type": "string"
             }
           },
+          "components": {
+            "$ref": "#/$defs/module_components"
+          },
           "result_contract": {
             "type": "object",
             "required": [
@@ -369,6 +478,225 @@
         },
         "additionalProperties": false
       }
+    }
+  },
+  "$defs": {
+    "module_components": {
+      "type": "object",
+      "required": [
+        "resources",
+        "tools",
+        "prompts",
+        "schemas",
+        "roots"
+      ],
+      "properties": {
+        "resources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resource_component"
+          }
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tool_component"
+          }
+        },
+        "prompts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/prompt_component"
+          }
+        },
+        "schemas": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/schema_component"
+          }
+        },
+        "roots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/root_component"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "resource_component": {
+      "type": "object",
+      "required": [
+        "uri",
+        "description",
+        "read_only",
+        "source",
+        "command",
+        "result_schema"
+      ],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9+.-]*://"
+        },
+        "description": {
+          "type": "string"
+        },
+        "read_only": {
+          "const": true
+        },
+        "source": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "result_schema": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tool_component": {
+      "type": "object",
+      "required": [
+        "name",
+        "description",
+        "command",
+        "read_only",
+        "destructive",
+        "idempotent",
+        "requires_dry_run",
+        "input_schema",
+        "result_schema",
+        "safety"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$"
+        },
+        "description": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "read_only": {
+          "type": "boolean"
+        },
+        "destructive": {
+          "type": "boolean"
+        },
+        "idempotent": {
+          "type": "boolean"
+        },
+        "requires_dry_run": {
+          "type": "boolean"
+        },
+        "input_schema": {
+          "type": "string"
+        },
+        "result_schema": {
+          "type": "string"
+        },
+        "safety": {
+          "type": "object",
+          "required": [
+            "requires_approval_when",
+            "owned_paths",
+            "dry_run_command"
+          ],
+          "properties": {
+            "requires_approval_when": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "owned_paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "dry_run_command": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "prompt_component": {
+      "type": "object",
+      "required": [
+        "name",
+        "description",
+        "template",
+        "prompt_kind"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$"
+        },
+        "description": {
+          "type": "string"
+        },
+        "template": {
+          "type": "string"
+        },
+        "prompt_kind": {
+          "enum": [
+            "skill",
+            "handoff",
+            "template"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "schema_component": {
+      "type": "object",
+      "required": [
+        "id",
+        "path",
+        "schema_kind"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_kind": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "root_component": {
+      "type": "object",
+      "required": [
+        "id",
+        "path",
+        "ownership"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "ownership": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

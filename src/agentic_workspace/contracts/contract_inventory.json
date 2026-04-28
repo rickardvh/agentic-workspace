@@ -240,6 +240,17 @@
       "notes": "The internal module capability contract is now formalized as a schema to reduce prose dependency."
     },
     {
+      "area": "module_component_model",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/module_registry.json",
+      "consumers": [
+        "agentic_workspace.cli:modules",
+        "src/agentic_workspace/contracts/schemas/module_registry.schema.json",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Generic module manifests declare MCP-style resources, tools, prompts, schemas, roots, safety metadata, and future adapter boundaries without adding an MCP runtime dependency."
+    },
+    {
       "area": "workspace_surfaces_manifest",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/workspace_surfaces.json",
