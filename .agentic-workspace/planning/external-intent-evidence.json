@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T09:13:31+00:00",
+  "refreshed_at": "2026-04-28T09:28:41+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T09:13:31+00:00",
+    "refreshed_at": "2026-04-28T09:28:41+00:00",
     "item_count": 495,
-    "open_count": 27,
-    "closed_count": 468,
+    "open_count": 26,
+    "closed_count": 469,
     "limit": 600,
     "state": "all",
     "state_source": "previous_evidence",
@@ -7576,7 +7576,7 @@
       "system": "github",
       "id": "#484",
       "title": "[Workspace]: Remove legacy compatibility machinery for unshipped product shapes",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#478",
       "planning_residue_expected": "optional",
@@ -7586,8 +7586,8 @@
         "planning"
       ],
       "created_at": "2026-04-28T06:07:04Z",
-      "updated_at": "2026-04-28T06:07:04Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T09:28:17Z",
+      "comments_count": 1
     },
     {
       "system": "github",
