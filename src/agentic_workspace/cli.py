@@ -3179,6 +3179,7 @@ def _operational_compression_payload(
     closeout_distillation = planning_report.get("closeout_distillation", {}) if isinstance(planning_report, dict) else {}
     closeout_counts = closeout_distillation.get("counts", {}) if isinstance(closeout_distillation, dict) else {}
     archived_distillation = _archived_plan_distillation_measure(target=report_payload.get("target"))
+    artifact_footprint = _artifact_footprint_by_class(target=report_payload.get("target"))
     intent_validation = planning_report.get("intent_validation", {}) if isinstance(planning_report, dict) else {}
     intent_counts = intent_validation.get("counts", {}) if isinstance(intent_validation, dict) else {}
     current_external_work = intent_validation.get("current_external_work", {}) if isinstance(intent_validation, dict) else {}
@@ -3251,6 +3252,7 @@ def _operational_compression_payload(
             **archived_distillation,
             "sources": ["planning.closeout_distillation.counts", ".agentic-workspace/planning/execplans/archive/*.plan.json"],
         },
+        "artifact_footprint_by_class": artifact_footprint,
         "unresolved_external_work_routing": {
             "status": current_external_work.get("status", "unavailable") if isinstance(current_external_work, dict) else "unavailable",
             "tracked_open_count": intent_counts.get("tracked_external_open_count"),
@@ -3312,6 +3314,15 @@ def _operational_compression_payload(
                 "measure": "unresolved_external_work_routing",
                 "message": "External work evidence has open items not tracked by active planning.",
                 "count": _as_int(intent_counts.get("untracked_external_open_count")),
+            }
+        )
+    if artifact_footprint.get("recommended_cleanup_target"):
+        advisory_signals.append(
+            {
+                "severity": "advisory",
+                "measure": "artifact_footprint_by_class",
+                "message": "Artifact footprint pressure is present; inspect the recommended cleanup target before expanding residue.",
+                "count": artifact_footprint.get("pressure_class_count", 0),
             }
         )
 
@@ -3565,6 +3576,192 @@ def _archived_plan_distillation_measure(*, target: Any) -> dict[str, Any]:
         "sample_missing_distillation": missing[:5],
         "sample_post_contract_missing_distillation": post_contract_missing[:5],
     }
+
+
+def _artifact_footprint_by_class(*, target: Any) -> dict[str, Any]:
+    target_text = str(target or "").strip()
+    if not target_text:
+        return {
+            "status": "unavailable",
+            "classes": [],
+            "pressure_class_count": 0,
+            "recommended_cleanup_target": {},
+            "rule": "Footprint classes are advisory and selector-driven; they do not delete artifacts.",
+        }
+    target_root = Path(target_text)
+
+    def _count_files(relative: str, pattern: str = "*") -> tuple[int, list[str]]:
+        root = target_root / relative
+        if not root.exists():
+            return 0, []
+        files = sorted(path for path in root.rglob(pattern) if path.is_file())
+        return len(files), [_relative_posix(path, target_root) for path in files[:5]]
+
+    def _top_level_plan_count() -> tuple[int, list[str]]:
+        root = target_root / ".agentic-workspace" / "planning" / "execplans"
+        if not root.exists():
+            return 0, []
+        files = sorted(path for path in root.glob("*.plan.json") if path.is_file() and path.name not in {"TEMPLATE.plan.json"})
+        return len(files), [_relative_posix(path, target_root) for path in files[:5]]
+
+    def _durable_memory_notes() -> tuple[int, list[str]]:
+        root = target_root / ".agentic-workspace" / "memory" / "repo"
+        if not root.exists():
+            return 0, []
+        files = sorted(
+            path
+            for path in root.rglob("*.md")
+            if path.is_file() and ".agentic-workspace/memory/repo/current/" not in _relative_posix(path, target_root)
+        )
+        return len(files), [_relative_posix(path, target_root) for path in files[:5]]
+
+    def _generated_outputs() -> tuple[int, list[str]]:
+        candidates: list[Path] = []
+        for pattern in (
+            "generated/**/*",
+            "src/**/generated_*",
+            "packages/**/generated_*",
+            "src/**/generated_cli_package/**/*",
+            "packages/**/generated_cli_package/**/*",
+        ):
+            candidates.extend(path for path in target_root.glob(pattern) if path.is_file())
+        unique = sorted({path.resolve(): path for path in candidates}.values(), key=lambda path: path.as_posix())
+        return len(unique), [_relative_posix(path, target_root) for path in unique[:5]]
+
+    def _large_docs() -> tuple[int, list[str]]:
+        candidates = [path for path in [target_root / "README.md", target_root / "AGENTS.md", target_root / "llms.txt"] if path.is_file()]
+        docs_root = target_root / "docs"
+        if docs_root.exists():
+            candidates.extend(path for path in docs_root.rglob("*.md") if path.is_file())
+        large: list[Path] = []
+        for path in sorted(candidates):
+            try:
+                line_count = len(path.read_text(encoding="utf-8").splitlines())
+            except OSError:
+                continue
+            if line_count > 400:
+                large.append(path)
+        return len(large), [_relative_posix(path, target_root) for path in large[:5]]
+
+    active_count, active_sample = _top_level_plan_count()
+    archive_count, archive_sample = _count_files(".agentic-workspace/planning/execplans/archive", "*.plan.json")
+    planning_review_count, planning_review_sample = _count_files(".agentic-workspace/planning/reviews", "*.review.json")
+    docs_review_count, docs_review_sample = _count_files("docs/reviews")
+    current_memory_count, current_memory_sample = _count_files(".agentic-workspace/memory/repo/current")
+    durable_memory_count, durable_memory_sample = _durable_memory_notes()
+    generated_count, generated_sample = _generated_outputs()
+    local_count, local_sample = _count_files(".agentic-workspace/local")
+    large_docs_count, large_docs_sample = _large_docs()
+
+    classes = [
+        _artifact_class(
+            class_id="active_execplans",
+            role="live operating state",
+            count=active_count,
+            sample=active_sample,
+            pressure="attention" if active_count > 1 else "quiet",
+            review_target=active_sample[0] if active_count > 1 and active_sample else "",
+        ),
+        _artifact_class(
+            class_id="archived_execplans",
+            role="historical evidence",
+            count=archive_count,
+            sample=archive_sample,
+            pressure="attention" if archive_count > 100 else "measured",
+            review_target=".agentic-workspace/planning/execplans/archive/" if archive_count > 100 else "",
+        ),
+        _artifact_class(
+            class_id="review_artifacts",
+            role="historical evidence",
+            count=planning_review_count + docs_review_count,
+            sample=(planning_review_sample + docs_review_sample)[:5],
+            pressure="attention" if planning_review_count + docs_review_count else "quiet",
+            review_target=(planning_review_sample + docs_review_sample)[0] if planning_review_count + docs_review_count else "",
+        ),
+        _artifact_class(
+            class_id="current_memory_notes",
+            role="legacy or optional calibration",
+            count=current_memory_count,
+            sample=current_memory_sample,
+            pressure="attention" if current_memory_count else "quiet",
+            review_target=current_memory_sample[0] if current_memory_sample else "",
+        ),
+        _artifact_class(
+            class_id="durable_memory_notes",
+            role="durable knowledge",
+            count=durable_memory_count,
+            sample=durable_memory_sample,
+            pressure="measured" if durable_memory_count else "quiet",
+            review_target="",
+        ),
+        _artifact_class(
+            class_id="generated_outputs",
+            role="derived reproducible artifact",
+            count=generated_count,
+            sample=generated_sample,
+            pressure="measured" if generated_count else "quiet",
+            review_target=generated_sample[0] if generated_sample else "",
+        ),
+        _artifact_class(
+            class_id="local_only_state",
+            role="local-only state",
+            count=local_count,
+            sample=local_sample,
+            pressure="measured" if local_count else "quiet",
+            review_target="",
+        ),
+        _artifact_class(
+            class_id="large_docs_or_package_surfaces",
+            role="large reference surface",
+            count=large_docs_count,
+            sample=large_docs_sample,
+            pressure="attention" if large_docs_count else "quiet",
+            review_target=large_docs_sample[0] if large_docs_sample else "",
+        ),
+    ]
+    pressure_classes = [item for item in classes if item["pressure"] == "attention"]
+    recommended = next((item for item in pressure_classes if item.get("review_target")), None)
+    return {
+        "status": "attention" if pressure_classes else "measured",
+        "classes": classes,
+        "pressure_class_count": len(pressure_classes),
+        "recommended_cleanup_target": (
+            {
+                "class_id": recommended["id"],
+                "path": recommended["review_target"],
+                "action": "review-shrink-route-or-retain",
+            }
+            if recommended
+            else {}
+        ),
+        "rule": "Footprint classes are advisory and selector-driven; they do not delete artifacts.",
+    }
+
+
+def _artifact_class(
+    *,
+    class_id: str,
+    role: str,
+    count: int,
+    sample: list[str],
+    pressure: str,
+    review_target: str,
+) -> dict[str, Any]:
+    return {
+        "id": class_id,
+        "role": role,
+        "count": count,
+        "pressure": pressure,
+        "sample": sample,
+        "review_target": review_target,
+    }
+
+
+def _relative_posix(path: Path, target_root: Path) -> str:
+    try:
+        return path.relative_to(target_root).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def _list_payload(value: Any) -> list[Any]:

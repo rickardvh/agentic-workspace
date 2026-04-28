@@ -3427,6 +3427,47 @@ def test_report_section_selector_returns_operational_compression_measures(tmp_pa
     assert measures["archived_plan_distillation"]["with_distillation_count"] == 1
     assert measures["archived_plan_distillation"]["missing_distillation_count"] == 0
     assert measures["archived_plan_distillation"]["post_contract_missing_distillation_count"] == 0
+    footprint = measures["artifact_footprint_by_class"]
+    assert footprint["rule"].startswith("Footprint classes are advisory")
+    classes = {entry["id"]: entry for entry in footprint["classes"]}
+    assert set(classes) >= {
+        "active_execplans",
+        "archived_execplans",
+        "review_artifacts",
+        "current_memory_notes",
+        "durable_memory_notes",
+        "generated_outputs",
+        "local_only_state",
+        "large_docs_or_package_surfaces",
+    }
+    assert classes["archived_execplans"]["role"] == "historical evidence"
+    assert classes["durable_memory_notes"]["role"] == "durable knowledge"
+    assert classes["generated_outputs"]["role"] == "derived reproducible artifact"
+
+
+def test_operational_compression_reports_artifact_footprint_pressure(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(target / ".agentic-workspace" / "memory" / "repo" / "current" / "legacy.md", "# Legacy\n")
+    _write(target / ".agentic-workspace" / "planning" / "reviews" / "old.review.json", "{}\n")
+    _write(target / "generated" / "adapter.json", "{}\n")
+    _write(target / "docs" / "large.md", "\n".join(f"line {index}" for index in range(401)))
+
+    assert cli.main(["report", "--target", str(target), "--section", "operational_compression", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    footprint = payload["answer"]["measures"]["artifact_footprint_by_class"]
+    classes = {entry["id"]: entry for entry in footprint["classes"]}
+    assert classes["current_memory_notes"]["pressure"] == "attention"
+    assert classes["review_artifacts"]["pressure"] == "attention"
+    assert classes["generated_outputs"]["count"] >= 1
+    assert classes["large_docs_or_package_surfaces"]["pressure"] == "attention"
+    assert footprint["pressure_class_count"] >= 3
+    assert footprint["recommended_cleanup_target"]["action"] == "review-shrink-route-or-retain"
+    assert any(signal["measure"] == "artifact_footprint_by_class" for signal in payload["answer"]["signals"])
 
 
 def test_report_distinguishes_legacy_archive_distillation_debt(tmp_path: Path, capsys) -> None:

@@ -1,0 +1,255 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Artifact Footprint By Class",
+  "goal": [
+    "Implement #438 by adding a compact artifact-footprint-by-class summary to report output without changing ordinary startup."
+  ],
+  "non_goals": [
+    "Do not delete artifacts automatically.",
+    "Do not turn footprint reporting into a dashboard.",
+    "Do not make historical archives, reviews, or generated outputs ordinary startup input."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "agentic-workspace report --section operational_compression exposes compact artifact classes, counts, pressure, and one cleanup/review target when present.",
+      "constraints": "Keep output selector-driven and advisory-only.",
+      "latitude": "Implement the smallest file-counting/report helper and regression tests.",
+      "escalation": "Escalate if accurate footprint reporting requires broad deletion policy or a new top-level command."
+    },
+    "execution": {
+      "milestone": "artifact-footprint-by-class",
+      "status": "completed",
+      "next_step": "Archive this plan, commit the completed slice, close #438, then continue the next footprint-pressure lane.",
+      "proof": "workspace CLI tests, ruff, planning surfaces, report/proof dogfooding"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/artifact-footprint-by-class.plan.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Ordinary startup stays unchanged.",
+        "Footprint output is compact and selector-driven.",
+        "Generated/local/historical/durable/live classes stay distinct."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#436/#449 make artifact growth visible and keep package use cheaper than bypassing it.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane operational-footprint-pressure",
+    "parent lane": "#436"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #438, continue #439-#441 retention/generated-output slices unless the compact report proves them already satisfied"
+  },
+  "active_milestone": {
+    "id": "artifact-footprint-by-class",
+    "status": "completed",
+    "scope": "Add compact artifact-class footprint reporting.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Add compact operational footprint reporting by artifact class.",
+    "hard constraints": "Do not expand startup or make cleanup destructive.",
+    "agent may decide locally": "Exact class names, thresholds, and test shape.",
+    "escalate when": "The slice needs retention/deletion policy beyond reporting."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Make existing report selector carry the footprint answer instead of adding a command.",
+    "broader-lane validation question": "Can an agent see artifact pressure by class without reading archives, reviews, Memory, docs, or generated outputs?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/438"
+  },
+  "immediate_next_action": [
+    "Archive, commit, push, and close #438 with proof; then refresh and select the next open footprint/compression lane."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/artifact-footprint-by-class.plan.json",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace report --target . --section operational_compression --format json",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/artifact-footprint-by-class.plan.json src/agentic_workspace/cli.py tests/test_workspace_cli.py --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace start --target . --format json",
+    "uv run agentic-workspace report --target . --format json"
+  ],
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/438",
+      "label": "#438 artifact footprint report",
+      "role": "source_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/436",
+      "label": "#436 footprint parent",
+      "role": "parent_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/449",
+      "label": "#449 operating-cost parent",
+      "role": "parent_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/439",
+      "label": "#439 archive retention",
+      "role": "next_lane",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/440",
+      "label": "#440 review retention",
+      "role": "next_lane",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/441",
+      "label": "#441 generated output footprint",
+      "role": "next_lane",
+      "locator": "issue body"
+    }
+  ],
+  "completion_criteria": [
+    "operational_compression includes artifact_footprint_by_class.",
+    "Classes distinguish live, historical, durable, generated, local-only, and large docs/package surfaces.",
+    "Output names at least one cleanup or review target when pressure exists.",
+    "Ordinary startup output is unchanged."
+  ],
+  "execution_summary": {
+    "outcome delivered": "operational_compression now includes artifact_footprint_by_class with compact counts, roles, pressure, and one recommended cleanup/review target.",
+    "validation confirmed": "pytest workspace CLI, ruff, planning surface check, operational_compression report, proof selection, root CLI authority, planning doctor, start, and default report all passed.",
+    "follow-on routed to": "#439 archive retention, #440 review retention, #441 generated output footprint, under #436/#449.",
+    "post-work posterity capture": "archived plan and issue closeout proof",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "external issue refresh, then next open footprint/compression lane"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "individual validation command transcripts after proof and commit",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#439 should use artifact_footprint_by_class.archived_execplans as one input, not reread all archives by default.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#440 should use artifact_footprint_by_class.review_artifacts as one input, not make review artifacts ordinary startup state.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#441 should use artifact_footprint_by_class.generated_outputs as one input and keep generated artifacts derived.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "tests/test_workspace_cli.py guards artifact_footprint_by_class as selector-driven operational_compression output.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Close #438 after commit/push.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "Keep #436 and #449 open as parent lanes.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "intent_satisfaction": {
+    "original intent": "Add compact operational footprint reporting by artifact class.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "operational_compression now includes artifact_footprint_by_class; tests cover class roles and pressure recommendations; startup and default report remain compact routers.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane operational-footprint-pressure"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane operational-footprint-pressure activates a fresh bounded slice."
+  },
+  "cost_assessment": {
+    "workflow_cost_found": "Before this slice, an agent had to infer artifact pressure by reading multiple historical, memory, generated, and local surfaces.",
+    "architecture_cost_found": "Long-running artifacts existed across several directories with no compact class-level report.",
+    "needless_complexity_found": "A new command would have added surface area; the final change uses the existing operational_compression selector.",
+    "surfaces_added": "No new first-contact or top-level command; one compact selector payload was added.",
+    "surfaces_removed_merged_or_demoted": "Footprint inspection is backgrounded behind --section operational_compression.",
+    "artifact_footprint_changed": "One active plan will archive after closeout; existing artifact classes are now visible in a compact report.",
+    "shipped_default_footprint_changed": "Ordinary startup and default report remain router-shaped.",
+    "signals_consumed": [
+      "#438",
+      "dogfooding need to see artifact growth without manual directory scans"
+    ],
+    "signals_still_accumulating": [
+      "archive retention",
+      "review retention",
+      "generated-output footprint",
+      "optional current-memory residue"
+    ],
+    "human_steering_avoided_next_time": "A future agent can query one selector for class-level artifact pressure before deciding cleanup.",
+    "follow_up_routed": [
+      "#439",
+      "#440",
+      "#441",
+      "#436",
+      "#449"
+    ],
+    "net_cost_direction": "lower"
+  },
+  "improvement_signal_review": {
+    "status": "fixed",
+    "candidate_kind": "dogfooding_friction",
+    "symptom": "Artifact footprint pressure required manual discovery across planning archives, reviews, memory, generated outputs, local-only state, and docs.",
+    "owner": "report operational_compression selector",
+    "retention": "shrink_after_fix"
+  },
+  "drift_log": [
+    "2026-04-28: Promoted after #450 closeout as the next concrete footprint/compression slice.",
+    "2026-04-28: Kept the answer selector-driven rather than adding another visible command or startup surface."
+  ],
+  "proof_report": {
+    "validation proof": "pytest workspace CLI, ruff, planning surface check, operational_compression report, proof selection, root CLI authority, planning doctor, start, and default report all passed.",
+    "proof achieved now": "yes; validation evidence is recorded in execution summary.",
+    "evidence for \"proof achieved\" state": "pytest workspace CLI, ruff, planning surface check, operational_compression report, proof selection, root CLI authority, planning doctor, start, and default report all passed."
+  }
+}
