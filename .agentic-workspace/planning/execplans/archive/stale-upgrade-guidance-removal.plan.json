@@ -1,0 +1,312 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Stale Upgrade Guidance Removal",
+  "goal": [
+    "Implement #480 by removing ordinary host-repo upgrade guidance that tells agents to run helper scripts absent from default installs."
+  ],
+  "non_goals": [
+    "Do not reintroduce helper scripts into default planning installs.",
+    "Do not remove package-local debugging CLIs.",
+    "Do not redesign generated static adapter headers in this slice unless they are ordinary upgrade guidance."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Bootstrap-upgrade guidance uses root agentic-workspace upgrade first and package-local CLIs only as fallback/debugging.",
+      "constraints": "Keep package shipped guidance repo-/tool-/language-agnostic; do not depend on host repos having monorepo maintainer scripts.",
+      "latitude": "Patch installed/package skill docs and add a narrow regression test.",
+      "escalation": "Escalate if the fix requires regenerating broad adapter payloads or changing lifecycle command behavior."
+    },
+    "execution": {
+      "milestone": "stale-upgrade-guidance-removal",
+      "status": "complete",
+      "next_step": "Archive this plan, commit, push, close #480, refresh evidence, then promote the next lifecycle child issue.",
+      "proof": "planning installer tests, planning-surface checks, proof selector, closeout"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md",
+        "packages/planning/skills/bootstrap-upgrade/SKILL.md",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/stale-upgrade-guidance-removal.plan.json"
+      ],
+      "invariants": [
+        "Host-repo upgrade guidance starts with root agentic-workspace upgrade --dry-run.",
+        "Package-local bootstrap CLIs remain documented as fallback/debug surfaces.",
+        "Default installs are not expected to contain monorepo maintainer helper scripts."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#478 lifecycle management hardening",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening",
+    "parent lane": "#478"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#481-#484 remain open after this slice.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #480 closeout, promote the next lifecycle child issue"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "The root-upgrade front door from #479 no longer competes with stale planning skill instructions.",
+    "intentionally deferred": "#481 fixture matrix, #482 plan action classification, #483 destructive lifecycle refusal coverage, and #484 legacy machinery removal.",
+    "discovered implications": "Generated static adapter headers still mention render_agent_docs.py as a source-checkout regeneration path, but they are not bootstrap-upgrade guidance; keep that separate from #480 unless a future issue targets generated-adapter header wording.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #480.",
+    "next likely slice": "#481 lifecycle fixture matrix unless reingestion reprioritizes."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/480",
+      "label": "#480 stale upgrade instructions",
+      "role": "closed_item",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/478",
+      "label": "#478 lifecycle parent",
+      "role": "parent_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/481",
+      "label": "#481 lifecycle fixture matrix",
+      "role": "next_lane",
+      "locator": "state.toml roadmap"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/482",
+      "label": "#482 lifecycle plan classification",
+      "role": "next_lane",
+      "locator": "state.toml roadmap"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/483",
+      "label": "#483 destructive lifecycle refusal coverage",
+      "role": "next_lane",
+      "locator": "state.toml roadmap"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/484",
+      "label": "#484 legacy compatibility cleanup",
+      "role": "next_lane",
+      "locator": "state.toml roadmap"
+    }
+  ],
+  "context_budget": {
+    "live working set": "state, this execplan, #480/#478 issue bodies, bootstrap-upgrade skill docs, planning installer tests",
+    "recoverable later": "full external evidence and historical archives",
+    "externalize before shift": "update execution_run, validation_commands, proof_report, intent_satisfaction, and closure_check",
+    "pre-work config pull": "uv run agentic-workspace summary --target . --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Active issue is #480 stale upgrade guidance.",
+    "context-shift triggers": "Before editing generated adapters or lifecycle command behavior."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Replace stale planning upgrade guidance with current lifecycle path.",
+    "hard constraints": "Dogfood package surfaces; commit/push milestone; close issue only after proof.",
+    "agent may decide locally": "Exact fallback/debug wording.",
+    "escalate when": "The slice expands into broad adapter regeneration or lifecycle behavior changes."
+  },
+  "active_milestone": {
+    "id": "stale-upgrade-guidance-removal",
+    "status": "completed",
+    "scope": "bootstrap-upgrade skills and tests",
+    "ready": "yes",
+    "blocked": "no"
+  },
+  "immediate_next_action": [
+    "Archive, commit, push, close #480, refresh evidence, and promote the next lifecycle child issue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md",
+    "packages/planning/skills/bootstrap-upgrade/SKILL.md",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "proof_expectations": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace proof --target . --changed <changed paths> --format json",
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "cd packages/planning && uv run ruff check ."
+  ],
+  "validation_commands": [
+    {
+      "command": "Set-Location packages/planning; uv run pytest tests/test_installer.py -q -k \"bootstrap_upgrade_skill or contract_file_shortlist\"",
+      "result": "pass: 2 passed"
+    },
+    {
+      "command": "Set-Location packages/planning; uv run pytest tests/test_installer.py",
+      "result": "pass: 131 passed"
+    },
+    {
+      "command": "Set-Location packages/planning; uv run ruff check .",
+      "result": "pass"
+    },
+    {
+      "command": "rg \"scripts/render_agent_docs.py|scripts/check/check_maintainer_surfaces.py\" .agentic-workspace\\planning\\skills packages\\planning\\skills packages\\planning\\tests\\test_installer.py -n",
+      "result": "pass: remaining references are regression assertions only"
+    },
+    {
+      "command": "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md packages/planning/skills/bootstrap-upgrade/SKILL.md packages/planning/tests/test_installer.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/stale-upgrade-guidance-removal.plan.json --format json",
+      "result": "pass: selected planning_surfaces and planning_package"
+    },
+    {
+      "command": "uv run agentic-workspace doctor --target . --modules planning --format json",
+      "result": "pass"
+    },
+    {
+      "command": "uv run python scripts/check/check_planning_surfaces.py",
+      "result": "pass"
+    },
+    {
+      "command": "make maintainer-surfaces",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace preflight --target . --format json",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace summary --target . --format json",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace report --target . --section workflow_obligations --format json",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace report --target . --section closeout_trust --format json",
+      "result": "pass: surfaced need to record workflow evidence and preserve #478 continuation"
+    },
+    {
+      "command": "uv run agentic-workspace reconcile --format json",
+      "result": "pass"
+    }
+  ],
+  "completion_criteria": [
+    "No shipped or installed bootstrap-upgrade guidance tells ordinary host repos to run absent helper scripts.",
+    "Upgrade guidance uses root lifecycle first and package-local CLI only as fallback/debugging.",
+    "Tests or checks catch future stale helper-script guidance."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "GitHub issue #480 plus refreshed external-intent evidence",
+    "what happened": "Updated installed and package bootstrap-upgrade skill guidance to route ordinary host-repo updates through root agentic-workspace upgrade dry-run/apply/doctor, kept planning package CLI as fallback/debugging, and added a regression test rejecting absent helper-script guidance.",
+    "scope touched": "Bootstrap-upgrade skill docs, planning installer tests, and planning state.",
+    "changed surfaces": ".agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md; packages/planning/skills/bootstrap-upgrade/SKILL.md; packages/planning/tests/test_installer.py; planning state.",
+    "validations run": "focused and full planning installer tests, planning package ruff, proof selector, doctor, planning surface check, maintainer-surfaces, rg stale-helper sweep, preflight, summary, workflow_obligations, closeout_trust, reconcile.",
+    "package workflow surfaces used": [
+      "preflight",
+      "summary",
+      "report",
+      "proof",
+      "reconcile",
+      "doctor"
+    ],
+    "result for continuation": "#480 satisfied; #478 remains open with #481-#484 as required continuation.",
+    "next step": "Archive, commit, push, close #480, refresh evidence, and promote #481 unless reingestion reprioritizes."
+  },
+  "proof_report": {
+    "validation proof": "yes",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "focused and full planning installer tests, planning package ruff, proof selector, doctor, planning surface check, maintainer-surfaces, rg stale-helper sweep, preflight, summary, workflow_obligations, closeout_trust, reconcile."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low; generated adapter source-checkout headers are outside ordinary bootstrap-upgrade guidance.",
+    "follow-on decision": "#478 remains open; continue #481-#484."
+  },
+  "intent_satisfaction": {
+    "original intent": "Replace stale planning upgrade guidance with current lifecycle path.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Removed stale helper-script instructions from bootstrap-upgrade guidance.",
+    "validation confirmed": "yes",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening (#481-#484).",
+    "post-work posterity capture": "Archived plan plus tests and skill docs; no Memory promotion needed.",
+    "knowledge promoted (Memory/Docs/Config)": "Skill docs and tests now encode root-lifecycle-first upgrade guidance; no Memory promotion.",
+    "resume from": ".agentic-workspace/planning/state.toml"
+  },
+  "improvement_signal_review": {
+    "signals": [],
+    "new_issues_created": []
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening (#481-#484).",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Skill docs and tests now encode root-lifecycle-first upgrade guidance; no Memory promotion.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "Skill docs and tests now encode root-lifecycle-first upgrade guidance; no Memory promotion.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "Skill docs and tests now encode root-lifecycle-first upgrade guidance; no Memory promotion.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#480 stale upgrade instructions",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/480"
+        },
+        {
+          "summary": "#478 lifecycle parent",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/478"
+        }
+      ]
+    }
+  }
+}

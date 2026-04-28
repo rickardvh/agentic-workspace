@@ -592,6 +592,20 @@ def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert set(REQUIRED_PAYLOAD_FILES).isdisjoint(OPTIONAL_PAYLOAD_FILES)
 
 
+def test_bootstrap_upgrade_skill_uses_root_lifecycle_without_unshipped_helper_scripts() -> None:
+    package_skill = installer_mod.skills_root() / "bootstrap-upgrade" / "SKILL.md"
+    repo_skill = Path(__file__).resolve().parents[3] / ".agentic-workspace" / "planning" / "skills" / "bootstrap-upgrade" / "SKILL.md"
+    for skill_path in (package_skill, repo_skill):
+        text = skill_path.read_text(encoding="utf-8")
+        assert "agentic-workspace upgrade --target <repo> --dry-run --format json" in text
+        assert "agentic-workspace upgrade --target <repo> --format json" in text
+        assert "agentic-workspace doctor --target <repo> --format json" in text
+        assert "agentic-planning-bootstrap upgrade --target <repo>" in text
+        assert "package-local debugging" in text
+        assert "scripts/render_agent_docs.py" not in text
+        assert "scripts/check/check_maintainer_surfaces.py" not in text
+
+
 def test_adopt_bootstrap_preserves_existing_agents(tmp_path: Path) -> None:
     agents_path = tmp_path / "AGENTS.md"
     agents_path.write_text("repo-owned agents\n", encoding="utf-8")
