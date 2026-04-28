@@ -860,6 +860,8 @@ def test_bootstrap_review_readme_includes_canonical_review_portfolio() -> None:
     assert "Repeated findings that work needed stronger execution capability than expected" in text
     assert "make future work cheaper to execute" in text
     assert "Last doctrinal review" in text
+    assert "## Constrained Prose" in text
+    assert "Finding`, `Evidence`, `Impact`, `Recommendation`, `Owner`, `Status" in text
 
 
 def test_bootstrap_review_template_includes_mode_and_cap_fields() -> None:
@@ -870,6 +872,22 @@ def test_bootstrap_review_template_includes_mode_and_cap_fields() -> None:
     assert record["kind"] == "planning-review/v1"
     assert "review_mode" in record
     assert "findings" in record
+    assert record["prose_templates"]["review_finding"]["sections"] == [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status",
+    ]
+    assert record["prose_templates"]["handoff_or_closeout"]["sections"] == [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner",
+    ]
 
 
 def test_bootstrap_capability_aware_execution_doc_defines_categories() -> None:
@@ -1989,6 +2007,8 @@ def test_planning_cli_create_review_writes_valid_review_record(tmp_path: Path, c
     assert record["classification"] == "closeout"
     assert record["review_mode"]["mode"] == "closeout"
     assert record["findings"] == []
+    assert record["prose_templates"]["review_finding"]["field_map"]["Evidence"] == "findings[].evidence + findings[].source"
+    assert record["prose_templates"]["handoff_or_closeout"]["sections"][-1] == "Next owner"
     assert payload["actions"][0]["kind"] == "created"
 
 
@@ -6059,6 +6079,14 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
     assert handoff["handoff_contract"]["return_with"]["execution_summary_fields"][3] == "post-work posterity capture"
     assert handoff["handoff_contract"]["return_with"]["finished_run_review_fields"][0] == "review status"
     assert handoff["handoff_contract"]["return_with"]["finished_run_review_fields"][4] == "config compliance"
+    assert handoff["handoff_contract"]["return_with"]["prose_templates"]["handoff_or_closeout"]["sections"] == [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner",
+    ]
     assert handoff["handoff_contract"]["worker_contract"]["worker_must_not_own_by_default"][0] == "roadmap routing"
 
 

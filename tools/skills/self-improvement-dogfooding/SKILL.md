@@ -70,6 +70,17 @@ Each pass should leave:
 - a durable-residue routing answer that says whether future-relevant motivation or lessons were promoted, routed, dismissed, or absent;
 - a clear continuation owner for any unsolved intent.
 
+## Constrained Prose Shape
+
+Prefer structured execplan and review fields. When a self-improvement pass needs a short human-readable note, use the same constrained shape exposed by planning review `prose_templates`:
+
+- `Intent`: the original or larger product outcome being served.
+- `What changed`: the bounded implementation or routing decision.
+- `Proof`: the validation, check, or review evidence.
+- `Remaining risk`: the unresolved risk or why none remains.
+- `Durable residue`: where reusable learning was promoted, routed, or dismissed.
+- `Next owner`: the issue, plan, Memory/docs/contracts/check owner, or `none`.
+
 ## Required Cost Assessment
 
 Every self-improvement pass must answer this before claiming the system improved. Validation success and issue closure are evidence, but they are not sufficient by themselves.

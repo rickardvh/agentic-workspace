@@ -56,6 +56,15 @@ Each review artifact should stay compact and include:
 Use the template in this directory and prefer one bounded review question per file.
 Prefer `TEMPLATE.review.json` plus a rendered Markdown view when you want the review to stay queryable and machine-usable.
 
+## Constrained Prose
+
+When a review, handoff, closeout, or self-improvement pass needs a short human-readable note, use the `prose_templates` section in the canonical JSON record instead of inventing a new shape.
+
+- Review findings use: `Finding`, `Evidence`, `Impact`, `Recommendation`, `Owner`, `Status`.
+- Handoff or closeout summaries use: `Intent`, `What changed`, `Proof`, `Remaining risk`, `Durable residue`, `Next owner`.
+
+Keep the structured fields canonical. The prose shape is only a compact adapter for readers.
+
 ## Canonical Review Portfolio
 
 Use one primary review mode per artifact. If a review starts surfacing a second substantial mode, split it into another artifact instead of widening the scope.

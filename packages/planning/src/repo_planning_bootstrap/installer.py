@@ -880,8 +880,52 @@ def _new_review_record(*, title: str, scope: str, classification: str) -> dict[s
             "trigger": "review complete",
             "proof surface": "this review record plus routed follow-up residue",
         },
+        "prose_templates": _default_prose_templates(),
         "validation_commands": [],
         "drift_log": [f"{date.today().isoformat()}: Review record created by create-review."],
+    }
+
+
+def _default_prose_templates() -> dict[str, dict[str, Any]]:
+    return {
+        "review_finding": {
+            "sections": [
+                "Finding",
+                "Evidence",
+                "Impact",
+                "Recommendation",
+                "Owner",
+                "Status",
+            ],
+            "field_map": {
+                "Finding": "findings[].title + findings[].summary",
+                "Evidence": "findings[].evidence + findings[].source",
+                "Impact": "findings[].risk if unchanged",
+                "Recommendation": "findings[].suggested action + findings[].promotion target",
+                "Owner": "findings[].promotion target",
+                "Status": "recommendation/promote|defer|dismiss",
+            },
+            "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured.",
+        },
+        "handoff_or_closeout": {
+            "sections": [
+                "Intent",
+                "What changed",
+                "Proof",
+                "Remaining risk",
+                "Durable residue",
+                "Next owner",
+            ],
+            "field_map": {
+                "Intent": "intent/outcome or requested_outcome",
+                "What changed": "execution_summary/outcome delivered",
+                "Proof": "proof_report/validation proof",
+                "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+                "Durable residue": "durable_residue + closeout_distillation",
+                "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface",
+            },
+            "rule": "Prefer structured fields; use this shape only for short human-readable summaries.",
+        },
     }
 
 
@@ -5906,6 +5950,7 @@ def _active_handoff_contract(
         "continuation_owner": str(planning_record.get("continuation_owner", "")).strip(),
         "context_budget": dict(context_budget_contract if context_budget_contract.get("status") == "present" else {}),
         "return_with": {
+            "prose_templates": _default_prose_templates(),
             "execution_run_fields": [
                 "run status",
                 "executor",

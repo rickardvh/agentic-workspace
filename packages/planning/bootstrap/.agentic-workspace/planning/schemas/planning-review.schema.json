@@ -37,6 +37,10 @@
         ]
       }
     },
+    "prose_templates": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/prose_template" }
+    },
     "validation_commands": { "$ref": "#/$defs/string_array" },
     "drift_log": { "$ref": "#/$defs/string_array" },
     "summary": {
@@ -98,6 +102,15 @@
         "promotion target": { "type": "string" },
         "promotion trigger": { "type": "string" },
         "post-remediation note shape": { "type": "string" }
+      }
+    },
+    "prose_template": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "sections": { "$ref": "#/$defs/string_array" },
+        "field_map": { "$ref": "#/$defs/string_map" },
+        "rule": { "type": "string" }
       }
     }
   }

@@ -1,0 +1,229 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Constrained Prose Templates",
+  "goal": [
+    "structured-first-operating-updates next child; #532 generated closeout prose and #546 removed meta-inventory residue, leaving recurring judgment prose to constrain."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "structured-first-operating-updates next child; #532 generated closeout prose and #546 removed meta-inventory residue, leaving recurring judgment prose to constrain.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "constrained-prose-templates",
+      "status": "completed",
+      "next_step": "Add compact prose templates to existing review and handoff scaffolds, then align repo-local self-improvement guidance.",
+      "proof": "Planning package installer tests, planning-surface checks, planning doctor, and proof selector for touched paths."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/reviews/TEMPLATE.review.json",
+        ".agentic-workspace/planning/reviews/README.md",
+        ".agentic-workspace/planning/schemas/planning-review.schema.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/reviews/TEMPLATE.review.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/reviews/README.md",
+        "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "tools/skills/self-improvement-dogfooding/SKILL.md"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "structured-first-operating-updates next child; #532 generated closeout prose and #546 removed meta-inventory residue, leaving recurring judgment prose to constrain.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Review records and handoff output now expose constrained prose shapes so recurring human-readable notes map back to structured fields.",
+    "intentionally deferred": "none",
+    "discovered implications": "Proof selection broadens when repo-local skill tests change; the existing scaffold/helper lane remains the right owner for reducing manual proof/touched-path spelling.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice",
+    "next likely slice": "ingest the next open structured-first operating-update issue"
+  },
+  "intent_interpretation": {
+    "literal request": "Constrained Prose Templates",
+    "inferred intended outcome": "structured-first-operating-updates next child; #532 generated closeout prose and #546 removed meta-inventory residue, leaving recurring judgment prose to constrain.",
+    "chosen concrete what": "Fill the execution contract and begin the first bounded implementation step.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Existing planning review templates/schema/README, planning handoff/create-review implementation/tests, repo-local self-improvement skill, and this execplan/state.",
+    "max changed files": "about 11",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill the execution contract and begin the first bounded implementation step.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "structured-first-operating-updates next child; #532 generated closeout prose and #546 removed meta-inventory residue, leaving recurring judgment prose to constrain.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "constrained-prose-templates",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add compact prose_templates fields to existing scaffolds and tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/reviews/TEMPLATE.review.json",
+    ".agentic-workspace/planning/reviews/README.md",
+    ".agentic-workspace/planning/schemas/planning-review.schema.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/reviews/TEMPLATE.review.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/reviews/README.md",
+    "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    "tools/skills/self-improvement-dogfooding/SKILL.md"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "rg -n \"prose_templates|Constrained Prose|handoff_or_closeout\" .agentic-workspace packages tests tools"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "TODO item `constrained-prose-templates` is implemented, validated, and can leave the active queue."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with read-only subagent exploration",
+    "handoff source": "agentic-workspace summary plus promoted execplan",
+    "what happened": "Added reusable prose_templates to planning review records and handoff output, aligned installed/bootstrap templates and schemas, and made the repo-local self-improvement skill consume the same constrained shape.",
+    "scope touched": "planning review templates/schema/README, planning installer/tests, maintainer-surface skill test, repo-local self-improvement skill, planning state/execplan",
+    "changed surfaces": "Existing durable surfaces only; no new first-line command, report, or review surface.",
+    "validations run": "uv run pytest tests/test_maintainer_surfaces.py packages/planning/tests/test_installer.py -q; uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check packages/planning/src packages/planning/tests tests/test_maintainer_surfaces.py; cd packages/planning && uv run ruff check .; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace proof --target . --changed ... --format json; uv run ruff check src tests; uv run pytest tests/test_workspace_cli.py -q",
+    "result for continuation": "slice satisfied; continue to the next open structured-first operating-update issue",
+    "next step": "archive this plan, close the issue, refresh evidence, then ingest the next issue"
+  },
+  "finished_run_review": {
+    "review status": "passed",
+    "scope respected": "yes; used existing planning review/handoff/skill surfaces instead of adding a new surface",
+    "proof status": "passed; the first workspace CLI run hit a transient Windows/jsonschema access violation and the rerun passed",
+    "intent served": "yes; recurring review, handoff, closeout, and self-improvement prose now has explicit compact section shapes mapped to structured fields",
+    "config compliance": "used compact package summary, active execplan, proof selector, planning doctor, and planning-surface checks",
+    "misinterpretation risk": "low; the templates remain optional adapters and structured fields stay canonical",
+    "follow-on decision": "no new issue; proof/touched-path manual overhead is already owned by the existing scaffold/helper lane"
+  },
+  "proof_report": {
+    "validation proof": "planning package installer tests, maintainer-surface tests, package/root ruff, planning-surface check, planning doctor, proof selector, and workspace CLI tests passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "All selected validation commands passed after one rerun of tests/test_workspace_cli.py following a transient Windows access violation in jsonschema."
+  },
+  "intent_satisfaction": {
+    "original intent": "structured-first-operating-updates next child; #532 generated closeout prose and #546 removed meta-inventory residue, leaving recurring judgment prose to constrain.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Existing review records and handoff output now expose constrained prose templates; self-improvement guidance uses the same shape; tests assert the sections remain present and compact.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Intent: constrain recurring prose. What changed: review and handoff scaffolds now expose prose_templates and the self-improvement skill uses the same shape. Proof: focused tests, ruff, planning checks, doctor, proof selector, and workspace CLI tests passed. Remaining risk: low, because templates are adapters over structured fields. Durable residue: owned by planning templates/schema and the repo-local skill. Next owner: next open issue.",
+    "validation confirmed": "passed",
+    "follow-on routed to": "existing scaffold/helper lane for reducing manual proof and touched-path authoring overhead",
+    "post-work posterity capture": "retained in existing planning review templates/schema, handoff return contract, and self-improvement skill",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "ingest the next open structured-first operating-update issue"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Constrain recurring prose by mapping short headings back to structured fields; do not add a parallel prose surface.",
+    "motivation worth preserving": "Agents should not invent review, handoff, closeout, or self-improvement section shapes when a reusable compact shape is enough.",
+    "canonical owner now": "planning review templates/schema and handoff return contract; repo-local skill for dogfooding guidance",
+    "promotion trigger": "already promoted in this slice",
+    "retention after promotion": "shrink"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The accepted surfaces are existing templates/contracts, the proof selector accepted surface value, and tests cover the new constrained sections.",
+    "evidence carried forward": "Planning review prose_templates, handoff return_with.prose_templates, and self-improvement constrained prose guidance.",
+    "reopen trigger": "Agents still invent materially different recurring prose shapes for review, handoff, closeout, or self-improvement after using current scaffolds."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "signals found": [
+      "Manual proof/touched-path spelling remains more work than it should be when the active plan and git diff already know the surfaces."
+    ],
+    "signals fixed": [
+      "Recurring prose shape improvisation fixed for review, handoff, closeout, and self-improvement notes."
+    ],
+    "signals routed": [
+      "Manual scaffold/proof authoring overhead remains with the existing scaffold/helper lane."
+    ],
+    "signals dismissed": [],
+    "next owner": "existing scaffold/helper lane"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Transient Windows/jsonschema access violation on the first workspace CLI run; rerun passed and no product action was identified.",
+          "owner": "discard",
+          "source": "validation run"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-29: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

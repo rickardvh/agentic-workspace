@@ -406,6 +406,21 @@ def test_self_improvement_skill_requires_durable_residue_routing_before_closeout
     assert "Memory note template's closeout-derived residue fields" in skill_text
 
 
+def test_self_improvement_skill_uses_constrained_prose_shape() -> None:
+    skill_text = (WORKSPACE_ROOT / "tools" / "skills" / "self-improvement-dogfooding" / "SKILL.md").read_text(
+        encoding="utf-8",
+    )
+
+    assert "Constrained Prose Shape" in skill_text
+    assert "planning review `prose_templates`" in skill_text
+    assert "`Intent`" in skill_text
+    assert "`What changed`" in skill_text
+    assert "`Proof`" in skill_text
+    assert "`Remaining risk`" in skill_text
+    assert "`Durable residue`" in skill_text
+    assert "`Next owner`" in skill_text
+
+
 def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "maintainer_surfaces_valid")
     _write_planning_surfaces(tmp_path)
