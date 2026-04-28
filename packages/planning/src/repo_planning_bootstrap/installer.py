@@ -195,6 +195,7 @@ EXECPLAN_SECTION_ORDER: tuple[tuple[str, str, str], ...] = (
     ("Intent Satisfaction", "intent_satisfaction", "dict"),
     ("System Intent Alignment", "system_intent_alignment", "dict"),
     ("Closure Check", "closure_check", "dict"),
+    ("Generated Closeout", "generated_closeout", "dict"),
     ("Durable Residue", "durable_residue", "dict"),
     ("Execution Summary", "execution_summary", "dict"),
     ("Drift Log", "drift_log", "list"),
@@ -6409,6 +6410,46 @@ def _prepared_closeout_proof_report(
     }
 
 
+def _generated_closeout_adapter(
+    *,
+    record: dict[str, Any],
+    patch: dict[str, Any],
+) -> dict[str, str]:
+    intent_satisfaction = _record_section_dict(patch, "intent_satisfaction") or {}
+    closure_check = _record_section_dict(patch, "closure_check") or {}
+    proof_report = _record_section_dict(patch, "proof_report") or _record_section_dict(record, "proof_report") or {}
+    durable_residue = _record_section_dict(patch, "durable_residue") or {}
+    execution_run = _record_section_dict(record, "execution_run") or {}
+    execution_summary = _record_section_dict(record, "execution_summary") or {}
+
+    changed_surfaces = execution_run.get("changed surfaces", "").strip() or execution_run.get("scope touched", "").strip() or "not recorded"
+    unsolved_intent = intent_satisfaction.get("unsolved intent passed to", "").strip()
+    recorded_follow_up = execution_summary.get("follow-on routed to", "").strip()
+    follow_up = recorded_follow_up or "none"
+    if unsolved_intent and unsolved_intent.lower() not in {"none", "none yet", "n/a", "no further action"}:
+        follow_up = unsolved_intent
+    durable_owner = durable_residue.get("canonical owner now", "").strip() or "archive"
+    durable_status = durable_residue.get("status", "").strip() or "none"
+    validation = proof_report.get("validation proof", "").strip() or "not recorded"
+
+    lines = [
+        "Generated closeout adapter; structured execplan fields are authoritative.",
+        f"Intent: {intent_satisfaction.get('original intent', '').strip() or str(record.get('title', 'Completed execplan')).strip()}",
+        f"Intent satisfied: {intent_satisfaction.get('was original intent fully satisfied?', '').strip() or 'not recorded'}",
+        f"Archive decision: {closure_check.get('closure decision', '').strip() or 'not recorded'}",
+        f"Proof: {validation}",
+        f"Changed surfaces: {changed_surfaces}",
+        f"Durable residue: {durable_status} ({durable_owner})",
+        f"Follow-up: {follow_up}",
+    ]
+    return {
+        "status": "generated",
+        "source": "archive-plan --prepare-closeout",
+        "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+        "text": "\n".join(lines),
+    }
+
+
 def _prepared_durable_residue(record: dict[str, Any]) -> dict[str, str]:
     existing = _record_section_dict(record, "durable_residue") or {}
     if existing.get("status"):
@@ -6595,6 +6636,7 @@ def _prepare_execplan_closeout(
             }
         )
     patch["closeout_distillation"] = {"buckets": buckets}
+    patch["generated_closeout"] = _generated_closeout_adapter(record=record, patch=patch)
 
     detail = json.dumps(patch, ensure_ascii=False, sort_keys=True)
     if dry_run:

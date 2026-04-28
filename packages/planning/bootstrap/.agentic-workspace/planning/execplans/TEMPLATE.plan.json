@@ -168,6 +168,12 @@
     "evidence carried forward": "",
     "reopen trigger": ""
   },
+  "generated_closeout": {
+    "status": "not-generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; structured execplan fields remain authoritative",
+    "text": ""
+  },
   "durable_residue": {
     "status": "none",
     "learned constraint": "",

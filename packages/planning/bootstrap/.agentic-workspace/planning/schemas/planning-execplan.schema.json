@@ -52,6 +52,7 @@
     "intent_satisfaction": { "$ref": "#/$defs/string_map" },
     "system_intent_alignment": { "$ref": "#/$defs/string_map" },
     "closure_check": { "$ref": "#/$defs/string_map" },
+    "generated_closeout": { "$ref": "#/$defs/string_map" },
     "durable_residue": {
       "type": "object",
       "additionalProperties": false,

@@ -1,0 +1,309 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generated Closeout Prose",
+  "goal": [
+    "structured-first-operating-updates next child; #531 identified closeout/archive prose as the highest-frequency generated-prose target."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "structured-first-operating-updates next child; #531 identified closeout/archive prose as the highest-frequency generated-prose target.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "generated-closeout-prose",
+      "status": "in-progress",
+      "next_step": "Add generated closeout prose to the existing archive-plan --prepare-closeout path.",
+      "proof": "uv run pytest packages/planning/tests/test_installer.py -q"
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
+        ".agentic-workspace/planning/execplans/TEMPLATE.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "structured-first-operating-updates next child; #531 identified closeout/archive prose as the highest-frequency generated-prose target.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "archive-plan --prepare-closeout now emits generated closeout prose from structured execplan fields.",
+    "intentionally deferred": "deriving missing execution_summary from structured run fields remains covered by scaffold/helper and validation-friction lanes.",
+    "discovered implications": "subagent review confirmed the same hook and identified execution_summary derivation as a narrower follow-up already represented by #526/#528.",
+    "proof achieved now": "planning package tests, ruff, planning surface check, and planning doctor all passed.",
+    "validation still needed": "none for this slice.",
+    "next likely slice": "#534 constrained templates for remaining prose surfaces or #535 structured Memory metadata."
+  },
+  "intent_interpretation": {
+    "literal request": "Generated Closeout Prose",
+    "inferred intended outcome": "structured-first-operating-updates next child; #531 identified closeout/archive prose as the highest-frequency generated-prose target.",
+    "chosen concrete what": "Teach archive-plan --prepare-closeout to render a generated closeout adapter from structured execplan fields.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning bootstrap archive/closeout code, planning execplan schema/template payload, focused planning bootstrap tests, and this active execplan.",
+    "max changed files": "about 6 files before closeout/archive cleanup.",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue the archive-plan --prepare-closeout generated-closeout adapter implementation.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "structured-first-operating-updates next child; #531 identified closeout/archive prose as the highest-frequency generated-prose target.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#532",
+      "label": "[Planning]: Generate closeout and archive prose from structured fields",
+      "role": "closed_item"
+    },
+    {
+      "kind": "issue",
+      "target": "#530",
+      "label": "[Workspace]: Reduce prose-authoring burden with structured-first operating updates",
+      "role": "parent_intent"
+    },
+    {
+      "kind": "issue",
+      "target": "#534",
+      "label": "[Workspace]: Add constrained templates for review, handoff, and self-improvement prose",
+      "role": "next_lane"
+    },
+    {
+      "kind": "issue",
+      "target": "#535",
+      "label": "[Memory]: Prefer structured note metadata over repeated explanatory prose",
+      "role": "next_lane"
+    },
+    {
+      "kind": "issue",
+      "target": "#526",
+      "label": "[Workspace]: Provide scaffold and writer helpers for schema-backed artifacts",
+      "role": "related_follow_up"
+    },
+    {
+      "kind": "issue",
+      "target": "#528",
+      "label": "[Workspace]: Route repeated validation failures into interface and scaffold improvements",
+      "role": "related_follow_up"
+    }
+  ],
+  "active_milestone": {
+    "id": "generated-closeout-prose",
+    "status": "completed",
+    "scope": "Generated closeout prose adapter for archive-plan --prepare-closeout.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan, close #532, refresh external evidence, and continue the parent lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
+    ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "archive-plan --prepare-closeout produces a generated closeout prose adapter from structured fields.",
+    "The generated prose marks itself as derived and keeps structured fields authoritative.",
+    "Tests cover rendering from a minimal valid closeout record."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with read-only subagent review",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Added a generated_closeout adapter derived during archive-plan --prepare-closeout, updated execplan schema/template payloads, and covered the dry-run, archive, and open-parent closeout paths.",
+    "scope touched": "planning bootstrap archive/closeout implementation, planning execplan schema/template payloads, focused tests, and this active execplan.",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/schemas/planning-execplan.schema.json; packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json; .agentic-workspace/planning/execplans/TEMPLATE.plan.json; packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .",
+    "result for continuation": "#532 is complete; parent #530 remains open for #534/#535 and related scaffold/helper lanes.",
+    "next step": "Archive this plan and continue the parent lane from compact summary."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "used compact package startup/summary/proof and planning lifecycle surfaces.",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest packages/planning/tests/test_installer.py -q; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .",
+    "proof achieved now": "all selected planning package and planning surface proof passed.",
+    "evidence for \"proof achieved\" state": "focused tests covered generated closeout dry-run/archive/open-parent paths; proof selection selected planning_package and planning_surfaces lanes."
+  },
+  "intent_satisfaction": {
+    "original intent": "structured-first-operating-updates next child; #531 identified closeout/archive prose as the highest-frequency generated-prose target.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "archive-plan --prepare-closeout now produces generated_closeout text from structured closeout fields and tests prove minimal closeout rendering.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Generated closeout/archive prose is now an adapter produced from structured execplan fields during prepare-closeout.",
+    "validation confirmed": "planning package tests, ruff, planning surface check, and planning doctor passed.",
+    "follow-on routed to": "#530 remains open in planning state for #534, #535, #526, and #528.",
+    "post-work posterity capture": "The shipped planning schema/template and prepare-closeout implementation own the reusable behavior; no Memory note is needed.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "compact summary after archiving #532"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded slice and larger intent are both complete.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "None unless new evidence shows the bounded closure was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "signals found": [
+      "Deriving missing execution_summary from structured run fields would further reduce closeout prose burden."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "#526 scaffold/writer helpers and #528 validation-friction routing already cover this follow-up."
+    ],
+    "signals dismissed": [
+      "No new issue needed; the opportunity is already represented by open lanes."
+    ],
+    "next owner": "#526/#528"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#530 remains open in planning state for #534, #535, #526, and #528.",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "none",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "[Planning]: Generate closeout and archive prose from structured fields",
+          "owner": "issue",
+          "source": "#532"
+        },
+        {
+          "summary": "[Workspace]: Reduce prose-authoring burden with structured-first operating updates",
+          "owner": "issue",
+          "source": "#530"
+        },
+        {
+          "summary": "[Workspace]: Add constrained templates for review, handoff, and self-improvement prose",
+          "owner": "issue",
+          "source": "#534"
+        },
+        {
+          "summary": "[Memory]: Prefer structured note metadata over repeated explanatory prose",
+          "owner": "issue",
+          "source": "#535"
+        },
+        {
+          "summary": "[Workspace]: Provide scaffold and writer helpers for schema-backed artifacts",
+          "owner": "issue",
+          "source": "#526"
+        },
+        {
+          "summary": "[Workspace]: Route repeated validation failures into interface and scaffold improvements",
+          "owner": "issue",
+          "source": "#528"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from TODO direct-task shape into an execplan.",
+    "2026-04-28: Completed generated closeout adapter implementation and routed remaining structured-first work to the parent lane."
+  ],
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: structured-first-operating-updates next child; #531 identified closeout/archive prose as the highest-frequency generated-prose target.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest packages/planning/tests/test_installer.py -q; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .\nChanged surfaces: packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/schemas/planning-execplan.schema.json; packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json; .agentic-workspace/planning/execplans/TEMPLATE.plan.json; packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json\nDurable residue: none (none)\nFollow-up: #530 remains open in planning state for #534, #535, #526, and #528."
+  }
+}
