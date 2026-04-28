@@ -3971,6 +3971,54 @@ def test_report_section_selector_returns_external_work_reconciliation(tmp_path: 
     assert answer["workspace_report_view"]["delta_section"] == "external_work_delta"
 
 
+def test_report_section_selector_accepts_current_work_alias(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(target), "--section", "current_work", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["selector"] == {"section": "current_work", "resolved_section": "effective_authority.current_work"}
+    assert payload["answer"]["status"] in {"absent", "direct-or-no-active-plan"}
+
+
+def test_report_section_selector_accepts_current_external_work_alias(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(target), "--section", "current_external_work", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["selector"] == {"section": "current_external_work", "resolved_section": "external_work_reconciliation"}
+    assert payload["answer"]["kind"] == "planning-external-work-reconciliation/v1"
+
+
+def test_report_section_selector_error_recommends_compact_recovery(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["report", "--target", str(target), "--section", "currnt_work", "--format", "json"])
+
+    assert excinfo.value.code == 2
+    stderr = capsys.readouterr().err
+    assert "Did you mean: current_work" in stderr
+    assert "agentic-workspace summary --format json" in stderr
+    assert "--section next_action" in stderr
+    assert "--section external_work_reconciliation" in stderr
+
+
 def test_report_routes_roadmap_backed_work_to_planning_before_broad_execution(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

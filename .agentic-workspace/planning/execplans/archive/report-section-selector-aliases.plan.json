@@ -1,0 +1,239 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Add report selector aliases and recovery guidance",
+  "goal": [
+    "Implement #507 by making plausible report selector mistakes recover cheaply.",
+    "Support narrow aliases for common active-work and external-work queries.",
+    "Improve unknown-section errors with compact recovery routes instead of only listing sections."
+  ],
+  "non_goals": [
+    "Do not add a new report section to the default router.",
+    "Do not move canonical active-work authority out of summary/effective_authority.",
+    "Do not add a new command or broaden startup/report output."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "agents can recover from common report selector guesses without broad rereads",
+      "constraints": "aliases only; canonical sections remain stable; no new first-line surface",
+      "latitude": "may add alias resolver, compact error guidance, and focused CLI tests",
+      "escalation": "stop if aliasing would change report default shape or duplicate summary semantics"
+    },
+    "execution": {
+      "milestone": "#507",
+      "status": "completed",
+      "next_step": "archive plan, close #507, and continue the next workflow-friction-polish slice",
+      "proof": "passed"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/report-section-selector-aliases.plan.json",
+        "src/agentic_workspace/reporting_support.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "default report shape stays router-shaped",
+        "canonical section names remain accepted",
+        "aliases should identify their resolved canonical source in compact output"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "remove small package-use friction discovered during dogfooding",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "workflow-friction-polish"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #507 closes, continue #515 or refreshed higher-priority issue"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the bounded #507 selector-friction slice.",
+    "hard constraints": "No new first-line report payload, no command addition, preserve canonical report sections.",
+    "agent may decide locally": "alias names, selector metadata shape, and test placement.",
+    "escalate when": "supporting the alias would require moving active-work semantics out of existing summary/report surfaces."
+  },
+  "execution_bounds": {
+    "allowed paths": "reporting support, report CLI tests, active plan/state",
+    "max changed files": "about 4",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_planning_surfaces.py --strict",
+    "ask-before-refactor threshold": "before changing report payload construction in cli.py",
+    "stop before touching": "default report profile shape or startup guidance"
+  },
+  "stop_conditions": {
+    "stop when": "alias support would make current_work an independent canonical report doctrine",
+    "escalate when boundary reached": "tests require broad CLI/report refactors",
+    "escalate on proof failure": "existing report selector contract conflicts with alias metadata"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#507",
+      "label": "Report selector alias issue",
+      "role": "source",
+      "locator": "GitHub issue #507"
+    },
+    {
+      "kind": "issue",
+      "target": "#515",
+      "label": "Next workflow-friction-polish slice",
+      "role": "next_lane",
+      "locator": "GitHub issue #515"
+    }
+  ],
+  "active_milestone": {
+    "id": "#507",
+    "status": "completed",
+    "scope": "report selector aliases and unknown-section recovery guidance",
+    "ready": "yes",
+    "blocked": "no"
+  },
+  "immediate_next_action": [
+    "Add selector alias resolution and tests for current_work/current_external_work recovery."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/report-section-selector-aliases.plan.json"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_planning_surfaces.py --strict"
+  ],
+  "required_tools": [
+    "uv",
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "report --section current_work and active_work recover to compact current-work output.",
+    "report --section current_external_work or external_work recovers to external_work_reconciliation.",
+    "unknown section errors recommend compact recovery routes.",
+    "Default report output remains unchanged.",
+    "Proof-selected validation passes."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": ".agentic-workspace/planning/execplans/report-section-selector-aliases.plan.json",
+    "what happened": "Added report section alias resolution for active/current work and external-work guesses, plus compact unknown-section recovery guidance.",
+    "scope touched": "reporting support, focused CLI tests, active plan/state",
+    "changed surfaces": "src/agentic_workspace/reporting_support.py; tests/test_workspace_cli.py; planning state/execplan",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"report_section_selector\"; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json; dogfooded report --section current_work/current_external_work and unknown-section recovery.",
+    "result for continuation": "#507 complete; workflow-friction-polish continues with #515 or refreshed higher-priority work.",
+    "next step": "archive and close the slice"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no default report expansion or new first-line surface",
+    "proof status": "passed",
+    "intent served": "yes; common selector guesses now recover cheaply",
+    "config compliance": "used compact package surfaces and planning closeout workflow",
+    "misinterpretation risk": "low; alias selector reports resolved_section",
+    "follow-on decision": "keep parent lane open for remaining workflow-friction-polish issues"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Focused and full workspace CLI tests passed, ruff passed, planning surfaces/doctor passed, proof selector chose the same lanes, and dogfooded alias/error commands behaved as intended."
+  },
+  "intent_satisfaction": {
+    "original intent": "#507: add aliases or guidance for common report selectors.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#507 added report selector aliases and compact unknown-section recovery guidance; focused CLI tests and proof-selected commands passed.",
+    "unsolved intent passed to": "#515 and the rest of workflow-friction-polish remain open."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "recover from plausible guesses through existing selectors rather than adding doctrine",
+    "broader-lane validation question": "Does this reduce selector guesswork without growing default output?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Bounded #507 slice complete; parent workflow-friction-polish lane remains open.",
+    "evidence carried forward": "tests/test_workspace_cli.py, ruff, planning surfaces, proof-selected doctor, and dogfooded alias commands passed.",
+    "reopen trigger": "Reopen #507 if common active/external-work report selectors fail without compact recovery guidance."
+  },
+  "durable_residue": {
+    "status": "check",
+    "learned constraint": "Common report-selector guesses should recover through aliases or compact guidance, not larger default payloads.",
+    "motivation worth preserving": "The package is cheaper to use when plausible selector names work or fail with narrow next actions.",
+    "canonical owner now": "src/agentic_workspace/reporting_support.py and tests/test_workspace_cli.py",
+    "promotion trigger": "when report sections, aliases, or selector guidance changes",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "report selector aliases and compact recovery guidance added",
+    "validation confirmed": "workspace CLI tests, ruff, planning checks, doctor, and dogfooded commands passed",
+    "follow-on routed to": "workflow-friction-polish/#515 or refreshed next issue",
+    "post-work posterity capture": "plan archive plus tests",
+    "knowledge promoted (Memory/Docs/Config)": "none; tests and reporting code are sufficient durable residue",
+    "resume from": ".agentic-workspace/planning/state.toml"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Dogfooding confirmed common report selector guesses failed before this slice."
+    ],
+    "signals fixed": [
+      "#507 fixed by alias resolution and compact unknown-section guidance."
+    ],
+    "signals routed": [
+      "#515 already covers remaining scaffold/projection friction."
+    ],
+    "signals dismissed": [
+      "No new shipped feature needed; existing report selector machinery was enough."
+    ],
+    "next owner": "workflow-friction-polish"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "raw command output after proof is recorded",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "continue #515 or refreshed next workflow-friction-polish issue",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "tests/test_workspace_cli.py and planning-surface checks",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "none; tests and reporting code are sufficient durable residue",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Report selector alias issue",
+          "owner": "issue",
+          "source": "#507"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #507 after closing structured-file-contract lane."
+  ]
+}

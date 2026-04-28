@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from difflib import get_close_matches
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,13 @@ REPO_FRICTION_SKIP_DIRS = {
 }
 
 STANDING_INTENT_CANONICAL_DOC = ".agentic-workspace/docs/standing-intent-contract.md"
+
+REPORT_SECTION_ALIASES = {
+    "active_work": "current_work",
+    "current_work": "current_work",
+    "current_external_work": "external_work_reconciliation",
+    "external_work": "external_work_reconciliation",
+}
 
 
 def output_contract_payload(
@@ -129,13 +137,16 @@ def select_report_payload(
     if section:
         if profile != "router":
             raise WorkspaceUsageError("report selectors are mutually exclusive; use either --profile or --section.")
-        if section not in payload:
-            available = ", ".join(sorted(str(key) for key in payload.keys()))
-            raise WorkspaceUsageError(f"Unknown report section {section!r}. Available sections: {available}")
+        resolved_section, answer = _resolve_report_section(payload, section)
+        if answer is None:
+            raise WorkspaceUsageError(_unknown_report_section_message(section, payload))
+        selector = {"section": section}
+        if resolved_section != section:
+            selector["resolved_section"] = resolved_section
         return compact_answer(
             surface="report",
-            selector={"section": section},
-            answer=payload[section],
+            selector=selector,
+            answer=answer,
             refs=[
                 ".agentic-workspace/docs/reporting-contract.md",
                 "agentic-workspace report --target ./repo --profile full --format json",
@@ -146,6 +157,36 @@ def select_report_payload(
     if profile == "router":
         return report_router_payload(payload, context_router=context_router)
     raise WorkspaceUsageError("report --profile must be one of: router, full")
+
+
+def _resolve_report_section(payload: dict[str, Any], section: str) -> tuple[str, Any | None]:
+    if section in payload:
+        return section, payload[section]
+    alias = REPORT_SECTION_ALIASES.get(section)
+    if alias == "current_work":
+        effective_authority = payload.get("effective_authority", {})
+        if isinstance(effective_authority, dict):
+            current_work = effective_authority.get("current_work")
+            if current_work is not None:
+                return "effective_authority.current_work", current_work
+        return "effective_authority.current_work", {}
+    if alias and alias in payload:
+        return alias, payload[alias]
+    return section, None
+
+
+def _unknown_report_section_message(section: str, payload: dict[str, Any]) -> str:
+    available_sections = sorted(str(key) for key in payload.keys())
+    available = ", ".join(available_sections)
+    alias_sections = sorted(REPORT_SECTION_ALIASES)
+    close_matches = get_close_matches(section, available_sections + alias_sections, n=3)
+    suggestions = f" Did you mean: {', '.join(close_matches)}." if close_matches else ""
+    recovery = (
+        " Compact active-work routes: agentic-workspace summary --format json; "
+        "agentic-workspace report --target ./repo --section next_action --format json; "
+        "agentic-workspace report --target ./repo --section external_work_reconciliation --format json."
+    )
+    return f"Unknown report section {section!r}.{suggestions} Available sections: {available}.{recovery}"
 
 
 def report_router_payload(payload: dict[str, Any], *, context_router: dict[str, Any]) -> dict[str, Any]:
