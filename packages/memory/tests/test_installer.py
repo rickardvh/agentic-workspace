@@ -4206,6 +4206,81 @@ elimination_target = "gone"
     assert any("manifest elimination_target must be one of" in action.detail for action in result.actions)
 
 
+def test_doctor_reports_invalid_manifest_toml(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
+        """
+version = 1
+[notes.".agentic-workspace/memory/repo/domains/api.md"
+note_type = "domain"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(action.role == "memory-manifest" and "manifest TOML parse error" in action.detail for action in result.actions)
+
+
+def test_doctor_reports_manifest_shape_drift(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md").write_text("# API\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
+        """
+version = "1"
+
+[rules]
+routing_only = ".agentic-workspace/memory/repo/index.md"
+forbid_core_docs_depend_on_memory = "yes"
+
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+routes_from = "README.md"
+improvement_candidate = "true"
+
+[notes.".agentic-workspace/memory/repo/domains/missing-fields.md"]
+routes_from = ["README.md"]
+
+[durable_facts."memory-owner-boundary"]
+summary = "Memory owns durable facts."
+owner = "memory"
+authority_class = "canonical"
+route_keys = "memory"
+evidence = "README.md"
+promotion = "Promote if useful."
+demotion_or_expiry = "Demote if stale."
+status = "active"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+    details = [action.detail for action in result.actions if action.role == "memory-manifest"]
+
+    assert "manifest version must be an integer" in details
+    assert "manifest rules.routing_only must be an array of strings" in details
+    assert "manifest rules.forbid_core_docs_depend_on_memory must be a boolean" in details
+    assert any("routes_from must be an array of strings" in detail for detail in details)
+    assert any("improvement_candidate must be a boolean" in detail for detail in details)
+    assert any("missing-fields.md.note_type must be a non-empty string" in detail for detail in details)
+    assert any("missing-fields.md.authority must be a non-empty string" in detail for detail in details)
+    assert any("durable_facts.memory-owner-boundary.route_keys must be an array of strings" in detail for detail in details)
+    assert any("durable_facts.memory-owner-boundary.evidence must be an array of strings" in detail for detail in details)
+
+
 def test_doctor_flags_incomplete_improvement_signal_lifecycle(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,173 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Add explicit typed validator for memory manifest TOML",
+  "goal": [
+    "Implement #504 by making the existing memory manifest validation an explicit typed-validator contract.",
+    "Update structured-file inventory so memory manifests are no longer routed as freeform-prohibited gaps."
+  ],
+  "non_goals": [
+    "Do not convert memory notes themselves into fully structured records.",
+    "Do not add a separate schema language when the memory package already owns a typed validator.",
+    "Do not require host repos to use GitHub or any repo-specific tracker."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "memory manifest TOML is typed-validator-backed and invalid manifest shape produces actionable diagnostics",
+      "constraints": "repo/tool/language agnostic; prefer existing doctor/report/check paths; keep prose note edits possible when manifest metadata is valid",
+      "latitude": "may update memory manifest loader/validator, doctor tests, structured-file inventory, and planning state",
+      "escalation": "stop if the slice needs a new top-level command or a rigid note-content schema"
+    },
+    "execution": {
+      "milestone": "#504",
+      "status": "completed",
+      "next_step": "archive this slice and continue the remaining structured-file contract issues",
+      "proof": "passed"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/memory-manifest-typed-validator.plan.json",
+        "packages/memory/src/repo_memory_bootstrap/_installer_memory.py",
+        "packages/memory/tests/test_installer.py",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        "tests/test_structured_file_inventory.py"
+      ],
+      "invariants": [
+        "memory manifest remains TOML and package-owned",
+        "doctor/report validation remains optional package behavior, not startup burden",
+        "structured files must not stay freeform once validation exists"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "all machine-readable files are schema-backed, typed-validator-backed, generated/derived, or explicitly diagnostic",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "structured-file-contract"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #504 closes, continue #505/#506/#508/#509"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the bounded #504 slice by making memory manifests explicitly typed-validator-backed.",
+    "hard constraints": "Preserve package boundaries, keep validation behind doctor/check paths, avoid GitHub-specific shipped behavior, and keep #502 open for remaining children.",
+    "agent may decide locally": "Implementation shape, focused tests, docs wording, inventory status text, and proof breadth.",
+    "escalate when": "A separate schema language, new top-level command, or rigid note-content schema becomes necessary."
+  },
+  "active_milestone": {
+    "id": "#504",
+    "status": "completed",
+    "scope": "memory manifest typed validator and inventory status",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "read-only subagent inspection"
+  },
+  "immediate_next_action": [
+    "Archive #504 and continue #505/#506/#508/#509."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "validation_commands": [
+    "cd packages/memory && uv run pytest tests/test_installer.py -q -k manifest",
+    "uv run pytest tests/test_structured_file_inventory.py -q",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run agentic-workspace doctor --target . --modules memory --format json"
+  ],
+  "completion_criteria": [
+    "Invalid memory manifest TOML or table shape produces doctor diagnostics.",
+    "Existing note metadata, improvement-signal fields, and durable facts are covered by explicit typed validation.",
+    "Structured-file inventory marks memory manifests typed-validator-backed.",
+    "#504 is closed and #502 remains open for the remaining child issues."
+  ],
+  "improvement_signal_review": {
+    "status": "completed",
+    "signals found": [
+      "Subagent and proof routing reduced discovery work; active execplan projection gaps remain covered by #515."
+    ],
+    "signals fixed": [
+      "Memory manifest entries now advertise concrete typed-validator backing instead of a routed gap."
+    ],
+    "signals routed": [
+      "#515 remains the owner for projection-complete execplan scaffolds."
+    ],
+    "signals dismissed": [
+      "No new generic issue was created for this slice; the remaining structured-file proof hardening stays under #502 child work."
+    ],
+    "next owner": "#505"
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #504 from structured-file-contract."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Add explicit typed validator for memory manifest TOML",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#504 landed explicit memory manifest typed validation, doctor diagnostics for invalid TOML and shape drift, metadata contract docs, inventory status updates, and focused tests.",
+    "unsolved intent passed to": "#505/#506/#508/#509 remain open under #502 for the remaining structured-file contract work."
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded #504 slice is complete while parent #502 remains open for the remaining child issues.",
+    "evidence carried forward": "uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_workspace_cli.py tests/test_structured_file_inventory.py -q; cd packages/memory && uv run pytest tests/test_installer.py tests/test_check_memory_freshness.py -q; uv run ruff check src tests; cd packages/memory && uv run ruff check .; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run agentic-workspace doctor --target . --modules memory --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace proof --target . --changed <changed paths> --format json",
+    "reopen trigger": "Reopen #504 only if invalid memory manifest TOML/shape no longer produces memory-manifest diagnostics or manifest inventory entries regress to freeform-prohibited-gap."
+  },
+  "durable_residue": {
+    "status": "evidence_only",
+    "learned constraint": "No future-relevant learning was identified beyond the archived proof record.",
+    "motivation worth preserving": "none beyond evidence-only archive",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Memory manifests now have explicit typed shape validation, doctor diagnostics for malformed manifest data, updated metadata-contract docs, and typed-validator-backed structured-file inventory entries.",
+    "validation confirmed": "Workspace CLI tests, memory package installer/freshness tests, ruff checks, structured-file inventory check, contract tooling check, memory doctor, planning doctor, and proof selection all passed.",
+    "follow-on routed to": "#505/#506/#508/#509 under #502",
+    "post-work posterity capture": "Archive evidence is enough; no Memory promotion needed beyond the existing metadata contract updates.",
+    "knowledge promoted (Memory/Docs/Config)": "Memory metadata contract docs were updated in the root installed surface and memory bootstrap payload.",
+    "resume from": "Refresh external evidence, continue structured-file-contract at #505 unless reprioritized."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "after #504 closes, continue #505/#506/#508/#509",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Memory metadata contract docs were updated in the root installed surface and memory bootstrap payload.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "Memory metadata contract docs were updated in the root installed surface and memory bootstrap payload.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "proof_report": {
+    "validation proof": "Workspace CLI tests, memory package installer/freshness tests, ruff checks, structured-file inventory check, contract tooling check, memory doctor, planning doctor, and proof selection all passed.",
+    "proof achieved now": "yes; validation evidence is recorded in execution summary.",
+    "evidence for \"proof achieved\" state": "Workspace CLI tests, memory package installer/freshness tests, ruff checks, structured-file inventory check, contract tooling check, memory doctor, planning doctor, and proof selection all passed."
+  }
+}

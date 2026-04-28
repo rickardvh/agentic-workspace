@@ -44,8 +44,26 @@ def test_inventory_routes_known_schema_gaps() -> None:
     inventory = check_structured_file_inventory.load_inventory()
     gap_entries = [entry for entry in inventory["entries"] if entry["status"] == "freeform-prohibited-gap"]
 
-    assert {entry["routed_to"] for entry in gap_entries} >= {"#504", "#505", "#508", "#509"}
+    assert {entry["routed_to"] for entry in gap_entries} >= {"#505", "#508", "#509"}
     assert all(entry["generated"] is False for entry in gap_entries)
+
+
+def test_memory_manifest_entries_are_typed_validator_backed() -> None:
+    inventory = check_structured_file_inventory.load_inventory()
+    manifest_entries = [
+        entry
+        for entry in inventory["entries"]
+        if entry["pattern"] in {".agentic-workspace/memory/repo/manifest.toml", "packages/memory/**/manifest.toml"}
+    ]
+
+    assert {entry["pattern"] for entry in manifest_entries} == {
+        ".agentic-workspace/memory/repo/manifest.toml",
+        "packages/memory/**/manifest.toml",
+    }
+    for entry in manifest_entries:
+        assert entry["status"] == "typed-validator-backed"
+        assert "_memory_manifest_typed_validator_findings" in entry["schema_or_validator"]
+        assert "routed_to" not in entry
 
 
 def test_inventory_routes_reconstructable_storage_cleanup_children() -> None:

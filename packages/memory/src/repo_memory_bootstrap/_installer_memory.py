@@ -96,7 +96,14 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
     notes_table = data.get("notes", {})
     durable_facts_table = data.get("durable_facts", {})
     rules_table = data.get("rules", {})
-    version = int(data.get("version", 1))
+    if not isinstance(notes_table, dict):
+        notes_table = {}
+    if not isinstance(durable_facts_table, dict):
+        durable_facts_table = {}
+    if not isinstance(rules_table, dict):
+        rules_table = {}
+    raw_version = data.get("version", 1)
+    version = raw_version if isinstance(raw_version, int) and not isinstance(raw_version, bool) else 1
 
     notes: list[MemoryNoteRecord] = []
     for note_path, raw in notes_table.items():
@@ -162,6 +169,74 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
         core_doc_exclude_globs=tuple(_string_list(rules_table.get("core_doc_exclude_globs")) or list(DEFAULT_CORE_DOC_EXCLUDE_GLOBS)),
         forbid_core_docs_depend_on_memory=bool(rules_table.get("forbid_core_docs_depend_on_memory", False)),
     )
+
+
+def _memory_manifest_typed_validator_findings(path: Path) -> list[str]:
+    """Validate the TOML manifest shape before typed records are consumed."""
+
+    if not path.exists():
+        return []
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        return [f"manifest TOML parse error: {exc}"]
+
+    findings: list[str] = []
+    raw_version = data.get("version", 1)
+    if not isinstance(raw_version, int) or isinstance(raw_version, bool):
+        findings.append("manifest version must be an integer")
+
+    for table_name in ("rules", "notes", "durable_facts"):
+        raw_table = data.get(table_name, {})
+        if raw_table is not None and not isinstance(raw_table, dict):
+            findings.append(f"manifest [{table_name}] must be a table")
+
+    rules_table = data.get("rules", {})
+    if isinstance(rules_table, dict):
+        for field in (
+            "routing_only",
+            "high_level",
+            "canonical_dirs",
+            "task_board_globs",
+            "core_doc_globs",
+            "core_doc_exclude_globs",
+        ):
+            if field in rules_table and not _is_string_array(rules_table[field]):
+                findings.append(f"manifest rules.{field} must be an array of strings")
+        if "forbid_core_docs_depend_on_memory" in rules_table and not isinstance(rules_table["forbid_core_docs_depend_on_memory"], bool):
+            findings.append("manifest rules.forbid_core_docs_depend_on_memory must be a boolean")
+
+    notes_table = data.get("notes", {})
+    if isinstance(notes_table, dict):
+        for note_path, raw in notes_table.items():
+            if not isinstance(raw, dict):
+                findings.append(f"manifest notes.{note_path} must be a table")
+                continue
+            for field in ("note_type", "canonical_home", "authority", "audience", "canonicality", "task_relevance"):
+                if field not in raw or not isinstance(raw[field], str) or not raw[field].strip():
+                    findings.append(f"manifest notes.{note_path}.{field} must be a non-empty string")
+            for field in ("subsystems", "surfaces", "routes_from", "stale_when", "related_validations"):
+                if field in raw and not _is_string_array(raw[field]):
+                    findings.append(f"manifest notes.{note_path}.{field} must be an array of strings")
+            for field in ("routing_only", "high_level", "improvement_candidate"):
+                if field in raw and not isinstance(raw[field], bool):
+                    findings.append(f"manifest notes.{note_path}.{field} must be a boolean")
+
+    durable_facts_table = data.get("durable_facts", {})
+    if isinstance(durable_facts_table, dict):
+        for fact_id, raw in durable_facts_table.items():
+            if not isinstance(raw, dict):
+                findings.append(f"manifest durable_facts.{fact_id} must be a table")
+                continue
+            for field in ("route_keys", "touched_surfaces", "evidence"):
+                if field in raw and not _is_string_array(raw[field]):
+                    findings.append(f"manifest durable_facts.{fact_id}.{field} must be an array of strings")
+
+    return findings
+
+
+def _is_string_array(value: object) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) and item.strip() for item in value)
 
 
 def _routing_baseline_paths(manifest: MemoryManifest | None) -> tuple[Path, ...]:
@@ -289,7 +364,19 @@ def _durable_fact_manifest_findings(fact: DurableFactRecord) -> list[str]:
 
 
 def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement: bool = False) -> None:
-    manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
+    manifest_path = target_root / MANIFEST_PATH
+    for finding in _memory_manifest_typed_validator_findings(manifest_path):
+        result.add(
+            "manual review",
+            manifest_path,
+            finding,
+            role="memory-manifest",
+            safety="manual",
+            source=MANIFEST_PATH.as_posix(),
+            category="contract-drift",
+        )
+
+    manifest = _load_memory_manifest(manifest_path)
     if manifest is None:
         return
 
