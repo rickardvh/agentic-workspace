@@ -3427,6 +3427,19 @@ def test_report_section_selector_returns_operational_compression_measures(tmp_pa
     assert measures["archived_plan_distillation"]["with_distillation_count"] == 1
     assert measures["archived_plan_distillation"]["missing_distillation_count"] == 0
     assert measures["archived_plan_distillation"]["post_contract_missing_distillation_count"] == 0
+    archive_retention = measures["archive_retention_policy"]
+    assert archive_retention["kind"] == "workspace-archive-retention-policy/v1"
+    assert archive_retention["advisory_only"] is True
+    assert archive_retention["outcomes"] == [
+        "retain",
+        "shrink",
+        "stub",
+        "delete",
+        "promote-summary-elsewhere",
+    ]
+    assert archive_retention["default_outcome"] == "retain"
+    assert archive_retention["candidate_count"] == 0
+    assert "never deletes" in archive_retention["rule"]
     footprint = measures["artifact_footprint_by_class"]
     assert footprint["rule"].startswith("Footprint classes are advisory")
     classes = {entry["id"]: entry for entry in footprint["classes"]}
@@ -3513,6 +3526,13 @@ def test_report_distinguishes_legacy_archive_distillation_debt(tmp_path: Path, c
     assert measure["distillation_contract_anchor"] == "compressed-lane.plan.json"
     signal = next(item for item in payload["answer"]["signals"] if item["measure"] == "archived_plan_distillation")
     assert signal["count"] == 1
+    archive_retention = payload["answer"]["measures"]["archive_retention_policy"]
+    assert archive_retention["status"] == "attention"
+    assert archive_retention["before_shrink_or_delete"][0].startswith("promote durable learning")
+    assert any(candidate["recommended_outcome"] == "promote-summary-elsewhere" for candidate in archive_retention["candidates"])
+    assert any(candidate["recommended_outcome"] == "stub" for candidate in archive_retention["candidates"])
+    retention_signal = next(item for item in payload["answer"]["signals"] if item["measure"] == "archive_retention_policy")
+    assert retention_signal["count"] == archive_retention["candidate_count"]
 
 
 def test_report_section_selector_returns_external_work_delta(tmp_path: Path, capsys) -> None:

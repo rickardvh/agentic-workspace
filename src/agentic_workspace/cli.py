@@ -3180,6 +3180,10 @@ def _operational_compression_payload(
     closeout_counts = closeout_distillation.get("counts", {}) if isinstance(closeout_distillation, dict) else {}
     archived_distillation = _archived_plan_distillation_measure(target=report_payload.get("target"))
     artifact_footprint = _artifact_footprint_by_class(target=report_payload.get("target"))
+    archive_retention = _archive_retention_policy(
+        archived_distillation=archived_distillation,
+        artifact_footprint=artifact_footprint,
+    )
     intent_validation = planning_report.get("intent_validation", {}) if isinstance(planning_report, dict) else {}
     intent_counts = intent_validation.get("counts", {}) if isinstance(intent_validation, dict) else {}
     current_external_work = intent_validation.get("current_external_work", {}) if isinstance(intent_validation, dict) else {}
@@ -3253,6 +3257,7 @@ def _operational_compression_payload(
             "sources": ["planning.closeout_distillation.counts", ".agentic-workspace/planning/execplans/archive/*.plan.json"],
         },
         "artifact_footprint_by_class": artifact_footprint,
+        "archive_retention_policy": archive_retention,
         "unresolved_external_work_routing": {
             "status": current_external_work.get("status", "unavailable") if isinstance(current_external_work, dict) else "unavailable",
             "tracked_open_count": intent_counts.get("tracked_external_open_count"),
@@ -3323,6 +3328,15 @@ def _operational_compression_payload(
                 "measure": "artifact_footprint_by_class",
                 "message": "Artifact footprint pressure is present; inspect the recommended cleanup target before expanding residue.",
                 "count": artifact_footprint.get("pressure_class_count", 0),
+            }
+        )
+    if archive_retention.get("status") == "attention":
+        advisory_signals.append(
+            {
+                "severity": "advisory",
+                "measure": "archive_retention_policy",
+                "message": "Archived execplan retention pressure is present; review candidates before expanding archive residue.",
+                "count": archive_retention.get("candidate_count", 0),
             }
         )
 
@@ -3575,6 +3589,75 @@ def _archived_plan_distillation_measure(*, target: Any) -> dict[str, Any]:
         "distillation_contract_anchor": anchor_name,
         "sample_missing_distillation": missing[:5],
         "sample_post_contract_missing_distillation": post_contract_missing[:5],
+    }
+
+
+def _archive_retention_policy(*, archived_distillation: dict[str, Any], artifact_footprint: dict[str, Any]) -> dict[str, Any]:
+    archived_count = _as_int(archived_distillation.get("archived_plan_count"))
+    legacy_missing = _as_int(archived_distillation.get("legacy_missing_distillation_count"))
+    post_contract_missing = _as_int(archived_distillation.get("post_contract_missing_distillation_count"))
+    footprint_classes = _list_payload(artifact_footprint.get("classes"))
+    archived_footprint = next(
+        (item for item in footprint_classes if isinstance(item, dict) and item.get("id") == "archived_execplans"),
+        {},
+    )
+    footprint_pressure = str(archived_footprint.get("pressure", "quiet")) if isinstance(archived_footprint, dict) else "quiet"
+    sample_missing = _list_payload(archived_distillation.get("sample_missing_distillation"))
+    sample_post_contract = _list_payload(archived_distillation.get("sample_post_contract_missing_distillation"))
+
+    candidates: list[dict[str, Any]] = []
+    if post_contract_missing:
+        candidates.append(
+            {
+                "signal": "post-contract-missing-distillation",
+                "count": post_contract_missing,
+                "recommended_outcome": "promote-summary-elsewhere",
+                "candidate_paths": sample_post_contract[:5],
+                "why": "Recent archives without closeout distillation should first route durable learning to Memory, docs, contracts, checks, or issues.",
+            }
+        )
+    if legacy_missing:
+        candidates.append(
+            {
+                "signal": "legacy-missing-distillation",
+                "count": legacy_missing,
+                "recommended_outcome": "stub",
+                "candidate_paths": sample_missing[:5],
+                "why": "Legacy archives without distillation are candidates for retain-or-stub review after durable facts are promoted elsewhere.",
+            }
+        )
+    if footprint_pressure == "attention":
+        candidates.append(
+            {
+                "signal": "archive-footprint-threshold",
+                "count": archived_count,
+                "recommended_outcome": "shrink",
+                "candidate_paths": _list_payload(archived_footprint.get("sample"))[:5] if isinstance(archived_footprint, dict) else [],
+                "why": "Archive count is high enough to merit selector-driven review before adding more residue.",
+            }
+        )
+
+    return {
+        "kind": "workspace-archive-retention-policy/v1",
+        "status": "attention" if candidates else "quiet",
+        "advisory_only": True,
+        "applies_to": ".agentic-workspace/planning/execplans/archive/*.plan.json",
+        "outcomes": [
+            "retain",
+            "shrink",
+            "stub",
+            "delete",
+            "promote-summary-elsewhere",
+        ],
+        "default_outcome": "retain",
+        "candidate_count": len(candidates),
+        "candidates": candidates,
+        "before_shrink_or_delete": [
+            "promote durable learning to Memory, docs, contracts, checks, or issues",
+            "preserve enough evidence for restart, review, trust, and continuation",
+            "keep ordinary startup and active planning out of archive history",
+        ],
+        "rule": "Retention pressure is advisory and selector-driven; it recommends review outcomes but never deletes archived evidence automatically.",
     }
 
 

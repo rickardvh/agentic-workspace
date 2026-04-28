@@ -1,0 +1,201 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Archived Execplan Retention Pressure",
+  "goal": [
+    "Implement #439 so archived execplans expose an explicit retention/shrink policy and selector-only review signal."
+  ],
+  "non_goals": [
+    "Do not delete or rewrite historical archives in this slice.",
+    "Do not make archived execplans part of ordinary startup.",
+    "Do not add a new command surface."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Operational compression should identify archive-retention pressure and name safe outcomes before any archive shrink/delete decision.",
+      "constraints": "Archive retention remains advisory and selector-driven; durable learning must be promoted before archive evidence shrinks.",
+      "latitude": "Add compact fields to existing report output and focused tests.",
+      "escalation": "Escalate if implementation requires a separate archive-management workflow or automatic deletion."
+    },
+    "execution": {
+      "milestone": "archived-execplan-retention-pressure",
+      "status": "completed",
+      "next_step": "Archive, commit, push, close #439, refresh evidence, and continue the next footprint slice.",
+      "proof": "workspace CLI tests, ruff, planning surfaces, summary/reconcile/proof dogfooding, planning doctor, root CLI authority audit"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/archived-execplan-retention-pressure.plan.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Ordinary active planning remains compact.",
+        "Archive retention output is advisory and does not delete artifacts.",
+        "Durable learning routes to Memory, docs, contracts, checks, or issues before shrink/delete."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#436 adds operational footprint pressure; #449 makes package use cheaper than bypassing it.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane operational-footprint-pressure",
+    "parent lane": "#436 and #449"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #439, continue #440/#441 footprint slices or the next higher-priority roadmap lane"
+  },
+  "active_milestone": {
+    "id": "archived-execplan-retention-pressure",
+    "status": "completed",
+    "scope": "Add selector-only archive retention policy/review signal.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Define retention pressure for archived execplans.",
+    "hard constraints": "No automatic deletion and no startup expansion.",
+    "agent may decide locally": "Exact report field names and candidate action shape.",
+    "escalate when": "The fix would require changing archive semantics or migrating historical archives."
+  },
+  "immediate_next_action": [
+    "Archive, commit, push, close #439, refresh evidence, and continue the next footprint slice."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/archived-execplan-retention-pressure.plan.json",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/archived-execplan-retention-pressure.plan.json src/agentic_workspace/cli.py tests/test_workspace_cli.py --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run agentic-workspace report --target . --section operational_compression --format json"
+  ],
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/439",
+      "label": "#439 archive retention pressure",
+      "role": "source_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/436",
+      "label": "#436 footprint parent",
+      "role": "parent_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/449",
+      "label": "#449 operating-cost parent",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "completion_criteria": [
+    "Archived execplans expose retain/shrink/stub/delete/promote-summary-elsewhere policy in selector output.",
+    "Operational compression identifies archive footprint pressure without broad manual archive reading.",
+    "Policy requires durable learning promotion before shrink/delete.",
+    "Default startup and active planning remain compact."
+  ],
+  "execution_summary": {
+    "outcome delivered": "operational_compression now exposes archive_retention_policy with retain/shrink/stub/delete/promote-summary-elsewhere outcomes, selector-only candidates, and before_shrink_or_delete promotion requirements.",
+    "validation confirmed": "focused operational compression tests, full workspace CLI tests, ruff, planning surface check, summary, reconcile, proof selection, planning doctor, root CLI authority audit, and live operational_compression report passed.",
+    "follow-on routed to": "remaining roadmap lanes",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next footprint or command-generation roadmap slice after evidence refresh",
+    "post-work posterity capture": "Keep report tests and archive_retention_policy output as durable evidence; do not preserve live command transcripts."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Validation transcripts and intermediate report payloads.",
+          "owner": "discard",
+          "source": "execution detail"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue #440/#441 footprint-control child slices and keep #436/#449 open until their remaining acceptance signals land.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "intent_continuity"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "tests/test_workspace_cli.py guards archive retention policy outcomes, advisory-only behavior, promotion-before-shrink/delete, and candidate signals.",
+          "owner": "tests/test_workspace_cli.py",
+          "source": "regression tests"
+        },
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Close #439 with proof; keep #436 and #449 open.",
+          "owner": "github-issue",
+          "source": "#439"
+        }
+      ]
+    }
+  },
+  "intent_satisfaction": {
+    "original intent": "Add retention pressure for archived execplans.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Operational compression now defines archive retention outcomes, identifies candidate signals without broad manual archive reading, and requires durable-learning promotion before shrink/delete.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane operational-footprint-pressure"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane operational-footprint-pressure activates a fresh bounded slice."
+  },
+  "cost_assessment": {
+    "signals consumed": [
+      "#439",
+      "#436",
+      "#449"
+    ],
+    "signals still accumulating": [
+      "#440",
+      "#441",
+      "command-generation extraction lane"
+    ],
+    "operating_cost_delta": "lower",
+    "reason": "Agents can inspect archive retention pressure through one compact selector instead of manually reading the archive or inventing deletion policy."
+  },
+  "improvement_signal_review": {
+    "status": "fixed",
+    "finding": "Archive footprint pressure existed, but retention outcomes and pre-shrink guardrails were implicit.",
+    "resolution": "archive_retention_policy now names outcomes, candidates, and before_shrink_or_delete requirements."
+  },
+  "drift_log": [
+    "2026-04-28: Selected after operational_compression recommended archived execplans as the highest footprint cleanup target."
+  ],
+  "proof_report": {
+    "validation proof": "focused operational compression tests, full workspace CLI tests, ruff, planning surface check, summary, reconcile, proof selection, planning doctor, root CLI authority audit, and live operational_compression report passed.",
+    "proof achieved now": "yes; validation evidence is recorded in execution summary.",
+    "evidence for \"proof achieved\" state": "focused operational compression tests, full workspace CLI tests, ruff, planning surface check, summary, reconcile, proof selection, planning doctor, root CLI authority audit, and live operational_compression report passed."
+  }
+}
