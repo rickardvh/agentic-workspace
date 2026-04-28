@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T08:52:54+00:00",
+  "refreshed_at": "2026-04-28T09:02:21+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T08:52:54+00:00",
-    "item_count": 481,
-    "open_count": 15,
-    "closed_count": 466,
+    "refreshed_at": "2026-04-28T09:02:21+00:00",
+    "item_count": 487,
+    "open_count": 20,
+    "closed_count": 467,
     "limit": 600,
     "state": "all",
     "state_source": "previous_evidence",
@@ -7542,7 +7542,7 @@
       "system": "github",
       "id": "#482",
       "title": "[Workspace]: Classify lifecycle plan output by ownership, action, and reason",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#478",
       "planning_residue_expected": "optional",
@@ -7552,8 +7552,8 @@
         "planning"
       ],
       "created_at": "2026-04-28T06:06:01Z",
-      "updated_at": "2026-04-28T06:06:01Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T09:02:01Z",
+      "comments_count": 1
     },
     {
       "system": "github",
@@ -7774,6 +7774,108 @@
       ],
       "created_at": "2026-04-28T06:50:58Z",
       "updated_at": "2026-04-28T06:50:58Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#496",
+      "title": "[Planning]: Reshape state.toml around work maturity, handoff roles, and progressive refinement",
+      "status": "open",
+      "kind": "lane",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/496",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T08:54:23Z",
+      "updated_at": "2026-04-28T08:59:48Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#497",
+      "title": "[Planning]: Define planning-state v1 schema with explicit maturity states",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#496",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/497",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T08:54:56Z",
+      "updated_at": "2026-04-28T08:54:56Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#498",
+      "title": "[Planning]: Add handoff role metadata for multi-agent team-style work",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#496",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/498",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T08:55:27Z",
+      "updated_at": "2026-04-28T08:55:27Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#499",
+      "title": "[Planning]: Update summary and query behavior for explicit work maturity",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#496",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/499",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T08:56:01Z",
+      "updated_at": "2026-04-28T08:56:01Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#500",
+      "title": "[Planning]: Migrate state.toml from todo/roadmap candidates to maturity-based work items",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#496",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/500",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T08:56:57Z",
+      "updated_at": "2026-04-28T08:56:57Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#501",
+      "title": "[Planning]: Connect maturity-based state with execplan promotion and durable-residue closeout",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#496",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/501",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T08:58:02Z",
+      "updated_at": "2026-04-28T08:59:05Z",
       "comments_count": 0
     }
   ]
