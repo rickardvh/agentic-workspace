@@ -32,6 +32,7 @@ def _valid_manifest(**overrides):
         "status": "candidate",
         "scope": "repo-shared",
         "portability": "cross-platform",
+        "proof_role": "candidate-aid",
         "owner": "workspace",
         "created_because": "Agents repeatedly need a bounded validation wrapper.",
         "use_when": ["validating workspace CLI and contract changes"],
@@ -41,6 +42,7 @@ def _valid_manifest(**overrides):
             "writes_repo": False,
             "destructive": False,
             "network": False,
+            "hidden_required_workflow": False,
             "requires_review": False,
         },
         "validation": {"commands": ["uv run python .agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"]},
@@ -111,6 +113,108 @@ def test_agent_aid_manifest_accepts_validation_absent_reason(tmp_path: Path) -> 
     _write(tmp_path / entrypoint, "# Review\n")
 
     assert check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path) == []
+
+
+def test_executable_agent_aid_requires_validation_commands(tmp_path: Path) -> None:
+    _prepare_schema(tmp_path)
+    manifest = ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json"
+    entrypoint = ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"
+    payload = _valid_manifest(validation={"absent_reason": "No validation command yet."})
+    _write(tmp_path / manifest, json.dumps(payload))
+    _write(tmp_path / entrypoint, "print('ok')\n")
+
+    findings = check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path)
+
+    assert any("executable agent aids must declare validation.commands" in finding.message for finding in findings)
+
+
+def test_platform_specific_agent_aid_requires_justification(tmp_path: Path) -> None:
+    _prepare_schema(tmp_path)
+    manifest = ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json"
+    entrypoint = ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"
+    payload = _valid_manifest(portability="platform-specific")
+    _write(tmp_path / manifest, json.dumps(payload))
+    _write(tmp_path / entrypoint, "print('ok')\n")
+
+    findings = check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path)
+
+    messages = [finding.message for finding in findings]
+    assert any("'portability_justification' is a required property" in message for message in messages)
+    assert any("'checked_in_scope_justification' is a required property" in message for message in messages)
+
+
+def test_executable_validation_command_must_reference_entrypoint(tmp_path: Path) -> None:
+    _prepare_schema(tmp_path)
+    manifest = ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json"
+    entrypoint = ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"
+    payload = _valid_manifest(validation={"commands": ["uv run pytest tests/test_workspace_cli.py -q"]})
+    _write(tmp_path / manifest, json.dumps(payload))
+    _write(tmp_path / entrypoint, "print('ok')\n")
+
+    findings = check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path)
+
+    assert any("validation.commands must reference the manifest entrypoint" in finding.message for finding in findings)
+
+
+def test_executable_validation_command_must_not_be_blank(tmp_path: Path) -> None:
+    _prepare_schema(tmp_path)
+    manifest = ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json"
+    entrypoint = ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"
+    payload = _valid_manifest(validation={"commands": ["   "]})
+    _write(tmp_path / manifest, json.dumps(payload))
+    _write(tmp_path / entrypoint, "print('ok')\n")
+
+    findings = check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path)
+
+    assert any("validation.commands must not contain blank commands" in finding.message for finding in findings)
+
+
+def test_candidate_agent_aid_cannot_be_hidden_required_workflow(tmp_path: Path) -> None:
+    _prepare_schema(tmp_path)
+    manifest = ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json"
+    entrypoint = ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"
+    _write(tmp_path / manifest, json.dumps(_valid_manifest()))
+    _write(tmp_path / entrypoint, "print('ok')\n")
+    _write(tmp_path / "Makefile", f"check:\n\tuv run python {entrypoint}\n")
+
+    findings = check_agent_aids.agent_aid_findings([manifest, entrypoint, "Makefile"], root=tmp_path)
+
+    assert any("hidden required workflow entrypoints" in finding.message for finding in findings)
+
+
+def test_high_risk_agent_aid_requires_review(tmp_path: Path) -> None:
+    _prepare_schema(tmp_path)
+    manifest = ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json"
+    entrypoint = ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"
+    payload = _valid_manifest(
+        safety={
+            "read_only": False,
+            "writes_repo": True,
+            "destructive": False,
+            "network": False,
+            "hidden_required_workflow": False,
+            "requires_review": False,
+        }
+    )
+    _write(tmp_path / manifest, json.dumps(payload))
+    _write(tmp_path / entrypoint, "print('ok')\n")
+
+    findings = check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path)
+
+    assert any("must require review" in finding.message for finding in findings)
+
+
+def test_candidate_agent_aid_cannot_claim_canonical_proof_role(tmp_path: Path) -> None:
+    _prepare_schema(tmp_path)
+    manifest = ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json"
+    entrypoint = ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"
+    payload = _valid_manifest(proof_role="canonical-proof")
+    _write(tmp_path / manifest, json.dumps(payload))
+    _write(tmp_path / entrypoint, "print('ok')\n")
+
+    findings = check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path)
+
+    assert any("only promoted aids may declare proof_role='canonical-proof'" in finding.message for finding in findings)
 
 
 def test_agent_aid_manifest_type_must_match_subdir(tmp_path: Path) -> None:

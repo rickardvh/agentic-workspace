@@ -531,6 +531,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert agent_aids["manifest_name"] == "manifest.json"
     assert agent_aids["manifest_kind"] == "agentic-workspace/agent-aid/v1"
     assert agent_aids["manifest_schema"] == "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json"
+    assert agent_aids["executable_safety"]["hidden_required_workflow"] == "forbidden"
+    assert agent_aids["executable_safety"]["canonical_proof_role_requires_status"] == "promoted"
     assert {entry["class"] for entry in agent_aids["storage_classes"]} == {
         "local-only",
         "checked-in-candidate",
@@ -1101,6 +1103,13 @@ def test_defaults_section_selector_returns_agent_aid_storage_answer(capsys) -> N
     assert payload["answer"]["candidate_root"] == ".agentic-workspace/agent-aids"
     assert payload["answer"]["ordinary_startup"] is False
     assert payload["answer"]["manifest_check"] == "python scripts/check/check_agent_aids.py"
+    assert payload["answer"]["executable_safety"]["executable_types"] == ["script", "check"]
+    assert payload["answer"]["executable_safety"]["candidate_aid_check"] == "python scripts/check/check_agent_aids.py"
+    assert payload["answer"]["executable_safety"]["candidate_aids_are_not"] == [
+        "canonical proof routes",
+        "required workflow entrypoints",
+    ]
+    assert payload["answer"]["executable_safety"]["platform_specific_checked_in_requires"] == "checked_in_scope_justification"
     assert [entry["class"] for entry in payload["answer"]["storage_classes"]] == [
         "local-only",
         "checked-in-candidate",
@@ -5826,6 +5835,29 @@ def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(cap
         "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
         "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
     ]
+    assert "uv run pytest tests/test_workspace_cli.py -q" not in answer["required_commands"]
+
+
+def test_proof_changed_selector_routes_agent_aid_changes_to_manifest_lane(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--changed",
+                ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json",
+                ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["agent_aid_manifests"]
+    assert answer["required_commands"] == ["uv run python scripts/check/check_agent_aids.py --quiet-success"]
+    assert "candidate aids" in answer["selected_lanes"][0]["recovery_signal"]
     assert "uv run pytest tests/test_workspace_cli.py -q" not in answer["required_commands"]
 
 

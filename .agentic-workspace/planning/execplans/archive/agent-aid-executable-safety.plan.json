@@ -1,0 +1,228 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Agent Aid Executable Safety",
+  "goal": [
+    "agent-created-aids-lifecycle next child; #518 created manifests and #519 should tighten executable aid safety and portability semantics before discovery or promotion."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "agent-created-aids-lifecycle next child; #518 created manifests and #519 should tighten executable aid safety and portability semantics before discovery or promotion.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "agent-aid-executable-safety",
+      "status": "in-progress",
+      "next_step": "archive this plan, close #519, and continue with #520.",
+      "proof": "Focused aid/defaults tests, aid checker, full workspace CLI tests, contract checks, ruff, maintainer surfaces, and planning checks passed."
+    },
+    "scope": {
+      "touched": [
+        "scripts/check/check_agent_aids.py",
+        "tests/test_agent_aids.py",
+        "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
+        "src/agentic_workspace/contracts/proof_selection_rules.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/docs/agent-aids-storage.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/agent-aid-executable-safety.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "agent-created-aids-lifecycle next child; #518 created manifests and #519 should tighten executable aid safety and portability semantics before discovery or promotion.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Executable checked-in aids now have explicit safety, portability, validation, review, and proof-role rules.",
+    "intentionally deferred": "Discovery and promotion mechanics remain in #520-#521.",
+    "discovered implications": "The manifest checker is the cheapest place to enforce executable-only rules without adding a separate safety subsystem.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #519 after archive checks",
+    "next likely slice": "#520"
+  },
+  "intent_interpretation": {
+    "literal request": "Agent Aid Executable Safety",
+    "inferred intended outcome": "agent-created-aids-lifecycle next child; #518 created manifests and #519 should tighten executable aid safety and portability semantics before discovery or promotion.",
+    "chosen concrete what": "Tighten the existing manifest schema/checker/defaults/docs to enforce #519 safety semantics.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "scripts/check/check_agent_aids.py; tests/test_agent_aids.py; src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json; src/agentic_workspace/contracts/proof_selection_rules.json; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; .agentic-workspace/docs/agent-aids-storage.md; .agentic-workspace/planning/state.toml; this execplan.",
+    "max changed files": "9 active files plus archive output at closeout.",
+    "required validation commands": "uv run pytest tests/test_agent_aids.py -q; uv run pytest tests/test_workspace_cli.py -q -k \"agent_aid_storage or config_command_reports_effective_defaults_without_repo_file or defaults\"; uv run python scripts/check/check_agent_aids.py --quiet-success; uv run ruff check scripts/check/check_agent_aids.py tests/test_agent_aids.py src/agentic_workspace/cli.py tests/test_workspace_cli.py src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "validate and close executable aid safety rules.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "agent-created-aids-lifecycle next child; #518 created manifests and #519 should tighten executable aid safety and portability semantics before discovery or promotion.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "agent-aid-executable-safety",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "validate executable aid safety and portability rules."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "scripts/check/check_agent_aids.py",
+    "tests/test_agent_aids.py",
+    "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
+    "src/agentic_workspace/contracts/proof_selection_rules.json",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/docs/agent-aids-storage.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/agent-aid-executable-safety.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_agent_aids.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q -k \"agent_aid_storage or config_command_reports_effective_defaults_without_repo_file or defaults\"",
+    "uv run python scripts/check/check_agent_aids.py --quiet-success",
+    "uv run ruff check scripts/check/check_agent_aids.py tests/test_agent_aids.py src/agentic_workspace/cli.py tests/test_workspace_cli.py src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "executable aid safety rules are documented and enforceable",
+    "checked-in aids cannot omit read/write/destructive/network/review metadata",
+    "platform-specific checked-in aids require explicit scope justification",
+    "portable validation wrappers are preferred for repo-general workflows",
+    "proof/report can distinguish candidate aids from canonical checks"
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with delegated read-only review",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Tightened agent aid manifests, checker policy, defaults/report routing, documentation, and proof selection so executable checked-in aids carry safety, portability, validation, review, and proof-role metadata.",
+    "scope touched": "agent aid manifest schema/checker/tests, compact defaults/proof routing, docs, and planning closeout",
+    "changed surfaces": "scripts/check/check_agent_aids.py; tests/test_agent_aids.py; src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json; src/agentic_workspace/contracts/proof_selection_rules.json; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; .agentic-workspace/docs/agent-aids-storage.md; .agentic-workspace/planning/state.toml; this execplan",
+    "validations run": "uv run pytest tests/test_agent_aids.py -q; uv run pytest tests/test_workspace_cli.py -q -k \"agent_aid_storage or proof_changed_selector_routes_agent_aid_changes_to_manifest_lane\"; uv run python scripts/check/check_agent_aids.py --quiet-success; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check src tests scripts/check/check_agent_aids.py; uv run agentic-workspace defaults --section root_cli_authority --format json; make agent-aids; make maintainer-surfaces; git diff --check",
+    "result for continuation": "#519 complete; continue the agent-created-aids-lifecycle lane with #520.",
+    "next step": "Archive this plan, close #519, refresh external evidence, and promote #520."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; proof selection rules were added because #519 explicitly requires proof/report distinction between candidate aids and canonical checks",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used compact summary/proof/defaults and planning execplan closeout",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue #520 and #521 for discovery and promotion"
+  },
+  "proof_report": {
+    "validation proof": "focused and selected broad proof commands passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "agent aid tests/checker, workspace CLI tests, contract tooling checks, ruff, maintainer surfaces, root CLI authority, and diff check passed"
+  },
+  "intent_satisfaction": {
+    "original intent": "agent-created-aids-lifecycle next child; #518 created manifests and #519 should tighten executable aid safety and portability semantics before discovery or promotion.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Executable aid manifests now require explicit safety flags, validation commands, portability justification, scope justification for checked-in platform-specific aids, review for high-risk aids, and candidate-vs-canonical proof role routing.",
+    "unsolved intent passed to": "#520 for discovery and #521 for promotion"
+  },
+  "execution_summary": {
+    "outcome delivered": "Executable agent aid safety and portability rules are schema-backed, checker-enforced, documented, and exposed through compact defaults/proof routing.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#520 and #521 in state.toml",
+    "post-work posterity capture": "rules live in schema, checker, defaults payload, proof selection, tests, and agent-aids storage docs",
+    "knowledge promoted (Memory/Docs/Config)": ".agentic-workspace/docs/agent-aids-storage.md and contracts/checks",
+    "resume from": "#520"
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "Candidate executable aids must be validated as metadata and safety policy, not executed as canonical proof before promotion.",
+    "motivation worth preserving": "Repo-shared aids are useful only if they do not become hidden workflow dependencies or platform-specific residue.",
+    "canonical owner now": "agent aid manifest schema, checker, defaults payload, proof selection rules, and storage docs",
+    "promotion trigger": "when candidate aid safety, portability, or proof-role policy changes",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "partial",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#519 is complete, but the parent agent-created-aids-lifecycle lane still needs #520 discovery and #521 promotion.",
+    "evidence carried forward": "schema/checker/defaults/docs/proof routing enforce executable aid safety and candidate-vs-canonical separation",
+    "reopen trigger": "A checked-in executable aid can bypass safety metadata, validation, review, portability, or candidate proof-role constraints."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "subagent review showed the existing package surface could have pointed directly to candidate-vs-canonical proof separation sooner"
+    ],
+    "signals fixed": [
+      "added agent_aid_manifests proof lane and compact defaults fields instead of a new command"
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "broader platform-shell heuristics deferred; current schema/checker rules cover the accepted #519 criteria without overfitting to a shell"
+    ],
+    "next owner": "#520"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

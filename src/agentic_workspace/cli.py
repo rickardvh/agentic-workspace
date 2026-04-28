@@ -229,6 +229,19 @@ def _agent_aid_storage_payload(*, target_root: Path | None = None) -> dict[str, 
         "manifest_schema": "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
         "manifest_check": "python scripts/check/check_agent_aids.py",
         "manifest_required": "for checked-in shared aids",
+        "executable_safety": {
+            "rule": "Checked-in executable aids must declare safety, portability, validation, and proof-role metadata.",
+            "executable_types": ["script", "check"],
+            "non_cross_platform_requires": "portability_justification",
+            "platform_specific_checked_in_requires": "checked_in_scope_justification",
+            "high_risk_requires_review_when": ["writes_repo", "destructive", "network"],
+            "hidden_required_workflow": "forbidden",
+            "canonical_proof_role_requires_status": "promoted",
+            "candidate_aid_check": "python scripts/check/check_agent_aids.py",
+            "candidate_aids_are_not": ["canonical proof routes", "required workflow entrypoints"],
+            "canonical_checks_are": "repo-owned checkers and proof routes that validate candidate metadata, not candidate aids themselves",
+            "repo_general_preference": "Prefer cross-platform wrappers for repo-shared validation; keep platform-specific helpers local unless justified.",
+        },
         "storage_classes": [
             {
                 "class": "local-only",
@@ -8095,6 +8108,28 @@ def _defaults_payload() -> dict[str, Any]:
             ],
             "recovery_signal": (
                 "Contract/check-only changes should use focused contract and inventory proof before broad workspace CLI tests."
+            ),
+        },
+        {
+            "id": "agent_aid_manifests",
+            "when": [
+                "checked-in candidate agent aids or their manifests change",
+                "the trust question is candidate aid metadata, ownership, safety, portability, and proof-role policy",
+            ],
+            "enough_proof": [
+                "uv run python scripts/check/check_agent_aids.py --quiet-success",
+            ],
+            "broaden_when": [
+                "the change promotes an aid into a canonical proof route or repo-native checker",
+                "the change also touches runtime CLI behavior, generated adapters, or package payloads",
+            ],
+            "escalate_when": [
+                "candidate aid metadata no longer proves the workflow boundary",
+                "a candidate aid is being treated as a required workflow entrypoint",
+            ],
+            "recovery_signal": (
+                "Candidate aid changes should validate manifest safety and portability metadata; do not execute candidate aids "
+                "as canonical proof until they are promoted."
             ),
         },
         {

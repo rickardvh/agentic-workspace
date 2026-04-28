@@ -22,6 +22,15 @@ TYPE_DIRS = {
     "checks": "check",
     "templates": "template",
 }
+EXECUTABLE_AID_TYPES = frozenset({"script", "check"})
+CANONICAL_WORKFLOW_EXACT = frozenset(
+    {
+        "Makefile",
+        "src/agentic_workspace/contracts/proof_selection_rules.json",
+        "src/agentic_workspace/contracts/proof_routes.json",
+    }
+)
+CANONICAL_WORKFLOW_PREFIXES = (".github/workflows/",)
 
 
 @dataclass(frozen=True)
@@ -125,6 +134,71 @@ def _entrypoint_findings(path: str, payload: dict[str, Any], tracked: set[str]) 
     return []
 
 
+def _validation_commands(validation: Any) -> list[str]:
+    if not isinstance(validation, dict):
+        return []
+    commands = validation.get("commands")
+    if not isinstance(commands, list):
+        return []
+    return [command for command in commands if isinstance(command, str)]
+
+
+def _canonical_workflow_paths(tracked: set[str]) -> list[str]:
+    return sorted(
+        path
+        for path in tracked
+        if path in CANONICAL_WORKFLOW_EXACT or path.startswith(CANONICAL_WORKFLOW_PREFIXES)
+    )
+
+
+def _referenced_from_canonical_workflow(entrypoint: str, *, root: Path, tracked: set[str]) -> str | None:
+    normalized_entrypoint = _as_posix(entrypoint)
+    for workflow_path in _canonical_workflow_paths(tracked):
+        try:
+            text = (root / workflow_path).read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text = (root / workflow_path).read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if normalized_entrypoint in _as_posix(text):
+            return workflow_path
+    return None
+
+
+def _safety_policy_findings(path: str, payload: dict[str, Any], *, root: Path, tracked: set[str]) -> list[Finding]:
+    findings: list[Finding] = []
+    aid_type = payload.get("type")
+    validation = payload.get("validation")
+    entrypoint = payload.get("entrypoint")
+    commands = _validation_commands(validation)
+    if aid_type in EXECUTABLE_AID_TYPES:
+        if not commands:
+            findings.append(Finding(path=path, message="executable agent aids must declare validation.commands"))
+        if any(not command.strip() for command in commands):
+            findings.append(Finding(path=path, message="validation.commands must not contain blank commands"))
+        if isinstance(entrypoint, str) and commands and not any(_as_posix(entrypoint) in _as_posix(command) for command in commands):
+            findings.append(Finding(path=path, message="executable validation.commands must reference the manifest entrypoint"))
+    safety = payload.get("safety")
+    if isinstance(safety, dict) and any(bool(safety.get(key)) for key in ("writes_repo", "destructive", "network")):
+        if not bool(safety.get("requires_review")):
+            findings.append(Finding(path=path, message="agent aids with writes, destructive actions, or network access must require review"))
+    if payload.get("proof_role") == "canonical-proof" and payload.get("status") != "promoted":
+        findings.append(Finding(path=path, message="only promoted aids may declare proof_role='canonical-proof'"))
+    if isinstance(entrypoint, str) and payload.get("proof_role") != "canonical-proof":
+        workflow_path = _referenced_from_canonical_workflow(entrypoint, root=root, tracked=tracked)
+        if workflow_path is not None:
+            findings.append(
+                Finding(
+                    path=path,
+                    message=(
+                        "candidate or advisory agent aids must not be hidden required workflow entrypoints; "
+                        f"referenced by {workflow_path}"
+                    ),
+                )
+            )
+    return findings
+
+
 def agent_aid_findings(paths: list[str] | None = None, root: Path = REPO_ROOT) -> list[Finding]:
     tracked = _tracked_files(root) if paths is None else sorted(_as_posix(path) for path in paths)
     aid_paths = _agent_aid_paths(tracked)
@@ -154,6 +228,7 @@ def agent_aid_findings(paths: list[str] | None = None, root: Path = REPO_ROOT) -
         elif payload.get("type") != expected_type:
             findings.append(Finding(path=path, message=f"manifest type must be {expected_type!r} for {path}"))
         findings.extend(_entrypoint_findings(path, payload, tracked_set))
+        findings.extend(_safety_policy_findings(path, payload, root=root, tracked=tracked_set))
 
     return findings
 
