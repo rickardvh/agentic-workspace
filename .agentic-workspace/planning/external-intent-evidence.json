@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T12:13:10+00:00",
+  "refreshed_at": "2026-04-28T12:21:08+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T12:13:10+00:00",
-    "item_count": 513,
+    "refreshed_at": "2026-04-28T12:21:08+00:00",
+    "item_count": 514,
     "open_count": 26,
-    "closed_count": 487,
+    "closed_count": 488,
     "limit": 600,
     "state": "all",
     "state_source": "previous_evidence",
@@ -8307,7 +8307,7 @@
       "system": "github",
       "id": "#527",
       "title": "[Review]: Suppress legacy archive continuations when all tracked refs are externally closed",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "optional",
@@ -8317,7 +8317,24 @@
         "review/friction"
       ],
       "created_at": "2026-04-28T12:12:46Z",
-      "updated_at": "2026-04-28T12:12:46Z",
+      "updated_at": "2026-04-28T12:20:38Z",
+      "comments_count": 1
+    },
+    {
+      "system": "github",
+      "id": "#528",
+      "title": "[Workspace]: Route repeated validation failures into interface and scaffold improvements",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/528",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T12:13:24Z",
+      "updated_at": "2026-04-28T12:13:24Z",
       "comments_count": 0
     }
   ]
