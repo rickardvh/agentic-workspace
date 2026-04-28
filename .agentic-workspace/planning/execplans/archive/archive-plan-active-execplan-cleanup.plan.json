@@ -1,0 +1,270 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Clean state active execplan rows during archive",
+  "goal": [
+    "Implement #522 by making archive-plan --apply-cleanup clean state.toml active rows whose execplan field points at the archived plan.",
+    "Preserve the package's existing archive command and planning cleanup model."
+  ],
+  "non_goals": [
+    "Do not redesign planning state storage.",
+    "Do not add a new cleanup command.",
+    "Do not make archive-plan silently delete unrelated active work."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "archive-plan cleanup does not leave broken active planning state after archiving the selected plan",
+      "constraints": "match only active rows that point at the archived plan through known execplan/path/surface fields",
+      "latitude": "may extend cleanup matching and focused tests",
+      "escalation": "stop if cleanup would require broad TOML rewrite semantics or ambiguous deletion of unrelated active rows"
+    },
+    "execution": {
+      "milestone": "#522",
+      "status": "completed",
+      "next_step": "archive this plan and continue the next workflow-friction-polish issue",
+      "proof": "focused archive cleanup tests, package planning tests, ruff, doctor, and planning surface checks passed"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/archive-plan-active-execplan-cleanup.plan.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py"
+      ],
+      "invariants": [
+        "archive-plan only removes or closes rows that point at the archived plan",
+        "unrelated active rows are preserved",
+        "cleanup remains visible through actions or warnings"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "remove small package-use friction discovered during dogfooding",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "workflow-friction-polish"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #522 closes, continue the next workflow-friction-polish issue or refreshed higher-priority issue"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "clean archive closeout for active state rows using execplan references",
+    "intentionally deferred": "historical/live tracking and external evidence polish remain in the lane",
+    "discovered implications": "No new shipped feature is needed; the archive helper itself now absorbs the repeated cleanup friction.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice",
+    "next likely slice": "continue #523 or refreshed next workflow-friction-polish issue"
+  },
+  "intent_interpretation": {
+    "literal request": "archive-plan cleanup misses state.toml active execplan rows.",
+    "inferred intended outcome": "Using the package's archive command should not require manual state cleanup.",
+    "chosen concrete what": "Extend existing archive cleanup matching and tests.",
+    "interpretation distance": "low",
+    "review guidance": "Check that cleanup is targeted and unrelated active rows stay intact."
+  },
+  "execution_bounds": {
+    "allowed paths": "archive cleanup implementation, package installer tests, active plan/state",
+    "max changed files": "about 4",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q -k \"archive_execplan\"; uv run python scripts/check/check_planning_surfaces.py --strict",
+    "ask-before-refactor threshold": "before rewriting planning state serialization broadly",
+    "stop before touching": "external evidence refresh logic or unrelated planning projections"
+  },
+  "stop_conditions": {
+    "stop when": "cleanup cannot distinguish the archived plan from unrelated active rows",
+    "escalate when boundary reached": "fix requires planning-state schema redesign",
+    "escalate on proof failure": "archive cleanup cannot be proven with focused tests"
+  },
+  "context_budget": {
+    "live working set": "archive cleanup code, focused installer tests, this execplan",
+    "recoverable later": "issue #522 and archived prior closeout evidence",
+    "externalize before shift": "record exact cleanup behavior and validation in this plan",
+    "pre-work config pull": "summary, issue view, proof selection, workflow obligations",
+    "pre-work memory pull": "none; issue and code locality are sufficient",
+    "tiny resumability note": "extend archive cleanup to match active rows with execplan fields",
+    "context-shift triggers": "proof failure, cleanup ambiguity, or before commit"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete #522 with a narrow archive cleanup fix.",
+    "hard constraints": "Do not remove unrelated active work; keep archive-plan as the cleanup path.",
+    "agent may decide locally": "matching helper shape and focused test fixtures.",
+    "escalate when": "state cleanup target cannot be unambiguously identified."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#522",
+      "label": "Archive cleanup active execplan row issue",
+      "role": "source",
+      "locator": "GitHub issue #522"
+    },
+    {
+      "kind": "issue",
+      "target": "#523",
+      "label": "Next workflow-friction-polish slice",
+      "role": "next_lane",
+      "locator": "GitHub issue #523"
+    },
+    {
+      "kind": "issue",
+      "target": "#524",
+      "label": "Remaining workflow-friction-polish slice",
+      "role": "next_lane",
+      "locator": "GitHub issue #524"
+    },
+    {
+      "kind": "issue",
+      "target": "#533",
+      "label": "Remaining workflow-friction-polish slice",
+      "role": "next_lane",
+      "locator": "GitHub issue #533"
+    }
+  ],
+  "active_milestone": {
+    "id": "#522",
+    "status": "completed",
+    "scope": "archive-plan cleanup for active execplan references",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Patch archive cleanup matching and focused tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/archive-plan-active-execplan-cleanup.plan.json"
+  ],
+  "invariants": [
+    "Archive cleanup must remain targeted to the archived plan."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"archive_execplan\"",
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "cd packages/planning && uv run ruff check .",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "rg -n '_active_execplan_reference|execplan =|active_items|raw\\\\.get\\\\(\\\"execplan\\\"\\\\)|raw\\\\.get\\\\(\\\"path\\\"\\\\)' packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/archive-plan-active-execplan-cleanup.plan.json"
+  ],
+  "required_tools": [
+    "uv",
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "archive-plan --apply-cleanup removes or closes active state rows whose execplan field points at the archived plan.",
+    "Unrelated active state rows are preserved.",
+    "Focused package tests and planning surface checks pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": ".agentic-workspace/planning/execplans/archive-plan-active-execplan-cleanup.plan.json",
+    "what happened": "Archive cleanup now normalizes active execplan references across path, surface, execplan, and plan fields; compact todo rows are removed when the closed-state cleanup path runs.",
+    "scope touched": "archive cleanup implementation, focused installer regression tests, and this planning record",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; planning state/execplan closeout",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"archive_execplan\"; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py --strict; rg stale-reference sweep for active execplan reference aliases",
+    "result for continuation": "#522 is complete; workflow-friction-polish remains open in state.toml.",
+    "next step": "Archive this plan, close #522, refresh issue evidence, then continue the next planned issue."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed inside archive cleanup, focused tests, and planning closeout surfaces",
+    "proof status": "passed",
+    "intent served": "yes; archive-plan --apply-cleanup no longer misses active rows using execplan references",
+    "config compliance": "used compact summary/proof/doctor and planning package tests",
+    "misinterpretation risk": "low; regression test covers the reported field shape and preserves unrelated active rows",
+    "follow-on decision": "continue the existing workflow-friction-polish lane; no new issue needed"
+  },
+  "proof_report": {
+    "validation proof": "archive_execplan focused tests passed; full packages/planning installer tests passed; ruff passed; planning doctor and strict planning-surface check passed; stale-reference sweep ran across active execplan reference aliases",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "33 archive-focused tests passed, 159 package planning installer tests passed, ruff reported all checks passed, doctor health was healthy, planning surface health reported no drift warnings, and rg showed the new helper callsites plus regression fixtures for execplan references."
+  },
+  "intent_satisfaction": {
+    "original intent": "#522: archive-plan cleanup misses state.toml active execplan rows.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The cleanup matcher recognizes execplan fields in active execplans and compact todo rows; the regression test proves the archived plan reference is removed while unrelated active work remains.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "make existing archive cleanup complete instead of adding a new repair path",
+    "broader-lane validation question": "Does this remove manual post-archive cleanup without making archive-plan risky?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#522 is complete, but the parent workflow-friction-polish lane still has other open issues.",
+    "evidence carried forward": "Implementation and regression tests are in the package planning archive cleanup path; continuation remains in state.toml.",
+    "reopen trigger": "Reopen if archive-plan --apply-cleanup again leaves a live state row pointing at an archived execplan through a supported reference field."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No separate durable knowledge surface is needed; the product behavior and regression test carry the learning.",
+    "motivation worth preserving": "Avoid adding new workflow surfaces when an existing command can absorb the friction directly.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "archive-plan cleanup now removes stale active rows that point at the archived plan through execplan fields, including compact todo rows when closed-state cleanup runs.",
+    "validation confirmed": "Focused archive tests, full package planning installer tests, ruff, doctor, strict planning-surface checks, and stale-reference sweep passed.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml",
+    "post-work posterity capture": "Regression coverage in packages/planning/tests/test_installer.py is the durable guardrail.",
+    "knowledge promoted (Memory/Docs/Config)": "none; the behavior is captured in code and tests.",
+    "resume from": ".agentic-workspace/planning/state.toml workflow-friction-polish queue"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Archive cleanup had alias drift across path/surface/plan/execplan fields.",
+      "Closed-state cleanup could bypass compact todo cleanup."
+    ],
+    "signals fixed": [
+      "Added a shared active execplan reference normalizer.",
+      "Removed compact todo rows during closed-state cleanup."
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "No new issue for plan closeout prose overhead; existing structured-first lanes already cover that broader friction."
+    ],
+    "next owner": ".agentic-workspace/planning/state.toml"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Execution-level details are captured by this archived plan and do not need Memory promotion.",
+          "owner": "archive",
+          "source": "finished_run_review"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue workflow-friction-polish with #523, #524, or #533 from checked-in state.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Continue workflow-friction-polish with the next open issue after #522 closes.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #522 after closing #515."
+  ]
+}

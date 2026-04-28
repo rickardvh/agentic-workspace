@@ -8030,6 +8030,11 @@ def _surface_execplan_reference(surface_value: str) -> str | None:
     return None
 
 
+def _active_execplan_reference(raw: dict[str, Any]) -> str:
+    value = str(raw.get("path") or raw.get("surface") or raw.get("execplan") or raw.get("plan") or "")
+    return _surface_execplan_reference(value) or value.strip()
+
+
 def _resolve_execplan_path(target_root: Path, plan: str) -> Path | None:
     candidate = Path(plan)
     if candidate.is_absolute():
@@ -8351,10 +8356,7 @@ def _close_state_active_execplan_for_archive(
         if not isinstance(raw, dict):
             kept_execplans.append(raw)
             continue
-        item_surface = (
-            _surface_execplan_reference(str(raw.get("path") or raw.get("surface") or ""))
-            or str(raw.get("path") or raw.get("surface") or "").strip()
-        )
+        item_surface = _active_execplan_reference(raw)
         if item_surface != relative:
             kept_execplans.append(raw)
             continue
@@ -8380,6 +8382,18 @@ def _close_state_active_execplan_for_archive(
     work_items = [item for item in work_items if not (isinstance(item, dict) and str(item.get("id", "")) in closed_ids)]
     work_items.extend(closed_items)
     next_state["work_items"] = work_items
+    if isinstance(next_state.get("todo"), dict):
+        todo_state = dict(next_state["todo"])
+        for bucket in ("active_items", "queued_items"):
+            raw_items = todo_state.get(bucket, [])
+            if not isinstance(raw_items, list):
+                continue
+            todo_state[bucket] = [
+                item
+                for item in raw_items
+                if not (isinstance(item, dict) and (_active_execplan_reference(item) == relative or str(item.get("id", "")) in closed_ids))
+            ]
+        next_state["todo"] = todo_state
     details = [f"move active execplan '{item['id']}' to closed work_items with durable residue routing" for item in closed_items]
     return {"changed": True, "state": next_state, "details": details}
 
@@ -8446,10 +8460,7 @@ def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path)
                 for raw in active.get("execplans", []):
                     if not isinstance(raw, dict):
                         continue
-                    item_surface = (
-                        _surface_execplan_reference(str(raw.get("path") or raw.get("surface") or ""))
-                        or str(raw.get("path") or raw.get("surface") or "").strip()
-                    )
+                    item_surface = _active_execplan_reference(raw)
                     if relative != item_surface:
                         continue
                     fields = {str(key): str(value) for key, value in raw.items()}
@@ -8459,9 +8470,7 @@ def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path)
                     for raw in state.get("todo", {}).get(bucket, []):
                         if not isinstance(raw, dict):
                             continue
-                        item_plan = _surface_execplan_reference(str(raw.get("plan", ""))) or str(raw.get("plan", "")).strip()
-                        item_surface = _surface_execplan_reference(str(raw.get("surface", ""))) or str(raw.get("surface", "")).strip()
-                        if relative not in {item_plan, item_surface}:
+                        if relative != _active_execplan_reference(raw):
                             continue
                         fields = {str(key): str(value) for key, value in raw.items()}
                         matches.append(TodoItem(fields=fields, field_order=list(fields.keys()), start=0, end=0))

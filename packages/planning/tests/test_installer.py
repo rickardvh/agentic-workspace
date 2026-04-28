@@ -2962,6 +2962,48 @@ execplans = [
     assert any(action.kind == "updated" and "remove TODO item '#257'" in action.detail for action in result.actions)
 
 
+def test_archive_execplan_apply_cleanup_removes_active_execplan_field_pointer(tmp_path: Path) -> None:
+    plan_ref = ".agentic-workspace/planning/execplans/module-manifest-components.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        f"""
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+work_items = []
+
+[todo]
+active_items = [
+  {{ id = "module-manifest-components-todo", execplan = "{plan_ref}", status = "active" }},
+]
+queued_items = []
+
+[active]
+execplans = [
+  {{ id = "module-manifest-components", execplan = "{plan_ref}", maturity = "active", status = "active" }},
+  {{ id = "unrelated-active-plan", execplan = ".agentic-workspace/planning/execplans/unrelated-active-plan.plan.json", maturity = "active", status = "active" }},
+]
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / plan_ref
+    unrelated_path = tmp_path / ".agentic-workspace/planning/execplans/unrelated-active-plan.plan.json"
+    _write_execplan_record(plan_path, item_id="module-manifest-components", status="completed")
+    _write_execplan_record(unrelated_path, item_id="unrelated-active-plan", status="active")
+
+    result = archive_execplan("module-manifest-components", target=tmp_path, apply_cleanup=True)
+
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/module-manifest-components.plan.json"
+
+    assert archived_path.exists()
+    assert not plan_path.exists()
+    assert "module-manifest-components" not in state_text
+    assert "active_items = []" in state_text
+    assert "unrelated-active-plan" in state_text
+    assert any(action.kind == "updated" and "remove TODO item 'module-manifest-components'" in action.detail for action in result.actions)
+
+
 def test_archive_execplan_apply_cleanup_merges_compact_state_todo_and_roadmap_cleanup(tmp_path: Path) -> None:
     plan_ref = ".agentic-workspace/planning/execplans/planning-backed-dogfooding-guardrail.plan.json"
     _write(
