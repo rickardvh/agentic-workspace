@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T01:35:13+00:00",
+  "refreshed_at": "2026-04-28T01:42:10+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T01:35:13+00:00",
+    "refreshed_at": "2026-04-28T01:42:10+00:00",
     "item_count": 461,
-    "open_count": 5,
-    "closed_count": 456,
+    "open_count": 4,
+    "closed_count": 457,
     "limit": 600,
     "state": "all",
     "state_source": "previous_evidence",
@@ -6698,7 +6698,7 @@
       "system": "github",
       "id": "#432",
       "title": "[Workspace]: Separate generic command-package schemas from workspace-specific contracts",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#430",
       "planning_residue_expected": "optional",
@@ -6708,8 +6708,8 @@
         "planning"
       ],
       "created_at": "2026-04-27T12:34:32Z",
-      "updated_at": "2026-04-27T12:34:32Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T01:41:52Z",
+      "comments_count": 1
     },
     {
       "system": "github",
