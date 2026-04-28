@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T00:55:31+00:00",
+  "refreshed_at": "2026-04-28T01:06:09+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T00:55:31+00:00",
+    "refreshed_at": "2026-04-28T01:06:09+00:00",
     "item_count": 460,
-    "open_count": 10,
-    "closed_count": 450,
+    "open_count": 9,
+    "closed_count": 451,
     "limit": 600,
     "state": "all",
     "state_source": "previous_evidence",
@@ -6834,7 +6834,7 @@
       "system": "github",
       "id": "#440",
       "title": "[Workspace]: Surface review artifact retention as actionable cleanup",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#436",
       "planning_residue_expected": "optional",
@@ -6844,8 +6844,8 @@
         "planning"
       ],
       "created_at": "2026-04-27T12:49:54Z",
-      "updated_at": "2026-04-27T12:49:54Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T01:05:47Z",
+      "comments_count": 1
     },
     {
       "system": "github",
