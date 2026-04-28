@@ -5,6 +5,7 @@
   "required": [
     "schema_version",
     "package_footprint",
+    "module_profiles",
     "feature_tiers",
     "advanced_features",
     "module_command_args",
@@ -76,6 +77,64 @@
         }
       },
       "additionalProperties": false
+    },
+    "module_profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "profile_kind",
+          "selected_modules",
+          "preset",
+          "default_active",
+          "activation",
+          "cost_model",
+          "selection_rule"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "profile_kind": {
+            "enum": [
+              "root-routing",
+              "installer-preset",
+              "module-selection"
+            ]
+          },
+          "selected_modules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "preset": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default_active": {
+            "type": "boolean"
+          },
+          "activation": {
+            "type": "string"
+          },
+          "cost_model": {
+            "type": "string"
+          },
+          "selection_rule": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
     },
     "feature_tiers": {
       "type": "array",

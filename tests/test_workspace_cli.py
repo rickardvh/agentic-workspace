@@ -64,6 +64,17 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert cli.main(["modules", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert [entry["id"] for entry in payload["module_profiles"]] == [
+        "routing-only",
+        "planning",
+        "memory",
+        "full",
+    ]
+    full_profile = next(entry for entry in payload["module_profiles"] if entry["id"] == "full")
+    assert full_profile["profile_kind"] == "installer-preset"
+    assert full_profile["selected_modules"] == ["planning", "memory"]
+    assert full_profile["selection_rule"] == "expands to every bundled module marked include_in_full_preset"
+    assert payload["feature_tiers_compatibility"]["canonical_field"] == "module_profiles"
     assert [entry["id"] for entry in payload["feature_tiers"]] == [
         "routing-only",
         "planning",
@@ -3183,7 +3194,8 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["feature_tier"]["active"]["id"] == "full"
     assert payload["feature_tier"]["active"]["modules"] == ["planning", "memory"]
     assert payload["feature_tier"]["active"]["source"] == "installed_modules"
-    assert payload["feature_tier"]["default_rule"].startswith("Use the smallest tier")
+    assert payload["feature_tier"]["default_rule"].startswith("Use the smallest module profile")
+    assert payload["feature_tier"]["compatibility_status"] == "deprecated-alias-for-module-profiles"
     assert "maintainer-dogfooding" not in {tier["id"] for tier in payload["feature_tier"]["available_tiers"]}
     assert payload["health"] == "healthy"
     assert payload["output_contract"]["optimization_bias"] == "balanced"

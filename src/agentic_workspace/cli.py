@@ -177,6 +177,7 @@ _IMPROVEMENT_LATITUDE_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for ite
 _OPTIMIZATION_BIAS_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for item in _OPTIMIZATION_BIAS_POLICY["modes"]}
 _MODULE_REGISTRY_ENTRIES = {str(item["name"]): copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST["modules"]}
 _PACKAGE_FOOTPRINT = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("package_footprint", {}))
+_MODULE_PROFILE_ENTRIES = tuple(copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("module_profiles", []))
 _FEATURE_TIER_ENTRIES = tuple(copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("feature_tiers", []))
 _ADVANCED_FEATURE_ENTRIES = tuple(copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("advanced_features", []))
 _CLI_COMMAND_MANIFESTS = {str(item["name"]): copy.deepcopy(item) for item in _CLI_COMMANDS_MANIFEST["commands"]}
@@ -2278,8 +2279,24 @@ def _ordered_module_names(descriptors: dict[str, ModuleDescriptor]) -> list[str]
 
 def _preset_modules(descriptors: dict[str, ModuleDescriptor]) -> dict[str, list[str]]:
     ordered_module_names = _ordered_module_names(descriptors)
-    presets = {module_name: [module_name] for module_name in ordered_module_names}
-    presets["full"] = [module_name for module_name in ordered_module_names if descriptors[module_name].include_in_full_preset]
+    presets: dict[str, list[str]] = {}
+    profile_entries = _MODULE_PROFILE_ENTRIES or tuple(
+        {
+            "id": module_name,
+            "preset": module_name,
+            "selected_modules": [module_name],
+        }
+        for module_name in ordered_module_names
+    )
+    for profile in profile_entries:
+        preset = profile.get("preset")
+        if not isinstance(preset, str) or not preset:
+            continue
+        selected = [str(module_name) for module_name in profile.get("selected_modules", []) if str(module_name) in descriptors]
+        presets[preset] = [module_name for module_name in ordered_module_names if module_name in selected]
+    for module_name in ordered_module_names:
+        presets.setdefault(module_name, [module_name])
+    presets.setdefault("full", [module_name for module_name in ordered_module_names if descriptors[module_name].include_in_full_preset])
     return presets
 
 
@@ -2294,32 +2311,40 @@ def _feature_tier_payload(
     active_modules = installed_modules if installed_modules is not None else selected_modules
     active_set = set(active_modules)
     active_source = "installed_modules" if installed_modules is not None else "selected_modules"
-    active_tier = next(
-        (tier for tier in _FEATURE_TIER_ENTRIES if bool(tier.get("default_active", True)) and set(tier.get("modules", [])) == active_set),
+    active_profile = next(
+        (
+            profile
+            for profile in _MODULE_PROFILE_ENTRIES
+            if bool(profile.get("default_active", True)) and set(profile.get("selected_modules", [])) == active_set
+        ),
         None,
     )
-    if active_tier is None:
-        active_tier = {
+    if active_profile is None:
+        active_profile = {
             "id": "custom",
             "label": "Custom",
-            "modules": list(active_modules),
+            "selected_modules": list(active_modules),
             "preset": resolved_preset,
             "default_active": True,
             "activation": "Custom module selection; inspect selected_modules for the exact footprint.",
             "cost_model": "depends on selected modules.",
+            "profile_kind": "module-selection",
+            "selection_rule": "explicit selected module ids",
         }
     active = {
-        "id": str(active_tier.get("id", "")),
-        "label": str(active_tier.get("label", active_tier.get("id", ""))),
+        "id": str(active_profile.get("id", "")),
+        "label": str(active_profile.get("label", active_profile.get("id", ""))),
         "modules": list(active_modules),
-        "preset": active_tier.get("preset") or resolved_preset,
-        "activation": str(active_tier.get("activation", "")),
+        "preset": active_profile.get("preset") or resolved_preset,
+        "activation": str(active_profile.get("activation", "")),
         "source": active_source,
     }
     payload: dict[str, Any] = {
         "schema_version": "workspace-feature-tiers/v1",
+        "compatibility_status": "deprecated-alias-for-module-profiles",
+        "canonical_surface": "agentic-workspace modules --target ./repo --format json -> module_profiles",
         "active": active,
-        "default_rule": "Use the smallest tier whose modules match the repo footprint; source-checkout maintainer tooling is not a shipped tier.",
+        "default_rule": "Use the smallest module profile whose selected modules match the repo footprint; source-checkout maintainer tooling is not a shipped tier.",
         "detail_command": "agentic-workspace modules --target ./repo --format json",
         "advanced_policy": _advanced_feature_policy_payload(config=config, include_catalog=not compact),
     }
@@ -2327,16 +2352,17 @@ def _feature_tier_payload(
         return payload
     payload["available_tiers"] = [
         {
-            "id": str(tier["id"]),
-            "label": str(tier["label"]),
-            "modules": list(tier.get("modules", [])),
-            "preset": tier.get("preset"),
-            "default_active": bool(tier.get("default_active", True)),
-            "activation": str(tier.get("activation", "")),
-            "cost_model": str(tier.get("cost_model", "")),
+            "id": str(profile["id"]),
+            "label": str(profile["label"]),
+            "modules": list(profile.get("selected_modules", [])),
+            "preset": profile.get("preset"),
+            "default_active": bool(profile.get("default_active", True)),
+            "activation": str(profile.get("activation", "")),
+            "cost_model": str(profile.get("cost_model", "")),
         }
-        for tier in _FEATURE_TIER_ENTRIES
+        for profile in _MODULE_PROFILE_ENTRIES
     ]
+    payload["available_module_profiles"] = copy.deepcopy(list(_MODULE_PROFILE_ENTRIES))
     return payload
 
 
@@ -7694,7 +7720,13 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     payload = {
         "package_footprint": copy.deepcopy(_PACKAGE_FOOTPRINT),
+        "module_profiles": copy.deepcopy(list(_MODULE_PROFILE_ENTRIES)),
         "feature_tiers": copy.deepcopy(list(_FEATURE_TIER_ENTRIES)),
+        "feature_tiers_compatibility": {
+            "status": "deprecated-alias",
+            "canonical_field": "module_profiles",
+            "rule": "Feature tiers are retained for weak-agent/backward compatibility; module_profiles are the canonical module-selection contract.",
+        },
         "advanced_features": copy.deepcopy(list(_ADVANCED_FEATURE_ENTRIES)),
         "modules": [
             {

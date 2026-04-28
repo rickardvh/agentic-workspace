@@ -1,0 +1,248 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generic Module Profiles",
+  "goal": [
+    "Implement #490 by replacing first-party feature-tier ontology with generic module profiles while preserving existing preset ergonomics."
+  ],
+  "non_goals": [
+    "Do not remove planning or memory.",
+    "Do not build a plugin marketplace.",
+    "Do not break `--preset memory|planning|full`.",
+    "Do not make mutating lifecycle adapters generic in this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "The registry treats planning and memory as bundled modules selected by generic profiles; feature tiers remain only as compatibility output.",
+      "constraints": "Preserve public preset behavior and keep lifecycle safety unchanged.",
+      "latitude": "Add canonical registry fields, compatibility aliases, README wording, and focused tests.",
+      "escalation": "Stop before third-party loading or lifecycle adapter redesign."
+    },
+    "execution": {
+      "milestone": "generic-module-profiles",
+      "status": "completed",
+      "next_step": "Archive this plan, commit, close #490, refresh external evidence, then continue #485 with #510.",
+      "proof": "Run contract tooling, focused modules/preset tests, full workspace CLI tests, ruff, proof selector, and planning closeout."
+    },
+    "scope": {
+      "touched": [
+        "README.md",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/module_registry.json",
+        "src/agentic_workspace/contracts/schemas/module_registry.schema.json",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/generic-module-profiles.plan.json"
+      ],
+      "invariants": [
+        "Preset names and selected module behavior remain unchanged.",
+        "Feature tiers are no longer the canonical registry concept.",
+        "Routing-only remains absence of selected modules plus root routing surfaces."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Keep the root orchestrator thin, boring, generic, and strictly bounded.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression",
+    "parent lane": "#485"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "follow-on detail": "#510-#514 remain after #490.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #490 closes, reingest and promote the next module-boundary-compression child."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Later MCP-style module component work can build on module profiles instead of feature tiers.",
+    "intentionally deferred": "Third-party discovery, MCP adapter boundary, structured-result tool metadata, and lifecycle adapter genericization.",
+    "discovered implications": "",
+    "proof achieved now": "module_profiles are schema-backed, emitted by modules, used for preset expansion, and feature_tier output is marked compatibility.",
+    "validation still needed": "Archive plan and commit after closeout checks.",
+    "next likely slice": "#510"
+  },
+  "intent_interpretation": {
+    "literal request": "Replace first-party feature tiers with generic module profiles and manifests.",
+    "inferred intended outcome": "Stop making planning/memory/full the orchestrator ontology while preserving convenient installer presets.",
+    "chosen concrete what": "Add canonical module_profiles, derive preset/module selection from profiles, and keep feature_tiers as deprecated compatibility output.",
+    "interpretation distance": "medium",
+    "review guidance": "Review whether compatibility output is acceptable until downstream report keys migrate."
+  },
+  "execution_bounds": {
+    "allowed paths": "README, module registry contract/schema, CLI registry/profile selection, focused tests, planning surfaces.",
+    "max changed files": "Prefer 5-7 files.",
+    "required validation commands": "contract tooling, focused modules/preset tests, full workspace CLI tests, ruff, proof selector, planning checks.",
+    "ask-before-refactor threshold": "Stop before adding third-party module loading or changing lifecycle behavior.",
+    "stop before touching": "pyproject dependencies, generated packages, mutating lifecycle adapter internals, MCP runtime dependency."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make generic module profiles the canonical selection model while preserving existing presets.",
+    "hard constraints": "Do not break preset behavior or lifecycle safety.",
+    "agent may decide locally": "Compatibility field names, schema wording, and test assertions.",
+    "escalate when": "The change requires third-party loading, lifecycle genericization, or removal of public compatibility fields."
+  },
+  "stop_conditions": {
+    "stop when": "Generic module profiles are canonical and behavior-compatible.",
+    "escalate when boundary reached": "The change requires removing public feature_tier/report fields immediately.",
+    "escalate on scope drift": "The work becomes plugin discovery or lifecycle adapter genericization.",
+    "escalate on proof failure": "Preset selection changes unexpectedly."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#490",
+      "label": "generic module profiles",
+      "role": "source_intent",
+      "locator": "GitHub issue #490"
+    },
+    {
+      "kind": "issue",
+      "target": "#485",
+      "label": "module boundary compression",
+      "role": "parent_intent",
+      "locator": "GitHub issue #485"
+    }
+  ],
+  "active_milestone": {
+    "id": "generic-module-profiles",
+    "status": "completed",
+    "scope": "Make module profiles canonical while preserving preset behavior.",
+    "ready": "#490 is the selected next child for #485.",
+    "blocked": "None.",
+    "optional_deps": "None."
+  },
+  "immediate_next_action": [
+    "Add module_profiles to the registry/schema and use them in CLI output and preset selection."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "README.md",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/module_registry.json",
+    "src/agentic_workspace/contracts/schemas/module_registry.schema.json",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/generic-module-profiles.plan.json"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"modules_command_lists or selected_modules_uses_descriptor_owned_presets or preset_conflicts\"",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed README.md src/agentic_workspace/cli.py src/agentic_workspace/contracts/module_registry.json src/agentic_workspace/contracts/schemas/module_registry.schema.json tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/generic-module-profiles.plan.json --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace report --target . --section closeout_trust --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json"
+  ],
+  "completion_criteria": [
+    "The module registry has schema-backed module_profiles.",
+    "Presets compile to selected module ids from module profile data.",
+    "Feature tiers are compatibility output, not canonical registry authority.",
+    "Planning and memory remain bundled first-party examples of the module contract."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "Issue #490 and checked-in roadmap.",
+    "what happened": "Added schema-backed module_profiles to the module registry, used profiles for preset expansion, emitted module_profiles from the modules command, and marked feature_tier report output as a deprecated compatibility alias.",
+    "scope touched": "README, module registry contract/schema, CLI module profile/preset handling, focused tests, planning closeout.",
+    "changed surfaces": "README.md; src/agentic_workspace/cli.py; src/agentic_workspace/contracts/module_registry.json; src/agentic_workspace/contracts/schemas/module_registry.schema.json; tests/test_workspace_cli.py.",
+    "validations run": "focused module/preset tests, full workspace CLI tests, ruff, contract tooling, proof selector, root CLI authority query, planning checks.",
+    "result for continuation": "#490 is satisfied; #510-#514 remain routed under #485.",
+    "next step": "Archive this plan, commit, close #490, refresh external evidence, then continue the module-boundary-compression lane."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no lifecycle mutation, dependency, or third-party loading behavior changed.",
+    "proof status": "passed local validation and proof selection.",
+    "intent served": "yes; module profiles are canonical registry data and presets expand from profile selections.",
+    "config compliance": "used package summary/report/proof/doctor/defaults workflow and checked-in plan closeout.",
+    "misinterpretation risk": "medium-low; feature_tier compatibility fields remain intentionally until downstream surfaces migrate.",
+    "follow-on decision": "archive this slice but keep #485 open through #510-#514."
+  },
+  "proof_report": {
+    "validation proof": "Local checks pass for focused module/preset behavior, full workspace CLI tests, ruff, contract tooling, proof selector, and planning doctor.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "modules output exposes module_profiles and compatibility metadata; preset selection uses module profile selected_modules; full report marks feature_tier as a deprecated alias."
+  },
+  "intent_satisfaction": {
+    "original intent": "#490",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The registry has canonical module_profiles, first-party presets compile from profile selected_modules, and feature_tier ontology is demoted to compatibility output.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Root orchestrator should be generic and bounded; first-party modules should be examples, not ontology.",
+    "slice shaping bias": "Prefer compatibility-preserving contract migration over breaking public fields.",
+    "broader-lane validation question": "Does this make #510 MCP-style component alignment easier?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane module-boundary-compression activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Generic module profiles are schema-backed and emitted; feature tiers are compatibility output.",
+    "validation confirmed": "Focused and full CLI tests plus ruff, contract tooling, proof selector, and planning checks passed.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml lane module-boundary-compression.",
+    "post-work posterity capture": "Archived execplan plus module_registry.json schema-backed contract metadata.",
+    "knowledge promoted (Memory/Docs/Config)": "Durable product decision lives in module_registry.json and README; no Memory update needed.",
+    "resume from": "Reingest open issues and choose #510 after closing #490."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Initial execplan scaffold omitted delegated_judgment, which made active contract projections unavailable until corrected."
+    ],
+    "signals fixed": [
+      "Added delegated_judgment before closeout; broader scaffold issue is already tracked by #515."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "#515"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#510-#514 remain under #485.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": ""
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Durable product decision lives in module_registry.json and README; no Memory update needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Continue generic module component alignment.",
+          "owner": "#510",
+          "source": ""
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Initial plan created from #490."
+  ]
+}
