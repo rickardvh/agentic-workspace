@@ -104,8 +104,7 @@
         "AGENTS.md",
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans",
-        "docs/contributor-playbook.md",
-        "docs/maintainer-commands.md"
+        "docs/contributor-playbook.md"
       ],
       "generated_artifacts": [],
       "startup_steps": [
@@ -120,8 +119,7 @@
       "root_agents_cleanup_blocks": [],
       "capabilities": [
         "active-execution-state",
-        "execplan-routing",
-        "generated-maintainer-guidance"
+        "execplan-routing"
       ],
       "dependencies": [],
       "conflicts": [],

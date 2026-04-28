@@ -148,6 +148,19 @@ def _load_toml_payload(*args, **kwargs):
     return config_lib.load_toml_payload(*args, **kwargs)
 
 
+def _is_agentic_workspace_source_checkout(target_root: Path | None) -> bool:
+    if target_root is None:
+        return False
+    pyproject_path = target_root / "pyproject.toml"
+    if not pyproject_path.exists() or not (target_root / "src" / "agentic_workspace").is_dir():
+        return False
+    try:
+        pyproject_text = pyproject_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return 'name = "agentic-workspace"' in pyproject_text or "name = 'agentic-workspace'" in pyproject_text
+
+
 SETUP_FINDINGS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["setup_findings_path"])
 _SETUP_FINDINGS_POLICY = setup_findings_policy_manifest()
 SETUP_FINDINGS_KIND = str(_SETUP_FINDINGS_POLICY["accepted_kind"])
@@ -792,10 +805,69 @@ def _improvement_intake_payload(
     setup_findings = _setup_findings_input_payload(target_root=target_root) if target_root is not None else None
     review_enabled = bool(config and "review_artifacts" in config.advanced_features)
     signal_candidates = _improvement_signal_candidates_from_repo_friction(repo_friction)
-    return {
+    source_checkout = _is_agentic_workspace_source_checkout(target_root)
+    subtypes: list[dict[str, Any]] = [
+        {
+            "id": "setup_finding",
+            "audience": "target-repo",
+            "source": SETUP_FINDINGS_PATH.as_posix(),
+            "evidence_class": "agent-provided setup artifact",
+            "confidence_field": "confidence",
+            "accepted_classes": list(SUPPORTED_SETUP_FINDING_CLASSES),
+            "primary_route": "repo_friction.external_evidence or planning promotion review",
+            "selector": "agentic-workspace setup --target ./repo --format json",
+        },
+        {
+            "id": "review_finding",
+            "audience": "target-repo",
+            "source": ".agentic-workspace/planning/reviews/",
+            "evidence_class": "bounded review finding",
+            "confidence_field": "review mode and finding severity/trust",
+            "primary_route": "planning review promotion only when the review_artifacts advanced feature is enabled or explicitly selected",
+            "selector": "agentic-workspace report --target ./repo --section closeout_trust --format json",
+            "advanced_feature": "review_artifacts",
+        },
+        {
+            "id": "validation_friction",
+            "audience": "target-repo",
+            "source": "src/agentic_workspace/contracts/repo_friction_policy.json",
+            "evidence_class": "proof or validation friction",
+            "confidence_field": "repeated failure against otherwise straightforward work",
+            "primary_route": "repo_friction evidence, config/check improvement, or proof-route cleanup",
+            "selector": "agentic-workspace defaults --section improvement_latitude --format json",
+        },
+        {
+            "id": "memory_improvement_signal",
+            "audience": "target-repo",
+            "source": ".agentic-workspace/memory/WORKFLOW.md",
+            "evidence_class": "durable memory note carrying upstream improvement pressure",
+            "confidence_field": "memory_role=improvement_signal plus config_treatment",
+            "primary_route": "Memory note, config/check follow-up, docs clarification, or issue follow-up",
+            "selector": "agentic-workspace report --target ./repo --section repo_friction --format json",
+        },
+    ]
+    source_checkout_only_subtypes = [
+        {
+            "id": "dogfooding_friction",
+            "audience": "source-checkout-only",
+            "source": "docs/dogfooding-feedback.md",
+            "evidence_class": "maintainer dogfooding signal",
+            "confidence_field": "repeated practical friction or maintainer override",
+            "primary_route": "active execplan, roadmap, Memory, docs, or issue follow-up",
+            "selector": "agentic-workspace report --target ./repo --section repo_friction --format json",
+        }
+    ]
+    if source_checkout:
+        subtypes[1:1] = source_checkout_only_subtypes
+    payload = {
         "kind": "workspace-improvement-intake/v1",
         "role": "router-not-backlog",
         "command": "agentic-workspace report --target ./repo --section improvement_intake --format json",
+        "audience_boundary": {
+            "status": "source-checkout" if source_checkout else "target-repo",
+            "rule": "Reusable host-repo diagnostics are shipped; package-development signals stay source-checkout-only.",
+            "source_checkout_only_subtypes": [item["id"] for item in source_checkout_only_subtypes] if source_checkout else [],
+        },
         "signal_contract": {
             "command": "agentic-workspace defaults --section improvement_signal --format json",
             "candidate_kind": _IMPROVEMENT_SIGNAL_CONTRACT["candidate_kind"],
@@ -803,57 +875,14 @@ def _improvement_intake_payload(
             "closeout_statuses": list(_IMPROVEMENT_SIGNAL_CONTRACT["closeout_statuses"]),
         },
         "default_rule": (
-            "Treat setup findings, dogfooding friction, review findings, validation friction, and memory "
-            "improvement signals as one intake question: what should happen to this signal, if anything?"
+            "Treat setup findings, review findings, validation friction, and memory improvement signals as one intake question: "
+            "what should happen to this signal, if anything? Package-development signals are added only in the package source checkout."
         ),
         "promotion_rule": (
             "Preserve or promote only signals with a clear evidence source, confidence/trust signal, and durable owner; "
             "dismiss weak or speculative signals explicitly."
         ),
-        "subtypes": [
-            {
-                "id": "setup_finding",
-                "source": SETUP_FINDINGS_PATH.as_posix(),
-                "evidence_class": "agent-provided setup artifact",
-                "confidence_field": "confidence",
-                "accepted_classes": list(SUPPORTED_SETUP_FINDING_CLASSES),
-                "primary_route": "repo_friction.external_evidence or planning promotion review",
-                "selector": "agentic-workspace setup --target ./repo --format json",
-            },
-            {
-                "id": "dogfooding_friction",
-                "source": "docs/dogfooding-feedback.md",
-                "evidence_class": "maintainer dogfooding signal",
-                "confidence_field": "repeated practical friction or maintainer override",
-                "primary_route": "active execplan, roadmap, Memory, docs, or issue follow-up",
-                "selector": "agentic-workspace report --target ./repo --section repo_friction --format json",
-            },
-            {
-                "id": "review_finding",
-                "source": ".agentic-workspace/planning/reviews/",
-                "evidence_class": "bounded review finding",
-                "confidence_field": "review mode and finding severity/trust",
-                "primary_route": "planning review promotion only when the review_artifacts advanced feature is enabled or explicitly selected",
-                "selector": "agentic-workspace report --target ./repo --section closeout_trust --format json",
-                "advanced_feature": "review_artifacts",
-            },
-            {
-                "id": "validation_friction",
-                "source": "src/agentic_workspace/contracts/repo_friction_policy.json",
-                "evidence_class": "proof or validation friction",
-                "confidence_field": "repeated failure against otherwise straightforward work",
-                "primary_route": "repo_friction evidence, config/check improvement, or proof-route cleanup",
-                "selector": "agentic-workspace defaults --section improvement_latitude --format json",
-            },
-            {
-                "id": "memory_improvement_signal",
-                "source": ".agentic-workspace/memory/WORKFLOW.md",
-                "evidence_class": "durable memory note carrying upstream improvement pressure",
-                "confidence_field": "memory_role=improvement_signal plus config_treatment",
-                "primary_route": "Memory note, config/check follow-up, docs clarification, or issue follow-up",
-                "selector": "agentic-workspace report --target ./repo --section repo_friction --format json",
-            },
-        ],
+        "subtypes": subtypes,
         "routing_decision": [
             {
                 "step": "classify",
@@ -861,7 +890,7 @@ def _improvement_intake_payload(
             },
             {
                 "step": "admit-or-dismiss",
-                "question": "Is there enough confidence, repetition, or maintainer override to preserve it?",
+                "question": "Is there enough confidence, repetition, or explicit owner override to preserve it?",
             },
             {
                 "step": "choose-owner",
@@ -911,6 +940,12 @@ def _improvement_intake_payload(
             "rule": "Review findings are an improvement-intake subtype, but review artifact machinery remains advanced opt-in.",
         },
     }
+    if not source_checkout:
+        payload["source_checkout_only"] = {
+            "status": "hidden-outside-package-source-checkout",
+            "hidden_subtype_count": len(source_checkout_only_subtypes),
+        }
+    return payload
 
 
 def _with_agent_instructions_file(config: WorkspaceConfig, *, filename: str, source: str) -> WorkspaceConfig:
@@ -4648,6 +4683,7 @@ def _report_router_improvement_intake(value: Any) -> dict[str, Any]:
         "kind": value.get("kind", "workspace-improvement-intake/v1"),
         "role": value.get("role", "router-not-backlog"),
         "command": value.get("command", "agentic-workspace report --target ./repo --section improvement_intake --format json"),
+        "audience_boundary": value.get("audience_boundary", {}),
         "subtypes": [item.get("id", "") for item in _list_payload(value.get("subtypes")) if isinstance(item, dict)],
         "allowed_destinations": value.get("allowed_destinations", []),
         "signal_contract": value.get("signal_contract", {}),
@@ -4847,7 +4883,7 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
         "external_work_delta": "provider-agnostic external-work snapshot or delta from prior evidence when available",
         "discovery": "setup discovery and candidate surfaces",
         "standing_intent": "effective standing intent and stronger-home guidance",
-        "improvement_intake": "unified routing for setup findings, dogfooding friction, review findings, validation friction, and memory improvement signals",
+        "improvement_intake": "unified routing for setup findings, review findings, validation friction, and memory improvement signals",
         "repo_friction": "repo-friction and improvement pressure evidence",
         "config": "resolved workspace config and local posture",
         "registry": "module registry and lifecycle metadata",
@@ -8673,9 +8709,9 @@ def _defaults_payload() -> dict[str, Any]:
             "secondary": list(_SETUP_FINDINGS_POLICY["secondary"]),
         },
         "improvement_intake": {
-            "canonical_doc": "docs/dogfooding-feedback.md",
+            "canonical_doc": "src/agentic_workspace/contracts/improvement_signal_contract.json",
             "command": "agentic-workspace defaults --section improvement_intake --format json",
-            "rule": "Use one improvement-intake router before treating setup findings, dogfooding feedback, review findings, validation friction, or memory improvement signals as separate mechanisms.",
+            "rule": "Use one improvement-intake router before treating setup findings, review findings, validation friction, or memory improvement signals as separate mechanisms.",
             "payload": _improvement_intake_payload(),
         },
         "improvement_signal": {

@@ -104,7 +104,6 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans",
         "docs/contributor-playbook.md",
-        "docs/maintainer-commands.md",
         ".agentic-workspace/planning",
     ]
     assert planning_module["generated_artifacts"] == [".agentic-workspace/planning/agent-manifest.json"]
@@ -115,7 +114,6 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert planning_module["capabilities"] == [
         "active-execution-state",
         "execplan-routing",
-        "generated-maintainer-guidance",
     ]
     assert planning_module["dependencies"] == []
     assert planning_module["conflicts"] == []
@@ -1207,17 +1205,19 @@ def test_defaults_improvement_intake_section_selector_returns_unified_router(cap
     assert payload["selector"] == {"section": "improvement_intake"}
     assert payload["matched"] is True
     answer = payload["answer"]
-    assert answer["canonical_doc"] == "docs/dogfooding-feedback.md"
+    assert answer["canonical_doc"] == "src/agentic_workspace/contracts/improvement_signal_contract.json"
     assert answer["payload"]["kind"] == "workspace-improvement-intake/v1"
     assert answer["payload"]["role"] == "router-not-backlog"
     subtype_ids = {item["id"] for item in answer["payload"]["subtypes"]}
     assert subtype_ids == {
         "setup_finding",
-        "dogfooding_friction",
         "review_finding",
         "validation_friction",
         "memory_improvement_signal",
     }
+    assert answer["payload"]["audience_boundary"]["status"] == "target-repo"
+    assert answer["payload"]["source_checkout_only"]["hidden_subtype_count"] == 1
+    assert "dogfooding_friction" not in json.dumps(answer["payload"], sort_keys=True)
     review_route = next(item for item in answer["payload"]["subtypes"] if item["id"] == "review_finding")
     assert review_route["advanced_feature"] == "review_artifacts"
     assert answer["payload"]["signal_contract"]["candidate_kind"] == "workspace-improvement-signal-candidate/v1"
@@ -2874,7 +2874,6 @@ def test_init_reports_docs_heavy_repo_as_high_ambiguity(monkeypatch, tmp_path: P
         "AGENTS.md",
         "TODO.md",
         "docs/contributor-playbook.md",
-        "docs/maintainer-commands.md",
     ]
     assert "AGENTS.md: reconcile existing workflow surface ownership" in payload["needs_review"]
     assert "docs/contributor-playbook.md: reconcile existing workflow surface ownership" in payload["needs_review"]
@@ -3328,11 +3327,12 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert len(intake["candidate_sample"]) <= 3
     assert intake["subtypes"] == [
         "setup_finding",
-        "dogfooding_friction",
         "review_finding",
         "validation_friction",
         "memory_improvement_signal",
     ]
+    assert intake["audience_boundary"]["status"] == "target-repo"
+    assert "dogfooding_friction" not in json.dumps(intake, sort_keys=True)
     assert intake["advanced_review_route"]["enabled"] is False
     assert "improvement_intake" in payload["report_profile"]["decision_grade_fields"]
     reconciliation = payload["external_work_reconciliation"]
@@ -3368,6 +3368,29 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "Shrink, stub, or delete stale review artifacts" in historical_reviews["retention_guidance"][1]
     assert historical_reviews["retention_policy"]["kind"] == "workspace-review-retention-policy/v1"
     assert historical_reviews["retention_policy"]["advisory_only"] is True
+
+
+def test_report_improvement_intake_keeps_dogfooding_source_checkout_only(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(target / "pyproject.toml", '[project]\nname = "agentic-workspace"\n')
+    (target / "src" / "agentic_workspace").mkdir(parents=True)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    intake = payload["improvement_intake"]
+    assert intake["audience_boundary"]["status"] == "source-checkout"
+    assert intake["subtypes"] == [
+        "setup_finding",
+        "dogfooding_friction",
+        "review_finding",
+        "validation_friction",
+        "memory_improvement_signal",
+    ]
 
 
 def test_report_surfaces_review_retention_cleanup_pressure(tmp_path: Path, capsys) -> None:
@@ -6190,7 +6213,6 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
                     Path(".agentic-workspace/planning/state.toml"),
                     Path(".agentic-workspace/planning/execplans"),
                     Path("docs/contributor-playbook.md"),
-                    Path("docs/maintainer-commands.md"),
                     Path(".agentic-workspace/planning"),
                 )
                 if module_name == "planning"
@@ -6225,7 +6247,7 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
                 else ()
             ),
             capabilities=(
-                ("active-execution-state", "execplan-routing", "generated-maintainer-guidance")
+                ("active-execution-state", "execplan-routing")
                 if module_name == "planning"
                 else ("durable-repo-knowledge", "anti-rediscovery-memory", "runbook-routing")
             ),

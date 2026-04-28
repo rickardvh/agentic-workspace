@@ -1,0 +1,292 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Source Checkout Diagnostics Boundary",
+  "goal": [
+    "Implement #489 by making the shipped host-repo report/default/module surfaces distinguish reusable diagnostics from source-checkout-only maintainer and dogfooding tooling."
+  ],
+  "non_goals": [
+    "Do not remove useful target-repo diagnostics.",
+    "Do not remove repo-local dogfooding tools from this source checkout.",
+    "Do not redesign feature tiers broadly; #490 owns the generic module profile replacement."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Ordinary host repos no longer see maintainer/dogfooding/codegen/extraction concepts as shipped diagnostic metadata, while this source checkout still exposes repo-local improvement routes.",
+      "constraints": "Stay on the current branch; preserve package dogfooding in this repo; keep host-repo diagnostics compact and useful.",
+      "latitude": "Add a small source-checkout detector and compact audience metadata where needed.",
+      "escalation": "Stop before broad root CLI decomposition or preset ontology replacement."
+    },
+    "execution": {
+      "milestone": "source-checkout-diagnostics-boundary",
+      "status": "completed",
+      "next_step": "Archive this plan, close #489, refresh external evidence, then promote the next child in #485.",
+      "proof": "Run focused workspace CLI tests, contract/schema checks, proof selector, report/default smoke checks for host and source checkout, and planning closeout checks."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/module_registry.json",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/source-checkout-diagnostics-boundary.plan.json"
+      ],
+      "invariants": [
+        "Target repos retain setup findings, validation friction, memory improvement, review-artifact, and external-adapter diagnostics where configured.",
+        "Dogfooding/self-improvement/package-maintainer concepts are source-checkout-only.",
+        "This repo can still dogfood through source-checkout routes."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Keep the root orchestrator thin, boring, generic, and strictly bounded.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression",
+    "parent lane": "#485"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "follow-on detail": "#486, #487, #488, and #490 remain after #489.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #489 closes, promote the next child in #485."
+  },
+  "iterative_follow_through": {
+    "larger_intent": "Keep the root orchestrator thin, boring, generic, and strictly bounded.",
+    "current_slice": "#489 separates host-repo diagnostics from package source-checkout-only maintainer and dogfooding routes.",
+    "slice_status": "completed",
+    "larger_intent_satisfied": "no",
+    "remaining_slices": [
+      "#486",
+      "#487",
+      "#488",
+      "#490"
+    ],
+    "next_slice_selection_rule": "After closing #489, reingest issues and promote the next open child under #485 unless external evidence changes priority."
+  },
+  "context_budget": {
+    "read_first": [
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/source-checkout-diagnostics-boundary.plan.json",
+      "GitHub issues #485 and #489"
+    ],
+    "avoid_bulk_reads": [
+      ".agentic-workspace/planning/execplans/archive/",
+      ".agentic-workspace/memory/",
+      "docs/reviews/"
+    ],
+    "open_only_when_pointed": [
+      "raw planning state beyond the active item",
+      "module contracts outside changed report/default surfaces"
+    ],
+    "resume_hint": "Use compact summary/report/proof outputs first; this slice does not require rereading historical archives."
+  },
+  "execution_bounds": {
+    "allowed paths": "Root CLI reporting/default helpers, module registry contract/schema, tests, and planning surfaces.",
+    "max changed files": "Prefer 4-7 files.",
+    "required validation commands": "Focused pytest for feature tier/report/defaults, full workspace CLI tests if root report helpers change, ruff, proof selector, planning checks.",
+    "ask-before-refactor threshold": "Stop before splitting cli.py modules or replacing feature tiers.",
+    "stop before touching": "Branch switching, mutating lifecycle behavior, generated package code, or broad schema inventory work."
+  },
+  "stop_conditions": {
+    "stop when": "Host-repo report/default/module metadata excludes source-checkout-only maintainer concepts and tests prove the boundary.",
+    "escalate when boundary reached": "The change requires a broader feature-tier/profile redesign owned by #490.",
+    "escalate on scope drift": "The work becomes root CLI responsibility decomposition (#488) or dependency review (#487).",
+    "escalate on proof failure": "Ordinary target-repo diagnostics disappear or this repo loses dogfooding routes."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #489 end-to-end.",
+    "hard constraints": "Stay on current branch; preserve useful target-repo diagnostics; keep source-checkout dogfooding available in this repo.",
+    "agent may decide locally": "Exact source-checkout detection and compact boundary wording.",
+    "escalate when": "The boundary requires replacing feature tiers or splitting root CLI responsibilities."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#489",
+      "label": "source-checkout diagnostics boundary",
+      "role": "source_intent",
+      "locator": "GitHub issue #489"
+    },
+    {
+      "kind": "issue",
+      "target": "#485",
+      "label": "module boundary compression",
+      "role": "parent_intent",
+      "locator": "GitHub issue #485"
+    }
+  ],
+  "active_milestone": {
+    "id": "source-checkout-diagnostics-boundary",
+    "status": "completed",
+    "scope": "Separate reusable host diagnostics from source-checkout-only maintainer tooling in compact report/default/module metadata.",
+    "ready": "Lifecycle hardening lane is closed and #489 is the selected first slice for #485.",
+    "blocked": "None.",
+    "optional_deps": "None."
+  },
+  "immediate_next_action": [
+    "Archive this plan, close #489, refresh external evidence, and promote the next #485 child."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/module_registry.json",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/source-checkout-diagnostics-boundary.plan.json"
+  ],
+  "validation_commands": [
+    {
+      "command": "uv run pytest tests/test_workspace_cli.py -q -k \"modules_command_lists or improvement_intake or default_profile_returns_router or docs_heavy_repo\"",
+      "result": "passed"
+    },
+    {
+      "command": "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py",
+      "result": "passed"
+    },
+    {
+      "command": "uv run pytest tests/test_workspace_cli.py -q",
+      "result": "passed: 205 passed"
+    },
+    {
+      "command": "uv run python scripts/check/check_contract_tooling_surfaces.py",
+      "result": "passed"
+    },
+    {
+      "command": "uv run python scripts/check/check_planning_surfaces.py",
+      "result": "passed"
+    },
+    {
+      "command": "uv run ruff check src tests",
+      "result": "passed"
+    },
+    {
+      "command": "uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py src/agentic_workspace/contracts/module_registry.json tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/source-checkout-diagnostics-boundary.plan.json --format json",
+      "result": "passed: selected workspace_cli, cli_authority, planning_surfaces"
+    },
+    {
+      "command": "uv run agentic-workspace doctor --target . --modules planning --format json",
+      "result": "passed: healthy"
+    },
+    {
+      "command": "uv run agentic-workspace defaults --section improvement_intake --format json",
+      "result": "passed: host/default payload hides source-checkout-only dogfooding subtype"
+    }
+  ],
+  "completion_criteria": [
+    "Target-repo diagnostics have explicit external value and shipped justification.",
+    "Dogfooding/self-improvement/codegen/extraction/package-maintainer review surfaces are source-checkout-only.",
+    "Startup/report/defaults output no longer advertises repo-local machinery to ordinary host repos.",
+    "Tests guard the distinction."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "Issue #489 plus checked-in roadmap.",
+    "what happened": "Separated reusable target-repo improvement diagnostics from package source-checkout-only dogfooding/maintainer signals in defaults, report routing, and module registry metadata.",
+    "scope touched": "Root CLI report/default helpers, module registry metadata, workspace CLI tests, and planning closeout surfaces.",
+    "changed surfaces": "Improvement-intake payload now reports a target-repo audience by default and adds dogfooding_friction only when the target is the agentic-workspace source checkout; planning module metadata no longer advertises maintainer command guidance as shipped host-repo capability.",
+    "validations run": "Focused workspace CLI tests, full workspace CLI tests, ruff, contract tooling check, planning surface check, proof selector, planning doctor, and defaults smoke check.",
+    "result for continuation": "#489 is ready to archive and close; #486, #487, #488, and #490 remain under #485.",
+    "next step": "Archive plan, commit, push, close #489, refresh external evidence, then promote the next #485 child."
+  },
+  "execution_summary": {
+    "outcome delivered": "Ordinary host-repo startup/report/default metadata no longer advertises package dogfooding or maintainer-only diagnostics, while the package source checkout still exposes dogfooding routes for self-improvement.",
+    "validation confirmed": "Focused and full workspace CLI tests passed, contract/planning checks passed, ruff passed, and package proof selected the expected proof lanes.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression (#485)",
+    "post-work posterity capture": "Archive this execplan as proof/history after closeout.",
+    "knowledge promoted (memory/docs/config)": "No durable Memory/docs/config promotion needed; one planning friction signal should be routed as an issue.",
+    "resume from": "Reingest open issues and promote the next child under #485."
+  },
+  "proof_report": {
+    "validation proof": "Focused and full workspace CLI tests passed, contract/planning checks passed, ruff passed, and package proof selected the expected proof lanes.",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "Focused workspace CLI tests, full workspace CLI tests, ruff, contract tooling check, planning surface check, proof selector, planning doctor, and defaults smoke check."
+  },
+  "finished_run_review": {
+    "review status": "ready-to-close",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used package workflow surfaces for startup, summary, proof, doctor, defaults, report, and closeout",
+    "misinterpretation risk": "low",
+    "follow-on decision": "close #489 but keep parent #485 open"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane module-boundary-compression activates a fresh bounded slice."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #489 end-to-end.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression"
+  },
+  "improvement_signal_review": {
+    "status": "routed",
+    "signals found": [
+      "Hand-authored execplan initially missed projection fields (iterative_follow_through and context_budget), causing summary hierarchy projection noise during closeout."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "Create a narrow planning issue for a projection-complete execplan scaffold/check so active plans are easier to author correctly."
+    ],
+    "signals dismissed": [],
+    "next owner": "new planning issue after #489 closeout"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression (#485)",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No durable Memory/docs/config promotion needed; one planning friction signal should be routed as an issue.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No durable Memory/docs/config promotion needed; one planning friction signal should be routed as an issue.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "No durable Memory/docs/config promotion needed; one planning friction signal should be routed as an issue.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "source-checkout diagnostics boundary",
+          "owner": "issue",
+          "source": "#489"
+        },
+        {
+          "summary": "module boundary compression",
+          "owner": "issue",
+          "source": "#485"
+        }
+      ]
+    }
+  }
+}
