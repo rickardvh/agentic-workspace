@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import tomllib
 from pathlib import Path
 
 import repo_planning_bootstrap._render as render_module
@@ -1522,6 +1523,8 @@ candidates = []
     )
     assert 'kind = "agentic-planning-state"' in state_text
     assert 'schema_version = "planning-state/v1"' in state_text
+    assert 'maturity = "active"' in state_text
+    assert 'status = "active"' in state_text
     assert 'surface = ".agentic-workspace/planning/execplans/compact-item.plan.json"' in state_text
     assert "next_action" not in state_text
     assert "done_when" not in state_text
@@ -1531,6 +1534,51 @@ candidates = []
     assert summary["context_budget_contract"]["tiny_resumability_note"] == "promote the compact item."
     assert summary["execution_run_contract"]["status"] == "present"
     assert summary["finished_run_review_contract"]["status"] == "present"
+    assert any(action.kind == "created" and action.path == record_path for action in result.actions)
+
+
+def test_promote_todo_item_to_execplan_preserves_compact_state_types(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "typed-item", status = "active", surface = "direct", why_now = "promotion must keep structured state valid.", next_action = "promote the typed item.", done_when = "state remains clean.", owner_role = "implementation", review_role = "validation", handoff_ready = true, refs = ["#545"] },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    result = promote_todo_item_to_execplan("typed-item", target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "typed-item.plan.json"
+
+    assert record_path.exists()
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    state = tomllib.loads(state_text)
+    state_item = state["todo"]["active_items"][0]
+    summary = planning_summary(target=tmp_path)
+    assert 'surface = ".agentic-workspace/planning/execplans/typed-item.plan.json"' in state_text
+    assert 'maturity = "active"' in state_text
+    assert "handoff_ready = true" in state_text
+    assert 'refs = ["#545"]' in state_text
+    assert 'handoff_ready = "True"' not in state_text
+    assert 'refs = "#545"' not in state_text
+    assert state_item["handoff_ready"] is True
+    assert state_item["refs"] == ["#545"]
+    assert state_item["maturity"] == "active"
+    assert state_item["status"] == "active"
+    assert state_item["surface"] == ".agentic-workspace/planning/execplans/typed-item.plan.json"
+    assert summary["planning_surface_health"]["status"] == "clean"
+    assert summary["todo"]["active_items"][0]["handoff_ready"] is True
+    assert summary["todo"]["active_items"][0]["maturity"] == "active"
     assert any(action.kind == "created" and action.path == record_path for action in result.actions)
 
 

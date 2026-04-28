@@ -6144,7 +6144,7 @@ def promote_todo_item_to_execplan(
     updated_fields.pop("next action", None)
     updated_fields.pop("done when", None)
     if compact_item is not None:
-        new_state = _update_compact_todo_item_in_state(state, item_id, updated_fields)
+        new_state = _update_compact_todo_item_in_state(state, item_id, {"surface": surface_relative.as_posix()})
         if new_state is None:
             result.add("manual review", todo_path, f"TODO item '{item_id}' could not be updated in compact state")
             return result
@@ -7745,7 +7745,7 @@ def _update_compact_todo_item_in_state(
             if not isinstance(raw, dict) or str(raw.get("id", "")) != item_id:
                 next_execplans.append(raw)
                 continue
-            next_execplans.append(_updated_compact_state_item(raw, updated_fields))
+            next_execplans.append(_updated_compact_state_item(raw, updated_fields, mark_active=True))
             changed = True
         if changed:
             next_active = dict(active)
@@ -7769,7 +7769,7 @@ def _update_compact_todo_item_in_state(
                 next_items.append(raw)
                 continue
 
-            next_item = _updated_compact_state_item(raw, updated_fields)
+            next_item = _updated_compact_state_item(raw, updated_fields, mark_active=bucket == "active_items")
             next_items.append(next_item)
             changed = True
 
@@ -7781,7 +7781,12 @@ def _update_compact_todo_item_in_state(
     return None
 
 
-def _updated_compact_state_item(raw: dict[str, Any], updated_fields: dict[str, str]) -> dict[str, Any]:
+def _updated_compact_state_item(
+    raw: dict[str, Any],
+    updated_fields: dict[str, str],
+    *,
+    mark_active: bool = False,
+) -> dict[str, Any]:
     next_item = dict(raw)
     for key in ("next_action", "next action", "done_when", "done when"):
         next_item.pop(key, None)
@@ -7791,6 +7796,9 @@ def _updated_compact_state_item(raw: dict[str, Any], updated_fields: dict[str, s
             next_item[compact_key] = value
         else:
             next_item.pop(compact_key, None)
+    if mark_active:
+        next_item["maturity"] = "active"
+        next_item["status"] = "active"
     return next_item
 
 

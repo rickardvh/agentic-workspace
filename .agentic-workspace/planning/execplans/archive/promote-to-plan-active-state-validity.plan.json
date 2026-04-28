@@ -1,0 +1,213 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Promote To Plan Active State Validity",
+  "goal": [
+    "workflow-friction-polish next child; promote-to-plan should not create planning-state schema drift."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "workflow-friction-polish next child; promote-to-plan should not create planning-state schema drift.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "promote-to-plan-active-state-validity",
+      "status": "completed",
+      "next_step": "Archive this completed slice and continue workflow-friction-polish.",
+      "proof": "Run focused promote-to-plan tests, planning-surface checks, and planning doctor."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/promote-to-plan-active-state-validity.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "workflow-friction-polish next child; promote-to-plan should not create planning-state schema drift.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Promote To Plan Active State Validity",
+    "inferred intended outcome": "workflow-friction-polish next child; promote-to-plan should not create planning-state schema drift.",
+    "chosen concrete what": "Fill the execution contract and begin the first bounded implementation step.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; this execplan.",
+    "max changed files": "4 active files plus archive output at closeout.",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q -k \"promote_todo_item_to_execplan\"; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill the execution contract and begin the first bounded implementation step.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "workflow-friction-polish next child; promote-to-plan should not create planning-state schema drift.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "promote-to-plan-active-state-validity",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed slice and continue workflow-friction-polish."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/promote-to-plan-active-state-validity.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"promote_todo_item_to_execplan\"",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "TODO item `promote-to-plan-active-state-validity` is implemented, validated, and can leave the active queue."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with Curie read-only inspection",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Changed compact promote-to-plan state updates to apply only promotion deltas instead of rewriting raw TOML records from stringified TodoItem fields; added regression coverage for boolean/list preservation and active maturity/status normalization.",
+    "scope touched": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; planning state and this execplan",
+    "changed surfaces": "promotion implementation, installer tests, active planning surfaces",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"promote_todo_item_to_execplan\"; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run pytest packages/planning/tests/test_installer.py -q; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "slice complete; continue workflow-friction-polish with remaining issues",
+    "next step": "Archive this completed slice and close #545."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used compact summary, active execplan, package promotion, and planning checks",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue existing workflow-friction-polish backlog; no new issue needed from this slice"
+  },
+  "proof_report": {
+    "validation proof": "focused promote-to-plan tests, full planning installer test suite, ruff, strict planning surface check, and planning doctor all passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "7 focused promote-to-plan tests passed; 160 planning installer tests passed; planning-surface strict check reported no drift; planning doctor reported healthy."
+  },
+  "intent_satisfaction": {
+    "original intent": "workflow-friction-polish next child; promote-to-plan should not create planning-state schema drift.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Promotion now preserves structured TOML types and marks active promoted records active by construction; regression proves handoff_ready remains boolean and refs remains an array.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "promote-to-plan no longer rewrites unchanged compact TOML fields through stringified TodoItem values",
+    "validation confirmed": "yes",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml workflow-friction-polish remaining issues #524 and #533",
+    "post-work posterity capture": "archived execplan plus regression test",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "workflow-friction-polish lane"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The concrete schema drift found while dogfooding is fixed and covered; the broader lane still has separate open issues.",
+    "evidence carried forward": "Regression test test_promote_todo_item_to_execplan_preserves_compact_state_types plus successful planning proof commands.",
+    "reopen trigger": "promote-to-plan again emits planning-state/v1 warnings for structured active item types or missing active maturity/status"
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "signals found": [],
+    "signals fixed": [
+      "promote-to-plan wrote stringified compact-state values back into state.toml"
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "No new feature needed; the existing promotion command just needed to preserve structured state."
+    ],
+    "next owner": "workflow-friction-polish"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        "Curie read-only inspection helped confirm the root cause; durable knowledge is captured by the regression rather than Memory."
+      ],
+      "continuation": [
+        "Continue workflow-friction-polish with #524 and #533 after closing #545."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from TODO direct-task shape into an execplan."
+  ]
+}
