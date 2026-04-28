@@ -15,6 +15,16 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 INVENTORY_PATH = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "structured_file_inventory.json"
 SCHEMA_PATH = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "schemas" / "structured_file_inventory.schema.json"
 STRUCTURED_SUFFIXES = frozenset({".json", ".toml", ".yaml", ".yml"})
+RECONSTRUCTABLE_CLASSES = frozenset(
+    {
+        "generated-required-adapter",
+        "local-cache",
+        "reconstructable-external-snapshot",
+        "removable-duplicate",
+    }
+)
+GUARDRAILED_CLASSES = frozenset({"reconstructable-external-snapshot", "historical-audit-distillation"})
+SOURCE_CLASSES = frozenset({"source-of-truth", "non-reconstructable-decision"})
 
 
 @dataclass(frozen=True)
@@ -127,13 +137,113 @@ def unmatched_structured_files(paths: list[str], inventory: dict[str, Any]) -> l
     return findings
 
 
+def _matched_files(paths: list[str], entry: dict[str, Any]) -> list[str]:
+    return sorted(path for path in paths if _entry_matches(path, entry))
+
+
+def _json_item_count(path: Path) -> int | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if isinstance(payload, list):
+        return len(payload)
+    if isinstance(payload, dict):
+        for key in ("items", "entries", "records"):
+            value = payload.get(key)
+            if isinstance(value, list):
+                return len(value)
+    return None
+
+
+def _guardrail_findings(paths: list[str], entry: dict[str, Any]) -> list[Finding]:
+    guardrails = entry.get("guardrails")
+    if not isinstance(guardrails, dict):
+        return []
+    findings: list[Finding] = []
+    for path in _matched_files(paths, entry):
+        full_path = REPO_ROOT / path
+        max_bytes = guardrails.get("max_bytes")
+        if isinstance(max_bytes, int) and full_path.exists() and full_path.stat().st_size > max_bytes:
+            findings.append(
+                Finding(
+                    path=path,
+                    message=f"file exceeds storage guardrail max_bytes={max_bytes}",
+                )
+            )
+        max_items = guardrails.get("max_items")
+        if isinstance(max_items, int) and _structured_format(path) == "json":
+            item_count = _json_item_count(full_path)
+            if item_count is not None and item_count > max_items:
+                findings.append(
+                    Finding(
+                        path=path,
+                        message=f"file exceeds storage guardrail max_items={max_items}",
+                    )
+                )
+    return findings
+
+
+def _entry_routes(entry: dict[str, Any]) -> set[str]:
+    routes: set[str] = set()
+    for key in ("routed_to", "storage_routed_to"):
+        value = entry.get(key)
+        if isinstance(value, str):
+            routes.add(value)
+    guardrails = entry.get("guardrails")
+    if isinstance(guardrails, dict):
+        guardrail_route = guardrails.get("routed_to")
+        if isinstance(guardrail_route, str):
+            routes.add(guardrail_route)
+    return routes
+
+
+def storage_policy_findings(paths: list[str], inventory: dict[str, Any]) -> list[Finding]:
+    findings: list[Finding] = []
+    for index, entry in enumerate(inventory["entries"]):
+        location = f"{INVENTORY_PATH.relative_to(REPO_ROOT).as_posix()}#entries[{index}]"
+        storage_class = entry["storage_class"]
+        if storage_class in RECONSTRUCTABLE_CLASSES and not entry.get("reconstructable_from"):
+            findings.append(Finding(path=location, message=f"{storage_class} entries must declare reconstructable_from"))
+        if storage_class in GUARDRAILED_CLASSES:
+            guardrails = entry.get("guardrails")
+            has_size_or_count = isinstance(guardrails, dict) and (
+                isinstance(guardrails.get("max_items"), int) or isinstance(guardrails.get("max_bytes"), int)
+            )
+            if not has_size_or_count:
+                findings.append(Finding(path=location, message=f"{storage_class} entries must declare max_items or max_bytes guardrails"))
+        if storage_class == "generated-required-adapter":
+            if not entry["generated"]:
+                findings.append(Finding(path=location, message="generated-required-adapter entries must set generated=true"))
+            if entry["status"] not in {"generated-derived", "typed-validator-backed", "schema-backed"}:
+                findings.append(Finding(path=location, message="generated-required-adapter entries must be generated-derived or validator-backed"))
+        routes = _entry_routes(entry)
+        if storage_class == "local-cache" and not routes:
+            findings.append(Finding(path=location, message="checked-in local-cache entries must be routed to a cleanup issue"))
+        if storage_class in {"reconstructable-external-snapshot", "removable-duplicate"} and not routes:
+            findings.append(Finding(path=location, message=f"{storage_class} entries must be routed to a cleanup issue"))
+        if storage_class == "historical-audit-distillation" and not routes:
+            findings.append(Finding(path=location, message="historical-audit-distillation entries must route oversized audit compression work"))
+        if storage_class in SOURCE_CLASSES and entry["generated"]:
+            findings.append(Finding(path=location, message=f"{storage_class} entries must not be marked generated"))
+        findings.extend(_guardrail_findings(paths, entry))
+    return findings
+
+
 def inventory_findings(paths: list[str] | None = None) -> list[Finding]:
     inventory = load_inventory()
     findings = validate_inventory_shape(inventory)
     if findings:
         return findings
     checked_paths = tracked_structured_files() if paths is None else paths
-    return unmatched_structured_files(checked_paths, inventory)
+    return unmatched_structured_files(checked_paths, inventory) + storage_policy_findings(checked_paths, inventory)
+
+
+def routed_storage_cleanup_issues(inventory: dict[str, Any]) -> set[str]:
+    routed: set[str] = set()
+    for entry in inventory["entries"]:
+        routed.update(_entry_routes(entry))
+    return routed
 
 
 def main(argv: list[str] | None = None) -> int:

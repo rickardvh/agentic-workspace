@@ -3,18 +3,18 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T14:08:19+00:00",
+  "refreshed_at": "2026-04-28T14:24:59+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T14:08:19+00:00",
+    "refreshed_at": "2026-04-28T14:24:59+00:00",
     "item_count": 528,
     "open_count": 31,
     "closed_count": 497,
     "limit": 600,
     "state": "all",
-    "state_source": "explicit",
-    "limit_source": "explicit",
+    "state_source": "previous_evidence",
+    "limit_source": "previous_evidence",
     "command": "gh issue list --state all --json number,title,state,url,labels,createdAt,updatedAt,body,comments"
   },
   "items": [

@@ -1,0 +1,262 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Add reconstructable artifact storage policy",
+  "goal": [
+    "Codify checked-in structured artifact storage classes so new machine-readable files must declare whether they are durable source, generated adapter, local/cache, derived evidence, audit distillation, duplicate, or routed gap.",
+    "Extend the structured-file inventory checker with storage-policy validation and guardrails that route known reconstructable residue to #536, #537, #538, #539, and #540."
+  ],
+  "non_goals": [
+    "Do not delete or relocate existing evidence snapshots, generated mirrors, or audit artifacts in this slice.",
+    "Do not add a new top-level command.",
+    "Do not make host-specific tracker assumptions part of the shipped package contract."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "new tracked structured artifacts cannot silently become unchecked persistence surfaces; reconstructable residue is classified and routed",
+      "constraints": "implementation-independent package policy, compact checker, source refs over copied facts",
+      "latitude": "may extend the existing inventory schema/checker/tests and planning state",
+      "escalation": "stop if enforcing the policy requires deleting artifacts or changing external adapter behavior"
+    },
+    "execution": {
+      "milestone": "#541",
+      "status": "completed",
+      "next_step": "archive this slice and promote #536 for concrete artifact compression",
+      "proof": "uv run pytest tests/test_structured_file_inventory.py -q (9 passed); uv run python scripts/check/check_structured_file_inventory.py --quiet-success (passed); uv run ruff check scripts/check/check_structured_file_inventory.py tests/test_structured_file_inventory.py (passed); uv run pytest tests/test_workspace_cli.py -q (206 passed); uv run ruff check src tests (passed); uv run agentic-workspace doctor --target . --modules planning --format json (healthy)"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        "src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json",
+        "scripts/check/check_structured_file_inventory.py",
+        "tests/test_structured_file_inventory.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/reconstructable-artifact-policy.plan.json"
+      ],
+      "invariants": [
+        "inventory remains the checked map for structured files",
+        "concrete cleanup work stays in child issues #536-#540",
+        "generated/local/reconstructable classes must carry regeneration or recovery guidance"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "reconstructable-artifact-policy"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #541 checker/policy lands",
+    "required follow-on detail": "Concrete artifact compression remains in #536, #537, #538, #539, and #540."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "future cleanup can distinguish source decisions from reconstructable residue before editing artifacts",
+    "intentionally deferred": "#536 external evidence cache treatment, #537 finished-work evidence sidecar reduction, #538 audit artifact distillation, #539 generated mirror justification, #540 duplicate planning check payload collapse",
+    "discovered implications": "",
+    "proof achieved now": "",
+    "validation still needed": "",
+    "next likely slice": "#536"
+  },
+  "intent_interpretation": {
+    "literal request": "repeat lane work on autopilot and use subagents where useful",
+    "inferred intended outcome": "keep reducing visible product residue with package-dogfooded planning and validation",
+    "chosen concrete what": "promote #541 as the next slice and implement storage-policy guardrails",
+    "interpretation distance": "low",
+    "review guidance": "verify this adds policy/check leverage without adding a new first-contact surface"
+  },
+  "execution_bounds": {
+    "allowed paths": "structured-file inventory/schema/checker/tests plus active planning state",
+    "max changed files": "8",
+    "required validation commands": "uv run pytest tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check scripts/check/check_structured_file_inventory.py tests/test_structured_file_inventory.py; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "broad CLI/report changes or artifact deletion",
+    "stop before touching": "GitHub-specific core package behavior, generated adapter rendering, external evidence refresh semantics"
+  },
+  "stop_conditions": {
+    "stop when": "inventory enforces storage classes and routes current cleanup children",
+    "escalate when boundary reached": "policy cannot be encoded without changing runtime behavior",
+    "escalate on scope drift": "work starts deleting artifacts or implementing child cleanup issues",
+    "escalate on proof failure": "focused tests or inventory checker fail in ways unrelated to this slice"
+  },
+  "context_budget": {
+    "live working set": "issue #541, structured file inventory/checker/tests, state active plan",
+    "recoverable later": "full archived plans and review artifacts",
+    "externalize before shift": "active execplan plus summary state",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "none unless summary points there",
+    "tiny resumability note": "continue #541 by finishing inventory storage-policy validation",
+    "context-shift triggers": "before committing, after validation failure, before child issue promotion"
+  },
+  "delegated_judgment": {
+    "requested outcome": "parallel read-only recommendations on storage classes and artifact groups",
+    "hard constraints": "no edits by subagents, no host-specific package assumptions",
+    "agent may decide locally": "field names and checker mechanics",
+    "escalate when": "recommendations require deleting artifacts in #541"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#541",
+      "label": "storage policy",
+      "role": "active slice",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/541"
+    },
+    {
+      "kind": "issues",
+      "target": "#536 #537 #538 #539 #540",
+      "label": "concrete cleanup children",
+      "role": "routed continuation",
+      "locator": "GitHub issues"
+    }
+  ],
+  "active_milestone": {
+    "id": "#541",
+    "status": "completed",
+    "scope": "inventory storage policy and checker",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "subagent read-only recommendations"
+  },
+  "immediate_next_action": [
+    "Update inventory schema with storage_class, reconstructability, justification, and guardrail fields."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/structured_file_inventory.json",
+    "src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json",
+    "scripts/check/check_structured_file_inventory.py",
+    "tests/test_structured_file_inventory.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/reconstructable-artifact-policy.plan.json"
+  ],
+  "invariants": [
+    "Policy stays package-agnostic.",
+    "The inventory remains compact enough to act as a guardrail, not a dashboard.",
+    "Concrete cleanup children stay open until implemented."
+  ],
+  "contract_decisions_to_freeze": [
+    "Every structured-file inventory entry declares a storage class.",
+    "Generated, reconstructable, duplicate, cache, and local-only classes must say how to regenerate, reconstruct, remove, or why they are kept."
+  ],
+  "open_questions_to_close": [
+    "Which storage classes are enough for current artifact residue without overfitting?"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_structured_file_inventory.py -q",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check scripts/check/check_structured_file_inventory.py tests/test_structured_file_inventory.py",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Inventory schema requires storage classification fields.",
+    "Checker enforces storage-policy requirements beyond raw schema shape.",
+    "Tests cover invalid generated/reconstructable/duplicate guardrails and routed cleanup children.",
+    "#541 is closed and child cleanup issues remain routed in state."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with two read-only subagent reviews",
+    "handoff source": "agentic-workspace summary, active execplan, issue #541",
+    "what happened": "Extended the structured-file inventory schema with storage classes, justifications, reconstruction refs, storage routes, and guardrails; extended the checker with storage-policy validation and size/count checks; routed current cleanup children #536-#540.",
+    "scope touched": "structured file inventory contract, schema, checker, tests, and planning state",
+    "changed surfaces": "existing inventory/checker surfaces only; no new first-contact command or docs surface",
+    "validations run": "uv run pytest tests/test_structured_file_inventory.py -q (9 passed); uv run python scripts/check/check_structured_file_inventory.py --quiet-success (passed); uv run ruff check scripts/check/check_structured_file_inventory.py tests/test_structured_file_inventory.py (passed); uv run pytest tests/test_workspace_cli.py -q (206 passed); uv run ruff check src tests (passed); uv run agentic-workspace doctor --target . --modules planning --format json (healthy)",
+    "result for continuation": "#541 complete; concrete compression remains in #536, #537, #538, #539, and #540",
+    "next step": "#536"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no artifact deletion or runtime behavior changes",
+    "proof status": "passed",
+    "intent served": "yes; new structured artifacts must declare storage class and reconstructability policy",
+    "config compliance": "used summary/proof/doctor and active checked-in execplan",
+    "misinterpretation risk": "low; child issues remain open for actual compression work",
+    "follow-on decision": "continue parent lane with #536"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_structured_file_inventory.py -q (9 passed); uv run python scripts/check/check_structured_file_inventory.py --quiet-success (passed); uv run ruff check scripts/check/check_structured_file_inventory.py tests/test_structured_file_inventory.py (passed); uv run pytest tests/test_workspace_cli.py -q (206 passed); uv run ruff check src tests (passed); uv run agentic-workspace doctor --target . --modules planning --format json (healthy)",
+    "proof achieved now": "storage-policy schema/checker/tests landed and current cleanup cases are routed",
+    "evidence for \"proof achieved\" state": "focused tests, checker pass, workspace CLI tests, ruff, planning doctor"
+  },
+  "intent_satisfaction": {
+    "original intent": "Add a reconstructable-artifact storage policy and checker.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Bounded #541 policy/checker acceptance is satisfied; larger reconstructable-artifact compression remains open in #536-#540.",
+    "unsolved intent passed to": "#536 #537 #538 #539 #540"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve only context that is expensive to rediscover and necessary for safe continuation.",
+    "slice shaping bias": "product-shape compression over capability expansion",
+    "broader-lane validation question": "Does this make the package feel smaller by preventing residue rather than adding another operating surface?",
+    "intent evidence source": ".agentic-workspace/system-intent/intent.toml"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "policy/checker is complete, but actual artifact compression is explicitly child work",
+    "evidence carried forward": "structured file inventory storage classes and state.toml lane routing",
+    "reopen trigger": "new checked-in structured artifact lacks storage classification or guardrail"
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "checked-in artifacts need explicit storage class and reconstruction guidance",
+    "motivation worth preserving": "reduce visible product residue without losing leverage",
+    "canonical owner now": "src/agentic_workspace/contracts/structured_file_inventory.json",
+    "promotion trigger": "new structured artifact classes or evidence mirrors",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "reconstructable-artifact storage policy is encoded in the existing structured-file inventory and checker",
+    "validation confirmed": "uv run pytest tests/test_structured_file_inventory.py -q (9 passed); uv run python scripts/check/check_structured_file_inventory.py --quiet-success (passed); uv run ruff check scripts/check/check_structured_file_inventory.py tests/test_structured_file_inventory.py (passed); uv run pytest tests/test_workspace_cli.py -q (206 passed); uv run ruff check src tests (passed); uv run agentic-workspace doctor --target . --modules planning --format json (healthy)",
+    "follow-on routed to": "#536 #537 #538 #539 #540",
+    "post-work posterity capture": "archive execplan plus inventory contract fields",
+    "knowledge promoted (Memory/Docs/Config)": "contracts/checks; no Memory promotion needed",
+    "resume from": ".agentic-workspace/planning/state.toml suggested_first_slice #536"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "subagents confirmed #540 is broader than structured-file coverage; represented through storage_routed_to on existing candidate artifacts without claiming deletion"
+    ],
+    "signals fixed": [
+      "active execplan maturity warning fixed by adding maturity=active"
+    ],
+    "signals routed": [
+      "#536",
+      "#537",
+      "#538",
+      "#539",
+      "#540"
+    ],
+    "signals dismissed": [
+      "adding a new command or docs surface for policy discovery"
+    ],
+    "next owner": ".agentic-workspace/planning/state.toml"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "#536",
+        "#537",
+        "#538",
+        "#539",
+        "#540"
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #541 from reconstructable-artifact-policy lane."
+  ]
+}

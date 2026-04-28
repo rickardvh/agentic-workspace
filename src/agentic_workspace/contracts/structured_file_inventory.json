@@ -1,7 +1,7 @@
 {
   "kind": "agentic-workspace/structured-file-inventory/v1",
   "schema_version": "structured-file-inventory/v1",
-  "rule": "Tracked JSON, TOML, YAML, and YML files are machine-readable surfaces. Each must be classified as schema-backed, typed-validator-backed, generated/derived, source-checkout diagnostic, or an explicit freeform-prohibited gap routed to an issue.",
+  "rule": "Tracked JSON, TOML, YAML, and YML files are machine-readable surfaces. Each must be classified as schema-backed, typed-validator-backed, generated/derived, source-checkout diagnostic, or an explicit freeform-prohibited gap, and must also declare a storage class explaining why the artifact belongs in checked-in state instead of being regenerated, reconstructed, kept local, or removed.",
   "statuses": [
     "schema-backed",
     "typed-validator-backed",
@@ -18,7 +18,9 @@
       "schema_or_validator": "src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "This inventory is validated by scripts/check/check_structured_file_inventory.py."
+      "notes": "This inventory is validated by scripts/check/check_structured_file_inventory.py.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "src/agentic_workspace/contracts/schemas/*.schema.json",
@@ -28,7 +30,9 @@
       "schema_or_validator": "JSON Schema draft 2020-12",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Schema files are the validation authority for contract manifests and generated payload shapes."
+      "notes": "Schema files are the validation authority for contract manifests and generated payload shapes.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "src/agentic_workspace/contracts/operations/*.json",
@@ -38,7 +42,9 @@
       "schema_or_validator": "src/agentic_workspace/contracts/schemas/operation.schema.json",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Operation contracts are validated by contract tooling checks."
+      "notes": "Operation contracts are validated by contract tooling checks.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "src/agentic_workspace/contracts/conformance/*.json",
@@ -48,7 +54,9 @@
       "schema_or_validator": "src/agentic_workspace/contracts/schemas/conformance.schema.json",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Conformance process contracts are validated by contract tooling checks."
+      "notes": "Conformance process contracts are validated by contract tooling checks.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "src/agentic_workspace/contracts/*.json",
@@ -59,7 +67,9 @@
       "editable_by_agents": true,
       "generated": false,
       "routed_to": "#508",
-      "notes": "Root contract manifests need complete schema or typed-validator coverage."
+      "notes": "Root contract manifests need complete schema or typed-validator coverage.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml",
@@ -69,7 +79,9 @@
       "schema_or_validator": "workspace install/doctor ownership checks",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Payload ownership metadata is consumed by lifecycle checks."
+      "notes": "Payload ownership metadata is consumed by lifecycle checks.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": ".agentic-workspace/config.toml",
@@ -79,7 +91,9 @@
       "schema_or_validator": "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Resolved workspace config is validated through config/start/report paths."
+      "notes": "Resolved workspace config is validated through config/start/report paths.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": ".agentic-workspace/OWNERSHIP.toml",
@@ -89,7 +103,9 @@
       "schema_or_validator": "workspace ownership and doctor checks",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Repo ownership metadata is a lifecycle surface."
+      "notes": "Repo ownership metadata is a lifecycle surface.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": ".agentic-workspace/system-intent/intent.toml",
@@ -99,7 +115,9 @@
       "schema_or_validator": "agentic-workspace system-intent refresh/report path",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "System intent is compact repo-owned policy state."
+      "notes": "System intent is compact repo-owned policy state.",
+      "storage_class": "non-reconstructable-decision",
+      "checked_in_justification": "Compact durable decision state; reconstructing intent from chat or history would be lossy."
     },
     {
       "pattern": ".agentic-workspace/docs/capability-contract.json",
@@ -109,7 +127,9 @@
       "schema_or_validator": "planning payload verification",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Installed planning payload capability contract is checked during payload verification."
+      "notes": "Installed planning payload capability contract is checked during payload verification.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": ".agentic-workspace/memory/repo/manifest.toml",
@@ -120,7 +140,9 @@
       "editable_by_agents": true,
       "generated": false,
       "routed_to": "#504",
-      "notes": "Memory manifest TOML needs an explicit schema or typed validator."
+      "notes": "Memory manifest TOML needs an explicit schema or typed validator.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
@@ -130,7 +152,9 @@
       "schema_or_validator": "memory upgrade/source checks",
       "editable_by_agents": false,
       "generated": false,
-      "notes": "Upgrade source metadata is payload-managed."
+      "notes": "Upgrade source metadata is payload-managed.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": ".agentic-workspace/memory/**/REGISTRY.json",
@@ -140,7 +164,9 @@
       "schema_or_validator": "agentic-workspace skills discovery",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Skill registries are consumed by the skills command and package verification."
+      "notes": "Skill registries are consumed by the skills command and package verification.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": ".agentic-workspace/memory/skills/*/agents/openai.yaml",
@@ -150,7 +176,9 @@
       "schema_or_validator": "OpenAI agent skill metadata convention",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Agent-specific skill hints are optional source metadata, not core package state."
+      "notes": "Agent-specific skill hints are optional source metadata, not core package state.",
+      "storage_class": "diagnostic-fixture",
+      "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
     },
     {
       "pattern": ".agentic-workspace/planning/state.toml",
@@ -160,7 +188,9 @@
       "schema_or_validator": "planning-state/v1 parser and planning surface checker",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Planning state is checked by summary, doctor, and planning-surface validation."
+      "notes": "Planning state is checked by summary, doctor, and planning-surface validation.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": ".agentic-workspace/planning/execplans/*.plan.json",
@@ -171,7 +201,9 @@
       "editable_by_agents": true,
       "generated": false,
       "routed_to": "#505",
-      "notes": "Active execplan records need a dedicated schema."
+      "notes": "Active execplan records need a dedicated schema.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": ".agentic-workspace/planning/execplans/archive/*.plan.json",
@@ -182,7 +214,23 @@
       "editable_by_agents": false,
       "generated": false,
       "routed_to": "#505",
-      "notes": "Archived execplan records need a dedicated schema."
+      "notes": "Archived execplan records need a dedicated schema.",
+      "storage_class": "historical-audit-distillation",
+      "checked_in_justification": "Historical proof or review residue retained as distilled audit evidence rather than ordinary startup input.",
+      "reconstructable_from": [
+        "git history",
+        "issue or PR references embedded in the archive record",
+        "commit history around the closeout"
+      ],
+      "guardrails": {
+        "max_bytes": 25000,
+        "preferred_refs": [
+          "issue ids",
+          "commit SHAs",
+          "validation command names"
+        ],
+        "routed_to": "#538"
+      }
     },
     {
       "pattern": ".agentic-workspace/planning/reviews/*.review.json",
@@ -193,7 +241,23 @@
       "editable_by_agents": true,
       "generated": false,
       "routed_to": "#505",
-      "notes": "Review records need a dedicated schema."
+      "notes": "Review records need a dedicated schema.",
+      "storage_class": "historical-audit-distillation",
+      "checked_in_justification": "Historical proof or review residue retained as distilled audit evidence rather than ordinary startup input.",
+      "reconstructable_from": [
+        "review prompt source",
+        "issue or PR references in the review record",
+        "git history"
+      ],
+      "guardrails": {
+        "max_bytes": 40000,
+        "preferred_refs": [
+          "issue ids",
+          "review artifact path",
+          "source doc refs"
+        ],
+        "routed_to": "#538"
+      }
     },
     {
       "pattern": ".agentic-workspace/planning/external-intent-evidence.json",
@@ -204,7 +268,23 @@
       "editable_by_agents": true,
       "generated": false,
       "routed_to": "#506",
-      "notes": "External intent evidence needs a dedicated schema."
+      "notes": "External intent evidence needs a dedicated schema.",
+      "storage_class": "reconstructable-external-snapshot",
+      "checked_in_justification": "Temporary checked-in evidence snapshot retained for planning continuity while cleanup migrates to compact refs or regeneration.",
+      "reconstructable_from": [
+        "external work provider query recorded in refresh_metadata.command",
+        "issue or tracker URLs carried by each item"
+      ],
+      "guardrails": {
+        "max_items": 600,
+        "max_bytes": 400000,
+        "preferred_refs": [
+          "provider item ids",
+          "provider URLs",
+          "refresh command"
+        ],
+        "routed_to": "#536"
+      }
     },
     {
       "pattern": ".agentic-workspace/planning/finished-work-evidence.json",
@@ -215,7 +295,24 @@
       "editable_by_agents": true,
       "generated": false,
       "routed_to": "#506",
-      "notes": "Finished-work evidence needs a dedicated schema."
+      "notes": "Finished-work evidence needs a dedicated schema.",
+      "storage_class": "reconstructable-external-snapshot",
+      "checked_in_justification": "Temporary checked-in evidence snapshot retained for planning continuity while cleanup migrates to compact refs or regeneration.",
+      "reconstructable_from": [
+        "planning state closeout records",
+        "archived execplan closeout fields",
+        "external work item refs"
+      ],
+      "guardrails": {
+        "max_items": 200,
+        "max_bytes": 20000,
+        "preferred_refs": [
+          "issue ids",
+          "archived execplan paths",
+          "commit SHAs when available"
+        ],
+        "routed_to": "#537"
+      }
     },
     {
       "pattern": ".agentic-workspace/planning/agent-manifest.json",
@@ -225,7 +322,14 @@
       "schema_or_validator": "planning payload verification",
       "editable_by_agents": false,
       "generated": true,
-      "notes": "Generated planning adapter manifest is payload-managed."
+      "notes": "Generated planning adapter manifest is payload-managed.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in for weak-agent or package compatibility; canonical source remains contracts, templates, or renderer inputs.",
+      "reconstructable_from": [
+        "package render/check commands",
+        "source contracts and templates"
+      ],
+      "routed_to": "#539"
     },
     {
       "pattern": ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
@@ -235,7 +339,9 @@
       "schema_or_validator": "planning upgrade/source checks",
       "editable_by_agents": false,
       "generated": false,
-      "notes": "Upgrade source metadata is payload-managed."
+      "notes": "Upgrade source metadata is payload-managed.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": ".agentic-workspace/planning/skills/REGISTRY.json",
@@ -245,7 +351,9 @@
       "schema_or_validator": "agentic-workspace skills discovery",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Planning skill registry is consumed by skill discovery."
+      "notes": "Planning skill registry is consumed by skill discovery.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "tools/agent-manifest.json",
@@ -255,7 +363,14 @@
       "schema_or_validator": "planning payload render/check surfaces",
       "editable_by_agents": false,
       "generated": true,
-      "notes": "Root generated agent manifest is a compatibility adapter."
+      "notes": "Root generated agent manifest is a compatibility adapter.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in for weak-agent or package compatibility; canonical source remains contracts, templates, or renderer inputs.",
+      "reconstructable_from": [
+        "package render/check commands",
+        "source contracts and templates"
+      ],
+      "routed_to": "#539"
     },
     {
       "pattern": "tools/skills/REGISTRY.json",
@@ -265,7 +380,9 @@
       "schema_or_validator": "agentic-workspace skills discovery",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Root tool skill registry is consumed by skill discovery."
+      "notes": "Root tool skill registry is consumed by skill discovery.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "packages/memory/**/manifest.toml",
@@ -276,7 +393,9 @@
       "editable_by_agents": true,
       "generated": false,
       "routed_to": "#504",
-      "notes": "Memory package and payload manifests share the memory manifest contract gap."
+      "notes": "Memory package and payload manifests share the memory manifest contract gap.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "packages/memory/**/REGISTRY.json",
@@ -286,7 +405,9 @@
       "schema_or_validator": "agentic-workspace skills discovery and memory payload verification",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Memory package registries are consumed by skills and payload checks."
+      "notes": "Memory package registries are consumed by skills and payload checks.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "packages/memory/**/agents/openai.yaml",
@@ -296,7 +417,9 @@
       "schema_or_validator": "OpenAI agent skill metadata convention",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Agent-specific skill hints are optional source metadata."
+      "notes": "Agent-specific skill hints are optional source metadata.",
+      "storage_class": "diagnostic-fixture",
+      "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
     },
     {
       "pattern": "packages/*/bootstrap/.agentic-workspace/*/UPGRADE-SOURCE.toml",
@@ -306,7 +429,9 @@
       "schema_or_validator": "package upgrade/source checks",
       "editable_by_agents": false,
       "generated": false,
-      "notes": "Package bootstrap upgrade-source metadata is payload-managed."
+      "notes": "Package bootstrap upgrade-source metadata is payload-managed.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "packages/memory/tests/fixtures/**/*.json",
@@ -316,7 +441,9 @@
       "schema_or_validator": "pytest fixture assertions",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Fixture JSON is test data, not shipped runtime policy."
+      "notes": "Fixture JSON is test data, not shipped runtime policy.",
+      "storage_class": "diagnostic-fixture",
+      "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
     },
     {
       "pattern": "packages/memory/tests/fixtures/**/*.toml",
@@ -326,7 +453,9 @@
       "schema_or_validator": "pytest fixture assertions",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Fixture TOML is test data, not shipped runtime policy."
+      "notes": "Fixture TOML is test data, not shipped runtime policy.",
+      "storage_class": "diagnostic-fixture",
+      "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
     },
     {
       "pattern": "packages/planning/bootstrap/.agentic-workspace/planning/execplans/*.plan.json",
@@ -337,7 +466,9 @@
       "editable_by_agents": true,
       "generated": false,
       "routed_to": "#505",
-      "notes": "Bootstrap execplan templates share the execplan schema gap."
+      "notes": "Bootstrap execplan templates share the execplan schema gap.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "packages/planning/bootstrap/.agentic-workspace/planning/reviews/*.review.json",
@@ -348,7 +479,9 @@
       "editable_by_agents": true,
       "generated": false,
       "routed_to": "#505",
-      "notes": "Bootstrap review templates share the review schema gap."
+      "notes": "Bootstrap review templates share the review schema gap.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "packages/planning/bootstrap/**/*.json",
@@ -358,7 +491,9 @@
       "schema_or_validator": "planning payload verification",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Planning bootstrap JSON is covered by package payload verification."
+      "notes": "Planning bootstrap JSON is covered by package payload verification.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "packages/planning/skills/REGISTRY.json",
@@ -368,7 +503,9 @@
       "schema_or_validator": "agentic-workspace skills discovery and planning payload verification",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Planning skill registry is consumed by skill discovery."
+      "notes": "Planning skill registry is consumed by skill discovery.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "packages/planning/tests/fixtures/**/*.json",
@@ -378,7 +515,9 @@
       "schema_or_validator": "pytest fixture assertions",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Fixture JSON is test data, not shipped runtime policy."
+      "notes": "Fixture JSON is test data, not shipped runtime policy.",
+      "storage_class": "diagnostic-fixture",
+      "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
     },
     {
       "pattern": "packages/planning/payload-surface-classification.json",
@@ -389,7 +528,15 @@
       "editable_by_agents": true,
       "generated": false,
       "routed_to": "#509",
-      "notes": "Package-local classification artifact needs schema coverage."
+      "notes": "Package-local classification artifact needs schema coverage.",
+      "storage_class": "removable-duplicate",
+      "checked_in_justification": "Duplicate or candidate payload metadata retained only while routed to collapse behind one source plus generated outputs.",
+      "reconstructable_from": [
+        "planning payload source files",
+        "scripts/check planning surface checks",
+        "git history"
+      ],
+      "storage_routed_to": "#540"
     },
     {
       "pattern": "packages/planning/extraction-candidates.json",
@@ -400,7 +547,15 @@
       "editable_by_agents": true,
       "generated": false,
       "routed_to": "#509",
-      "notes": "Package-local extraction artifact needs schema coverage."
+      "notes": "Package-local extraction artifact needs schema coverage.",
+      "storage_class": "removable-duplicate",
+      "checked_in_justification": "Duplicate or candidate payload metadata retained only while routed to collapse behind one source plus generated outputs.",
+      "reconstructable_from": [
+        "planning payload source files",
+        "scripts/check planning surface checks",
+        "git history"
+      ],
+      "storage_routed_to": "#540"
     },
     {
       "pattern": "packages/*/pyproject.toml",
@@ -410,7 +565,9 @@
       "schema_or_validator": "uv/build-backend packaging validation",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Package metadata is validated by Python packaging tools."
+      "notes": "Package metadata is validated by Python packaging tools.",
+      "storage_class": "platform-tooling",
+      "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools."
     },
     {
       "pattern": "packages/*/src/**/_ownership.toml",
@@ -420,7 +577,9 @@
       "schema_or_validator": "package payload ownership checks",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Package ownership metadata is consumed by package verification."
+      "notes": "Package ownership metadata is consumed by package verification.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "packages/command-generation/schemas/*.schema.json",
@@ -430,7 +589,9 @@
       "schema_or_validator": "JSON Schema draft 2020-12 and workspace parity check",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Generated-command package schemas are kept in parity with workspace schemas."
+      "notes": "Generated-command package schemas are kept in parity with workspace schemas.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
       "pattern": "generated/typescript/*/package.json",
@@ -440,7 +601,14 @@
       "schema_or_validator": "generated command package checks",
       "editable_by_agents": false,
       "generated": true,
-      "notes": "Generated TypeScript package manifests are adapter outputs."
+      "notes": "Generated TypeScript package manifests are adapter outputs.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in for weak-agent or package compatibility; canonical source remains contracts, templates, or renderer inputs.",
+      "reconstructable_from": [
+        "package render/check commands",
+        "source contracts and templates"
+      ],
+      "routed_to": "#539"
     },
     {
       "pattern": "tests/fixtures/**/*.json",
@@ -450,7 +618,9 @@
       "schema_or_validator": "pytest fixture assertions",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Workspace fixture JSON is test data."
+      "notes": "Workspace fixture JSON is test data.",
+      "storage_class": "diagnostic-fixture",
+      "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
     },
     {
       "pattern": ".github/ISSUE_TEMPLATE/*.yml",
@@ -460,7 +630,9 @@
       "schema_or_validator": "GitHub issue template format",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Host-repo issue templates are platform metadata, not package contracts."
+      "notes": "Host-repo issue templates are platform metadata, not package contracts.",
+      "storage_class": "platform-tooling",
+      "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools."
     },
     {
       "pattern": ".github/workflows/*.yml",
@@ -470,7 +642,9 @@
       "schema_or_validator": "GitHub Actions workflow syntax",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Host-repo CI configuration is platform metadata, not package runtime state."
+      "notes": "Host-repo CI configuration is platform metadata, not package runtime state.",
+      "storage_class": "platform-tooling",
+      "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools."
     },
     {
       "pattern": ".pre-commit-config.yaml",
@@ -480,7 +654,9 @@
       "schema_or_validator": "pre-commit runtime",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Developer-tool configuration is validated by pre-commit."
+      "notes": "Developer-tool configuration is validated by pre-commit.",
+      "storage_class": "platform-tooling",
+      "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools."
     },
     {
       "pattern": "pyproject.toml",
@@ -490,7 +666,20 @@
       "schema_or_validator": "uv/build-backend packaging validation",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Root Python project metadata is validated by Python packaging tools."
+      "notes": "Root Python project metadata is validated by Python packaging tools.",
+      "storage_class": "platform-tooling",
+      "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools."
     }
+  ],
+  "storage_classes": [
+    "source-of-truth",
+    "non-reconstructable-decision",
+    "generated-required-adapter",
+    "local-cache",
+    "reconstructable-external-snapshot",
+    "historical-audit-distillation",
+    "removable-duplicate",
+    "diagnostic-fixture",
+    "platform-tooling"
   ]
 }
