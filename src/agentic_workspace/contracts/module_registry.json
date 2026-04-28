@@ -192,13 +192,11 @@
       "include_in_full_preset": true,
       "install_signals": [
         ".agentic-workspace/memory/repo/index.md",
-        ".agentic-workspace/memory/repo/current",
         ".agentic-workspace/memory"
       ],
       "workflow_surfaces": [
         "AGENTS.md",
         ".agentic-workspace/memory/repo/index.md",
-        ".agentic-workspace/memory/repo/current",
         ".agentic-workspace/memory"
       ],
       "generated_artifacts": [],

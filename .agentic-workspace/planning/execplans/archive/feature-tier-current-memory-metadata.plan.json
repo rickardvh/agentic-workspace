@@ -1,0 +1,238 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Feature Tier Current Memory Metadata",
+  "goal": [
+    "Complete the remaining #450 parent-lane gap by removing current-memory from ordinary module/feature-tier metadata while preserving optional legacy migration and routing-calibration handling."
+  ],
+  "non_goals": [
+    "Do not delete legacy migration support.",
+    "Do not remove optional routing-feedback calibration behavior.",
+    "Do not reopen the completed #455 package payload removal work."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "agentic-workspace modules/start/report should no longer advertise .agentic-workspace/memory/repo/current as an ordinary Memory install or workflow surface.",
+      "constraints": "Keep current-memory only as migration/calibration residue where explicitly selected.",
+      "latitude": "Patch contract metadata and any generated routing text needed to make ordinary feature-tier output honest.",
+      "escalation": "Escalate if removing ordinary metadata would require deleting migration or calibration support."
+    },
+    "execution": {
+      "milestone": "feature-tier-current-memory-metadata",
+      "status": "completed",
+      "next_step": "Archive this slice, commit it, then close #450 if issue-state refresh still shows no remaining child gaps.",
+      "proof": "workspace CLI tests, contract tooling checks, modules/start/report outputs, planning checks"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/feature-tier-current-memory-metadata.plan.json",
+        "src/agentic_workspace/contracts/module_registry.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Current-memory is not a normal shared current-state feature.",
+        "Memory still provides durable anti-rediscovery knowledge.",
+        "Legacy migration/calibration support remains explicit and opt-in."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450 make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge",
+    "parent lane": "#450"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "close #450 after this milestone is committed and external evidence is refreshed"
+  },
+  "active_milestone": {
+    "id": "feature-tier-current-memory-metadata",
+    "status": "completed",
+    "scope": "Remove stale current-memory ordinary metadata from feature-tier/module output.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make #450 feature-tier output honest by removing current-memory from ordinary Memory module metadata.",
+    "hard constraints": "Do not reintroduce current-memory as active shared state or remove legacy migration/calibration support.",
+    "agent may decide locally": "Exact metadata wording, tests, and whether a small runtime renderer patch is needed.",
+    "escalate when": "The remaining gap requires changing feature-tier product direction or deleting compatibility behavior."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Remove stale ordinary surface metadata instead of adding another explanatory surface.",
+    "broader-lane validation question": "Can #450 now close with current-memory absent from ordinary startup/module metadata and advanced features opt-in?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/450"
+  },
+  "immediate_next_action": [
+    "Patch ordinary module metadata so current-memory no longer appears as an install/workflow surface."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/feature-tier-current-memory-metadata.plan.json",
+    "src/agentic_workspace/contracts/module_registry.json",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace modules --target . --format json",
+    "uv run agentic-workspace start --target . --format json",
+    "uv run agentic-workspace report --target . --format json",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/feature-tier-current-memory-metadata.plan.json src/agentic_workspace/contracts/module_registry.json src/agentic_workspace/cli.py tests/test_workspace_cli.py --format json",
+    "rg -n \"\\.agentic-workspace/memory/repo/current\" src/agentic_workspace/contracts/module_registry.json src/agentic_workspace/cli.py tests/test_workspace_cli.py"
+  ],
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "source_intent",
+      "locator": "acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/455",
+      "label": "#455 current-memory removal",
+      "role": "implemented_predecessor",
+      "locator": "closed child issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/449",
+      "label": "#449 operating-cost parent",
+      "role": "parent_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/430",
+      "label": "#430 command-generation extraction parent",
+      "role": "next_lane",
+      "locator": "roadmap"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/436",
+      "label": "#436 operational-footprint parent",
+      "role": "next_lane",
+      "locator": "roadmap"
+    }
+  ],
+  "completion_criteria": [
+    "modules output does not list .agentic-workspace/memory/repo/current as an ordinary memory install or workflow surface.",
+    "startup/report still expose feature tiers and advanced opt-in policy.",
+    "Tests protect current-memory from reappearing in ordinary feature-tier metadata."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Removed .agentic-workspace/memory/repo/current from ordinary Memory module install/workflow metadata and memory bridge routing while preserving explicit legacy migration/calibration handling.",
+    "validation confirmed": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace modules --target . --format json; uv run agentic-workspace start --target . --format json; uv run agentic-workspace report --target . --format json; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/feature-tier-current-memory-metadata.plan.json src/agentic_workspace/contracts/module_registry.json src/agentic_workspace/cli.py tests/test_workspace_cli.py --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json; make maintainer-surfaces; uv run agentic-workspace report --target . --section workflow_obligations --format json; uv run agentic-workspace report --target . --section closeout_trust --format json; uv run agentic-workspace reconcile --format json",
+    "follow-on routed to": "#449 remains the broader operating-cost parent; command-generation extraction and operational-footprint lanes remain lower priority.",
+    "post-work posterity capture": "Archive carries #450 acceptance evidence; no new durable docs or memory note needed.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "close #450, refresh external evidence, then promote the next open roadmap issue"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "checked-in execplan plus summary/proof/report/modules outputs",
+    "what happened": "Patched module registry and root CLI routing metadata so current-memory no longer appears as an ordinary Memory surface, and added a regression test.",
+    "scope touched": "feature-tier/module metadata, root CLI derived routing text, workspace CLI tests, planning closeout state",
+    "changed surfaces": "src/agentic_workspace/contracts/module_registry.json; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml; this execplan",
+    "validations run": "workspace CLI tests; ruff; contract tooling check; planning surfaces; modules/start/report/proof/root_cli_authority/doctor/workflow_obligations/closeout_trust/reconcile package queries; maintainer-surface refresh",
+    "result for continuation": "#450 acceptance criteria are now satisfied by current outputs.",
+    "next step": "archive, commit, push, close #450, refresh external evidence"
+  },
+  "finished_run_review": {
+    "review status": "accepted",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes; the remaining stale ordinary current-memory metadata was removed and guarded.",
+    "config compliance": "yes; used summary, proof, modules, report, doctor, workflow obligations, reconcile, and maintainer-surface refresh.",
+    "misinterpretation risk": "low; legacy migration/calibration references remain explicit and opt-in rather than ordinary module metadata.",
+    "follow-on decision": "close #450, keep #449 and lower-priority extraction/footprint parents open"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "modules output excludes .agentic-workspace/memory/repo/current from memory install_signals/workflow_surfaces, startup/report expose feature tiers and advanced opt-in policy, and tests guard the ordinary metadata boundary.",
+    "evidence for \"proof achieved\" state": "uv run agentic-workspace modules --target . --format json; uv run agentic-workspace start --target . --format json; uv run agentic-workspace report --target . --format json; uv run pytest tests/test_workspace_cli.py -q"
+  },
+  "intent_satisfaction": {
+    "original intent": "#450 Make advanced features opt-in through feature tiers and merged surfaces.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Feature tiers are exposed by modules/start/report, advanced features are opt-in, context/maintenance/external/improvement surfaces are merged behind routers/selectors, current-memory is absent from ordinary module metadata, and generated/codegen infrastructure is maintainer/dogfooding tier.",
+    "unsolved intent passed to": "#449 broader operating-cost parent, plus command-generation extraction and operational-footprint lanes"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "satisfied",
+    "closure decision": "close #450 after commit",
+    "why this decision is honest": "The only newly discovered #450 gap was stale current-memory ordinary metadata; this slice removed it and current compact outputs satisfy the parent acceptance criteria.",
+    "evidence carried forward": "archive plan, module registry contract, tests/test_workspace_cli.py regression, modules/start/report outputs",
+    "reopen trigger": "ordinary startup/modules output again asks a new repo to understand advanced or current-memory surfaces without observed need"
+  },
+  "cost_assessment": {
+    "workflow_cost_found": "Parent-lane closeout required validating the compact outputs rather than trusting closed child issues.",
+    "architecture_cost_found": "The module registry remained a stale authority surface after current-memory payload removal.",
+    "needless_complexity_found": "Current-memory was still listed as an ordinary Memory install/workflow surface despite being migration/calibration residue.",
+    "surfaces_added": "No new first-contact surface; one checked-in execplan is temporary closeout evidence.",
+    "surfaces_removed_merged_or_demoted": ".agentic-workspace/memory/repo/current was removed from ordinary Memory module metadata and memory bridge routing.",
+    "artifact_footprint_changed": "One execplan archive is added; shipped ordinary metadata is smaller.",
+    "shipped_default_footprint_changed": "Smaller: ordinary modules output no longer advertises current-memory.",
+    "signals_consumed": "Dogfooding validation of #450 acceptance found stale current-memory metadata in modules output.",
+    "signals_still_accumulating": "Large CLI/test/artifact surfaces remain routed to command-generation extraction and operational-footprint lanes.",
+    "human_steering_avoided_next_time": "The regression test prevents current-memory from silently reappearing as an ordinary module surface.",
+    "follow_up_routed": "#449, #430, #436",
+    "net_cost_direction": "lower"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Per-command validation transcript details are not durable beyond the proof summary.",
+          "owner": "discard",
+          "source": "execution_run.validations run"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue broader operating-cost work under #449 after #450 closes.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "intent_satisfaction.unsolved intent passed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "module_registry.json and tests now encode current-memory absence from ordinary module metadata.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#450 can close after this commit.",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/450"
+        },
+        {
+          "summary": "#449 remains the broader package-cheaper-than-bypass parent.",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/449"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted after #467 closeout because #450 validation found current-memory still advertised by modules metadata.",
+    "2026-04-28: Completed by removing current-memory from ordinary module metadata and guarding the boundary with a workspace CLI regression test."
+  ]
+}

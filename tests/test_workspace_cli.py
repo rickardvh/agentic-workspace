@@ -121,6 +121,20 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert planning_module["command_args"]["doctor"] == ["target"]
 
 
+def test_modules_command_does_not_advertise_current_memory_as_ordinary_surface(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["modules", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    memory_module = next(entry for entry in payload["modules"] if entry["name"] == "memory")
+    ordinary_surfaces = memory_module["install_signals"] + memory_module["workflow_surfaces"]
+    assert ".agentic-workspace/memory/repo/current" not in ordinary_surfaces
+    assert ".agentic-workspace/memory/repo/current/" not in ordinary_surfaces
+
+
 def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys) -> None:
     assert cli.main(["defaults", "--format", "json"]) == 0
 

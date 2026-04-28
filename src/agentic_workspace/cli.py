@@ -6043,7 +6043,6 @@ def _relay_contract_payload() -> dict[str, Any]:
             "summary": "when routed Memory is installed, borrow durable repo understanding before freezing the compact contract.",
             "borrow_from": [
                 ".agentic-workspace/memory/repo/index.md",
-                ".agentic-workspace/memory/repo/current/",
                 ".agentic-workspace/memory/repo/runbooks/",
             ],
             "fallback": [
@@ -7473,7 +7472,6 @@ def _defaults_payload() -> dict[str, Any]:
                     "supported": True,
                     "primary_writable_surfaces": [
                         ".agentic-workspace/memory/repo/",
-                        ".agentic-workspace/memory/repo/current/ (weak authority)",
                     ],
                 },
                 {
