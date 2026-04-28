@@ -172,6 +172,7 @@ _WORKFLOW_ARTIFACT_PROFILE_PAYLOADS = {
 _IMPROVEMENT_LATITUDE_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for item in _IMPROVEMENT_LATITUDE_POLICY["modes"]}
 _OPTIMIZATION_BIAS_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for item in _OPTIMIZATION_BIAS_POLICY["modes"]}
 _MODULE_REGISTRY_ENTRIES = {str(item["name"]): copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST["modules"]}
+_PACKAGE_FOOTPRINT = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("package_footprint", {}))
 _FEATURE_TIER_ENTRIES = tuple(copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("feature_tiers", []))
 _ADVANCED_FEATURE_ENTRIES = tuple(copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("advanced_features", []))
 _CLI_COMMAND_MANIFESTS = {str(item["name"]): copy.deepcopy(item) for item in _CLI_COMMANDS_MANIFEST["commands"]}
@@ -8105,6 +8106,7 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
     descriptors = _module_operations()
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     payload = {
+        "package_footprint": copy.deepcopy(_PACKAGE_FOOTPRINT),
         "feature_tiers": copy.deepcopy(list(_FEATURE_TIER_ENTRIES)),
         "advanced_features": copy.deepcopy(list(_ADVANCED_FEATURE_ENTRIES)),
         "modules": [

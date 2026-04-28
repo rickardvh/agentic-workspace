@@ -1,0 +1,254 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Root Package Footprint Review",
+  "goal": [
+    "Implement #487 by making the root package dependency-footprint decision explicit and discoverable without changing packaging behavior."
+  ],
+  "non_goals": [
+    "Do not split packages or make optional extras in this slice.",
+    "Do not break uvx/pipx root lifecycle ergonomics.",
+    "Do not implement third-party module loading; #490/#510 own that direction."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Routing-only/minimal claims are accurate at both repo-state and Python-package levels, and the current first-party module dependency tradeoff is recorded.",
+      "constraints": "Stay on current branch; preserve root command behavior and packaging dependencies.",
+      "latitude": "Add decision metadata to existing module registry/default docs and tests.",
+      "escalation": "Stop before changing pyproject dependencies or lifecycle invocation behavior."
+    },
+    "execution": {
+      "milestone": "root-package-footprint-review",
+      "status": "completed",
+      "next_step": "Archive this plan, commit, close #487, refresh external evidence, then continue #485 with the next routed child.",
+      "proof": "Run contract tooling, focused workspace CLI tests, ruff/docs-adjacent checks, proof selector, and planning closeout."
+    },
+    "scope": {
+      "touched": [
+        "README.md",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/module_registry.json",
+        "src/agentic_workspace/contracts/schemas/module_registry.schema.json",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/root-package-footprint-review.plan.json"
+      ],
+      "invariants": [
+        "Root package dependencies remain unchanged.",
+        "Root lifecycle keeps a simple installed path to planning and memory modules.",
+        "Routing-only is described as smallest checked-in repo footprint, not smallest Python dependency footprint."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Keep the root orchestrator thin, boring, generic, and strictly bounded.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression",
+    "parent lane": "#485"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "follow-on detail": "#488, #490, and #510-#514 remain after #487.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #487 closes, reingest and promote the next module-boundary-compression child."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Later optional-module or generic-manifest work can start from an explicit package-footprint decision.",
+    "intentionally deferred": "Changing pyproject dependencies, optional extras, lazy imports, and third-party module discovery.",
+    "discovered implications": "",
+    "proof achieved now": "schema-backed package-footprint decision metadata is emitted by the modules command and asserted by tests.",
+    "validation still needed": "Run proof selector and closeout checks after archive.",
+    "next likely slice": "#488 or #490 depending on refreshed issue priority."
+  },
+  "intent_interpretation": {
+    "literal request": "Review root package dependency footprint and first-party module coupling.",
+    "inferred intended outcome": "Make the current coupling honest and bounded so minimal-footprint claims do not overstate what routing-only means.",
+    "chosen concrete what": "Add schema-backed package-footprint decision metadata and README/test coverage.",
+    "interpretation distance": "low",
+    "review guidance": "Review whether the decision should remain temporary until #490 or be treated as intentional."
+  },
+  "execution_bounds": {
+    "allowed paths": "Module registry contract/schema, modules command rendering, README, focused tests, planning surfaces.",
+    "max changed files": "Prefer 5-7 files.",
+    "required validation commands": "contract tooling, focused tests, full workspace CLI tests if cli.py changes, ruff, proof selector, planning checks.",
+    "ask-before-refactor threshold": "Stop before changing dependencies or module invocation.",
+    "stop before touching": "pyproject dependency changes, generated packages, module lifecycle internals, third-party discovery implementation."
+  },
+  "stop_conditions": {
+    "stop when": "Package-footprint decision is explicit and tests assert routing-only package-vs-repo footprint language.",
+    "escalate when boundary reached": "The review shows dependencies must change now rather than later.",
+    "escalate on scope drift": "The work becomes optional extras, lazy loading, or module-manifest redesign.",
+    "escalate on proof failure": "Contract parity or modules command output drifts unexpectedly."
+  },
+  "context_budget": {
+    "live working set": "pyproject.toml, README.md, module_registry.json/schema, modules command tests, issue #487.",
+    "recoverable later": "Full package split and generic module manifest design.",
+    "externalize before shift": "Record any required dependency change as follow-up issue if discovered.",
+    "pre-work config pull": "uv run agentic-workspace report --target . --format json",
+    "pre-work memory pull": "Not needed unless compact output points to Memory.",
+    "tiny resumability note": "Decision/metadata slice only; do not change dependencies.",
+    "context-shift triggers": "Dependency edits, import failures, or broad module loader changes."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make the root package dependency footprint decision explicit for #487.",
+    "hard constraints": "Preserve current packaging and root lifecycle ergonomics.",
+    "agent may decide locally": "Exact metadata shape and README wording.",
+    "escalate when": "A packaging behavior change appears necessary."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#487",
+      "label": "root package footprint",
+      "role": "source_intent",
+      "locator": "GitHub issue #487"
+    },
+    {
+      "kind": "issue",
+      "target": "#485",
+      "label": "module boundary compression",
+      "role": "parent_intent",
+      "locator": "GitHub issue #485"
+    }
+  ],
+  "active_milestone": {
+    "id": "root-package-footprint-review",
+    "status": "completed",
+    "scope": "Record dependency-footprint decision metadata and tests.",
+    "ready": "#487 is the selected next child for #485.",
+    "blocked": "None.",
+    "optional_deps": "None."
+  },
+  "immediate_next_action": [
+    "Patch package-footprint metadata, README wording, and focused tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "README.md",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/module_registry.json",
+    "src/agentic_workspace/contracts/schemas/module_registry.schema.json",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/root-package-footprint-review.plan.json"
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_workspace_cli.py -q -k \"modules_command_lists\"",
+    "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "completion_criteria": [
+    "Dependency-footprint and module-coupling tradeoff is explicitly decided.",
+    "If unconditional dependencies remain, the reason is recorded and bounded.",
+    "Routing-only/minimal install claims are accurate at repo and Python package levels.",
+    "The chosen path does not block #490 generic module declarations."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "Issue #487 and checked-in roadmap.",
+    "what happened": "Added schema-backed package-footprint metadata to the module registry, exposed it through the modules command, clarified README footprint wording, and asserted the contract in CLI tests.",
+    "scope touched": "README, module registry contract/schema, modules command output, focused tests, and planning closeout.",
+    "changed surfaces": "README.md; src/agentic_workspace/cli.py; src/agentic_workspace/contracts/module_registry.json; src/agentic_workspace/contracts/schemas/module_registry.schema.json; tests/test_workspace_cli.py.",
+    "validations run": "contract tooling, focused modules command test, full workspace CLI tests, ruff over src/tests, planning surface check.",
+    "result for continuation": "#487 is satisfied; #488, #490, and #510-#514 remain routed under #485.",
+    "next step": "Archive this plan, commit, close #487, refresh external evidence, then continue the module-boundary-compression lane."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no dependency, packaging, or module-loader behavior changed.",
+    "proof status": "passed local validation; proof selector and closeout checks remain before commit.",
+    "intent served": "yes; routing-only and root package footprint are now explicitly separated.",
+    "config compliance": "used package summary/check/proof workflow and kept repo invocation through uv.",
+    "misinterpretation risk": "low; the decision is marked intentional-temporary and bounded by follow-up issues.",
+    "follow-on decision": "archive this slice but keep #485 open through routed children."
+  },
+  "proof_report": {
+    "validation proof": "Local checks pass for contract tooling, focused modules command output, full workspace CLI tests, ruff, and planning surfaces.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "modules payload now includes package_footprint, tests assert decision/bounds/wording, and README clarifies checked-in repo footprint versus Python package dependencies."
+  },
+  "intent_satisfaction": {
+    "original intent": "#487",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The root package dependency-footprint decision is explicit, discoverable through `agentic-workspace modules --format json`, schema validated, and documented in README.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Root orchestrator should be thin and honest about footprint while preserving leverage.",
+    "slice shaping bias": "Record the decision before changing package topology.",
+    "broader-lane validation question": "Does this reduce ambiguity for later #490 module-manifest work?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane module-boundary-compression activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Package-footprint decision captured as machine-readable module-registry metadata and exposed in command output.",
+    "validation confirmed": "Focused and full CLI tests plus lint/planning/contract checks pass.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml lane module-boundary-compression.",
+    "post-work posterity capture": "Archived execplan plus schema-backed contract metadata.",
+    "knowledge promoted (Memory/Docs/Config)": "Durable product decision lives in module_registry.json and README; no Memory update needed.",
+    "resume from": "Reingest open issues and choose the next #485 child after closing #487."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#488, #490, and #510-#514 remain under #485.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": ""
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Durable product decision lives in module_registry.json and README; no Memory update needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "README clarifies routing-only as checked-in repo footprint, not Python dependency footprint.",
+          "owner": "README.md",
+          "source": ""
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "Continue root module boundary compression.",
+          "owner": "#485",
+          "source": ""
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Initial plan created from #487."
+  ]
+}

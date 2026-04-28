@@ -10,7 +10,7 @@ Choose the smallest preset that matches the repo problem:
 - `planning`: active planning without memory
 - `full`: both together, when the repo needs both durable knowledge and checked-in execution continuity
 
-These presets map to feature tiers. `routing-only` is the smallest footprint when a repo only needs compact startup/config/report routing. `full` means planning plus memory; it does not activate source-checkout maintainer tooling, package extraction, codegen development, or self-improvement surfaces.
+These presets map to feature tiers. `routing-only` is the smallest checked-in repo footprint when a repo only needs compact startup/config/report routing. The current root Python package still bundles the first-party planning and memory packages so the root lifecycle command stays simple; routing-only does not mean a smaller Python dependency install. `full` means planning plus memory; it does not activate source-checkout maintainer tooling, package extraction, codegen development, or self-improvement surfaces.
 
 Then run:
 

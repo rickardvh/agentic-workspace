@@ -70,6 +70,11 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
         "memory",
         "full",
     ]
+    footprint = payload["package_footprint"]
+    assert footprint["decision"] == "bundle-first-party-modules-for-now"
+    assert "unconditionally" in footprint["python_package_dependency_model"]
+    assert "not Python package dependencies" in footprint["repo_footprint_rule"]
+    assert footprint["bounded_by"] == ["#490", "#510"]
     full_tier = next(entry for entry in payload["feature_tiers"] if entry["id"] == "full")
     assert full_tier["modules"] == ["planning", "memory"]
     assert "does not imply source-checkout maintainer tooling" in full_tier["cost_model"]

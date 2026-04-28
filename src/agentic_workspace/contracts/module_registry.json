@@ -1,5 +1,27 @@
 {
   "schema_version": "agentic-workspace/module-registry/v1",
+  "package_footprint": {
+    "decision": "bundle-first-party-modules-for-now",
+    "status": "intentional-temporary",
+    "python_package_dependency_model": "root package currently depends on the bundled planning and memory module packages unconditionally.",
+    "repo_footprint_rule": "Presets choose checked-in repository footprint; routing-only minimizes installed repo state, not Python package dependencies.",
+    "why": "Keeping first-party modules installed with the root command preserves simple uvx/pipx lifecycle orchestration while generic module manifests and optional-module loading are still being shaped.",
+    "bounded_by": [
+      "#490",
+      "#510"
+    ],
+    "future_options": [
+      "keep bundled first-party distribution intentionally",
+      "add optional extras for selected first-party modules",
+      "load module packages lazily from generic module declarations",
+      "publish a separate core orchestrator and first-party bundle"
+    ],
+    "must_preserve": [
+      "simple root lifecycle invocation",
+      "routing-only as smallest checked-in repo footprint",
+      "planning and memory as first-party examples of the same module contract third parties use"
+    ]
+  },
   "feature_tiers": [
     {
       "id": "routing-only",
