@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T11:20:35+00:00",
+  "refreshed_at": "2026-04-28T11:34:11+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T11:20:35+00:00",
-    "item_count": 509,
+    "refreshed_at": "2026-04-28T11:34:11+00:00",
+    "item_count": 510,
     "open_count": 28,
-    "closed_count": 481,
+    "closed_count": 482,
     "limit": 600,
     "state": "all",
     "state_source": "explicit",
@@ -7712,7 +7712,7 @@
       "system": "github",
       "id": "#492",
       "title": "[Planning]: Add durable-residue routing to plan closeout and archive gates",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#491",
       "planning_residue_expected": "optional",
@@ -7722,8 +7722,8 @@
         "planning"
       ],
       "created_at": "2026-04-28T06:49:24Z",
-      "updated_at": "2026-04-28T06:49:24Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T11:32:49Z",
+      "comments_count": 1
     },
     {
       "system": "github",
@@ -8250,6 +8250,23 @@
       ],
       "created_at": "2026-04-28T11:19:47Z",
       "updated_at": "2026-04-28T11:19:47Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#524",
+      "title": "[Review]: Suppress stale archive continuation when parent refs are externally closed",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/524",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "review/friction"
+      ],
+      "created_at": "2026-04-28T11:33:41Z",
+      "updated_at": "2026-04-28T11:33:41Z",
       "comments_count": 0
     }
   ]
