@@ -6,6 +6,7 @@
     "schema_version",
     "package_footprint",
     "component_model",
+    "workspace_components",
     "module_profiles",
     "feature_tiers",
     "advanced_features",
@@ -240,6 +241,47 @@
         },
         "additionalProperties": false
       }
+    },
+    "workspace_components": {
+      "type": "object",
+      "required": [
+        "scope",
+        "components"
+      ],
+      "properties": {
+        "scope": {
+          "type": "object",
+          "required": [
+            "audience",
+            "role",
+            "excludes",
+            "rule"
+          ],
+          "properties": {
+            "audience": {
+              "const": "shipped-host-repo"
+            },
+            "role": {
+              "type": "string"
+            },
+            "excludes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            },
+            "rule": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "components": {
+          "$ref": "#/$defs/module_components"
+        }
+      },
+      "additionalProperties": false
     },
     "feature_tiers": {
       "type": "array",

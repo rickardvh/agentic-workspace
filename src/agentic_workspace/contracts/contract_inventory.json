@@ -248,7 +248,7 @@
         "src/agentic_workspace/contracts/schemas/module_registry.schema.json",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
-      "notes": "Generic module manifests declare MCP-style resources, tools, prompts, schemas, roots, safety metadata, and future adapter boundaries without adding an MCP runtime dependency."
+      "notes": "The module registry declares root workspace components plus module-owned MCP-style resources, tools, prompts, schemas, roots, safety metadata, and future adapter boundaries without adding an MCP runtime dependency."
     },
     {
       "area": "workspace_surfaces_manifest",

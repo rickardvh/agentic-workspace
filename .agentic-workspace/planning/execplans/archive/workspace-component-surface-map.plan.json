@@ -1,0 +1,187 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workspace Component Surface Map",
+  "goal": [
+    "Complete #512 by mapping current root workspace, planning, and memory surfaces to MCP-style component classes in the existing module registry contract."
+  ],
+  "non_goals": [
+    "Do not implement all mapped future tools.",
+    "Do not expose source-checkout-only maintainer or dogfooding components as shipped host-repo components.",
+    "Do not add an MCP runtime or server."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "current shipped workspace, planning, and memory surfaces have a compact component mapping",
+      "constraints": "reuse the existing module registry contract; keep the root orchestrator generic and small",
+      "latitude": "choose whether root workspace components are top-level contract metadata rather than a selectable module",
+      "escalation": "escalate if satisfying #512 requires a new top-level command or runtime adapter"
+    },
+    "execution": {
+      "milestone": "#512 root/planning/memory component map",
+      "status": "completed",
+      "next_step": "Archive this execplan, close #512, and evaluate whether #485 can close or needs another bounded slice.",
+      "proof": "contract tooling, workspace CLI tests, ruff, proof, and planning doctor"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/module_registry.json",
+        "src/agentic_workspace/contracts/schemas/module_registry.schema.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/workspace-component-surface-map.plan.json"
+      ],
+      "invariants": [
+        "root workspace is mapped as shipped orchestration components, not as a selectable module",
+        "source-checkout-only maintainer tooling remains excluded",
+        "no MCP runtime dependency"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#485 keeps the root orchestrator thin and generic; #512 completes the current-surface mapping child of #510.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression",
+    "parent lane": "module-boundary-compression"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression",
+    "activation trigger": "after #512 lands, evaluate whether #485 can close or whether another bounded module-boundary slice remains"
+  },
+  "delegated_judgment": {
+    "requested outcome": "complete #512 without adding residue",
+    "hard constraints": "contract-backed mapping; no MCP runtime dependency; preserve source-checkout boundary",
+    "agent may decide locally": "exact contract field name and compact component selection",
+    "escalate when": "mapping needs runtime adapter behavior or new shipped command surface"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#512",
+      "label": "current surface mapping",
+      "role": "closed_item",
+      "locator": "GitHub issue #512"
+    },
+    {
+      "kind": "issue",
+      "target": "#485",
+      "label": "root orchestrator parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue #485"
+    }
+  ],
+  "active_milestone": {
+    "id": "root-workspace-components",
+    "status": "completed",
+    "scope": "root workspace component mapping in module registry contract plus tests",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this plan, close #512, refresh external evidence, and reassess #485."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/workspace-component-surface-map.plan.json"
+  ],
+  "invariants": [
+    "No MCP/FastMCP runtime dependency.",
+    "No source-checkout-only maintainer tooling in shipped component map."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "gh",
+    "uv"
+  ],
+  "completion_criteria": [
+    "Root workspace commands are mapped as resources/tools/prompts/schemas/roots.",
+    "Planning and memory mappings remain available from module manifests.",
+    "Mapping distinguishes shipped host-repo components from source-checkout-only components.",
+    "Tests and contract checks pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "GitHub issue #512",
+    "what happened": "Added root workspace component mapping to the existing module registry contract, exposed it through modules JSON output, and tested that root resources/tools/prompts/roots are reported separately from planning and memory module components.",
+    "scope touched": "module registry contract and schema, modules output assembly, CLI tests, contract inventory, and planning closeout state.",
+    "changed surfaces": "Existing machine contract update only; no new first-contact prose, command, runtime, or MCP server surface.",
+    "validations run": "uv run python scripts/check/check_contract_tooling_surfaces.py; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace proof --target . --changed <paths> --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py.",
+    "result for continuation": "#512 is complete. #485 should be assessed next rather than assumed closed by this child slice alone.",
+    "next step": "Archive #512 and refresh/ingest remaining open work."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; the slice mapped current shipped surfaces without adding a runtime adapter or broad source-checkout maintainer surface.",
+    "proof status": "passed",
+    "intent served": "yes; root workspace, planning, and memory surfaces now have compact component mappings in one existing contract.",
+    "config compliance": "used compact startup/proof/doctor/defaults surfaces and did not bulk-read planning state.",
+    "misinterpretation risk": "low; source-checkout-only maintainer tooling is explicitly excluded from shipped host-repo component scope.",
+    "follow-on decision": "evaluate parent #485 after #512 closeout."
+  },
+  "proof_report": {
+    "validation proof": "contract tooling, full workspace CLI tests, lint, proof selection, CLI authority query, planning doctor, and planning surface check all passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "206 workspace CLI tests passed; ruff passed; check_contract_tooling_surfaces passed; proof selected workspace_cli, cli_authority, and planning_surfaces with no blocker; planning doctor and planning surface checker were clean."
+  },
+  "intent_satisfaction": {
+    "original intent": "#512 map current root, planning, and memory surfaces to MCP-style components",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "module_registry.json now declares workspace_components for shipped root resources/tools/prompts/roots while preserving planning and memory module components; schema and tests cover the new mapping.",
+    "unsolved intent passed to": "#485 parent assessment, not a #512 gap."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "The package should feel smaller by making compact commands and contracts the cheapest route.",
+    "slice shaping bias": "existing contract update over new surface",
+    "broader-lane validation question": "Does root mapping clarify current components without making first contact heavier?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#512's mapping is complete, but #485 is a parent compression outcome and should be closed only after checking the remaining open issue set and intended outcome.",
+    "evidence carried forward": "root workspace components distinguish shipped host-repo resources/tools/prompts/roots from source-checkout-only maintainer tooling.",
+    "reopen trigger": "A shipped root workspace command/resource is found unmapped or source-checkout-only tooling appears in shipped component scope."
+  },
+  "execution_summary": {
+    "outcome delivered": "Root workspace components are mapped in the existing module registry alongside planning and memory module components.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#485 parent assessment after #512 closure.",
+    "post-work posterity capture": "archived execplan plus GitHub closeout comment.",
+    "knowledge promoted (Memory/Docs/Config)": "none; the durable mapping belongs in the existing contract, not Memory.",
+    "resume from": "Refresh open issues and prioritize the next lane."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "No new friction from this slice; #522 already tracks archive cleanup friction discovered in the previous closeout."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #512 after #510/#511/#513/#514 closed and evidence refreshed."
+  ]
+}

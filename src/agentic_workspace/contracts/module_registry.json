@@ -91,6 +91,7 @@
       "future_adapter": "optional separate adapter package or wrapper",
       "adapter_consumes": [
         "module_registry.component_model",
+        "workspace_components.components",
         "modules[*].components",
         "component schema references",
         "tool safety metadata",
@@ -105,6 +106,221 @@
         "stable component vocabulary",
         "schema or typed-validator coverage for referenced structured results",
         "explicit safety metadata for mutating tools"
+      ]
+    }
+  },
+  "workspace_components": {
+    "scope": {
+      "audience": "shipped-host-repo",
+      "role": "root orchestration components that compose selected modules",
+      "excludes": [
+        "source-checkout maintainer tooling",
+        "repo-local dogfooding skills",
+        "generated package development commands"
+      ],
+      "rule": "Root workspace components describe the shipped host-repo command surface; module-specific behavior stays in modules[*].components."
+    },
+    "components": {
+      "resources": [
+        {
+          "uri": "workspace://config",
+          "description": "Resolved workspace configuration, including local invocation posture when present.",
+          "read_only": true,
+          "source": ".agentic-workspace/config.toml plus optional local override",
+          "command": "agentic-workspace config --target <repo> --format json",
+          "result_schema": "schemas/workspace_config.schema.json"
+        },
+        {
+          "uri": "workspace://start",
+          "description": "Minimum safe startup context for ordinary first contact.",
+          "read_only": true,
+          "source": "startup context contracts and resolved config",
+          "command": "agentic-workspace start --target <repo> --format json",
+          "result_schema": "schemas/startup_context.schema.json"
+        },
+        {
+          "uri": "workspace://summary",
+          "description": "Compact current planning and continuation state.",
+          "read_only": true,
+          "source": "planning module summary projection",
+          "command": "agentic-workspace summary --format json",
+          "result_schema": "typed-validator:planning-summary"
+        },
+        {
+          "uri": "workspace://report",
+          "description": "Router-shaped workspace health, warnings, selectors, and module report gateway.",
+          "read_only": true,
+          "source": "workspace report router",
+          "command": "agentic-workspace report --target <repo> --format json",
+          "result_schema": "schemas/workspace_report.schema.json"
+        },
+        {
+          "uri": "workspace://proof",
+          "description": "Changed-path proof selection and surface-value review guidance.",
+          "read_only": true,
+          "source": "proof selection rules",
+          "command": "agentic-workspace proof --target <repo> --changed <paths> --format json",
+          "result_schema": "typed-validator:proof-selection"
+        }
+      ],
+      "tools": [
+        {
+          "name": "workspace.init",
+          "description": "Initialize Agentic Workspace in a host repository.",
+          "command": "agentic-workspace init --target <repo> --preset <preset> --format json",
+          "read_only": false,
+          "destructive": false,
+          "idempotent": true,
+          "requires_dry_run": false,
+          "input_schema": "typed-validator:lifecycle-command-options",
+          "result_schema": "workspace-lifecycle-plan/v1",
+          "safety": {
+            "requires_approval_when": [
+              "ambiguous_ownership",
+              "manual_review"
+            ],
+            "owned_paths": [
+              ".agentic-workspace/**",
+              "managed AGENTS.md fences",
+              "llms.txt"
+            ],
+            "dry_run_command": ""
+          }
+        },
+        {
+          "name": "workspace.install",
+          "description": "Install selected workspace modules in a host repository.",
+          "command": "agentic-workspace install --target <repo> --modules <modules> --dry-run --format json",
+          "read_only": false,
+          "destructive": false,
+          "idempotent": true,
+          "requires_dry_run": true,
+          "input_schema": "typed-validator:lifecycle-command-options",
+          "result_schema": "workspace-lifecycle-plan/v1",
+          "safety": {
+            "requires_approval_when": [
+              "ambiguous_ownership",
+              "manual_review"
+            ],
+            "owned_paths": [
+              ".agentic-workspace/**",
+              "managed AGENTS.md fences",
+              "llms.txt"
+            ],
+            "dry_run_command": "agentic-workspace install --target <repo> --modules <modules> --dry-run --format json"
+          }
+        },
+        {
+          "name": "workspace.upgrade",
+          "description": "Refresh managed workspace and module surfaces.",
+          "command": "agentic-workspace upgrade --target <repo> --dry-run --format json",
+          "read_only": false,
+          "destructive": false,
+          "idempotent": true,
+          "requires_dry_run": true,
+          "input_schema": "typed-validator:lifecycle-command-options",
+          "result_schema": "workspace-lifecycle-plan/v1",
+          "safety": {
+            "requires_approval_when": [
+              "ambiguous_ownership",
+              "manual_review"
+            ],
+            "owned_paths": [
+              ".agentic-workspace/**",
+              "managed AGENTS.md fences",
+              "llms.txt"
+            ],
+            "dry_run_command": "agentic-workspace upgrade --target <repo> --dry-run --format json"
+          }
+        },
+        {
+          "name": "workspace.uninstall",
+          "description": "Remove managed workspace and selected module surfaces when ownership is clear.",
+          "command": "agentic-workspace uninstall --target <repo> --modules <modules> --dry-run --format json",
+          "read_only": false,
+          "destructive": true,
+          "idempotent": true,
+          "requires_dry_run": true,
+          "input_schema": "typed-validator:lifecycle-command-options",
+          "result_schema": "workspace-lifecycle-plan/v1",
+          "safety": {
+            "requires_approval_when": [
+              "destructive",
+              "ambiguous_ownership",
+              "manual_review"
+            ],
+            "owned_paths": [
+              ".agentic-workspace/**",
+              "managed AGENTS.md fences",
+              "llms.txt"
+            ],
+            "dry_run_command": "agentic-workspace uninstall --target <repo> --modules <modules> --dry-run --format json"
+          }
+        },
+        {
+          "name": "workspace.doctor",
+          "description": "Inspect workspace and module health.",
+          "command": "agentic-workspace doctor --target <repo> --format json",
+          "read_only": true,
+          "destructive": false,
+          "idempotent": true,
+          "requires_dry_run": false,
+          "input_schema": "typed-validator:lifecycle-command-options",
+          "result_schema": "workspace-module-report/v1",
+          "safety": {
+            "requires_approval_when": [],
+            "owned_paths": [],
+            "dry_run_command": ""
+          }
+        }
+      ],
+      "prompts": [
+        {
+          "name": "workspace.startup",
+          "description": "Ordinary startup route through AGENTS.md and compact context commands.",
+          "template": "AGENTS.md",
+          "prompt_kind": "handoff"
+        },
+        {
+          "name": "workspace.external_handoff",
+          "description": "Compatibility handoff for agents that start from llms.txt.",
+          "template": "llms.txt",
+          "prompt_kind": "handoff"
+        }
+      ],
+      "schemas": [
+        {
+          "id": "workspace-config",
+          "path": "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+          "schema_kind": "json-schema"
+        },
+        {
+          "id": "workspace-report",
+          "path": "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+          "schema_kind": "json-schema"
+        },
+        {
+          "id": "startup-context",
+          "path": "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+          "schema_kind": "json-schema"
+        }
+      ],
+      "roots": [
+        {
+          "id": "workspace-root",
+          "path": ".agentic-workspace",
+          "ownership": "product-managed-enclave"
+        },
+        {
+          "id": "workspace-agents-fence",
+          "path": "AGENTS.md#agentic-workspace:workflow",
+          "ownership": "managed-fence-in-repo-owned-file"
+        },
+        {
+          "id": "workspace-local-root",
+          "path": ".agentic-workspace/local",
+          "ownership": "local-only-ignored"
+        }
       ]
     }
   },
