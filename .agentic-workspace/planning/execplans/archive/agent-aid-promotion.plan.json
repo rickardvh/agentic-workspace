@@ -1,0 +1,240 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Agent Aid Promotion",
+  "goal": [
+    "agent-created-aids-lifecycle final child; #520 made aids discoverable and #521 should define how proven aids leave candidate storage for repo-native surfaces."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "agent-created-aids-lifecycle final child; #520 made aids discoverable and #521 should define how proven aids leave candidate storage for repo-native surfaces.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "agent-aid-promotion",
+      "status": "completed",
+      "next_step": "archive this plan, close #521 and parent #516, then continue with the structured-first operating updates lane.",
+      "proof": "Focused aid/defaults/discovery tests, agent aid checker, workspace CLI tests, contract checks, ruff, maintainer surfaces, planning checks, proof selector, root CLI authority defaults, and planning doctor passed."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/config.py",
+        "scripts/check/check_agent_aids.py",
+        "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_agent_aids.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/docs/agent-aids-storage.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/agent-aid-promotion.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "agent-created-aids-lifecycle final child; #520 made aids discoverable and #521 should define how proven aids leave candidate storage for repo-native surfaces.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Candidate aids now have schema-backed promotion targets, required discovery routes, explicit post-promotion retention, module-component coverage, and checker enforcement that repo-shared canonical proof aids stay portable.",
+    "intentionally deferred": "none",
+    "discovered implications": "Dogfooding confirmed the proof selector and root CLI authority review shortened validation selection, while closeout still depends on hand-authored narrative already routed to the structured-first operating updates lane.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice",
+    "next likely slice": "#531 in the structured-first operating updates lane"
+  },
+  "intent_interpretation": {
+    "literal request": "Agent Aid Promotion",
+    "inferred intended outcome": "agent-created-aids-lifecycle final child; #520 made aids discoverable and #521 should define how proven aids leave candidate storage for repo-native surfaces.",
+    "chosen concrete what": "Define promotion target kinds and discovery routes in the manifest/defaults/docs, add module-component candidate coverage, and enforce portable canonical proof promotion rules.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/config.py; scripts/check/check_agent_aids.py; src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json; src/agentic_workspace/cli.py; tests/test_agent_aids.py; tests/test_workspace_cli.py; .agentic-workspace/docs/agent-aids-storage.md; .agentic-workspace/planning/state.toml; this execplan.",
+    "max changed files": "9 active files plus archive output at closeout.",
+    "required validation commands": "uv run pytest tests/test_agent_aids.py -q; uv run pytest tests/test_workspace_cli.py -q -k \"agent_aids or matching_agent_aids or agent_aid_storage\"; uv run python scripts/check/check_agent_aids.py --quiet-success; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "validate and close agent aid promotion.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "agent-created-aids-lifecycle final child; #520 made aids discoverable and #521 should define how proven aids leave candidate storage for repo-native surfaces.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "agent-aid-promotion",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this plan and close #521."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/config.py",
+    "scripts/check/check_agent_aids.py",
+    "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
+    "src/agentic_workspace/cli.py",
+    "tests/test_agent_aids.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/docs/agent-aids-storage.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/agent-aid-promotion.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_agent_aids.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q -k \"agent_aids or matching_agent_aids or agent_aid_storage\"",
+    "uv run python scripts/check/check_agent_aids.py --quiet-success",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check src tests",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Proven aids have a clear promotion path to repo-native surfaces.",
+    "Promoted aids become visible through the appropriate discovery route.",
+    "Candidate aids declare retention after promotion.",
+    "Platform-specific helpers do not become canonical when a portable implementation is feasible.",
+    "The promotion model applies to scripts, skills, runbooks, prompts, checks, templates, and module components."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Added module-component agent-aid coverage, required promotion discovery routes, exposed the promotion model in compact defaults/report surfaces, documented the promotion path, and tightened checker rules for promoted retention and portable canonical proof aids.",
+    "scope touched": "agent aid manifest schema, agent aid checker, compact defaults/report payload, storage docs, focused tests, and planning state.",
+    "changed surfaces": "src/agentic_workspace/config.py; scripts/check/check_agent_aids.py; src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json; src/agentic_workspace/cli.py; tests/test_agent_aids.py; tests/test_workspace_cli.py; .agentic-workspace/docs/agent-aids-storage.md; planning state and this execplan.",
+    "validations run": "uv run pytest tests/test_agent_aids.py -q; uv run pytest tests/test_workspace_cli.py -q -k \"agent_aids or matching_agent_aids or agent_aid_storage\"; uv run python scripts/check/check_agent_aids.py --quiet-success; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace proof --target . --changed ... --format json; uv run agentic-workspace doctor --target . --modules planning --format json.",
+    "result for continuation": "agent-created-aids-lifecycle parent is satisfied after #517-#521; continue with structured-first operating updates.",
+    "next step": "Archive this plan and close #521/#516."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "close #521 and #516; continue with #531."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Focused tests, full workspace CLI tests, agent aid checker, contract tooling and structured inventory checks, ruff, maintainer surfaces, planning strict check, root CLI authority defaults, proof selector, and planning doctor all passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "agent-created-aids-lifecycle final child; #520 made aids discoverable and #521 should define how proven aids leave candidate storage for repo-native surfaces.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Manifest promotion metadata now requires target kind, target, trigger, retention, and discovery route; defaults/docs describe the promotion model; checker rules reject unsafe promoted retention and non-portable repo-shared canonical proof aids; module-component aids are supported.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "agent aid promotion paths are schema-backed, discoverable, and policy-checked.",
+    "validation confirmed": "yes",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml structured-first-operating-updates lane",
+    "post-work posterity capture": "this execplan and agent-aids-storage docs",
+    "knowledge promoted (Memory/Docs/Config)": ".agentic-workspace/docs/agent-aids-storage.md and compact defaults payload",
+    "resume from": "#531"
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "Promoted candidate aids must declare their target, discovery route, trigger, and retention; repo-shared executable canonical proof aids should be cross-platform.",
+    "motivation worth preserving": "Reusable aids should graduate into ordinary repo-native surfaces instead of becoming permanent candidate storage doctrine.",
+    "canonical owner now": "agent aid manifest schema, checker, compact defaults payload, and agent-aids-storage docs",
+    "promotion trigger": "when aid promotion metadata, discovery routes, module-component aid coverage, or canonical proof aid policy changes",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "complete",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#517-#521 now cover storage, manifests, executable safety, discovery, and promotion for the agent-created-aids lifecycle.",
+    "evidence carried forward": "manifest schema/checker/defaults/docs/tests and this archived execplan; supersedes .agentic-workspace/planning/execplans/archive/agent-aid-discovery.plan.json, .agentic-workspace/planning/execplans/archive/agent-aid-executable-safety.plan.json, and .agentic-workspace/planning/execplans/archive/agent-aid-manifest-schema.plan.json",
+    "reopen trigger": "new aid classes, promotion targets, or canonical proof aid policies that are not covered by current schema and checker rules"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Proof selection and root CLI authority review reduced validation uncertainty.",
+      "Closeout still required hand-authored narrative and state edits.",
+      "Promotion scaffolds already carried enough execution bounds to avoid broad rereads."
+    ],
+    "signals fixed": [
+      "Used existing compact proof/defaults/report surfaces instead of adding a new command."
+    ],
+    "signals routed": [
+      "Structured closeout/state-update friction remains in the existing structured-first operating updates lane, especially #528 and #531."
+    ],
+    "signals dismissed": [],
+    "next owner": ".agentic-workspace/planning/state.toml structured-first-operating-updates lane"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "#531 structured-first operating updates"
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        ".agentic-workspace/docs/agent-aids-storage.md now owns the promotion guidance."
+      ],
+      "issue_follow_up": [
+        "#528/#531 already cover the closeout authoring friction observed here."
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

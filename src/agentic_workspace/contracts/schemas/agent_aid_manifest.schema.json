@@ -36,7 +36,8 @@
         "runbook",
         "prompt",
         "check",
-        "template"
+        "template",
+        "module-component"
       ]
     },
     "status": {
@@ -165,14 +166,41 @@
     "promotion": {
       "type": "object",
       "required": [
+        "target_kind",
         "target",
+        "discovery_route",
         "trigger",
         "retention_after_promotion"
       ],
       "properties": {
+        "target_kind": {
+          "type": "string",
+          "enum": [
+            "command",
+            "check",
+            "skill",
+            "runbook",
+            "prompt",
+            "template",
+            "module-component",
+            "docs-contract"
+          ]
+        },
         "target": {
           "type": "string",
           "minLength": 1
+        },
+        "discovery_route": {
+          "type": "string",
+          "enum": [
+            "repo-command",
+            "repo-check",
+            "skills",
+            "runbook",
+            "prompt-template",
+            "module-manifest",
+            "docs-contract"
+          ]
         },
         "trigger": {
           "type": "string",

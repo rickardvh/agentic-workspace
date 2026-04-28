@@ -21,6 +21,7 @@ TYPE_DIRS = {
     "prompts": "prompt",
     "checks": "check",
     "templates": "template",
+    "module-components": "module-component",
 }
 EXECUTABLE_AID_TYPES = frozenset({"script", "check"})
 CANONICAL_WORKFLOW_EXACT = frozenset(
@@ -184,6 +185,13 @@ def _safety_policy_findings(path: str, payload: dict[str, Any], *, root: Path, t
             findings.append(Finding(path=path, message="agent aids with writes, destructive actions, or network access must require review"))
     if payload.get("proof_role") == "canonical-proof" and payload.get("status") != "promoted":
         findings.append(Finding(path=path, message="only promoted aids may declare proof_role='canonical-proof'"))
+    if (
+        aid_type in EXECUTABLE_AID_TYPES
+        and payload.get("scope") == "repo-shared"
+        and payload.get("proof_role") == "canonical-proof"
+        and payload.get("portability") != "cross-platform"
+    ):
+        findings.append(Finding(path=path, message="repo-shared executable canonical proof aids must be cross-platform"))
     if isinstance(entrypoint, str) and payload.get("proof_role") != "canonical-proof":
         workflow_path = _referenced_from_canonical_workflow(entrypoint, root=root, tracked=tracked)
         if workflow_path is not None:
@@ -196,6 +204,12 @@ def _safety_policy_findings(path: str, payload: dict[str, Any], *, root: Path, t
                     ),
                 )
             )
+    promotion = payload.get("promotion")
+    if isinstance(promotion, dict):
+        if payload.get("status") == "promoted" and promotion.get("retention_after_promotion") == "delete":
+            findings.append(Finding(path=path, message="promoted candidate manifests cannot retain retention_after_promotion='delete'"))
+        if payload.get("proof_role") == "canonical-proof" and promotion.get("target_kind") not in {"command", "check"}:
+            findings.append(Finding(path=path, message="canonical proof aids must promote to a command or check target"))
     return findings
 
 

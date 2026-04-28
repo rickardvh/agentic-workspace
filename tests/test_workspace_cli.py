@@ -870,7 +870,15 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     agent_aids = payload["mixed_agent"]["agent_aid_storage"]
     assert agent_aids["canonical_doc"] == ".agentic-workspace/docs/agent-aids-storage.md"
     assert agent_aids["candidate_root"] == ".agentic-workspace/agent-aids"
-    assert agent_aids["candidate_subdirs"] == ["scripts", "skills", "runbooks", "prompts", "checks", "templates"]
+    assert agent_aids["candidate_subdirs"] == [
+        "scripts",
+        "skills",
+        "runbooks",
+        "prompts",
+        "checks",
+        "templates",
+        "module-components",
+    ]
     assert [entry["class"] for entry in agent_aids["storage_classes"][:3]] == [
         "local-only",
         "checked-in-candidate",
@@ -1112,6 +1120,17 @@ def test_defaults_section_selector_returns_agent_aid_storage_answer(capsys) -> N
         "required workflow entrypoints",
     ]
     assert payload["answer"]["executable_safety"]["platform_specific_checked_in_requires"] == "checked_in_scope_justification"
+    assert payload["answer"]["promotion_model"]["target_kinds"] == [
+        "command",
+        "check",
+        "skill",
+        "runbook",
+        "prompt",
+        "template",
+        "module-component",
+        "docs-contract",
+    ]
+    assert payload["answer"]["promotion_model"]["portable_repo_general_rule"].endswith("must be cross-platform.")
     assert [entry["class"] for entry in payload["answer"]["storage_classes"]] == [
         "local-only",
         "checked-in-candidate",
@@ -2409,7 +2428,9 @@ def test_skills_command_recommends_matching_agent_aids_without_retired_aids(tmp_
         },
         "validation": {"commands": ["uv run python .agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"]},
         "promotion": {
+            "target_kind": "check",
             "target": "scripts/check/check_workspace_validation.py",
+            "discovery_route": "repo-check",
             "trigger": "used successfully across multiple closeouts",
             "retention_after_promotion": "delete",
         },
@@ -3667,7 +3688,9 @@ def test_report_section_agent_aids_discovers_checked_in_and_local_aids(tmp_path:
         },
         "validation": {"commands": ["uv run python .agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"]},
         "promotion": {
+            "target_kind": "check",
             "target": "scripts/check/check_workspace_validation.py",
+            "discovery_route": "repo-check",
             "trigger": "used successfully across multiple closeouts",
             "retention_after_promotion": "delete",
         },
@@ -3698,6 +3721,9 @@ def test_report_section_agent_aids_discovers_checked_in_and_local_aids(tmp_path:
     assert candidate["entrypoint"].endswith("workspace_validation.py")
     assert candidate["safety_summary"]["read_only"] is True
     assert candidate["canonical_proof_route"] is False
+    assert candidate["promotion_summary"]["target_kind"] == "check"
+    assert candidate["promotion_summary"]["discovery_route"] == "repo-check"
+    assert candidate["promotion_summary"]["retention_after_promotion"] == "delete"
     assert [entry["id"] for entry in answer["recommended_actions"]] == ["workspace-validation-wrapper"]
     assert answer["local_only"]["entries"][0]["id"] == "codex"
     assert answer["local_only"]["entries"][0]["authority"] == "none"

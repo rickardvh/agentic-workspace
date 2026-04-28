@@ -25,6 +25,7 @@ WORKSPACE_AGENT_AID_SUBDIRS = (
     "prompts",
     "checks",
     "templates",
+    "module-components",
 )
 WORKSPACE_LOCAL_INTEGRATION_ALLOWED_AID_KINDS = (
     "prompt helpers",

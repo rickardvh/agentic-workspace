@@ -47,7 +47,9 @@ def _valid_manifest(**overrides):
         },
         "validation": {"commands": ["uv run python .agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"]},
         "promotion": {
+            "target_kind": "check",
             "target": "scripts/check/check_workspace_validation.py",
+            "discovery_route": "repo-check",
             "trigger": "used successfully across multiple closeouts or required by proof routes",
             "retention_after_promotion": "delete",
         },
@@ -215,6 +217,96 @@ def test_candidate_agent_aid_cannot_claim_canonical_proof_role(tmp_path: Path) -
     findings = check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path)
 
     assert any("only promoted aids may declare proof_role='canonical-proof'" in finding.message for finding in findings)
+
+
+def test_agent_aid_manifest_requires_promotion_target_kind(tmp_path: Path) -> None:
+    _prepare_schema(tmp_path)
+    manifest = ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json"
+    entrypoint = ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"
+    payload = _valid_manifest()
+    del payload["promotion"]["target_kind"]
+    _write(tmp_path / manifest, json.dumps(payload))
+    _write(tmp_path / entrypoint, "print('ok')\n")
+
+    findings = check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path)
+
+    assert any("'target_kind' is a required property" in finding.message for finding in findings)
+
+
+def test_agent_aid_manifest_requires_promotion_discovery_route(tmp_path: Path) -> None:
+    _prepare_schema(tmp_path)
+    manifest = ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json"
+    entrypoint = ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"
+    payload = _valid_manifest()
+    del payload["promotion"]["discovery_route"]
+    _write(tmp_path / manifest, json.dumps(payload))
+    _write(tmp_path / entrypoint, "print('ok')\n")
+
+    findings = check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path)
+
+    assert any("'discovery_route' is a required property" in finding.message for finding in findings)
+
+
+def test_repo_shared_executable_canonical_proof_aid_must_be_cross_platform(tmp_path: Path) -> None:
+    _prepare_schema(tmp_path)
+    manifest = ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json"
+    entrypoint = ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"
+    payload = _valid_manifest(
+        status="promoted",
+        proof_role="canonical-proof",
+        portability="platform-specific",
+        portability_justification="Only works on one platform.",
+        checked_in_scope_justification="Kept for historical platform-specific proof.",
+        promotion={
+            "target_kind": "check",
+            "target": "scripts/check/check_workspace_validation.py",
+            "discovery_route": "repo-check",
+            "trigger": "used successfully across multiple closeouts or required by proof routes",
+            "retention_after_promotion": "keep",
+        },
+    )
+    _write(tmp_path / manifest, json.dumps(payload))
+    _write(tmp_path / entrypoint, "print('ok')\n")
+
+    findings = check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path)
+
+    assert any("repo-shared executable canonical proof aids must be cross-platform" in finding.message for finding in findings)
+
+
+def test_promoted_candidate_manifest_cannot_keep_delete_retention(tmp_path: Path) -> None:
+    _prepare_schema(tmp_path)
+    manifest = ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json"
+    entrypoint = ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"
+    payload = _valid_manifest(status="promoted")
+    _write(tmp_path / manifest, json.dumps(payload))
+    _write(tmp_path / entrypoint, "print('ok')\n")
+
+    findings = check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path)
+
+    assert any("promoted candidate manifests cannot retain retention_after_promotion='delete'" in finding.message for finding in findings)
+
+
+def test_module_component_agent_aid_manifest_passes(tmp_path: Path) -> None:
+    _prepare_schema(tmp_path)
+    manifest = ".agentic-workspace/agent-aids/module-components/review-router/manifest.json"
+    entrypoint = ".agentic-workspace/agent-aids/module-components/review-router/resource.json"
+    payload = _valid_manifest(
+        id="review-router",
+        type="module-component",
+        entrypoint=entrypoint,
+        promotion={
+            "target_kind": "module-component",
+            "target": "src/agentic_workspace/contracts/module_components.json",
+            "discovery_route": "module-manifest",
+            "trigger": "module component is useful across host repos",
+            "retention_after_promotion": "delete",
+        },
+        validation={"absent_reason": "Module component manifests are validated by contract tooling after promotion."},
+    )
+    _write(tmp_path / manifest, json.dumps(payload))
+    _write(tmp_path / entrypoint, "{}\n")
+
+    assert check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path) == []
 
 
 def test_agent_aid_manifest_type_must_match_subdir(tmp_path: Path) -> None:

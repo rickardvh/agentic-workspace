@@ -244,6 +244,29 @@ def _agent_aid_storage_payload(*, target_root: Path | None = None) -> dict[str, 
             "canonical_checks_are": "repo-owned checkers and proof routes that validate candidate metadata, not candidate aids themselves",
             "repo_general_preference": "Prefer cross-platform wrappers for repo-shared validation; keep platform-specific helpers local unless justified.",
         },
+        "promotion_model": {
+            "rule": "Proven aids should move from candidate storage to the strongest repo-native surface and retire or shrink the candidate copy.",
+            "target_kinds": [
+                "command",
+                "check",
+                "skill",
+                "runbook",
+                "prompt",
+                "template",
+                "module-component",
+                "docs-contract",
+            ],
+            "trigger": "repeated successful use or clear repo-general value",
+            "discovery_route_required": True,
+            "retirement_required": "candidate manifests declare retention_after_promotion",
+            "portable_repo_general_rule": "Repo-shared executable canonical proof aids must be cross-platform.",
+            "discovery_after_promotion": {
+                "command_or_check": "agentic-workspace proof --changed ... --format json or repo-native check discovery",
+                "skill": 'agentic-workspace skills --target ./repo --task "<task>" --format json',
+                "runbook_prompt_template_docs": "agentic-workspace report --target ./repo --section agent_aids --format json until promoted surface owns discovery",
+                "module_component": "module manifest resources/tools/prompts",
+            },
+        },
         "storage_classes": [
             {
                 "class": "local-only",
@@ -385,9 +408,28 @@ def _checked_in_agent_aid_entries(*, target_root: Path) -> tuple[list[dict[str, 
                     "command_count": len(commands) if isinstance(commands, list) else 0,
                     "absent_reason": str(validation.get("absent_reason", "")) if isinstance(validation, dict) else "",
                 },
+                "promotion_summary": _agent_aid_promotion_summary(payload.get("promotion", {})),
             }
         )
     return entries, warnings
+
+
+def _agent_aid_promotion_summary(promotion: Any) -> dict[str, Any]:
+    if not isinstance(promotion, dict):
+        return {
+            "target_kind": "",
+            "target": "",
+            "discovery_route": "",
+            "trigger": "",
+            "retention_after_promotion": "",
+        }
+    return {
+        "target_kind": str(promotion.get("target_kind", "")),
+        "target": str(promotion.get("target", "")),
+        "discovery_route": str(promotion.get("discovery_route", "")),
+        "trigger": str(promotion.get("trigger", "")),
+        "retention_after_promotion": str(promotion.get("retention_after_promotion", "")),
+    }
 
 
 def _local_only_agent_aid_entries(*, target_root: Path) -> list[dict[str, Any]]:

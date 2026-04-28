@@ -30,7 +30,7 @@ Executable aid types are `script` and `check`. They must declare nonblank valida
 
 Root: the host repo's ordinary command, check, skill, runbook, prompt, template, or documentation surface.
 
-Use this when an aid is stable enough that candidate storage is no longer the right home. Promotion should make the aid discoverable through the promoted surface's normal route and should retire or shrink the candidate copy.
+Use this when an aid is stable enough that candidate storage is no longer the right home. Promotion should make the aid discoverable through the promoted surface's normal route and should retire or shrink the candidate copy. Candidate manifests declare `promotion.target_kind`, `promotion.target`, `promotion.discovery_route`, `promotion.trigger`, and `promotion.retention_after_promotion`; supported target kinds are command, check, skill, runbook, prompt, template, module-component, and docs-contract. Repo-shared executable aids that become canonical proof must be cross-platform.
 
 ### Package-Owned
 
