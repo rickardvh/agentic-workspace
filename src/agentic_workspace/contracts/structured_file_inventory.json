@@ -1,0 +1,496 @@
+{
+  "kind": "agentic-workspace/structured-file-inventory/v1",
+  "schema_version": "structured-file-inventory/v1",
+  "rule": "Tracked JSON, TOML, YAML, and YML files are machine-readable surfaces. Each must be classified as schema-backed, typed-validator-backed, generated/derived, source-checkout diagnostic, or an explicit freeform-prohibited gap routed to an issue.",
+  "statuses": [
+    "schema-backed",
+    "typed-validator-backed",
+    "generated-derived",
+    "source-checkout-diagnostic",
+    "freeform-prohibited-gap"
+  ],
+  "entries": [
+    {
+      "pattern": "src/agentic_workspace/contracts/structured_file_inventory.json",
+      "format": "json",
+      "owner": "workspace-contracts",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "This inventory is validated by scripts/check/check_structured_file_inventory.py."
+    },
+    {
+      "pattern": "src/agentic_workspace/contracts/schemas/*.schema.json",
+      "format": "json",
+      "owner": "workspace-contracts",
+      "status": "schema-backed",
+      "schema_or_validator": "JSON Schema draft 2020-12",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Schema files are the validation authority for contract manifests and generated payload shapes."
+    },
+    {
+      "pattern": "src/agentic_workspace/contracts/operations/*.json",
+      "format": "json",
+      "owner": "workspace-contracts",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/operation.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Operation contracts are validated by contract tooling checks."
+    },
+    {
+      "pattern": "src/agentic_workspace/contracts/conformance/*.json",
+      "format": "json",
+      "owner": "workspace-contracts",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/conformance.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Conformance process contracts are validated by contract tooling checks."
+    },
+    {
+      "pattern": "src/agentic_workspace/contracts/*.json",
+      "format": "json",
+      "owner": "workspace-contracts",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "mixed existing schema coverage; see routed issue",
+      "editable_by_agents": true,
+      "generated": false,
+      "routed_to": "#508",
+      "notes": "Root contract manifests need complete schema or typed-validator coverage."
+    },
+    {
+      "pattern": "src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml",
+      "format": "toml",
+      "owner": "workspace-payload",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "workspace install/doctor ownership checks",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Payload ownership metadata is consumed by lifecycle checks."
+    },
+    {
+      "pattern": ".agentic-workspace/config.toml",
+      "format": "toml",
+      "owner": "workspace-config",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Resolved workspace config is validated through config/start/report paths."
+    },
+    {
+      "pattern": ".agentic-workspace/OWNERSHIP.toml",
+      "format": "toml",
+      "owner": "workspace-lifecycle",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "workspace ownership and doctor checks",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Repo ownership metadata is a lifecycle surface."
+    },
+    {
+      "pattern": ".agentic-workspace/system-intent/intent.toml",
+      "format": "toml",
+      "owner": "system-intent",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic-workspace system-intent refresh/report path",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "System intent is compact repo-owned policy state."
+    },
+    {
+      "pattern": ".agentic-workspace/docs/capability-contract.json",
+      "format": "json",
+      "owner": "planning-payload",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "planning payload verification",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Installed planning payload capability contract is checked during payload verification."
+    },
+    {
+      "pattern": ".agentic-workspace/memory/repo/manifest.toml",
+      "format": "toml",
+      "owner": "memory",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "memory manifest typed validator pending",
+      "editable_by_agents": true,
+      "generated": false,
+      "routed_to": "#504",
+      "notes": "Memory manifest TOML needs an explicit schema or typed validator."
+    },
+    {
+      "pattern": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
+      "format": "toml",
+      "owner": "memory-payload",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "memory upgrade/source checks",
+      "editable_by_agents": false,
+      "generated": false,
+      "notes": "Upgrade source metadata is payload-managed."
+    },
+    {
+      "pattern": ".agentic-workspace/memory/**/REGISTRY.json",
+      "format": "json",
+      "owner": "memory-skills",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic-workspace skills discovery",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Skill registries are consumed by the skills command and package verification."
+    },
+    {
+      "pattern": ".agentic-workspace/memory/skills/*/agents/openai.yaml",
+      "format": "yaml",
+      "owner": "memory-skills",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "OpenAI agent skill metadata convention",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Agent-specific skill hints are optional source metadata, not core package state."
+    },
+    {
+      "pattern": ".agentic-workspace/planning/state.toml",
+      "format": "toml",
+      "owner": "planning",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "planning-state/v1 parser and planning surface checker",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Planning state is checked by summary, doctor, and planning-surface validation."
+    },
+    {
+      "pattern": ".agentic-workspace/planning/execplans/*.plan.json",
+      "format": "json",
+      "owner": "planning",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "planning execplan JSON schema pending",
+      "editable_by_agents": true,
+      "generated": false,
+      "routed_to": "#505",
+      "notes": "Active execplan records need a dedicated schema."
+    },
+    {
+      "pattern": ".agentic-workspace/planning/execplans/archive/*.plan.json",
+      "format": "json",
+      "owner": "planning",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "planning execplan JSON schema pending",
+      "editable_by_agents": false,
+      "generated": false,
+      "routed_to": "#505",
+      "notes": "Archived execplan records need a dedicated schema."
+    },
+    {
+      "pattern": ".agentic-workspace/planning/reviews/*.review.json",
+      "format": "json",
+      "owner": "planning-review",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "planning review JSON schema pending",
+      "editable_by_agents": true,
+      "generated": false,
+      "routed_to": "#505",
+      "notes": "Review records need a dedicated schema."
+    },
+    {
+      "pattern": ".agentic-workspace/planning/external-intent-evidence.json",
+      "format": "json",
+      "owner": "planning-evidence",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "external intent evidence schema pending",
+      "editable_by_agents": true,
+      "generated": false,
+      "routed_to": "#506",
+      "notes": "External intent evidence needs a dedicated schema."
+    },
+    {
+      "pattern": ".agentic-workspace/planning/finished-work-evidence.json",
+      "format": "json",
+      "owner": "planning-evidence",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "finished work evidence schema pending",
+      "editable_by_agents": true,
+      "generated": false,
+      "routed_to": "#506",
+      "notes": "Finished-work evidence needs a dedicated schema."
+    },
+    {
+      "pattern": ".agentic-workspace/planning/agent-manifest.json",
+      "format": "json",
+      "owner": "planning-payload",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "planning payload verification",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated planning adapter manifest is payload-managed."
+    },
+    {
+      "pattern": ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
+      "format": "toml",
+      "owner": "planning-payload",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "planning upgrade/source checks",
+      "editable_by_agents": false,
+      "generated": false,
+      "notes": "Upgrade source metadata is payload-managed."
+    },
+    {
+      "pattern": ".agentic-workspace/planning/skills/REGISTRY.json",
+      "format": "json",
+      "owner": "planning-skills",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic-workspace skills discovery",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Planning skill registry is consumed by skill discovery."
+    },
+    {
+      "pattern": "tools/agent-manifest.json",
+      "format": "json",
+      "owner": "planning-payload",
+      "status": "generated-derived",
+      "schema_or_validator": "planning payload render/check surfaces",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Root generated agent manifest is a compatibility adapter."
+    },
+    {
+      "pattern": "tools/skills/REGISTRY.json",
+      "format": "json",
+      "owner": "workspace-skills",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic-workspace skills discovery",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Root tool skill registry is consumed by skill discovery."
+    },
+    {
+      "pattern": "packages/memory/**/manifest.toml",
+      "format": "toml",
+      "owner": "memory",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "memory manifest typed validator pending",
+      "editable_by_agents": true,
+      "generated": false,
+      "routed_to": "#504",
+      "notes": "Memory package and payload manifests share the memory manifest contract gap."
+    },
+    {
+      "pattern": "packages/memory/**/REGISTRY.json",
+      "format": "json",
+      "owner": "memory-skills",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic-workspace skills discovery and memory payload verification",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Memory package registries are consumed by skills and payload checks."
+    },
+    {
+      "pattern": "packages/memory/**/agents/openai.yaml",
+      "format": "yaml",
+      "owner": "memory-skills",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "OpenAI agent skill metadata convention",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Agent-specific skill hints are optional source metadata."
+    },
+    {
+      "pattern": "packages/*/bootstrap/.agentic-workspace/*/UPGRADE-SOURCE.toml",
+      "format": "toml",
+      "owner": "package-payload",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "package upgrade/source checks",
+      "editable_by_agents": false,
+      "generated": false,
+      "notes": "Package bootstrap upgrade-source metadata is payload-managed."
+    },
+    {
+      "pattern": "packages/memory/tests/fixtures/**/*.json",
+      "format": "json",
+      "owner": "memory-tests",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "pytest fixture assertions",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Fixture JSON is test data, not shipped runtime policy."
+    },
+    {
+      "pattern": "packages/memory/tests/fixtures/**/*.toml",
+      "format": "toml",
+      "owner": "memory-tests",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "pytest fixture assertions",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Fixture TOML is test data, not shipped runtime policy."
+    },
+    {
+      "pattern": "packages/planning/bootstrap/.agentic-workspace/planning/execplans/*.plan.json",
+      "format": "json",
+      "owner": "planning-payload",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "planning execplan JSON schema pending",
+      "editable_by_agents": true,
+      "generated": false,
+      "routed_to": "#505",
+      "notes": "Bootstrap execplan templates share the execplan schema gap."
+    },
+    {
+      "pattern": "packages/planning/bootstrap/.agentic-workspace/planning/reviews/*.review.json",
+      "format": "json",
+      "owner": "planning-payload",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "planning review JSON schema pending",
+      "editable_by_agents": true,
+      "generated": false,
+      "routed_to": "#505",
+      "notes": "Bootstrap review templates share the review schema gap."
+    },
+    {
+      "pattern": "packages/planning/bootstrap/**/*.json",
+      "format": "json",
+      "owner": "planning-payload",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "planning payload verification",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Planning bootstrap JSON is covered by package payload verification."
+    },
+    {
+      "pattern": "packages/planning/skills/REGISTRY.json",
+      "format": "json",
+      "owner": "planning-skills",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic-workspace skills discovery and planning payload verification",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Planning skill registry is consumed by skill discovery."
+    },
+    {
+      "pattern": "packages/planning/tests/fixtures/**/*.json",
+      "format": "json",
+      "owner": "planning-tests",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "pytest fixture assertions",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Fixture JSON is test data, not shipped runtime policy."
+    },
+    {
+      "pattern": "packages/planning/payload-surface-classification.json",
+      "format": "json",
+      "owner": "planning-package",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "package-local classification schema pending",
+      "editable_by_agents": true,
+      "generated": false,
+      "routed_to": "#509",
+      "notes": "Package-local classification artifact needs schema coverage."
+    },
+    {
+      "pattern": "packages/planning/extraction-candidates.json",
+      "format": "json",
+      "owner": "planning-package",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "package-local extraction schema pending",
+      "editable_by_agents": true,
+      "generated": false,
+      "routed_to": "#509",
+      "notes": "Package-local extraction artifact needs schema coverage."
+    },
+    {
+      "pattern": "packages/*/pyproject.toml",
+      "format": "toml",
+      "owner": "python-packaging",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "uv/build-backend packaging validation",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Package metadata is validated by Python packaging tools."
+    },
+    {
+      "pattern": "packages/*/src/**/_ownership.toml",
+      "format": "toml",
+      "owner": "package-lifecycle",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "package payload ownership checks",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Package ownership metadata is consumed by package verification."
+    },
+    {
+      "pattern": "packages/command-generation/schemas/*.schema.json",
+      "format": "json",
+      "owner": "command-generation",
+      "status": "schema-backed",
+      "schema_or_validator": "JSON Schema draft 2020-12 and workspace parity check",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Generated-command package schemas are kept in parity with workspace schemas."
+    },
+    {
+      "pattern": "generated/typescript/*/package.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated TypeScript package manifests are adapter outputs."
+    },
+    {
+      "pattern": "tests/fixtures/**/*.json",
+      "format": "json",
+      "owner": "workspace-tests",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "pytest fixture assertions",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Workspace fixture JSON is test data."
+    },
+    {
+      "pattern": ".github/ISSUE_TEMPLATE/*.yml",
+      "format": "yml",
+      "owner": "github-integration",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "GitHub issue template format",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Host-repo issue templates are platform metadata, not package contracts."
+    },
+    {
+      "pattern": ".github/workflows/*.yml",
+      "format": "yml",
+      "owner": "github-integration",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "GitHub Actions workflow syntax",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Host-repo CI configuration is platform metadata, not package runtime state."
+    },
+    {
+      "pattern": ".pre-commit-config.yaml",
+      "format": "yaml",
+      "owner": "developer-tooling",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "pre-commit runtime",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Developer-tool configuration is validated by pre-commit."
+    },
+    {
+      "pattern": "pyproject.toml",
+      "format": "toml",
+      "owner": "python-packaging",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "uv/build-backend packaging validation",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Root Python project metadata is validated by Python packaging tools."
+    }
+  ]
+}

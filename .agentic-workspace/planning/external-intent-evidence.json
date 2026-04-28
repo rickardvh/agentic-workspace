@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T12:56:35+00:00",
+  "refreshed_at": "2026-04-28T14:08:19+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T12:56:35+00:00",
-    "item_count": 516,
-    "open_count": 21,
-    "closed_count": 495,
+    "refreshed_at": "2026-04-28T14:08:19+00:00",
+    "item_count": 528,
+    "open_count": 31,
+    "closed_count": 497,
     "limit": 600,
     "state": "all",
     "state_source": "explicit",
@@ -7899,7 +7899,7 @@
       "system": "github",
       "id": "#503",
       "title": "[Workspace]: Add a structured-file inventory and no-freeform check",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#502",
       "planning_residue_expected": "optional",
@@ -7909,8 +7909,8 @@
         "planning"
       ],
       "created_at": "2026-04-28T09:06:23Z",
-      "updated_at": "2026-04-28T09:06:23Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T14:01:29Z",
+      "comments_count": 1
     },
     {
       "system": "github",
@@ -8356,6 +8356,57 @@
     },
     {
       "system": "github",
+      "id": "#530",
+      "title": "[Workspace]: Reduce prose-authoring burden with structured-first operating updates",
+      "status": "open",
+      "kind": "lane",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/530",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T12:57:52Z",
+      "updated_at": "2026-04-28T13:04:29Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#531",
+      "title": "[Workspace]: Inventory prose-heavy operating surfaces and classify essential vs generated prose",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#530",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/531",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T12:58:44Z",
+      "updated_at": "2026-04-28T12:58:44Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#532",
+      "title": "[Planning]: Generate closeout and archive prose from structured fields",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#530",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/532",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T12:59:15Z",
+      "updated_at": "2026-04-28T12:59:15Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
       "id": "#533",
       "title": "[Review]: Add a safe external evidence refresh helper",
       "status": "open",
@@ -8368,6 +8419,159 @@
       "created_at": "2026-04-28T12:59:28Z",
       "updated_at": "2026-04-28T12:59:28Z",
       "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#534",
+      "title": "[Workspace]: Add constrained templates for review, handoff, and self-improvement prose",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#530",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/534",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T13:00:00Z",
+      "updated_at": "2026-04-28T13:00:00Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#535",
+      "title": "[Memory]: Prefer structured note metadata over repeated explanatory prose",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#530",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/535",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T13:03:21Z",
+      "updated_at": "2026-04-28T13:03:21Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#536",
+      "title": "[Planning]: Treat external intent evidence as reconstructable cache, not checked-in state",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/536",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T13:47:34Z",
+      "updated_at": "2026-04-28T13:47:34Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#537",
+      "title": "[Planning]: Replace finished-work evidence sidecar with source-owned links or derived inspection",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/537",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T13:47:54Z",
+      "updated_at": "2026-04-28T13:47:54Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#538",
+      "title": "[Review]: Distill audit artifacts to decisions and refs instead of copied source context",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/538",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "review/friction"
+      ],
+      "created_at": "2026-04-28T13:48:07Z",
+      "updated_at": "2026-04-28T13:48:07Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#539",
+      "title": "[Workspace]: Require checked-in generated mirrors to justify why regeneration is not enough",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/539",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T13:48:23Z",
+      "updated_at": "2026-04-28T13:48:23Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#540",
+      "title": "[Planning]: Collapse duplicate planning check-script payload copies to one source plus generated outputs",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/540",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T13:48:41Z",
+      "updated_at": "2026-04-28T13:48:41Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#541",
+      "title": "[Workspace]: Add a reconstructable-artifact storage policy and checker",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/541",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T13:48:59Z",
+      "updated_at": "2026-04-28T13:48:59Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#542",
+      "title": "[Planning]: Recognize work_items lanes as routed finished-work continuations",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/542",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T14:04:56Z",
+      "updated_at": "2026-04-28T14:07:38Z",
+      "comments_count": 1
     }
   ]
 }

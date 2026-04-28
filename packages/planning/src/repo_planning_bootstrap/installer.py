@@ -4277,6 +4277,20 @@ def _finished_work_continuation_routed_by_roadmap(*, target_root: Path, candidat
         return []
 
     routed_by: list[str] = []
+    work_items = state.get("work_items", [])
+    if isinstance(work_items, list):
+        for raw_item in work_items:
+            if not isinstance(raw_item, dict):
+                continue
+            item_refs = {_reference_issue_token(str(issue)) for issue in raw_item.get("issues", []) if _reference_issue_token(str(issue))}
+            for value in (raw_item.get("id", ""), raw_item.get("title", ""), raw_item.get("reason", "")):
+                item_refs.update(_issue_refs_from_text(str(value)))
+            if not (item_refs & non_closure_refs):
+                continue
+            item_type = str(raw_item.get("type", "")).strip() or "item"
+            item_id = str(raw_item.get("id", "")).strip() or str(raw_item.get("title", "")).strip() or "unnamed"
+            routed_by.append(f".agentic-workspace/planning/state.toml work_items {item_type} {item_id}")
+
     for collection_name in ("lanes", "candidates"):
         collection = roadmap.get(collection_name, [])
         if not isinstance(collection, list):

@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/structured-file-inventory.schema.json",
+  "title": "Structured File Inventory",
+  "type": "object",
+  "required": [
+    "kind",
+    "schema_version",
+    "rule",
+    "statuses",
+    "entries"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/structured-file-inventory/v1"
+    },
+    "schema_version": {
+      "const": "structured-file-inventory/v1"
+    },
+    "rule": {
+      "type": "string",
+      "minLength": 1
+    },
+    "statuses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "schema-backed",
+          "typed-validator-backed",
+          "generated-derived",
+          "source-checkout-diagnostic",
+          "freeform-prohibited-gap"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "pattern",
+          "format",
+          "owner",
+          "status",
+          "schema_or_validator",
+          "editable_by_agents",
+          "generated",
+          "notes"
+        ],
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "minLength": 1
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "json",
+              "toml",
+              "yaml",
+              "yml"
+            ]
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "schema-backed",
+              "typed-validator-backed",
+              "generated-derived",
+              "source-checkout-diagnostic",
+              "freeform-prohibited-gap"
+            ]
+          },
+          "schema_or_validator": {
+            "type": "string",
+            "minLength": 1
+          },
+          "editable_by_agents": {
+            "type": "boolean"
+          },
+          "generated": {
+            "type": "boolean"
+          },
+          "routed_to": {
+            "type": "string",
+            "pattern": "^#[0-9]+$"
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "freeform-prohibited-gap"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "required": [
+                "routed_to"
+              ]
+            }
+          }
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

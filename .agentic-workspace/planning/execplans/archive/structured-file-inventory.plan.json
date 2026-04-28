@@ -1,0 +1,209 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Add structured-file inventory and no-freeform check",
+  "goal": [
+    "Add a checked inventory for tracked JSON, TOML, YAML, and YML files so machine-readable repo state is not introduced as unclassified freeform residue."
+  ],
+  "non_goals": [
+    "Do not add every missing validator or schema in this slice.",
+    "Do not inventory generated caches, virtualenvs, or untracked local outputs.",
+    "Do not make prose Markdown part of the structured-file contract."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Structured files are classified as schema-backed, typed-validator-backed, generated/derived, source-checkout diagnostics, or explicit routed gaps.",
+      "constraints": "Keep the inventory compact and pattern-based; preserve child issues #504, #505, #506, #508, and #509 for deeper validators.",
+      "latitude": "Choose the smallest schema/check/test surface that prevents new unclassified tracked JSON/TOML/YAML files.",
+      "escalation": "Stop if the inventory requires broad semantic validation of every historical artifact."
+    },
+    "execution": {
+      "milestone": "#503",
+      "status": "complete",
+      "next_step": "Archive this slice and continue the structured-file contract lane through the validator/schema children.",
+      "proof": "uv run pytest tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make structured-file-inventory; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests scripts/check/check_structured_file_inventory.py; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/",
+        "scripts/check/",
+        "tests/",
+        "Makefile",
+        ".agentic-workspace/planning/state.toml"
+      ],
+      "invariants": [
+        "New tracked structured files must be classified before landing.",
+        "Remaining validator/schema gaps must be explicit and routed to existing child issues."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#502: require schemas or typed validators for all machine-readable files.",
+    "this slice completes the larger intended outcome": "No; it creates the checked inventory and gap routing needed for child schema work.",
+    "continuation surface": ".agentic-workspace/planning/state.toml structured-file-contract lane",
+    "parent lane": "#502"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "#504, #505, #506, #508, and #509 close routed validator/schema gaps.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #503 lands and the next child issue is selected."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A cheap no-freeform guardrail over tracked structured files.",
+    "intentionally deferred": "Specific validators and schemas for memory manifest, execplan/review records, evidence records, root contract manifests, and package-local artifacts.",
+    "discovered implications": "",
+    "proof achieved now": "A schema-backed structured-file inventory and checked no-freeform guard now cover tracked JSON/TOML/YAML/YML files, and an injected unclassified structured path fails focused tests.",
+    "validation still needed": "Child issues #504, #505, #506, #508, and #509 still need to replace routed gaps with concrete schemas or typed validators.",
+    "next likely slice": "#504 or #505"
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/contracts/; scripts/check/; tests/; Makefile; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/structured-file-inventory.plan.json",
+    "max changed files": "10",
+    "required validation commands": "uv run pytest tests/test_structured_file_inventory.py; uv run python scripts/check/check_structured_file_inventory.py; uv run agentic-workspace proof --changed <paths> --format json",
+    "ask-before-refactor threshold": "Do not refactor contract loading or planning internals for this slice.",
+    "stop before touching": "Memory manifest validator, execplan/review schemas, evidence schemas, root contract semantic validation, package-local schema work."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Use subagents for read-only inventory/test recommendations while keeping implementation integration local.",
+    "hard constraints": "Subagents must not edit overlapping files without a disjoint assignment.",
+    "agent may decide locally": "Pattern grouping, status names, and check output wording.",
+    "escalate when": "Inventory cannot be kept compact without weakening the no-freeform check."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#503",
+      "label": "Structured-file inventory child issue",
+      "role": "source",
+      "locator": "GitHub issue #503"
+    },
+    {
+      "kind": "issue",
+      "target": "#502",
+      "label": "Structured-file contract parent lane",
+      "role": "parent",
+      "locator": "GitHub issue #502"
+    }
+  ],
+  "active_milestone": {
+    "id": "#503",
+    "status": "completed",
+    "scope": "inventory and no-freeform check",
+    "ready": "issue and state promoted",
+    "blocked": "None.",
+    "optional_deps": "subagent read-only inventory review"
+  },
+  "immediate_next_action": [
+    "Add schema-backed inventory and checker."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/structured_file_inventory.json",
+    "src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json",
+    "scripts/check/check_structured_file_inventory.py",
+    "tests/test_structured_file_inventory.py",
+    "Makefile",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/structured-file-inventory.plan.json"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_structured_file_inventory.py",
+    "uv run python scripts/check/check_structured_file_inventory.py",
+    "uv run agentic-workspace proof --target . --changed src/agentic_workspace/contracts/structured_file_inventory.json src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json scripts/check/check_structured_file_inventory.py tests/test_structured_file_inventory.py Makefile .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/structured-file-inventory.plan.json --format json"
+  ],
+  "completion_criteria": [
+    "Inventory validates against its schema.",
+    "Checker fails on unclassified tracked structured files.",
+    "Checker passes on the current repo.",
+    "Remaining gaps are explicitly routed to child issues."
+  ],
+  "execution_run": {
+    "run status": "complete",
+    "executor": "Codex",
+    "handoff source": ".agentic-workspace/planning/execplans/structured-file-inventory.plan.json",
+    "what happened": "Added structured_file_inventory.json with its own JSON Schema, added a git-ls-files-backed checker for tracked structured files, wired a Makefile target, and covered current coverage plus unclassified-file failure behavior with tests.",
+    "scope touched": "src/agentic_workspace/contracts/; scripts/check/; tests/; Makefile; .agentic-workspace/planning/",
+    "changed surfaces": "src/agentic_workspace/contracts/structured_file_inventory.json; src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json; scripts/check/check_structured_file_inventory.py; tests/test_structured_file_inventory.py; Makefile; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/structured-file-inventory.plan.json",
+    "validations run": "uv run pytest tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make structured-file-inventory; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests scripts/check/check_structured_file_inventory.py; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "result for continuation": "Remaining freeform-prohibited gaps are explicitly routed to #504, #505, #506, #508, and #509.",
+    "next step": "Promote the next child schema/validator issue from the restored structured-file-contract lane."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; deeper validators and schemas stayed routed to child issues.",
+    "proof status": "passed",
+    "intent served": "yes; the repo now has a checked inventory and fails unclassified tracked structured files.",
+    "config compliance": "used compact summary/proof/doctor surfaces and delegated read-only review.",
+    "misinterpretation risk": "low; #503 asked for inventory and no-freeform classification, not complete schema coverage.",
+    "follow-on decision": "archive-but-keep-lane-open for #502."
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make structured-file-inventory; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests scripts/check/check_structured_file_inventory.py; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "proof achieved now": "Structured file inventory validates against its schema, covers every current tracked structured file, and fails unclassified tracked structured paths in focused tests.",
+    "evidence for \"proof achieved\" state": "5 focused tests passed, current-repo checker passed, Makefile target passed, workspace CLI suite passed, ruff passed, planning doctor was healthy, and contract-tooling checks passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "#503 add a structured-file inventory and no-freeform check.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The inventory exists, the check fails unclassified structured files, current tracked structured files are covered, and known validator/schema gaps are routed to child issues.",
+    "unsolved intent passed to": "#504, #505, #506, #508, #509"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Keep the package lightweight and contract-backed while reducing freeform machine-readable residue.",
+    "slice shaping bias": "Add one small guardrail before adding deeper validators.",
+    "broader-lane validation question": "Can future structured files be introduced without an owner/status contract?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#503 is complete, but #502 remains open because routed gaps still need concrete schemas or typed validators.",
+    "evidence carried forward": "src/agentic_workspace/contracts/structured_file_inventory.json; scripts/check/check_structured_file_inventory.py; tests/test_structured_file_inventory.py; .agentic-workspace/planning/state.toml",
+    "reopen trigger": "A tracked JSON/TOML/YAML file can be added without inventory classification."
+  },
+  "durable_residue": {
+    "status": "evidence_only",
+    "learned constraint": "New tracked structured files should enter through the inventory check rather than as unclassified machine-readable residue.",
+    "motivation worth preserving": "The contract inventory and checker now carry the reusable rule; the archived plan only preserves proof history.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Tracked structured files now have a compact owner/status inventory and a checked no-freeform guard.",
+    "validation confirmed": "focused checker/tests, Make target, workspace CLI tests, ruff, planning doctor, and contract-tooling checks passed.",
+    "follow-on routed to": "#504, #505, #506, #508, #509 in the structured-file-contract lane.",
+    "post-work posterity capture": ".agentic-workspace/planning/execplans/archive/structured-file-inventory.plan.json after archive",
+    "knowledge promoted (Memory/Docs/Config)": "none; the durable owner is the new checked contract inventory and checker.",
+    "resume from": ".agentic-workspace/planning/state.toml"
+  },
+  "improvement_signal_review": {
+    "status": "none",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "#504",
+        "#505",
+        "#506",
+        "#508",
+        "#509"
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #503 from structured-file-contract lane."
+  ]
+}
