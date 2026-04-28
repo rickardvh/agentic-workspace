@@ -1317,12 +1317,10 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
 
     state = _read_state_from_toml(target_root)
     if state:
-        todo_data = state.get("todo", {})
-        active_items = todo_data.get("active_items", [])
-        queued_items = todo_data.get("queued_items", [])
-        roadmap_data = state.get("roadmap", {})
-        roadmap_lanes = [_normalize_roadmap_lane_record(item) for item in roadmap_data.get("lanes", []) if isinstance(item, dict)]
-        roadmap_candidates = roadmap_data.get("candidates", [])
+        active_items = _state_active_items(state)
+        queued_items = _state_queued_items(state)
+        roadmap_lanes = _state_roadmap_lanes(state)
+        roadmap_candidates = _state_roadmap_candidates(state)
         if not roadmap_candidates and roadmap_lanes:
             roadmap_candidates = [{"priority": lane.get("priority", ""), "summary": lane.get("title", "")} for lane in roadmap_lanes]
         todo_line_count = 0  # We don't have a direct line count for the TOML state
@@ -2957,6 +2955,11 @@ def _planning_state_v1_warnings(*, target_root: Path, state: dict[str, Any] | No
 
 def _planning_state_v1_items(state: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
     items: list[tuple[str, dict[str, Any]]] = []
+    active = state.get("active")
+    if isinstance(active, dict):
+        raw_execplans = active.get("execplans", [])
+        if isinstance(raw_execplans, list):
+            items.extend(("active.execplans", item) for item in raw_execplans if isinstance(item, dict))
     todo = state.get("todo")
     if isinstance(todo, dict):
         for bucket in ("active_items", "queued_items"):
@@ -2973,6 +2976,76 @@ def _planning_state_v1_items(state: dict[str, Any]) -> list[tuple[str, dict[str,
     if isinstance(raw_work_items, list):
         items.extend(("work_items", item) for item in raw_work_items if isinstance(item, dict))
     return items
+
+
+def _state_active_items(state: dict[str, Any]) -> list[dict[str, Any]]:
+    active_items: list[dict[str, Any]] = []
+    active = state.get("active")
+    if isinstance(active, dict):
+        raw_execplans = active.get("execplans", [])
+        if isinstance(raw_execplans, list):
+            for raw in raw_execplans:
+                if not isinstance(raw, dict):
+                    continue
+                item = dict(raw)
+                item.setdefault("maturity", "active")
+                item.setdefault("status", "active")
+                if "surface" not in item and "path" in item:
+                    item["surface"] = item["path"]
+                active_items.append(item)
+    todo = state.get("todo")
+    if isinstance(todo, dict):
+        raw_items = todo.get("active_items", [])
+        if isinstance(raw_items, list):
+            active_items.extend(item for item in raw_items if isinstance(item, dict))
+    return active_items
+
+
+def _state_queued_items(state: dict[str, Any]) -> list[dict[str, Any]]:
+    queued_items: list[dict[str, Any]] = []
+    raw_work_items = state.get("work_items", [])
+    if isinstance(raw_work_items, list):
+        for raw in raw_work_items:
+            if not isinstance(raw, dict):
+                continue
+            if str(raw.get("type", "")).strip() == "lane":
+                continue
+            if str(raw.get("maturity", "")).strip() == "active" or str(raw.get("status", "")).strip() == "active":
+                continue
+            queued_items.append(raw)
+    todo = state.get("todo")
+    if isinstance(todo, dict):
+        raw_items = todo.get("queued_items", [])
+        if isinstance(raw_items, list):
+            queued_items.extend(item for item in raw_items if isinstance(item, dict))
+    return queued_items
+
+
+def _state_roadmap_lanes(state: dict[str, Any]) -> list[dict[str, Any]]:
+    lanes: list[dict[str, Any]] = []
+    raw_work_items = state.get("work_items", [])
+    if isinstance(raw_work_items, list):
+        lanes.extend(
+            _normalize_roadmap_lane_record(item)
+            for item in raw_work_items
+            if isinstance(item, dict) and str(item.get("type", "")).strip() == "lane"
+        )
+    roadmap = state.get("roadmap")
+    if isinstance(roadmap, dict):
+        raw_lanes = roadmap.get("lanes", [])
+        if isinstance(raw_lanes, list):
+            lanes.extend(_normalize_roadmap_lane_record(item) for item in raw_lanes if isinstance(item, dict))
+    return lanes
+
+
+def _state_roadmap_candidates(state: dict[str, Any]) -> list[dict[str, Any]]:
+    roadmap = state.get("roadmap")
+    if not isinstance(roadmap, dict):
+        return []
+    raw_candidates = roadmap.get("candidates", [])
+    if not isinstance(raw_candidates, list):
+        return []
+    return [item for item in raw_candidates if isinstance(item, dict)]
 
 
 def _non_empty_string(value: Any) -> bool:
@@ -3000,7 +3073,7 @@ def _planning_state_v1_item_warnings(*, bucket_path: str, item_id: str, item: di
         if item.get("handoff_ready") is not True:
             warnings.append(_planning_state_v1_warning(bucket_path, f"ready item {item_id} requires handoff_ready = true."))
     if maturity == "active":
-        surface = str(item.get("execplan") or item.get("surface") or "").strip()
+        surface = str(item.get("execplan") or item.get("surface") or item.get("path") or "").strip()
         if not surface or not _surface_execplan_reference(surface):
             warnings.append(_planning_state_v1_warning(bucket_path, f"active item {item_id} requires an execplan or execplan surface."))
     if maturity == "closed":
@@ -3032,7 +3105,7 @@ def _planning_state_item_summary(*, bucket_path: str, item: dict[str, Any]) -> d
     title = str(item.get("title") or item.get("summary") or "").strip()
     maturity = str(item.get("maturity", "")).strip()
     status = str(item.get("status", "")).strip()
-    surface = str(item.get("execplan") or item.get("surface") or "").strip()
+    surface = str(item.get("execplan") or item.get("surface") or item.get("path") or "").strip()
     refs = [str(ref).strip() for ref in item.get("refs", []) if str(ref).strip()] if isinstance(item.get("refs"), list) else []
     issues = [str(issue).strip() for issue in item.get("issues", []) if str(issue).strip()] if isinstance(item.get("issues"), list) else []
     summary: dict[str, Any] = {
@@ -4755,7 +4828,11 @@ def _active_intent_contract(
 
     active_item = active_items[0] if active_items else None
     active_execplan_path = active_execplans[0]["path"].strip()
-    surface = active_item.get("surface", "").strip() if active_item else active_execplan_path
+    surface = (
+        str(active_item.get("surface") or active_item.get("execplan") or active_item.get("path") or "").strip()
+        if active_item
+        else active_execplan_path
+    )
     plan_path = _resolve_execplan_path(target_root, surface) or _resolve_execplan_path(target_root, active_execplan_path)
     if plan_path is None or not plan_path.exists():
         return {
@@ -5763,6 +5840,18 @@ def _system_intent_contract_payload() -> dict[str, Any]:
 
 
 def summary_todo_queue(*, target_root: Path) -> list[dict[str, str]]:
+    state = _read_state_from_toml(target_root)
+    if state:
+        return [
+            {
+                "id": str(item.get("id", "")).strip(),
+                "surface": str(item.get("surface") or item.get("path") or "").strip(),
+                "status": str(item.get("status", "")).strip(),
+                "why_now": str(item.get("why_now", "")).strip(),
+            }
+            for item in _state_queued_items(state)
+            if str(item.get("status", "")).strip().lower() not in {"completed", "done", "closed"}
+        ]
     todo_lines, todo_items = _read_todo_items(target_root / ".agentic-workspace/planning/state.toml")
     del todo_lines
     queue: list[dict[str, str]] = []
@@ -7373,6 +7462,18 @@ def _read_todo_items(path: Path) -> tuple[list[str], list[TodoItem]]:
 def _compact_todo_item_from_state(state: dict[str, Any] | None, item_id: str) -> TodoItem | None:
     if not isinstance(state, dict):
         return None
+    active = state.get("active")
+    if isinstance(active, dict):
+        for raw in active.get("execplans", []):
+            item = _todo_item_from_compact_record(raw, item_id)
+            if item is not None:
+                return item
+    raw_work_items = state.get("work_items", [])
+    if isinstance(raw_work_items, list):
+        for raw in raw_work_items:
+            item = _todo_item_from_compact_record(raw, item_id)
+            if item is not None:
+                return item
     todo = state.get("todo")
     if not isinstance(todo, dict):
         return None
@@ -7384,17 +7485,28 @@ def _compact_todo_item_from_state(state: dict[str, Any] | None, item_id: str) ->
         for raw in raw_items:
             if not isinstance(raw, dict) or str(raw.get("id", "")) != item_id:
                 continue
-            fields: dict[str, str] = {}
-            field_order: list[str] = []
-            for key, value in raw.items():
-                normalized_key = str(key).replace("_", " ").lower()
-                field_order.append(normalized_key)
-                if isinstance(value, list):
-                    fields[normalized_key] = ", ".join(str(item) for item in value)
-                else:
-                    fields[normalized_key] = str(value)
-            return TodoItem(fields=fields, field_order=field_order, start=-1, end=-1)
+            item = _todo_item_from_compact_record(raw, item_id)
+            if item is not None:
+                return item
     return None
+
+
+def _todo_item_from_compact_record(raw: Any, item_id: str) -> TodoItem | None:
+    if not isinstance(raw, dict) or str(raw.get("id", "")) != item_id:
+        return None
+    fields: dict[str, str] = {}
+    field_order: list[str] = []
+    for key, value in raw.items():
+        normalized_key = str(key).replace("_", " ").lower()
+        field_order.append(normalized_key)
+        if isinstance(value, list):
+            fields[normalized_key] = ", ".join(str(item) for item in value)
+        else:
+            fields[normalized_key] = str(value)
+    if "surface" not in fields and "path" in fields:
+        fields["surface"] = fields["path"]
+        field_order.append("surface")
+    return TodoItem(fields=fields, field_order=field_order, start=-1, end=-1)
 
 
 def _update_compact_todo_item_in_state(
@@ -7404,11 +7516,54 @@ def _update_compact_todo_item_in_state(
 ) -> dict[str, Any] | None:
     if not isinstance(state, dict):
         return None
+    next_state = dict(state)
+    raw_work_items = state.get("work_items", [])
+    if isinstance(raw_work_items, list):
+        next_items: list[Any] = []
+        promoted_item: dict[str, Any] | None = None
+        for raw in raw_work_items:
+            if not isinstance(raw, dict) or str(raw.get("id", "")) != item_id:
+                next_items.append(raw)
+                continue
+            promoted_item = dict(raw)
+            for key in ("next_action", "next action", "done_when", "done when"):
+                promoted_item.pop(key, None)
+            promoted_item.pop("type", None)
+            promoted_item.pop("surface", None)
+            surface = updated_fields.get("surface", "").strip()
+            if surface:
+                promoted_item["path"] = surface
+        if promoted_item is not None:
+            promoted_item["maturity"] = "active"
+            promoted_item["status"] = "active"
+            active = dict(next_state.get("active", {})) if isinstance(next_state.get("active"), dict) else {}
+            execplans = list(active.get("execplans", [])) if isinstance(active.get("execplans"), list) else []
+            execplans.append(promoted_item)
+            active["execplans"] = execplans
+            next_state["active"] = active
+            next_state["work_items"] = next_items
+            return next_state
+
+    active = state.get("active")
+    if isinstance(active, dict) and isinstance(active.get("execplans"), list):
+        next_execplans: list[Any] = []
+        changed = False
+        for raw in active["execplans"]:
+            if not isinstance(raw, dict) or str(raw.get("id", "")) != item_id:
+                next_execplans.append(raw)
+                continue
+            next_execplans.append(_updated_compact_state_item(raw, updated_fields))
+            changed = True
+        if changed:
+            next_active = dict(active)
+            next_active["execplans"] = next_execplans
+            next_state["active"] = next_active
+            return next_state
+
     todo = state.get("todo")
     if not isinstance(todo, dict):
         return None
 
-    next_state = dict(state)
     next_todo = dict(todo)
     for bucket in ("active_items", "queued_items"):
         raw_items = todo.get(bucket, [])
@@ -7421,15 +7576,7 @@ def _update_compact_todo_item_in_state(
                 next_items.append(raw)
                 continue
 
-            next_item = dict(raw)
-            for key in ("next_action", "next action", "done_when", "done when"):
-                next_item.pop(key, None)
-            for key, value in updated_fields.items():
-                compact_key = key.replace(" ", "_")
-                if value:
-                    next_item[compact_key] = value
-                else:
-                    next_item.pop(compact_key, None)
+            next_item = _updated_compact_state_item(raw, updated_fields)
             next_items.append(next_item)
             changed = True
 
@@ -7439,6 +7586,19 @@ def _update_compact_todo_item_in_state(
             return next_state
 
     return None
+
+
+def _updated_compact_state_item(raw: dict[str, Any], updated_fields: dict[str, str]) -> dict[str, Any]:
+    next_item = dict(raw)
+    for key in ("next_action", "next action", "done_when", "done when"):
+        next_item.pop(key, None)
+    for key, value in updated_fields.items():
+        compact_key = key.replace(" ", "_")
+        if value:
+            next_item[compact_key] = value
+        else:
+            next_item.pop(compact_key, None)
+    return next_item
 
 
 def _rewrite_todo_item(lines: list[str], item: TodoItem, updated_fields: dict[str, str]) -> list[str]:
@@ -7902,19 +8062,33 @@ def _validation_has_reference_sweep(commands: list[str]) -> bool:
 def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path) -> list[TodoItem]:
     if todo_path.name == "state.toml":
         state = _read_state_from_toml(target_root)
-        if state and isinstance(state.get("todo"), dict):
+        if state:
             relative = plan_path.relative_to(target_root).as_posix()
             matches: list[TodoItem] = []
-            for bucket in ("active_items", "queued_items"):
-                for raw in state.get("todo", {}).get(bucket, []):
+            active = state.get("active", {})
+            if isinstance(active, dict):
+                for raw in active.get("execplans", []):
                     if not isinstance(raw, dict):
                         continue
-                    item_plan = _surface_execplan_reference(str(raw.get("plan", ""))) or str(raw.get("plan", "")).strip()
-                    item_surface = _surface_execplan_reference(str(raw.get("surface", ""))) or str(raw.get("surface", "")).strip()
-                    if relative not in {item_plan, item_surface}:
+                    item_surface = (
+                        _surface_execplan_reference(str(raw.get("path") or raw.get("surface") or ""))
+                        or str(raw.get("path") or raw.get("surface") or "").strip()
+                    )
+                    if relative != item_surface:
                         continue
                     fields = {str(key): str(value) for key, value in raw.items()}
                     matches.append(TodoItem(fields=fields, field_order=list(fields.keys()), start=0, end=0))
+            if isinstance(state.get("todo"), dict):
+                for bucket in ("active_items", "queued_items"):
+                    for raw in state.get("todo", {}).get(bucket, []):
+                        if not isinstance(raw, dict):
+                            continue
+                        item_plan = _surface_execplan_reference(str(raw.get("plan", ""))) or str(raw.get("plan", "")).strip()
+                        item_surface = _surface_execplan_reference(str(raw.get("surface", ""))) or str(raw.get("surface", "")).strip()
+                        if relative not in {item_plan, item_surface}:
+                            continue
+                        fields = {str(key): str(value) for key, value in raw.items()}
+                        matches.append(TodoItem(fields=fields, field_order=list(fields.keys()), start=0, end=0))
             return matches
     _, items = _read_todo_items(todo_path)
     relative = plan_path.relative_to(target_root).as_posix()
@@ -7929,16 +8103,24 @@ def _remove_todo_items(todo_path: Path, items_to_remove: list[TodoItem]) -> list
     if todo_path.name == "state.toml":
         target_root = todo_path.parents[2]
         state = _read_state_from_toml(target_root)
-        if state and isinstance(state.get("todo"), dict):
+        if state:
             item_ids = {item.item_id for item in items_to_remove if item.item_id}
             if not item_ids:
                 return _read_lines(todo_path)
-            todo_state = state.setdefault("todo", {})
-            for bucket in ("active_items", "queued_items"):
-                raw_items = todo_state.get(bucket, [])
-                if not isinstance(raw_items, list):
-                    continue
-                todo_state[bucket] = [item for item in raw_items if not (isinstance(item, dict) and str(item.get("id", "")) in item_ids)]
+            active = state.get("active")
+            if isinstance(active, dict) and isinstance(active.get("execplans"), list):
+                active["execplans"] = [
+                    item for item in active["execplans"] if not (isinstance(item, dict) and str(item.get("id", "")) in item_ids)
+                ]
+            if isinstance(state.get("todo"), dict):
+                todo_state = state.setdefault("todo", {})
+                for bucket in ("active_items", "queued_items"):
+                    raw_items = todo_state.get(bucket, [])
+                    if not isinstance(raw_items, list):
+                        continue
+                    todo_state[bucket] = [
+                        item for item in raw_items if not (isinstance(item, dict) and str(item.get("id", "")) in item_ids)
+                    ]
             return _state_to_toml_lines(state)
     lines, _ = _read_todo_items(todo_path)
     indexes_to_remove: set[int] = set()
@@ -8330,6 +8512,29 @@ def _state_to_toml_lines(state: dict[str, Any]) -> list[str]:
             lines.append(f"{key} = {json.dumps(state[key])}")
     if lines:
         lines.append("")
+    if "work_items" in state:
+        items = state["work_items"]
+        if not items:
+            lines.append("work_items = []")
+        else:
+            lines.append("work_items = [")
+            for item in items:
+                item_str = ", ".join(f"{k} = {json.dumps(v)}" for k, v in item.items())
+                lines.append(f"  {{ {item_str} }},")
+            lines.append("]")
+        lines.append("")
+    if "active" in state:
+        lines.append("[active]")
+        execplans = state["active"].get("execplans", []) if isinstance(state["active"], dict) else []
+        if not execplans:
+            lines.append("execplans = []")
+        else:
+            lines.append("execplans = [")
+            for item in execplans:
+                item_str = ", ".join(f"{k} = {json.dumps(v)}" for k, v in item.items())
+                lines.append(f"  {{ {item_str} }},")
+            lines.append("]")
+        lines.append("")
     if "todo" in state:
         lines.append("[todo]")
         for key in ["active_items", "queued_items"]:
@@ -8371,14 +8576,8 @@ def _ensure_state_toml_exists(target_root: Path, *, overwrite: bool = False) -> 
     state = {
         "kind": PLANNING_STATE_KIND,
         "schema_version": PLANNING_STATE_SCHEMA_VERSION,
-        "todo": {
-            "active_items": [],
-            "queued_items": [],
-        },
-        "roadmap": {
-            "lanes": [],
-            "candidates": [],
-        },
+        "active": {"execplans": []},
+        "work_items": [],
     }
     _write_state_to_toml(target_root, state)
 

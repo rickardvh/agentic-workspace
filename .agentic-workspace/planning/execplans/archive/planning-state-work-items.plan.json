@@ -1,0 +1,224 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning State Work Items",
+  "goal": [
+    "Migrate planning state from todo/roadmap candidate buckets to maturity-based work_items and active execplan references."
+  ],
+  "non_goals": [
+    "Do not preserve duplicate roadmap.candidates as authoritative state.",
+    "Do not remove old-shape compatibility parsing in this slice.",
+    "Do not implement promotion/closeout transition helpers beyond preserving current commands."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Current and default state use [active].execplans plus work_items as the authoritative shape while summary/reconcile still work.",
+      "constraints": "Keep the package repo-/agent-/tool-agnostic and avoid long-lived duplicate authority.",
+      "latitude": "Keep old-shape parsing as compatibility input where tests need it.",
+      "escalation": "Stop before broad checker rewrite or generated compatibility views."
+    },
+    "execution": {
+      "milestone": "Migrate state shape to work_items.",
+      "status": "completed",
+      "next_step": "Continue the parent planning-state-maturity lane through #501 when selected.",
+      "proof": "planning package tests, ruff, planning doctor, summary"
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/planning-state-work-items.plan.json"
+      ],
+      "invariants": [
+        "Active execplans remain execution authority.",
+        "work_items owns lanes and non-active slices.",
+        "Old shapes remain readable compatibility input, not preferred output."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Planning state supports progressive refinement and multi-agent handoff through explicit maturity, roles, promotion, and closeout state.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+    "parent lane": "planning-state-maturity (#496)"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+    "activation trigger": "After #500 lands, continue #501 when selected."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Planning state can now use top-level work_items for lanes and ready slices plus [active].execplans for active execution authority, while legacy todo/roadmap shapes remain readable compatibility input.",
+    "intentionally deferred": "Promotion/closeout transition helpers.",
+    "discovered implications": "TOML table ordering matters: top-level work_items must be emitted before [active]. Promotion from structured work_items must preserve typed values instead of stringifying TODO fields.",
+    "proof achieved now": "Current/default state shape, summary projections, promotion, archive cleanup, planning-surface checks, root CLI tests, and lint passed.",
+    "validation still needed": "None for #500; #501 remains as the next parent-lane slice.",
+    "next likely slice": "#501"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement #500 state.toml migration to maturity-based work items.",
+    "inferred intended outcome": "Make the compact planning state itself match the maturity model.",
+    "chosen concrete what": "Add new-shape parser/writer/default support and migrate current state.",
+    "interpretation distance": "low",
+    "review guidance": "Reject duplicate authoritative todo/roadmap candidate state."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning package state parser/writer/defaults/tests and active planning files",
+    "max changed files": "Prefer under 6 files before archive.",
+    "required validation commands": "cd packages/planning; uv run pytest tests/test_installer.py; cd packages/planning; uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace summary --format json",
+    "ask-before-refactor threshold": "Any broad checker or manifest rewrite.",
+    "stop before touching": "generated CLI, agent aid lifecycle, full compatibility view generation"
+  },
+  "stop_conditions": {
+    "stop when": "#500 acceptance is met with current/default state migrated and tests passing.",
+    "escalate when boundary reached": "The next change requires broad checker or adapter rewrite.",
+    "escalate on scope drift": "Work starts implementing #501 transition helpers.",
+    "escalate on proof failure": "Summary or current v1 state reports warnings."
+  },
+  "context_budget": {
+    "live working set": "#500 issue body, state parser/writer/defaults, promotion/archive cleanup",
+    "recoverable later": "parent #496 and #501 transition helper details",
+    "externalize before shift": "execution_run, proof_report, closure_check",
+    "pre-work config pull": "uv run agentic-workspace summary --format json; uv run agentic-workspace proof --changed <paths> --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Continue #500 from planning-state-work-items.plan.json.",
+    "context-shift triggers": "subagent map shows broader compatibility risk."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Migrate planning state to maturity-based work_items and active execplan references.",
+    "hard constraints": "No duplicate authoritative roadmap.candidates or todo buckets in current/default state.",
+    "agent may decide locally": "Exact compatibility parsing and tests.",
+    "escalate when": "Migration requires broad checker or generated adapter redesign."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#500",
+      "label": "State work_items migration",
+      "role": "source_intent",
+      "locator": "GitHub issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#496",
+      "label": "Planning-state maturity parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue"
+    }
+  ],
+  "active_milestone": {
+    "id": "work-items-state",
+    "status": "completed",
+    "scope": "planning state work_items migration",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "immediate_next_action": [
+    "Archive this execplan, close #500, then continue #501 when selected."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/planning-state-work-items.plan.json"
+  ],
+  "validation_commands": [
+    "cd packages/planning; uv run pytest tests/test_installer.py",
+    "cd packages/planning; uv run ruff check .",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Current state.toml uses [active].execplans and work_items.",
+    "Default bootstrap state uses the new shape.",
+    "Summary/reconcile continue to work on the new shape.",
+    "Migration/refusal behavior is tested through new-shape parser/writer coverage.",
+    "roadmap.candidates is not authoritative state in current/default shape."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "planning-autopilot and self-improvement-dogfooding",
+    "what happened": "Migrated current and default planning state to work_items plus [active].execplans; taught summary, maturity projection, queue projection, promotion, archive cleanup, and planning-surface checks to read the new shape while keeping old-shape compatibility input.",
+    "scope touched": "planning package parser/writer/defaults/tests, planning-surface checkers, current state, and this execplan.",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/planning-state-work-items.plan.json; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; scripts/check/check_planning_surfaces.py; packages/planning/bootstrap/scripts/check/check_planning_surfaces.py",
+    "validations run": "Focused planning tests; focused workspace CLI tests; workspace summary tests; planning-surface checker; package summary and doctor; targeted ruff; full planning package tests; full planning package ruff; proof selection; full workspace CLI tests; root ruff src tests.",
+    "result for continuation": "#500 is complete; #501 remains routed under planning-state-maturity.",
+    "next step": "Archive this plan and close #500."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; changes stayed inside planning package state handling, checkers, tests, and planning surfaces.",
+    "proof status": "passed",
+    "intent served": "yes; authoritative current/default planning state no longer uses todo/roadmap candidate buckets, and compact package outputs read the new maturity shape.",
+    "config compliance": "respected repo and local config by using compact summary, checked-in active planning, and bounded package/planning surfaces before implementation",
+    "misinterpretation risk": "low after proof; compatibility parsing remains input-only, not preferred output.",
+    "follow-on decision": "archive-but-keep-lane-open for #501."
+  },
+  "proof_report": {
+    "validation proof": "All selected planning package, planning surface, workspace CLI, and lint commands passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "149 planning package tests passed; 206 workspace CLI tests passed; summary and doctor returned clean planning state; planning surface checker and ruff checks passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Migrate state.toml from todo/roadmap candidates to maturity-based work items.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Current state.toml uses top-level work_items and [active].execplans; default bootstrap state writes the same shape; summaries, promotion, and cleanup have new-shape tests.",
+    "unsolved intent passed to": "planning-state-maturity lane (#496)"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make planning state compact, explicit, and queryable without duplicate authority.",
+    "slice shaping bias": "Migrate authoritative state shape, keep compatibility as input only.",
+    "broader-lane validation question": "Can summary and promotion work from work_items without raw bucket inference?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#500 is satisfied, but the parent #496 lane still contains #501 transition-helper work.",
+    "evidence carried forward": ".agentic-workspace/planning/state.toml work_items lane planning-state-maturity should now suggest #501 after #500 closure.",
+    "reopen trigger": "current/default state reintroduces authoritative todo/roadmap candidates"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Compatibility parsing is acceptable; duplicate authoritative state is not.",
+    "motivation worth preserving": "The state file should itself express maturity rather than requiring bucket inference.",
+    "canonical owner now": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+    "promotion trigger": "archive closeout for #500",
+    "retention after promotion": "shrink"
+  },
+  "execution_summary": {
+    "outcome delivered": "Planning state migrated to explicit maturity-based work_items and active execplan references.",
+    "validation confirmed": "Planning package tests, workspace CLI tests, summary, doctor, proof selection, planning-surface check, and ruff all passed.",
+    "follow-on routed to": "#501 in the planning-state-maturity parent lane.",
+    "post-work posterity capture": "Closeout records TOML ordering and typed promotion implications.",
+    "knowledge promoted (Memory/Docs/Config)": "No separate Memory or docs promotion needed; the behavior is enforced by code and tests.",
+    "resume from": ".agentic-workspace/planning/state.toml work_items lane planning-state-maturity"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        {
+          "summary": "Planning-state maturity continues through #501 after state migration.",
+          "owner": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #500 from planning-state-maturity roadmap lane into an active execplan."
+  ]
+}

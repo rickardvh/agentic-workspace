@@ -241,34 +241,61 @@ def _read_state_toml(path: Path = STATE_TOML_PATH) -> dict[str, object] | None:
 def _todo_items_from_state(state: dict[str, object] | None) -> list[dict[str, str]]:
     if not isinstance(state, dict):
         return []
-    todo = state.get("todo")
-    if not isinstance(todo, dict):
-        return []
     items: list[dict[str, str]] = []
 
-    for raw in todo.get("active_items", []):
-        if not isinstance(raw, dict):
-            continue
-        items.append(
-            {
-                "id": str(raw.get("id", "")),
-                "surface": str(raw.get("surface", "")),
-                "why_now": str(raw.get("why_now", "")),
-                "status": "in-progress",
-            }
-        )
+    active = state.get("active")
+    if isinstance(active, dict):
+        for raw in active.get("execplans", []):
+            if not isinstance(raw, dict):
+                continue
+            items.append(
+                {
+                    "id": str(raw.get("id", "")),
+                    "surface": str(raw.get("surface") or raw.get("path") or ""),
+                    "why_now": str(raw.get("why_now", "")),
+                    "status": str(raw.get("status", "active")),
+                }
+            )
 
-    for raw in todo.get("queued_items", []):
+    for raw in state.get("work_items", []):
         if not isinstance(raw, dict):
+            continue
+        if str(raw.get("type", "")) == "lane":
             continue
         items.append(
             {
                 "id": str(raw.get("id", "")),
-                "surface": str(raw.get("surface", "")),
+                "surface": str(raw.get("surface") or raw.get("path") or ""),
                 "why_now": str(raw.get("why_now", "")),
                 "status": str(raw.get("status", "")),
             }
         )
+
+    todo = state.get("todo")
+    if isinstance(todo, dict):
+        for raw in todo.get("active_items", []):
+            if not isinstance(raw, dict):
+                continue
+            items.append(
+                {
+                    "id": str(raw.get("id", "")),
+                    "surface": str(raw.get("surface", "")),
+                    "why_now": str(raw.get("why_now", "")),
+                    "status": "in-progress",
+                }
+            )
+
+        for raw in todo.get("queued_items", []):
+            if not isinstance(raw, dict):
+                continue
+            items.append(
+                {
+                    "id": str(raw.get("id", "")),
+                    "surface": str(raw.get("surface", "")),
+                    "why_now": str(raw.get("why_now", "")),
+                    "status": str(raw.get("status", "")),
+                }
+            )
 
     return items
 
@@ -276,13 +303,19 @@ def _todo_items_from_state(state: dict[str, object] | None) -> list[dict[str, st
 def _roadmap_counts_from_state(state: dict[str, object] | None) -> tuple[int, int]:
     if not isinstance(state, dict):
         return 0, 0
+    work_items = state.get("work_items", [])
+    lane_count = (
+        sum(1 for item in work_items if isinstance(item, dict) and str(item.get("type", "")) == "lane")
+        if isinstance(work_items, list)
+        else 0
+    )
+    candidate_count = 0
     roadmap = state.get("roadmap")
-    if not isinstance(roadmap, dict):
-        return 0, 0
-    lanes = roadmap.get("lanes", [])
-    candidates = roadmap.get("candidates", [])
-    lane_count = len(lanes) if isinstance(lanes, list) else 0
-    candidate_count = len(candidates) if isinstance(candidates, list) else 0
+    if isinstance(roadmap, dict):
+        lanes = roadmap.get("lanes", [])
+        candidates = roadmap.get("candidates", [])
+        lane_count += len(lanes) if isinstance(lanes, list) else 0
+        candidate_count = len(candidates) if isinstance(candidates, list) else 0
     if candidate_count == 0 and lane_count:
         candidate_count = lane_count
     return lane_count, candidate_count
