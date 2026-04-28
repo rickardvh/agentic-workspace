@@ -1444,6 +1444,7 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
         active_execplans=active_execplans,
         roadmap_lanes=roadmap_lanes,
         roadmap_candidates=roadmap_candidates,
+        intent_validation=intent_validation_contract,
         finished_work_inspection=finished_work_inspection_contract,
     )
     hierarchy_contract = _active_hierarchy_contract(
@@ -2090,6 +2091,7 @@ def _execution_readiness_payload(
     active_execplans: list[dict[str, str]],
     roadmap_lanes: list[dict[str, Any]],
     roadmap_candidates: list[dict[str, str]],
+    intent_validation: dict[str, Any] | None = None,
     finished_work_inspection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     derived_candidates = []
@@ -2097,6 +2099,18 @@ def _execution_readiness_payload(
         raw_candidates = finished_work_inspection.get("derived_follow_up_candidates", [])
         if isinstance(raw_candidates, list):
             derived_candidates = [candidate for candidate in raw_candidates if isinstance(candidate, dict)]
+    external_work_quiet = False
+    if isinstance(intent_validation, dict):
+        reconciliation = intent_validation.get("external_work_reconciliation", {})
+        if isinstance(reconciliation, dict):
+            external_state = reconciliation.get("external_work_state", {})
+            if isinstance(external_state, dict):
+                external_work_quiet = (
+                    external_state.get("open_count") == 0
+                    and external_state.get("tracked_open_count") == 0
+                    and external_state.get("untracked_open_count") == 0
+                )
+    historical_only_candidates = bool(derived_candidates) and external_work_quiet and not roadmap_lanes and not roadmap_candidates
     if active_execplans:
         return {
             "status": "planning-backed",
@@ -2125,7 +2139,7 @@ def _execution_readiness_payload(
             },
             "rule": "A TODO row can own narrow direct work, but broad planned work needs an active execplan.",
         }
-    if derived_candidates:
+    if derived_candidates and not historical_only_candidates:
         first_candidate = derived_candidates[0]
         return {
             "status": "intent-continuation-needs-promotion",
@@ -2166,12 +2180,16 @@ def _execution_readiness_payload(
         "broad_work_allowed": False,
         "direct_work_allowed": True,
         "roadmap_candidate_count": 0,
+        "historical_derived_follow_up_candidate_count": len(derived_candidates) if historical_only_candidates else 0,
         "recommendation": {
             "id": "stay-direct-for-narrow-work",
             "summary": "No active planning-backed slice is present; narrow direct work may proceed.",
             "next_step": "Promote to planning only if the work widens into milestone sequencing, proof scope, or handoff continuity.",
         },
-        "rule": "Direct execution is acceptable for narrow work; broad planned work needs checked-in planning first.",
+        "rule": (
+            "Direct execution is acceptable for narrow work; broad planned work needs checked-in planning first. "
+            "When current external and roadmap work are quiet, historical archive-derived candidates remain audit evidence rather than current execution pressure."
+        ),
     }
 
 

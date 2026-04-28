@@ -4028,6 +4028,20 @@ def test_planning_summary_exposes_finished_work_inspection_contract(tmp_path: Pa
 
 def test_planning_summary_inspects_machine_first_archived_execplans_for_required_continuation(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "EXT-1",
+                "title": "Generated CLI continuation",
+                "status": "open",
+                "kind": "issue",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            }
+        ],
+    )
     archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
     archive_dir.mkdir(parents=True, exist_ok=True)
     plan_path = archive_dir / "generated-cli-migration.plan.json"
@@ -4061,6 +4075,45 @@ def test_planning_summary_inspects_machine_first_archived_execplans_for_required
     assert candidate["recommended_owner"] == ".agentic-workspace/planning/state.toml"
     assert summary["execution_readiness"]["status"] == "intent-continuation-needs-promotion"
     assert summary["execution_readiness"]["recommendation"]["id"] == "promote-intent-derived-continuation"
+
+
+def test_planning_summary_keeps_historical_archive_pressure_audit_only_when_current_work_is_quiet(
+    tmp_path: Path,
+) -> None:
+    install_bootstrap(target=tmp_path)
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[],
+    )
+    archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    plan_path = archive_dir / "generated-cli-migration.plan.json"
+    _write_execplan_record(plan_path, item_id="generated-cli-migration", status="completed")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["title"] = "Generated CLI Migration"
+    record["intent_satisfaction"] = {
+        "original intent": "Remove reliance on a single hand-authored CLI implementation.",
+        "was original intent fully satisfied?": "no",
+        "evidence of intent satisfaction": "The first adapter slice landed, but runtime work still depends on hand-authored CLI code.",
+        "unsolved intent passed to": "intent-derived continuation candidate",
+    }
+    record["closure_check"] = {
+        "slice status": "bounded slice complete",
+        "larger-intent status": "open",
+        "closure decision": "archive-but-keep-lane-open",
+        "why this decision is honest": "The slice landed but the larger generated-CLI intent remains open.",
+        "evidence carried forward": "generated adapter proof",
+        "reopen trigger": "future direct CLI edits continue",
+    }
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+
+    summary = planning_summary(target=tmp_path)
+    contract = summary["finished_work_inspection_contract"]
+    readiness = summary["execution_readiness"]
+
+    assert contract["counts"]["derived_follow_up_candidate_count"] == 1
+    assert readiness["status"] == "narrow-direct-ready"
+    assert readiness["historical_derived_follow_up_candidate_count"] == 1
 
 
 def test_planning_summary_suppresses_child_continuation_consumed_by_later_parent_archive(tmp_path: Path) -> None:

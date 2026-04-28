@@ -1,0 +1,195 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Historical Archive Quiet State",
+  "goal": [
+    "Implement #476 so historical archive-derived continuation candidates remain audit evidence without blocking ordinary quiet-state startup when current external and roadmap work are closed."
+  ],
+  "non_goals": [
+    "Do not delete or hide historical audit evidence.",
+    "Do not weaken active TODO, active execplan, roadmap, or open external work routing.",
+    "Do not create a new startup surface."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Compact summary can report a genuinely quiet current-work state after all open issues are closed.",
+      "constraints": "Keep historical follow-up candidates discoverable as audit pressure; only reduce their authority as current execution pressure when no current owner exists.",
+      "latitude": "Patch planning summary readiness routing and add focused tests.",
+      "escalation": "Escalate if the fix would suppress active or externally open continuation work."
+    },
+    "execution": {
+      "milestone": "historical-archive-quiet-state",
+      "status": "complete",
+      "next_step": "Archive, commit, push, close #476, refresh external evidence, then confirm quiet state.",
+      "proof": "focused planning tests, lint, planning checks, and proof selector."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/historical-archive-quiet-state.plan.json"
+      ],
+      "invariants": [
+        "Open external work and roadmap work still route into current execution pressure.",
+        "Historical audit candidates remain present in finished_work_inspection_contract.",
+        "Quiet state means no active items, no active execplans, no roadmap items, and no open external work."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make package operation streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "",
+    "parent lane": "#476"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "",
+    "activation trigger": ""
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Idle summaries stop turning historical archive residue into current work after current work is closed.",
+    "intentionally deferred": "Historical audit backlog cleanup.",
+    "discovered implications": "",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice.",
+    "next likely slice": "none if summary/reconcile show no open work after closure."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Fix dogfooding friction discovered during autopilot closeout.",
+    "hard constraints": "Dogfood package surfaces, commit/push milestone, close issue only after proof.",
+    "agent may decide locally": "Exact quiet-state status name and test shape.",
+    "escalate when": "A change would hide open or selected current work."
+  },
+  "active_milestone": {
+    "id": "historical-archive-quiet-state",
+    "status": "completed",
+    "scope": "planning summary readiness routing and tests",
+    "ready": "yes",
+    "blocked": "no"
+  },
+  "immediate_next_action": [
+    "Archive, commit, push, close #476, refresh external evidence, then confirm quiet state."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "proof_expectations": [
+    "agentic-workspace preflight --target . --format json",
+    "agentic-workspace summary --target . --format json",
+    "agentic-workspace report --target . --section workflow_obligations --format json",
+    "agentic-workspace report --target . --section closeout_trust --format json",
+    "agentic-workspace proof --target . --changed <changed paths> --format json"
+  ],
+  "context_budget": {
+    "live working set": "planning summary readiness routing, focused planning tests, active planning record.",
+    "recoverable later": "Archived execplan, #476 issue, and test fixture.",
+    "externalize before shift": "Archive this plan, close #476, refresh external evidence, and verify compact summary no longer reports historical archive candidates as current execution pressure.",
+    "pre-work config pull": "agentic-workspace preflight --target . --format json",
+    "pre-work memory pull": "not needed; dogfooding observation and issue body contain the relevant facts",
+    "tiny resumability note": "Finish #476 quiet-state routing and verify final summary/reconcile.",
+    "context-shift triggers": "Any change that hides open external work, roadmap work, or active planning state."
+  },
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run ruff check packages/planning/src packages/planning/tests",
+    "uv run agentic-workspace proof --target . --changed packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/historical-archive-quiet-state.plan.json .agentic-workspace/planning/external-intent-evidence.json --format json",
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "cd packages/planning && uv run ruff check .",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace preflight --target . --format json",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace report --target . --section workflow_obligations --format json",
+    "uv run agentic-workspace report --target . --section closeout_trust --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "completion_criteria": [
+    "Quiet current state no longer reports intent-continuation-needs-promotion only because archived candidates exist.",
+    "Historical derived candidates remain visible as audit evidence.",
+    "Open external work and roadmap work still route as current pressure.",
+    "Focused tests cover the quiet-state case."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "Dogfooding finding and GitHub issue #476 plus agentic-workspace preflight, summary, report, proof, reconcile, and doctor surfaces",
+    "what happened": "Changed planning summary readiness so archive-derived historical candidates become audit-only when loaded external evidence, roadmap state, active items, and active execplans are all quiet. Added tests for both open-work blocking and quiet-state audit behavior.",
+    "scope touched": "packages/planning/src/repo_planning_bootstrap/installer.py and packages/planning/tests/test_installer.py, plus planning state/evidence.",
+    "changed surfaces": "Planning package implementation, planning package tests, active execplan, planning state, external evidence.",
+    "validations run": "pytest packages/planning/tests/test_installer.py, ruff for planning package, proof selector, selected planning package commands, planning doctor, preflight, summary, workflow obligations report, closeout trust report, reconcile.",
+    "result for continuation": "#476 is implemented; after closure and evidence refresh the repo should return to no open current work.",
+    "next step": "Archive this plan, commit, push, close #476, refresh evidence, and confirm quiet state."
+  },
+  "proof_report": {
+    "validation proof": "yes",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "pytest packages/planning/tests/test_installer.py, ruff for planning package, proof selector, selected planning package commands, planning doctor, preflight, summary, workflow obligations report, closeout trust report, reconcile."
+  },
+  "finished_run_review": {
+    "review status": "passed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "package workflow was dogfooded through preflight, summary, report, proof, reconcile, and doctor surfaces",
+    "misinterpretation risk": "low",
+    "follow-on decision": "close #476 after commit and final evidence refresh"
+  },
+  "intent_satisfaction": {
+    "original intent": "Fix dogfooding friction discovered during autopilot closeout.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded slice and larger intent are both complete.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "None unless new evidence shows the bounded closure was incomplete."
+  },
+  "execution_summary": {
+    "outcome delivered": "Historical archive pressure no longer blocks ordinary quiet-state routing when current external and roadmap work are closed.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive this execplan and close the issue with validation evidence",
+    "knowledge promoted (memory/docs/config)": "test coverage only; no Memory promotion needed",
+    "resume from": ".agentic-workspace/planning/state.toml after evidence refresh"
+  },
+  "improvement_signal_review": {
+    "friction": "The quiet-state dogfooding pass exposed that historical audit residue could outweigh clean current-work evidence.",
+    "action": "Fixed in this slice by gating archive-derived execution pressure on loaded current external work and roadmap state."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [],
+      "memory": [
+        {
+          "summary": "test coverage only; no Memory promotion needed",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "test coverage only; no Memory promotion needed",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}
