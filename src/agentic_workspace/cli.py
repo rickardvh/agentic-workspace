@@ -3180,6 +3180,7 @@ def _operational_compression_payload(
     closeout_counts = closeout_distillation.get("counts", {}) if isinstance(closeout_distillation, dict) else {}
     archived_distillation = _archived_plan_distillation_measure(target=report_payload.get("target"))
     artifact_footprint = _artifact_footprint_by_class(target=report_payload.get("target"))
+    generated_footprint = _generated_output_footprint(target=report_payload.get("target"))
     archive_retention = _archive_retention_policy(
         archived_distillation=archived_distillation,
         artifact_footprint=artifact_footprint,
@@ -3263,6 +3264,7 @@ def _operational_compression_payload(
             "sources": ["planning.closeout_distillation.counts", ".agentic-workspace/planning/execplans/archive/*.plan.json"],
         },
         "artifact_footprint_by_class": artifact_footprint,
+        "generated_output_footprint": generated_footprint,
         "archive_retention_policy": archive_retention,
         "review_retention_policy": review_retention,
         "unresolved_external_work_routing": {
@@ -3335,6 +3337,15 @@ def _operational_compression_payload(
                 "measure": "artifact_footprint_by_class",
                 "message": "Artifact footprint pressure is present; inspect the recommended cleanup target before expanding residue.",
                 "count": artifact_footprint.get("pressure_class_count", 0),
+            }
+        )
+    if generated_footprint.get("status") == "attention":
+        advisory_signals.append(
+            {
+                "severity": "advisory",
+                "measure": "generated_output_footprint",
+                "message": "Generated-output footprint has unclassified or stale candidates; inspect before expanding generated residue.",
+                "count": generated_footprint.get("unclassified_generated_output_count", 0),
             }
         )
     if archive_retention.get("status") == "attention":
@@ -3721,19 +3732,6 @@ def _artifact_footprint_by_class(*, target: Any) -> dict[str, Any]:
         )
         return len(files), [_relative_posix(path, target_root) for path in files[:5]]
 
-    def _generated_outputs() -> tuple[int, list[str]]:
-        candidates: list[Path] = []
-        for pattern in (
-            "generated/**/*",
-            "src/**/generated_*",
-            "packages/**/generated_*",
-            "src/**/generated_cli_package/**/*",
-            "packages/**/generated_cli_package/**/*",
-        ):
-            candidates.extend(path for path in target_root.glob(pattern) if path.is_file())
-        unique = sorted({path.resolve(): path for path in candidates}.values(), key=lambda path: path.as_posix())
-        return len(unique), [_relative_posix(path, target_root) for path in unique[:5]]
-
     def _large_docs() -> tuple[int, list[str]]:
         candidates = [path for path in [target_root / "README.md", target_root / "AGENTS.md", target_root / "llms.txt"] if path.is_file()]
         docs_root = target_root / "docs"
@@ -3755,7 +3753,9 @@ def _artifact_footprint_by_class(*, target: Any) -> dict[str, Any]:
     docs_review_count, docs_review_sample = _count_files("docs/reviews")
     current_memory_count, current_memory_sample = _count_files(".agentic-workspace/memory/repo/current")
     durable_memory_count, durable_memory_sample = _durable_memory_notes()
-    generated_count, generated_sample = _generated_outputs()
+    generated_files = _generated_output_files(target_root=target_root)
+    generated_count = len(generated_files)
+    generated_sample = [_relative_posix(path, target_root) for path in generated_files[:5]]
     local_count, local_sample = _count_files(".agentic-workspace/local")
     large_docs_count, large_docs_sample = _large_docs()
 
@@ -3861,6 +3861,193 @@ def _artifact_class(
         "sample": sample,
         "review_target": review_target,
     }
+
+
+def _generated_output_files(*, target_root: Path) -> list[Path]:
+    candidates: list[Path] = []
+    for pattern in (
+        "generated/**/*",
+        "src/**/generated_*",
+        "packages/**/generated_*",
+        "src/**/generated_cli_package/**/*",
+        "packages/**/generated_cli_package/**/*",
+    ):
+        candidates.extend(path for path in target_root.glob(pattern) if path.is_file() and not _is_runtime_cache_file(path))
+    return sorted({path.resolve(): path for path in candidates}.values(), key=lambda path: path.as_posix())
+
+
+def _is_runtime_cache_file(path: Path) -> bool:
+    parts = set(path.parts)
+    return "__pycache__" in parts or path.suffix in {".pyc", ".pyo"}
+
+
+def _generated_output_footprint(*, target: Any) -> dict[str, Any]:
+    target_text = str(target or "").strip()
+    if not target_text:
+        return {
+            "kind": "workspace-generated-output-footprint/v1",
+            "status": "unavailable",
+            "artifact_count": 0,
+            "generated_surfaces": [],
+            "unclassified_generated_output_count": 0,
+            "rule": "Generated outputs are derived reproducible footprint, not hand-authored operating state.",
+        }
+    target_root = Path(target_text)
+    generated_files = _generated_output_files(target_root=target_root)
+    generated_relatives = [_relative_posix(path, target_root) for path in generated_files]
+    command_package_ir_path = target_root / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json"
+    command_adapter_generation_path = target_root / "src" / "agentic_workspace" / "contracts" / "command_adapter_generation.json"
+    generator_path = target_root / "scripts" / "generate" / "generate_command_packages.py"
+    check_path = target_root / "scripts" / "check" / "check_generated_command_packages.py"
+
+    declared_roots: list[str] = []
+    generated_surfaces: list[dict[str, Any]] = []
+    role_counts: dict[str, int] = {}
+
+    ir_payload: dict[str, Any] = {}
+    if command_package_ir_path.is_file():
+        try:
+            loaded = json.loads(command_package_ir_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            loaded = {}
+        ir_payload = loaded if isinstance(loaded, dict) else {}
+    for package in _list_payload(ir_payload.get("packages")):
+        if not isinstance(package, dict):
+            continue
+        package_id = str(package.get("id") or "")
+        program = str(package.get("program") or "")
+        for target_info in _list_payload(package.get("targets")):
+            if not isinstance(target_info, dict):
+                continue
+            root = str(target_info.get("generated_root") or "").strip().replace("\\", "/")
+            if not root:
+                continue
+            declared_roots.append(root.rstrip("/") + "/")
+            files = [path for path in generated_relatives if _relative_is_under(path, root)]
+            role = _generated_target_role(target_info)
+            role_counts[role] = role_counts.get(role, 0) + 1
+            generated_surfaces.append(
+                {
+                    "id": f"{package_id}:{target_info.get('kind', '')}",
+                    "program": program,
+                    "kind": str(target_info.get("kind") or ""),
+                    "generated_root": root,
+                    "generation_status": str(target_info.get("generation_status") or ""),
+                    "maturity_level_ref": str(target_info.get("maturity_level_ref") or ""),
+                    "test_environment": str(target_info.get("test_environment") or ""),
+                    "role": role,
+                    "file_count": len(files),
+                    "sample": files[:3],
+                    "ordinary_startup_surface": False,
+                }
+            )
+
+    declared_outputs: list[str] = []
+    if command_adapter_generation_path.is_file():
+        try:
+            adapter_payload = json.loads(command_adapter_generation_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            adapter_payload = {}
+        if isinstance(adapter_payload, dict):
+            for output in _list_payload(adapter_payload.get("generated_outputs")):
+                if isinstance(output, dict):
+                    path = str(output.get("path") or "").strip().replace("\\", "/")
+                    if not path:
+                        continue
+                    declared_outputs.append(path)
+                    role_counts["generated-dispatch-adapter"] = role_counts.get("generated-dispatch-adapter", 0) + 1
+                    generated_surfaces.append(
+                        {
+                            "id": f"{output.get('program', '')}:generated-dispatch-adapter",
+                            "program": str(output.get("program") or ""),
+                            "kind": "python",
+                            "generated_root": path,
+                            "generation_status": "generated",
+                            "maturity_level_ref": "generated-dispatch-adapter",
+                            "test_environment": "python-dev",
+                            "role": "generated-dispatch-adapter",
+                            "file_count": 1 if path in generated_relatives else 0,
+                            "sample": [path] if path in generated_relatives else [],
+                            "ordinary_startup_surface": False,
+                        }
+                    )
+
+    support_artifacts = [
+        path for path in generated_relatives if path in {"generated/typescript/Dockerfile", "generated/typescript/Dockerfile.conformance"}
+    ]
+    if support_artifacts:
+        role_counts["proof-container-support"] = role_counts.get("proof-container-support", 0) + len(support_artifacts)
+        generated_surfaces.append(
+            {
+                "id": "typescript:proof-container-support",
+                "program": "generated-typescript-packages",
+                "kind": "docker",
+                "generated_root": "generated/typescript",
+                "generation_status": "proof-support",
+                "maturity_level_ref": "proof-container-support",
+                "test_environment": "docker",
+                "role": "proof-container-support",
+                "file_count": len(support_artifacts),
+                "sample": support_artifacts[:3],
+                "ordinary_startup_surface": False,
+            }
+        )
+
+    classified = set(declared_outputs) | set(support_artifacts)
+    for root in declared_roots:
+        classified.update(path for path in generated_relatives if _relative_is_under(path, root))
+    unclassified = [path for path in generated_relatives if path not in classified]
+    freshness_missing = not (generator_path.is_file() and check_path.is_file() and command_package_ir_path.is_file())
+    runnable_count = sum(1 for surface in generated_surfaces if surface.get("role") == "runnable-read-only-adapter")
+    proof_fixture_count = sum(1 for surface in generated_surfaces if surface.get("role") == "proof-fixture")
+    status = "attention" if freshness_missing or unclassified else "measured"
+
+    return {
+        "kind": "workspace-generated-output-footprint/v1",
+        "status": status,
+        "advisory_only": True,
+        "artifact_count": len(generated_relatives),
+        "declared_surface_count": len(generated_surfaces),
+        "role_counts": role_counts,
+        "proof_fixture_count": proof_fixture_count,
+        "runnable_adapter_count": runnable_count,
+        "unclassified_generated_output_count": len(unclassified),
+        "sample_unclassified_generated_outputs": unclassified[:5],
+        "freshness": {
+            "status": "check-available" if not freshness_missing else "missing-check-or-source",
+            "source_contract": "src/agentic_workspace/contracts/command_package_ir.json",
+            "regeneration_command": "uv run python scripts/generate/generate_command_packages.py",
+            "freshness_check": "uv run python scripts/check/check_generated_command_packages.py",
+            "docker_proof": "uv run python scripts/check/check_generated_command_packages.py --docker --docker-conformance",
+            "ordinary_report_runs_checks": False,
+        },
+        "guardrails": [
+            "Generated outputs are reproducible derived artifacts, not durable hand-authored operating state.",
+            "Weak-agent routing follows generated package maturity; proof fixtures are not runnable startup surfaces.",
+            "No-direct-edit and freshness proof belong in generated package checks, not ordinary report execution.",
+        ],
+        "generated_surfaces": generated_surfaces[:12],
+        "omitted_generated_surface_count": max(0, len(generated_surfaces) - 12),
+        "rule": "Generated-output footprint is selector-driven advisory evidence; inspect it before expanding generated targets or compatibility artifacts.",
+    }
+
+
+def _relative_is_under(path: str, root: str) -> bool:
+    normalized_path = path.replace("\\", "/")
+    normalized_root = root.strip("/").replace("\\", "/")
+    return normalized_path == normalized_root or normalized_path.startswith(normalized_root + "/")
+
+
+def _generated_target_role(target_info: dict[str, Any]) -> str:
+    status = str(target_info.get("generation_status") or "").lower()
+    maturity = str(target_info.get("maturity_level_ref") or "").lower()
+    if status == "deferred" or maturity == "deferred":
+        return "deferred-target"
+    if "runnable" in status or "runnable" in maturity:
+        return "runnable-read-only-adapter"
+    if "fixture" in status or "fixture" in maturity or "supported-now" in status:
+        return "proof-fixture"
+    return "generated-target"
 
 
 def _relative_posix(path: Path, target_root: Path) -> str:

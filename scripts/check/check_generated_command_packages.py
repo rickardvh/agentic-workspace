@@ -301,18 +301,26 @@ def main(argv: list[str] | None = None) -> int:
                 print(error)
             return 1
         print("[ok] generated command package adapter conformance")
+    docker_status = 0
     if args.docker:
-        return _run_docker(
+        docker_status = _run_docker(
             str(args.tag),
             dockerfile="generated/typescript/Dockerfile",
             require_docker=bool(args.require_docker),
         )
+        if docker_status:
+            return docker_status
     if args.docker_conformance:
-        return _run_docker(
+        docker_status = _run_docker(
             f"{args.tag}-conformance",
             dockerfile="generated/typescript/Dockerfile.conformance",
             require_docker=bool(args.require_docker),
         )
+        if docker_status:
+            return docker_status
+    if args.docker or args.docker_conformance:
+        print("[ok] generated command package Docker proof")
+        return 0
     print("[ok] generated command package static proof")
     return 0
 

@@ -294,6 +294,33 @@ def test_generated_command_package_adapter_conformance_check_passes() -> None:
     assert module.main(["--conformance"]) == 0
 
 
+def test_generated_command_package_docker_flags_compose(monkeypatch) -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_generated_command_packages.py"
+    spec = importlib.util.spec_from_file_location("check_generated_command_packages", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    calls: list[tuple[str, str]] = []
+
+    def fake_run(command: list[str]) -> int:
+        return 0
+
+    def fake_run_docker(tag: str, *, dockerfile: str, require_docker: bool) -> int:
+        calls.append((tag, dockerfile))
+        assert require_docker is True
+        return 0
+
+    monkeypatch.setattr(module, "_run", fake_run)
+    monkeypatch.setattr(module, "_run_docker", fake_run_docker)
+
+    assert module.main(["--docker", "--docker-conformance", "--require-docker"]) == 0
+    assert calls == [
+        ("agentic-workspace-generated-typescript-cli-test", "generated/typescript/Dockerfile"),
+        ("agentic-workspace-generated-typescript-cli-test-conformance", "generated/typescript/Dockerfile.conformance"),
+    ]
+
+
 def test_generated_command_package_docker_conformance_surface_exists() -> None:
     dockerfile = Path(__file__).resolve().parents[1] / "generated" / "typescript" / "Dockerfile.conformance"
     text = dockerfile.read_text(encoding="utf-8")

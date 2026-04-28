@@ -1,0 +1,246 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generated Output Footprint",
+  "goal": [
+    "Implement #441 by classifying generated outputs as reproducible derived footprint in report/check output."
+  ],
+  "non_goals": [
+    "Do not remove generated outputs.",
+    "Do not treat generated proof fixtures as hand-authored docs.",
+    "Do not move generator infrastructure to a new repo in this slice.",
+    "Do not expand ordinary startup."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Generated outputs are reported by role, maturity, freshness/reproducibility check availability, and unclassified residue.",
+      "constraints": "Keep generated outputs derived and selector-backed.",
+      "latitude": "Add compact operational_compression fields and regression coverage.",
+      "escalation": "Escalate if freshness proof must run expensive Docker checks during ordinary report."
+    },
+    "execution": {
+      "milestone": "generated-output-footprint",
+      "status": "complete",
+      "next_step": "Archive the completed execplan, commit, push, and close #441 plus the dogfooding follow-up #475.",
+      "proof": "workspace CLI tests, generated package checks, planning surfaces, proof selector, and live operational_compression selector."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_contract_tooling.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/generated-output-footprint.plan.json"
+      ],
+      "invariants": [
+        "Generated output footprint remains advisory.",
+        "Generated outputs are not ordinary startup input.",
+        "Freshness checks are referenced, not run by report."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#436 operational footprint pressure for long-running package artifacts",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap",
+    "parent lane": "#436"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap",
+    "activation trigger": "after #441 closeout, parent #436 can close if no new footprint child remains open"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Generated outputs become inspectable as reproducible footprint without manual directory scans.",
+    "intentionally deferred": "Command-generation extraction parent #430 remains separate.",
+    "discovered implications": "",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice.",
+    "next likely slice": "close parent #436 if external evidence confirms all children are closed"
+  },
+  "context_budget": {
+    "live working set": "Issue #441, active execplan, operational_compression selector, command_package_ir, generated package check script, and workspace CLI tests.",
+    "recoverable later": "Archived execplan plus commit history after milestone closeout.",
+    "externalize before shift": "Update execution_run, proof_report, closure_check, and closeout_distillation before archiving.",
+    "pre-work config pull": "uv run agentic-workspace summary --target . --format json",
+    "pre-work memory pull": "uv run agentic-workspace report --target . --section operational_compression --format json",
+    "tiny resumability note": "Classify generated outputs by declared roots and maturity; do not run Docker in ordinary report.",
+    "context-shift triggers": "validation failure, unclassified generated output that needs a new owner, or generator freshness drift"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make package use smaller and cheaper while preserving leverage.",
+    "hard constraints": "Dogfood package surfaces, commit/push milestone, close the issue only after proof.",
+    "agent may decide locally": "Exact compact field shape and candidate grouping.",
+    "escalate when": "Report would need to execute expensive generation or Docker checks by default."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#441",
+      "label": "generated output footprint",
+      "role": "closed_item",
+      "locator": "operational_compression.generated_output_footprint"
+    },
+    {
+      "kind": "issue",
+      "target": "#436",
+      "label": "operational footprint pressure parent",
+      "role": "parent_intent",
+      "locator": ".agentic-workspace/planning/state.toml roadmap"
+    }
+  ],
+  "active_milestone": {
+    "id": "generated-output-footprint",
+    "status": "completed",
+    "scope": "operational_compression generated-output measure and tests",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "Docker proof can be run explicitly; ordinary report should not depend on it."
+  },
+  "immediate_next_action": [
+    "Archive completed plan and close the external issues after commit/push."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_contract_tooling.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/generated-output-footprint.plan.json"
+  ],
+  "invariants": [
+    "Generated outputs remain derived reproducible artifacts.",
+    "No generated output becomes first-line startup guidance.",
+    "Report surfaces checks and owners without executing expensive proof."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace preflight --target . --format json",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run ruff check src tests scripts",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+    "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py tests/test_workspace_cli.py scripts/check/check_generated_command_packages.py tests/test_contract_tooling.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/generated-output-footprint.plan.json --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace report --target . --section workflow_obligations --format json",
+    "uv run agentic-workspace report --target . --section closeout_trust --format json",
+    "uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json"
+  ],
+  "completion_criteria": [
+    "Generated outputs are reported as derived/reproducible artifacts.",
+    "Stale or unjustified generated outputs are visible as footprint pressure.",
+    "The report distinguishes generated proof fixtures from runnable/generated operating adapters.",
+    "No direct startup path is expanded."
+  ],
+  "execution_run": {
+    "run status": "complete",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace summary --target . --format json",
+    "what happened": "Added an advisory generated-output footprint measure to operational_compression, classified generated outputs by declared role, surfaced freshness/reproducibility commands without running expensive checks in ordinary report, and fixed dogfooded Docker proof flag composition through #475.",
+    "scope touched": "report/runtime inspection, workspace CLI tests, generated package check script, contract tooling tests, planning residue",
+    "changed surfaces": "operational_compression generated_output_footprint, artifact_footprint_by_class generated-output counting, generated package Docker proof composition, state.toml and active execplan",
+    "validations run": "uv run agentic-workspace preflight --target . --format json; uv run agentic-workspace summary --target . --format json; uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_contract_tooling.py -q; uv run ruff check src tests scripts; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py tests/test_workspace_cli.py scripts/check/check_generated_command_packages.py tests/test_contract_tooling.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/generated-output-footprint.plan.json --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace report --target . --section workflow_obligations --format json; uv run agentic-workspace report --target . --section closeout_trust --format json; uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json",
+    "result for continuation": "Generated output footprint is measured with no unclassified generated outputs in the live repo; #475 removes proof-script friction found while dogfooding.",
+    "next step": "Archive plan, commit, push, close #441 and #475, refresh external evidence, then reingest."
+  },
+  "execution_summary": {
+    "outcome delivered": "Generated outputs are now classified as reproducible derived footprint in operational_compression, including role counts, freshness/reproducibility commands, guardrails, and unclassified generated-output pressure.",
+    "validation confirmed": "workspace CLI tests, contract tooling tests, ruff, planning surfaces, proof selection, root CLI authority, generated package static/conformance/Docker/Docker-conformance checks, doctor, reconcile, workflow obligations, closeout trust, skills, preflight, and summary all passed.",
+    "follow-on routed to": "#475 was created and fixed for discovered Docker proof flag composition friction; no further follow-up is required for #441.",
+    "post-work posterity capture": "The archived execplan, commit history, tests, and #441/#475 issue closure comments carry the durable evidence.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory, docs, or config promotion was needed.",
+    "resume from": "Refresh external evidence, close #436 if all children are closed, then ingest the next open lane."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "workspace CLI tests passed (188); contract tooling tests passed (27); ruff passed; generated package static/conformance/Docker/Docker-conformance checks passed; planning surfaces, proof selector, root CLI authority, doctor, reconcile, workflow, closeout, and skills selectors passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "#441 generated output footprint classification",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "operational_compression now reports generated_output_footprint with role counts, freshness commands, guardrails, and unclassified residue detection; tests cover declared generated surfaces, proof fixtures, runnable adapters, and cache-file exclusion.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded slice and larger intent are both complete.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "None unless new evidence shows the bounded closure was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Generated package check accepted both --docker and --docker-conformance but returned after the first Docker path."
+    ],
+    "signals fixed": [
+      "#475: Docker and Docker-conformance generated package proof flags now compose and have regression coverage."
+    ],
+    "signals routed": [
+      "#475"
+    ],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Reingest after closing #441/#475 to decide whether parent #436 can close.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#475 was created and fixed during this lane.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #441 into active planning from refreshed issue intake.",
+    "2026-04-28: Dogfooding generated package proof found non-composable Docker flags; created and fixed #475."
+  ]
+}

@@ -3505,6 +3505,11 @@ def test_report_section_selector_returns_operational_compression_measures(tmp_pa
     assert review_retention["kind"] == "workspace-review-retention-policy/v1"
     assert review_retention["advisory_only"] is True
     assert review_retention["default_outcome"] == "retain"
+    generated_footprint = measures["generated_output_footprint"]
+    assert generated_footprint["kind"] == "workspace-generated-output-footprint/v1"
+    assert generated_footprint["advisory_only"] is True
+    assert generated_footprint["freshness"]["ordinary_report_runs_checks"] is False
+    assert "Generated outputs are reproducible derived artifacts" in generated_footprint["guardrails"][0]
     footprint = measures["artifact_footprint_by_class"]
     assert footprint["rule"].startswith("Footprint classes are advisory")
     classes = {entry["id"]: entry for entry in footprint["classes"]}
@@ -3543,9 +3548,86 @@ def test_operational_compression_reports_artifact_footprint_pressure(tmp_path: P
     assert classes["review_artifacts"]["pressure"] == "attention"
     assert classes["generated_outputs"]["count"] >= 1
     assert classes["large_docs_or_package_surfaces"]["pressure"] == "attention"
+    generated_footprint = payload["answer"]["measures"]["generated_output_footprint"]
+    assert generated_footprint["status"] == "attention"
+    assert generated_footprint["unclassified_generated_output_count"] >= 1
+    assert "generated/adapter.json" in generated_footprint["sample_unclassified_generated_outputs"]
+    assert any(signal["measure"] == "generated_output_footprint" for signal in payload["answer"]["signals"])
     assert footprint["pressure_class_count"] >= 3
     assert footprint["recommended_cleanup_target"]["action"] == "review-shrink-route-or-retain"
     assert any(signal["measure"] == "artifact_footprint_by_class" for signal in payload["answer"]["signals"])
+
+
+def test_operational_compression_classifies_generated_output_footprint(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write_json(
+        target / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json",
+        {
+            "packages": [
+                {
+                    "id": "root-workspace",
+                    "program": "agentic-workspace",
+                    "targets": [
+                        {
+                            "kind": "python",
+                            "generated_root": "src/agentic_workspace/generated_cli_package",
+                            "generation_status": "supported-now",
+                            "maturity_level_ref": "metadata-proof-fixture",
+                            "test_environment": "python-dev",
+                        },
+                        {
+                            "kind": "typescript",
+                            "generated_root": "generated/typescript/workspace-cli",
+                            "generation_status": "runnable-read-only-adapter",
+                            "maturity_level_ref": "runnable-read-only-adapter",
+                            "test_environment": "docker",
+                        },
+                    ],
+                }
+            ]
+        },
+    )
+    _write_json(
+        target / "src" / "agentic_workspace" / "contracts" / "command_adapter_generation.json",
+        {
+            "generated_outputs": [
+                {
+                    "program": "agentic-workspace",
+                    "path": "src/agentic_workspace/generated_command_adapters.py",
+                }
+            ]
+        },
+    )
+    _write(target / "scripts" / "generate" / "generate_command_packages.py", "print('generate')\n")
+    _write(target / "scripts" / "check" / "check_generated_command_packages.py", "print('check')\n")
+    _write(target / "src" / "agentic_workspace" / "generated_cli_package" / "__init__.py", "# generated\n")
+    _write(
+        target / "src" / "agentic_workspace" / "generated_cli_package" / "__pycache__" / "__init__.cpython-313.pyc",
+        "cache\n",
+    )
+    _write(target / "src" / "agentic_workspace" / "generated_command_adapters.py", "# generated\n")
+    _write(target / "generated" / "typescript" / "workspace-cli" / "package.json", "{}\n")
+    _write(target / "generated" / "typescript" / "workspace-cli" / "src" / "cli.mjs", "export {};\n")
+    _write(target / "generated" / "typescript" / "Dockerfile", "FROM node:22\n")
+
+    assert cli.main(["report", "--target", str(target), "--section", "operational_compression", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    generated = payload["answer"]["measures"]["generated_output_footprint"]
+    assert generated["status"] == "measured"
+    assert generated["artifact_count"] >= 5
+    assert generated["proof_fixture_count"] == 1
+    assert generated["runnable_adapter_count"] == 1
+    assert generated["unclassified_generated_output_count"] == 0
+    assert generated["freshness"]["status"] == "check-available"
+    surfaces = {surface["id"]: surface for surface in generated["generated_surfaces"]}
+    assert surfaces["root-workspace:python"]["role"] == "proof-fixture"
+    assert surfaces["root-workspace:typescript"]["role"] == "runnable-read-only-adapter"
+    assert surfaces["typescript:proof-container-support"]["role"] == "proof-container-support"
 
 
 def test_report_distinguishes_legacy_archive_distillation_debt(tmp_path: Path, capsys) -> None:
