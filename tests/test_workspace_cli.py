@@ -523,6 +523,19 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["mixed_agent"]["local_integration_area"]["git_ignored"] is True
     assert payload["mixed_agent"]["local_integration_area"]["canonical_doc"] == ".agentic-workspace/docs/local-integration-area.md"
     assert "not a plugin registry or shared compatibility framework" in payload["mixed_agent"]["local_integration_area"]["boundary_rules"]
+    agent_aids = payload["mixed_agent"]["agent_aid_storage"]
+    assert agent_aids["command"] == "agentic-workspace defaults --section agent_aid_storage --format json"
+    assert agent_aids["candidate_root"] == ".agentic-workspace/agent-aids"
+    assert agent_aids["candidate_root_exists"] is False
+    assert agent_aids["ordinary_startup"] is False
+    assert {entry["class"] for entry in agent_aids["storage_classes"]} == {
+        "local-only",
+        "checked-in-candidate",
+        "promoted-repo-native",
+        "package-owned",
+        "source-checkout-only",
+    }
+    assert "the model is repo-, agent-, tool-, and language-agnostic" in agent_aids["boundary_rules"]
     assert payload["mixed_agent"]["local_memory"]["path"] == ".agentic-workspace/local/memory.toml"
     assert payload["mixed_agent"]["local_memory"]["authoritative"] is False
     assert payload["mixed_agent"]["local_memory"]["advisory_only"] is True
@@ -849,6 +862,15 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
         ],
         "rule": "local-only vendor/runtime aids; may reduce local operating cost, but must not become shared workflow authority",
     }
+    agent_aids = payload["mixed_agent"]["agent_aid_storage"]
+    assert agent_aids["canonical_doc"] == ".agentic-workspace/docs/agent-aids-storage.md"
+    assert agent_aids["candidate_root"] == ".agentic-workspace/agent-aids"
+    assert agent_aids["candidate_subdirs"] == ["scripts", "skills", "runbooks", "prompts", "checks", "templates"]
+    assert [entry["class"] for entry in agent_aids["storage_classes"][:3]] == [
+        "local-only",
+        "checked-in-candidate",
+        "promoted-repo-native",
+    ]
     assert payload["mixed_agent"]["local_memory"]["status"] == "disabled"
     assert payload["mixed_agent"]["local_memory"]["path"] == ".agentic-workspace/local/memory.toml"
     assert payload["mixed_agent"]["local_memory"]["authoritative"] is False
@@ -1060,6 +1082,28 @@ def test_defaults_section_selector_returns_intent_answer(capsys) -> None:
     assert payload["answer"]["confirmed_intent"]["summary"] == "the human-owned request before workspace normalization"
     assert payload["answer"]["interpreted_intent"]["summary"] == "the workspace-normalized request carried forward by lifecycle commands"
     assert ".agentic-workspace/docs/compact-contract-profile.md" in payload["refs"]
+    assert "agentic-workspace defaults --format json" in payload["refs"]
+
+
+def test_defaults_section_selector_returns_agent_aid_storage_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "agent_aid_storage", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "agent_aid_storage"}
+    assert payload["matched"] is True
+    assert payload["answer"]["command"] == "agentic-workspace defaults --section agent_aid_storage --format json"
+    assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/agent-aids-storage.md"
+    assert payload["answer"]["candidate_root"] == ".agentic-workspace/agent-aids"
+    assert payload["answer"]["ordinary_startup"] is False
+    assert [entry["class"] for entry in payload["answer"]["storage_classes"]] == [
+        "local-only",
+        "checked-in-candidate",
+        "promoted-repo-native",
+        "package-owned",
+        "source-checkout-only",
+    ]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 

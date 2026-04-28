@@ -161,3 +161,4 @@ Do not treat the substrate as permission to encode arbitrary repo choreography o
 - Use [minimum-operating-model.md](minimum-operating-model.md) for the startup-facing boundary map.
 - Use [system-intent-contract.md](system-intent-contract.md) when the question is how higher-level system intent remains durable and recoverable.
 - Use [local-integration-area.md](local-integration-area.md) for the local-only vendor/runtime integration boundary.
+- Use [agent-aids-storage.md](agent-aids-storage.md) for reusable aid storage boundaries across local-only, checked-in candidate, promoted, package-owned, and source-checkout-only homes.

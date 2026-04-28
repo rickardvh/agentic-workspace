@@ -1,0 +1,235 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Agent Aids Storage Boundaries",
+  "goal": [
+    "agent-created-aids-lifecycle first child; storage boundaries should exist before manifest, safety, discovery, and promotion work."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "agent-created-aids-lifecycle first child; storage boundaries should exist before manifest, safety, discovery, and promotion work.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "agent-aids-storage-boundaries",
+      "status": "completed",
+      "next_step": "archive this plan, close #517, and continue with #518.",
+      "proof": "Workspace CLI, structured inventory, contract tooling, maintainer-surface, planning, and root CLI authority checks passed."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        "tests/test_structured_file_inventory.py",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        ".agentic-workspace/OWNERSHIP.toml",
+        "src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml",
+        ".agentic-workspace/docs/agent-aids-storage.md",
+        ".agentic-workspace/docs/workspace-config-contract.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/agent-aids-storage-boundaries.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "agent-created-aids-lifecycle first child; storage boundaries should exist before manifest, safety, discovery, and promotion work.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Agents can query a compact storage-boundary answer and avoid turning local aids into shared authority.",
+    "intentionally deferred": "Manifest schema, safety checks, discovery, and promotion workflow remain in #518-#521.",
+    "discovered implications": "Structured candidate aid metadata needs an explicit schema route before checked-in manifests are allowed.",
+    "proof achieved now": "passed",
+    "validation still needed": "none for #517",
+    "next likely slice": "#518"
+  },
+  "intent_interpretation": {
+    "literal request": "Agent Aids Storage Boundaries",
+    "inferred intended outcome": "agent-created-aids-lifecycle first child; storage boundaries should exist before manifest, safety, discovery, and promotion work.",
+    "chosen concrete what": "define the smallest repo-agnostic aid storage and ownership boundary using existing local integration concepts.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/config.py; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; tests/test_structured_file_inventory.py; src/agentic_workspace/contracts/structured_file_inventory.json; .agentic-workspace/OWNERSHIP.toml; src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml; .agentic-workspace/docs/agent-aids-storage.md; .agentic-workspace/docs/workspace-config-contract.md; .agentic-workspace/planning/state.toml; this execplan.",
+    "max changed files": "11 active files plus archive output at closeout.",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check src tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "define the smallest repo-agnostic aid storage and ownership boundary using existing local integration concepts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "agent-created-aids-lifecycle first child; storage boundaries should exist before manifest, safety, discovery, and promotion work.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "agent-aids-storage-boundaries",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "define the smallest repo-agnostic aid storage and ownership boundary using existing local integration concepts."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/config.py",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    "tests/test_structured_file_inventory.py",
+    "src/agentic_workspace/contracts/structured_file_inventory.json",
+    ".agentic-workspace/OWNERSHIP.toml",
+    "src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml",
+    ".agentic-workspace/docs/agent-aids-storage.md",
+    ".agentic-workspace/docs/workspace-config-contract.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/agent-aids-storage-boundaries.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run pytest tests/test_structured_file_inventory.py -q",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run ruff check src tests",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "agents can tell local-only, checked-in candidate, promoted repo-native, package-owned, and source-checkout-only aid locations apart without broad search."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Defined repo-agnostic agent-aid storage classes, exposed them through compact defaults/config output, documented the boundary, added ownership-ledger entries, and routed candidate structured metadata to #518.",
+    "scope touched": "workspace config constants, defaults/config payloads, tests, structured inventory, ownership ledgers, and docs.",
+    "changed surfaces": "src/agentic_workspace/config.py; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; tests/test_structured_file_inventory.py; src/agentic_workspace/contracts/structured_file_inventory.json; .agentic-workspace/OWNERSHIP.toml; src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml; .agentic-workspace/docs/agent-aids-storage.md; .agentic-workspace/docs/workspace-config-contract.md; .agentic-workspace/planning/state.toml; this execplan.",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"agent_aid_storage or config_command_reports_effective_defaults_without_repo_file or defaults\"; uv run pytest tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/config.py src/agentic_workspace/cli.py tests/test_workspace_cli.py tests/test_structured_file_inventory.py; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json; uv run pytest tests/test_workspace_cli.py -q; make maintainer-surfaces; uv run agentic-workspace defaults --section agent_aid_storage --format json; uv run agentic-workspace proof --target . --changed ... --format json; uv run ruff check src tests; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run agentic-workspace defaults --section root_cli_authority --format json; git diff --check.",
+    "result for continuation": "#517 complete; continue with #518.",
+    "next step": "archive this plan, close #517, refresh external evidence, and ingest #518."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; widened only to necessary ownership and structured-inventory guardrails for the same boundary.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue planned lifecycle children #518-#521."
+  },
+  "proof_report": {
+    "validation proof": "Focused and full workspace CLI tests, structured inventory tests/check, contract tooling, ruff, maintainer-surfaces, planning strict check, planning doctor, root CLI authority query, and git diff --check passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "216 workspace CLI tests passed; 24 structured inventory tests passed; maintainer-surfaces and contract/planning checks passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "agent-created-aids-lifecycle first child; storage boundaries should exist before manifest, safety, discovery, and promotion work.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The compact agent_aid_storage defaults selector, config mixed-agent output, ownership ledger, and docs distinguish local-only, checked-in candidate, promoted repo-native, package-owned, and source-checkout-only aid storage.",
+    "unsolved intent passed to": "#518 for manifest/schema; #519-#521 for safety, discovery, and promotion."
+  },
+  "execution_summary": {
+    "outcome delivered": "Agent-created aid storage and ownership boundaries are queryable, documented, and guarded against ad hoc structured metadata.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#518",
+    "post-work posterity capture": "this execplan and .agentic-workspace/docs/agent-aids-storage.md",
+    "knowledge promoted (Memory/Docs/Config)": ".agentic-workspace/docs/agent-aids-storage.md; defaults/config payloads; ownership ledgers; structured inventory.",
+    "resume from": "#518"
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "Reusable aid storage must stay repo-, agent-, tool-, and language-agnostic, with local-only helpers outside shared authority.",
+    "motivation worth preserving": "The candidate root lowers repeated placement decisions but must remain outside ordinary startup and route structured metadata to a manifest contract.",
+    "canonical owner now": "defaults/config payloads, ownership ledgers, structured inventory, and .agentic-workspace/docs/agent-aids-storage.md",
+    "promotion trigger": "when a candidate aid becomes stable enough to move to a repo-native or package-owned surface",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "partial",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#517 was only the boundary slice; manifest, safety, discovery, and promotion remain planned children.",
+    "evidence carried forward": ".agentic-workspace/docs/agent-aids-storage.md, defaults/config payloads, ownership ledger entries, and structured inventory gap entries routed to #518.",
+    "reopen trigger": "agents still cannot tell where to place local-only versus checked-in reusable aids without broad search."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "A compact defaults selector made the boundary cheaper to recover than opening docs or scanning config output.",
+      "Structured candidate aid metadata would otherwise become ad hoc before the manifest slice."
+    ],
+    "signals fixed": [
+      "Added defaults --section agent_aid_storage.",
+      "Routed structured candidate aid files to #518 through the structured-file inventory."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "#518"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "#518 manifest/schema follows the structured-file inventory gap."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        ".agentic-workspace/docs/agent-aids-storage.md"
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

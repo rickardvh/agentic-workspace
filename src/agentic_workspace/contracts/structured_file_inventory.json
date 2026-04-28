@@ -107,6 +107,58 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": ".agentic-workspace/agent-aids/**/*.json",
+      "format": "json",
+      "owner": "agent-aids",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "agent aid manifest/schema contract pending in #518",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Checked-in candidate aid metadata must not become ad hoc structured state before the manifest contract exists.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Shared aid metadata is durable checked-in state only after it has a schema-backed manifest contract.",
+      "routed_to": "#518"
+    },
+    {
+      "pattern": ".agentic-workspace/agent-aids/**/*.toml",
+      "format": "toml",
+      "owner": "agent-aids",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "agent aid manifest/schema contract pending in #518",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Checked-in candidate aid metadata must not become ad hoc structured state before the manifest contract exists.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Shared aid metadata is durable checked-in state only after it has a schema-backed manifest contract.",
+      "routed_to": "#518"
+    },
+    {
+      "pattern": ".agentic-workspace/agent-aids/**/*.yaml",
+      "format": "yaml",
+      "owner": "agent-aids",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "agent aid manifest/schema contract pending in #518",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Checked-in candidate aid metadata must not become ad hoc structured state before the manifest contract exists.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Shared aid metadata is durable checked-in state only after it has a schema-backed manifest contract.",
+      "routed_to": "#518"
+    },
+    {
+      "pattern": ".agentic-workspace/agent-aids/**/*.yml",
+      "format": "yml",
+      "owner": "agent-aids",
+      "status": "freeform-prohibited-gap",
+      "schema_or_validator": "agent aid manifest/schema contract pending in #518",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Checked-in candidate aid metadata must not become ad hoc structured state before the manifest contract exists.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Shared aid metadata is durable checked-in state only after it has a schema-backed manifest contract.",
+      "routed_to": "#518"
+    },
+    {
       "pattern": ".agentic-workspace/system-intent/intent.toml",
       "format": "toml",
       "owner": "system-intent",

@@ -46,6 +46,8 @@ from agentic_workspace.config import (
     SUPPORTED_REVIEW_BURDENS,
     SUPPORTED_WORKFLOW_ARTIFACT_PROFILES,
     SUPPORTED_WORKFLOW_OBLIGATION_STAGES,
+    WORKSPACE_AGENT_AID_ROOT_PATH,
+    WORKSPACE_AGENT_AID_SUBDIRS,
     WORKSPACE_BOOTSTRAP_HANDOFF_PATH,
     WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH,
     WORKSPACE_CONFIG_PATH,
@@ -207,6 +209,67 @@ def _local_integration_area_payload(*, target_root: Path | None = None) -> dict[
         "canonical_doc": ".agentic-workspace/docs/local-integration-area.md",
         "allowed_aid_kinds": list(WORKSPACE_LOCAL_INTEGRATION_ALLOWED_AID_KINDS),
         "boundary_rules": list(WORKSPACE_LOCAL_INTEGRATION_BOUNDARY_RULES),
+    }
+
+
+def _agent_aid_storage_payload(*, target_root: Path | None = None) -> dict[str, Any]:
+    exists = False
+    if target_root is not None:
+        exists = (target_root / WORKSPACE_AGENT_AID_ROOT_PATH).exists()
+    return {
+        "status": "available-checked-in-candidate-area",
+        "command": "agentic-workspace defaults --section agent_aid_storage --format json",
+        "canonical_doc": ".agentic-workspace/docs/agent-aids-storage.md",
+        "candidate_root": WORKSPACE_AGENT_AID_ROOT_PATH.as_posix(),
+        "candidate_subdirs": list(WORKSPACE_AGENT_AID_SUBDIRS),
+        "candidate_root_exists": exists,
+        "ordinary_startup": False,
+        "manifest_required": "for checked-in shared aids once the manifest contract is enabled",
+        "storage_classes": [
+            {
+                "class": "local-only",
+                "root": WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH.as_posix(),
+                "authority": "none",
+                "git_ignored": True,
+                "use_for": "runtime-specific or machine-specific helpers that must be safe to delete",
+            },
+            {
+                "class": "checked-in-candidate",
+                "root": WORKSPACE_AGENT_AID_ROOT_PATH.as_posix(),
+                "authority": "candidate aid metadata plus ordinary repo review",
+                "git_ignored": False,
+                "use_for": "repo-shared aids that are still proving value before promotion",
+            },
+            {
+                "class": "promoted-repo-native",
+                "root": "host repo canonical commands, checks, skills, runbooks, prompts, templates, or docs",
+                "authority": "the promoted surface's normal contract, tests, and ownership",
+                "git_ignored": False,
+                "use_for": "stable aids whose value no longer depends on candidate-aid storage",
+            },
+            {
+                "class": "package-owned",
+                "root": "package source or installed payload surfaces",
+                "authority": "package contracts and release process",
+                "git_ignored": False,
+                "use_for": "features shipped by the package, not host-repo local aids",
+            },
+            {
+                "class": "source-checkout-only",
+                "root": "maintainer tooling in the package source checkout",
+                "authority": "source checkout tests and maintainer workflow",
+                "git_ignored": False,
+                "use_for": "package-maintainer aids that must not appear as host-repo workflow requirements",
+            },
+        ],
+        "boundary_rules": [
+            "local-only helpers remain under the local integration area and must not become shared authority",
+            "checked-in candidate aids live under the candidate root until promoted or retired",
+            "promoted aids move to the strongest ordinary repo-native surface and should not require candidate storage",
+            "package-owned aids are shipped product surfaces, not host-repo custom aids",
+            "source-checkout-only maintainer aids must not be required in ordinary host repos",
+            "the model is repo-, agent-, tool-, and language-agnostic",
+        ],
     }
 
 
@@ -8508,6 +8571,7 @@ def _defaults_payload() -> dict[str, Any]:
         "agent_configuration_system": _agent_configuration_system_payload(),
         "agent_configuration_queries": _agent_configuration_queries_payload(),
         "agent_configuration_workflow_extensions": _agent_configuration_workflow_extensions_payload(),
+        "agent_aid_storage": _agent_aid_storage_payload(),
         "system_intent": _system_intent_payload(),
         "surface_value_guardrail": _surface_value_guardrail_payload(),
         "effective_authority": _effective_authority_payload(),
@@ -8641,6 +8705,7 @@ def _defaults_payload() -> dict[str, Any]:
                     "but shared workflow truth must stay in repo-owned workspace, planning, and memory surfaces."
                 ),
             },
+            "agent_aid_storage": _agent_aid_storage_payload(),
             "local_memory": {
                 "path": WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH.as_posix(),
                 "controlled_by": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
@@ -10806,6 +10871,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             **_local_integration_area_payload(target_root=config.target_root),
             "rule": ("local-only vendor/runtime aids; may reduce local operating cost, but must not become shared workflow authority"),
         },
+        "agent_aid_storage": _agent_aid_storage_payload(target_root=config.target_root),
         "local_memory": _local_memory_payload(config=config),
         "runtime_inference": {
             "tool_owned": defaults["runtime_inference"]["tool_owned"],

@@ -44,7 +44,32 @@ def test_inventory_routes_known_schema_gaps() -> None:
     inventory = check_structured_file_inventory.load_inventory()
     gap_entries = [entry for entry in inventory["entries"] if entry["status"] == "freeform-prohibited-gap"]
 
-    assert gap_entries == []
+    assert {entry["pattern"] for entry in gap_entries} == {
+        ".agentic-workspace/agent-aids/**/*.json",
+        ".agentic-workspace/agent-aids/**/*.toml",
+        ".agentic-workspace/agent-aids/**/*.yaml",
+        ".agentic-workspace/agent-aids/**/*.yml",
+    }
+    for entry in gap_entries:
+        assert entry["owner"] == "agent-aids"
+        assert entry["routed_to"] == "#518"
+        assert entry["schema_or_validator"] == "agent aid manifest/schema contract pending in #518"
+
+
+def test_agent_aid_candidate_structured_files_are_routed_to_manifest_contract() -> None:
+    inventory = check_structured_file_inventory.load_inventory()
+
+    findings = check_structured_file_inventory.unmatched_structured_files(
+        [
+            ".agentic-workspace/agent-aids/scripts/demo.json",
+            ".agentic-workspace/agent-aids/skills/demo.toml",
+            ".agentic-workspace/agent-aids/runbooks/demo.yaml",
+            ".agentic-workspace/agent-aids/prompts/demo.yml",
+        ],
+        inventory,
+    )
+
+    assert findings == []
 
 
 def test_root_contract_manifests_are_typed_validator_backed() -> None:

@@ -125,6 +125,14 @@ authority = "primary"
 summary = "Workspace-owned compiled system-intent declaration consumed by package operations."
 
 [[authority_surfaces]]
+concern = "agent-aid-candidates"
+surface = ".agentic-workspace/agent-aids/"
+owner = "repo"
+ownership = "repo_owned"
+authority = "candidate"
+summary = "Optional checked-in candidate area for reusable agent-created aids before promotion to ordinary repo-native surfaces."
+
+[[authority_surfaces]]
 concern = "planning-install-tree"
 surface = ".agentic-workspace/planning/"
 owner = "planning"
