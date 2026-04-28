@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T10:17:05+00:00",
+  "refreshed_at": "2026-04-28T10:25:58+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T10:17:05+00:00",
+    "refreshed_at": "2026-04-28T10:25:58+00:00",
     "item_count": 507,
-    "open_count": 33,
-    "closed_count": 474,
+    "open_count": 32,
+    "closed_count": 475,
     "limit": 600,
     "state": "all",
     "state_source": "previous_evidence",
@@ -7678,7 +7678,7 @@
       "system": "github",
       "id": "#490",
       "title": "[Workspace]: Replace first-party feature tiers with generic module profiles and manifests",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#485",
       "planning_residue_expected": "optional",
@@ -7688,8 +7688,8 @@
         "planning"
       ],
       "created_at": "2026-04-28T06:34:25Z",
-      "updated_at": "2026-04-28T06:34:25Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T10:25:36Z",
+      "comments_count": 1
     },
     {
       "system": "github",
