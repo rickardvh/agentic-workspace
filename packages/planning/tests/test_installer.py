@@ -1683,6 +1683,7 @@ candidates = [
         "needs_shaping": 1,
         "deferred_lanes": 1,
         "blocked_items": 1,
+        "closed_items": 0,
         "residue_routing_needed": 1,
     }
     assert compact["work_maturity"]["ready_slices"][0]["id"] == "ready-slice"
@@ -2631,6 +2632,51 @@ def test_archive_execplan_allows_rename_like_work_with_reference_sweep(tmp_path:
     assert archived_record_path.exists()
     assert not plan_path.exists()
     assert any(action.kind == "archived" and action.path == archived_record_path for action in result.actions)
+
+
+def test_archive_execplan_apply_cleanup_moves_active_execplan_to_closed_work_item(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+work_items = []
+
+[active]
+execplans = [
+  { id = "plan-alpha", title = "Plan Alpha", maturity = "active", status = "active", path = ".agentic-workspace/planning/execplans/plan-alpha.plan.json", source = "#501", owner_role = "implementation", review_role = "validation", handoff_ready = true },
+]
+""",
+    )
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(plan_path, item_id="plan-alpha", status="completed")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["durable_residue"] = {
+        "status": "planning",
+        "learned constraint": "Closed work should keep only compact residue routing in state.",
+        "motivation worth preserving": "Later agents need to know the residue owner without reading the archive first.",
+        "canonical owner now": ".agentic-workspace/planning/state.toml",
+        "promotion trigger": "when selecting the next planning-state maturity slice",
+        "retention after promotion": "shrink",
+    }
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+
+    result = archive_execplan("plan-alpha", target=tmp_path, apply_cleanup=True)
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    summary = planning_summary(target=tmp_path)
+
+    assert archived_record_path.exists()
+    assert "execplans = []" in state_text
+    assert 'maturity = "closed"' in state_text
+    assert 'durable_residue = "planning"' in state_text
+    assert 'residue_owner = ".agentic-workspace/planning/state.toml"' in state_text
+    assert summary["work_maturity"]["closed_items"][0]["id"] == "plan-alpha"
+    assert summary["work_maturity"]["closed_items"][0]["durable_residue"] == "planning"
+    assert summary["work_maturity"]["counts"]["residue_routing_needed"] == 0
+    assert summary["todo"]["queued_count"] == 0
+    assert any("closed work_items" in action.detail for action in result.actions)
 
 
 def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_path: Path) -> None:

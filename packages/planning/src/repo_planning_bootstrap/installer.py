@@ -3010,7 +3010,9 @@ def _state_queued_items(state: dict[str, Any]) -> list[dict[str, Any]]:
                 continue
             if str(raw.get("type", "")).strip() == "lane":
                 continue
-            if str(raw.get("maturity", "")).strip() == "active" or str(raw.get("status", "")).strip() == "active":
+            maturity = str(raw.get("maturity", "")).strip()
+            status = str(raw.get("status", "")).strip()
+            if maturity in {"active", "closed"} or status in {"active", "done", "dismissed", "closed", "completed"}:
                 continue
             queued_items.append(raw)
     todo = state.get("todo")
@@ -3121,6 +3123,9 @@ def _planning_state_item_summary(*, bucket_path: str, item: dict[str, Any]) -> d
         ("why_now", str(item.get("why_now", "")).strip()),
         ("reason", str(item.get("reason", "")).strip()),
         ("suggested_first_slice", str(item.get("suggested_first_slice", "")).strip()),
+        ("durable_residue", _planning_state_residue_value(item)),
+        ("residue_owner", str(item.get("residue_owner") or item.get("residue owner") or "").strip()),
+        ("residue_routing", str(item.get("residue_routing") or item.get("residue routing") or "").strip()),
     ):
         if value:
             summary[key] = value
@@ -3135,7 +3140,14 @@ def _planning_state_item_summary(*, bucket_path: str, item: dict[str, Any]) -> d
 
 
 def _planning_state_residue_routed(item: dict[str, Any]) -> bool:
-    return bool(str(item.get("durable_residue") or item.get("residue") or item.get("closure") or "").strip())
+    return bool(_planning_state_residue_value(item))
+
+
+def _planning_state_residue_value(item: dict[str, Any]) -> str:
+    residue = item.get("durable_residue") or item.get("residue") or item.get("closure")
+    if isinstance(residue, dict):
+        return str(residue.get("status") or residue.get("route") or residue.get("owner") or "").strip()
+    return str(residue or "").strip()
 
 
 def _planning_work_maturity_projection(*, state: dict[str, Any] | None, active_execplans: list[dict[str, str]]) -> dict[str, Any]:
@@ -3145,6 +3157,7 @@ def _planning_work_maturity_projection(*, state: dict[str, Any] | None, active_e
         "needs_shaping": [],
         "deferred_lanes": [],
         "blocked_items": [],
+        "closed_items": [],
         "residue_routing_needed": [],
     }
     seen_active_surfaces: set[str] = set()
@@ -3161,6 +3174,8 @@ def _planning_work_maturity_projection(*, state: dict[str, Any] | None, active_e
         if maturity == "closed":
             if not _planning_state_residue_routed(item):
                 buckets["residue_routing_needed"].append(summary)
+            else:
+                buckets["closed_items"].append(summary)
             continue
         if maturity == "active" or status == "active":
             buckets["active_execplans"].append(summary)
@@ -6830,11 +6845,37 @@ def archive_execplan(
             "add a stale-reference sweep to `Validation Commands` before archiving rename/refactor-like work",
         )
         return result
+    destination = archive_dir / plan_path.name
+    record_path = _canonical_execplan_record_path(plan_path)
+    destination_record = _canonical_execplan_record_path(destination)
+    archived_record_relative = destination_record.relative_to(target_root).as_posix()
+    has_record = record_path.exists()
+    if destination.exists():
+        result.add("manual review", destination, "archive destination already exists")
+        return result
+    if has_record and destination_record.exists():
+        result.add("manual review", destination_record, "archive destination for canonical execplan record already exists")
+        return result
+
     cleanup_todo_lines: list[str] | None = None
     todo_ref_items = _todo_referencing_items(target_root / ".agentic-workspace/planning/state.toml", plan_path, target_root)
     if apply_cleanup and todo_ref_items:
-        cleanup_todo_lines = _remove_todo_items(target_root / ".agentic-workspace/planning/state.toml", todo_ref_items)
+        closed_state = _close_state_active_execplan_for_archive(
+            target_root=target_root,
+            plan_path=plan_path,
+            archived_record_relative=archived_record_relative,
+            durable_residue=durable_residue,
+            closure_decision=closure_decision,
+        )
+        if closed_state["changed"]:
+            cleanup_todo_lines = _state_to_toml_lines(closed_state["state"])
+            for detail in closed_state["details"]:
+                result.add("would update" if dry_run else "updated", target_root / ".agentic-workspace/planning/state.toml", detail)
+        else:
+            cleanup_todo_lines = _remove_todo_items(target_root / ".agentic-workspace/planning/state.toml", todo_ref_items)
         for item in todo_ref_items:
+            if closed_state["changed"]:
+                continue
             result.add(
                 "would update" if dry_run else "updated",
                 target_root / ".agentic-workspace/planning/state.toml",
@@ -6866,17 +6907,6 @@ def archive_execplan(
                 target_root / ".agentic-workspace/planning/state.toml",
                 f"TODO item '{item_id}' still references this execplan",
             )
-        return result
-
-    destination = archive_dir / plan_path.name
-    record_path = _canonical_execplan_record_path(plan_path)
-    destination_record = _canonical_execplan_record_path(destination)
-    has_record = record_path.exists()
-    if destination.exists():
-        result.add("manual review", destination, "archive destination already exists")
-        return result
-    if has_record and destination_record.exists():
-        result.add("manual review", destination_record, "archive destination for canonical execplan record already exists")
         return result
 
     cleanup_roadmap_state = _cleanup_state_roadmap_followup(target_root, plan_path)
@@ -8057,6 +8087,113 @@ def _execplan_needs_reference_sweep(path: Path) -> bool:
 def _validation_has_reference_sweep(commands: list[str]) -> bool:
     lowered = "\n".join(command.lower() for command in commands)
     return any(token in lowered for token in ("rg ", "ripgrep", "grep "))
+
+
+def _close_state_active_execplan_for_archive(
+    *,
+    target_root: Path,
+    plan_path: Path,
+    archived_record_relative: str,
+    durable_residue: dict[str, str],
+    closure_decision: str,
+) -> dict[str, Any]:
+    state = _read_state_from_toml(target_root)
+    if not state:
+        return {"changed": False, "state": None, "details": []}
+
+    active = state.get("active")
+    if not isinstance(active, dict) or not isinstance(active.get("execplans"), list):
+        return {"changed": False, "state": None, "details": []}
+
+    relative = plan_path.relative_to(target_root).as_posix()
+    kept_execplans: list[Any] = []
+    closed_items: list[dict[str, Any]] = []
+    for raw in active["execplans"]:
+        if not isinstance(raw, dict):
+            kept_execplans.append(raw)
+            continue
+        item_surface = (
+            _surface_execplan_reference(str(raw.get("path") or raw.get("surface") or ""))
+            or str(raw.get("path") or raw.get("surface") or "").strip()
+        )
+        if item_surface != relative:
+            kept_execplans.append(raw)
+            continue
+        if _archive_should_leave_closed_work_item(durable_residue=durable_residue, closure_decision=closure_decision):
+            closed_items.append(
+                _closed_work_item_from_active_execplan(
+                    raw,
+                    archived_record_relative=archived_record_relative,
+                    durable_residue=durable_residue,
+                    closure_decision=closure_decision,
+                )
+            )
+
+    if not closed_items:
+        return {"changed": False, "state": None, "details": []}
+
+    next_state = dict(state)
+    next_active = dict(active)
+    next_active["execplans"] = kept_execplans
+    next_state["active"] = next_active
+    work_items = list(next_state.get("work_items", [])) if isinstance(next_state.get("work_items"), list) else []
+    closed_ids = {str(item.get("id", "")) for item in closed_items}
+    work_items = [item for item in work_items if not (isinstance(item, dict) and str(item.get("id", "")) in closed_ids)]
+    work_items.extend(closed_items)
+    next_state["work_items"] = work_items
+    details = [f"move active execplan '{item['id']}' to closed work_items with durable residue routing" for item in closed_items]
+    return {"changed": True, "state": next_state, "details": details}
+
+
+def _archive_should_leave_closed_work_item(*, durable_residue: dict[str, str], closure_decision: str) -> bool:
+    residue_status = durable_residue.get("status", "").strip().lower()
+    if closure_decision == "archive-but-keep-lane-open":
+        return True
+    return residue_status not in EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES
+
+
+def _closed_work_item_from_active_execplan(
+    raw: dict[str, Any],
+    *,
+    archived_record_relative: str,
+    durable_residue: dict[str, str],
+    closure_decision: str,
+) -> dict[str, Any]:
+    residue_status = durable_residue.get("status", "").strip() or "none"
+    residue_owner = durable_residue.get("canonical owner now", "").strip()
+    if not residue_owner and residue_status in EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES:
+        residue_owner = "archive"
+    closed: dict[str, Any] = {}
+    for key in (
+        "id",
+        "title",
+        "source",
+        "refs",
+        "issues",
+        "why_now",
+        "reason",
+        *PLANNING_STATE_ROLE_FIELDS,
+        "handoff_ready",
+    ):
+        if key in raw:
+            closed[key] = raw[key]
+    closed.setdefault("id", Path(archived_record_relative).name.removesuffix(".plan.json").removesuffix(".md"))
+    closed["type"] = "slice"
+    closed["maturity"] = "closed"
+    closed["status"] = "done"
+    closed["path"] = archived_record_relative
+    closed["closure"] = closure_decision
+    closed["durable_residue"] = residue_status
+    if residue_owner:
+        closed["residue_owner"] = residue_owner
+        closed["residue_routing"] = residue_owner
+    promotion_trigger = durable_residue.get("promotion trigger", "").strip()
+    if promotion_trigger:
+        closed["residue_promotion_trigger"] = promotion_trigger
+    retention = durable_residue.get("retention after promotion", "").strip()
+    if retention:
+        closed["residue_retention"] = retention
+    return closed
 
 
 def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path) -> list[TodoItem]:

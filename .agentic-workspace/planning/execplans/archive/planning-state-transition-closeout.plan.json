@@ -1,0 +1,190 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning State Transition Closeout",
+  "goal": [
+    "Connect maturity-based planning state to promotion and closeout transitions so ready work becomes active execplans and future-relevant completed work leaves compact residue routing."
+  ],
+  "non_goals": [
+    "Do not add heavy workflow automation.",
+    "Do not duplicate execplan implementation detail in state.toml.",
+    "Do not make archives ordinary active context."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Ready slices, active execplans, and closed residue records have predictable state transitions.",
+      "constraints": "Keep the package repo-/agent-/tool-agnostic and keep closed residue compact.",
+      "latitude": "Use the existing promotion/archive commands and summary projection instead of adding a new command.",
+      "escalation": "Stop before broad state-machine automation or generated adapter changes."
+    },
+    "execution": {
+      "milestone": "Wire closeout transition residue",
+      "status": "completed",
+      "next_step": "Archive this execplan, close #501 and #496, then continue the next shaped lane when selected.",
+      "proof": "planning package tests, ruff, planning doctor, summary"
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/planning-state-transition-closeout.plan.json"
+      ],
+      "invariants": [
+        "Active state points to execplans rather than implementation detail.",
+        "Future-relevant residue has a non-archive owner.",
+        "Evidence-only completed work can shrink to archive evidence."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Planning state supports progressive refinement and multi-agent handoff through explicit maturity, roles, promotion, and closeout state.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "planning-state-maturity (#496)"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Ready work still promotes into active execplans, archive cleanup now removes evidence-only active entries, and future-relevant durable residue is retained as compact closed work_items.",
+    "intentionally deferred": "none",
+    "discovered implications": "Closed items should not become active context; only future-relevant residue or open-lane closure leaves compact checked-in routing.",
+    "proof achieved now": "Focused transition tests, full planning package tests, ruff, planning-surface check, doctor, summary, and workspace summary tests passed.",
+    "validation still needed": "none for #501",
+    "next likely slice": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Connect maturity-based state with execplan promotion and durable-residue closeout.",
+    "hard constraints": "No duplicate implementation detail in state; no heavy workflow automation.",
+    "agent may decide locally": "Exact compact closed-item fields, summary bucket naming, and focused test coverage.",
+    "escalate when": "The change would require broad state-machine automation or new public command surfaces."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#501",
+      "label": "Promotion and closeout transition integration",
+      "role": "source_intent",
+      "locator": "GitHub issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#496",
+      "label": "Planning-state maturity parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue"
+    }
+  ],
+  "active_milestone": {
+    "id": "transition-closeout",
+    "status": "completed",
+    "scope": "planning state promotion and closeout transitions",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "immediate_next_action": [
+    "Archive this execplan and close #501/#496."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/planning-state-transition-closeout.plan.json"
+  ],
+  "validation_commands": [
+    "cd packages/planning; uv run pytest tests/test_installer.py",
+    "cd packages/planning; uv run ruff check .",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run pytest tests/test_workspace_summary_cli.py -q"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Ready slice promotion still creates an active execplan reference.",
+    "Archive cleanup removes evidence-only active state but keeps future-relevant residue as a compact closed work item.",
+    "Summary distinguishes routed closed items from closed items that still need residue routing.",
+    "#501 is closed with proof and the parent #496 lane is closed or honestly routed."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "planning-autopilot and self-improvement-dogfooding",
+    "what happened": "Added compact closed-work routing for future-relevant archive cleanup, kept evidence-only archive cleanup shrinking state, and exposed routed closed items separately from residue-routing-needed items in summary.",
+    "scope touched": "planning package state/archive logic, tests, active state, and active execplan closeout.",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/planning-state-transition-closeout.plan.json",
+    "validations run": "Focused transition tests; full planning package tests; planning package ruff; planning-surface checker; planning doctor; planning summary; workspace summary CLI tests.",
+    "result for continuation": "#501 and the parent #496 lane are satisfied; next broad work should come from another shaped lane.",
+    "next step": "Archive this plan and close #501/#496."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; changes stayed inside planning state transition logic, tests, and planning surfaces.",
+    "proof status": "passed",
+    "intent served": "yes; ready-to-active and active-to-closed transitions are covered, and closed residue routing is visible without archive reads.",
+    "config compliance": "used compact summary, issue evidence, and checked-in planning state before implementation",
+    "misinterpretation risk": "low after tests; closed routed items are compact state records, not active archive context.",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "150 planning package tests passed; planning package ruff passed; planning-surface checker passed; planning doctor and summary returned clean; workspace summary CLI tests passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Archive transition test proves future-relevant durable residue becomes a closed work_item, while existing active-pointer cleanup behavior still removes evidence-only completed state."
+  },
+  "intent_satisfaction": {
+    "original intent": "Connect maturity-based state with execplan promotion and durable-residue closeout.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Promotion from work_items ready slices was already covered and remains passing; archive cleanup now handles active-to-closed residue routing and summary exposes closed routed items separately from missing residue.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make planning state compact, explicit, and queryable without duplicate authority.",
+    "slice shaping bias": "Use commands and projections as the transition boundary, not raw state browsing.",
+    "broader-lane validation question": "Does this complete the planning-state maturity lane without adding product residue?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#497 through #501 have landed the planning-state maturity schema, role metadata, summary behavior, state migration, and transition closeout behavior.",
+    "evidence carried forward": "Code and tests now enforce the ready, active, closed, and residue-routing parts of the maturity model.",
+    "reopen trigger": "ready/active/closed transitions regress or closed residue becomes ordinary active context"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Future-relevant closeout residue should route into compact checked-in planning state instead of requiring archive reads.",
+    "motivation worth preserving": "Agents need to distinguish evidence-only completed work from closed work that still owns durable follow-up.",
+    "canonical owner now": ".agentic-workspace/planning/state.toml",
+    "promotion trigger": "when archive cleanup or work_maturity projections are touched",
+    "retention after promotion": "shrink"
+  },
+  "execution_summary": {
+    "outcome delivered": "Connected maturity-based planning state to archive closeout residue routing.",
+    "validation confirmed": "Planning package tests, ruff, planning-surface check, doctor, summary, and workspace summary tests passed.",
+    "follow-on routed to": "none; planning-state-maturity lane is complete.",
+    "post-work posterity capture": "The transition rules are carried by installer code, tests, and compact closed work_items when future-relevant residue exists.",
+    "knowledge promoted (Memory/Docs/Config)": "No separate Memory or docs promotion needed.",
+    "resume from": ".agentic-workspace/planning/state.toml next shaped lane"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #501 from planning-state-maturity lane into an active execplan."
+  ]
+}
