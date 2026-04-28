@@ -250,21 +250,30 @@
         "candidate_type": "extract-interface-authority",
         "owner_surface": "src/agentic_workspace/contracts/command_adapter_generation.json",
         "why": "Support commands are the next visible root CLI surfaces whose command/interface semantics can move out of cli.py without touching runtime primitives.",
-        "tracking_issue": "#410"
+        "tracking_status": "closed",
+        "tracking_role": "historical-provenance",
+        "provenance_issue": "#410",
+        "provenance": "Closed historical audit work identified this candidate; it is not the live owner for future extraction work."
       },
       {
         "id": "report-section-schema-guard",
         "candidate_type": "add-guard-check",
         "owner_surface": "src/agentic_workspace/contracts/report_contract.json",
         "why": "New stable report sections should be reviewed as report contract/schema authority instead of becoming hidden interface authority in cli.py.",
-        "tracking_issue": "#410"
+        "tracking_status": "closed",
+        "tracking_role": "historical-provenance",
+        "provenance_issue": "#410",
+        "provenance": "Closed historical audit work identified this candidate; it is not the live owner for future guard work."
       },
       {
         "id": "package-support-command-manifest-pattern",
         "candidate_type": "expand-generated-adapter",
         "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json",
         "why": "Planning and memory package support commands need the same interface-authority routing before broad non-Python generation expands.",
-        "tracking_issue": "#410"
+        "tracking_status": "closed",
+        "tracking_role": "historical-provenance",
+        "provenance_issue": "#410",
+        "provenance": "Closed historical audit work identified this candidate; it is not the live owner for future package support-command work."
       }
     ],
     "direct_cli_edit_routing": {

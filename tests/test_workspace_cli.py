@@ -1222,6 +1222,12 @@ def test_defaults_section_selector_returns_root_cli_authority_audit(capsys) -> N
     candidates = answer["next_extraction_or_guard_candidates"]
     assert any(candidate["candidate_type"] == "extract-interface-authority" for candidate in candidates)
     assert any(candidate["candidate_type"] == "add-guard-check" for candidate in candidates)
+    assert all(candidate["tracking_role"] in {"historical-provenance", "live-owner"} for candidate in candidates)
+    assert all(candidate["tracking_role"] != "live-owner" or candidate["tracking_status"] != "closed" for candidate in candidates)
+    assert not any(candidate.get("tracking_issue") == "#410" for candidate in candidates)
+    assert any(
+        candidate["provenance_issue"] == "#410" and candidate["tracking_role"] == "historical-provenance" for candidate in candidates
+    )
     assert answer["direct_cli_edit_routing"]["route_to_contract_when"]
     assert answer["direct_cli_edit_routing"]["review_requires"]
 

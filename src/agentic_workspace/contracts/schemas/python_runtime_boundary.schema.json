@@ -216,7 +216,8 @@
               "candidate_type",
               "owner_surface",
               "why",
-              "tracking_issue"
+              "tracking_status",
+              "tracking_role"
             ],
             "properties": {
               "id": {
@@ -239,6 +240,30 @@
               "tracking_issue": {
                 "type": "string",
                 "pattern": "^#[0-9]+$"
+              },
+              "provenance_issue": {
+                "type": "string",
+                "pattern": "^#[0-9]+$"
+              },
+              "tracking_status": {
+                "enum": [
+                  "open",
+                  "closed",
+                  "unknown",
+                  "not-applicable"
+                ]
+              },
+              "tracking_role": {
+                "enum": [
+                  "live-owner",
+                  "historical-provenance"
+                ]
+              },
+              "current_owner": {
+                "type": "string"
+              },
+              "provenance": {
+                "type": "string"
               }
             },
             "additionalProperties": false

@@ -785,8 +785,32 @@ def _validate_python_runtime_boundary_authority(payload: dict[str, object]) -> l
     candidate_types = {str(item.get("candidate_type", "")) for item in candidates}
     if not {"extract-interface-authority", "add-guard-check"} <= candidate_types:
         errors.append("python_runtime_boundary.json root CLI audit must name extraction and guard candidates")
-    if not all(str(item.get("tracking_issue", "")).startswith("#") for item in candidates):
-        errors.append("python_runtime_boundary.json root CLI audit candidates must carry tracking issues")
+    for item in candidates:
+        role = str(item.get("tracking_role", "")).strip()
+        status = str(item.get("tracking_status", "")).strip()
+        if role not in {"live-owner", "historical-provenance"} or not status:
+            errors.append("python_runtime_boundary.json root CLI audit candidates must classify tracking as live-owner or historical-provenance")
+            continue
+        tracking_issue = str(item.get("tracking_issue", "")).strip()
+        provenance_issue = str(item.get("provenance_issue", "")).strip()
+        if role == "live-owner" and status == "closed":
+            errors.append(
+                f"python_runtime_boundary.json root CLI audit candidate {item.get('id', '<unknown>')} cannot use closed tracking as live ownership"
+            )
+        if role == "live-owner" and (not tracking_issue.startswith("#") or not str(item.get("current_owner", "")).strip()):
+            errors.append(
+                f"python_runtime_boundary.json root CLI audit candidate {item.get('id', '<unknown>')} must name tracking_issue and current_owner for live ownership"
+            )
+        if role == "historical-provenance" and (
+            not provenance_issue.startswith("#") or not str(item.get("provenance", "")).strip()
+        ):
+            errors.append(
+                f"python_runtime_boundary.json root CLI audit candidate {item.get('id', '<unknown>')} must name provenance_issue and explain historical provenance"
+            )
+        if role == "historical-provenance" and tracking_issue:
+            errors.append(
+                f"python_runtime_boundary.json root CLI audit candidate {item.get('id', '<unknown>')} must not use tracking_issue for historical provenance"
+            )
     routing = audit.get("direct_cli_edit_routing", {})
     if not isinstance(routing, dict):
         errors.append("python_runtime_boundary.json root CLI audit missing direct_cli_edit_routing")

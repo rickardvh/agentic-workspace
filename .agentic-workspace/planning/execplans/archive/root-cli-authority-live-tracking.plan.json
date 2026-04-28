@@ -1,0 +1,280 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Distinguish historical and live root CLI authority tracking",
+  "goal": [
+    "Implement #523 by making root CLI authority candidate output distinguish closed historical tracking from live actionable ownership.",
+    "Keep the change bounded to the contract/defaults/check/test surfaces named by the issue."
+  ],
+  "non_goals": [
+    "Do not implement the extraction candidates themselves.",
+    "Do not refactor broad CLI authority behavior.",
+    "Do not add tracker-specific assumptions to shipped package behavior."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "compact root CLI authority output no longer implies closed historical issues are live owners",
+      "constraints": "keep provenance and live ownership explicit without broad CLI authority refactors",
+      "latitude": "may adjust contract schema/data, compact defaults projection, checks, and focused tests",
+      "escalation": "stop if the fix requires implementing candidate extraction work or adding provider-specific tracker semantics"
+    },
+    "execution": {
+      "milestone": "#523",
+      "status": "completed",
+      "next_step": "Archive this plan, close #523, ingest #545, then continue the refreshed backlog.",
+      "proof": "contract tooling, structured inventory, workspace CLI tests, ruff, planning doctor, and defaults output passed"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/python_runtime_boundary.json",
+        "src/agentic_workspace/contracts/schemas/python_runtime_boundary.schema.json",
+        "src/agentic_workspace/cli.py",
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "tests/test_workspace_cli.py",
+        "tests/test_contract_tooling.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/root-cli-authority-live-tracking.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "remove small package-use friction discovered during dogfooding",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "workflow-friction-polish"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #523 closes, ingest #545, then continue #524/#533 or refreshed higher-priority issue"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "root CLI authority candidates now separate historical provenance from live ownership in compact defaults output",
+    "intentionally deferred": "remaining workflow-friction-polish issues #524 and #533",
+    "discovered implications": "promote-to-plan normalized the plan but left a state active item without maturity until manually corrected; this needs a follow-up issue.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice",
+    "next likely slice": "#524 or #533 depending on refreshed prioritization"
+  },
+  "intent_interpretation": {
+    "literal request": "#523: Distinguish historical and live tracking in root CLI authority candidates.",
+    "inferred intended outcome": "Agents can trust compact defaults output without mistaking closed historical audit issues for current owners.",
+    "chosen concrete what": "Make candidate tracking metadata explicitly historical/provenance or live/current, and enforce that distinction in checks/tests.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "python runtime boundary contract/schema, root CLI defaults projection, contract tooling checks/tests, planning state/execplan",
+    "max changed files": "about 7",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q -k \"root_cli_authority or runtime_boundary or contract_tooling\"; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py --strict",
+    "ask-before-refactor threshold": "before changing root CLI authority semantics beyond candidate ownership/provenance fields",
+    "stop before touching": "candidate extraction implementation, unrelated CLI sections, provider-specific tracker integrations"
+  },
+  "stop_conditions": {
+    "stop when": "candidate tracking cannot distinguish historical provenance from live ownership without changing broader contract semantics",
+    "escalate when boundary reached": "the fix requires implementing extraction candidates or adding GitHub-specific behavior to shipped contracts",
+    "escalate on scope drift": "implementation needs files outside the declared contract/defaults/check/test scope",
+    "escalate on proof failure": "focused defaults and contract tooling tests cannot prove the distinction"
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Patch root_cli_authority candidate tracking fields so closed #410 is historical/provenance, not live ownership.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete #523 with a narrow contract/defaults/check/test fix.",
+    "hard constraints": "Do not imply closed #410 is a live owner; do not implement the candidates themselves.",
+    "agent may decide locally": "field names, projection shape, and focused test coverage.",
+    "escalate when": "a correct fix requires broad root CLI authority refactors or tracker-provider coupling."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "clarify existing compact output rather than adding another tracking surface",
+    "broader-lane validation question": "Does this reduce misleading compact output without increasing first-contact burden?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#523",
+      "label": "Root CLI authority tracking distinction",
+      "role": "source",
+      "locator": "GitHub issue #523"
+    },
+    {
+      "kind": "issue",
+      "target": "#545",
+      "label": "Promote-to-plan active state normalization follow-up",
+      "role": "next_lane",
+      "locator": "GitHub issue #545"
+    },
+    {
+      "kind": "issue",
+      "target": "#524",
+      "label": "Remaining workflow-friction-polish slice",
+      "role": "next_lane",
+      "locator": "GitHub issue #524"
+    },
+    {
+      "kind": "issue",
+      "target": "#533",
+      "label": "Remaining workflow-friction-polish slice",
+      "role": "next_lane",
+      "locator": "GitHub issue #533"
+    }
+  ],
+  "active_milestone": {
+    "id": "#523",
+    "status": "completed",
+    "scope": "root CLI authority candidate tracking/provenance distinction",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect contract projection/checks, then patch candidate tracking fields and tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/python_runtime_boundary.json",
+    "src/agentic_workspace/contracts/schemas/python_runtime_boundary.schema.json",
+    "src/agentic_workspace/cli.py",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "tests/test_workspace_cli.py",
+    "tests/test_contract_tooling.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/root-cli-authority-live-tracking.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q -k \"root_cli_authority or runtime_boundary or contract_tooling\"",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run python scripts/check/check_planning_surfaces.py --strict"
+  ],
+  "required_tools": [
+    "uv",
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "Compact root CLI authority output no longer implies closed #410 is the live owner for future work.",
+    "Contract checks require explicit provenance or live ownership for candidates.",
+    "Focused tests cover historical vs live tracking distinction."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Root CLI authority candidates now use provenance_issue for closed historical #410 evidence and reserve tracking_issue for live ownership; schema, checker, and tests enforce the distinction.",
+    "scope touched": "python runtime boundary contract/schema, contract tooling checker, workspace/contract tests, planning state/execplan",
+    "changed surfaces": "src/agentic_workspace/contracts/python_runtime_boundary.json; src/agentic_workspace/contracts/schemas/python_runtime_boundary.schema.json; scripts/check/check_contract_tooling_surfaces.py; tests/test_workspace_cli.py; tests/test_contract_tooling.py; planning state/execplan",
+    "validations run": "focused tests; contract tooling check; structured inventory check; ruff focused and src/tests; full tests/test_workspace_cli.py; planning doctor; strict planning-surface check",
+    "result for continuation": "#523 is complete; #545/#524/#533 remain in workflow-friction-polish.",
+    "next step": "Archive this plan, close #523, ingest #545, then continue the refreshed backlog."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed inside contract/defaults/check/test and planning closeout surfaces",
+    "proof status": "passed",
+    "intent served": "yes; compact output no longer exposes closed #410 as tracking_issue",
+    "config compliance": "used compact summary, proof selection, and required checks",
+    "misinterpretation risk": "low; checker rejects historical provenance using tracking_issue and rejects closed live ownership",
+    "follow-on decision": "created #545 for promote-to-plan active maturity normalization, then continue planned backlog"
+  },
+  "proof_report": {
+    "validation proof": "Focused root_cli_authority/runtime_boundary/contract_tooling tests passed; full workspace CLI tests passed; contract tooling, structured inventory, ruff, planning doctor, and planning-surface checks passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "34 focused tests passed, 213 workspace CLI tests passed, all ruff checks passed, contract tooling and structured inventory checks passed, planning doctor was healthy, and root_cli_authority defaults output shows provenance_issue #410 with no tracking_issue #410."
+  },
+  "intent_satisfaction": {
+    "original intent": "workflow-friction-polish next child; compact root CLI authority output should not imply closed historical issues are live owners.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The candidate entries now classify #410 as historical provenance via provenance_issue/tracking_role/tracking_status, and tests assert #410 is no longer emitted as tracking_issue.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml"
+  },
+  "execution_summary": {
+    "outcome delivered": "Root CLI authority candidates distinguish closed historical provenance from live tracking ownership.",
+    "validation confirmed": "Contract tooling, structured inventory, focused/full workspace tests, ruff, planning doctor, and planning-surface checks passed.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml plus a new issue for promote-to-plan maturity normalization",
+    "post-work posterity capture": "Contract schema/check/tests now carry the historical-vs-live tracking rule.",
+    "knowledge promoted (Memory/Docs/Config)": "none; behavior is captured in contracts and checks.",
+    "resume from": "create and ingest promote-to-plan active maturity follow-up, then continue refreshed backlog"
+  },
+  "durable_residue": {
+    "status": "check",
+    "learned constraint": "Historical issue references in compact contract output must not occupy live tracking fields.",
+    "motivation worth preserving": "Agents should be able to trust compact output without knowing which external tracker items are already closed.",
+    "canonical owner now": "src/agentic_workspace/contracts/python_runtime_boundary.json and scripts/check/check_contract_tooling_surfaces.py",
+    "promotion trigger": "when root CLI authority candidates or tracking/provenance fields change",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#523 is complete, but workflow-friction-polish still has #545/#524/#533.",
+    "evidence carried forward": "Contract data/schema/check/tests encode the distinction and proof commands passed.",
+    "reopen trigger": "Reopen if compact root_cli_authority output again uses a live tracking field for closed historical provenance."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "promote-to-plan left an active todo item without maturity until manually corrected"
+    ],
+    "signals fixed": [
+      "corrected the current state row before implementation"
+    ],
+    "signals routed": [
+      "#545"
+    ],
+    "signals dismissed": [],
+    "next owner": "new issue"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Execution details beyond validation and changed surfaces do not need promotion.",
+          "owner": "archive",
+          "source": "finished_run_review"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "Root CLI authority candidates reserve tracking_issue for live ownership and use provenance_issue for closed historical evidence.",
+          "owner": "src/agentic_workspace/contracts/python_runtime_boundary.json and scripts/check/check_contract_tooling_surfaces.py",
+          "source": "durable_residue"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Promote-to-plan active state normalization follow-up.",
+          "owner": "issue",
+          "source": "#545"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

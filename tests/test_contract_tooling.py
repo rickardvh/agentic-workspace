@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 from pathlib import Path
@@ -495,7 +496,11 @@ def test_python_runtime_boundary_declares_root_cli_authority_audit() -> None:
         "extract-interface-authority",
         "add-guard-check",
     }
-    assert any(candidate["tracking_issue"] == "#410" for candidate in candidates)
+    assert not any(candidate.get("tracking_issue") == "#410" for candidate in candidates)
+    assert any(
+        candidate["provenance_issue"] == "#410" and candidate["tracking_role"] == "historical-provenance" for candidate in candidates
+    )
+    assert all(candidate["tracking_role"] != "live-owner" or candidate["tracking_status"] != "closed" for candidate in candidates)
     assert audit["direct_cli_edit_routing"]["route_to_contract_when"]
     assert audit["direct_cli_edit_routing"]["review_requires"]
 
@@ -508,6 +513,21 @@ def test_contract_tooling_check_enforces_root_cli_authority_audit() -> None:
     spec.loader.exec_module(module)
 
     assert module._validate_python_runtime_boundary_authority(contract_tooling.python_runtime_boundary_manifest()) == []
+
+    manifest = copy.deepcopy(contract_tooling.python_runtime_boundary_manifest())
+    manifest["root_cli_authority_audit"]["next_extraction_or_guard_candidates"][0]["tracking_role"] = "live-owner"
+    manifest["root_cli_authority_audit"]["next_extraction_or_guard_candidates"][0]["tracking_status"] = "closed"
+    manifest["root_cli_authority_audit"]["next_extraction_or_guard_candidates"][0]["tracking_issue"] = "#410"
+    assert any(
+        "cannot use closed tracking as live ownership" in error for error in module._validate_python_runtime_boundary_authority(manifest)
+    )
+
+    manifest = copy.deepcopy(contract_tooling.python_runtime_boundary_manifest())
+    manifest["root_cli_authority_audit"]["next_extraction_or_guard_candidates"][0]["tracking_issue"] = "#410"
+    assert any(
+        "must not use tracking_issue for historical provenance" in error
+        for error in module._validate_python_runtime_boundary_authority(manifest)
+    )
 
 
 def test_contract_tooling_check_reports_generated_adapter_status() -> None:
