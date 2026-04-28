@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T00:40:57+00:00",
+  "refreshed_at": "2026-04-28T00:49:25+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T00:40:57+00:00",
+    "refreshed_at": "2026-04-28T00:49:25+00:00",
     "item_count": 460,
-    "open_count": 12,
-    "closed_count": 448,
+    "open_count": 11,
+    "closed_count": 449,
     "limit": 600,
     "state": "all",
     "state_source": "previous_evidence",
@@ -6783,7 +6783,7 @@
       "system": "github",
       "id": "#437",
       "title": "[Workspace]: Detect and repair stale current-memory against planning state",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#436",
       "planning_residue_expected": "optional",
@@ -6793,8 +6793,8 @@
         "planning"
       ],
       "created_at": "2026-04-27T12:48:02Z",
-      "updated_at": "2026-04-27T12:48:02Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T00:49:07Z",
+      "comments_count": 1
     },
     {
       "system": "github",
