@@ -4558,7 +4558,7 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
             "reason": "optional external intent cache not present",
         }
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
     except (json.JSONDecodeError, OSError) as exc:
         return {
             "status": "invalid",
@@ -4582,6 +4582,7 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
             "reason": "optional evidence file does not match planning-external-intent-evidence/v1",
         }
     schema_findings = _json_schema_findings(payload=payload, schema_path=EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH)
+    schema_findings.extend(_external_intent_evidence_consistency_findings(payload))
     if schema_findings:
         return _evidence_schema_invalid_payload(
             relative_path=relative_path,
@@ -4633,6 +4634,24 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
         "items": normalized_items,
         "reason": "",
     }
+
+
+def _external_intent_evidence_consistency_findings(payload: dict[str, Any]) -> list[str]:
+    refresh_metadata = payload.get("refresh_metadata", {})
+    if not isinstance(refresh_metadata, dict):
+        return []
+    raw_items = payload.get("items", [])
+    items = [item for item in raw_items if isinstance(item, dict)] if isinstance(raw_items, list) else []
+    expected_counts = {
+        "item_count": len(items),
+        "open_count": sum(1 for item in items if str(item.get("status", "")).strip().lower() == "open"),
+        "closed_count": sum(1 for item in items if str(item.get("status", "")).strip().lower() == "closed"),
+    }
+    findings: list[str] = []
+    for count_name, expected in expected_counts.items():
+        if count_name in refresh_metadata and refresh_metadata.get(count_name) != expected:
+            findings.append(f"refresh_metadata.{count_name} must equal {expected} from items, got {refresh_metadata.get(count_name)!r}")
+    return findings
 
 
 def _load_finished_work_evidence(target_root: Path) -> dict[str, Any]:

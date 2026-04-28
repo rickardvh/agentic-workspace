@@ -4457,6 +4457,125 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
     assert refreshed["items"][1]["status"] == "closed"
 
 
+def test_external_intent_refresh_github_accepts_bom_and_recomputes_counts(tmp_path: Path, monkeypatch, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    evidence_path = target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    previous = {
+        "kind": "planning-external-intent-evidence/v1",
+        "refresh_metadata": {"item_count": 1, "open_count": 1, "closed_count": 0},
+        "items": [{"system": "github", "id": "#1", "status": "open"}],
+    }
+    evidence_path.write_bytes(("\ufeff" + json.dumps(previous, indent=2) + "\n").encode("utf-8"))
+
+    class Result:
+        returncode = 0
+        stderr = ""
+        stdout = json.dumps(
+            [
+                {
+                    "number": 1,
+                    "title": "Open work",
+                    "state": "OPEN",
+                    "url": "https://github.com/acme/project/issues/1",
+                    "labels": [],
+                    "createdAt": "2026-04-01T00:00:00Z",
+                    "updatedAt": "2026-04-27T00:00:00Z",
+                    "body": "",
+                    "comments": 0,
+                },
+                {
+                    "number": 2,
+                    "title": "Closed work",
+                    "state": "CLOSED",
+                    "url": "https://github.com/acme/project/issues/2",
+                    "labels": [],
+                    "createdAt": "2026-04-01T00:00:00Z",
+                    "updatedAt": "2026-04-27T00:00:00Z",
+                    "body": "",
+                    "comments": 0,
+                },
+            ]
+        )
+
+    monkeypatch.setattr(cli.subprocess, "run", lambda *args, **kwargs: Result())
+
+    assert (
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(target),
+                "--repo",
+                "acme/project",
+                "--state",
+                "all",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    refreshed_bytes = evidence_path.read_bytes()
+    refreshed = json.loads(refreshed_bytes.decode("utf-8"))
+    assert payload["previous_item_count"] == 1
+    assert not refreshed_bytes.startswith(b"\xef\xbb\xbf")
+    assert refreshed["refresh_metadata"]["item_count"] == 2
+    assert refreshed["refresh_metadata"]["open_count"] == 1
+    assert refreshed["refresh_metadata"]["closed_count"] == 1
+
+
+def test_external_intent_refresh_github_rejects_count_drift(tmp_path: Path, monkeypatch, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    evidence_path = target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "refresh_metadata": {"item_count": 2, "open_count": 2, "closed_count": 0},
+                "items": [{"system": "github", "id": "#1", "status": "open"}],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def fail_run(*args, **kwargs):  # pragma: no cover - should not be called
+        raise AssertionError("refresh should reject invalid existing evidence before calling gh")
+
+    monkeypatch.setattr(cli.subprocess, "run", fail_run)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(target),
+                "--repo",
+                "acme/project",
+                "--format",
+                "json",
+            ]
+        )
+
+    assert excinfo.value.code == 2
+    assert "refresh_metadata.item_count must equal 1 from items" in capsys.readouterr().err
+
+
 def test_external_intent_refresh_github_uses_product_defaults_instead_of_previous_audit_scope(tmp_path: Path, monkeypatch, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

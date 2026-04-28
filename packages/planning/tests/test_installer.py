@@ -3947,6 +3947,80 @@ def test_planning_summary_surfaces_external_intent_refresh_metadata(tmp_path: Pa
     assert reconciliation["freshness"]["refresh_metadata"]["adapter"] == "github-gh-cli"
 
 
+def test_planning_summary_accepts_bom_external_intent_evidence(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    evidence_path = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "kind": "planning-external-intent-evidence/v1",
+        "refresh_metadata": {
+            "adapter": "github-gh-cli",
+            "repository": "acme/project",
+            "item_count": 1,
+            "open_count": 1,
+            "closed_count": 0,
+        },
+        "items": [
+            {
+                "system": "github",
+                "id": "#533",
+                "status": "open",
+            }
+        ],
+    }
+    evidence_path.write_bytes(("\ufeff" + json.dumps(payload, indent=2) + "\n").encode("utf-8"))
+
+    summary = planning_summary(target=tmp_path)
+
+    external_evidence = summary["intent_validation_contract"]["external_evidence"]
+    assert external_evidence["status"] == "loaded"
+    assert external_evidence["item_count"] == 1
+    assert summary["intent_validation_contract"]["current_external_work"]["open_count"] == 1
+
+
+def test_planning_summary_rejects_external_intent_count_drift(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\n	candidates = []\n",
+    )
+    evidence_path = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "refresh_metadata": {
+                    "item_count": 2,
+                    "open_count": 0,
+                    "closed_count": 0,
+                },
+                "items": [
+                    {
+                        "system": "github",
+                        "id": "#533",
+                        "status": "open",
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    external_evidence = summary["intent_validation_contract"]["external_evidence"]
+    assert external_evidence["status"] == "invalid"
+    assert "refresh_metadata.item_count must equal 1 from items" in external_evidence["reason"]
+    assert any("refresh_metadata.open_count must equal 1 from items" in finding for finding in external_evidence["schema_findings"])
+
+
 def test_planning_summary_rejects_schema_invalid_external_intent_evidence(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(

@@ -5081,7 +5081,7 @@ def _external_work_delta_payload(*, target_root: Path) -> dict[str, Any]:
             "recommended_next_lane": {},
         }
     try:
-        payload = json.loads(evidence_path.read_text(encoding="utf-8"))
+        payload = json.loads(evidence_path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
         return {
             "status": "invalid",
@@ -5411,21 +5411,38 @@ def _external_intent_evidence_schema_findings(*, target_root: Path, payload: obj
     if not isinstance(payload, dict):
         return ["external intent evidence must be a JSON object"]
     schema_path = target_root / ".agentic-workspace" / "planning" / "schemas" / "planning-external-intent-evidence.schema.json"
+    findings = _external_intent_evidence_consistency_findings(payload)
     if not schema_path.exists():
-        return []
+        return findings
     try:
         from jsonschema import Draft202012Validator
     except ImportError:
-        return []
+        return findings
     try:
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        return [f"schema is missing or invalid JSON: {exc}"]
+        return [f"schema is missing or invalid JSON: {exc}", *findings]
     errors = sorted(Draft202012Validator(schema).iter_errors(payload), key=lambda error: list(error.path))
-    findings: list[str] = []
     for error in errors:
         location = ".".join(str(part) for part in error.path) or "<root>"
         findings.append(f"{location}: {error.message}")
+    return findings
+
+
+def _external_intent_evidence_consistency_findings(payload: dict[str, Any]) -> list[str]:
+    metadata = payload.get("refresh_metadata", {})
+    if not isinstance(metadata, dict):
+        return []
+    items = [item for item in _list_payload(payload.get("items")) if isinstance(item, dict)]
+    expected_counts = {
+        "item_count": len(items),
+        "open_count": sum(1 for item in items if str(item.get("status", "")).strip().lower() == "open"),
+        "closed_count": sum(1 for item in items if str(item.get("status", "")).strip().lower() == "closed"),
+    }
+    findings: list[str] = []
+    for field, expected in expected_counts.items():
+        if field in metadata and metadata.get(field) != expected:
+            findings.append(f"refresh_metadata.{field} must equal {expected} from items, got {metadata.get(field)!r}")
     return findings
 
 

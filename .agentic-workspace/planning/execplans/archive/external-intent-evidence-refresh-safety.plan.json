@@ -1,0 +1,216 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "External Intent Evidence Refresh Safety",
+  "goal": [
+    "workflow-friction-polish next child; external evidence refresh should be BOM-safe and count-consistent without manual JSON edits."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "workflow-friction-polish next child; external evidence refresh should be BOM-safe and count-consistent without manual JSON edits.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "external-intent-evidence-refresh-safety",
+      "status": "completed",
+      "next_step": "Archive this completed slice and close #533.",
+      "proof": "Run focused external-intent refresh and planning evidence loader tests plus lint and planning surface checks."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/external-intent-evidence-refresh-safety.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "workflow-friction-polish next child; external evidence refresh should be BOM-safe and count-consistent without manual JSON edits.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "External Intent Evidence Refresh Safety",
+    "inferred intended outcome": "workflow-friction-polish next child; external evidence refresh should be BOM-safe and count-consistent without manual JSON edits.",
+    "chosen concrete what": "add small validation gaps around external intent evidence refresh and loading.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/cli.py; tests/test_workspace_cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; this execplan.",
+    "max changed files": "6 active files plus archive output at closeout.",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q -k \"external_intent_refresh_github\"; uv run pytest packages/planning/tests/test_installer.py -q -k \"external_intent\"; uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "add small validation gaps around external intent evidence refresh and loading.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "workflow-friction-polish next child; external evidence refresh should be BOM-safe and count-consistent without manual JSON edits.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "external-intent-evidence-refresh-safety",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed slice and close #533."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/external-intent-evidence-refresh-safety.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"external_intent_refresh_github\"",
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"external_intent\"",
+    "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "refresh output is BOM-free/count-consistent and loaders reject count drift clearly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "External intent evidence refresh now tolerates existing UTF-8 BOM input, writes BOM-free refreshed evidence, recomputes output counts, and validates metadata count drift before refresh. Planning loaders also tolerate BOM input and reject count drift clearly.",
+    "scope touched": "root CLI external-intent refresh, planning evidence loader, tests, and planning state",
+    "changed surfaces": "src/agentic_workspace/cli.py; tests/test_workspace_cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; planning state/execplan",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"external_intent_refresh_github\"; uv run pytest packages/planning/tests/test_installer.py -q -k \"external_intent\"; uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run pytest tests/test_workspace_cli.py -q; uv run pytest packages/planning/tests/test_installer.py -q; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "slice complete; close #533 and continue backlog refresh",
+    "next step": "Archive this completed slice and close #533."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used compact summary, promoted checked-in plan, and package validation commands",
+    "misinterpretation risk": "low",
+    "follow-on decision": "no new product issue; the existing helper was fine-tuned rather than adding a new command"
+  },
+  "proof_report": {
+    "validation proof": "focused and full relevant tests, lint, strict planning-surface check, and planning doctor passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "5 focused root external-intent refresh tests, 4 focused planning external-intent tests, 215 workspace CLI tests, and 162 planning installer tests passed; strict planning surface and doctor checks passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "workflow-friction-polish next child; external evidence refresh should be BOM-safe and count-consistent without manual JSON edits.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Refresh handles BOM input and writes BOM-free count-consistent output; both root refresh and planning loaders reject count drift with clear messages.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "BOM-safe and count-consistent external intent evidence refresh/loading",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archived execplan and regression tests",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "refreshed backlog"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The specific #533 desired helper behavior is covered without adding a new command; remaining backlog items are separate lanes.",
+    "evidence carried forward": "Regression tests cover BOM input/output behavior and metadata count drift in both root refresh and planning loading paths.",
+    "reopen trigger": "external evidence refresh or planning summary again accepts inconsistent metadata counts silently or rejects BOM input"
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "signals found": [],
+    "signals fixed": [
+      "existing external intent evidence with BOM could still be rejected by planning loader",
+      "schema-valid evidence with wrong metadata counts was not rejected consistently"
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "No new command was needed; existing refresh and loader paths could absorb the issue."
+    ],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from TODO direct-task shape into an execplan."
+  ]
+}
