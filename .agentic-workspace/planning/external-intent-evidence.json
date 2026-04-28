@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T11:44:36+00:00",
+  "refreshed_at": "2026-04-28T11:53:30+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T11:44:36+00:00",
+    "refreshed_at": "2026-04-28T11:53:30+00:00",
     "item_count": 510,
-    "open_count": 27,
-    "closed_count": 483,
+    "open_count": 26,
+    "closed_count": 484,
     "limit": 600,
     "state": "all",
     "state_source": "previous_evidence",
@@ -7746,7 +7746,7 @@
       "system": "github",
       "id": "#494",
       "title": "[Workspace]: Warn when planning archives are the only home for future-relevant intent",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#491",
       "planning_residue_expected": "optional",
@@ -7756,8 +7756,8 @@
         "planning"
       ],
       "created_at": "2026-04-28T06:50:28Z",
-      "updated_at": "2026-04-28T06:50:28Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T11:53:10Z",
+      "comments_count": 1
     },
     {
       "system": "github",
