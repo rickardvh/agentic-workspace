@@ -1,0 +1,245 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Self Improvement Durable Residue Closeout",
+  "goal": [
+    "Make repo-local self-improvement closeout require a durable-residue routing answer before claiming improvement."
+  ],
+  "non_goals": [
+    "Do not make self-improvement a shipped host-repo feature.",
+    "Do not turn every self-improvement pass into a broad documentation review.",
+    "Do not duplicate Memory content in planning archives."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Self-improvement passes distinguish validation, issue closure, intent satisfaction, operating-cost direction, and durable-residue routing.",
+      "constraints": "Keep this repo-local skill guidance, not package authority.",
+      "latitude": "Update the skill and maintainer-surface tests.",
+      "escalation": "Escalate if shared package workflow or product direction needs to change."
+    },
+    "execution": {
+      "milestone": "#495",
+      "status": "closed",
+      "next_step": "Assess #491 parent after #495 closeout.",
+      "proof": "Maintainer-surface tests, proof selector, planning-surface check."
+    },
+    "scope": {
+      "touched": [
+        "tools/skills/self-improvement-dogfooding/SKILL.md",
+        "tests/test_maintainer_surfaces.py"
+      ],
+      "invariants": [
+        "Self-improvement is repo-local dogfooding guidance.",
+        "Durable motivation and lessons route to Memory/docs/contracts/checks/planning before closeout.",
+        "Validation success, issue completion, intent satisfaction, cost reduction, and residue routing remain separate answers."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Route durable motivation and lessons out of planning archives.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "durable-residue-routing (#491)"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Self-improvement closeout cannot claim improvement while durable residue is only in archives.",
+    "intentionally deferred": "Remaining open roadmap lanes outside #491.",
+    "discovered implications": "The skill itself is the right repo-local surface for this closeout requirement; no shipped package workflow change was needed.",
+    "proof achieved now": "Maintainer-surface tests and proof-selected workspace checks pass.",
+    "validation still needed": "None for this bounded slice.",
+    "next likely slice": "reconcile #491 parent after #495 closes"
+  },
+  "intent_interpretation": {
+    "literal request": "Repeat until done.",
+    "inferred intended outcome": "Finish the final child in durable-residue-routing.",
+    "chosen concrete what": "Implement #495 repo-local skill closeout guidance.",
+    "interpretation distance": "low",
+    "review guidance": "Check that the skill requires a durable-residue answer distinct from validation and cost assessment."
+  },
+  "execution_bounds": {
+    "allowed paths": "tools/skills/self-improvement-dogfooding/SKILL.md, tests/test_maintainer_surfaces.py, this execplan, planning state.",
+    "max changed files": "about 4",
+    "required validation commands": "uv run pytest tests/test_maintainer_surfaces.py -q; uv run ruff check tests; uv run python scripts/check/check_planning_surfaces.py",
+    "ask-before-refactor threshold": "Any shared package workflow change.",
+    "stop before touching": "Memory package or planning package runtime unless proof selects it."
+  },
+  "stop_conditions": {
+    "stop when": "#495 acceptance is met, validated, archived, committed, pushed, closed, evidence refreshed, and #491 can be assessed.",
+    "escalate when boundary reached": "If this needs shipped host-repo package behavior rather than repo-local skill guidance.",
+    "escalate on scope drift": "If changes broaden into unrelated self-improvement workflow redesign.",
+    "escalate on proof failure": "If maintainer-surface proof no longer covers the claim."
+  },
+  "context_budget": {
+    "live working set": "self-improvement skill, maintainer-surface tests, active execplan.",
+    "recoverable later": "Issue #495 and closed #492/#493/#494 evidence.",
+    "externalize before shift": "Update this execplan with proof and closeout.",
+    "pre-work config pull": "summary/report/skills already run.",
+    "pre-work memory pull": "not needed.",
+    "tiny resumability note": "Implementing #495 durable-residue routing in self-improvement closeout.",
+    "context-shift triggers": "Before parent #491 reconciliation or after proof failure."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement remaining planned work lane by lane.",
+    "hard constraints": "Dogfood package; commit/push per milestone; preserve repo-/agent-/tool-/language-agnostic shipped package behavior.",
+    "agent may decide locally": "Exact wording and test assertions.",
+    "escalate when": "Repo-local skill guidance would become shipped package policy."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#495",
+      "label": "self-improvement durable residue closeout",
+      "role": "source_intent",
+      "locator": "GitHub issue #495"
+    },
+    {
+      "kind": "issue",
+      "target": "#491",
+      "label": "durable residue routing parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue #491"
+    }
+  ],
+  "active_milestone": {
+    "id": "self-improvement-durable-residue-closeout",
+    "status": "closed",
+    "scope": "Repo-local self-improvement skill closeout requirements",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Patch self-improvement-dogfooding closeout guidance with durable-residue routing fields and tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/self-improvement-durable-residue-closeout.plan.json",
+    "tools/skills/self-improvement-dogfooding/SKILL.md",
+    "tests/test_maintainer_surfaces.py"
+  ],
+  "invariants": [
+    "Durable residue must not remain only in archived execplans or issue closeout.",
+    "Cost reduction is separate from durable residue routing.",
+    "This is repo-local skill guidance, not shipped package workflow."
+  ],
+  "contract_decisions_to_freeze": [
+    "Self-improvement closeout must record validation_passed, issue_completed, intent_satisfied, operating_cost_reduced, and durable_residue_routed as separate answers."
+  ],
+  "open_questions_to_close": [
+    "Which exact fields should the skill require for durable-residue routing?"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_maintainer_surfaces.py -q",
+    "uv run ruff check tests",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Self-improvement closeout requires a durable-residue routing answer.",
+    "Cost assessment references consumed/routed residue where relevant.",
+    "A self-improvement pass cannot honestly close as improved if future-relevant motivation is only archived.",
+    "Tests guard the required fields."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "repeat until done",
+    "what happened": "Updated the repo-local self-improvement skill so closeout requires separate answers for validation, issue completion, intent satisfaction, operating-cost direction, and durable-residue routing; added maintainer-surface coverage for those requirements.",
+    "scope touched": "repo-local skill guidance, maintainer-surface tests, planning state, and active execplan",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/self-improvement-durable-residue-closeout.plan.json; tools/skills/self-improvement-dogfooding/SKILL.md; tests/test_maintainer_surfaces.py",
+    "validations run": "uv run pytest tests/test_maintainer_surfaces.py -q; uv run ruff check tests; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/self-improvement-durable-residue-closeout.plan.json tools/skills/self-improvement-dogfooding/SKILL.md tests/test_maintainer_surfaces.py --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests",
+    "result for continuation": "#495 acceptance is met; assess and close #491 parent after #495 is closed and evidence is refreshed.",
+    "next step": "Archive this plan, commit/push, close #495, refresh evidence, and assess #491."
+  },
+  "finished_run_review": {
+    "review status": "reviewed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "summary/report/skills used before promotion",
+    "misinterpretation risk": "low",
+    "follow-on decision": "Close #495 after commit; reconcile #491 parent next."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "maintainer-surface test, planning check, proof-selected workspace CLI tests, and lint all passed",
+    "evidence for \"proof achieved\" state": "tests/test_maintainer_surfaces.py passed; tests/test_workspace_cli.py passed; ruff check src tests passed; planning doctor healthy"
+  },
+  "intent_satisfaction": {
+    "original intent": "#495 acceptance criteria",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Self-improvement closeout guidance now requires durable_residue_consumed_or_routed and a Required Durable-Residue Routing section with explicit closeout fields; tests assert the requirement and archive-only prohibition.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make self-improvement lower-cost and honest about durable residue.",
+    "slice shaping bias": "Keep guidance repo-local and compact.",
+    "broader-lane validation question": "Can durable lessons now leave planning archives through every closeout path in #491?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "complete",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#495 acceptance is implemented and proof-selected checks passed; the #491 parent has no remaining implementation child after this slice, though upstream issue closure/evidence refresh still needs to be performed.",
+    "evidence carried forward": "tests/test_maintainer_surfaces.py guards required durable-residue routing closeout fields; tools/skills/self-improvement-dogfooding/SKILL.md is the repo-local operating guidance.",
+    "reopen trigger": "Self-improvement closeout can claim improvement while future-relevant motivation remains only archived."
+  },
+  "durable_residue": {
+    "status": "docs",
+    "learned constraint": "Self-improvement closeout needs a durable-residue routing answer distinct from validation and cost assessment.",
+    "motivation worth preserving": "Dogfooding improvements otherwise repeat old mistakes when the only durable why is in archived plans or issue closeout.",
+    "canonical owner now": "tools/skills/self-improvement-dogfooding/SKILL.md and tests/test_maintainer_surfaces.py",
+    "promotion trigger": "Already promoted into repo-local skill guidance and guard test.",
+    "retention after promotion": "shrink"
+  },
+  "execution_summary": {
+    "outcome delivered": "Self-improvement closeout now requires durable-residue routing before claiming improvement.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#491 parent reconciliation",
+    "post-work posterity capture": "Durable residue promoted to repo-local skill guidance with maintainer-surface tests.",
+    "knowledge promoted (Memory/Docs/Config)": "Skill guidance and tests, not Memory; this is operating guidance rather than durable repo fact.",
+    "resume from": "#491 parent reconciliation after #495 closeout"
+  },
+  "improvement_signal_review": {
+    "status": "none",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "#491 parent reconciliation"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        "Per-command execution detail; validations are preserved in this archive and commit history."
+      ],
+      "continuation": [
+        "Assess #491 parent after #495 closes."
+      ],
+      "memory": [],
+      "config_check": [
+        "tests/test_maintainer_surfaces.py now guards the self-improvement closeout fields."
+      ],
+      "docs": [
+        "tools/skills/self-improvement-dogfooding/SKILL.md carries the durable closeout requirement."
+      ],
+      "issue_follow_up": [
+        "#491 parent reconciliation"
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #495 into active planning.",
+    "2026-04-28: Implemented, validated, and routed durable closeout guidance into the self-improvement skill and maintainer-surface tests."
+  ]
+}

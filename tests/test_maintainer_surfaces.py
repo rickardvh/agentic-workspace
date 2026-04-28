@@ -389,6 +389,23 @@ def test_self_improvement_skill_requires_total_operating_cost_assessment() -> No
     assert "agentic-workspace report --target . --section improvement_intake --format json" in skill_text
 
 
+def test_self_improvement_skill_requires_durable_residue_routing_before_closeout() -> None:
+    skill_text = (WORKSPACE_ROOT / "tools" / "skills" / "self-improvement-dogfooding" / "SKILL.md").read_text(
+        encoding="utf-8",
+    )
+
+    assert "Required Durable-Residue Routing" in skill_text
+    assert "`validation_passed`" in skill_text
+    assert "`issue_completed`" in skill_text
+    assert "`intent_satisfied`" in skill_text
+    assert "`operating_cost_reduced`" in skill_text
+    assert "`durable_residue_routed`" in skill_text
+    assert "`durable_residue_owner`" in skill_text
+    assert "`post_promotion_shape`" in skill_text
+    assert "future-relevant motivation or lessons exist only in an archived execplan" in skill_text
+    assert "Memory note template's closeout-derived residue fields" in skill_text
+
+
 def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "maintainer_surfaces_valid")
     _write_planning_surfaces(tmp_path)

@@ -34,8 +34,9 @@ Use one pass at a time:
 5. Validate with `agentic-workspace proof --target . --changed <paths> --format json` plus required commands.
 6. Assess intent satisfaction separately from validation success.
 7. Assess total operating cost separately from issue completion and intent satisfaction.
-8. Route discovered friction into a narrow fix, review record, memory note, issue, or explicit dismissal.
-9. Close/archive only when evidence is compact and reconstructable.
+8. Route durable residue separately from validation, issue closure, intent satisfaction, and cost assessment.
+9. Route discovered friction into a narrow fix, review record, memory note, issue, or explicit dismissal.
+10. Close/archive only when evidence is compact and reconstructable.
 
 ## Allowed Autonomous Actions
 
@@ -66,6 +67,7 @@ Each pass should leave:
 - external-work evidence updates when tracked issues change state;
 - an `improvement_signal_review` or equivalent note that says whether signals were found, fixed, routed, dismissed, or absent;
 - a total-operating-cost assessment with net cost direction;
+- a durable-residue routing answer that says whether future-relevant motivation or lessons were promoted, routed, dismissed, or absent;
 - a clear continuation owner for any unsolved intent.
 
 ## Required Cost Assessment
@@ -83,11 +85,31 @@ Record a compact cost assessment in the execplan closeout, review artifact, or i
 - `shipped_default_footprint_changed`: Did ordinary host-repo startup/install get smaller, larger, or unchanged?
 - `signals_consumed`: Which `improvement_signal_candidates`, Memory improvement-signal notes, Planning follow-through entries, review findings, or human corrections were consumed?
 - `signals_still_accumulating`: Which cost signals remain and where are they routed?
+- `durable_residue_consumed_or_routed`: Which future-relevant motivation, constraints, lessons, or closeout residue were consumed or routed, and to which owner?
 - `human_steering_avoided_next_time`: What repeated correction should the package catch without the human saying it again?
 - `follow_up_routed`: What issue, plan, Memory note, review, docs/check/skill change, or dismissal owns the remainder?
 - `net_cost_direction`: `lower`, `same`, or `higher`.
 
 If `net_cost_direction` is `same` or `higher`, do not close as an improvement solely because tests passed. Route the remaining cost signal or explain why retention is intentional.
+
+## Required Durable-Residue Routing
+
+Every self-improvement pass must answer this before claiming the system improved. Validation passing, an issue closing, intent being satisfied, and operating cost going down are separate answers; none of them proves durable residue was routed.
+
+Record a compact durable-residue answer in the execplan closeout, review artifact, or issue-close proof:
+
+- `validation_passed`: yes | no, with proof command or reason
+- `issue_completed`: yes | no | not_applicable, with tracker or local owner
+- `intent_satisfied`: yes | no | partial, with the larger-intent owner if partial
+- `operating_cost_reduced`: yes | no | same | unknown, with the cost assessment reference
+- `durable_residue_routed`: yes | no | none_found, with the destination or dismissal reason
+- `durable_residue_owner`: Memory | docs | contracts | checks | planning | issue | review | none
+- `durable_residue_summary`: one sentence naming the motivation, constraint, lesson, or reason no residue exists
+- `post_promotion_shape`: retain | shrink | stub | delete | not_applicable
+
+Do not close a self-improvement pass as improved when future-relevant motivation or lessons exist only in an archived execplan, review artifact, issue comment, or chat transcript. Route that residue to Memory, docs, contracts, checks, planning, an issue, a review record, or explicitly dismiss it as not future-relevant.
+
+If residue is routed to Memory, keep it compact and use the Memory note template's closeout-derived residue fields. If residue belongs in docs, contracts, checks, or planning, update or create that owner instead of duplicating the full archive. If no residue exists, say `durable_residue_routed = "none_found"` and explain why future work does not need to act differently.
 
 ## Friction Routing
 
@@ -119,4 +141,4 @@ Route to a planning review instead of closing when:
 
 ## Closure Criteria
 
-Close the pass when the bounded slice is implemented, validated, assessed against intent, and any follow-up is routed. Continue to another pass only when an already-established issue or roadmap lane remains and no stop trigger fired.
+Close the pass when the bounded slice is implemented, validated, assessed against intent, assessed for operating-cost direction, durable residue is routed or explicitly absent, and any follow-up is routed. Continue to another pass only when an already-established issue or roadmap lane remains and no stop trigger fired.
