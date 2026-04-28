@@ -132,6 +132,142 @@ def test_inventory_routes_reconstructable_storage_cleanup_children() -> None:
     assert check_structured_file_inventory.routed_storage_cleanup_issues(inventory) >= {"#538", "#539", "#540"}
 
 
+def test_schema_backed_claim_validates_matched_json_file(tmp_path: Path) -> None:
+    (tmp_path / "schema.schema.json").write_text(
+        '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["kind"],"properties":{"kind":{"const":"demo/v1"}},"additionalProperties":false}',
+        encoding="utf-8",
+    )
+    (tmp_path / "data.json").write_text('{"kind":"demo/v1"}', encoding="utf-8")
+    inventory = {
+        "entries": [
+            {
+                "pattern": "data.json",
+                "format": "json",
+                "owner": "test",
+                "status": "schema-backed",
+                "schema_or_validator": "schema.schema.json",
+                "storage_class": "source-of-truth",
+                "checked_in_justification": "test",
+                "editable_by_agents": True,
+                "generated": False,
+                "notes": "Test schema claim.",
+            }
+        ]
+    }
+
+    assert check_structured_file_inventory.claim_validation_findings(["data.json"], inventory, root=tmp_path) == []
+
+
+def test_schema_backed_claim_reports_invalid_matched_json_file(tmp_path: Path) -> None:
+    (tmp_path / "schema.schema.json").write_text(
+        '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["kind"],"properties":{"kind":{"const":"demo/v1"}},"additionalProperties":false}',
+        encoding="utf-8",
+    )
+    (tmp_path / "data.json").write_text('{"kind":"other/v1"}', encoding="utf-8")
+    inventory = {
+        "entries": [
+            {
+                "pattern": "data.json",
+                "format": "json",
+                "owner": "test",
+                "status": "schema-backed",
+                "schema_or_validator": "schema.schema.json",
+                "storage_class": "source-of-truth",
+                "checked_in_justification": "test",
+                "editable_by_agents": True,
+                "generated": False,
+                "notes": "Test schema claim.",
+            }
+        ]
+    }
+
+    findings = check_structured_file_inventory.claim_validation_findings(["data.json"], inventory, root=tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].path == "data.json"
+    assert "schema.schema.json" in findings[0].message
+
+
+def test_schema_backed_claim_reports_missing_schema(tmp_path: Path) -> None:
+    (tmp_path / "data.json").write_text('{"kind":"demo/v1"}', encoding="utf-8")
+    inventory = {
+        "entries": [
+            {
+                "pattern": "data.json",
+                "format": "json",
+                "owner": "test",
+                "status": "schema-backed",
+                "schema_or_validator": "missing.schema.json",
+                "storage_class": "source-of-truth",
+                "checked_in_justification": "test",
+                "editable_by_agents": True,
+                "generated": False,
+                "notes": "Test schema claim.",
+            }
+        ]
+    }
+
+    findings = check_structured_file_inventory.claim_validation_findings(["data.json"], inventory, root=tmp_path)
+
+    assert len(findings) == 1
+    assert "schema claim is not executable" in findings[0].message
+
+
+def test_draft_schema_claim_validates_schema_files(tmp_path: Path) -> None:
+    (tmp_path / "valid.schema.json").write_text('{"type":"object"}', encoding="utf-8")
+    (tmp_path / "invalid.schema.json").write_text('{"type":"definitely-not-a-json-schema-type"}', encoding="utf-8")
+    inventory = {
+        "entries": [
+            {
+                "pattern": "*.schema.json",
+                "format": "json",
+                "owner": "test",
+                "status": "schema-backed",
+                "schema_or_validator": "JSON Schema draft 2020-12",
+                "storage_class": "source-of-truth",
+                "checked_in_justification": "test",
+                "editable_by_agents": True,
+                "generated": False,
+                "notes": "Test draft schema claim.",
+            }
+        ]
+    }
+
+    findings = check_structured_file_inventory.claim_validation_findings(
+        ["valid.schema.json", "invalid.schema.json"],
+        inventory,
+        root=tmp_path,
+    )
+
+    assert len(findings) == 1
+    assert findings[0].path == "invalid.schema.json"
+    assert "declared draft schema is invalid" in findings[0].message
+
+
+def test_typed_validator_backed_claim_requires_executable_delegation() -> None:
+    inventory = {
+        "entries": [
+            {
+                "pattern": "data.toml",
+                "format": "toml",
+                "owner": "test",
+                "status": "typed-validator-backed",
+                "schema_or_validator": "some prose",
+                "storage_class": "source-of-truth",
+                "checked_in_justification": "test",
+                "editable_by_agents": True,
+                "generated": False,
+                "notes": "Test delegated claim.",
+            }
+        ]
+    }
+
+    findings = check_structured_file_inventory.claim_validation_findings(["data.toml"], inventory)
+
+    assert len(findings) == 1
+    assert "must name an executable validator" in findings[0].message
+
+
 def test_large_review_audit_records_require_distillation_metadata() -> None:
     payload = {
         "kind": "planning-review/v1",

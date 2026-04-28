@@ -1,0 +1,260 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Make structured inventory validation claims executable",
+  "goal": [
+    "Implement #544 by making practical structured-file inventory schema claims executable.",
+    "Distinguish entries validated directly by the inventory checker from entries delegated to existing specialized checks.",
+    "Keep the improvement behind the existing structured inventory check rather than adding a new first-line command."
+  ],
+  "non_goals": [
+    "Do not replace specialized cross-file validators with JSON Schema.",
+    "Do not validate ignored local caches by default.",
+    "Do not add a new top-level command or startup/report payload.",
+    "Do not make ordinary startup heavier."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "structured-file inventory schema_or_validator claims are executable or explicitly delegated/descriptive",
+      "constraints": "repo/tool/language agnostic; no new first-line surfaces; use existing inventory and contract checks",
+      "latitude": "may add narrow inventory metadata, checker helpers, tests, and inventory entry updates",
+      "escalation": "stop if broad validator semantics would duplicate specialized package or contract checks"
+    },
+    "execution": {
+      "milestone": "#544",
+      "status": "completed",
+      "next_step": "archive #544, close #544 and #502, then refresh evidence and continue the next prioritized lane",
+      "proof": "passed"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/executable-structured-inventory-claims.plan.json",
+        "scripts/check/check_structured_file_inventory.py",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        "src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json",
+        "tests/test_structured_file_inventory.py"
+      ],
+      "invariants": [
+        "existing check_structured_file_inventory.py remains the front door",
+        "schema-backed direct validation is limited to feasible local JSON schema paths or JSON Schema draft markers",
+        "typed-validator-backed entries point to executable checks or explicitly delegated validators",
+        "startup and default report output stay unchanged"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "all machine-readable files are schema-backed, typed-validator-backed, generated/derived, or explicitly classified diagnostics",
+    "this slice completes the larger intended outcome": "yes if no remaining inventory claims are merely ambiguous prose",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "structured-file-contract"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "none for #502 after #544 proof unless a future structured file appears without classification or executable/delegated validation"
+  },
+  "intent_interpretation": {
+    "literal request": "Continue backlog lane-by-lane while dogfooding and creating immediate improvement issues when useful.",
+    "inferred intended outcome": "make the structured-file inventory trustworthy without adding product residue",
+    "chosen concrete what": "inventory enforcement metadata plus direct/delegated validation in the existing checker",
+    "interpretation distance": "low",
+    "review guidance": "verify that simple schema claims are checked and delegated claims identify executable checks"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the bounded #544 slice end-to-end.",
+    "hard constraints": "No new first-line command, no default startup/report expansion, no replacement of specialized validators.",
+    "agent may decide locally": "metadata shape, direct validation helper names, which schema claims are feasible to validate directly, and focused tests.",
+    "escalate when": "A claim cannot be made executable or delegated without changing unrelated validator architecture."
+  },
+  "execution_bounds": {
+    "allowed paths": "structured inventory checker/schema/tests, structured_file_inventory.json, active plan/state",
+    "max changed files": "about 6 unless proof reveals a narrow additional owner",
+    "required validation commands": "uv run pytest tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py --strict; uv run ruff check scripts/check tests src/agentic_workspace/contracts",
+    "ask-before-refactor threshold": "before changing broad contract-tooling architecture or adding a new command",
+    "stop before touching": "startup/report defaults, package payload semantics, ignored local cache validation"
+  },
+  "stop_conditions": {
+    "stop when": "direct schema validation creates false authority over specialized cross-file checks",
+    "escalate when boundary reached": "inventory needs a new command or runtime-specific integration to satisfy the issue",
+    "escalate on scope drift": "implementation spreads into generated adapters or package lifecycle behavior",
+    "escalate on proof failure": "existing checker cannot distinguish direct and delegated claims without a larger metadata migration"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#544",
+      "label": "Executable structured inventory claim issue",
+      "role": "source",
+      "locator": "GitHub issue #544"
+    },
+    {
+      "kind": "issue",
+      "target": "#502",
+      "label": "Structured-file contract parent lane",
+      "role": "parent",
+      "locator": "GitHub issue #502"
+    }
+  ],
+  "active_milestone": {
+    "id": "#544",
+    "status": "completed",
+    "scope": "structured inventory claim enforcement metadata, checker logic, and tests",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "read-only subagent inspection"
+  },
+  "immediate_next_action": [
+    "Add direct/delegated validation semantics to the structured inventory checker and tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/executable-structured-inventory-claims.plan.json"
+  ],
+  "invariants": [
+    "inventory remains a validation/check surface, not startup doctrine",
+    "simple schema claims become executable where practical",
+    "delegated claims name executable checks"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_structured_file_inventory.py -q",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "uv run ruff check scripts/check tests src/agentic_workspace/contracts"
+  ],
+  "required_tools": [
+    "uv",
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "Simple schema-backed inventory entries validate matched JSON files against the named local schema where feasible.",
+    "Inventory entries can explicitly state direct, delegated, draft-schema, or descriptive enforcement.",
+    "Typed-validator-backed entries point to executable validators/checks or are explicitly classified as delegated/descriptive.",
+    "Focused tests fail on unsupported unverifiable claims and pass for current records.",
+    "Proof-selected validation passes."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": ".agentic-workspace/planning/execplans/executable-structured-inventory-claims.plan.json",
+    "what happened": "Added executable claim validation to the existing structured-file inventory checker: schema-backed JSON entries with local .schema.json claims now validate matched files; draft-schema claims validate matched schemas; typed-validator-backed claims must name an executable/delegated validator, checker, parser, doctor, or runtime. Added focused tests for valid direct schema claims, invalid matched JSON, missing schemas, invalid draft schemas, and unsupported typed-validator prose.",
+    "scope touched": "structured inventory checker/tests plus active planning state and execplan",
+    "changed surfaces": "scripts/check/check_structured_file_inventory.py; tests/test_structured_file_inventory.py; .agentic-workspace/planning/state.toml; active execplan",
+    "validations run": "uv run pytest tests/test_structured_file_inventory.py -q; uv run pytest tests/test_structured_file_inventory.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py --strict; uv run ruff check scripts/check tests src/agentic_workspace/contracts; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run agentic-workspace proof --target . --changed <slice paths> --format json; uv run agentic-workspace doctor --target . --modules planning --format json; dogfooding closeout report/reconcile/skills commands",
+    "result for continuation": "#544 is complete and satisfies the remaining #502 structured-file-contract lane unless future refreshed evidence identifies another structured-file gap.",
+    "next step": "archive this plan, mark #502/#544 complete in state, commit/push, close issues, refresh external evidence, and continue the next prioritized lane"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no new command or startup/report payload was added",
+    "proof status": "passed",
+    "intent served": "yes; practical schema-backed inventory claims are executable and typed-validator-backed claims must be executable/delegated rather than arbitrary prose",
+    "config compliance": "used start/summary/proof/doctor/report/reconcile/skills surfaces and kept the change inside existing checks",
+    "misinterpretation risk": "low; specialized validators remain delegated and ignored local caches are not validated by default",
+    "follow-on decision": "close #544 and parent #502 after commit"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "focused tests, inventory check, contract tooling check, planning-surface check, ruff, proof-selected commands, and planning doctor passed",
+    "evidence for \"proof achieved\" state": "23 structured inventory tests and 56 structured inventory/contract tooling tests passed; check_structured_file_inventory.py validates current tracked records; proof selected planning_surfaces and contract_tooling lanes and their commands passed"
+  },
+  "intent_satisfaction": {
+    "original intent": "#544: make structured inventory schema/validator claims executable or explicitly delegated.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#544 added executable schema/draft validation and delegated typed-validator checks to the existing structured inventory checker; focused tests and proof-selected checks passed.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "strengthen an existing check rather than adding a command or startup surface",
+    "broader-lane validation question": "Does this make inventory trust cheaper without increasing first-contact burden?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#544 closes the remaining known #502 structured-file inventory validation gap without adding a new command or startup surface.",
+    "evidence carried forward": "Structured inventory tests, inventory check, contract tooling check, planning-surface check, ruff, proof-selected commands, and planning doctor passed.",
+    "reopen trigger": "Reopen if tracked structured files can claim schema-backed or typed-validator-backed status without executable validation or explicit delegation."
+  },
+  "durable_residue": {
+    "status": "check",
+    "learned constraint": "inventory trust is cheapest when executable validation lives in the existing inventory check rather than a new command or prose doctrine",
+    "motivation worth preserving": "agents can rely on inventory classifications without manually reconstructing whether schema_or_validator claims are real",
+    "canonical owner now": "scripts/check/check_structured_file_inventory.py and tests/test_structured_file_inventory.py",
+    "promotion trigger": "promote to docs only if maintainers need human-facing guidance for adding new inventory entries",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "executable/delegated structured inventory validation claims",
+    "validation confirmed": "focused tests, inventory/contract checks, planning checks, ruff, proof-selected commands, and planning doctor passed",
+    "follow-on routed to": "none for #502; continue next refreshed lane",
+    "post-work posterity capture": "plan closeout records package-use effects and no-new-issue decision",
+    "knowledge promoted (Memory/Docs/Config)": "none; checker/tests are the durable residue",
+    "resume from": ".agentic-workspace/planning/state.toml after archive"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "pre-commit and #509 showed new schemas could be added without immediately making their validation claims executable",
+      "summary caught a parent-lane active-state shape mistake before commit"
+    ],
+    "signals fixed": [
+      "#544 fixed executable structured inventory claim validation inside the existing checker"
+    ],
+    "signals routed": [
+      "#515 already covers projection-complete execplan scaffolds and closeout evidence ergonomics"
+    ],
+    "signals dismissed": [
+      "No new issue for subagent decomposition; the existing handoff and summary surfaces were sufficient for this slice."
+    ],
+    "next owner": "next refreshed lane"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "raw command output and subagent read-only findings after proof and design decisions were recorded",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "continue next refreshed lane after #502/#544 close",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "proof selector and structured inventory checker now carry the reusable trust path",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "none; checker/tests are the durable residue",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#515 remains existing scaffold/projection-completeness friction",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #544 after closing #509."
+  ]
+}

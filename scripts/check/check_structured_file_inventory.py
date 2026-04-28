@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from jsonschema import Draft202012Validator
+from jsonschema import exceptions as jsonschema_exceptions
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 INVENTORY_PATH = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "structured_file_inventory.json"
@@ -247,6 +248,115 @@ def _guardrail_findings(paths: list[str], entry: dict[str, Any]) -> list[Finding
     return findings
 
 
+def _load_json_file(path: Path) -> tuple[Any | None, str | None]:
+    try:
+        return json.loads(path.read_text(encoding="utf-8")), None
+    except OSError as exc:
+        return None, str(exc)
+    except json.JSONDecodeError as exc:
+        return None, f"invalid JSON: {exc.msg}"
+
+
+def _schema_error_message(error: jsonschema_exceptions.ValidationError | jsonschema_exceptions.SchemaError) -> str:
+    location = ".".join(str(part) for part in error.path) or "<root>"
+    return f"{location}: {error.message}"
+
+
+def _is_draft_schema_claim(claim: str) -> bool:
+    return "JSON Schema draft 2020-12" in claim
+
+
+def _explicit_schema_path(claim: str) -> str | None:
+    normalized = _as_posix(claim.strip())
+    if normalized.endswith(".schema.json") and " " not in normalized:
+        return normalized
+    return None
+
+
+def _known_delegated_validator_claim(claim: str) -> bool:
+    executable_markers = (
+        "scripts/check/",
+        "_typed_validator_findings",
+        "validator",
+        "check",
+        "doctor",
+        "verification",
+        "discovery",
+        "parser",
+        "pre-commit",
+        "uv/build-backend",
+        "agentic-workspace",
+        "runtime",
+    )
+    return any(marker in claim for marker in executable_markers)
+
+
+def _validate_against_schema(path: str, schema_path: str, root: Path) -> list[Finding]:
+    schema_payload, schema_error = _load_json_file(root / schema_path)
+    if schema_error is not None:
+        return [Finding(path=path, message=f"schema claim is not executable; cannot load {schema_path}: {schema_error}")]
+    try:
+        Draft202012Validator.check_schema(schema_payload)
+    except jsonschema_exceptions.SchemaError as exc:
+        return [Finding(path=schema_path, message=f"declared schema is invalid: {_schema_error_message(exc)}")]
+
+    payload, payload_error = _load_json_file(root / path)
+    if payload_error is not None:
+        return [Finding(path=path, message=f"schema-backed file cannot be loaded for validation: {payload_error}")]
+    errors = sorted(Draft202012Validator(schema_payload).iter_errors(payload), key=lambda error: list(error.path))
+    if errors:
+        return [
+            Finding(
+                path=path,
+                message=f"does not validate against {schema_path}: {_schema_error_message(errors[0])}",
+            )
+        ]
+    return []
+
+
+def _validate_draft_schema_file(path: str, root: Path) -> list[Finding]:
+    payload, payload_error = _load_json_file(root / path)
+    if payload_error is not None:
+        return [Finding(path=path, message=f"schema-backed draft schema cannot be loaded: {payload_error}")]
+    try:
+        Draft202012Validator.check_schema(payload)
+    except jsonschema_exceptions.SchemaError as exc:
+        return [Finding(path=path, message=f"declared draft schema is invalid: {_schema_error_message(exc)}")]
+    return []
+
+
+def claim_validation_findings(paths: list[str], inventory: dict[str, Any], root: Path = REPO_ROOT) -> list[Finding]:
+    findings: list[Finding] = []
+    for index, entry in enumerate(inventory["entries"]):
+        location = f"{INVENTORY_PATH.relative_to(REPO_ROOT).as_posix()}#entries[{index}]"
+        status = entry["status"]
+        claim = entry["schema_or_validator"]
+        matched = _matched_files(paths, entry)
+        if status == "schema-backed" and entry["format"] == "json" and matched:
+            schema_path = _explicit_schema_path(claim)
+            if schema_path is not None:
+                for path in matched:
+                    findings.extend(_validate_against_schema(path, schema_path, root))
+            elif _is_draft_schema_claim(claim):
+                for path in matched:
+                    findings.extend(_validate_draft_schema_file(path, root))
+            else:
+                findings.append(
+                    Finding(
+                        path=location,
+                        message="schema-backed JSON entries must use a repo-relative .schema.json path or JSON Schema draft 2020-12 claim",
+                    )
+                )
+        if status == "typed-validator-backed" and not _known_delegated_validator_claim(claim):
+            findings.append(
+                Finding(
+                    path=location,
+                    message="typed-validator-backed entries must name an executable validator, checker, parser, doctor, or delegated runtime",
+                )
+            )
+    return findings
+
+
 def _entry_routes(entry: dict[str, Any]) -> set[str]:
     routes: set[str] = set()
     for key in ("routed_to", "storage_routed_to"):
@@ -343,6 +453,7 @@ def inventory_findings(paths: list[str] | None = None) -> list[Finding]:
     checked_all_paths = _tracked_files() if paths is None else checked_paths
     return (
         unmatched_structured_files(checked_paths, inventory)
+        + claim_validation_findings(checked_paths, inventory)
         + storage_policy_findings(checked_paths, inventory)
         + generated_mirror_policy_findings(checked_all_paths, inventory)
     )
