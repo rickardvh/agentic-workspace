@@ -5570,6 +5570,67 @@ def test_upgrade_lifecycle_plan_advertises_root_front_door_for_module_selections
     ]
 
 
+@pytest.mark.parametrize("dry_run_arg", [["--dry-run"], []])
+def test_upgrade_lifecycle_surface_classifications_cover_reason_classes(
+    monkeypatch, tmp_path: Path, capsys, dry_run_arg: list[str]
+) -> None:
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
+    _write(tmp_path / ".agentic-workspace" / "local" / "memory.toml", 'kind = "local-memory"\n')
+    _write(
+        tmp_path / "ROADMAP.md",
+        "<!-- GENERATED COMPATIBILITY VIEW: authoritative source is .agentic-workspace/planning/state.toml -->\n# ROADMAP\n",
+    )
+
+    assert cli.main(["upgrade", "--modules", "planning", "--target", str(tmp_path), *dry_run_arg, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    classifications = payload["lifecycle_plan"]["surface_classifications"]
+    entries = classifications["entries"]
+    by_path = {entry["path"]: entry for entry in entries}
+    reason_classes = {entry["reason_class"] for entry in entries}
+    assert classifications["kind"] == "workspace-lifecycle-surface-classifications/v1"
+    assert by_path[".agentic-workspace/planning/agent-manifest.json"]["reason_class"] == "core refreshed"
+    assert by_path["AGENTS.md"]["reason_class"] == "repo-owned preserved"
+    assert by_path["README.md"]["reason_class"] == "ambiguous ownership manual-review"
+    assert by_path[".agentic-workspace/local/memory.toml"]["reason_class"] == "local-only preserved"
+    assert "optional legacy retained" in reason_classes or "optional legacy removable" in reason_classes
+    assert classifications["summary_by_class"]["core refreshed"] >= 1
+
+
+def test_uninstall_lifecycle_surface_classifications_include_refused_destructive_action(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    workflow_path = target / ".agentic-workspace" / "WORKFLOW.md"
+    workflow_path.write_text(workflow_path.read_text(encoding="utf-8") + "\nLocal owner edit.\n", encoding="utf-8")
+
+    assert cli.main(["uninstall", "--modules", "planning", "--target", str(target), "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    classifications = payload["lifecycle_plan"]["surface_classifications"]
+    assert classifications["summary_by_class"]["refused destructive action"] >= 1
+    assert any(
+        entry["reason_class"] == "ambiguous ownership manual-review" and entry["review_required"] is True
+        for entry in classifications["entries"]
+    )
+
+
+def test_upgrade_text_output_keeps_surface_classification_detail_in_json(monkeypatch, tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
+
+    assert cli.main(["upgrade", "--modules", "planning", "--target", str(tmp_path), "--dry-run"]) == 0
+
+    output = capsys.readouterr().out
+    assert "Surface classifications:" in output
+    assert "lifecycle_plan.surface_classifications.entries" in output
+    assert "[planning] upgrade planning" not in output
+    assert "README.md: inspect manually" in output
+
+
 def test_uninstall_dry_run_requires_review_for_ambiguous_workspace_payload(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

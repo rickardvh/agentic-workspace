@@ -53,6 +53,14 @@ def _emit_lifecycle_text(payload: dict[str, Any]) -> None:
     _print_path_list("Warnings", payload["warnings"])
     _print_path_list("Placeholders", payload["placeholders"])
     _print_path_list("Stale generated surfaces", payload["stale_generated_surfaces"])
+    classifications = payload.get("lifecycle_plan", {}).get("surface_classifications", {})
+    if payload.get("command") == "upgrade" and isinstance(classifications, dict):
+        summary = classifications.get("summary_by_class", {})
+        if isinstance(summary, dict) and summary:
+            print("Surface classifications: " + ", ".join(f"{key}={value}" for key, value in summary.items()))
+            print("Surface detail: rerun with --format json and inspect lifecycle_plan.surface_classifications.entries")
+            _print_path_list("Next steps", payload["next_steps"])
+            return
     for report in payload["reports"]:
         print(f"[{report['module']}] {report['message']}")
         for action in report["actions"]:

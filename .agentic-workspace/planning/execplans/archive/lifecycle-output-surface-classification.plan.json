@@ -1,0 +1,288 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Lifecycle Output Surface Classification",
+  "goal": [
+    "Make root lifecycle output classify relevant surfaces by ownership, action, and reason so agents do not infer lifecycle safety from prose or ad hoc lists."
+  ],
+  "non_goals": [
+    "Do not automatically remove optional legacy surfaces.",
+    "Do not support every historical product shape.",
+    "Do not add a new top-level command."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Root lifecycle JSON exposes predictable surface classifications for #482 acceptance classes.",
+      "constraints": "Keep text compact and route detail to JSON; preserve root lifecycle front-door ownership.",
+      "latitude": "Implement classification as derived lifecycle output over existing module reports and root summaries.",
+      "escalation": "Stop before broad module rewrites or destructive policy changes."
+    },
+    "execution": {
+      "milestone": "classification-output",
+      "status": "active",
+      "next_step": "Add derived lifecycle surface classifications and tests for dry-run/apply symmetry.",
+      "proof": "Run workspace CLI tests, proof selector, root CLI authority, planning checks, and closeout workflow."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/lifecycle-output-surface-classification.plan.json"
+      ],
+      "invariants": [
+        "Classification is descriptive, not permission to mutate.",
+        "Review-required and refused states remain review-required.",
+        "Text output remains compact."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make lifecycle management straightforward, predictable, and low-judgment.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening",
+    "parent lane": "#478"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "follow-on detail": "#483 and #484 remain after #482.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #482 is proven and closed."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Agents can inspect why lifecycle surfaces changed, were preserved, were reviewed, or were refused from one structured output.",
+    "intentionally deferred": "Legacy shape removal/refusal policy belongs to #483.",
+    "discovered implications": "Read-only lifecycle outputs should not carry large classification payloads; the final implementation keeps classifications on mutation commands.",
+    "proof achieved now": "Lifecycle mutation JSON classifies surfaces by reason class and upgrade text points to JSON for detail.",
+    "validation still needed": "None for #482 after closeout.",
+    "next likely slice": "#483"
+  },
+  "intent_interpretation": {
+    "literal request": "Reingest and repeat until out of issues.",
+    "inferred intended outcome": "Continue the lifecycle hardening lane with #482 after #481 closed.",
+    "chosen concrete what": "Add derived root lifecycle surface classifications and tests.",
+    "interpretation distance": "low",
+    "review guidance": "Verify classification is compact, descriptive, and symmetric across dry-run/apply."
+  },
+  "execution_bounds": {
+    "allowed paths": "Root CLI lifecycle output/tests plus planning execplan/state.",
+    "max changed files": "Prefer 4-6 files.",
+    "required validation commands": "Focused pytest, full workspace CLI pytest, ruff, proof selector, root CLI authority, planning checks.",
+    "ask-before-refactor threshold": "Stop before rewriting module installers or adding a new lifecycle command.",
+    "stop before touching": "Branch switching, destructive lifecycle policy, or generated package work."
+  },
+  "stop_conditions": {
+    "stop when": "Classification tests and closeout proof pass.",
+    "escalate when boundary reached": "The slice requires changing module ownership semantics.",
+    "escalate on scope drift": "The work becomes #483 legacy removal/refusal policy.",
+    "escalate on proof failure": "Dry-run/apply symmetry cannot be shown without broader behavior changes."
+  },
+  "context_budget": {
+    "live working set": "#482, root lifecycle output code, lifecycle tests, active execplan.",
+    "recoverable later": "Historical reviews and unrelated derived follow-up backlog.",
+    "externalize before shift": "Update this execplan with proof and closeout.",
+    "pre-work config pull": "summary and issue refresh used.",
+    "pre-work memory pull": "not needed.",
+    "tiny resumability note": "Implement lifecycle_plan.surface_classifications and tests.",
+    "context-shift triggers": "Before commit or if classification scope expands into module installer policy."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #482 end-to-end with root lifecycle surface classifications.",
+    "hard constraints": "Stay on current branch, commit after proof, keep root lifecycle output compact.",
+    "agent may decide locally": "Classification field names, reason taxonomy details, and test fixture arrangement.",
+    "escalate when": "A classification needs destructive automation or broad package-local rewrites."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#482",
+      "label": "lifecycle output surface classification",
+      "role": "source_intent",
+      "locator": "GitHub issue #482"
+    },
+    {
+      "kind": "issue",
+      "target": "#478",
+      "label": "lifecycle management hardening parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue #478"
+    },
+    {
+      "kind": "issue",
+      "target": "#483",
+      "label": "next lifecycle hardening child",
+      "role": "next_lane",
+      "locator": "GitHub issue #483"
+    }
+  ],
+  "active_milestone": {
+    "id": "classification-output",
+    "status": "completed",
+    "scope": "Root lifecycle output classification and tests.",
+    "ready": "Issue #482 is open and #481 is closed.",
+    "blocked": "None.",
+    "optional_deps": "None."
+  },
+  "immediate_next_action": [
+    "Archive this plan, commit the milestone, close #482, refresh external evidence, then promote #483."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/lifecycle-output-surface-classification.plan.json"
+  ],
+  "invariants": [
+    "Classification does not authorize mutation.",
+    "Text output remains compact and points to JSON for detail."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"surface_classifications or upgrade_text_output\"",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py src/agentic_workspace/workspace_output.py tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/lifecycle-output-surface-classification.plan.json --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "make maintainer-surfaces",
+    "uv run agentic-workspace preflight --target . --format json",
+    "uv run agentic-workspace report --target . --section closeout_trust --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "upgrade --dry-run --format json lists planned/preserved/refused/manual-review surfaces with reason classes.",
+    "Apply output uses the same classes as dry-run.",
+    "Tests cover core refresh, repo-owned preservation, optional legacy surface, local-only preservation, and ambiguous/refused surface.",
+    "Text output remains compact and points to JSON for detail."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "Issue #482 plus checked-in roadmap.",
+    "what happened": "Added lifecycle_plan.surface_classifications for mutation commands, reason-class mapping over existing module/root report actions, local-only and optional-legacy scans, refused destructive classifications, and compact upgrade text routing to JSON detail.",
+    "scope touched": "Root lifecycle CLI output, text renderer, workspace CLI tests, and checked-in planning surfaces.",
+    "changed surfaces": "preflight, report, proof, reconcile, doctor, skills, root_cli_authority defaults, maintainer-surfaces.",
+    "validations run": "focused surface-classification pytest; full tests/test_workspace_cli.py; ruff; proof selector; root CLI authority; planning doctor; planning surface check; maintainer-surfaces; preflight; closeout_trust report; reconcile; skills dogfooding query.",
+    "result for continuation": "#482 is ready to close; lifecycle-management-hardening continues with #483 and #484.",
+    "next step": "Archive plan, commit, push, close #482, refresh external evidence, then continue #483."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed in derived lifecycle output, text rendering, tests, and planning state.",
+    "proof status": "passed",
+    "intent served": "yes; dry-run/apply classifications cover core refresh, repo-owned preservation, optional legacy, local-only, manual review, and refused destructive action.",
+    "config compliance": "used package workflow surfaces and stayed on the current branch.",
+    "misinterpretation risk": "low; classifications are descriptive and do not authorize mutation.",
+    "follow-on decision": "close #482 and continue lifecycle hardening with #483."
+  },
+  "proof_report": {
+    "validation proof": "201 workspace CLI tests passed; ruff passed; proof selector, root CLI authority, planning doctor, planning surface check, maintainer-surfaces, preflight, closeout_trust, reconcile, and skills query completed successfully.",
+    "proof achieved now": "Lifecycle mutation output classification works and upgrade text stays compact.",
+    "evidence for \"proof achieved\" state": "tests/test_workspace_cli.py::test_upgrade_lifecycle_surface_classifications_cover_reason_classes, ::test_uninstall_lifecycle_surface_classifications_include_refused_destructive_action, and ::test_upgrade_text_output_keeps_surface_classification_detail_in_json."
+  },
+  "intent_satisfaction": {
+    "original intent": "#482 Classify lifecycle plan output by ownership, action, and reason.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "upgrade dry-run/apply JSON now includes lifecycle_plan.surface_classifications.entries with reason_class values; tests cover core refreshed, repo-owned preserved, optional legacy retained/removable, local-only preserved, ambiguous manual review, and refused destructive action; upgrade text points to JSON detail.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Add a compact derived field instead of new surfaces or prose.",
+    "broader-lane validation question": "Does lifecycle output reduce judgment without increasing first-contact burden?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Lifecycle mutation output now classifies relevant surfaces by ownership/action/reason.",
+    "validation confirmed": "Focused and full workspace CLI tests, ruff, proof selector, root CLI authority, planning doctor, planning surface check, maintainer-surfaces, preflight, closeout_trust, reconcile, and skills dogfooding query passed.",
+    "follow-on routed to": "#483",
+    "post-work posterity capture": "Archive this plan after commit/closeout.",
+    "knowledge promoted (Memory/Docs/Config)": "No new Memory/docs/config promotion needed.",
+    "resume from": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Read-only doctor/status output became too large when classifications were initially applied to every lifecycle command."
+    ],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [
+      "Fixed in-slice by limiting surface classifications to mutation commands."
+    ],
+    "next owner": "#483"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Temporary fixture/output inspection details.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#483 and #484 remain in lifecycle-management-hardening.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No new Memory/docs/config promotion needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No new Memory/docs/config promotion needed.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "No new Memory/docs/config promotion needed.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "lifecycle output surface classification",
+          "owner": "issue",
+          "source": "#482"
+        },
+        {
+          "summary": "lifecycle management hardening parent",
+          "owner": "issue",
+          "source": "#478"
+        },
+        {
+          "summary": "next lifecycle hardening child",
+          "owner": "issue",
+          "source": "#483"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #482 after closing #481."
+  ]
+}

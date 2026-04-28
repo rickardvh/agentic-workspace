@@ -2859,6 +2859,14 @@ def _lifecycle_plan_payload(
             review_required=review_required,
             planned_removals=planned_removals,
         ),
+        "surface_classifications": _lifecycle_surface_classifications_payload(
+            payload=payload,
+            command_name=command_name,
+            target_root=target_root,
+            dry_run=dry_run,
+            review_required=review_required,
+            planned_removals=planned_removals,
+        ),
         "next_safe_command": {
             "status": "review-required" if review_required else "ready",
             "command": next_command,
@@ -2874,6 +2882,255 @@ def _lifecycle_plan_payload(
             review_required=review_required,
         )
     return plan
+
+
+def _lifecycle_surface_classifications_payload(
+    *,
+    payload: dict[str, Any],
+    command_name: str,
+    target_root: Path,
+    dry_run: bool,
+    review_required: bool,
+    planned_removals: list[str],
+) -> dict[str, Any]:
+    if command_name not in {"install", "init", "adopt", "upgrade", "uninstall"}:
+        return {
+            "kind": "workspace-lifecycle-surface-classifications/v1",
+            "rule": "Classifications explain lifecycle mutation output; read-only commands keep this detail behind mutation paths.",
+            "entries": [],
+            "summary_by_class": {},
+            "detail_hint": "Use lifecycle mutation commands with --format json for surface classifications.",
+        }
+    entries: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+
+    def add_entry(
+        *,
+        path: str,
+        module: str,
+        action: str,
+        reason_class: str,
+        reason: str,
+        source: str,
+        ownership: str | None = None,
+        review_required_for_surface: bool | None = None,
+    ) -> None:
+        if not path:
+            return
+        key = (path, action, reason_class)
+        if key in seen:
+            return
+        seen.add(key)
+        entries.append(
+            {
+                "path": path,
+                "module": module,
+                "action": action,
+                "reason_class": reason_class,
+                "ownership": ownership or _lifecycle_ownership_for_reason(reason_class),
+                "reason": reason,
+                "dry_run": dry_run,
+                "review_required": review_required if review_required_for_surface is None else review_required_for_surface,
+                "source": source,
+            }
+        )
+
+    for report in payload.get("reports", []) + payload.get("module_reports", []):
+        if not isinstance(report, dict):
+            continue
+        module = str(report.get("module", "workspace"))
+        for action in report.get("actions", []):
+            if not isinstance(action, dict):
+                continue
+            path = _display_path(action.get("path", "."), target_root)
+            action_kind = str(action.get("kind", ""))
+            detail = str(action.get("detail", ""))
+            reason_class, reason = _classify_lifecycle_action(
+                path=path,
+                action_kind=action_kind,
+                detail=detail,
+                command_name=command_name,
+                review_required=review_required,
+            )
+            add_entry(
+                path=path,
+                module=module,
+                action=action_kind,
+                reason_class=reason_class,
+                reason=reason,
+                source="module-report",
+                review_required_for_surface=reason_class in {"ambiguous ownership manual-review", "refused destructive action"},
+            )
+        for warning in report.get("warnings", []):
+            if not isinstance(warning, dict):
+                continue
+            path = _display_path(warning.get("path", "."), target_root)
+            message = str(warning.get("message", "needs review"))
+            reason_class, reason = _classify_lifecycle_action(
+                path=path,
+                action_kind="warning",
+                detail=message,
+                command_name=command_name,
+                review_required=review_required,
+            )
+            add_entry(
+                path=path,
+                module=module,
+                action="warning",
+                reason_class=reason_class,
+                reason=reason,
+                source="module-warning",
+                review_required_for_surface=reason_class == "ambiguous ownership manual-review",
+            )
+
+    for path in payload.get("preserved_existing", []):
+        add_entry(
+            path=str(path),
+            module="workspace",
+            action="preserved",
+            reason_class="repo-owned preserved",
+            reason="Existing repo-owned surface was preserved rather than overwritten.",
+            source="summary",
+            review_required_for_surface=False,
+        )
+    for item in payload.get("needs_review", []):
+        path, _, detail = str(item).partition(": ")
+        reason_class = "ambiguous ownership manual-review"
+        if "legacy" in detail.lower():
+            reason_class = "legacy unsupported; migration/refusal required"
+        add_entry(
+            path=path,
+            module="workspace",
+            action="manual review",
+            reason_class=reason_class,
+            reason=detail or "Manual review is required before applying this lifecycle change.",
+            source="summary",
+            review_required_for_surface=True,
+        )
+
+    for path in _local_only_surfaces(target_root=target_root):
+        add_entry(
+            path=path,
+            module="workspace",
+            action="preserved",
+            reason_class="local-only preserved",
+            reason="Repo-local private state is preserved unless --local-only explicitly targets it.",
+            source="local-only-scan",
+            review_required_for_surface=False,
+        )
+
+    for path in _optional_legacy_surfaces(target_root=target_root):
+        add_entry(
+            path=path,
+            module="workspace",
+            action="retained",
+            reason_class="optional legacy retained",
+            reason="Optional legacy compatibility surface is retained and classified for review.",
+            source="legacy-scan",
+            review_required_for_surface=False,
+        )
+
+    if command_name == "uninstall" and review_required:
+        for path in planned_removals:
+            add_entry(
+                path=path,
+                module="workspace",
+                action="refused",
+                reason_class="refused destructive action",
+                reason="Destructive removal requires ownership review before apply.",
+                source="destructive-safety",
+                review_required_for_surface=True,
+            )
+
+    summary_by_class: dict[str, int] = {}
+    for entry in entries:
+        reason_class = str(entry["reason_class"])
+        summary_by_class[reason_class] = summary_by_class.get(reason_class, 0) + 1
+    return {
+        "kind": "workspace-lifecycle-surface-classifications/v1",
+        "rule": "Classifications explain lifecycle output; they do not grant mutation permission.",
+        "entries": entries,
+        "summary_by_class": dict(sorted(summary_by_class.items())),
+        "detail_hint": "Use --format json for full surface classifications; text output stays compact.",
+    }
+
+
+def _classify_lifecycle_action(*, path: str, action_kind: str, detail: str, command_name: str, review_required: bool) -> tuple[str, str]:
+    detail_l = detail.lower()
+    path_l = path.lower()
+    if action_kind == "skipped":
+        return "repo-owned preserved", detail or "Existing repo-owned surface was preserved."
+    if action_kind in {"manual review", "missing"}:
+        if "legacy" in detail_l:
+            return "legacy unsupported; migration/refusal required", detail or "Legacy surface requires migration or refusal."
+        return "ambiguous ownership manual-review", detail or "Manual review is required before applying this change."
+    if action_kind in {"warning", "suggested fix"}:
+        if path in {"TODO.md", "ROADMAP.md"} or "legacy" in detail_l or "compatibility" in detail_l:
+            if action_kind == "suggested fix" or "delete" in detail_l or "remove" in detail_l:
+                return "optional legacy removable", detail or "Optional legacy surface can be removed after review."
+            return "optional legacy retained", detail or "Optional legacy surface is retained for review."
+        return "ambiguous ownership manual-review", detail or "Warning requires review."
+    if action_kind in {"would remove", "removed"}:
+        if command_name == "uninstall" and review_required:
+            return "refused destructive action", detail or "Destructive action requires review."
+        return "product-managed replaced", detail or "Managed lifecycle payload was removed."
+    if action_kind in {"would update", "updated", "overwritten", "would overwrite", "would replace", "replaced"}:
+        if "optional" in detail_l:
+            return "optional enabled", detail or "Optional managed surface is enabled or refreshed."
+        if path_l.startswith(".agentic-workspace/") or path in {"AGENTS.md", "llms.txt"}:
+            return "core refreshed", detail or "Core managed lifecycle surface is refreshed."
+        return "product-managed replaced", detail or "Product-managed surface is replaced."
+    if action_kind in {"created", "copied", "would create", "would copy"}:
+        if "optional" in detail_l:
+            return "optional enabled", detail or "Optional managed surface is enabled."
+        return "core refreshed", detail or "Core managed lifecycle surface is created or refreshed."
+    if "generated" in detail_l or path_l.startswith("tools/"):
+        return "generated/dev-only ignored", detail or "Generated or dev-only surface is informational."
+    return "core refreshed", detail or "Lifecycle action is managed by the selected module."
+
+
+def _lifecycle_ownership_for_reason(reason_class: str) -> str:
+    if reason_class.startswith("repo-owned"):
+        return "repo-owned"
+    if reason_class.startswith("local-only"):
+        return "local-only"
+    if reason_class.startswith("optional"):
+        return "optional"
+    if reason_class.startswith("generated"):
+        return "generated/dev-only"
+    if reason_class.startswith("ambiguous"):
+        return "ambiguous"
+    if reason_class.startswith("refused"):
+        return "refused"
+    if reason_class.startswith("legacy"):
+        return "legacy"
+    return "product-managed"
+
+
+def _local_only_surfaces(*, target_root: Path) -> list[str]:
+    local_root = target_root / ".agentic-workspace" / "local"
+    if not local_root.exists():
+        return []
+    paths: list[str] = []
+    for path in sorted(local_root.rglob("*")):
+        if path.is_file():
+            paths.append(path.relative_to(target_root).as_posix())
+    return paths
+
+
+def _optional_legacy_surfaces(*, target_root: Path) -> list[str]:
+    paths: list[str] = []
+    for relative in (Path("TODO.md"), Path("ROADMAP.md")):
+        path = target_root / relative
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if "GENERATED COMPATIBILITY VIEW" in text or "authoritative source is .agentic-workspace/planning/state.toml" in text:
+            paths.append(relative.as_posix())
+    return paths
 
 
 def _root_upgrade_front_door_payload(
