@@ -17,8 +17,9 @@ Run compact package surfaces before reading broad files:
 
 1. `uv run agentic-workspace summary --format json`
 2. `uv run agentic-workspace report --target . --format json`
-3. `uv run agentic-workspace reconcile --format json`
-4. `uv run agentic-workspace skills --target . --task "<current task>" --format json`
+3. `uv run agentic-workspace report --target . --section improvement_intake --format json`
+4. `uv run agentic-workspace reconcile --format json`
+5. `uv run agentic-workspace skills --target . --task "<current task>" --format json`
 
 Read `.agentic-workspace/system-intent/intent.toml` or `SYSTEM_INTENT.md` only when the compact surfaces or the current issue need product-direction context.
 
@@ -32,8 +33,9 @@ Use one pass at a time:
 4. Implement using existing package commands and package-selected proof.
 5. Validate with `agentic-workspace proof --target . --changed <paths> --format json` plus required commands.
 6. Assess intent satisfaction separately from validation success.
-7. Route discovered friction into a narrow fix, review record, memory note, or issue.
-8. Close/archive only when evidence is compact and reconstructable.
+7. Assess total operating cost separately from issue completion and intent satisfaction.
+8. Route discovered friction into a narrow fix, review record, memory note, issue, or explicit dismissal.
+9. Close/archive only when evidence is compact and reconstructable.
 
 ## Allowed Autonomous Actions
 
@@ -62,16 +64,40 @@ Each pass should leave:
 - a closeout review or equivalent compact evidence for issue closure;
 - proof selector output or named validation commands;
 - external-work evidence updates when tracked issues change state;
+- an `improvement_signal_review` or equivalent note that says whether signals were found, fixed, routed, dismissed, or absent;
+- a total-operating-cost assessment with net cost direction;
 - a clear continuation owner for any unsolved intent.
+
+## Required Cost Assessment
+
+Every self-improvement pass must answer this before claiming the system improved. Validation success and issue closure are evidence, but they are not sufficient by themselves.
+
+Record a compact cost assessment in the execplan closeout, review artifact, or issue-close proof:
+
+- `workflow_cost_found`: What workflow was slower, more manual, or easier to bypass than it should be?
+- `architecture_cost_found`: What module, boundary, duplication, or overgrown surface made change harder?
+- `needless_complexity_found`: What concept, field, command, or artifact can be merged, removed, demoted, or made optional?
+- `surfaces_added`: Which visible surfaces were added?
+- `surfaces_removed_merged_or_demoted`: Which visible surfaces were removed, merged, shortened, hidden behind selectors, or made opt-in?
+- `artifact_footprint_changed`: What happened to planning, review, Memory, generated, local-only, or evidence artifacts?
+- `shipped_default_footprint_changed`: Did ordinary host-repo startup/install get smaller, larger, or unchanged?
+- `signals_consumed`: Which `improvement_signal_candidates`, Memory improvement-signal notes, Planning follow-through entries, review findings, or human corrections were consumed?
+- `signals_still_accumulating`: Which cost signals remain and where are they routed?
+- `human_steering_avoided_next_time`: What repeated correction should the package catch without the human saying it again?
+- `follow_up_routed`: What issue, plan, Memory note, review, docs/check/skill change, or dismissal owns the remainder?
+- `net_cost_direction`: `lower`, `same`, or `higher`.
+
+If `net_cost_direction` is `same` or `higher`, do not close as an improvement solely because tests passed. Route the remaining cost signal or explain why retention is intentional.
 
 ## Friction Routing
 
 Treat dogfooding friction as product input, but do not derail the active lane. Prefer this order:
 
 1. Fix immediately only if the friction blocks the current proof or causes unsafe behavior.
-2. Create a narrow issue when the friction is real but not blocking.
-3. Record a review finding when evidence needs later prioritization.
-4. Promote durable repo knowledge to memory only when it will prevent rediscovery.
+2. Consume `agentic-workspace report --target . --section improvement_intake --format json` and decide whether each relevant signal is fixed, routed, reviewed, remembered, dismissed, or intentionally retained.
+3. Create a narrow issue when the friction is real but not blocking.
+4. Record a review finding when evidence needs later prioritization.
+5. Promote durable repo knowledge to memory only when it will prevent rediscovery.
 
 ## Required Anti-Overfitting Review
 

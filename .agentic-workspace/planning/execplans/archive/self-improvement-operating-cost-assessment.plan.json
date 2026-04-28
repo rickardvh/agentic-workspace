@@ -1,0 +1,264 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Self Improvement Operating Cost Assessment",
+  "goal": [
+    "Implement #467 by making repo-local self-improvement explicitly assess total operating cost, consume captured improvement signals, and separate validation success from actual cost reduction."
+  ],
+  "non_goals": [
+    "Do not create a heavyweight optimisation framework.",
+    "Do not turn Memory or Planning into a separate self-improvement backlog.",
+    "Do not add a shipped autopilot subsystem."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Each self-improvement pass leaves compact cost-assessment evidence and routes signals to fix, route, review, remember, dismiss, or follow-up.",
+      "constraints": "Keep this repo-local and compact; use #469 signal intake rather than broad rereads.",
+      "latitude": "Tighten repo-owned skill guidance, closeout obligation, and maintainer-surface tests.",
+      "escalation": "Escalate if cost assessment needs product-direction judgment beyond existing issues/system intent."
+    },
+    "execution": {
+      "milestone": "self-improvement-operating-cost-assessment",
+      "status": "completed",
+      "next_step": "Archive the completed plan, refresh external evidence, and promote the next open issue from the feature-tier/default-footprint lane.",
+      "proof": "maintainer-surface tests, workspace CLI tests, ruff, planning surface checks, proof selector, planning doctor, summary/report dogfooding"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/self-improvement-operating-cost-assessment.plan.json",
+        "tools/skills/self-improvement-dogfooding/SKILL.md",
+        ".agentic-workspace/config.toml",
+        "tests/test_maintainer_surfaces.py"
+      ],
+      "invariants": [
+        "Cost assessment stays repo-local skill guidance.",
+        "Validation success alone is not sufficient evidence of improvement.",
+        "Captured improvement signals are inputs, not automatic work items."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450/#449: make the package cheaper to use than bypassing it.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#450/#449 and later footprint/codegen lanes remain after this workflow tightening.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #467 closeout, refresh external evidence and promote the next open issue indicated by roadmap priority"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Self-improvement runs now have to consume improvement_intake signals and leave a compact total-operating-cost assessment before claiming improvement.",
+    "intentionally deferred": "Large-surface refactors and footprint compression remain owned by the existing #430-#438/#449/#450 lanes.",
+    "discovered implications": "Validation success can still be useful proof, but it must be separated from intent satisfaction and net-cost direction.",
+    "proof achieved now": "Focused maintainer tests, workspace CLI tests, ruff, planning checks, proof selection, summary, improvement_intake, and planning doctor all passed.",
+    "validation still needed": "No additional #467 validation remains; follow-on lanes should prove their own footprint or extraction changes.",
+    "next likely slice": "Promote the next open #449/#450 feature-tier or footprint lane after external evidence refresh."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make self-improvement detect and reduce total operating cost.",
+    "hard constraints": "Do not equate validation success with system improvement.",
+    "agent may decide locally": "Exact compact cost-assessment wording and tests.",
+    "escalate when": "Assessment requires changing product direction or active roadmap priority."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Reduce total successful-completion cost across restart, handoff, review, and proof loops.",
+    "slice shaping bias": "Tighten existing self-improvement guidance instead of adding new product machinery.",
+    "broader-lane validation question": "Will the next self-improvement pass catch cost increases and route them?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/467"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/467",
+      "label": "#467 total operating cost",
+      "role": "source_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/449",
+      "label": "#449 package cheaper than bypass",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "self-improvement-operating-cost-assessment",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to repo-local self-improvement guidance and tests.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Patch self-improvement guidance and tests for required operating-cost assessment."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/self-improvement-operating-cost-assessment.plan.json",
+    "tools/skills/self-improvement-dogfooding/SKILL.md",
+    ".agentic-workspace/config.toml",
+    "tests/test_maintainer_surfaces.py"
+  ],
+  "invariants": [
+    "Cost assessment stays repo-local skill guidance.",
+    "Validation success alone is not sufficient evidence of improvement.",
+    "Captured improvement signals are inputs, not automatic work items."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_maintainer_surfaces.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/self-improvement-operating-cost-assessment.plan.json tools/skills/self-improvement-dogfooding/SKILL.md .agentic-workspace/config.toml tests/test_maintainer_surfaces.py --format json",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace report --target . --section improvement_intake --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "Self-improvement skill requires a total-operating-cost assessment.",
+    "Dogfooding closeout separates validation success, issue completion, intent satisfaction, and cost reduction.",
+    "Captured improvement signals are named as assessment inputs.",
+    "Tests protect the required fields and anti-validation-only rule."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Self-improvement guidance now requires total operating-cost assessment, improvement_signal intake consumption, and an explicit distinction between validation success, issue closure, intent satisfaction, and improvement.",
+    "validation confirmed": "uv run pytest tests/test_maintainer_surfaces.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/self-improvement-operating-cost-assessment.plan.json tools/skills/self-improvement-dogfooding/SKILL.md .agentic-workspace/config.toml tests/test_maintainer_surfaces.py --format json; uv run agentic-workspace summary --target . --format json; uv run agentic-workspace report --target . --section improvement_intake --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "follow-on routed to": "#449/#450 for package-cheaper-than-bypass and feature-tier compression; #430-#435 for command-generation extraction; #436-#438/#441 for artifact-footprint pressure.",
+    "post-work posterity capture": "Archived execplan should retain only proof, cost assessment, and routed follow-up; command-level detail is discardable.",
+    "knowledge promoted (Memory/Docs/Config)": ".agentic-workspace/config.toml dogfooding closeout hint tightened; no Memory promotion needed.",
+    "resume from": "refresh external evidence, then promote the next open roadmap issue by priority"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "active checked-in execplan plus package summary/proof/report outputs",
+    "what happened": "Updated the repo-local self-improvement skill and workflow obligation so future runs must assess net operating cost and consume improvement signals before closeout.",
+    "scope touched": "repo-local skill guidance, workspace config obligation wording, maintainer-surface test, and planning closeout record",
+    "changed surfaces": "tools/skills/self-improvement-dogfooding/SKILL.md; .agentic-workspace/config.toml; tests/test_maintainer_surfaces.py; .agentic-workspace/planning/state.toml; this execplan",
+    "validations run": "maintainer-surface tests; workspace CLI tests; ruff; planning surface check; proof selector; summary; improvement_intake report; planning doctor",
+    "result for continuation": "Issue #467 is satisfied; larger #449/#450 footprint and cost-compression work remains.",
+    "next step": "Archive this plan, refresh external evidence, close #467, then promote the next open lane."
+  },
+  "finished_run_review": {
+    "review status": "accepted",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes; future self-improvement closeouts now have to judge net operating-cost direction, not just pass checks.",
+    "config compliance": "yes; used package summary, proof, report, doctor, planning checks, and archive flow.",
+    "misinterpretation risk": "low; large-surface candidates are routed, not treated as automatically fixed.",
+    "follow-on decision": "archive and keep parent roadmap lanes open"
+  },
+  "improvement_signal_review": {
+    "status": "routed",
+    "signals consumed": "agentic-workspace report --target . --section improvement_intake --format json produced five architecture-cost candidates: src/agentic_workspace/cli.py, packages/planning installer, external evidence JSON, tests/test_workspace_cli.py, and packages/memory installer tests.",
+    "signals fixed now": "The missing closeout-cost-assessment behavior was fixed in the self-improvement skill and guarded by tests.",
+    "signals routed": "#430-#435 own command-generation and CLI extraction pressure; #436-#438/#441 own operational-footprint pressure; #449/#450 own package-cheaper-than-bypass and feature-tier compression.",
+    "signals dismissed": "none",
+    "signals still accumulating": "Large source/test/artifact surfaces remain visible as improvement candidates until their owning lanes reduce, split, or demote them."
+  },
+  "cost_assessment": {
+    "workflow_cost_found": "Self-improvement could previously close on validation evidence without proving lower total operating cost.",
+    "architecture_cost_found": "Large-surface improvement candidates are now visible and routed, but not reduced in this slice.",
+    "needless_complexity_found": "No new product machinery was needed; existing skill guidance and improvement_intake carry the assessment.",
+    "surfaces_added": "No new durable first-contact surface; the active execplan is archival proof.",
+    "surfaces_removed_merged_or_demoted": "None in this slice; future lanes own compression.",
+    "artifact_footprint_changed": "One execplan is archived after closeout; no new shipped artifact family was added.",
+    "shipped_default_footprint_changed": "Unchanged.",
+    "signals_consumed": "The improvement_intake candidates from #469 plus repeated dogfooding feedback that package use must be cheaper and mandatory during implementation.",
+    "signals_still_accumulating": "Large CLI, installer, test, and external-evidence surfaces remain routed to existing open lanes.",
+    "human_steering_avoided_next_time": "The skill now requires cost assessment and signal intake before closeout, reducing the need for a maintainer to ask whether the package actually improved the work.",
+    "follow_up_routed": "#449, #450, #430-#435, #436-#438, #441",
+    "net_cost_direction": "lower"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command transcript detail from this narrow validation pass is not durable knowledge.",
+          "owner": "discard",
+          "source": "execution_run.validations run"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue package-cheaper-than-bypass and feature-tier/default-footprint compression after #467 closeout.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "#449/#450 roadmap lane"
+        }
+      ],
+      "memory": [
+        {
+          "summary": ".agentic-workspace/config.toml dogfooding closeout hint tightened; no Memory promotion needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "Dogfooding closeout obligation now requires separating validation, issue completion, intent satisfaction, and net operating-cost direction.",
+          "owner": ".agentic-workspace/config.toml",
+          "source": "workflow_obligations.dogfooding_lane_closeout.review_hint"
+        },
+        {
+          "summary": ".agentic-workspace/config.toml dogfooding closeout hint tightened; no Memory promotion needed.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#467 total operating-cost assessment can close after this milestone.",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/467"
+        },
+        {
+          "summary": "#449/#450 remain the parent product-shape compression lane.",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/449"
+        },
+        {
+          "summary": "#430-#435 and #436-#438/#441 own the large-surface improvement candidates.",
+          "owner": "github-issue",
+          "source": "agentic-workspace report --target . --section improvement_intake --format json"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted after #469 closeout; improvement signal capture now exists and this lane makes self-improvement consume it.",
+    "2026-04-28: Completed by requiring self-improvement cost assessment and guarding it with maintainer-surface tests."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Make self-improvement detect and reduce total operating cost.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge activates a fresh bounded slice."
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_maintainer_surfaces.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/self-improvement-operating-cost-assessment.plan.json tools/skills/self-improvement-dogfooding/SKILL.md .agentic-workspace/config.toml tests/test_maintainer_surfaces.py --format json; uv run agentic-workspace summary --target . --format json; uv run agentic-workspace report --target . --section improvement_intake --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "proof achieved now": "Focused maintainer tests, workspace CLI tests, ruff, planning checks, proof selection, summary, improvement_intake, and planning doctor all passed.",
+    "evidence for \"proof achieved\" state": "maintainer-surface tests; workspace CLI tests; ruff; planning surface check; proof selector; summary; improvement_intake report; planning doctor"
+  }
+}

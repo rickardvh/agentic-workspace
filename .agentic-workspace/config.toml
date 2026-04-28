@@ -59,7 +59,7 @@ commands = [
   "uv run agentic-workspace reconcile --format json",
   "uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json",
 ]
-review_hint = "Before claiming a lane complete, ask what was harder, slower, noisier, or more manual than it should have been; fix blockers immediately, create narrow issues for durable friction, and promote reusable knowledge to Memory only when it prevents rediscovery."
+review_hint = "Before claiming a lane complete, separate validation success, issue completion, intent satisfaction, and total operating-cost direction; consume improvement_signal_candidates, fix blockers immediately, create narrow issues for durable friction, and promote reusable knowledge to Memory only when it prevents rediscovery."
 
 [workflow_obligations.startup_first_contact_routing]
 summary = "Use compact startup, config, and summary queries before opening raw planning or routing docs."

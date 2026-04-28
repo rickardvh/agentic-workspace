@@ -374,6 +374,21 @@ def test_self_improvement_skill_requires_anti_overfitting_closeout_review() -> N
     assert "only package-internal neatness" in skill_text
 
 
+def test_self_improvement_skill_requires_total_operating_cost_assessment() -> None:
+    skill_text = (WORKSPACE_ROOT / "tools" / "skills" / "self-improvement-dogfooding" / "SKILL.md").read_text(
+        encoding="utf-8",
+    )
+
+    assert "Required Cost Assessment" in skill_text
+    assert "`workflow_cost_found`" in skill_text
+    assert "`architecture_cost_found`" in skill_text
+    assert "`signals_consumed`" in skill_text
+    assert "`signals_still_accumulating`" in skill_text
+    assert "`net_cost_direction`" in skill_text
+    assert "Validation success and issue closure are evidence, but they are not sufficient by themselves." in skill_text
+    assert "agentic-workspace report --target . --section improvement_intake --format json" in skill_text
+
+
 def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "maintainer_surfaces_valid")
     _write_planning_surfaces(tmp_path)
