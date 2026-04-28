@@ -90,6 +90,7 @@ Record a compact cost assessment in the execplan closeout, review artifact, or i
 - `workflow_cost_found`: What workflow was slower, more manual, or easier to bypass than it should be?
 - `architecture_cost_found`: What module, boundary, duplication, or overgrown surface made change harder?
 - `needless_complexity_found`: What concept, field, command, or artifact can be merged, removed, demoted, or made optional?
+- `correct_by_design_assessment`: Did the change make the correct action easy to construct before validation runs, and if not, what scaffold, writer helper, alias, lifecycle command, compact route, or agent aid owns that gap?
 - `surfaces_added`: Which visible surfaces were added?
 - `surfaces_removed_merged_or_demoted`: Which visible surfaces were removed, merged, shortened, hidden behind selectors, or made opt-in?
 - `artifact_footprint_changed`: What happened to planning, review, Memory, generated, local-only, or evidence artifacts?
@@ -98,6 +99,7 @@ Record a compact cost assessment in the execplan closeout, review artifact, or i
 - `signals_still_accumulating`: Which cost signals remain and where are they routed?
 - `durable_residue_consumed_or_routed`: Which future-relevant motivation, constraints, lessons, or closeout residue were consumed or routed, and to which owner?
 - `human_steering_avoided_next_time`: What repeated correction should the package catch without the human saying it again?
+- `validation_role`: Did validation confirm an already-correct construction, or did it still teach artifact/workflow construction through a repair loop?
 - `follow_up_routed`: What issue, plan, Memory note, review, docs/check/skill change, or dismissal owns the remainder?
 - `net_cost_direction`: `lower`, `same`, or `higher`.
 
@@ -128,9 +130,10 @@ Treat dogfooding friction as product input, but do not derail the active lane. P
 
 1. Fix immediately only if the friction blocks the current proof or causes unsafe behavior.
 2. Consume `agentic-workspace report --target . --section improvement_intake --format json` and decide whether each relevant signal is fixed, routed, reviewed, remembered, dismissed, or intentionally retained.
-3. Create a narrow issue when the friction is real but not blocking.
-4. Record a review finding when evidence needs later prioritization.
-5. Promote durable repo knowledge to memory only when it will prevent rediscovery.
+3. Treat repeated validation repair loops as package/interface defects; prefer scaffolds, writer helpers, aliases, lifecycle commands, compact routes, or agent aids before adding more validation prose.
+4. Create a narrow issue when the friction is real but not blocking.
+5. Record a review finding when evidence needs later prioritization.
+6. Promote durable repo knowledge to memory only when it will prevent rediscovery.
 
 ## Required Anti-Overfitting Review
 

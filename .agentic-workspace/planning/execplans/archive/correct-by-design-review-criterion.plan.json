@@ -1,0 +1,252 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Correct By Design Review Criterion",
+  "goal": [
+    "structured-first-operating-updates next child; #528 routed repeated validation friction, leaving the general product/review rule to make validation confirm construction rather than teach shape."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "structured-first-operating-updates next child; #528 routed repeated validation friction, leaving the general product/review rule to make validation confirm construction rather than teach shape.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "correct-by-design-review-criterion",
+      "status": "completed",
+      "next_step": "Make correct-by-design a compact review criterion in existing system-intent, improvement-signal, and self-improvement surfaces.",
+      "proof": "uv run pytest tests/test_workspace_cli.py tests/test_maintainer_surfaces.py -q; uv run ruff check src tests; uv run agentic-workspace proof --target . --changed <paths> --format json"
+    },
+    "scope": {
+      "touched": [
+        "SYSTEM_INTENT.md",
+        ".agentic-workspace/system-intent/intent.toml",
+        ".agentic-workspace/docs/proof-surfaces-contract.md",
+        "src/agentic_workspace/contracts/improvement_signal_contract.json",
+        "src/agentic_workspace/contracts/schemas/improvement_signal_contract.schema.json",
+        "src/agentic_workspace/cli.py",
+        "tools/skills/self-improvement-dogfooding/SKILL.md",
+        "tests/test_workspace_cli.py",
+        "tests/test_maintainer_surfaces.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "structured-first-operating-updates next child; #528 routed repeated validation friction, leaving the general product/review rule to make validation confirm construction rather than teach shape.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Correct-by-design construction is now a queryable proof/defaults criterion, an improvement-signal review field, and a self-improvement closeout check.",
+    "intentionally deferred": "none",
+    "discovered implications": "The proof/validation defaults surface is the cheapest shipped home for this rule; system intent and self-improvement guidance should support it rather than own it alone.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice",
+    "next likely slice": "continue structured-first-operating-updates with #530 if still open after refresh"
+  },
+  "intent_interpretation": {
+    "literal request": "Correct By Design Review Criterion",
+    "inferred intended outcome": "structured-first-operating-updates next child; #528 routed repeated validation friction, leaving the general product/review rule to make validation confirm construction rather than teach shape.",
+    "chosen concrete what": "Add correct-by-design review criteria to existing intent, signal, and self-improvement closeout surfaces with focused regression tests.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Fill in the concrete write scope before implementation starts.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Slice complete; archive and refresh open issues.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "structured-first-operating-updates next child; #528 routed repeated validation friction, leaving the general product/review rule to make validation confirm construction rather than teach shape.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "correct-by-design-review-criterion",
+    "status": "completed",
+    "scope": "Bounded updates to existing intent, improvement-signal contract/defaults, self-improvement skill guidance, and tests.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Patch existing correct-by-design review owners and validate focused defaults/maintainer-surface tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "SYSTEM_INTENT.md",
+    ".agentic-workspace/system-intent/intent.toml",
+    ".agentic-workspace/docs/proof-surfaces-contract.md",
+    "src/agentic_workspace/contracts/improvement_signal_contract.json",
+    "src/agentic_workspace/contracts/schemas/improvement_signal_contract.schema.json",
+    "src/agentic_workspace/cli.py",
+    "tools/skills/self-improvement-dogfooding/SKILL.md",
+    "tests/test_workspace_cli.py",
+    "tests/test_maintainer_surfaces.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_maintainer_surfaces.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace proof --target . --changed <paths> --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "TODO item `correct-by-design-review-criterion` is implemented, validated, and can leave the active queue."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with Curie/Hilbert read-only subagent review",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Added correct-by-design construction guidance to proof/defaults, improvement-signal contract/defaults, system intent, and repo-local self-improvement closeout guidance.",
+    "scope touched": "proof/defaults docs and payloads, improvement-signal contract/schema, system-intent source and mirror, self-improvement skill, focused tests, and planning state.",
+    "changed surfaces": "proof-surfaces-contract, system intent source/mirror, improvement_signal_contract/schema, workspace CLI defaults, self-improvement skill, tests, planning surfaces.",
+    "validations run": "pytest tests/test_workspace_cli.py tests/test_maintainer_surfaces.py -q; ruff check src tests; check_contract_tooling_surfaces; check_structured_file_inventory; check_planning_surfaces --strict; planning doctor; root_cli_authority defaults; contract-focused ruff; proof selection.",
+    "result for continuation": "continue with #530 after archive, push, close #525, and refresh external evidence",
+    "next step": "Archive this plan and close #525."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; updated existing compact/queryable surfaces and repo-local skill guidance without adding a new process framework",
+    "proof status": "passed",
+    "intent served": "yes; package-surface work now has an explicit correct-by-design criterion and validation is framed as confirmatory rather than instructional",
+    "config compliance": "yes; work used compact summary/proof/defaults and planning helpers",
+    "misinterpretation risk": "low; proof/defaults now own the shipped rule and tests guard the payload",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "pytest tests/test_workspace_cli.py tests/test_maintainer_surfaces.py -q; ruff check src tests; check_contract_tooling_surfaces; check_structured_file_inventory; check_planning_surfaces --strict; planning doctor; root_cli_authority defaults; contract-focused ruff; proof selection",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "All selected proof lanes passed after adding the proof/defaults construction boundary."
+  },
+  "intent_satisfaction": {
+    "original intent": "structured-first-operating-updates next child; #528 routed repeated validation friction, leaving the general product/review rule to make validation confirm construction rather than teach shape.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Product guidance states validation should confirm correct construction; proof/defaults expose the construction boundary; improvement-signal contract carries correct_by_design_review; self-improvement closeout must assess it.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Correct-by-design construction is now an explicit package-surface review criterion across proof/defaults, improvement intake, system intent, and self-improvement closeout.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#530 if still open",
+    "post-work posterity capture": "contracts, proof/defaults docs, system intent mirror, tests, and this archived execplan",
+    "knowledge promoted (Memory/Docs/Config)": "contracts/docs/system-intent",
+    "resume from": "next compact summary recommendation"
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "Validation should confirm correct construction; repeated validation repair loops are product/interface defects.",
+    "motivation worth preserving": "Correct-by-design assessment keeps future package-surface changes from treating validation output as the authoring interface.",
+    "canonical owner now": "proof/defaults construction_boundary and improvement_signal_contract correct_by_design_review",
+    "promotion trigger": "when validation repair loops recur for a package-owned surface",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The rule is now present in shipped queryable proof/defaults output, contract-backed improvement-signal guidance, repo-local self-improvement closeout, and system intent evidence without adding a new checklist surface.",
+    "evidence carried forward": "pytest tests/test_workspace_cli.py tests/test_maintainer_surfaces.py -q; ruff check src tests; check_contract_tooling_surfaces; check_structured_file_inventory; check_planning_surfaces --strict; planning doctor; root_cli_authority defaults.",
+    "reopen trigger": "A future package-surface change has repeated validation repair loops without a correct-by-design assessment or routed remedy."
+  },
+  "improvement_signal_review": {
+    "status": "fixed",
+    "signals found": [
+      "Initial implementation placed the rule in system intent and self-improvement guidance before subagent review identified proof/defaults as the cheaper shipped owner."
+    ],
+    "signals fixed": [
+      "Added proof/defaults construction_boundary so agents can query the rule directly.",
+      "Added improvement_signal_contract correct_by_design_review and self-improvement closeout fields."
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "No new issue for manual TODO promotion; existing correct-by-design lanes already cover reducing construction friction."
+    ],
+    "next owner": "#530 if still open"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Execution details and subagent exploration are archived only; reusable guidance lives in proof/defaults, contracts, system intent, skill guidance, and tests.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#530 if still open",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "contracts/docs/system-intent",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "contracts/docs/system-intent",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-29: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: structured-first-operating-updates next child; #528 routed repeated validation friction, leaving the general product/review rule to make validation confirm construction rather than teach shape.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: pytest tests/test_workspace_cli.py tests/test_maintainer_surfaces.py -q; ruff check src tests; check_contract_tooling_surfaces; check_structured_file_inventory; check_planning_surfaces --strict; planning doctor; root_cli_authority defaults; contract-focused ruff; proof selection\nChanged surfaces: proof-surfaces-contract, system intent source/mirror, improvement_signal_contract/schema, workspace CLI defaults, self-improvement skill, tests, planning surfaces.\nDurable residue: contract (proof/defaults construction_boundary and improvement_signal_contract correct_by_design_review)\nFollow-up: #530 if still open"
+  }
+}

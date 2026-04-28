@@ -97,6 +97,34 @@
     "for repeated interface-design failures, prefer scaffold, writer helper, alias, lifecycle command, command, or agent aid before adding more validation prose",
     "promote to planning or issue follow-up only when the owner and proof path are clear"
   ],
+  "correct_by_design_review": {
+    "status": "required-when-relevant",
+    "rule": "Validation should confirm correct construction, not teach agents how to construct the artifact or workflow after failure.",
+    "ask_when": [
+      "adding or materially changing package-owned command, report, planning, Memory, setup, or lifecycle surfaces",
+      "adding or materially changing schema-backed artifacts or generated adapters",
+      "closing a self-improvement slice that touched package operating surfaces",
+      "routing repeated validation friction"
+    ],
+    "questions": [
+      "Does the structure invite the right action before validation runs?",
+      "Can the interface make the wrong action impossible or unlikely?",
+      "Can a scaffold, writer helper, alias, lifecycle command, compact route, or agent aid construct the correct shape?",
+      "Can validation remain confirmatory rather than instructional?",
+      "If validation still teaches construction, where is the remedy signal routed?"
+    ],
+    "preferred_remediation_order": [
+      "scaffold",
+      "writer_helper",
+      "alias",
+      "lifecycle_command",
+      "command",
+      "agent_aid",
+      "validation",
+      "docs"
+    ],
+    "closeout_field": "correct_by_design_assessment"
+  },
   "confidence": [
     "low",
     "medium",

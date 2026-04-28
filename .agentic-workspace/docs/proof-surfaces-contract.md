@@ -12,6 +12,10 @@ Use the narrowest proof lane that answers the current trust question.
 
 Do not widen routine proof into a broad repo check when a surface-specific lane is enough.
 
+Validation should confirm correct construction, not serve as the normal instruction source for how agents construct an artifact, command path, or workflow.
+
+When otherwise straightforward work repeatedly needs validation output to teach the construction shape, route that as interface friction toward a scaffold, writer helper, alias, lifecycle command, compact route, or agent aid before adding more validation prose.
+
 ## Default Proof Surface
 
 Use:

@@ -183,6 +183,7 @@ This file should inform planning and validation in the following way:
   - reduced or at least did not worsen total operating cost
   - respected ownership boundaries
   - improved or at least did not worsen handoff, resumability, reviewability, or proof clarity
+  - made correct construction cheap enough that validation confirms the shape instead of teaching agents how to repair it
   - avoided unnecessary visible residue or new framework feel
   - treated relevant config or declared operating posture as authority when it materially mattered
   - strengthened the durable product contract rather than only fitting this repo, language, agent, or vendor more tightly
@@ -198,6 +199,7 @@ New work should be favored when it does one or more of the following:
 - removes, merges, compresses, or backgrounds older machinery
 - sharpens ownership or reduces package residue
 - turns important operating choices into clearer declared or machine-consumable authority
+- makes the correct action easy to construct by design, with validation acting as confirmation rather than the authoring interface
 - improves portability across host repos, languages, agents, or vendors by reducing accidental local assumptions
 
 New work should be questioned when it mainly:
@@ -206,6 +208,7 @@ New work should be questioned when it mainly:
 - increases framework feel in ordinary use
 - scripts local execution judgment instead of supporting it
 - improves one narrow loop stage while making the overall system heavier
+- relies on repeated validation failures to teach agents how to construct package-owned artifacts or workflows
 - leaves materially relevant config or operating posture as ambient advice instead of explicit authority
 - hardens current dogfooding assumptions into durable product contract without strong justification
 

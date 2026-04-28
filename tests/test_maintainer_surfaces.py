@@ -382,11 +382,14 @@ def test_self_improvement_skill_requires_total_operating_cost_assessment() -> No
     assert "Required Cost Assessment" in skill_text
     assert "`workflow_cost_found`" in skill_text
     assert "`architecture_cost_found`" in skill_text
+    assert "`correct_by_design_assessment`" in skill_text
+    assert "`validation_role`" in skill_text
     assert "`signals_consumed`" in skill_text
     assert "`signals_still_accumulating`" in skill_text
     assert "`net_cost_direction`" in skill_text
     assert "Validation success and issue closure are evidence, but they are not sufficient by themselves." in skill_text
     assert "agentic-workspace report --target . --section improvement_intake --format json" in skill_text
+    assert "repeated validation repair loops as package/interface defects" in skill_text
 
 
 def test_self_improvement_skill_requires_durable_residue_routing_before_closeout() -> None:

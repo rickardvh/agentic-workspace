@@ -1078,6 +1078,12 @@ def test_defaults_section_selector_returns_compact_contract_answer(capsys) -> No
     assert payload["selector"] == {"section": "validation"}
     assert payload["matched"] is True
     assert payload["answer"]["rule"] == "Run the narrowest proving lane that matches the touched surface."
+    assert payload["answer"]["construction_boundary"]["route_repeated_repair_to"][:3] == [
+        "scaffold",
+        "writer_helper",
+        "alias",
+    ]
+    assert "confirm correct construction" in payload["answer"]["construction_boundary"]["rule"]
     assert ".agentic-workspace/docs/compact-contract-profile.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
@@ -1446,6 +1452,8 @@ def test_defaults_improvement_intake_section_selector_returns_unified_router(cap
     assert answer["payload"]["signal_contract"]["candidate_kind"] == "workspace-improvement-signal-candidate/v1"
     assert "found" in answer["payload"]["signal_contract"]["closeout_statuses"]
     assert "interface_design_error" in answer["payload"]["signal_contract"]["validation_failure_classes"]
+    assert answer["payload"]["signal_contract"]["correct_by_design_review"]["status"] == "required-when-relevant"
+    assert "confirm correct construction" in answer["payload"]["signal_contract"]["correct_by_design_review"]["rule"]
     assert "issue follow-up" in answer["payload"]["allowed_destinations"]
     assert answer["payload"]["setup_findings"]["status"] == "not-evaluated"
 
@@ -1465,6 +1473,10 @@ def test_defaults_improvement_signal_section_selector_returns_signal_contract(ca
     failure_classes = {item["class"]: item for item in answer["payload"]["validation_failure_classes"]}
     assert failure_classes["interface_design_error"]["preferred_remediations"][:2] == ["scaffold", "writer_helper"]
     assert "proof selection" in failure_classes["unclear_proof_contract"]["route"]
+    review = answer["payload"]["correct_by_design_review"]
+    assert review["closeout_field"] == "correct_by_design_assessment"
+    assert "Validation should confirm correct construction" in review["rule"]
+    assert review["preferred_remediation_order"][:3] == ["scaffold", "writer_helper", "alias"]
     assert answer["payload"]["closeout_statuses"] == ["found", "fixed", "routed", "dismissed", "none"]
     assert "A signal is not a work item until an owner and proof path are chosen." in answer["payload"]["guardrails"]
 

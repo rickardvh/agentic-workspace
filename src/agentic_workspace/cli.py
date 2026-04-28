@@ -957,6 +957,7 @@ def _improvement_signal_contract_payload() -> dict[str, Any]:
         "likely_remediations": list(_IMPROVEMENT_SIGNAL_CONTRACT["likely_remediations"]),
         "validation_failure_classes": list(_IMPROVEMENT_SIGNAL_CONTRACT.get("validation_failure_classes", [])),
         "validation_remedy_order": list(_IMPROVEMENT_SIGNAL_CONTRACT.get("validation_remedy_order", [])),
+        "correct_by_design_review": dict(_IMPROVEMENT_SIGNAL_CONTRACT.get("correct_by_design_review", {})),
         "closeout_statuses": list(_IMPROVEMENT_SIGNAL_CONTRACT["closeout_statuses"]),
         "destinations": list(_IMPROVEMENT_SIGNAL_CONTRACT["destinations"]),
         "guardrails": list(_IMPROVEMENT_SIGNAL_CONTRACT["guardrails"]),
@@ -1187,6 +1188,11 @@ def _improvement_intake_payload(
                 for item in _IMPROVEMENT_SIGNAL_CONTRACT.get("validation_failure_classes", [])
                 if isinstance(item, dict)
             ],
+            "correct_by_design_review": {
+                "status": _IMPROVEMENT_SIGNAL_CONTRACT.get("correct_by_design_review", {}).get("status", ""),
+                "rule": _IMPROVEMENT_SIGNAL_CONTRACT.get("correct_by_design_review", {}).get("rule", ""),
+                "closeout_field": _IMPROVEMENT_SIGNAL_CONTRACT.get("correct_by_design_review", {}).get("closeout_field", ""),
+            },
         },
         "default_rule": (
             "Treat setup findings, review findings, validation friction, and memory improvement signals as one intake question: "
@@ -9136,6 +9142,17 @@ def _defaults_payload() -> dict[str, Any]:
         },
         "validation": {
             "rule": "Run the narrowest proving lane that matches the touched surface.",
+            "construction_boundary": {
+                "rule": "Validation should confirm correct construction, not teach agents how to construct the artifact or workflow after failure.",
+                "route_repeated_repair_to": [
+                    "scaffold",
+                    "writer_helper",
+                    "alias",
+                    "lifecycle_command",
+                    "compact_route",
+                    "agent_aid",
+                ],
+            },
             "default_routes": {
                 "workspace_cli": "uv run pytest tests/test_workspace_cli.py",
                 "planning_package": "cd packages/planning && uv run pytest tests/test_installer.py",
@@ -9163,6 +9180,7 @@ def _defaults_payload() -> dict[str, Any]:
             "canonical_doc": ".agentic-workspace/docs/proof-surfaces-contract.md",
             "command": "agentic-workspace defaults --section proof_selection --format json",
             "rule": "Make proof choice cheap by naming the narrowest lane that still answers the trust question.",
+            "construction_boundary": "Proof and validation confirm correct construction; repeated construction repair loops should route to interface/scaffold improvements instead of more validation prose.",
             "recommended_lanes": [
                 {
                     "id": "workspace_proof",
