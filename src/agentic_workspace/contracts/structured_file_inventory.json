@@ -251,6 +251,7 @@
       ],
       "guardrails": {
         "max_bytes": 40000,
+        "max_items": 40,
         "preferred_refs": [
           "issue ids",
           "review artifact path",

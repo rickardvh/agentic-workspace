@@ -291,7 +291,19 @@
   "retention": {
     "closeout shape": "retain while summary reconciliation references this artifact",
     "trigger": "until a generated reconciliation report supersedes manual audit artifacts",
-    "proof surface": ".agentic-workspace/planning/reviews/older-lower-trust-closeout-audit-2026-04-26.review.json"
+    "proof surface": ".agentic-workspace/planning/reviews/older-lower-trust-closeout-audit-2026-04-26.review.json",
+    "source retention rule": "Treat copied issue titles and live states in this legacy artifact as reconstructable context, not as authoritative current state.",
+    "distillation path": "When generated reconciliation or open follow-up issues own these decisions, retain only issue ids, classifications, confidence, follow-up refs, and reopen/promote triggers.",
+    "reconstructable refs": [
+      "issue ids",
+      "planning state refs",
+      "review artifact path"
+    ],
+    "fields intentionally omitted": [
+      "full GitHub history",
+      "full git history",
+      "raw command output"
+    ]
   },
   "validation_commands": [
     "uv run agentic-workspace summary --format json",

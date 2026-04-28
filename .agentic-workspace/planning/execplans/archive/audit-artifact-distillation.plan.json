@@ -1,0 +1,250 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Distill audit artifacts to decisions and refs",
+  "goal": [
+    "Implement #538 by making review and audit artifacts keep non-reconstructable judgment, compact refs, confidence, and reopen/promote triggers instead of copying source context.",
+    "Add guardrails so large audit records cannot become parallel history stores."
+  ],
+  "non_goals": [
+    "Do not delete historical review artifacts without a distillation path.",
+    "Do not make GitHub or any provider mandatory for core review records.",
+    "Do not implement generated mirror or duplicate checker compression in this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "review/audit records are compact decision records with reconstructable source refs",
+      "constraints": "repo/tool/language agnostic; preserve weak reconstruction refs; no broad archive cleanup",
+      "latitude": "may update review templates, review docs, structured inventory, checks, and focused tests",
+      "escalation": "stop if satisfying the issue requires deleting existing audit history instead of adding a distillation path"
+    },
+    "execution": {
+      "milestone": "#538",
+      "status": "completed",
+      "next_step": "archive #538 and continue the parent lane with #539",
+      "proof": "passed: structured inventory check, review retention unit tests, planning surfaces check, planning doctor, workspace CLI tests, ruff"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/audit-artifact-distillation.plan.json",
+        ".agentic-workspace/planning/reviews/TEMPLATE.review.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/reviews/TEMPLATE.review.json",
+        "scripts/check/check_structured_file_inventory.py",
+        "tests/test_structured_file_inventory.py",
+        "src/agentic_workspace/contracts/structured_file_inventory.json"
+      ],
+      "invariants": [
+        "historical review artifacts remain evidence/history, not ordinary startup input",
+        "source detail stays reconstructable from refs rather than copied into durable records",
+        "review schema work remains routed to #505 unless implemented directly"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "stop checking in reconstructable artifact residue",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "reconstructable-artifact-policy"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#539 and #540 remain after #538.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #538 lands"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "audit/review artifact retention can be checked as compact decision residue",
+    "intentionally deferred": "#539 #540",
+    "discovered implications": "",
+    "proof achieved now": "Large review/audit records now require retention metadata for source retention, distillation path, reconstructable refs, and intentionally omitted copied context; template and legacy large audits carry that metadata.",
+    "validation still needed": "None for #538; #539 and #540 remain in the parent lane.",
+    "next likely slice": "#539"
+  },
+  "intent_interpretation": {
+    "literal request": "Finish the current lane, then take a break.",
+    "inferred intended outcome": "complete reconstructable-artifact compression lane in order",
+    "chosen concrete what": "implement #538 after #537",
+    "interpretation distance": "low",
+    "review guidance": "verify review/audit artifacts cannot grow into copied source-history stores"
+  },
+  "execution_bounds": {
+    "allowed paths": "review artifact templates/docs/checks plus structured inventory and planning state",
+    "max changed files": "12",
+    "required validation commands": "uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run pytest tests/test_structured_file_inventory.py -q; uv run ruff check scripts tests src",
+    "ask-before-refactor threshold": "broad review schema implementation",
+    "stop before touching": "generated mirror files or planning checker duplicate copies"
+  },
+  "stop_conditions": {
+    "stop when": "review/audit retention rules and guardrails are encoded and tested",
+    "escalate when boundary reached": "historical artifact deletion becomes necessary",
+    "escalate on scope drift": "work starts implementing #539 or #540",
+    "escalate on proof failure": "selected validation cannot pass"
+  },
+  "context_budget": {
+    "live working set": "#538, review templates/checks, structured inventory",
+    "recoverable later": "#541, #536, #537 archives",
+    "externalize before shift": "this execplan",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "continue #538 from audit retention guardrails",
+    "context-shift triggers": "before commit or after validation failure"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#538",
+      "label": "audit artifact distillation",
+      "role": "active slice",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/538"
+    }
+  ],
+  "active_milestone": {
+    "id": "#538",
+    "status": "completed",
+    "scope": "review/audit artifact retention guardrails",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "subagent read-only inspection"
+  },
+  "immediate_next_action": [
+    "Continue reconstructable-artifact-policy with #539."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/reviews/TEMPLATE.review.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/reviews/TEMPLATE.review.json",
+    ".agentic-workspace/planning/reviews/000-historical-closeout-baseline-2026-04-26.review.json",
+    ".agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json",
+    ".agentic-workspace/planning/reviews/older-lower-trust-closeout-audit-2026-04-26.review.json",
+    "scripts/check/check_structured_file_inventory.py",
+    "tests/test_structured_file_inventory.py",
+    "src/agentic_workspace/contracts/structured_file_inventory.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "Do not store provider-specific source history in core review retention rules.",
+    "Keep full source reconstruction behind refs, not copied status/title/history snapshots.",
+    "Leave schema implementation for #505 unless the minimal guard needs typed validation."
+  ],
+  "contract_decisions_to_freeze": [
+    "Review/audit artifacts may be checked in as distilled historical decisions, not as source-history mirrors."
+  ],
+  "open_questions_to_close": [
+    "Which existing check should enforce large review artifact retention guardrails?"
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run pytest tests/test_structured_file_inventory.py -q",
+    "uv run ruff check scripts tests src"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Retention rule for review/audit records is encoded in a durable surface.",
+    "Size/count guardrail exists for many-classification review artifacts.",
+    "Distillation path for historical audit artifacts is documented or checked.",
+    "Future templates/checks discourage copied issue titles, status snapshots, and long command/source summaries.",
+    "#538 closes and parent lane routes to #539."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "#538 and active checked-in execplan",
+    "what happened": "Added compact-retention metadata to review templates and legacy large audit records, extended structured inventory guardrails to count review classifications, and added a check that large review/audit records declare source-retention and distillation metadata.",
+    "scope touched": "review templates, historical large review artifacts, structured inventory guardrails/checks/tests, planning state",
+    "changed surfaces": "review retention metadata and structured-file inventory checker",
+    "validations run": "uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run pytest tests/test_structured_file_inventory.py -q; uv run ruff check scripts/check/check_structured_file_inventory.py tests/test_structured_file_inventory.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace doctor --target . --modules planning --format json; uv run ruff check src tests scripts; uv run pytest tests/test_workspace_cli.py -q",
+    "result for continuation": "#538 complete; parent reconstructable-artifact-policy should route to #539 next.",
+    "next step": "archive plan, close #538, commit, then continue #539 later"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used compact summary/proof and active execplan; preserved provider-agnostic source refs",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-but-keep-lane-open for #539 and #540"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "structured inventory check, focused tests, planning surfaces, planning doctor, workspace CLI tests, and ruff passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Distill audit artifacts to decisions and refs instead of copied source context.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "large audit records have compact retention/distillation metadata; future large review records are checked for that metadata; templates discourage copied source history",
+    "unsolved intent passed to": "#539 and #540 for generated mirror and duplicate payload residue"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve only context that is expensive to rediscover and necessary for safe continuation.",
+    "slice shaping bias": "decisions and refs over copied source context",
+    "broader-lane validation question": "Do historical review artifacts stay compact and reconstructable?",
+    "intent evidence source": ".agentic-workspace/system-intent/intent.toml"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#538 guards review/audit artifacts, but generated mirror justification and duplicate checker payload copies remain.",
+    "evidence carried forward": ".agentic-workspace/planning/state.toml routes the parent lane to #539; archive retains #538 proof.",
+    "reopen trigger": "large review/audit records again store copied source context without retention/distillation metadata"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "review/audit artifacts should retain judgment and compact refs, not copied reconstructable source context",
+    "motivation worth preserving": "reduce historical product residue",
+    "canonical owner now": ".agentic-workspace/planning/state.toml",
+    "promotion trigger": "review artifact retention rules change",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Review/audit artifacts now have a compact-retention rule and checked guardrail for large classification records.",
+    "validation confirmed": "structured inventory check, focused unit tests, planning surfaces check, planning doctor, workspace CLI tests, and ruff passed",
+    "follow-on routed to": "#539",
+    "post-work posterity capture": "archive proof plus template/check updates; no Memory promotion needed",
+    "knowledge promoted (Memory/Docs/Config)": "review templates and structured inventory checker updated",
+    "resume from": ".agentic-workspace/planning/state.toml reconstructable-artifact-policy suggested_first_slice #539"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [
+      "No new dogfooding friction beyond #539/#540 surfaced during #538."
+    ],
+    "next owner": "#539"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        "transient validation output"
+      ],
+      "continuation": [
+        "#539",
+        "#540"
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "#539",
+        "#540"
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #538 from reconstructable-artifact-policy lane."
+  ],
+  "delegated_judgment": {
+    "requested outcome": "bounded review of audit/review retention guardrails for #538",
+    "hard constraints": "do not delete historical audit artifacts; keep tracker/provider agnostic; do not implement #539/#540 in this slice",
+    "agent may decide locally": "specific template/check fields and focused tests needed to enforce compact retention",
+    "escalate when": "satisfying the issue requires broad review schema implementation or historical artifact deletion"
+  }
+}

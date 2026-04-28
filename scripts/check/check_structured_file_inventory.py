@@ -25,6 +25,13 @@ RECONSTRUCTABLE_CLASSES = frozenset(
 )
 GUARDRAILED_CLASSES = frozenset({"reconstructable-external-snapshot", "historical-audit-distillation"})
 SOURCE_CLASSES = frozenset({"source-of-truth", "non-reconstructable-decision"})
+REVIEW_AUDIT_CLASSIFICATION_THRESHOLD = 10
+REVIEW_AUDIT_RETENTION_FIELDS = (
+    "source retention rule",
+    "distillation path",
+    "reconstructable refs",
+    "fields intentionally omitted",
+)
 
 
 @dataclass(frozen=True)
@@ -149,11 +156,39 @@ def _json_item_count(path: Path) -> int | None:
     if isinstance(payload, list):
         return len(payload)
     if isinstance(payload, dict):
-        for key in ("items", "entries", "records"):
+        for key in ("items", "entries", "records", "issue_classifications", "findings"):
             value = payload.get(key)
             if isinstance(value, list):
                 return len(value)
     return None
+
+
+def _review_audit_retention_findings(path: str, payload: dict[str, Any]) -> list[Finding]:
+    if payload.get("kind") != "planning-review/v1":
+        return []
+    issue_classifications = payload.get("issue_classifications")
+    if not isinstance(issue_classifications, list) or len(issue_classifications) <= REVIEW_AUDIT_CLASSIFICATION_THRESHOLD:
+        return []
+    retention = payload.get("retention")
+    if not isinstance(retention, dict):
+        return [
+            Finding(
+                path=path,
+                message=(
+                    "large review/audit records must include retention metadata with source refs and a "
+                    "distillation path instead of copied source history"
+                ),
+            )
+        ]
+    missing = [field for field in REVIEW_AUDIT_RETENTION_FIELDS if not retention.get(field)]
+    if missing:
+        return [
+            Finding(
+                path=path,
+                message=f"large review/audit record is missing retention fields: {', '.join(missing)}",
+            )
+        ]
+    return []
 
 
 def _guardrail_findings(paths: list[str], entry: dict[str, Any]) -> list[Finding]:
@@ -181,6 +216,13 @@ def _guardrail_findings(paths: list[str], entry: dict[str, Any]) -> list[Finding
                         message=f"file exceeds storage guardrail max_items={max_items}",
                     )
                 )
+        if _structured_format(path) == "json":
+            try:
+                payload = json.loads(full_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                payload = None
+            if isinstance(payload, dict):
+                findings.extend(_review_audit_retention_findings(path, payload))
     return findings
 
 

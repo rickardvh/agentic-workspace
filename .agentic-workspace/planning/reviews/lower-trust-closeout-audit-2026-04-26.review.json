@@ -456,7 +456,19 @@
   "retention": {
     "closeout shape": "Keep this review artifact as the durable lower-trust closeout map until #325 provides a generated reconciliation view.",
     "trigger": "Retain while roadmap lanes reference lower-trust closeout signals.",
-    "proof surface": ".agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json"
+    "proof surface": ".agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json",
+    "source retention rule": "Treat copied issue titles, live states, commit summaries, and command lists in this legacy artifact as reconstructable context, not as authoritative current state.",
+    "distillation path": "When #325 or later reconciliation surfaces own these decisions, retain only issue ids, classifications, confidence, follow-up refs, lane decisions, and reopen/promote triggers.",
+    "reconstructable refs": [
+      "issue ids",
+      "commit SHAs",
+      "planning state refs"
+    ],
+    "fields intentionally omitted": [
+      "full GitHub history",
+      "full git history",
+      "raw command output"
+    ]
   },
   "validation_commands": [
     "uv run agentic-workspace summary --format json",

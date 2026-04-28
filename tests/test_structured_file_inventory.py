@@ -54,6 +54,39 @@ def test_inventory_routes_reconstructable_storage_cleanup_children() -> None:
     assert check_structured_file_inventory.routed_storage_cleanup_issues(inventory) >= {"#538", "#539", "#540"}
 
 
+def test_large_review_audit_records_require_distillation_metadata() -> None:
+    payload = {
+        "kind": "planning-review/v1",
+        "issue_classifications": [{"id": f"#{index}"} for index in range(12)],
+        "retention": {
+            "closeout shape": "retain briefly",
+            "trigger": "until promoted",
+            "proof surface": "review.json",
+        },
+    }
+
+    findings = check_structured_file_inventory._review_audit_retention_findings("review.json", payload)
+
+    assert len(findings) == 1
+    assert "source retention rule" in findings[0].message
+    assert "distillation path" in findings[0].message
+
+
+def test_large_review_audit_records_accept_compact_retention_metadata() -> None:
+    payload = {
+        "kind": "planning-review/v1",
+        "issue_classifications": [{"id": f"#{index}"} for index in range(12)],
+        "retention": {
+            "source retention rule": "store decisions and refs only",
+            "distillation path": "promote decisions then remove source context",
+            "reconstructable refs": ["issue ids"],
+            "fields intentionally omitted": ["issue titles", "live states"],
+        },
+    }
+
+    assert check_structured_file_inventory._review_audit_retention_findings("review.json", payload) == []
+
+
 def test_generated_adapter_requires_regeneration_source() -> None:
     inventory = {
         "entries": [

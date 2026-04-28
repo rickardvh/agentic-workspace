@@ -99,5 +99,22 @@
       "evidence": "Historical audit reference retained for context; current provider-agnostic evidence is reconciled separately.",
       "follow_up": "#230"
     }
-  ]
+  ],
+  "retention": {
+    "closeout shape": "Keep as a compact historical baseline only while follow-up reconciliation needs these accepted-baseline decisions.",
+    "trigger": "Remove or shrink when source-owned issue refs and current planning state fully replace this manual baseline.",
+    "proof surface": ".agentic-workspace/planning/reviews/000-historical-closeout-baseline-2026-04-26.review.json",
+    "source retention rule": "Store only baseline classification judgment and compact refs; issue titles and live states are reconstructable context, not current authority.",
+    "distillation path": "Promote durable decisions into issues, planning state, contracts, checks, or Memory, then retain only issue ids, classifications, confidence, and follow-up refs.",
+    "reconstructable refs": [
+      "issue ids",
+      "planning state refs",
+      "review artifact path"
+    ],
+    "fields intentionally omitted": [
+      "full GitHub history",
+      "full git history",
+      "raw command output"
+    ]
+  }
 }

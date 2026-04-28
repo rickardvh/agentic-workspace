@@ -51,7 +51,20 @@
   "retention": {
     "closeout shape": "",
     "trigger": "",
-    "proof surface": ""
+    "proof surface": "",
+    "source retention rule": "Store decision, confidence, source refs, and reopen/promote triggers; do not copy issue titles, current status snapshots, long command output, or source summaries unless the copied text is the judgment itself.",
+    "distillation path": "When decisions are promoted into issues, planning state, Memory, docs, contracts, or checks, keep this artifact as evidence/history and remove or summarize reconstructable source context at the next cleanup.",
+    "reconstructable refs": [
+      "issue ids",
+      "commit SHAs",
+      "review artifact path"
+    ],
+    "fields intentionally omitted": [
+      "issue titles",
+      "current status snapshots",
+      "long command output",
+      "source-history summaries"
+    ]
   },
   "validation_commands": [
     ""
