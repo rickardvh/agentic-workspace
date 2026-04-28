@@ -1,0 +1,236 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Closed Lane Roadmap Filter",
+  "goal": [
+    "Prevent closed or done planning lanes from appearing as roadmap promotion candidates in compact summary and autopilot routing."
+  ],
+  "non_goals": [
+    "Do not add a new command or report surface.",
+    "Do not remove closed lane history from planning state."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Closed lanes remain durable history but no longer create current roadmap promotion pressure.",
+      "constraints": "Keep the fix provider-agnostic and limited to planning-state projection/filtering.",
+      "latitude": "Tighten existing filters and focused tests.",
+      "escalation": "Escalate if closed lanes need a new historical projection surface rather than filtering from current candidates."
+    },
+    "execution": {
+      "milestone": "closed-lane-roadmap-filter",
+      "status": "completed",
+      "next_step": "Close #548 after proof and external evidence refresh.",
+      "proof": "uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_workspace_summary_cli.py -q; cd packages/planning && uv run pytest tests/test_installer.py; ruff checks"
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "tests/test_workspace_summary_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/archive/closed-lane-roadmap-filter.plan.json"
+      ],
+      "invariants": [
+        "Closed lanes remain recoverable evidence.",
+        "Only current/promotable lanes should influence roadmap promotion readiness."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Keep the package streamlined and cheap by avoiding stale planning pressure after backlog closure.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "closed or historical planning records create current execution pressure again"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "The summary/autopilot loop can report satisfaction when only closed lanes remain.",
+    "intentionally deferred": "No historical closed-lane display was added.",
+    "discovered implications": "The existing compact summary was the right place to catch the issue; no new feature was needed.",
+    "proof achieved now": "yes",
+    "validation still needed": "none",
+    "next likely slice": "none"
+  },
+  "intent_interpretation": {
+    "literal request": "Create and ingest improvement issues, then implement them.",
+    "inferred intended outcome": "Fix the dogfooded stale roadmap routing without adding product residue.",
+    "chosen concrete what": "Filter closed planning lanes/candidates before readiness and roadmap projections consume them.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm closed/done lanes no longer count as promotable, while active roadmap lanes still do."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning package projection logic, focused summary tests, and planning closeout evidence",
+    "max changed files": "5",
+    "required validation commands": "proof-selected planning package and workspace CLI tests",
+    "ask-before-refactor threshold": "Any new command, schema, or report surface",
+    "stop before touching": "External adapter semantics or GitHub-specific routing"
+  },
+  "stop_conditions": {
+    "stop when": "Filtering would hide an active/deferred lane.",
+    "escalate when boundary reached": "Historical closed-lane display requires a new surface.",
+    "escalate on scope drift": "Changes move outside summary/projection filtering.",
+    "escalate on proof failure": "Focused tests or planning doctor fail."
+  },
+  "context_budget": {
+    "live working set": "Issue #548, planning summary projection code, focused tests, and compact summary output.",
+    "recoverable later": "Closed parent lane #530 and child archives.",
+    "do not bulk read": "Historical review artifacts."
+  },
+  "delegated_judgment": {
+    "status": "not-used",
+    "reason": "The fix was small, local, and on the critical path."
+  },
+  "parent_lane": {
+    "id": "workflow-friction-polish",
+    "issue": "#548",
+    "status": "closed-by-this-record"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#548",
+      "label": "Exclude closed lanes from roadmap promotion candidates",
+      "role": "source"
+    }
+  ],
+  "active_milestone": {
+    "id": "closed-lane-roadmap-filter",
+    "status": "completed",
+    "scope": "planning summary projection",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Close #548 after commit and push."
+  ],
+  "blockers": [],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    "tests/test_workspace_summary_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/archive/closed-lane-roadmap-filter.plan.json"
+  ],
+  "invariants": [
+    "Closed lanes are durable evidence, not current execution pressure.",
+    "Provider-specific tracker state stays outside the core projection logic."
+  ],
+  "contract_decisions_to_freeze": [
+    "Summary roadmap candidate counts should represent promotable current work."
+  ],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run pytest tests/test_workspace_summary_cli.py -q",
+    "uv run ruff check src tests",
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "cd packages/planning && uv run ruff check .",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "agentic-workspace",
+    "pytest",
+    "ruff",
+    "git",
+    "gh"
+  ],
+  "completion_criteria": [
+    "Closed/done lanes are excluded from roadmap candidates.",
+    "Summary readiness becomes narrow-direct-ready when only closed lanes remain.",
+    "Autopilot reports satisfied when no active, deferred, or promotable work remains.",
+    "#548 is closed."
+  ],
+  "execution_run": {
+    "status": "completed",
+    "summary": "Added closed-lane filtering for state-backed roadmap lanes/candidates and focused package/root summary tests."
+  },
+  "finished_run_review": {
+    "status": "complete",
+    "findings": "No follow-up product issue; existing projection surfaces were sufficient."
+  },
+  "proof_report": {
+    "status": "passed",
+    "commands": "Focused planning package, workspace summary, workspace CLI, and ruff checks passed before closeout."
+  },
+  "intent_satisfaction": {
+    "status": "satisfied",
+    "evidence": "Current repo summary reports roadmap lane_count 0, candidate_count 0, execution_readiness narrow-direct-ready, and autopilot satisfied after the fix."
+  },
+  "system_intent_alignment": {
+    "status": "aligned",
+    "reason": "The fix removes stale current-work pressure without adding a new surface."
+  },
+  "closure_check": {
+    "status": "ready-to-close",
+    "issue": "#548",
+    "larger_intent": "satisfied"
+  },
+  "generated_closeout": {
+    "summary": "#548 is satisfied by filtering closed/done planning lanes and matching candidates out of current roadmap promotion projections.",
+    "validation": "Focused package/root summary tests, workspace CLI tests, ruff, summary, and planning doctor.",
+    "residue": "Projection logic and tests own the behavior."
+  },
+  "durable_residue": {
+    "status": "check",
+    "learned constraint": "Closed durable planning history should not create current promotion pressure.",
+    "motivation worth preserving": "A quiet backlog should make the package feel quiet.",
+    "canonical owner now": "packages/planning/src/repo_planning_bootstrap/installer.py and focused summary tests",
+    "promotion trigger": "closed or historical records affect current execution pressure again",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "status": "completed",
+    "changed": "Filtered closed planning lanes/candidates and added focused regression tests."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "signals found": [
+      "Closed lanes were still counted as roadmap promotion candidates."
+    ],
+    "signals fixed": [
+      "Summary/autopilot now treat closed lanes as history rather than current work."
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "No new command or surface was needed."
+    ],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [],
+  "proof_expectations": [
+    "agentic-workspace summary --format json reports no roadmap promotion pressure when only closed lanes remain."
+  ],
+  "anti_overfitting_review": {
+    "status": "passed",
+    "reason": "The filter uses generic planning maturity/status fields and makes no GitHub, repo, tool, language, or model assumption."
+  },
+  "cost_assessment": {
+    "outcome": "positive",
+    "quality": "Current-work projection now matches closed backlog state.",
+    "efficiency": "The package exposed the stale-route issue immediately in compact summary.",
+    "cognitive_load": "Lower after fix; agents no longer have to ignore stale roadmap promotion advice.",
+    "correct_by_design_assessment": "Filtering uses existing structured status/maturity fields instead of post-hoc guidance.",
+    "validation_role": "confirmation after one shape fix in the closeout record"
+  },
+  "parent_acceptance_map": {
+    "closed lanes excluded from roadmap candidates": "implemented",
+    "execution_readiness quiet when only closed lanes remain": "implemented",
+    "autopilot quiet when only closed lanes remain": "implemented",
+    "focused tests": "implemented",
+    "no host tracker assumptions": "implemented"
+  }
+}

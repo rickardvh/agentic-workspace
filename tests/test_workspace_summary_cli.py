@@ -60,6 +60,40 @@ candidates = [
     assert "candidate_lanes" not in payload["roadmap"]
 
 
+def test_workspace_summary_json_excludes_closed_lanes_from_promotion_candidates(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+work_items = [
+  { id = "done-lane", type = "lane", title = "Done lane", maturity = "closed", status = "done", priority = "first", issues = ["#1"], outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "", closure = "archive-and-close", durable_residue = "planning" },
+]
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "also-done", title = "Also done", maturity = "closed", status = "done", priority = "second", issues = ["#2"], outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "", closure = "archive-and-close", durable_residue = "planning" },
+]
+candidates = [
+  { priority = "first", summary = "Done lane" },
+  { priority = "second", summary = "Also done" },
+]
+""",
+    )
+
+    exit_code = cli.main(["summary", "--target", str(tmp_path), "--format", "json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["roadmap"]["lane_count"] == 0
+    assert payload["roadmap"]["candidate_count"] == 0
+    assert payload["execution_readiness"]["status"] == "narrow-direct-ready"
+    assert payload["autopilot_loop"]["status"] == "satisfied"
+
+
 def test_workspace_summary_json_accepts_full_profile(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")

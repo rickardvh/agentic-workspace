@@ -3660,6 +3660,40 @@ candidates = [
     assert "Roadmap candidates are not execution authority" in readiness["rule"]
 
 
+def test_planning_summary_excludes_closed_lanes_from_promotion_candidates(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+work_items = [
+  { id = "done-lane", type = "lane", title = "Done lane", maturity = "closed", status = "done", priority = "first", issues = ["#1"], outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "", closure = "archive-and-close", durable_residue = "planning" },
+]
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "also-done", title = "Also done", maturity = "closed", status = "done", priority = "second", issues = ["#2"], outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "", closure = "archive-and-close", durable_residue = "planning" },
+]
+candidates = [
+  { priority = "first", summary = "Done lane" },
+  { priority = "second", summary = "Also done" },
+]
+""",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    assert summary["roadmap"]["lane_count"] == 0
+    assert summary["roadmap"]["candidate_count"] == 0
+    assert summary["roadmap"]["candidates"] == []
+    assert summary["execution_readiness"]["status"] == "narrow-direct-ready"
+    assert summary["execution_readiness"]["recommendation"]["id"] == "stay-direct-for-narrow-work"
+    assert summary["autopilot_loop"]["status"] == "satisfied"
+
+
 def test_planning_summary_reports_candidate_lanes(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")

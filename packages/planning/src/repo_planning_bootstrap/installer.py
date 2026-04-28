@@ -3167,6 +3167,38 @@ def _state_queued_items(state: dict[str, Any]) -> list[dict[str, Any]]:
     return queued_items
 
 
+_CLOSED_PLANNING_STATUSES = {"closed", "completed", "dismissed", "done"}
+
+
+def _is_closed_planning_state_item(item: dict[str, Any]) -> bool:
+    maturity = str(item.get("maturity", "")).strip().lower()
+    status = str(item.get("status", "")).strip().lower()
+    return maturity == "closed" or status in _CLOSED_PLANNING_STATUSES
+
+
+def _roadmap_candidate_key(item: dict[str, Any]) -> tuple[str, str]:
+    priority = str(item.get("priority", "")).strip()
+    summary = str(item.get("summary") or item.get("title") or "").strip()
+    return priority, summary
+
+
+def _closed_roadmap_candidate_keys(state: dict[str, Any]) -> set[tuple[str, str]]:
+    keys: set[tuple[str, str]] = set()
+    raw_work_items = state.get("work_items", [])
+    if isinstance(raw_work_items, list):
+        for item in raw_work_items:
+            if isinstance(item, dict) and str(item.get("type", "")).strip() == "lane" and _is_closed_planning_state_item(item):
+                keys.add(_roadmap_candidate_key(item))
+    roadmap = state.get("roadmap")
+    if isinstance(roadmap, dict):
+        raw_lanes = roadmap.get("lanes", [])
+        if isinstance(raw_lanes, list):
+            for item in raw_lanes:
+                if isinstance(item, dict) and _is_closed_planning_state_item(item):
+                    keys.add(_roadmap_candidate_key(item))
+    return keys
+
+
 def _state_roadmap_lanes(state: dict[str, Any]) -> list[dict[str, Any]]:
     lanes: list[dict[str, Any]] = []
     raw_work_items = state.get("work_items", [])
@@ -3174,13 +3206,17 @@ def _state_roadmap_lanes(state: dict[str, Any]) -> list[dict[str, Any]]:
         lanes.extend(
             _normalize_roadmap_lane_record(item)
             for item in raw_work_items
-            if isinstance(item, dict) and str(item.get("type", "")).strip() == "lane"
+            if isinstance(item, dict) and str(item.get("type", "")).strip() == "lane" and not _is_closed_planning_state_item(item)
         )
     roadmap = state.get("roadmap")
     if isinstance(roadmap, dict):
         raw_lanes = roadmap.get("lanes", [])
         if isinstance(raw_lanes, list):
-            lanes.extend(_normalize_roadmap_lane_record(item) for item in raw_lanes if isinstance(item, dict))
+            lanes.extend(
+                _normalize_roadmap_lane_record(item)
+                for item in raw_lanes
+                if isinstance(item, dict) and not _is_closed_planning_state_item(item)
+            )
     return lanes
 
 
@@ -3191,7 +3227,12 @@ def _state_roadmap_candidates(state: dict[str, Any]) -> list[dict[str, Any]]:
     raw_candidates = roadmap.get("candidates", [])
     if not isinstance(raw_candidates, list):
         return []
-    return [item for item in raw_candidates if isinstance(item, dict)]
+    closed_keys = _closed_roadmap_candidate_keys(state)
+    return [
+        item
+        for item in raw_candidates
+        if isinstance(item, dict) and not _is_closed_planning_state_item(item) and _roadmap_candidate_key(item) not in closed_keys
+    ]
 
 
 def _non_empty_string(value: Any) -> bool:
