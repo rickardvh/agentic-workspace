@@ -1099,6 +1099,8 @@ def test_defaults_section_selector_returns_agent_aid_storage_answer(capsys) -> N
     assert payload["selector"] == {"section": "agent_aid_storage"}
     assert payload["matched"] is True
     assert payload["answer"]["command"] == "agentic-workspace defaults --section agent_aid_storage --format json"
+    assert payload["answer"]["discovery_command"] == "agentic-workspace report --target ./repo --section agent_aids --format json"
+    assert payload["answer"]["task_recommendation_command"] == 'agentic-workspace skills --target ./repo --task "<task>" --format json'
     assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/agent-aids-storage.md"
     assert payload["answer"]["candidate_root"] == ".agentic-workspace/agent-aids"
     assert payload["answer"]["ordinary_startup"] is False
@@ -2376,6 +2378,72 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     assert "run autopilot" in autopilot["activation_hints"]["phrases"]
 
 
+def test_skills_command_recommends_matching_agent_aids_without_retired_aids(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    aid_root = target / ".agentic-workspace" / "agent-aids" / "scripts"
+    manifest = {
+        "kind": "agentic-workspace/agent-aid/v1",
+        "id": "workspace-validation-wrapper",
+        "type": "script",
+        "status": "candidate",
+        "scope": "repo-shared",
+        "portability": "cross-platform",
+        "proof_role": "candidate-aid",
+        "owner": "workspace",
+        "created_because": "Agents repeatedly need a bounded validation wrapper.",
+        "use_when": ["validating workspace CLI and contract changes"],
+        "entrypoint": ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py",
+        "safety": {
+            "read_only": True,
+            "writes_repo": False,
+            "destructive": False,
+            "network": False,
+            "hidden_required_workflow": False,
+            "requires_review": False,
+        },
+        "validation": {"commands": ["uv run python .agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"]},
+        "promotion": {
+            "target": "scripts/check/check_workspace_validation.py",
+            "trigger": "used successfully across multiple closeouts",
+            "retention_after_promotion": "delete",
+        },
+        "retirement": {"trigger": "obsolete", "retention_after_retirement": "delete"},
+    }
+    (aid_root / "workspace-validation" / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (aid_root / "old-helper" / "manifest.json").write_text(
+        json.dumps({**manifest, "id": "old-helper", "status": "retired"}),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "validate workspace CLI contracts",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert [entry["id"] for entry in payload["agent_aids"]] == ["workspace-validation-wrapper"]
+    assert payload["agent_aids"][0]["canonical_proof_route"] is False
+    assert payload["agent_aids"][0]["safety_summary"]["read_only"] is True
+    assert payload["agent_aid_recommendations"][0]["id"] == "workspace-validation-wrapper"
+    assert payload["agent_aid_source"]["section_command"] == ("agentic-workspace report --target ./repo --section agent_aids --format json")
+
+
 def test_skills_command_recommends_planning_autopilot_for_active_milestone_task(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -3567,6 +3635,72 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "Shrink, stub, or delete stale review artifacts" in historical_reviews["retention_guidance"][1]
     assert historical_reviews["retention_policy"]["kind"] == "workspace-review-retention-policy/v1"
     assert historical_reviews["retention_policy"]["advisory_only"] is True
+
+
+def test_report_section_agent_aids_discovers_checked_in_and_local_aids(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    aid_root = target / ".agentic-workspace" / "agent-aids" / "scripts"
+    candidate_manifest = {
+        "kind": "agentic-workspace/agent-aid/v1",
+        "id": "workspace-validation-wrapper",
+        "type": "script",
+        "status": "candidate",
+        "scope": "repo-shared",
+        "portability": "cross-platform",
+        "proof_role": "candidate-aid",
+        "owner": "workspace",
+        "created_because": "Agents repeatedly need a bounded validation wrapper.",
+        "use_when": ["validating workspace CLI and contract changes"],
+        "entrypoint": ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py",
+        "safety": {
+            "read_only": True,
+            "writes_repo": False,
+            "destructive": False,
+            "network": False,
+            "hidden_required_workflow": False,
+            "requires_review": False,
+        },
+        "validation": {"commands": ["uv run python .agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"]},
+        "promotion": {
+            "target": "scripts/check/check_workspace_validation.py",
+            "trigger": "used successfully across multiple closeouts",
+            "retention_after_promotion": "delete",
+        },
+        "retirement": {"trigger": "obsolete", "retention_after_retirement": "delete"},
+    }
+    retired_manifest = {**candidate_manifest, "id": "old-helper", "status": "retired"}
+    (aid_root / "workspace-validation" / "manifest.json").write_text(json.dumps(candidate_manifest), encoding="utf-8")
+    (aid_root / "old-helper" / "manifest.json").write_text(json.dumps(retired_manifest), encoding="utf-8")
+    (target / ".agentic-workspace" / "local" / "integrations" / "codex" / "README.md").write_text(
+        "# Local aids\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "agent_aids", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert answer["kind"] == "workspace-agent-aids-discovery/v1"
+    assert answer["summary"]["checked_in_count"] == 2
+    assert answer["summary"]["visible_checked_in_count"] == 1
+    assert answer["summary"]["retired_count"] == 1
+    assert answer["summary"]["local_only_container_count"] == 1
+    candidate = next(entry for entry in answer["checked_in_aids"] if entry["id"] == "workspace-validation-wrapper")
+    assert candidate["type"] == "script"
+    assert candidate["status"] == "candidate"
+    assert candidate["scope"] == "repo-shared"
+    assert candidate["portability"] == "cross-platform"
+    assert candidate["entrypoint"].endswith("workspace_validation.py")
+    assert candidate["safety_summary"]["read_only"] is True
+    assert candidate["canonical_proof_route"] is False
+    assert [entry["id"] for entry in answer["recommended_actions"]] == ["workspace-validation-wrapper"]
+    assert answer["local_only"]["entries"][0]["id"] == "codex"
+    assert answer["local_only"]["entries"][0]["authority"] == "none"
 
 
 def test_report_improvement_intake_keeps_dogfooding_source_checkout_only(tmp_path: Path, capsys) -> None:

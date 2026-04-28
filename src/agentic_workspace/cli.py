@@ -219,6 +219,8 @@ def _agent_aid_storage_payload(*, target_root: Path | None = None) -> dict[str, 
     return {
         "status": "available-checked-in-candidate-area",
         "command": "agentic-workspace defaults --section agent_aid_storage --format json",
+        "discovery_command": "agentic-workspace report --target ./repo --section agent_aids --format json",
+        "task_recommendation_command": 'agentic-workspace skills --target ./repo --task "<task>" --format json',
         "canonical_doc": ".agentic-workspace/docs/agent-aids-storage.md",
         "candidate_root": WORKSPACE_AGENT_AID_ROOT_PATH.as_posix(),
         "candidate_subdirs": list(WORKSPACE_AGENT_AID_SUBDIRS),
@@ -288,6 +290,127 @@ def _agent_aid_storage_payload(*, target_root: Path | None = None) -> dict[str, 
             "the model is repo-, agent-, tool-, and language-agnostic",
         ],
     }
+
+
+def _agent_aids_report_payload(*, target_root: Path) -> dict[str, Any]:
+    checked_in_aids, manifest_warnings = _checked_in_agent_aid_entries(target_root=target_root)
+    local_only_entries = _local_only_agent_aid_entries(target_root=target_root)
+    visible_checked_in = [entry for entry in checked_in_aids if entry["status"] != "retired"]
+    return {
+        "kind": "workspace-agent-aids-discovery/v1",
+        "status": "available",
+        "command": "agentic-workspace report --target ./repo --section agent_aids --format json",
+        "storage": _agent_aid_storage_payload(target_root=target_root),
+        "summary": {
+            "checked_in_count": len(checked_in_aids),
+            "visible_checked_in_count": len(visible_checked_in),
+            "retired_count": len(checked_in_aids) - len(visible_checked_in),
+            "local_only_container_count": len(local_only_entries),
+        },
+        "checked_in_aids": checked_in_aids,
+        "local_only": {
+            "root": WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH.as_posix(),
+            "authority": "none",
+            "advisory_only": True,
+            "entries": local_only_entries,
+        },
+        "recommended_actions": [
+            {
+                "id": entry["id"],
+                "type": entry["type"],
+                "status": entry["status"],
+                "entrypoint": entry["entrypoint"],
+                "use_when": entry["use_when"],
+                "proof_role": entry["proof_role"],
+                "canonical_proof_route": entry["canonical_proof_route"],
+            }
+            for entry in visible_checked_in
+        ],
+        "warnings": manifest_warnings,
+        "rules": [
+            "candidate and advisory aids are discoverable but not canonical proof routes",
+            "retired aids remain visible for audit but are not recommended actions",
+            "local-only aids are advisory machine-local context and not shared workflow authority",
+            "discovery reads only known aid roots and manifest files",
+        ],
+    }
+
+
+def _checked_in_agent_aid_entries(*, target_root: Path) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    root = target_root / WORKSPACE_AGENT_AID_ROOT_PATH
+    if not root.exists():
+        return [], []
+    entries: list[dict[str, Any]] = []
+    warnings: list[dict[str, str]] = []
+    for manifest_path in sorted(root.rglob("manifest.json")):
+        relative_manifest = manifest_path.relative_to(target_root).as_posix()
+        try:
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            warnings.append({"path": relative_manifest, "message": f"manifest cannot be loaded: {exc}"})
+            continue
+        if not isinstance(payload, dict):
+            warnings.append({"path": relative_manifest, "message": "manifest must be a JSON object"})
+            continue
+        status = str(payload.get("status", "unknown"))
+        proof_role = str(payload.get("proof_role", "candidate-aid"))
+        safety = payload.get("safety", {})
+        safety_summary = {
+            "read_only": bool(safety.get("read_only")) if isinstance(safety, dict) else False,
+            "writes_repo": bool(safety.get("writes_repo")) if isinstance(safety, dict) else False,
+            "destructive": bool(safety.get("destructive")) if isinstance(safety, dict) else False,
+            "network": bool(safety.get("network")) if isinstance(safety, dict) else False,
+            "requires_review": bool(safety.get("requires_review")) if isinstance(safety, dict) else False,
+            "hidden_required_workflow": bool(safety.get("hidden_required_workflow")) if isinstance(safety, dict) else False,
+        }
+        validation = payload.get("validation", {})
+        commands = validation.get("commands") if isinstance(validation, dict) else None
+        entries.append(
+            {
+                "id": str(payload.get("id", manifest_path.parent.name)),
+                "manifest": relative_manifest,
+                "type": str(payload.get("type", "unknown")),
+                "status": status,
+                "scope": str(payload.get("scope", "unknown")),
+                "portability": str(payload.get("portability", "unknown")),
+                "entrypoint": str(payload.get("entrypoint", "")),
+                "owner": str(payload.get("owner", "")),
+                "use_when": [str(item) for item in payload.get("use_when", []) if isinstance(item, str)],
+                "proof_role": proof_role,
+                "canonical_proof_route": proof_role == "canonical-proof" and status == "promoted",
+                "recommended": status != "retired",
+                "safety_summary": safety_summary,
+                "validation_summary": {
+                    "has_commands": isinstance(commands, list) and bool(commands),
+                    "command_count": len(commands) if isinstance(commands, list) else 0,
+                    "absent_reason": str(validation.get("absent_reason", "")) if isinstance(validation, dict) else "",
+                },
+            }
+        )
+    return entries, warnings
+
+
+def _local_only_agent_aid_entries(*, target_root: Path) -> list[dict[str, Any]]:
+    root = target_root / WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH
+    if not root.exists():
+        return []
+    entries: list[dict[str, Any]] = []
+    for path in sorted(root.iterdir()):
+        entries.append(
+            {
+                "id": path.name,
+                "path": path.relative_to(target_root).as_posix(),
+                "type": "local-only-container",
+                "status": "local-only",
+                "scope": "machine-local",
+                "portability": "runtime-specific",
+                "entrypoint": "",
+                "authority": "none",
+                "advisory_only": True,
+                "recommended": False,
+            }
+        )
+    return entries
 
 
 def _local_memory_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
@@ -3643,6 +3766,7 @@ def _run_report_command(
         ),
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
+        "agent_aids": _agent_aids_report_payload(target_root=target_root),
         "execution_shape": execution_shape,
         "agent_configuration_system": _agent_configuration_report_payload(
             config=config,
@@ -11321,6 +11445,11 @@ def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str |
             print(f"- {recommendation['id']} ({recommendation['score']}): {recommendation['summary']}")
             print(f"  path: {recommendation['path']}")
             print(f"  reasons: {', '.join(recommendation['reasons'])}")
+    if payload.get("agent_aid_recommendations"):
+        print("Recommended agent aids:")
+        for recommendation in payload["agent_aid_recommendations"]:
+            print(f"- {recommendation['id']} ({recommendation['score']}): {recommendation['entrypoint']}")
+            print(f"  reasons: {', '.join(recommendation['reasons'])}")
     elif payload.get("task"):
         print("Recommended:")
         print("- none")
@@ -11341,6 +11470,9 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
         return {"skills": [], "recommendations": [], "warnings": [], "sources": []}
     skills, warnings, sources = _discover_registered_skills(target_root=target_root)
     recommendations = _recommend_skills(task_text=task_text, skills=skills) if task_text else []
+    agent_aids, aid_warnings = _checked_in_agent_aid_entries(target_root=target_root)
+    visible_agent_aids = [aid for aid in agent_aids if aid["status"] != "retired"]
+    agent_aid_recommendations = _recommend_agent_aids(task_text=task_text, aids=visible_agent_aids) if task_text else []
     return {
         "target": target_root.as_posix(),
         "task": task_text,
@@ -11353,9 +11485,48 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
             }
             for recommendation in recommendations
         ],
+        "agent_aids": visible_agent_aids,
+        "agent_aid_recommendations": agent_aid_recommendations,
+        "agent_aid_source": {
+            "root": WORKSPACE_AGENT_AID_ROOT_PATH.as_posix(),
+            "manifest_name": "manifest.json",
+            "section_command": "agentic-workspace report --target ./repo --section agent_aids --format json",
+            "retired_aids_excluded": True,
+        },
         "warnings": warnings,
+        "agent_aid_warnings": aid_warnings,
         "sources": sources,
     }
+
+
+def _recommend_agent_aids(*, task_text: str, aids: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    task_tokens = set(_skill_match_tokens(task_text))
+    task_text_normalized = " ".join(_skill_match_tokens(task_text))
+    recommendations: list[dict[str, Any]] = []
+    for aid in aids:
+        score = 0
+        reasons: list[str] = []
+        searchable_values = [
+            str(aid.get("id", "")),
+            str(aid.get("type", "")),
+            str(aid.get("entrypoint", "")),
+            *[str(item) for item in aid.get("use_when", []) if isinstance(item, str)],
+        ]
+        for value in searchable_values:
+            value_tokens = set(_skill_match_tokens(value))
+            overlap = sorted(token for token in task_tokens & value_tokens if len(token) >= 4)
+            if overlap:
+                score += len(overlap)
+                reasons.append(f"term overlap: {', '.join(overlap)}")
+                break
+        aid_id_phrase = " ".join(_skill_match_tokens(str(aid.get("id", ""))))
+        if aid_id_phrase and aid_id_phrase in task_text_normalized:
+            score += 6
+            reasons.append(f"id match: {aid.get('id')}")
+        if score > 0:
+            recommendations.append({**aid, "score": score, "reasons": reasons})
+    recommendations.sort(key=lambda item: (-int(item["score"]), str(item["id"])))
+    return recommendations
 
 
 def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSkill], list[str], list[dict[str, str]]]:

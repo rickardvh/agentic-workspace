@@ -1,0 +1,225 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Agent Aid Discovery",
+  "goal": [
+    "agent-created-aids-lifecycle next child; #519 made checked-in aids safe enough to expose, and #520 should make them cheaply discoverable without startup burden."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "agent-created-aids-lifecycle next child; #519 made checked-in aids safe enough to expose, and #520 should make them cheaply discoverable without startup burden.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "agent-aid-discovery",
+      "status": "in-progress",
+      "next_step": "archive this plan, close #520, and continue with #521.",
+      "proof": "Focused report/skills/defaults tests, workspace CLI tests, ruff, maintainer surfaces, root CLI authority, planning checks, and diff check passed."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        "src/agentic_workspace/contracts/report_contract.json",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        ".agentic-workspace/docs/agent-aids-storage.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/agent-aid-discovery.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "agent-created-aids-lifecycle next child; #519 made checked-in aids safe enough to expose, and #520 should make them cheaply discoverable without startup burden.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #520 after archive checks",
+    "next likely slice": "#521"
+  },
+  "intent_interpretation": {
+    "literal request": "Agent Aid Discovery",
+    "inferred intended outcome": "agent-created-aids-lifecycle next child; #519 made checked-in aids safe enough to expose, and #520 should make them cheaply discoverable without startup burden.",
+    "chosen concrete what": "Expose checked-in and local-only agent aids through report --section agent_aids, and surface task-specific aid recommendations through the existing skills command.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/cli.py; tests/test_workspace_cli.py; src/agentic_workspace/contracts/report_contract.json; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; .agentic-workspace/docs/agent-aids-storage.md; .agentic-workspace/planning/state.toml; this execplan.",
+    "max changed files": "7 active files plus archive output at closeout.",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q -k \"agent_aids or matching_agent_aids or agent_aid_storage\"; uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_contract_tooling.py -q -k \"contract_tooling_check_passes\"; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check src tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "validate and close agent aid discovery.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "agent-created-aids-lifecycle next child; #519 made checked-in aids safe enough to expose, and #520 should make them cheaply discoverable without startup burden.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "agent-aid-discovery",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "validate agent aid discovery and task recommendation surfaces."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    "src/agentic_workspace/contracts/report_contract.json",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    ".agentic-workspace/docs/agent-aids-storage.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/agent-aid-discovery.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"agent_aids or matching_agent_aids or agent_aid_storage\"",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run pytest tests/test_contract_tooling.py -q -k \"contract_tooling_check_passes\"",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run ruff check src tests",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Agents can list relevant aids with one compact command.",
+    "Discovery output includes type, status, scope, portability, entrypoint, and safety summary.",
+    "Retired aids do not appear as recommended actions.",
+    "Candidate aids do not masquerade as canonical proof routes."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with delegated read-only review",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Added compact agent aid discovery through report --section agent_aids and task-specific recommendations through the existing skills command, with docs/defaults routing.",
+    "scope touched": "workspace report and skills payloads, tests, docs, and planning closeout",
+    "changed surfaces": "src/agentic_workspace/cli.py; tests/test_workspace_cli.py; src/agentic_workspace/contracts/report_contract.json; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; .agentic-workspace/docs/agent-aids-storage.md; .agentic-workspace/planning/state.toml; this execplan",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"agent_aids or matching_agent_aids or agent_aid_storage\"; uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_contract_tooling.py -q -k \"contract_tooling_check_passes\"; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check src tests; make maintainer-surfaces; uv run agentic-workspace proof --target . --changed .agentic-workspace/docs/agent-aids-storage.md .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/agent-aid-discovery.plan.json src/agentic_workspace/cli.py tests/test_workspace_cli.py src/agentic_workspace/contracts/report_contract.json src/agentic_workspace/contracts/schemas/workspace_report.schema.json --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; git diff --check",
+    "result for continuation": "#520 complete; continue the agent-created-aids-lifecycle lane with #521.",
+    "next step": "Archive this plan, close #520, refresh external evidence, and promote #521."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used compact summary/proof/defaults and planning execplan closeout",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue #521 for promotion"
+  },
+  "proof_report": {
+    "validation proof": "focused and selected broad proof commands passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "report/skills/defaults tests, full workspace CLI tests, contract tooling checks, ruff, maintainer surfaces, proof selection, root CLI authority, planning doctor, and diff check passed"
+  },
+  "intent_satisfaction": {
+    "original intent": "agent-created-aids-lifecycle next child; #519 made checked-in aids safe enough to expose, and #520 should make them cheaply discoverable without startup burden.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Agents can discover manifest-backed and local-only aids with report --section agent_aids, and task-specific skills output now includes non-retired aid recommendations with safety and proof-role summaries.",
+    "unsolved intent passed to": "#521 for promotion"
+  },
+  "execution_summary": {
+    "outcome delivered": "Agent aid discovery is available through compact report and skills queries without startup burden or broad repo search.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#521",
+    "post-work posterity capture": "discovery rules live in CLI payloads, docs, defaults, and tests",
+    "knowledge promoted (Memory/Docs/Config)": ".agentic-workspace/docs/agent-aids-storage.md and compact defaults",
+    "resume from": "#521"
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "Aid discovery should reuse compact report and skills selectors instead of adding startup burden or a new top-level command.",
+    "motivation worth preserving": "Agent-created aids lower cost only when discovery is cheaper than broad file search and retired/candidate status remains explicit.",
+    "canonical owner now": "report agent_aids section, skills agent_aid recommendations, agent aid storage defaults, and storage docs",
+    "promotion trigger": "when aid discovery, recommendation, or visibility policy changes",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "partial",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#520 is complete, but the parent agent-created-aids-lifecycle lane still needs #521 promotion.",
+    "evidence carried forward": "report --section agent_aids and skills --task expose aids from manifest metadata without broad search",
+    "reopen trigger": "Agents cannot list or recommend non-retired aids compactly, or candidate/retired aids appear as canonical required actions."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "promote-to-plan silently skipped scaffolding when the active TODO row already contained a surface path"
+    ],
+    "signals fixed": [
+      "used existing report and skills surfaces instead of adding a new command"
+    ],
+    "signals routed": [
+      "#528 should cover the promote-to-plan scaffold/reentry friction"
+    ],
+    "signals dismissed": [],
+    "next owner": "#521"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from TODO direct-task shape into an execplan."
+  ]
+}
