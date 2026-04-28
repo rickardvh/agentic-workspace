@@ -53,10 +53,7 @@
           "items": {
             "enum": [
               "review_artifacts",
-              "command_generation",
-              "external_adapters",
-              "autopilot_loops",
-              "maintenance_pressure"
+              "external_adapters"
             ]
           },
           "uniqueItems": true

@@ -3,5 +3,9 @@ active_items = []
 queued_items = []
 
 [roadmap]
-lanes = []
+lanes = [
+  { id = "lifecycle-management-hardening", title = "Make lifecycle management straightforward, predictable, and low-judgment", priority = "2", issues = ["#478", "#479", "#480", "#481", "#482", "#483", "#484"], outcome = "host repo lifecycle management has one obvious root path, predictable dry-run/apply/refusal behavior, and no stale unshipped guidance.", reason = "large follow-up lane after shipped-boundary correction.", promotion_signal = "promote after #477 closes or when lifecycle docs/tests are selected.", suggested_first_slice = "#479" },
+  { id = "module-boundary-compression", title = "Compress root package around generic module contracts", priority = "3", issues = ["#485", "#486", "#487", "#488", "#489", "#490"], outcome = "root workspace package is smaller, less first-party-coupled, and clearer about reusable diagnostics versus source-checkout-only machinery.", reason = "depends on the shipped-boundary distinction from #477 and may overlap lifecycle shape.", promotion_signal = "promote after lifecycle front door is stable.", suggested_first_slice = "#489" },
+  { id = "durable-residue-routing", title = "Route durable motivation and lessons out of planning archives", priority = "4", issues = ["#491", "#492", "#493", "#494", "#495"], outcome = "closeout routes durable learning to Memory/docs/contracts/checks/planning instead of relying on archives.", reason = "important but downstream of current product-shape and lifecycle boundaries.", promotion_signal = "promote after shipped surface and lifecycle issues close.", suggested_first_slice = "#492" },
+]
 candidates = []

@@ -69,21 +69,32 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
         "planning",
         "memory",
         "full",
-        "maintainer-dogfooding",
     ]
     full_tier = next(entry for entry in payload["feature_tiers"] if entry["id"] == "full")
     assert full_tier["modules"] == ["planning", "memory"]
-    assert "does not imply maintainer dogfooding" in full_tier["cost_model"]
-    dogfooding_tier = next(entry for entry in payload["feature_tiers"] if entry["id"] == "maintainer-dogfooding")
-    assert dogfooding_tier["default_active"] is False
+    assert "does not imply source-checkout maintainer tooling" in full_tier["cost_model"]
+    assert "maintainer-dogfooding" not in {entry["id"] for entry in payload["feature_tiers"]}
     assert {entry["id"] for entry in payload["advanced_features"]} == {
         "review_artifacts",
-        "command_generation",
         "external_adapters",
-        "autopilot_loops",
-        "maintenance_pressure",
     }
+    assert {entry["tier"] for entry in payload["advanced_features"]} == {"reusable-diagnostics"}
     assert all(entry["default_enabled"] is False for entry in payload["advanced_features"])
+    shipped_catalog = json.dumps(
+        {
+            "feature_tiers": payload["feature_tiers"],
+            "advanced_features": payload["advanced_features"],
+        },
+        sort_keys=True,
+    )
+    for source_checkout_only in (
+        "maintainer-dogfooding",
+        "command_generation",
+        "autopilot_loops",
+        "self-improvement",
+        "codegen",
+    ):
+        assert source_checkout_only not in shipped_catalog
     assert [entry["name"] for entry in payload["modules"]] == ["planning", "memory"]
     planning_module = next(entry for entry in payload["modules"] if entry["name"] == "planning")
     assert planning_module["install_signals"] == ["TODO.md", ".agentic-workspace/planning/execplans", ".agentic-workspace/planning"]
@@ -663,7 +674,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["optimization_bias_source"] == "product-default"
     assert payload["workspace"]["advanced_features"] == []
     assert payload["workspace"]["advanced_features_source"] == "product-default"
-    assert "autopilot_loops" in payload["workspace"]["supported_advanced_features"]
+    assert payload["workspace"]["supported_advanced_features"] == ["review_artifacts", "external_adapters"]
     assert payload["workspace"]["workflow_artifact_adapter"]["canonical_surfaces"] == [
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans/",
@@ -756,14 +767,14 @@ def test_config_command_accepts_agent_efficiency_optimization_bias(tmp_path: Pat
 def test_config_command_reports_enabled_advanced_features(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace/config.toml").write_text(
-        'schema_version = 1\n\n[workspace]\nadvanced_features = ["review_artifacts", "autopilot_loops"]\n',
+        'schema_version = 1\n\n[workspace]\nadvanced_features = ["review_artifacts", "external_adapters"]\n',
         encoding="utf-8",
     )
 
     assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["advanced_features"] == ["review_artifacts", "autopilot_loops"]
+    assert payload["workspace"]["advanced_features"] == ["review_artifacts", "external_adapters"]
     assert payload["workspace"]["advanced_features_source"] == "repo-config"
 
 
@@ -3117,9 +3128,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["feature_tier"]["active"]["modules"] == ["planning", "memory"]
     assert payload["feature_tier"]["active"]["source"] == "installed_modules"
     assert payload["feature_tier"]["default_rule"].startswith("Use the smallest tier")
-    assert any(
-        tier["id"] == "maintainer-dogfooding" and tier["default_active"] is False for tier in payload["feature_tier"]["available_tiers"]
-    )
+    assert "maintainer-dogfooding" not in {tier["id"] for tier in payload["feature_tier"]["available_tiers"]}
     assert payload["health"] == "healthy"
     assert payload["output_contract"]["optimization_bias"] == "balanced"
     assert payload["output_contract"]["optimization_bias_source"] == "product-default"
@@ -5006,8 +5015,8 @@ def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None
     assert startup["skill_routing"]["status"] == "advisory"
     configured_cli = payload["resolved_config"]["workspace_config"]["cli_invoke"]
     assert startup["skill_routing"]["query"] == f'{configured_cli} skills --target ./repo --task "<task>" --format json'
-    assert "planning-autopilot" in {route["skill"] for route in startup["skill_routing"]["preferred_routes"]}
-    assert "autopilot_loops" in startup["skill_routing"]["enabled_advanced_routes"]
+    assert "planning-autopilot" not in {route["skill"] for route in startup["skill_routing"]["preferred_routes"]}
+    assert startup["skill_routing"]["enabled_advanced_routes"] == ["external_adapters", "review_artifacts"]
 
     # Verify config is present
     config = payload["resolved_config"]

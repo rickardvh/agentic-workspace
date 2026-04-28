@@ -1,0 +1,315 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Shipped Dogfooding Tier Removal",
+  "goal": [
+    "Implement #477 by removing repo-local maintainer/dogfooding concepts from shipped feature-tier metadata while preserving repo-local dogfooding for this source checkout."
+  ],
+  "non_goals": [
+    "Do not remove repo-local tools or skills from this repository.",
+    "Do not remove reusable diagnostics that have target-repo value.",
+    "Do not redesign the whole module registry in this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Ordinary host-repo startup/module metadata no longer advertises maintainer dogfooding as a shipped feature tier.",
+      "constraints": "Keep shipped package repo/tool/language agnostic; keep dogfooding source-checkout-only.",
+      "latitude": "Adjust registry metadata, config/docs/tests, and generated adapter checks as needed.",
+      "escalation": "Escalate if the change requires removing source-checkout dogfooding tools or breaking repo-local workflow obligations."
+    },
+    "execution": {
+      "milestone": "shipped-dogfooding-tier-removal",
+      "status": "complete",
+      "next_step": "Archive this plan, commit, push, close #477, refresh external evidence, and continue the next prioritized lane.",
+      "proof": "workspace CLI tests, registry/output tests, planning surface checks, and proof selector."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/module_registry.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/shipped-dogfooding-tier-removal.plan.json"
+      ],
+      "invariants": [
+        "Source checkout dogfooding remains available through tools/ and repo config.",
+        "Ordinary host repos do not see dogfooding/self-improvement/codegen/extraction as shipped feature tiers.",
+        "Advanced reusable diagnostics remain opt-in when externally valuable."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#477 remove repo-local maintainer and dogfooding surfaces from shipped feature tiers",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap",
+    "parent lane": "#477"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "",
+    "activation trigger": ""
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Later shipped-surface and module-contract work can distinguish reusable diagnostics from source-checkout-only maintainer machinery.",
+    "intentionally deferred": "#478 lifecycle, #485 module-profile redesign, #491 durable residue routing.",
+    "discovered implications": "The package still benefits from source-checkout-only diagnostics, but those diagnostics should not appear as installable feature tiers for host repositories.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #477.",
+    "next likely slice": "#479 lifecycle front door unless new blockers emerge."
+  },
+  "context_budget": {
+    "read_first": [
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/shipped-dogfooding-tier-removal.plan.json"
+    ],
+    "avoid_bulk_reads": [
+      ".agentic-workspace/planning/execplans/archive/",
+      ".agentic-workspace/planning/reviews/"
+    ],
+    "deep_context_loaded": "Only compact package workflow surfaces and targeted changed files were used."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "hard constraints": "Dogfood package surfaces; commit/push milestone; close issue only after proof.",
+    "agent may decide locally": "Exact metadata names for shipped reusable diagnostics versus source-checkout-only notes.",
+    "escalate when": "A change would remove repo-local dogfooding tools instead of removing only shipped feature-tier exposure."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/477",
+      "label": "#477 shipped dogfooding tier removal",
+      "role": "closed_item",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/478",
+      "label": "#478 lifecycle parent",
+      "role": "next_lane",
+      "locator": "state.toml roadmap"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/479",
+      "label": "#479 lifecycle first child",
+      "role": "next_lane",
+      "locator": "state.toml roadmap"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/485",
+      "label": "#485 module-boundary parent",
+      "role": "next_lane",
+      "locator": "state.toml roadmap"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/491",
+      "label": "#491 durable residue parent",
+      "role": "next_lane",
+      "locator": "state.toml roadmap"
+    }
+  ],
+  "active_milestone": {
+    "id": "shipped-dogfooding-tier-removal",
+    "status": "completed",
+    "scope": "registry, output, tests, and planning state",
+    "ready": "yes",
+    "blocked": "no"
+  },
+  "immediate_next_action": [
+    "Archive, commit, push, close #477, refresh evidence, and continue the next prioritized lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/module_registry.json",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "proof_expectations": [
+    "uv run agentic-workspace preflight --target . --format json",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace proof --target . --changed <changed paths> --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "validation_commands": [
+    {
+      "command": "uv run pytest tests/test_workspace_cli.py -q",
+      "result": "pass: 188 passed"
+    },
+    {
+      "command": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_packaging.py -q",
+      "result": "pass: 189 passed"
+    },
+    {
+      "command": "uv run ruff check src tests",
+      "result": "pass"
+    },
+    {
+      "command": "uv run python scripts/check/check_planning_surfaces.py",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace proof --target . --changed src/agentic_workspace/contracts/module_registry.json src/agentic_workspace/config.py src/agentic_workspace/contracts/schemas/workspace_config.schema.json src/agentic_workspace/cli.py tests/test_workspace_cli.py README.md docs/contributor-playbook.md .agentic-workspace/docs/workspace-config-contract.md .agentic-workspace/config.toml .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/shipped-dogfooding-tier-removal.plan.json .agentic-workspace/planning/external-intent-evidence.json --format json",
+      "result": "pass: selected workspace_cli, cli_authority, maintainer_surfaces, planning_surfaces"
+    },
+    {
+      "command": "uv run agentic-workspace defaults --section root_cli_authority --format json",
+      "result": "pass"
+    },
+    {
+      "command": "make maintainer-surfaces",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace doctor --target . --modules planning --format json",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace modules --target . --format json",
+      "result": "pass: shipped tiers exclude maintainer-dogfooding; advanced features are review_artifacts and external_adapters"
+    },
+    {
+      "command": "uv run agentic-workspace preflight --target . --format json",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace summary --target . --format json",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace report --target . --section workflow_obligations --format json",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace report --target . --section closeout_trust --format json",
+      "result": "pass: surfaced need to record package workflow evidence before archive"
+    },
+    {
+      "command": "uv run agentic-workspace reconcile --format json",
+      "result": "pass"
+    },
+    {
+      "command": "rg \"maintainer-dogfooding|command_generation|autopilot_loops|maintenance_pressure\" -n src tests README.md docs .agentic-workspace\\docs .agentic-workspace\\config.toml",
+      "result": "pass: remaining references are tests guarding absence, explicit source-checkout command-generation docs/tests, and the reusable maintenance_pressure report section; no shipped feature tier/config-schema references remain."
+    }
+  ],
+  "completion_criteria": [
+    "module_registry.json no longer contains a maintainer-dogfooding feature tier.",
+    "Advanced feature metadata no longer points at maintainer-dogfooding as a shipped tier.",
+    "Ordinary startup/report/module output does not advertise dogfooding as a shipped tier.",
+    "Repo-local dogfooding remains available through source-checkout tools and config.",
+    "Tests guard the shipped/source-checkout boundary."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "GitHub issue #477 plus agentic-workspace start/external-intent refresh",
+    "what happened": "Removed maintainer-dogfooding as a shipped feature tier, constrained advanced feature configuration to reusable diagnostics, filtered startup skill routing by enabled shipped features, and updated docs/tests to preserve the source-checkout-only dogfooding boundary.",
+    "scope touched": "Registry metadata, config/schema validation, CLI startup/report/module output, targeted docs, tests, and planning state.",
+    "changed surfaces": "src/agentic_workspace/contracts/module_registry.json; src/agentic_workspace/config.py; src/agentic_workspace/contracts/schemas/workspace_config.schema.json; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; README.md; docs/contributor-playbook.md; .agentic-workspace/docs/workspace-config-contract.md; .agentic-workspace/config.toml; planning state.",
+    "validations run": "pytest workspace CLI/package tests, ruff, proof selector lanes, maintainer-surfaces, planning-surface check, modules output check, doctor, preflight, summary, workflow_obligations, closeout_trust, reconcile.",
+    "package workflow surfaces used": [
+      "preflight",
+      "summary",
+      "report",
+      "proof",
+      "reconcile",
+      "doctor",
+      "modules"
+    ],
+    "result for continuation": "#477 satisfied; continue #478 lifecycle lane, with #479 as the suggested first child.",
+    "next step": "Archive, commit, push, close #477, refresh evidence, and continue the next prioritized lane."
+  },
+  "proof_report": {
+    "validation proof": "yes",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "pytest workspace CLI/package tests, ruff, proof selector lanes, maintainer-surfaces, planning-surface check, modules output check, doctor, preflight, summary, workflow_obligations, closeout_trust, reconcile."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low; source-checkout diagnostics remain present but no longer define shipped tiers.",
+    "follow-on decision": "No required follow-on for #477; continue separately tracked lifecycle, module-boundary, and residue-routing lanes."
+  },
+  "intent_satisfaction": {
+    "original intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded slice and larger intent are both complete.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "None unless new evidence shows the bounded closure was incomplete."
+  },
+  "execution_summary": {
+    "outcome delivered": "Removed repo-local dogfooding from shipped feature-tier metadata while preserving source-checkout dogfooding tools.",
+    "validation confirmed": "yes",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lanes #478, #485, and #491.",
+    "post-work posterity capture": "Archived plan plus tests and docs; no standalone Memory needed.",
+    "knowledge promoted (Memory/Docs/Config)": "Docs and tests now encode the reusable-diagnostic versus source-checkout-only boundary; no Memory promotion.",
+    "resume from": ".agentic-workspace/planning/state.toml"
+  },
+  "improvement_signal_review": {
+    "signals": [
+      {
+        "summary": "closeout_trust correctly flagged missing package workflow evidence until this plan recorded surfaces used.",
+        "routed_to": "handled in this plan record",
+        "new_issue_needed": "no"
+      }
+    ],
+    "new_issues_created": []
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/state.toml roadmap lanes #478, #485, and #491.",
+          "owner": "",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Docs and tests now encode the reusable-diagnostic versus source-checkout-only boundary; no Memory promotion.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "Docs and tests now encode the reusable-diagnostic versus source-checkout-only boundary; no Memory promotion.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "Docs and tests now encode the reusable-diagnostic versus source-checkout-only boundary; no Memory promotion.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  }
+}

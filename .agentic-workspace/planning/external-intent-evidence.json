@@ -3,13 +3,13 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T02:16:02+00:00",
+  "refreshed_at": "2026-04-28T08:10:12+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T02:16:02+00:00",
-    "item_count": 462,
-    "open_count": 0,
+    "refreshed_at": "2026-04-28T08:10:12+00:00",
+    "item_count": 481,
+    "open_count": 19,
     "closed_count": 462,
     "limit": 600,
     "state": "all",
@@ -7452,6 +7452,329 @@
       "created_at": "2026-04-28T02:08:10Z",
       "updated_at": "2026-04-28T02:14:08Z",
       "comments_count": 1
+    },
+    {
+      "system": "github",
+      "id": "#477",
+      "title": "[Workspace]: Remove repo-local maintainer and dogfooding surfaces from shipped feature tiers",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/477",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T05:37:56Z",
+      "updated_at": "2026-04-28T05:37:56Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#478",
+      "title": "[Workspace]: Make lifecycle management straightforward, predictable, and low-judgment",
+      "status": "open",
+      "kind": "lane",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/478",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:01:37Z",
+      "updated_at": "2026-04-28T06:07:47Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#479",
+      "title": "[Workspace]: Make root upgrade the single authoritative host-repo update path",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#478",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/479",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:03:48Z",
+      "updated_at": "2026-04-28T06:03:48Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#480",
+      "title": "[Planning]: Remove stale upgrade instructions that reference unshipped helper scripts",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#478",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/480",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:04:45Z",
+      "updated_at": "2026-04-28T06:04:45Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#481",
+      "title": "[Workspace]: Add root synthetic lifecycle fixture matrix",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#478",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/481",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:05:30Z",
+      "updated_at": "2026-04-28T06:05:30Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#482",
+      "title": "[Workspace]: Classify lifecycle plan output by ownership, action, and reason",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#478",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/482",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:06:01Z",
+      "updated_at": "2026-04-28T06:06:01Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#483",
+      "title": "[Workspace]: Harden uninstall and destructive lifecycle refusal coverage",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#478",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/483",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:06:25Z",
+      "updated_at": "2026-04-28T06:06:25Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#484",
+      "title": "[Workspace]: Remove legacy compatibility machinery for unshipped product shapes",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#478",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/484",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:07:04Z",
+      "updated_at": "2026-04-28T06:07:04Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#485",
+      "title": "[Workspace]: Keep the root orchestrator thin, boring, generic, and strictly bounded",
+      "status": "open",
+      "kind": "lane",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/485",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:14:08Z",
+      "updated_at": "2026-04-28T06:35:07Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#486",
+      "title": "[Workspace]: Audit root command surface for daily-operation necessity",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#485",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/486",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:14:52Z",
+      "updated_at": "2026-04-28T06:14:52Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#487",
+      "title": "[Workspace]: Review root package dependency footprint and first-party module coupling",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#485",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/487",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:15:43Z",
+      "updated_at": "2026-04-28T06:35:53Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#488",
+      "title": "[Workspace]: Split root cli.py responsibilities into runtime primitives, renderers, and orchestration glue",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#485",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/488",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:16:23Z",
+      "updated_at": "2026-04-28T06:16:23Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#489",
+      "title": "[Workspace]: Separate reusable target-repo diagnostics from source-checkout-only maintainer tooling",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#485",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/489",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:16:58Z",
+      "updated_at": "2026-04-28T06:16:58Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#490",
+      "title": "[Workspace]: Replace first-party feature tiers with generic module profiles and manifests",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#485",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/490",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:34:25Z",
+      "updated_at": "2026-04-28T06:34:25Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#491",
+      "title": "[Workspace]: Route durable motivation and lessons out of planning archives",
+      "status": "open",
+      "kind": "lane",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/491",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:48:56Z",
+      "updated_at": "2026-04-28T06:51:48Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#492",
+      "title": "[Planning]: Add durable-residue routing to plan closeout and archive gates",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#491",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/492",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:49:24Z",
+      "updated_at": "2026-04-28T06:49:24Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#493",
+      "title": "[Memory]: Capture useful but not-yet-canonical motivation from completed work",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#491",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/493",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:49:56Z",
+      "updated_at": "2026-04-28T06:49:56Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#494",
+      "title": "[Workspace]: Warn when planning archives are the only home for future-relevant intent",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#491",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/494",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:50:28Z",
+      "updated_at": "2026-04-28T06:50:28Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#495",
+      "title": "[Workspace]: Teach self-improvement closeout to route durable residue before claiming improvement",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#491",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/495",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T06:50:58Z",
+      "updated_at": "2026-04-28T06:50:58Z",
+      "comments_count": 0
     }
   ]
 }

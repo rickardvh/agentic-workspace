@@ -31,7 +31,7 @@ Planning and Memory remain behavior modules inside that substrate rather than am
 ## Authority Map
 
 - **Repo-owned workspace policy** lives in `.agentic-workspace/config.toml`.
-- **Advanced maintainer and dogfooding features** are explicit opt-ins under `workspace.advanced_features`; ordinary startup should not route into review, codegen, external-adapter, autopilot, or heavy maintenance concepts unless enabled or directly relevant.
+- **Advanced host-repo diagnostics** are explicit opt-ins under `workspace.advanced_features`; source-checkout-only maintainer tooling such as codegen development, autopilot/self-improvement loops, package extraction, and heavy maintenance pressure is not a shipped feature tier.
 - **Machine-local invocation preferences** such as `workspace.cli_invoke` live in `.agentic-workspace/config.local.toml`, not checked-in repo config.
 - **Local-only integration aids** may live under `.agentic-workspace/local/integrations/<vendor-or-runtime>/`; they are ignored, optional, non-authoritative, and safe to delete.
 - **Local-only memory** may live at `.agentic-workspace/local/memory.toml` only when enabled by `.agentic-workspace/config.local.toml`; it is ignored, advisory, non-authoritative, and promoted to checked-in Memory only by deliberate manual action.

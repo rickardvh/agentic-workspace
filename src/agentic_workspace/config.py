@@ -72,10 +72,7 @@ SUPPORTED_OPTIMIZATION_BIASES = (
 )
 SUPPORTED_ADVANCED_FEATURES = (
     "review_artifacts",
-    "command_generation",
     "external_adapters",
-    "autopilot_loops",
-    "maintenance_pressure",
 )
 DEFAULT_CLI_INVOKE = "agentic-workspace"
 SUPPORTED_WORKFLOW_OBLIGATION_STAGES = (

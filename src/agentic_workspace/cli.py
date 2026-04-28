@@ -10,7 +10,7 @@ import re
 import shutil
 import subprocess
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -2263,7 +2263,7 @@ def _feature_tier_payload(
     payload: dict[str, Any] = {
         "schema_version": "workspace-feature-tiers/v1",
         "active": active,
-        "default_rule": "Use the smallest tier whose modules match the repo footprint; maintainer dogfooding requires explicit activation.",
+        "default_rule": "Use the smallest tier whose modules match the repo footprint; source-checkout maintainer tooling is not a shipped tier.",
         "detail_command": "agentic-workspace modules --target ./repo --format json",
         "advanced_policy": _advanced_feature_policy_payload(config=config, include_catalog=not compact),
     }
@@ -2290,8 +2290,8 @@ def _advanced_feature_policy_payload(*, config: WorkspaceConfig | None, include_
         "schema_version": "workspace-advanced-feature-policy/v1",
         "enabled_features": enabled,
         "enabled_source": config.advanced_features_source if config is not None else "product-default",
-        "default_rule": "Advanced maintainer and dogfooding features are opt-in; ordinary startup should not route into them unless enabled or directly relevant.",
-        "ordinary_startup_rule": "Use start, summary, report, defaults, and proof first; inspect advanced review, codegen, external-adapter, autopilot, or heavy maintenance sections only by selector or explicit enabled feature.",
+        "default_rule": "Advanced host-repo diagnostics are opt-in; source-checkout-only maintainer tooling is not a shipped feature tier.",
+        "ordinary_startup_rule": "Use start, summary, report, defaults, and proof first; inspect advanced review or external-adapter diagnostics only by selector or explicit enabled feature.",
         "config_field": "workspace.advanced_features",
         "detail_command": "agentic-workspace modules --target ./repo --format json",
     }
@@ -2300,7 +2300,7 @@ def _advanced_feature_policy_payload(*, config: WorkspaceConfig | None, include_
             {
                 "id": str(item.get("id", "")),
                 "label": str(item.get("label", item.get("id", ""))),
-                "tier": str(item.get("tier", "maintainer-dogfooding")),
+                "tier": str(item.get("tier", "reusable-diagnostics")),
                 "default_enabled": bool(item.get("default_enabled", False)),
                 "activation": str(item.get("activation", "")),
                 "default_surface_policy": str(item.get("default_surface_policy", "")),
@@ -5433,7 +5433,7 @@ def _run_preflight_command(
             "escalation_rules": startup_payload.get("escalation_cues", [])[:2],  # Top 2 most common
             "skill_routing": _startup_skill_routing_payload(
                 cli_invoke=config.cli_invoke,
-                include_advanced=bool(config.advanced_features),
+                enabled_advanced_features=config.advanced_features,
             ),
         },
         "resolved_config": {
@@ -5719,7 +5719,7 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
         "closeout_obligations": preflight.get("closeout_obligations", {}),
         "skill_routing": _startup_skill_routing_payload(
             cli_invoke=config.cli_invoke,
-            include_advanced=bool(config.advanced_features),
+            enabled_advanced_features=config.advanced_features,
         ),
     }
     normalized_paths = _normalize_changed_paths(changed_paths)
@@ -7698,7 +7698,11 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
     _emit_payload(payload=payload, format_name=format_name)
 
 
-def _startup_skill_routing_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE, include_advanced: bool = False) -> dict[str, Any]:
+def _startup_skill_routing_payload(
+    *,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+    enabled_advanced_features: Sequence[str] = (),
+) -> dict[str, Any]:
     skill_command = _command_with_cli_invoke(
         command='agentic-workspace skills --target ./repo --task "<task>" --format json',
         cli_invoke=cli_invoke,
@@ -7715,7 +7719,8 @@ def _startup_skill_routing_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE, incl
             "fallback": "agentic-workspace doctor --target ./repo --modules planning --format json",
         },
     ]
-    advanced_routes = [
+    configured_features = set(enabled_advanced_features)
+    available_advanced_routes = [
         {
             "task_shape": "active planned work or autopilot execution",
             "skill": "planning-autopilot",
@@ -7735,19 +7740,20 @@ def _startup_skill_routing_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE, incl
             "fallback": "agentic-workspace report --target ./repo --format json before selecting any review artifact",
         },
     ]
+    advanced_routes = [route for route in available_advanced_routes if str(route.get("feature", "")) in configured_features]
     payload = {
         "status": "advisory",
-        "rule": "Prefer task-specific package skills when the runtime supports them; keep compact CLI and workflow docs as the fallback. Advanced skills are opt-in.",
+        "rule": "Prefer task-specific package skills when the runtime supports them; keep compact CLI and workflow docs as the fallback. Advanced host-repo diagnostics are opt-in.",
         "query": skill_command,
-        "advanced_route_rule": "Review, external-intake, autopilot, code-generation, and maintenance-pressure skills are surfaced only when the repo enables the matching advanced feature or a compact selector points there.",
+        "advanced_route_rule": "Review and external-intake skills are surfaced only when the repo enables the matching reusable diagnostic feature. Source-checkout-only maintainer skills stay outside shipped feature tiers.",
         "fallback_when_skills_unavailable": [
             "follow AGENTS.md and .agentic-workspace/WORKFLOW.md",
             "use agentic-workspace preflight --format json for one-call takeover context",
             "use agentic-workspace summary --format json before raw planning reads",
         ],
-        "preferred_routes": core_routes + (advanced_routes if include_advanced else []),
+        "preferred_routes": core_routes + advanced_routes,
     }
-    if include_advanced:
+    if configured_features:
         payload["enabled_advanced_routes"] = [route["feature"] for route in advanced_routes]
     else:
         payload["available_advanced_route_command"] = "agentic-workspace modules --target ./repo --format json"

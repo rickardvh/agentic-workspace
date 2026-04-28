@@ -10,7 +10,7 @@ Choose the smallest preset that matches the repo problem:
 - `planning`: active planning without memory
 - `full`: both together, when the repo needs both durable knowledge and checked-in execution continuity
 
-These presets map to feature tiers. `routing-only` is the smallest footprint when a repo only needs compact startup/config/report routing. `full` means planning plus memory; it does not activate maintainer dogfooding, review intake, extraction, or self-improvement surfaces.
+These presets map to feature tiers. `routing-only` is the smallest footprint when a repo only needs compact startup/config/report routing. `full` means planning plus memory; it does not activate source-checkout maintainer tooling, package extraction, codegen development, or self-improvement surfaces.
 
 Then run:
 

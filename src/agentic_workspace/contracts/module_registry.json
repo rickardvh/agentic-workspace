@@ -42,66 +42,27 @@
       "preset": "full",
       "default_active": true,
       "activation": "Use when both active execution state and durable repo knowledge are worth the shared footprint.",
-      "cost_model": "current full preset; does not imply maintainer dogfooding or optional advanced surfaces."
-    },
-    {
-      "id": "maintainer-dogfooding",
-      "label": "Maintainer dogfooding",
-      "modules": [
-        "planning",
-        "memory"
-      ],
-      "preset": null,
-      "default_active": false,
-      "activation": "Use only for package development, self-improvement, review intake, extraction, and operating-cost pressure work.",
-      "cost_model": "optional maintainer/development layer; never implied by full installs."
+      "cost_model": "current full preset; does not imply source-checkout maintainer tooling or optional advanced surfaces."
     }
   ],
   "advanced_features": [
     {
       "id": "review_artifacts",
       "label": "Review artifacts and promotion",
-      "tier": "maintainer-dogfooding",
+      "tier": "reusable-diagnostics",
       "default_enabled": false,
-      "activation": "Enable for package-maintainer review, audit, or self-improvement work.",
+      "activation": "Enable when a host repo intentionally keeps review artifacts and promotion evidence.",
       "default_surface_policy": "Evidence/history only; not ordinary startup input.",
       "selector_hint": "agentic-workspace report --target ./repo --section closeout_trust --format json"
     },
     {
-      "id": "command_generation",
-      "label": "Command generation and codegen",
-      "tier": "maintainer-dogfooding",
-      "default_enabled": false,
-      "activation": "Enable for package interface-generation and adapter-conformance work.",
-      "default_surface_policy": "Contract machinery; inspect only for generator or interface-authority changes.",
-      "selector_hint": "agentic-workspace proof --target ./repo --changed <paths> --format json"
-    },
-    {
       "id": "external_adapters",
       "label": "External tracker adapters",
-      "tier": "maintainer-dogfooding",
+      "tier": "reusable-diagnostics",
       "default_enabled": false,
       "activation": "Enable when reconciling optional provider-agnostic evidence from a host tracker.",
       "default_surface_policy": "Optional adapter; core planning consumes only provider-agnostic evidence.",
       "selector_hint": "agentic-workspace external-intent refresh-github --target ./repo --format json"
-    },
-    {
-      "id": "autopilot_loops",
-      "label": "Autopilot and self-improvement loops",
-      "tier": "maintainer-dogfooding",
-      "default_enabled": false,
-      "activation": "Enable for broad package-maintainer lane execution and dogfooding.",
-      "default_surface_policy": "Checked-in planning only; ordinary repos should not need autopilot concepts for normal startup.",
-      "selector_hint": "agentic-workspace summary --format json"
-    },
-    {
-      "id": "maintenance_pressure",
-      "label": "Maintenance and footprint pressure",
-      "tier": "maintainer-dogfooding",
-      "default_enabled": false,
-      "activation": "Enable when surface residue, retention, or operating-cost pressure is itself the task.",
-      "default_surface_policy": "Router signal only by default; deep pressure details require report selectors.",
-      "selector_hint": "agentic-workspace report --target ./repo --section maintenance_pressure --format json"
     }
   ],
   "module_command_args": {

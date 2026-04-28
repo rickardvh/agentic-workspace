@@ -6,10 +6,7 @@ improvement_latitude = "proactive"
 optimization_bias = "agent-efficiency"
 advanced_features = [
   "review_artifacts",
-  "command_generation",
   "external_adapters",
-  "autopilot_loops",
-  "maintenance_pressure",
 ]
 
 [system_intent]
