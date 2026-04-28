@@ -9,9 +9,6 @@ WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _checker_script_path() -> Path:
-    root_checker = WORKSPACE_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
-    if root_checker.exists():
-        return root_checker
     return PACKAGE_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
 
 

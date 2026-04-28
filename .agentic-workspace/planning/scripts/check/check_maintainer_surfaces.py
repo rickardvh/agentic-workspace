@@ -7,8 +7,19 @@ import json
 from pathlib import Path
 from typing import Any, NamedTuple
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
-PLANNING_MODULE_SCRIPT = Path(__file__).resolve().with_name("check_planning_surfaces.py")
+
+def _find_repo_root() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        if (parent / "packages" / "planning").exists() and (parent / ".agentic-workspace").exists():
+            return parent
+    return current.parents[4]
+
+
+REPO_ROOT = _find_repo_root()
+PLANNING_MODULE_SCRIPT = REPO_ROOT / "packages" / "planning" / "scripts" / "check" / "check_planning_surfaces.py"
+if not PLANNING_MODULE_SCRIPT.exists():
+    PLANNING_MODULE_SCRIPT = Path(__file__).resolve().with_name("check_planning_surfaces.py")
 BOUNDARY_MODULE_SCRIPT = REPO_ROOT / "scripts" / "check" / "check_source_payload_operational_install.py"
 
 

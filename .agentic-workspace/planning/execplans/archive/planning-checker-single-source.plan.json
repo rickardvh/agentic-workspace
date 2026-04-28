@@ -1,0 +1,228 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Collapse duplicate planning checker payload copies",
+  "goal": [
+    "Implement #540 by making one package-owned planning surface checker the authoritative source.",
+    "Keep stable command paths as thin compatibility wrappers or generated payload only when a real consumer needs them."
+  ],
+  "non_goals": [
+    "Do not remove the root scripts/check/check_planning_surfaces.py command path.",
+    "Do not add a new command or host-specific workflow dependency.",
+    "Do not broaden this slice into unrelated planning-state or structured-file schema work."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "duplicate checker implementations collapse to one maintained source plus verified compatibility surfaces",
+      "constraints": "repo/tool/language agnostic; preserve weak-agent/bootstrap consumers; prefer deletion or thin wrappers over duplicated payload",
+      "latitude": "may update checker source, wrappers, installer payload routing, payload classifications, tests, and planning state",
+      "escalation": "stop if a stable consumer requires multiple full implementations rather than a generated or wrapper surface"
+    },
+    "execution": {
+      "milestone": "#540",
+      "status": "completed",
+      "next_step": "archive this plan, close #540, and clear the completed parent lane from active planning state",
+      "proof": "passed: planning checker, planning doctor, package tests, workspace tests, maintainer surfaces, and ruff"
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/scripts/check/check_planning_surfaces.py",
+        "scripts/check/check_planning_surfaces.py",
+        "packages/planning/bootstrap/scripts/check/check_planning_surfaces.py",
+        "packages/planning/bootstrap/.agentic-workspace/planning/scripts/check/check_planning_surfaces.py",
+        ".agentic-workspace/planning/scripts/check/check_planning_surfaces.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_check_planning_surfaces.py",
+        "tests/test_source_payload_operational_install.py",
+        "packages/planning/payload-surface-classification.json",
+        "packages/planning/extraction-candidates.json"
+      ],
+      "invariants": [
+        "root checker command remains runnable from source checkouts",
+        "installed/bootstrap paths do not retain stale full implementations",
+        "newer active.execplans and work_items state-shape support is preserved"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "stop checking in reconstructable artifact residue",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "reconstructable-artifact-policy"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "none known after #540",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "new duplicate generated payload copies or checker drift"
+  },
+  "delegated_judgment": {
+    "requested outcome": "collapse duplicate planning checker implementations",
+    "hard constraints": "preserve both source-checkout and bootstrap/install consumers",
+    "agent may decide locally": "whether each non-canonical path should be removed or kept as a thin wrapper",
+    "escalate when": "a consumer cannot run without a full duplicated checker body"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "single-source planning checker maintenance",
+    "intentionally deferred": "",
+    "discovered implications": "Deleting the root-installed checker mirror exposed an implicit maintainer-checker consumer, so the consumer path was converted to load the package-owned checker and boundary tests now prevent full-body duplicate reintroduction.",
+    "proof achieved now": "The root wrapper executes the package-owned checker, bootstrap/root-installed duplicate checker bodies are gone, maintainer surfaces still run, and source-payload tests guard the single-source shape.",
+    "validation still needed": "none for #540",
+    "next likely slice": ""
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#540",
+      "label": "collapse duplicate planning checker payload copies",
+      "role": "active slice",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/540"
+    }
+  ],
+  "active_milestone": {
+    "id": "#540",
+    "status": "completed",
+    "scope": "planning checker source, payload mirrors, and parity checks",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "read-only subagent inspection already completed"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and close #540."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/scripts/check/check_planning_surfaces.py",
+    "scripts/check/check_planning_surfaces.py",
+    "packages/planning/bootstrap/scripts/check/check_planning_surfaces.py",
+    "packages/planning/bootstrap/.agentic-workspace/planning/scripts/check/check_planning_surfaces.py",
+    ".agentic-workspace/planning/scripts/check/check_planning_surfaces.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_check_planning_surfaces.py",
+    "tests/test_source_payload_operational_install.py"
+  ],
+  "invariants": [
+    "One full checker implementation is maintained.",
+    "Compatibility paths stay thin and checked.",
+    "Package surfaces stay implementation independent where shipped."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run pytest packages/planning/tests/test_check_planning_surfaces.py tests/test_source_payload_operational_install.py -q",
+    "uv run python scripts/check/check_source_payload_operational_install.py",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "completion_criteria": [
+    "Canonical checker source is identified and contains the freshest state-shape support.",
+    "Non-canonical checked-in checker paths are removed or reduced to thin compatibility wrappers.",
+    "Tests or checks fail on future full-body duplicate checker copies.",
+    "#540 is closed and the parent reconstructable-artifact-policy lane has no remaining child issues."
+  ],
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "The package did not list reverse consumers for a soon-to-be-deleted mirror up front; `make maintainer-surfaces` caught the break after the edit."
+    ],
+    "signals fixed": [
+      "Maintainer checks now load the package-owned checker source instead of a removed mirror.",
+      "Source-payload boundary tests now reject duplicate full-body planning checker copies."
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "No new issue: the actionable consumer-discovery gap was closed inside this slice with existing checks rather than a new feature."
+    ],
+    "next owner": "none"
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #540 from reconstructable-artifact-policy lane."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "active planning summary and #540",
+    "what happened": "Promoted the freshest planning checker logic into packages/planning/scripts/check/check_planning_surfaces.py, reduced the root command path to a wrapper, removed stale bootstrap/root-installed full-body mirrors, and updated maintainer/boundary checks.",
+    "scope touched": "planning checker source, compatibility wrappers, maintainer checker routing, payload classification metadata, and focused tests",
+    "changed surfaces": "single-source checker authority moved to the planning package source tree",
+    "validations run": "uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace doctor --target . --modules planning --format json; cd packages/planning && uv run pytest tests/test_installer.py tests/test_check_planning_surfaces.py tests/test_packaging.py -q; uv run pytest tests/test_workspace_cli.py tests/test_source_payload_operational_install.py tests/test_maintainer_surfaces.py -q; uv run ruff check src tests packages/planning/src packages/planning/tests scripts; cd packages/planning && uv run ruff check .; make maintainer-surfaces",
+    "result for continuation": "#540 complete; reconstructable-artifact-policy has no remaining child issue.",
+    "next step": "archive plan, close #540, commit, and push"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used package summary/proof/doctor/archive-plan and refreshed generated maintainer surfaces",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "planning checker, planning doctor, package tests, workspace tests, maintainer surfaces, and ruff passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "The root wrapper runs the package-owned checker, deleted duplicate paths are absent, source-payload tests guard against future duplicates, and selected proof commands passed."
+  },
+  "execution_summary": {
+    "outcome delivered": "Collapsed duplicate planning checker copies to one package-owned implementation plus a root compatibility wrapper.",
+    "validation confirmed": "planning checker, planning doctor, package tests, workspace tests, maintainer surfaces, and ruff passed",
+    "follow-on routed to": "none for reconstructable-artifact-policy",
+    "post-work posterity capture": "archive evidence plus boundary tests and payload metadata",
+    "knowledge promoted (Memory/Docs/Config)": "none; the useful learning was encoded directly in checks",
+    "resume from": "state.toml after #540 closeout"
+  },
+  "intent_satisfaction": {
+    "original intent": "collapse duplicate planning checker implementations",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#540 collapsed the planning checker to one package-owned implementation, kept the root command as a thin wrapper, removed stale bootstrap/root-installed full-body mirrors, and added checks/tests against future duplicate bodies.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#540 was the final child of the reconstructable-artifact-policy lane and all acceptance criteria are represented in code, metadata, and validation.",
+    "evidence carried forward": "Planning checker, planning doctor, package tests, workspace tests, maintainer surfaces, and ruff passed.",
+    "reopen trigger": "A second full planning checker implementation or unchecked stable-path mirror is added."
+  },
+  "durable_residue": {
+    "status": "evidence_only",
+    "learned constraint": "No future-relevant learning was identified beyond the archived proof record.",
+    "motivation worth preserving": "none beyond evidence-only archive",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "none for reconstructable-artifact-policy",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "none; the useful learning was encoded directly in checks",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "collapse duplicate planning checker payload copies",
+          "owner": "issue",
+          "source": "#540"
+        }
+      ]
+    }
+  }
+}

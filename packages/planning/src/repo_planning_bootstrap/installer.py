@@ -26,7 +26,7 @@ PLANNING_STATE_PATH = PLANNING_MANAGED_ROOT / "state.toml"
 PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "external-intent-evidence.json"
 PLANNING_EXTERNAL_INTENT_CACHE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 PLANNING_FINISHED_WORK_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "finished-work-evidence.json"
-PLANNING_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
+SOURCE_PLANNING_CHECKER_SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "check" / "check_planning_surfaces.py"
 PLANNING_STATE_KIND = "agentic-planning-state"
 PLANNING_STATE_SCHEMA_VERSION = "planning-state/v1"
 PLANNING_STATE_MATURITIES = {"idea", "candidate", "shaped", "ready", "active", "closed"}
@@ -7270,7 +7270,7 @@ def _render_generated_agent_files(*, target_root: Path, result: InstallResult, a
 
 
 def _run_planning_checker(target_root: Path) -> list[dict[str, str]]:
-    checker_path = payload_root() / PLANNING_CHECKER_SCRIPT_PATH
+    checker_path = SOURCE_PLANNING_CHECKER_SCRIPT_PATH
     if not checker_path.exists():
         return []
     spec = importlib.util.spec_from_file_location("planning_checker", checker_path)
@@ -7278,7 +7278,7 @@ def _run_planning_checker(target_root: Path) -> list[dict[str, str]]:
         return [
             {
                 "warning_class": "planning_checker_load_failure",
-                "path": PLANNING_CHECKER_SCRIPT_PATH.as_posix(),
+                "path": checker_path.as_posix(),
                 "message": "Unable to load planning checker.",
             }
         ]

@@ -155,7 +155,6 @@
         "packages/planning/bootstrap/tools/AGENT_ROUTING.md",
         "packages/planning/bootstrap/tools/agent-manifest.json",
         "packages/planning/bootstrap/scripts/render_agent_docs.py",
-        "packages/planning/bootstrap/scripts/check/check_planning_surfaces.py",
         "packages/planning/bootstrap/scripts/check/check_maintainer_surfaces.py"
       ],
       "existing_follow_up": [

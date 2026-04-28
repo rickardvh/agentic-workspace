@@ -24,6 +24,7 @@ WARNING_CONTRACT_DRIFT = "contract_drift"
 WARNING_DOC_INSTALLED_SURFACE_DRIFT = "doc_installed_surface_drift"
 WARNING_PAYLOAD_INVENTORY_DRIFT = "payload_inventory_drift"
 WARNING_PACKAGING_MANIFEST_DRIFT = "packaging_manifest_drift"
+WARNING_DUPLICATE_PLANNING_CHECKER_DRIFT = "duplicate_planning_checker_drift"
 
 
 class BoundaryWarning(NamedTuple):
@@ -216,6 +217,54 @@ def _readme_payload_claim_warnings(*, repo_root: Path) -> list[BoundaryWarning]:
     ]
 
 
+def _planning_checker_duplicate_warnings(*, repo_root: Path) -> list[BoundaryWarning]:
+    canonical = repo_root / "packages" / "planning" / "scripts" / "check" / "check_planning_surfaces.py"
+    package_checkout = repo_root / "packages" / "planning"
+    if not (package_checkout / "scripts").exists():
+        return []
+    root_wrapper = repo_root / "scripts" / "check" / "check_planning_surfaces.py"
+    duplicate_paths = [
+        repo_root / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_planning_surfaces.py",
+        repo_root / "packages" / "planning" / "bootstrap" / "scripts" / "check" / "check_planning_surfaces.py",
+        repo_root
+        / "packages"
+        / "planning"
+        / "bootstrap"
+        / ".agentic-workspace"
+        / "planning"
+        / "scripts"
+        / "check"
+        / "check_planning_surfaces.py",
+    ]
+    warnings: list[BoundaryWarning] = []
+    if not canonical.exists():
+        warnings.append(
+            BoundaryWarning(
+                WARNING_DUPLICATE_PLANNING_CHECKER_DRIFT,
+                _render_path(canonical),
+                "Package-owned planning checker source is missing; keep one canonical full implementation under packages/planning/scripts/check.",
+            )
+        )
+    if root_wrapper.exists() and "def gather_planning_warnings" in root_wrapper.read_text(encoding="utf-8"):
+        warnings.append(
+            BoundaryWarning(
+                WARNING_DUPLICATE_PLANNING_CHECKER_DRIFT,
+                _render_path(root_wrapper),
+                "Root planning checker command path must stay a thin wrapper, not a second full implementation.",
+            )
+        )
+    for path in duplicate_paths:
+        if path.exists():
+            warnings.append(
+                BoundaryWarning(
+                    WARNING_DUPLICATE_PLANNING_CHECKER_DRIFT,
+                    _render_path(path),
+                    "Duplicate planning checker body found; use the package-owned checker source plus thin compatibility wrappers.",
+                )
+            )
+    return warnings
+
+
 def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWarning]:
     warnings: list[BoundaryWarning] = []
 
@@ -251,6 +300,7 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
             )
 
     warnings.extend(_readme_payload_claim_warnings(repo_root=repo_root))
+    warnings.extend(_planning_checker_duplicate_warnings(repo_root=repo_root))
     planning_expected = _planning_expected_payload_files(repo_root)
     memory_expected = _memory_expected_payload_files(repo_root)
     warnings.extend(_payload_inventory_warnings(repo_root=repo_root, package_name="planning", expected=planning_expected))

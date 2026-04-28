@@ -180,7 +180,7 @@
         ".agentic-workspace/docs/execution-flow-contract.md",
         ".agentic-workspace/planning/execplans/",
         "scripts/check/check_maintainer_surfaces.py",
-        ".agentic-workspace/planning/scripts/check/check_planning_surfaces.py",
+        "scripts/check/check_planning_surfaces.py",
         ".agentic-workspace/planning/agent-manifest.json",
         "tools/AGENT_QUICKSTART.md",
         "tools/AGENT_ROUTING.md"

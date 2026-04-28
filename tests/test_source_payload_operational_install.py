@@ -205,3 +205,29 @@ def test_sync_proof_warns_on_unclassified_source_extra(monkeypatch, tmp_path: Pa
             "rule": "Unexpected bootstrap source extras require classification before they can be treated as intentional.",
         }
     ]
+
+
+def test_planning_checker_has_single_full_source() -> None:
+    canonical = WORKSPACE_ROOT / "packages" / "planning" / "scripts" / "check" / "check_planning_surfaces.py"
+    root_wrapper = WORKSPACE_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
+    removed_duplicate_paths = [
+        WORKSPACE_ROOT / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_planning_surfaces.py",
+        WORKSPACE_ROOT / "packages" / "planning" / "bootstrap" / "scripts" / "check" / "check_planning_surfaces.py",
+        WORKSPACE_ROOT
+        / "packages"
+        / "planning"
+        / "bootstrap"
+        / ".agentic-workspace"
+        / "planning"
+        / "scripts"
+        / "check"
+        / "check_planning_surfaces.py",
+    ]
+
+    assert canonical.exists()
+    assert "def gather_planning_warnings" in canonical.read_text(encoding="utf-8")
+    assert root_wrapper.exists()
+    wrapper_text = root_wrapper.read_text(encoding="utf-8")
+    assert "runpy.run_path" in wrapper_text
+    assert "def gather_planning_warnings" not in wrapper_text
+    assert not [path for path in removed_duplicate_paths if path.exists()]

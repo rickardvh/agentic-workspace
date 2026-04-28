@@ -77,7 +77,6 @@
         "packages/planning/bootstrap/tools/AGENT_ROUTING.md",
         "packages/planning/bootstrap/tools/agent-manifest.json",
         "packages/planning/bootstrap/scripts/render_agent_docs.py",
-        "packages/planning/bootstrap/scripts/check/check_planning_surfaces.py",
         "packages/planning/bootstrap/scripts/check/check_maintainer_surfaces.py"
       ],
       "next_issue": "https://github.com/rickardvh/agentic-workspace/issues/465"
@@ -325,13 +324,6 @@
       "rationale": "Payload mirror of maintainer rendering helper; target repos should consume rendered adapters or commands instead."
     },
     {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/scripts/check/check_planning_surfaces.py",
-      "installed_path": ".agentic-workspace/planning/scripts/check/check_planning_surfaces.py",
-      "classification": "maintainer/development only",
-      "owner": "planning package maintainers",
-      "rationale": "Payload mirror of a maintainer check; ordinary repos should reach checks through package commands."
-    },
-    {
       "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py",
       "installed_path": ".agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py",
       "classification": "maintainer/development only",
@@ -344,13 +336,6 @@
       "classification": "maintainer/development only",
       "owner": "planning package maintainers",
       "rationale": "Package-local renderer source for generated adapters."
-    },
-    {
-      "source_path": "packages/planning/bootstrap/scripts/check/check_planning_surfaces.py",
-      "installed_path": null,
-      "classification": "maintainer/development only",
-      "owner": "planning package maintainers",
-      "rationale": "Package-local maintainer check source."
     },
     {
       "source_path": "packages/planning/bootstrap/scripts/check/check_maintainer_surfaces.py",
