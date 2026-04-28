@@ -1,0 +1,269 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Make execplan scaffolds projection-complete by default",
+  "goal": [
+    "Implement #515 by making newly promoted execplan records carry the compact projection fields summary expects.",
+    "Keep the fix inside the existing planning scaffold path instead of adding a new command or extra first-line surface."
+  ],
+  "non_goals": [
+    "Do not add a new planner workflow command.",
+    "Do not make summary accept incomplete active records silently.",
+    "Do not broaden default startup or report payloads."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "agents can promote a bounded work item to an execplan without rediscovering required projection fields during closeout",
+      "constraints": "prefer existing scaffold/promote machinery; keep summary projection checks meaningful",
+      "latitude": "may add default scaffold fields and focused tests",
+      "escalation": "stop if the fix requires changing planning schema semantics or hiding real active-plan drift"
+    },
+    "execution": {
+      "milestone": "#515",
+      "status": "completed",
+      "next_step": "archive plan, close #515, and continue the next workflow-friction-polish slice",
+      "proof": "passed"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/projection-complete-execplan-scaffolds.plan.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py"
+      ],
+      "invariants": [
+        "summary should still warn for genuinely incomplete hand-authored active records",
+        "promote-to-plan should remain the existing scaffold path",
+        "generated records should validate against planning-execplan.schema.json"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "remove small package-use friction discovered during dogfooding",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "workflow-friction-polish"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #515 closes, continue the next workflow-friction-polish issue or refreshed higher-priority issue"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "projection-complete scaffolded active execplans",
+    "intentionally deferred": "broader structured-first authoring helpers remain in the later lane",
+    "discovered implications": "pending closeout dogfooding review",
+    "proof achieved now": "pending",
+    "validation still needed": "package installer tests and planning surface checks",
+    "next likely slice": "continue #522 or refreshed next workflow-friction-polish issue"
+  },
+  "intent_interpretation": {
+    "literal request": "Make execplan scaffolds projection-complete by default.",
+    "inferred intended outcome": "Reduce plan-authoring repair loops while preserving summary warnings for real drift.",
+    "chosen concrete what": "Patch the existing scaffold builder and tests.",
+    "interpretation distance": "low",
+    "review guidance": "Check that no new command or default payload expansion was introduced."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning scaffold builder, package installer tests, active plan/state",
+    "max changed files": "about 4",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q -k \"promote_todo_item_to_execplan\"; uv run python scripts/check/check_planning_surfaces.py --strict",
+    "ask-before-refactor threshold": "before changing summary projection semantics",
+    "stop before touching": "CLI startup/report defaults"
+  },
+  "stop_conditions": {
+    "stop when": "the only viable fix hides missing-field warnings instead of creating better scaffolds",
+    "escalate when boundary reached": "schema or summary projection contracts need redesign",
+    "escalate on proof failure": "promoted scaffold cannot be made projection-complete without broad package changes"
+  },
+  "context_budget": {
+    "live working set": "installer scaffold builder and focused installer tests",
+    "recoverable later": "issue #515 and this execplan",
+    "externalize before shift": "record proof and closeout in this plan",
+    "pre-work config pull": "summary, issue view, workflow obligations",
+    "pre-work memory pull": "none; issue and package code are sufficient",
+    "tiny resumability note": "add context_budget defaults to _build_execplan_record_from_todo_item and assert promoted summaries project cleanly",
+    "context-shift triggers": "before commit, after proof failure, or if summary semantics need broad changes"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete #515 without adding workflow surface area.",
+    "hard constraints": "Use existing promote-to-plan scaffold path; preserve summary drift detection.",
+    "agent may decide locally": "field text, exact focused tests, and closeout residue routing.",
+    "escalate when": "projection completeness requires changing active-summary contracts."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#515",
+      "label": "Projection-complete execplan scaffolds",
+      "role": "source",
+      "locator": "GitHub issue #515"
+    },
+    {
+      "kind": "issue",
+      "target": "#522",
+      "label": "Next workflow-friction-polish slice",
+      "role": "next_lane",
+      "locator": "GitHub issue #522"
+    }
+  ],
+  "active_milestone": {
+    "id": "#515",
+    "status": "completed",
+    "scope": "execplan scaffold projection completeness",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Patch the scaffold builder and tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/projection-complete-execplan-scaffolds.plan.json"
+  ],
+  "invariants": [
+    "Summary warning behavior remains useful for incomplete records."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"promote_todo_item_to_execplan\"",
+    "uv run python scripts/check/check_planning_surfaces.py --strict"
+  ],
+  "required_tools": [
+    "uv",
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "Promoted execplan records include context-budget fields by default.",
+    "A promoted active execplan has present iterative/context projections in summary.",
+    "Focused package tests and planning surface checks pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": ".agentic-workspace/planning/execplans/projection-complete-execplan-scaffolds.plan.json",
+    "what happened": "Added projection-complete default sections to promoted execplan records and normalized planned/next promotions to active in-progress plan records.",
+    "scope touched": "planning scaffold builder, installer tests, active plan/state",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; planning state/execplan",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"promote_todo_item_to_execplan\"; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py --strict",
+    "result for continuation": "#515 complete; workflow-friction-polish continues with #522 or refreshed higher-priority work.",
+    "next step": "archive and close the slice"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changed existing scaffold path and tests without adding a command or default payload",
+    "proof status": "passed",
+    "intent served": "yes; promoted records now include projection fields and active promoted work-items project cleanly",
+    "config compliance": "used compact summary/proof/report/reconcile/doctor surfaces and subagent inspection",
+    "misinterpretation risk": "low; defaults are pending/not-run-yet and do not pretend work is complete",
+    "follow-on decision": "keep parent lane open for remaining workflow-friction-polish issues"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Focused promotion tests, full planning installer tests, planning package ruff, planning doctor, planning-surface checks, and proof selection passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "#515: make execplan scaffolds projection-complete by default.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#515 added projection-complete promote-to-plan scaffolds and active status normalization; focused and full planning package proof passed.",
+    "unsolved intent passed to": "#522 and the rest of workflow-friction-polish remain open."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "use existing scaffold machinery and checks instead of adding surface area",
+    "broader-lane validation question": "Does this reduce plan-authoring repair loops without hiding real drift?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Bounded #515 slice complete; parent workflow-friction-polish lane remains open.",
+    "evidence carried forward": "packages/planning tests/test_installer.py, package ruff, planning doctor, planning surfaces, and proof selection passed.",
+    "reopen trigger": "Reopen #515 if promoted execplans miss active summary projection fields or need manual projection-field repair."
+  },
+  "durable_residue": {
+    "status": "check",
+    "learned constraint": "Generated execplan scaffolds should be projection-complete with pending defaults rather than relying on closeout-time repair.",
+    "motivation worth preserving": "Plan promotion is cheaper when the scaffold immediately supports summary, handoff, context-budget, and closeout projections.",
+    "canonical owner now": "packages/planning/src/repo_planning_bootstrap/installer.py and packages/planning/tests/test_installer.py",
+    "promotion trigger": "when execplan projection sections or promote-to-plan scaffold behavior changes",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "promote-to-plan scaffolds now include projection-complete pending sections and ready/next promotions become active plan records",
+    "validation confirmed": "focused and full planning installer tests, package ruff, planning doctor, proof selection, and planning-surface checks passed",
+    "follow-on routed to": "workflow-friction-polish/#522 or refreshed next issue",
+    "post-work posterity capture": "plan archive plus tests",
+    "knowledge promoted (Memory/Docs/Config)": "none; code and tests are sufficient durable residue",
+    "resume from": ".agentic-workspace/planning/state.toml"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Subagent inspection confirmed the builder, not the template, was the missing scaffold path.",
+      "Focused testing showed ready work-item promotion created a plan record but did not project as an active planning_record until planned status was normalized."
+    ],
+    "signals fixed": [
+      "#515 fixed by projection-complete builder defaults and active-status normalization."
+    ],
+    "signals routed": [
+      "Remaining workflow-friction-polish issues stay in state.toml."
+    ],
+    "signals dismissed": [
+      "No new command or first-line surface was needed."
+    ],
+    "next owner": "workflow-friction-polish"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "raw command output and subagent exploration detail after proof is recorded",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "continue #522 or refreshed next workflow-friction-polish issue",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "packages/planning/tests/test_installer.py and planning proof-selected checks",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "none; code and tests are sufficient durable residue",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Projection-complete execplan scaffolds",
+          "owner": "issue",
+          "source": "#515"
+        },
+        {
+          "summary": "Next workflow-friction-polish slice",
+          "owner": "issue",
+          "source": "#522"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #515 after closing #507."
+  ]
+}

@@ -1476,6 +1476,11 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
     assert record["intent_continuity"]["this slice completes the larger intended outcome"] == "yes"
     assert record["intent_continuity"]["continuation surface"] == "none"
     assert record["required_continuation"]["required follow-on for the larger intended outcome"] == "no"
+    assert record["iterative_follow_through"]["proof achieved now"] == "pending"
+    assert record["intent_interpretation"]["inferred intended outcome"] == "this thread needs a bounded execution contract."
+    assert record["context_budget"]["tiny resumability note"] == "sketch the first implementation step."
+    assert record["execution_run"]["run status"] == "not-run-yet"
+    assert record["finished_run_review"]["review status"] == "pending"
     assert record["delegated_judgment"]["requested outcome"] == "this thread needs a bounded execution contract."
     assert "Surface: .agentic-workspace/planning/execplans/direct-item.md" in todo_text
     assert "Next Action:" not in todo_text
@@ -1508,14 +1513,24 @@ candidates = []
     assert record_path.exists()
     record = json.loads(record_path.read_text(encoding="utf-8"))
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    summary = planning_summary(target=tmp_path)
     assert record["kind"] == "planning-execplan/v1"
     assert record["active_milestone"]["id"] == "compact-item"
     assert record["delegated_judgment"]["requested outcome"] == "this thread needs the package command to dogfood compact state."
+    assert record["context_budget"]["pre-work config pull"] == (
+        "Use compact config/startup/summary outputs before opening raw planning or routing files."
+    )
     assert 'kind = "agentic-planning-state"' in state_text
     assert 'schema_version = "planning-state/v1"' in state_text
     assert 'surface = ".agentic-workspace/planning/execplans/compact-item.plan.json"' in state_text
     assert "next_action" not in state_text
     assert "done_when" not in state_text
+    assert summary["follow_through_contract"]["status"] == "present"
+    assert summary["intent_interpretation_contract"]["status"] == "present"
+    assert summary["context_budget_contract"]["status"] == "present"
+    assert summary["context_budget_contract"]["tiny_resumability_note"] == "promote the compact item."
+    assert summary["execution_run_contract"]["status"] == "present"
+    assert summary["finished_run_review_contract"]["status"] == "present"
     assert any(action.kind == "created" and action.path == record_path for action in result.actions)
 
 
@@ -1539,14 +1554,25 @@ execplans = []
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "work-item.plan.json"
 
     assert record_path.exists()
+    record = json.loads(record_path.read_text(encoding="utf-8"))
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     summary = planning_summary(target=tmp_path)
+    assert record["kind"] == "planning-execplan/v1"
+    assert record["context_budget"]["tiny resumability note"] == "promote the work item."
     assert "[active]" in state_text
     assert "work_items = []" in state_text
     assert 'path = ".agentic-workspace/planning/execplans/work-item.plan.json"' in state_text
     assert "next_action" not in state_text
     assert summary["todo"]["active_items"][0]["id"] == "work-item"
+    assert summary["execplans"]["active_count"] == 1
     assert summary["work_maturity"]["active_execplans"][0]["source_bucket"] == "active.execplans"
+    assert summary["planning_record"]["status"] == "present"
+    assert summary["follow_through_contract"]["status"] == "present"
+    assert summary["intent_interpretation_contract"]["status"] == "present"
+    assert summary["context_budget_contract"]["status"] == "present"
+    assert summary["context_budget_contract"]["tiny_resumability_note"] == "promote the work item."
+    assert summary["execution_run_contract"]["status"] == "present"
+    assert summary["finished_run_review_contract"]["status"] == "present"
     assert any(action.kind == "created" and action.path == record_path for action in result.actions)
 
 

@@ -6127,6 +6127,8 @@ def promote_todo_item_to_execplan(
     done_when = item.fields.get("done when", "").strip()
     why_now = item.fields.get("why now", "").strip()
     status = _normalize_status(item.fields.get("status", "planned"))
+    if status == "planned":
+        status = "in-progress"
     plan_record = _build_execplan_record_from_todo_item(
         title=_title_from_slug(slug),
         item_id=item_id,
@@ -7882,6 +7884,35 @@ def _build_execplan_record_from_todo_item(
             "validation still needed": "current milestone validation remains pending",
             "next likely slice": "continue the current milestone until the completion criteria are met",
         },
+        "intent_interpretation": {
+            "literal request": title,
+            "inferred intended outcome": goal,
+            "chosen concrete what": immediate,
+            "interpretation distance": "low",
+            "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation.",
+        },
+        "execution_bounds": {
+            "allowed paths": "Fill in the concrete write scope before implementation starts.",
+            "max changed files": "Fill in an expected upper bound before implementation starts.",
+            "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+            "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+            "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan.",
+        },
+        "stop_conditions": {
+            "stop when": "The work no longer matches the promoted item or its completion criteria.",
+            "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+            "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+            "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria.",
+        },
+        "context_budget": {
+            "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+            "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+            "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+            "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+            "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+            "tiny resumability note": immediate,
+            "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout.",
+        },
         "delegated_judgment": {
             "requested outcome": goal,
             "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
@@ -7910,6 +7941,37 @@ def _build_execplan_record_from_todo_item(
         "validation_commands": ["Fill in the narrowest command that proves the promoted work."],
         "required_tools": ["None."],
         "completion_criteria": [completion],
+        "execution_run": {
+            "run status": "not-run-yet",
+            "executor": "",
+            "handoff source": "agentic-planning-bootstrap promote-to-plan",
+            "what happened": "execution has not started",
+            "scope touched": "none yet",
+            "changed surfaces": "none yet; execution has not changed files",
+            "validations run": "pending",
+            "result for continuation": "continue from this scaffolded execplan",
+            "next step": immediate,
+        },
+        "finished_run_review": {
+            "review status": "pending",
+            "scope respected": "pending",
+            "proof status": "pending",
+            "intent served": "pending",
+            "config compliance": "pending",
+            "misinterpretation risk": "pending",
+            "follow-on decision": "pending",
+        },
+        "proof_report": {
+            "validation proof": "pending",
+            "proof achieved now": "pending",
+            'evidence for "proof achieved" state': "",
+        },
+        "intent_satisfaction": {
+            "original intent": goal,
+            "was original intent fully satisfied?": "pending",
+            "evidence of intent satisfaction": "",
+            "unsolved intent passed to": "none yet",
+        },
         "execution_summary": {
             "outcome delivered": "not completed yet",
             "validation confirmed": "pending",
@@ -7925,6 +7987,22 @@ def _build_execplan_record_from_todo_item(
             "canonical owner now": "none",
             "promotion trigger": "none",
             "retention after promotion": "retain",
+        },
+        "closure_check": {
+            "slice status": "pending",
+            "larger-intent status": "pending",
+            "closure decision": "pending",
+            "why this decision is honest": "",
+            "evidence carried forward": "",
+            "reopen trigger": "",
+        },
+        "improvement_signal_review": {
+            "status": "pending",
+            "signals found": [],
+            "signals fixed": [],
+            "signals routed": [],
+            "signals dismissed": [],
+            "next owner": "",
         },
         "closeout_distillation": {
             "buckets": {
