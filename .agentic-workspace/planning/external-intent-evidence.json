@@ -3,13 +3,13 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T00:21:02+00:00",
+  "refreshed_at": "2026-04-28T00:22:52+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T00:21:02+00:00",
-    "item_count": 458,
-    "open_count": 12,
+    "refreshed_at": "2026-04-28T00:22:52+00:00",
+    "item_count": 460,
+    "open_count": 14,
     "closed_count": 446,
     "limit": 600,
     "state": "all",
@@ -7386,6 +7386,38 @@
       "created_at": "2026-04-27T23:19:19Z",
       "updated_at": "2026-04-27T23:31:58Z",
       "comments_count": 1
+    },
+    {
+      "system": "github",
+      "id": "#473",
+      "title": "[Bug]: Preserve bounded intent satisfaction during archive closeout",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/473",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "bug"
+      ],
+      "created_at": "2026-04-28T00:22:12Z",
+      "updated_at": "2026-04-28T00:22:12Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#474",
+      "title": "[Review]: Make external intent refresh preserve audit scope by default",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/474",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [],
+      "created_at": "2026-04-28T00:22:33Z",
+      "updated_at": "2026-04-28T00:22:33Z",
+      "comments_count": 0
     }
   ]
 }

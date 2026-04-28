@@ -1,0 +1,215 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Archive Closeout Bounded Intent",
+  "goal": [
+    "Implement #473 so archive closeout preserves bounded child intent satisfaction separately from parent-lane continuation."
+  ],
+  "non_goals": [
+    "Do not weaken archive-and-close validation.",
+    "Do not remove parent-lane continuation pressure when no checked-in owner exists.",
+    "Do not add a new closeout command or top-level startup surface."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Archive preparation and finished-work inspection distinguish completed child work from open parent-lane continuation.",
+      "constraints": "Keep provider and tracker assumptions out of the product; use checked-in planning state and structured issue-reference roles.",
+      "latitude": "Patch the smallest planning bootstrap behavior and regression tests.",
+      "escalation": "Escalate if the fix requires changing the public meaning of archive-and-close."
+    },
+    "execution": {
+      "milestone": "archive-closeout-bounded-intent",
+      "status": "completed",
+      "next_step": "Archive this plan, commit, push, close #473, then continue #474.",
+      "proof": "planning package tests, planning surfaces, summary/reconcile/proof dogfooding"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/archive-closeout-bounded-intent.plan.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py"
+      ],
+      "invariants": [
+        "A completed child can have bounded intent satisfied while the parent lane remains open.",
+        "Open-parent archives must still name a checked-in continuation owner.",
+        "Finished-work inspection should not ask agents to re-promote a child whose continuation is already routed in active planning or roadmap state."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#449 makes package use cheaper than bypassing it by removing trust and workflow friction.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge",
+    "parent lane": "#449"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #473, continue #474 or the next refreshed high-priority product friction lane"
+  },
+  "active_milestone": {
+    "id": "archive-closeout-bounded-intent",
+    "status": "completed",
+    "scope": "Fix closeout intent normalization and continuation routing.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Preserve bounded intent satisfaction during archive closeout.",
+    "hard constraints": "Keep the package repo-, provider-, tool-, and language-agnostic.",
+    "agent may decide locally": "Exact helper names and regression test structure.",
+    "escalate when": "The fix would require changing issue tracker semantics into product core."
+  },
+  "immediate_next_action": [
+    "Archive, commit, push, and close #473 with proof; then refresh and promote #474."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/archive-closeout-bounded-intent.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run ruff check packages/planning/src packages/planning/tests",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/external-intent-evidence.json .agentic-workspace/planning/execplans/archive-closeout-bounded-intent.plan.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "cd packages/planning && uv run ruff check ."
+  ],
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/473",
+      "label": "#473 bounded archive intent",
+      "role": "source_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/449",
+      "label": "#449 operating-cost parent",
+      "role": "parent_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/474",
+      "label": "#474 external evidence refresh scope",
+      "role": "next_lane",
+      "locator": "issue body"
+    }
+  ],
+  "completion_criteria": [
+    "archive-plan --prepare-closeout preserves an existing yes bounded intent answer for archive-but-keep-lane-open.",
+    "archive validation accepts bounded intent satisfied with larger-intent status open when continuation owner is explicit.",
+    "planning summary does not create a derived follow-up candidate for a completed child whose parent/next refs are already routed in roadmap state.",
+    "External evidence includes #473/#474 in checked-in planning state."
+  ],
+  "execution_summary": {
+    "outcome delivered": "archive prepare preserves existing bounded intent satisfaction; archive validation allows explicit bounded satisfaction with open larger intent; finished-work inspection recognizes roadmap-routed continuations.",
+    "validation confirmed": "planning package tests, focused tests, ruff, planning surface check, summary, reconcile, proof selection, planning doctor, and proof-selected package commands passed.",
+    "follow-on routed to": "#474 and remaining roadmap lanes",
+    "post-work posterity capture": "archived execplan and issue closeout proof",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "refresh external evidence, promote #474"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "individual validation transcripts after proof and commit",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#474 owns the external-evidence refresh scope friction found during the same closeout.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "packages/planning/tests/test_installer.py guards archive prepare, archive validation, and roadmap-routed continuation behavior.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Close #473 after commit/push.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "Keep #449 open as parent lane.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "intent_satisfaction": {
+    "original intent": "Preserve bounded intent satisfaction during archive closeout.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Behavior and tests now distinguish bounded child satisfaction from open parent-lane continuation.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge activates a fresh bounded slice."
+  },
+  "cost_assessment": {
+    "workflow_cost_found": "Agents had to manually repair archive residue and reason around false follow-up pressure after closing a completed child issue.",
+    "architecture_cost_found": "Closeout used one field to imply both bounded source intent and larger parent-lane state.",
+    "needless_complexity_found": "The fix avoided a new command by tightening existing closeout and summary behavior.",
+    "surfaces_added": "No new first-contact surface; one active plan was used for proof and will archive.",
+    "surfaces_removed_merged_or_demoted": "False historical audit pressure for roadmap-routed child continuations is backgrounded.",
+    "artifact_footprint_changed": "One active execplan will move to archive.",
+    "shipped_default_footprint_changed": "No ordinary startup change.",
+    "signals_consumed": [
+      "#473",
+      "#438 closeout dogfooding friction"
+    ],
+    "signals_still_accumulating": [
+      "#474 external evidence refresh scope",
+      "remaining parent product-cost lanes"
+    ],
+    "human_steering_avoided_next_time": "A future agent can archive a completed child with an open parent lane without hand-editing intent satisfaction.",
+    "follow_up_routed": [
+      "#474",
+      "#449"
+    ],
+    "net_cost_direction": "lower"
+  },
+  "improvement_signal_review": {
+    "status": "fixed",
+    "candidate_kind": "dogfooding_friction",
+    "symptom": "Archive closeout conflated child completion with parent continuation and created misleading autopilot pressure.",
+    "owner": "planning bootstrap archive closeout and finished-work inspection",
+    "retention": "shrink_after_fix"
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from #438 dogfooding friction before lower-priority footprint/codegen lanes because false closeout pressure makes autopilot harder to trust.",
+    "2026-04-28: Kept the correction in existing planning closeout/reporting machinery rather than adding another workflow surface."
+  ],
+  "proof_report": {
+    "validation proof": "planning package tests, focused tests, ruff, planning surface check, summary, reconcile, proof selection, planning doctor, and proof-selected package commands passed.",
+    "proof achieved now": "yes; validation evidence is recorded in execution summary.",
+    "evidence for \"proof achieved\" state": "planning package tests, focused tests, ruff, planning surface check, summary, reconcile, proof selection, planning doctor, and proof-selected package commands passed."
+  }
+}

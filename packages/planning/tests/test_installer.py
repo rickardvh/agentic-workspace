@@ -2157,7 +2157,12 @@ def test_archive_plan_prepare_closeout_handles_open_parent_lane(tmp_path: Path, 
         "owner surface": ".agentic-workspace/planning/state.toml",
         "activation trigger": "when fresh product-compression pressure appears",
     }
-    record.pop("intent_satisfaction")
+    record["intent_satisfaction"] = {
+        "original intent": "Complete the child slice.",
+        "was original intent fully satisfied?": "yes",
+        "evidence of intent satisfaction": "Child slice validation passed.",
+        "unsolved intent passed to": ".agentic-workspace/planning/state.toml",
+    }
     record.pop("closure_check")
     record.pop("closeout_distillation", None)
     installer_mod._write_execplan_record(record_path=record_path, record=record)
@@ -2183,7 +2188,9 @@ def test_archive_plan_prepare_closeout_handles_open_parent_lane(tmp_path: Path, 
     archived = json.loads(archived_record_path.read_text(encoding="utf-8"))
 
     assert payload["warnings"] == []
-    assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "no"
+    assert archived["intent_satisfaction"]["original intent"] == "Complete the child slice."
+    assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
+    assert archived["intent_satisfaction"]["evidence of intent satisfaction"] == "Child slice validation passed."
     assert archived["intent_satisfaction"]["unsolved intent passed to"] == ".agentic-workspace/planning/state.toml"
     assert archived["closure_check"]["larger-intent status"] == "open"
     assert archived["closure_check"]["closure decision"] == "archive-but-keep-lane-open"
@@ -4226,6 +4233,75 @@ candidates = []
     assert inspection["routed_by"] == [".agentic-workspace/planning/execplans/active-follow-on.plan.json"]
     assert contract["derived_follow_up_candidates"] == []
     assert summary["execution_readiness"]["status"] == "planning-backed"
+
+
+def test_planning_summary_suppresses_archived_child_when_continuation_is_in_roadmap(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "parent-lane", title = "Parent lane", priority = "1", issues = ["#701", "#702"], outcome = "continue parent", reason = "next child #702 remains open", promotion_signal = "after child #700", suggested_first_slice = "#702" },
+]
+candidates = []
+""",
+    )
+
+    archive_dir = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    child_path = archive_dir / "completed-child.plan.json"
+    _write_execplan_record(
+        child_path,
+        item_id="completed-child",
+        status="completed",
+        references=[
+            {
+                "kind": "github-issue",
+                "target": "#700",
+                "label": "completed child",
+                "role": "source_intent",
+                "locator": "issue",
+            },
+            {
+                "kind": "github-issue",
+                "target": "#701",
+                "label": "parent lane",
+                "role": "parent_intent",
+                "locator": "issue",
+            },
+            {
+                "kind": "github-issue",
+                "target": "#702",
+                "label": "next child",
+                "role": "next_lane",
+                "locator": "issue",
+            },
+        ],
+    )
+    child_record = json.loads(child_path.read_text(encoding="utf-8"))
+    child_record["intent_satisfaction"]["was original intent fully satisfied?"] = "yes"
+    child_record["intent_satisfaction"]["unsolved intent passed to"] = ".agentic-workspace/planning/state.toml roadmap lane parent-lane"
+    child_record["closure_check"]["larger-intent status"] = "open"
+    child_record["closure_check"]["closure decision"] = "archive-but-keep-lane-open"
+    installer_mod._write_execplan_record(record_path=child_path, record=child_record)
+
+    summary = planning_summary(target=tmp_path)
+    contract = summary["finished_work_inspection_contract"]
+
+    assert contract["counts"]["partial_count"] == 1
+    assert contract["counts"]["routed_continuation_count"] == 1
+    assert contract["counts"]["derived_follow_up_candidate_count"] == 0
+    inspection = contract["inspections"][0]
+    assert inspection["classification"] == "routed_partial"
+    assert inspection["intent_satisfied"] == "yes"
+    assert inspection["routed_by"] == [".agentic-workspace/planning/state.toml roadmap lane parent-lane"]
+    assert contract["derived_follow_up_candidates"] == []
+    assert summary["execution_readiness"]["status"] == "roadmap-needs-promotion"
 
 
 def test_planning_summary_uses_reference_roles_before_prose_issue_refs(tmp_path: Path) -> None:

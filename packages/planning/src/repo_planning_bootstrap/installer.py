@@ -3467,6 +3467,8 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
     routed_continuation = 0
     for candidate in derived_follow_up_candidates:
         routed_by = _finished_work_continuation_routed_by_active_plan(target_root=target_root, candidate=candidate)
+        if not routed_by:
+            routed_by = _finished_work_continuation_routed_by_roadmap(target_root=target_root, candidate=candidate)
         if routed_by:
             routed_continuation += 1
             source_plan = str(candidate.get("source_plan", ""))
@@ -3478,7 +3480,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
                     inspection["classification"] = "routed_partial"
                     inspection["routed_by"] = routed_by
                     inspection["reason"] = (
-                        "Archived residue left larger intent open, but a live checked-in plan already owns the same parent continuation."
+                        "Archived residue left larger intent open, but checked-in planning already owns the same continuation."
                     )
                     break
             continue
@@ -3598,6 +3600,40 @@ def _finished_work_continuation_routed_by_active_plan(*, target_root: Path, cand
         if parent_refs & active_parent_refs and not (closure_refs & active_closure_refs):
             routed_by.append(path.relative_to(target_root).as_posix())
     return routed_by
+
+
+def _finished_work_continuation_routed_by_roadmap(*, target_root: Path, candidate: dict[str, Any]) -> list[str]:
+    unsolved_intent = str(candidate.get("unsolved_intent", "")).strip().lower()
+    if not unsolved_intent or unsolved_intent in {"none", "n/a", "none yet"}:
+        return []
+    reference_roles = candidate.get("reference_roles", {})
+    if not isinstance(reference_roles, dict):
+        return []
+    non_closure_refs = set(reference_roles.get("non_closure_refs", []) or [])
+    if not non_closure_refs:
+        return []
+
+    state = _read_state_from_toml(target_root)
+    roadmap = state.get("roadmap", {}) if isinstance(state, dict) else {}
+    if not isinstance(roadmap, dict):
+        return []
+
+    routed_by: list[str] = []
+    for collection_name in ("lanes", "candidates"):
+        collection = roadmap.get(collection_name, [])
+        if not isinstance(collection, list):
+            continue
+        for raw_item in collection:
+            if not isinstance(raw_item, dict):
+                continue
+            item_refs = {_reference_issue_token(str(issue)) for issue in raw_item.get("issues", []) if _reference_issue_token(str(issue))}
+            for value in (raw_item.get("id", ""), raw_item.get("title", ""), raw_item.get("reason", "")):
+                item_refs.update(_issue_refs_from_text(str(value)))
+            if not (item_refs & non_closure_refs):
+                continue
+            item_id = str(raw_item.get("id", "")).strip() or str(raw_item.get("title", "")).strip() or "unnamed"
+            routed_by.append(f".agentic-workspace/planning/state.toml roadmap {collection_name[:-1]} {item_id}")
+    return sorted(set(routed_by))
 
 
 def _live_execplan_paths(execplan_dir: Path) -> list[Path]:
@@ -5560,7 +5596,10 @@ def _prepare_execplan_closeout(
         result.add("manual review", record_path, "--closure-decision must be one of archive-and-close or archive-but-keep-lane-open")
         return False
 
+    existing_intent_satisfaction = _record_section_dict(record, "intent_satisfaction") or {}
     normalized_intent_satisfied = (intent_satisfied or "").strip().lower()
+    if not normalized_intent_satisfied:
+        normalized_intent_satisfied = str(existing_intent_satisfaction.get("was original intent fully satisfied?", "")).strip().lower()
     if not normalized_intent_satisfied:
         normalized_intent_satisfied = "no" if normalized_closure == "archive-but-keep-lane-open" else "yes"
     if normalized_intent_satisfied not in {"yes", "true", "no", "false"}:
@@ -5570,12 +5609,17 @@ def _prepare_execplan_closeout(
     larger_status = "open" if normalized_closure == "archive-but-keep-lane-open" else "closed"
     routed_unsolved_intent = continuation_owner if normalized_closure == "archive-but-keep-lane-open" else "none"
     original_intent = (
-        intent_interpretation.get("literal request")
+        existing_intent_satisfaction.get("original intent")
+        or intent_interpretation.get("literal request")
         or intent_interpretation.get("inferred intended outcome")
         or delegated_judgment.get("requested outcome")
         or str(record.get("title", "Completed execplan")).strip()
     )
-    evidence = intent_evidence or "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields."
+    evidence = (
+        intent_evidence
+        or existing_intent_satisfaction.get("evidence of intent satisfaction")
+        or "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields."
+    )
     honest_reason = closure_reason or (
         "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner."
         if normalized_closure == "archive-but-keep-lane-open"
@@ -5970,7 +6014,11 @@ def archive_execplan(
             )
             return result
     elif closure_decision == "archive-but-keep-lane-open":
-        if fully_satisfied not in {"no", "false"} or larger_intent_status not in {"open", "partial", "unfinished"}:
+        if fully_satisfied not in {"yes", "true", "no", "false"} or larger_intent_status not in {
+            "open",
+            "partial",
+            "unfinished",
+        }:
             result.warnings.append(
                 {
                     "warning_class": "archive_intent_not_fully_satisfied",
@@ -5983,7 +6031,7 @@ def archive_execplan(
                 plan_path,
                 (
                     "align `Intent Satisfaction` and `Closure Check` with `archive-but-keep-lane-open`: "
-                    "`intent_satisfaction.was original intent fully satisfied?` must be `no` or `false`, "
+                    "`intent_satisfaction.was original intent fully satisfied?` must explicitly answer the bounded/source intent, "
                     "and `closure_check.larger-intent status` must be one of `open`, `partial`, or `unfinished`"
                 ),
             )
