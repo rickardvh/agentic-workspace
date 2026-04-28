@@ -31,13 +31,37 @@
       "type": "object",
       "required": [
         "name",
-        "help"
+        "help",
+        "role",
+        "audience"
       ],
       "properties": {
         "name": {
           "type": "string"
         },
         "help": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "core_lifecycle",
+            "core_context_router",
+            "reusable_host_repo_diagnostics",
+            "module_delegation_front_door",
+            "candidate_for_module_ownership",
+            "source_checkout_only_maintainer_development",
+            "remove_or_hide"
+          ]
+        },
+        "audience": {
+          "enum": [
+            "ordinary_host_repo",
+            "advanced_host_repo",
+            "local_only",
+            "source_checkout_only"
+          ]
+        },
+        "classification_note": {
           "type": "string"
         },
         "uses_option_groups": {

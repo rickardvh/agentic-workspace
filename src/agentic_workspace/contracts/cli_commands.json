@@ -17,7 +17,10 @@
           ],
           "help": "Optional repository path used to report installed modules."
         }
-      ]
+      ],
+      "role": "module_delegation_front_door",
+      "audience": "ordinary_host_repo",
+      "classification_note": "front door for declared module availability and install state"
     },
     {
       "name": "summary",
@@ -44,7 +47,10 @@
           ],
           "default": "compact"
         }
-      ]
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "compact active planning and handoff state"
     },
     {
       "name": "start",
@@ -69,7 +75,10 @@
           "default": [],
           "help": "Optional repo-relative changed paths used to include a proof recommendation."
         }
-      ]
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "ordinary first-contact startup context"
     },
     {
       "name": "implement",
@@ -101,7 +110,10 @@
           ],
           "help": "Optional task text used to route broad external-work requests before implementation."
         }
-      ]
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "bounded implementer context over changed paths"
     },
     {
       "name": "defaults",
@@ -117,7 +129,10 @@
           ],
           "help": "Return only one top-level defaults section in the compact contract profile."
         }
-      ]
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "queryable default policy and routing contracts"
     },
     {
       "name": "proof",
@@ -157,14 +172,20 @@
           "default": [],
           "help": "Return required proof commands for the provided repo-relative changed paths."
         }
-      ]
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "changed-path proof routing and authority checks"
     },
     {
       "name": "setup",
       "help": "Show the bounded post-bootstrap setup guidance for a mature repository.",
       "uses_option_groups": [
         "selection"
-      ]
+      ],
+      "role": "reusable_host_repo_diagnostics",
+      "audience": "advanced_host_repo",
+      "classification_note": "post-bootstrap setup findings and guidance"
     },
     {
       "name": "ownership",
@@ -194,7 +215,10 @@
           ],
           "help": "Return the ownership answer for one repo-relative path."
         }
-      ]
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "ownership and authority routing"
     },
     {
       "name": "config",
@@ -210,7 +234,10 @@
           ],
           "help": "Optional repository path used to resolve repo-owned config."
         }
-      ]
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "resolved repo and local configuration posture"
     },
     {
       "name": "system-intent",
@@ -234,7 +261,10 @@
           "action": "store_true",
           "help": "Refresh source discovery metadata and create the compiled system-intent declaration if it is missing."
         }
-      ]
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "compiled system-intent declaration and sync route"
     },
     {
       "name": "note-delegation-outcome",
@@ -301,7 +331,10 @@
           "action": "store_true",
           "help": "Record that the delegated run had to stop and escalate."
         }
-      ]
+      ],
+      "role": "reusable_host_repo_diagnostics",
+      "audience": "local_only",
+      "classification_note": "local-only delegation calibration record"
     },
     {
       "name": "skills",
@@ -324,7 +357,10 @@
           ],
           "help": "Optional task description used to recommend likely skills."
         }
-      ]
+      ],
+      "role": "module_delegation_front_door",
+      "audience": "ordinary_host_repo",
+      "classification_note": "registered package and repo skill routing"
     },
     {
       "name": "report",
@@ -360,7 +396,10 @@
           ],
           "help": "Return one top-level full-report section in the compact contract profile."
         }
-      ]
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "combined compact workspace router and selected diagnostics"
     },
     {
       "name": "reconcile",
@@ -376,7 +415,10 @@
           ],
           "help": "Optional repository path used to reconcile planning state."
         }
-      ]
+      ],
+      "role": "reusable_host_repo_diagnostics",
+      "audience": "advanced_host_repo",
+      "classification_note": "provider-agnostic external-work reconciliation"
     },
     {
       "name": "external-intent",
@@ -432,9 +474,15 @@
               "action": "store_true",
               "help": "Preview refresh counts without writing external intent evidence."
             }
-          ]
+          ],
+          "role": "reusable_host_repo_diagnostics",
+          "audience": "advanced_host_repo",
+          "classification_note": "optional GitHub adapter for provider-agnostic external evidence"
         }
-      ]
+      ],
+      "role": "reusable_host_repo_diagnostics",
+      "audience": "advanced_host_repo",
+      "classification_note": "optional external evidence adapter front door"
     },
     {
       "name": "preflight",
@@ -458,21 +506,30 @@
           "action": "store_true",
           "help": "Return only active planning state without startup defaults and config."
         }
-      ]
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "takeover-safe compact startup plus active state"
     },
     {
       "name": "install",
       "help": "Bootstrap selected modules into a target repository.",
       "uses_option_groups": [
         "init"
-      ]
+      ],
+      "role": "core_lifecycle",
+      "audience": "ordinary_host_repo",
+      "classification_note": "module install lifecycle mutation"
     },
     {
       "name": "init",
       "help": "Bootstrap selected modules into a target repository.",
       "uses_option_groups": [
         "init"
-      ]
+      ],
+      "role": "core_lifecycle",
+      "audience": "ordinary_host_repo",
+      "classification_note": "conservative bootstrap/adopt lifecycle mutation"
     },
     {
       "name": "prompt",
@@ -501,37 +558,55 @@
               "action": "store_true",
               "help": "Force conservative adopt behavior."
             }
-          ]
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "bootstrap handoff prompt renderer"
         },
         {
           "name": "upgrade",
           "help": "Print the workspace upgrade handoff prompt.",
           "uses_option_groups": [
             "selection"
-          ]
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "upgrade handoff prompt renderer"
         },
         {
           "name": "uninstall",
           "help": "Print the workspace uninstall handoff prompt.",
           "uses_option_groups": [
             "selection"
-          ]
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "uninstall handoff prompt renderer"
         }
-      ]
+      ],
+      "role": "core_lifecycle",
+      "audience": "ordinary_host_repo",
+      "classification_note": "lifecycle handoff prompt renderer"
     },
     {
       "name": "status",
       "help": "Report installed modules and workspace health summary.",
       "uses_option_groups": [
         "selection"
-      ]
+      ],
+      "role": "core_lifecycle",
+      "audience": "ordinary_host_repo",
+      "classification_note": "read-only lifecycle health status"
     },
     {
       "name": "doctor",
       "help": "Report drift, missing surfaces, and recommended remediation.",
       "uses_option_groups": [
         "selection"
-      ]
+      ],
+      "role": "core_lifecycle",
+      "audience": "ordinary_host_repo",
+      "classification_note": "read-only lifecycle drift diagnostics"
     },
     {
       "name": "upgrade",
@@ -549,7 +624,10 @@
           "action": "store_true",
           "help": "Show planned changes without mutating files."
         }
-      ]
+      ],
+      "role": "core_lifecycle",
+      "audience": "ordinary_host_repo",
+      "classification_note": "module upgrade lifecycle mutation"
     },
     {
       "name": "uninstall",
@@ -575,7 +653,10 @@
           "action": "store_true",
           "help": "Remove the workspace install from `.agentic-workspace/` instead of the repository root."
         }
-      ]
+      ],
+      "role": "core_lifecycle",
+      "audience": "ordinary_host_repo",
+      "classification_note": "conservative lifecycle removal mutation"
     }
   ]
 }

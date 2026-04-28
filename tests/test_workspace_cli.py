@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from agentic_workspace import cli
-from agentic_workspace.contract_tooling import authority_markers_manifest
+from agentic_workspace.contract_tooling import authority_markers_manifest, cli_commands_manifest
 from agentic_workspace.result_adapter import adapt_action, adapt_module_result
 
 _ORIGINAL_PATH_WRITE_TEXT = Path.write_text
@@ -128,6 +128,58 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     ]
     assert planning_module["command_args"]["install"] == ["target", "dry_run", "force"]
     assert planning_module["command_args"]["doctor"] == ["target"]
+
+
+def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
+    manifest = cli_commands_manifest()
+    commands = manifest["commands"]
+    command_roles = {command["name"]: command["role"] for command in commands}
+    command_audiences = {command["name"]: command["audience"] for command in commands}
+
+    assert set(command_roles) == {
+        "modules",
+        "summary",
+        "start",
+        "implement",
+        "defaults",
+        "proof",
+        "setup",
+        "ownership",
+        "config",
+        "system-intent",
+        "note-delegation-outcome",
+        "skills",
+        "report",
+        "reconcile",
+        "external-intent",
+        "preflight",
+        "install",
+        "init",
+        "prompt",
+        "status",
+        "doctor",
+        "upgrade",
+        "uninstall",
+    }
+    assert command_roles["install"] == "core_lifecycle"
+    assert command_roles["upgrade"] == "core_lifecycle"
+    assert command_roles["start"] == "core_context_router"
+    assert command_roles["report"] == "core_context_router"
+    assert command_roles["modules"] == "module_delegation_front_door"
+    assert command_roles["setup"] == "reusable_host_repo_diagnostics"
+    assert command_roles["external-intent"] == "reusable_host_repo_diagnostics"
+    assert command_audiences["note-delegation-outcome"] == "local_only"
+    assert command_audiences["setup"] == "advanced_host_repo"
+    assert all(command["classification_note"] for command in commands)
+    assert "source_checkout_only_maintainer_development" not in set(command_roles.values())
+    assert "remove_or_hide" not in set(command_roles.values())
+
+    prompt = next(command for command in commands if command["name"] == "prompt")
+    assert {subcommand["name"] for subcommand in prompt["subcommands"]} == {"init", "upgrade", "uninstall"}
+    assert {subcommand["role"] for subcommand in prompt["subcommands"]} == {"core_lifecycle"}
+
+    external_intent = next(command for command in commands if command["name"] == "external-intent")
+    assert external_intent["subcommands"][0]["audience"] == "advanced_host_repo"
 
 
 def test_modules_command_does_not_advertise_current_memory_as_ordinary_surface(tmp_path: Path, capsys) -> None:

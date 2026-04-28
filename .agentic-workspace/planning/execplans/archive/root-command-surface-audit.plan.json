@@ -1,0 +1,301 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Root Command Surface Audit",
+  "goal": [
+    "Implement #486 by classifying every root command by daily-operation role and adding guard coverage so non-core or source-checkout-only concepts do not become ordinary host-repo command surface."
+  ],
+  "non_goals": [
+    "Do not remove or rename commands in this slice.",
+    "Do not split cli.py responsibilities; #488 owns extraction.",
+    "Do not replace first-party feature tiers with generic module manifests; #490/#510 own that work."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "The root command manifest explains why each command belongs in the shipped host-repo command surface.",
+      "constraints": "Stay on the current branch; preserve existing CLI behavior; keep classification declarative and low-residue.",
+      "latitude": "Add manifest fields, schema validation, and tests; adjust compact report/default routing only if a command is currently advertised incorrectly.",
+      "escalation": "Stop before removing commands, creating a new public command, or moving behavior into modules."
+    },
+    "execution": {
+      "milestone": "root-command-surface-audit",
+      "status": "completed",
+      "next_step": "Archive this plan, commit, close #486, refresh external evidence, then promote the next module-boundary-compression child.",
+      "proof": "Run contract tooling checks, focused workspace CLI tests for command manifest classification, full workspace CLI tests if report/default behavior changes, ruff, proof selector, and planning closeout checks."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/cli_commands.json",
+        "src/agentic_workspace/contracts/schemas/cli_commands.schema.json",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/root-command-surface-audit.plan.json"
+      ],
+      "invariants": [
+        "Existing command names, options, and generated adapter parity remain unchanged.",
+        "Root command classifications are declarative metadata, not a new execution path.",
+        "No source-checkout-only maintainer/dogfooding command is advertised as an ordinary host-repo command."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Keep the root orchestrator thin, boring, generic, and strictly bounded.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression",
+    "parent lane": "#485"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "follow-on detail": "#487, #488, #490, and #510-#514 remain after #486.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #486 closes, reingest and promote the next module-boundary-compression child."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Command-surface role metadata gives later module-manifest and cli.py extraction work a concrete map.",
+    "intentionally deferred": "Command removal/demotion, root dependency changes, cli.py splitting, and MCP-style module component design.",
+    "discovered implications": "",
+    "proof achieved now": "",
+    "validation still needed": "Contract/schema checks and command manifest tests.",
+    "next likely slice": "#487 or #488 depending on refreshed issue priority."
+  },
+  "intent_interpretation": {
+    "literal request": "Audit root command surface for daily-operation necessity.",
+    "inferred intended outcome": "Make the root command surface explainable and prevent source-checkout-only or module-owned concepts from becoming first-line host-repo workflow.",
+    "chosen concrete what": "Add schema-backed role classification to the command manifest and tests that classify all root commands.",
+    "interpretation distance": "low",
+    "review guidance": "Review whether the categories are useful and whether any command should become a future removal/demotion follow-up."
+  },
+  "execution_bounds": {
+    "allowed paths": "CLI command manifest, its schema, focused tests, and planning surfaces.",
+    "max changed files": "Prefer 4-6 files.",
+    "required validation commands": "contract tooling check, focused test for command classifications, workspace CLI tests if command behavior changes, ruff, proof selector, planning checks.",
+    "ask-before-refactor threshold": "Stop before changing parser behavior or public command names.",
+    "stop before touching": "Generated packages, command execution code, root dependency footprint, or module manifest redesign."
+  },
+  "stop_conditions": {
+    "stop when": "Every root command and prompt subcommand has an explicit role/audience classification and tests guard the classification.",
+    "escalate when boundary reached": "A command appears unjustifiable and should be hidden or removed instead of merely classified.",
+    "escalate on scope drift": "The work becomes command removal, module ownership transfer, or cli.py extraction.",
+    "escalate on proof failure": "Manifest parity or generated-command checks fail due role metadata."
+  },
+  "context_budget": {
+    "live working set": "cli_commands.json, cli_commands.schema.json, relevant tests, issue #486.",
+    "recoverable later": "Full root CLI implementation and module-manifest redesign.",
+    "externalize before shift": "Update this execplan if a removal/demotion follow-up is discovered.",
+    "pre-work config pull": "uv run agentic-workspace report --target . --format json",
+    "pre-work memory pull": "Not needed unless compact output points to Memory.",
+    "tiny resumability note": "Role-classification slice only; do not alter command behavior.",
+    "context-shift triggers": "Parser behavior changes, command removal, or broad module manifest redesign."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Classify the root command surface for #486.",
+    "hard constraints": "Preserve existing CLI behavior and stay on current branch.",
+    "agent may decide locally": "Exact role names and tests, provided they map to the issue categories.",
+    "escalate when": "Classification shows a command should be hidden/removed or owned by a module now."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#486",
+      "label": "root command surface audit",
+      "role": "source_intent",
+      "locator": "GitHub issue #486"
+    },
+    {
+      "kind": "issue",
+      "target": "#485",
+      "label": "module boundary compression",
+      "role": "parent_intent",
+      "locator": "GitHub issue #485"
+    }
+  ],
+  "active_milestone": {
+    "id": "root-command-surface-audit",
+    "status": "completed",
+    "scope": "Add command role classification metadata and tests.",
+    "ready": "#486 is the selected next child for #485.",
+    "blocked": "None.",
+    "optional_deps": "None."
+  },
+  "immediate_next_action": [
+    "Archive this plan, commit, close #486, refresh external evidence, then promote the next module-boundary-compression child."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/cli_commands.json",
+    "src/agentic_workspace/contracts/schemas/cli_commands.schema.json",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/root-command-surface-audit.plan.json"
+  ],
+  "invariants": [
+    "No command behavior changes.",
+    "Role metadata remains schema-backed.",
+    "Source-checkout-only work is not advertised as a root host-repo command."
+  ],
+  "contract_decisions_to_freeze": [
+    "Root command role classification lives in cli_commands.json until a later module-manifest model supersedes it."
+  ],
+  "open_questions_to_close": [
+    "Whether any command should be routed as future module-owned or hide/remove follow-up."
+  ],
+  "validation_commands": [
+    {
+      "command": "uv run python scripts/check/check_contract_tooling_surfaces.py",
+      "result": "passed"
+    },
+    {
+      "command": "uv run pytest tests/test_workspace_cli.py -q -k \"root_command_manifest_classifies or modules_command_lists\"",
+      "result": "passed: 2 passed"
+    },
+    {
+      "command": "uv run ruff check tests/test_workspace_cli.py",
+      "result": "passed"
+    },
+    {
+      "command": "uv run pytest tests/test_workspace_cli.py -q",
+      "result": "passed: 206 passed"
+    },
+    {
+      "command": "uv run ruff check src tests",
+      "result": "passed"
+    },
+    {
+      "command": "uv run python scripts/check/check_planning_surfaces.py",
+      "result": "passed"
+    },
+    {
+      "command": "uv run agentic-workspace proof --target . --changed src/agentic_workspace/contracts/cli_commands.json src/agentic_workspace/contracts/schemas/cli_commands.schema.json tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/root-command-surface-audit.plan.json --format json",
+      "result": "passed: selected workspace_cli and planning_surfaces"
+    },
+    {
+      "command": "uv run agentic-workspace doctor --target . --modules planning --format json",
+      "result": "passed: healthy"
+    }
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Every root command has a role classification.",
+    "Source-checkout-only or module-owned candidates are identified.",
+    "First-contact docs/defaults are not expanded to advertise non-core commands.",
+    "Tests guard the classification."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "Issue #486 and checked-in roadmap.",
+    "what happened": "Added schema-backed role, audience, and classification-note metadata to every root command and root subcommand in cli_commands.json.",
+    "scope touched": "Command manifest/schema, focused workspace CLI test coverage, and planning surfaces.",
+    "changed surfaces": "The command manifest now classifies core lifecycle, core context/router, reusable host-repo diagnostics, module front doors, local-only calibration, and absence of source-checkout-only command roles.",
+    "validations run": "Contract tooling check, focused command-classification test, full workspace CLI tests, ruff, planning-surface check, proof selector, and planning doctor.",
+    "result for continuation": "#486 is ready to archive and close; #487, #488, #490, and #510-#514 remain under #485.",
+    "next step": "Archive plan, commit, push, close #486, refresh external evidence, then promote the next child."
+  },
+  "finished_run_review": {
+    "review status": "ready-to-close",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used package workflow surfaces for report, summary, proof, doctor, reconcile, and planning closeout",
+    "misinterpretation risk": "low",
+    "follow-on decision": "close #486 but keep parent #485 open"
+  },
+  "proof_report": {
+    "validation proof": "full workspace CLI tests, ruff, contract tooling, planning surfaces, proof selector, and planning doctor passed",
+    "proof achieved now": "Every root command and prompt/external-intent subcommand has schema-backed role/audience metadata and tests guard the shipped host-repo boundary.",
+    "evidence for \"proof achieved\" state": "tests/test_workspace_cli.py::test_root_command_manifest_classifies_host_repo_command_surface plus cli_commands.schema.json validation"
+  },
+  "intent_satisfaction": {
+    "original intent": "#486",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "cli_commands.json classifies every root command by role/audience and the focused test asserts no source-checkout-only or remove/hide roles are shipped as ordinary commands.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Root orchestrator should be thin, generic, host-repo useful, and low-residue.",
+    "slice shaping bias": "Classify and guard before removing or redesigning.",
+    "broader-lane validation question": "Does this make the root command surface easier to explain and review?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane module-boundary-compression activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Root command surface has explicit schema-backed command roles and audiences.",
+    "validation confirmed": "Focused and full workspace CLI tests, contract tooling, ruff, proof selector, planning surfaces, and planning doctor passed.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression (#485)",
+    "post-work posterity capture": "Archive this execplan as proof/history.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory/docs/config promotion needed; command manifest is the durable owner.",
+    "resume from": "Reingest open issues and promote the next #485 child."
+  },
+  "improvement_signal_review": {
+    "status": "none",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression (#485)",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No Memory/docs/config promotion needed; command manifest is the durable owner.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No Memory/docs/config promotion needed; command manifest is the durable owner.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "No Memory/docs/config promotion needed; command manifest is the durable owner.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "root command surface audit",
+          "owner": "issue",
+          "source": "#486"
+        },
+        {
+          "summary": "module boundary compression",
+          "owner": "issue",
+          "source": "#485"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Initial plan created from #486."
+  ]
+}
