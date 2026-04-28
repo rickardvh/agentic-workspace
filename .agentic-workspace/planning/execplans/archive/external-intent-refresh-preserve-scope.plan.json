@@ -1,0 +1,197 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "External Intent Refresh Preserve Scope",
+  "goal": [
+    "Implement #474 so external intent refresh preserves the previous evidence scope by default when an evidence file already exists."
+  ],
+  "non_goals": [
+    "Do not make GitHub a core planning dependency.",
+    "Do not add a new external-intent command.",
+    "Do not change provider-agnostic evidence file semantics."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Running external-intent refresh without --state/--limit should not accidentally shrink an existing all-state audit evidence file.",
+      "constraints": "Keep provider-specific access in the optional GitHub adapter; core planning continues to consume only provider-agnostic evidence.",
+      "latitude": "Use previous refresh metadata for omitted state/limit and expose the resolved scope in output.",
+      "escalation": "Escalate if parser contracts cannot represent omitted state distinctly from an explicit user value."
+    },
+    "execution": {
+      "milestone": "external-intent-refresh-preserve-scope",
+      "status": "completed",
+      "next_step": "Archive, commit, push, close #474, refresh evidence, and continue the next prioritized lane.",
+      "proof": "workspace CLI tests, ruff, planning surfaces, summary/reconcile/proof dogfooding, doctor, root CLI authority audit"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/external-intent-refresh-preserve-scope.plan.json",
+        "src/agentic_workspace/contracts/cli_commands.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "The shipped package remains repo-/host-agnostic outside optional adapters.",
+        "Existing evidence state/limit are reused only when the user omits those options.",
+        "Explicit --state and --limit still win."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#449 makes package use cheaper than bypassing it by removing trust and workflow friction.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge",
+    "parent lane": "#449"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #474, refresh external evidence and continue the next prioritized lane"
+  },
+  "active_milestone": {
+    "id": "external-intent-refresh-preserve-scope",
+    "status": "completed",
+    "scope": "Preserve external-evidence refresh state/limit scope.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make external intent refresh preserve audit scope by default.",
+    "hard constraints": "Do not add host-specific assumptions to core planning.",
+    "agent may decide locally": "Exact resolved-scope fields and test shape.",
+    "escalate when": "The fix would require broader command-generation work."
+  },
+  "immediate_next_action": [
+    "Archive, commit, push, close #474, refresh evidence, and continue the next prioritized lane."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/external-intent-refresh-preserve-scope.plan.json",
+    "src/agentic_workspace/contracts/cli_commands.json",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/external-intent-refresh-preserve-scope.plan.json src/agentic_workspace/contracts/cli_commands.json src/agentic_workspace/cli.py tests/test_workspace_cli.py --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json"
+  ],
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/474",
+      "label": "#474 external intent refresh scope",
+      "role": "source_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/449",
+      "label": "#449 operating-cost parent",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "completion_criteria": [
+    "Omitting --state preserves previous refresh_metadata.state when existing evidence is present.",
+    "Omitting --limit preserves previous refresh_metadata.limit when existing evidence is present.",
+    "Explicit --state and --limit still override previous metadata.",
+    "Refresh output reports the resolved state/limit and prior scope source."
+  ],
+  "execution_summary": {
+    "outcome delivered": "external-intent refresh-github now preserves previous evidence state/limit when the user omits those options, keeps explicit overrides authoritative, and reports state_source/limit_source in command output and refresh metadata.",
+    "validation confirmed": "workspace CLI tests, ruff, planning surface check, compact summary, reconcile, proof selection, planning doctor, and root CLI authority audit all passed.",
+    "follow-on routed to": "remaining roadmap lanes",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next prioritized roadmap lane after evidence refresh",
+    "post-work posterity capture": "Keep the regression tests and resolved-scope metadata behavior as durable evidence; discard command transcripts and fake-gh traces; route only the remaining roadmap lane forward."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "validation transcripts",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "intermediate fake-gh command traces",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue the next prioritized roadmap lane after closing #474 and refreshing external evidence.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "tests/test_workspace_cli.py guards preserved default state/limit scope and explicit override behavior.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Close #474 with proof; keep the larger operating-cost lane open until remaining roadmap work is complete.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "intent_satisfaction": {
+    "original intent": "Make external intent refresh preserve audit scope by default.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge activates a fresh bounded slice."
+  },
+  "cost_assessment": {
+    "signals consumed": [
+      "#474",
+      "#438/#473 dogfooding evidence"
+    ],
+    "signals still accumulating": [
+      "remaining roadmap lanes"
+    ],
+    "operating_cost_delta": "lower",
+    "reason": "The refresh command no longer silently narrows audit evidence, so agents can refresh and reconcile without remembering hidden scope flags. No new command or first-contact surface was added."
+  },
+  "improvement_signal_review": {
+    "status": "fixed",
+    "finding": "Hidden adapter defaults made evidence refresh cheaper to run but riskier to trust.",
+    "resolution": "Defaults now preserve the prior evidence scope unless the user explicitly changes it."
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from #438/#473 closeout dogfooding because hidden refresh defaults can silently change reconciliation scope."
+  ],
+  "proof_report": {
+    "validation proof": "workspace CLI tests, ruff, planning surface check, compact summary, reconcile, proof selection, planning doctor, and root CLI authority audit all passed.",
+    "proof achieved now": "yes; validation evidence is recorded in execution summary.",
+    "evidence for \"proof achieved\" state": "workspace CLI tests, ruff, planning surface check, compact summary, reconcile, proof selection, planning doctor, and root CLI authority audit all passed."
+  }
+}

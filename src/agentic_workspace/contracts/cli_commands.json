@@ -414,8 +414,7 @@
                 "closed",
                 "all"
               ],
-              "default": "open",
-              "help": "GitHub issue state to import. Use all for audit refreshes."
+              "help": "GitHub issue state to import. Defaults to the previous evidence state when present, otherwise open."
             },
             {
               "name": "limit",
@@ -423,8 +422,7 @@
                 "--limit"
               ],
               "type": "integer",
-              "default": 1000,
-              "help": "Maximum number of GitHub issues to import."
+              "help": "Maximum number of GitHub issues to import. Defaults to the previous evidence limit when present, otherwise 1000."
             },
             {
               "name": "dry_run",

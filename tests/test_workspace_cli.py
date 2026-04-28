@@ -4024,18 +4024,118 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
     assert payload["written"] is True
     assert payload["repository"] == "acme/project"
     assert payload["state"] == "all"
+    assert payload["state_source"] == "explicit"
+    assert payload["limit_source"] == "product_default"
     assert payload["item_count"] == 2
     refreshed = json.loads(evidence_path.read_text(encoding="utf-8"))
     assert refreshed["kind"] == "planning-external-intent-evidence/v1"
     assert refreshed["refresh_metadata"]["adapter"] == "github-gh-cli"
     assert refreshed["refresh_metadata"]["repository"] == "acme/project"
     assert refreshed["refresh_metadata"]["state"] == "all"
+    assert refreshed["refresh_metadata"]["limit"] == 1000
     assert "previous_items" not in refreshed
     assert refreshed["items"][0]["id"] == "#1"
     assert refreshed["items"][0]["kind"] == "slice"
     assert refreshed["items"][0]["parent_id"] == "#10"
     assert refreshed["items"][0]["labels"] == ["planning"]
     assert refreshed["items"][1]["status"] == "closed"
+
+
+def test_external_intent_refresh_github_preserves_existing_scope_by_default(tmp_path: Path, monkeypatch, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    evidence_path = target / ".agentic-workspace" / "planning" / "external-intent-evidence.json"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "refresh_metadata": {
+                    "state": "all",
+                    "limit": 600,
+                },
+                "items": [],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    observed_commands: list[list[str]] = []
+
+    class Result:
+        def __init__(self, stdout: str) -> None:
+            self.returncode = 0
+            self.stdout = stdout
+            self.stderr = ""
+
+    def fake_run(command, cwd, capture_output, text, encoding, check):
+        observed_commands.append(command)
+        assert cwd == target
+        assert capture_output is True
+        assert text is True
+        assert encoding == "utf-8"
+        assert check is False
+        return Result("[]")
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    assert (
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(target),
+                "--repo",
+                "acme/project",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert observed_commands[-1][observed_commands[-1].index("--state") + 1] == "all"
+    assert observed_commands[-1][observed_commands[-1].index("--limit") + 1] == "600"
+    assert payload["state"] == "all"
+    assert payload["limit"] == 600
+    assert payload["state_source"] == "previous_evidence"
+    assert payload["limit_source"] == "previous_evidence"
+    refreshed = json.loads(evidence_path.read_text(encoding="utf-8"))
+    assert refreshed["refresh_metadata"]["state"] == "all"
+    assert refreshed["refresh_metadata"]["limit"] == 600
+    assert refreshed["refresh_metadata"]["state_source"] == "previous_evidence"
+    assert refreshed["refresh_metadata"]["limit_source"] == "previous_evidence"
+
+    assert (
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(target),
+                "--repo",
+                "acme/project",
+                "--state",
+                "open",
+                "--limit",
+                "50",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert observed_commands[-1][observed_commands[-1].index("--state") + 1] == "open"
+    assert observed_commands[-1][observed_commands[-1].index("--limit") + 1] == "50"
+    assert payload["state_source"] == "explicit"
+    assert payload["limit_source"] == "explicit"
 
 
 def test_report_surfaces_finished_work_inspection_findings(tmp_path: Path, capsys) -> None:

@@ -1084,8 +1084,8 @@ def main(argv: list[str] | None = None) -> int:
                 payload = _refresh_github_external_intent_evidence(
                     target_root=target_root,
                     repo=getattr(args, "repo", None),
-                    limit=int(getattr(args, "limit", 1000)),
-                    state=str(getattr(args, "state", "open")),
+                    limit=getattr(args, "limit", None),
+                    state=getattr(args, "state", None),
                     dry_run=bool(getattr(args, "dry_run", False)),
                 )
                 _emit_payload(payload=payload, format_name=args.format)
@@ -4760,14 +4760,31 @@ def _refresh_github_external_intent_evidence(
     *,
     target_root: Path,
     repo: str | None,
-    limit: int,
-    state: str,
+    limit: int | None,
+    state: str | None,
     dry_run: bool,
 ) -> dict[str, Any]:
-    if limit <= 0:
-        raise WorkspaceUsageError("--limit must be greater than 0.")
-    if state not in {"open", "closed", "all"}:
+    evidence_path = _external_intent_evidence_path(target_root)
+    previous_payload = _load_existing_external_intent_evidence(evidence_path)
+    previous_metadata = previous_payload.get("refresh_metadata", {}) if isinstance(previous_payload, dict) else {}
+    previous_state = str(previous_metadata.get("state", "")).strip() if isinstance(previous_metadata, dict) else ""
+    previous_limit = previous_metadata.get("limit") if isinstance(previous_metadata, dict) else None
+
+    resolved_state = str(state).strip() if state is not None else ""
+    state_source = "explicit" if resolved_state else "default"
+    if not resolved_state:
+        resolved_state = previous_state if previous_state in {"open", "closed", "all"} else "open"
+        state_source = "previous_evidence" if previous_state in {"open", "closed", "all"} else "product_default"
+    if resolved_state not in {"open", "closed", "all"}:
         raise WorkspaceUsageError("--state must be one of: open, closed, all.")
+
+    resolved_limit = limit
+    limit_source = "explicit" if resolved_limit is not None else "default"
+    if resolved_limit is None:
+        resolved_limit = previous_limit if isinstance(previous_limit, int) and previous_limit > 0 else 1000
+        limit_source = "previous_evidence" if isinstance(previous_limit, int) and previous_limit > 0 else "product_default"
+    if resolved_limit <= 0:
+        raise WorkspaceUsageError("--limit must be greater than 0.")
     resolved_repo = _resolve_github_repo_for_external_intent(target_root=target_root, repo=repo)
     raw_issues = _run_gh_json(
         [
@@ -4776,9 +4793,9 @@ def _refresh_github_external_intent_evidence(
             "--repo",
             resolved_repo,
             "--state",
-            state,
+            resolved_state,
             "--limit",
-            str(limit),
+            str(resolved_limit),
             "--json",
             "number,title,state,url,labels,createdAt,updatedAt,body,comments",
         ],
@@ -4794,8 +4811,6 @@ def _refresh_github_external_intent_evidence(
         if item is not None
     ]
     items.sort(key=lambda item: int(str(item["id"]).lstrip("#") or "0"))
-    evidence_path = _external_intent_evidence_path(target_root)
-    previous_payload = _load_existing_external_intent_evidence(evidence_path)
     previous_count = len([item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)])
     refreshed_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     next_payload = {
@@ -4809,9 +4824,11 @@ def _refresh_github_external_intent_evidence(
             "item_count": len(items),
             "open_count": sum(1 for item in items if item["status"] == "open"),
             "closed_count": sum(1 for item in items if item["status"] == "closed"),
-            "limit": limit,
-            "state": state,
-            "command": f"gh issue list --state {state} --json number,title,state,url,labels,createdAt,updatedAt,body,comments",
+            "limit": resolved_limit,
+            "state": resolved_state,
+            "state_source": state_source,
+            "limit_source": limit_source,
+            "command": f"gh issue list --state {resolved_state} --json number,title,state,url,labels,createdAt,updatedAt,body,comments",
         },
         "items": items,
     }
@@ -4832,7 +4849,10 @@ def _refresh_github_external_intent_evidence(
         "open_count": next_payload["refresh_metadata"]["open_count"],
         "closed_count": next_payload["refresh_metadata"]["closed_count"],
         "previous_item_count": previous_count,
-        "state": state,
+        "state": resolved_state,
+        "limit": resolved_limit,
+        "state_source": state_source,
+        "limit_source": limit_source,
         "provider_rule": "Core planning consumes only provider-agnostic external intent evidence; GitHub access stays in this optional adapter.",
     }
 
