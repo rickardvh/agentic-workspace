@@ -4476,6 +4476,77 @@ candidates = []
     assert summary["execution_readiness"]["status"] == "roadmap-needs-promotion"
 
 
+def test_planning_summary_suppresses_archived_child_when_parent_ref_is_externally_closed(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#701",
+                "title": "Closed parent lane",
+                "status": "closed",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "optional",
+            },
+            {
+                "system": "manual",
+                "id": "#700",
+                "title": "Closed child slice",
+                "status": "closed",
+                "kind": "issue",
+                "parent_id": "#701",
+                "planning_residue_expected": "optional",
+            },
+        ],
+    )
+
+    archive_dir = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    child_path = archive_dir / "completed-child.plan.json"
+    _write_execplan_record(
+        child_path,
+        item_id="completed-child",
+        status="completed",
+        references=[
+            {
+                "kind": "github-issue",
+                "target": "#700",
+                "label": "completed child",
+                "role": "closed_item",
+                "locator": "issue",
+            },
+            {
+                "kind": "github-issue",
+                "target": "#701",
+                "label": "parent lane",
+                "role": "parent_intent",
+                "locator": "issue",
+            },
+        ],
+    )
+    child_record = json.loads(child_path.read_text(encoding="utf-8"))
+    child_record["intent_satisfaction"]["was original intent fully satisfied?"] = "yes"
+    child_record["intent_satisfaction"]["unsolved intent passed to"] = "#701 parent assessment"
+    child_record["closure_check"]["larger-intent status"] = "open"
+    child_record["closure_check"]["closure decision"] = "archive-but-keep-lane-open"
+    installer_mod._write_execplan_record(record_path=child_path, record=child_record)
+
+    summary = planning_summary(target=tmp_path)
+    contract = summary["finished_work_inspection_contract"]
+
+    assert contract["counts"]["partial_count"] == 1
+    assert contract["counts"]["externally_closed_continuation_count"] == 1
+    assert contract["counts"]["derived_follow_up_candidate_count"] == 0
+    inspection = contract["inspections"][0]
+    assert inspection["classification"] == "externally_closed_partial"
+    assert inspection["externally_closed_by"] == ["#701"]
+    assert contract["signals"] == []
+    assert contract["derived_follow_up_candidates"] == []
+    assert summary["execution_readiness"]["status"] == "narrow-direct-ready"
+
+
 def test_planning_summary_uses_reference_roles_before_prose_issue_refs(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"

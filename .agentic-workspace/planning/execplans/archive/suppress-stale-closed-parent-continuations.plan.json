@@ -1,0 +1,252 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Suppress Stale Closed Parent Continuations",
+  "goal": [
+    "Stop finished-work inspection from promoting archived continuation candidates whose explicit parent or continuation refs are externally closed."
+  ],
+  "non_goals": [
+    "Do not delete historical archives.",
+    "Do not make provider-specific trackers required by core planning.",
+    "Do not reshape planning state broadly."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Autopilot should move past stale archive continuation candidates when provider-neutral evidence says their parent refs are closed.",
+      "constraints": "Consume only provider-neutral external-intent evidence; keep detailed archive evidence available.",
+      "latitude": "Add a bounded suppression path and tests in planning summary.",
+      "escalation": "Escalate if this requires changing external tracker semantics rather than using normalized evidence."
+    },
+    "execution": {
+      "milestone": "#524",
+      "status": "closed",
+      "next_step": "Continue remaining workflow-friction-polish issues after #524 evidence refresh.",
+      "proof": "planning package tests, planning surface check, proof selector"
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py"
+      ],
+      "invariants": [
+        "Historical archives remain evidence.",
+        "External evidence is optional and provider-neutral.",
+        "Open or missing external refs must not be suppressed as complete."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Remove small package-use friction discovered during dogfooding.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane workflow-friction-polish",
+    "parent lane": "workflow-friction-polish (#507/#515/#522/#523/#524)"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane workflow-friction-polish",
+    "activation trigger": "Continue remaining workflow-friction-polish issues after #524 closes."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Closed parent refs stop steering autopilot back into stale archive work.",
+    "intentionally deferred": "Other workflow-friction-polish issues.",
+    "discovered implications": "Closed-ref suppression removed the #485/#512 stale continuation path; older historical candidates without role metadata remain separate follow-up pressure.",
+    "proof achieved now": "Focused planning package tests, planning lint, planning surface check, proof selector, summary, and planning doctor pass.",
+    "validation still needed": "None for this bounded slice.",
+    "next likely slice": "#523 or #522 depending on refreshed summary"
+  },
+  "intent_interpretation": {
+    "literal request": "Repeat until done.",
+    "inferred intended outcome": "Continue open planned lanes while fixing package friction discovered through dogfooding.",
+    "chosen concrete what": "Implement #524 because summary is currently routed to stale closed-parent archive continuation.",
+    "interpretation distance": "low",
+    "review guidance": "Verify summary no longer reports intent-continuation-needs-promotion for closed parent refs."
+  },
+  "execution_bounds": {
+    "allowed paths": "packages/planning/src/repo_planning_bootstrap/installer.py, packages/planning/tests/test_installer.py, this execplan, planning state.",
+    "max changed files": "about 4",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning; uv run ruff check .; uv run python scripts/check/check_planning_surfaces.py",
+    "ask-before-refactor threshold": "Any broad finished-work inspection redesign.",
+    "stop before touching": "Root CLI surfaces unless proof selects them."
+  },
+  "stop_conditions": {
+    "stop when": "#524 acceptance is met, validated, archived, committed, pushed, closed, and external evidence refreshed.",
+    "escalate when boundary reached": "If provider-neutral evidence lacks enough data to distinguish closed parent refs.",
+    "escalate on scope drift": "If implementation starts changing roadmap maturity or external adapter shape.",
+    "escalate on proof failure": "If closed-ref suppression hides open or missing refs."
+  },
+  "context_budget": {
+    "live working set": "finished-work inspection code, planning package tests, active execplan.",
+    "recoverable later": "Issue #524 and current summary output.",
+    "externalize before shift": "Update this execplan with proof and closeout.",
+    "pre-work config pull": "summary and issue evidence already run.",
+    "pre-work memory pull": "not needed.",
+    "tiny resumability note": "Implementing #524 stale closed-parent continuation suppression.",
+    "context-shift triggers": "Before moving to remaining workflow-friction-polish issues."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Repeat until done.",
+    "hard constraints": "Dogfood package; commit/push per milestone; stay on current branch.",
+    "agent may decide locally": "Exact suppression metadata and test shape.",
+    "escalate when": "Suppression would depend on GitHub-specific state rather than provider-neutral evidence."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#524",
+      "label": "stale archive continuation",
+      "role": "source_intent",
+      "locator": "GitHub issue #524"
+    },
+    {
+      "kind": "issue",
+      "target": "#485",
+      "label": "closed parent proving current friction",
+      "role": "parent_intent",
+      "locator": "GitHub issue #485"
+    },
+    {
+      "kind": "issue",
+      "target": "#512",
+      "label": "closed child proving current friction",
+      "role": "related-work",
+      "locator": "GitHub issue #512"
+    }
+  ],
+  "active_milestone": {
+    "id": "suppress-stale-closed-parent-continuations",
+    "status": "closed",
+    "scope": "planning summary finished-work inspection suppression",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add provider-neutral closed-ref suppression to finished-work inspection candidates."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/suppress-stale-closed-parent-continuations.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "invariants": [
+    "Provider-neutral external evidence is optional.",
+    "Only explicit non-closure parent/continuation refs that are known closed should suppress a candidate.",
+    "Detailed inspection remains available."
+  ],
+  "contract_decisions_to_freeze": [
+    "Closed external non-closure refs suppress historical continuation promotion but remain visible as inspection metadata."
+  ],
+  "open_questions_to_close": [
+    "Should suppression require all non-closure refs to be known closed?"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "cd packages/planning; uv run ruff check .",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Closed parent refs in refreshed external evidence no longer become top autopilot recommendations.",
+    "Detailed finished-work inspection still records the historical archive and suppression reason.",
+    "Open or missing external refs still require promotion/routing.",
+    "Core planning remains provider-agnostic."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "repeat until done",
+    "what happened": "Finished-work inspection now loads provider-neutral external evidence and suppresses derived continuation candidates when all explicit non-closure refs are known closed. The suppression is recorded on the inspection while removing the candidate and signal from autopilot pressure.",
+    "scope touched": "planning package summary logic, planning package tests, planning state, and active execplan",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/suppress-stale-closed-parent-continuations.plan.json; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning; uv run ruff check .; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/suppress-stale-closed-parent-continuations.plan.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "#524 acceptance is met; remaining workflow-friction-polish issues stay in the roadmap.",
+    "next step": "Archive this plan, commit/push, close #524, refresh evidence, then reingest."
+  },
+  "finished_run_review": {
+    "review status": "reviewed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "summary and issue evidence used before promotion",
+    "misinterpretation risk": "low",
+    "follow-on decision": "Continue workflow-friction-polish after closeout; older historical candidates without role metadata remain outside #524."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "planning package tests, planning lint, planning surface check, proof selector, summary, and planning doctor passed",
+    "evidence for \"proof achieved\" state": "136 planning package tests passed; ruff passed; planning surface health clean; planning doctor healthy"
+  },
+  "intent_satisfaction": {
+    "original intent": "#524 acceptance criteria",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Finished-work inspection now suppresses explicit non-closure refs that are all closed in provider-neutral external evidence, keeps the inspection metadata, and focused tests cover the behavior.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane workflow-friction-polish"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Remove stale routing noise rather than add new capability.",
+    "broader-lane validation question": "Does summary route to live work after this stale historical candidate is suppressed?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#524 is implemented and validated, while the broader workflow-friction-polish lane still has other open issues.",
+    "evidence carried forward": "packages/planning/tests/test_installer.py covers closed-parent suppression; summary no longer shows the #485/#512 stale candidate.",
+    "reopen trigger": "Summary again promotes an archived continuation whose parent refs are externally closed."
+  },
+  "durable_residue": {
+    "status": "check",
+    "learned constraint": "Finished-work inspection should use refreshed provider-neutral external evidence to avoid promoting stale closed-parent continuations.",
+    "motivation worth preserving": "Without this, autopilot repeats already-completed historical work instead of moving to the next live lane.",
+    "canonical owner now": "packages/planning/src/repo_planning_bootstrap/installer.py and packages/planning/tests/test_installer.py",
+    "promotion trigger": "Already promoted into planning package behavior and tests.",
+    "retention after promotion": "shrink"
+  },
+  "execution_summary": {
+    "outcome delivered": "Suppressed stale archive continuation candidates when explicit parent/continuation refs are externally closed.",
+    "validation confirmed": "yes",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane workflow-friction-polish",
+    "post-work posterity capture": "Rule promoted to package code and guarded by planning package tests.",
+    "knowledge promoted (Memory/Docs/Config)": "Check/code promotion; no Memory note needed.",
+    "resume from": "Refresh summary and continue remaining open workflow-friction-polish issues."
+  },
+  "improvement_signal_review": {
+    "status": "fixed",
+    "signals found": [
+      "Dogfooding summary routed to a stale archived continuation for closed issues #485/#512."
+    ],
+    "signals fixed": [
+      "#485/#512 stale closed-parent continuation suppression"
+    ],
+    "signals routed": [
+      "Older historical candidates without role metadata remain in workflow-friction-polish/historical audit pressure."
+    ],
+    "signals dismissed": [],
+    "next owner": "#524"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "Continue remaining workflow-friction-polish issues after #524."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "Continue remaining workflow-friction-polish issues after #524."
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #524 after summary recommended a stale closed-parent archive continuation.",
+    "2026-04-28: Implemented and validated provider-neutral closed-ref suppression for finished-work inspection."
+  ]
+}

@@ -3352,6 +3352,7 @@ def _closeout_reconciliation_action_state(classification: str) -> str:
 def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
     archive_dir = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive"
     evidence = _load_finished_work_evidence(target_root)
+    external_evidence = _load_external_intent_evidence(target_root)
     signals: list[dict[str, Any]] = []
     inspections: list[dict[str, Any]] = []
     derived_follow_up_candidates: list[dict[str, Any]] = []
@@ -3360,6 +3361,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
     partial = 0
     likely_premature = 0
     superseded_continuation = 0
+    externally_closed_continuation = 0
     role_aware_reference_plan_count = 0
     non_closure_reference_count = 0
 
@@ -3504,6 +3506,38 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
         ]
     derived_follow_up_candidates = active_derived_follow_up_candidates
 
+    externally_closed_source_plans: set[str] = set()
+    active_externally_closed_follow_up_candidates: list[dict[str, Any]] = []
+    for candidate in derived_follow_up_candidates:
+        externally_closed_by = _finished_work_continuation_closed_by_external_evidence(
+            candidate=candidate,
+            external_evidence=external_evidence,
+        )
+        if externally_closed_by:
+            externally_closed_continuation += 1
+            source_plan = str(candidate.get("source_plan", ""))
+            externally_closed_source_plans.add(source_plan)
+            candidate["externally_closed_by"] = externally_closed_by
+            candidate["recommended_action"] = "no promotion; continuation refs are externally closed"
+            for inspection in inspections:
+                if inspection.get("plan") == source_plan:
+                    inspection["classification"] = "externally_closed_partial"
+                    inspection["externally_closed_by"] = externally_closed_by
+                    inspection["reason"] = (
+                        "Archived residue left larger intent open, but refreshed external evidence marks the explicit "
+                        "parent or continuation refs as closed."
+                    )
+                    break
+            continue
+        active_externally_closed_follow_up_candidates.append(candidate)
+    if externally_closed_source_plans:
+        signals = [
+            signal
+            for signal in signals
+            if not (signal.get("kind") == "intent_continuation_required" and signal.get("path") in externally_closed_source_plans)
+        ]
+    derived_follow_up_candidates = active_externally_closed_follow_up_candidates
+
     routed_source_plans: set[str] = set()
     active_routed_follow_up_candidates: list[dict[str, Any]] = []
     routed_continuation = 0
@@ -3556,6 +3590,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
         "partial_count": partial,
         "likely_premature_closeout_count": likely_premature,
         "superseded_continuation_count": superseded_continuation,
+        "externally_closed_continuation_count": externally_closed_continuation,
         "routed_continuation_count": routed_continuation,
         "archive_only_durable_residue_count": len(archive_only_durable_residue),
         "role_aware_reference_plan_count": role_aware_reference_plan_count,
@@ -3711,6 +3746,31 @@ def _finished_work_continuation_routed_by_active_plan(*, target_root: Path, cand
         if parent_refs & active_parent_refs and not (closure_refs & active_closure_refs):
             routed_by.append(path.relative_to(target_root).as_posix())
     return routed_by
+
+
+def _finished_work_continuation_closed_by_external_evidence(
+    *,
+    candidate: dict[str, Any],
+    external_evidence: dict[str, Any],
+) -> list[str]:
+    if external_evidence.get("status") != "loaded":
+        return []
+    reference_roles = candidate.get("reference_roles", {})
+    if not isinstance(reference_roles, dict):
+        return []
+    non_closure_refs = sorted({str(ref).strip() for ref in reference_roles.get("non_closure_refs", []) if str(ref).strip()})
+    if not non_closure_refs:
+        return []
+
+    status_by_id = {
+        str(item.get("id", "")).strip(): str(item.get("status", "")).strip().lower()
+        for item in external_evidence.get("items", [])
+        if isinstance(item, dict) and str(item.get("id", "")).strip()
+    }
+    closed_statuses = {"closed", "complete", "completed", "done"}
+    if all(status_by_id.get(ref, "") in closed_statuses for ref in non_closure_refs):
+        return non_closure_refs
+    return []
 
 
 def _finished_work_continuation_routed_by_roadmap(*, target_root: Path, candidate: dict[str, Any]) -> list[str]:
