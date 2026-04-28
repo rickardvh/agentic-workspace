@@ -5621,6 +5621,139 @@ def test_upgrade_apply_preserves_local_only_memory_and_integration_state(tmp_pat
     assert scenarios["local-only memory/integration preservation"]["status"] == "covered"
 
 
+@pytest.mark.parametrize(
+    ("modules", "expected_modules"),
+    [
+        ("memory", ["memory"]),
+        ("planning", ["planning"]),
+        (None, ["planning", "memory"]),
+    ],
+)
+def test_root_lifecycle_fixture_matrix_covers_upgrade_shapes(
+    tmp_path: Path, capsys, modules: str | None, expected_modules: list[str]
+) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    init_args = ["init", "--target", str(target), "--format", "json"]
+    if modules is not None:
+        init_args.extend(["--modules", modules])
+
+    assert cli.main(init_args) == 0
+    capsys.readouterr()
+
+    assert cli.main(["upgrade", "--target", str(target), "--dry-run", "--format", "json"]) == 0
+    upgrade_payload = json.loads(capsys.readouterr().out)
+    assert upgrade_payload["modules"] == expected_modules
+    assert upgrade_payload["lifecycle_plan"]["root_upgrade_front_door"]["selected_modules"] == expected_modules
+
+    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+    status_payload = json.loads(capsys.readouterr().out)
+    assert status_payload["modules"] == expected_modules
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    doctor_payload = json.loads(capsys.readouterr().out)
+    assert doctor_payload["modules"] == expected_modules
+
+
+def test_root_lifecycle_fixture_matrix_classifies_entry_states(monkeypatch, tmp_path: Path, capsys) -> None:
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    _init_git_repo(empty)
+    assert cli.main(["init", "--target", str(empty), "--dry-run", "--format", "json"]) == 0
+    empty_payload = json.loads(capsys.readouterr().out)
+    assert empty_payload["repo_state"] == "blank_or_unmanaged_repo"
+    assert empty_payload["mode"] == "install"
+
+    routing_only = tmp_path / "routing-only"
+    routing_only.mkdir()
+    _init_git_repo(routing_only)
+    _write(routing_only / "AGENTS.md", "# Local agent instructions\n")
+    _write(routing_only / "llms.txt", "# Local external-agent adapter\n")
+    assert cli.main(["init", "--target", str(routing_only), "--dry-run", "--format", "json"]) == 0
+    routing_payload = json.loads(capsys.readouterr().out)
+    assert routing_payload["repo_state"] == "docs_heavy_existing_repo"
+    assert routing_payload["inferred_policy"] == "require_explicit_handoff"
+    assert sorted(routing_payload["detected_surfaces"]) == ["AGENTS.md", "llms.txt"]
+
+    partial = tmp_path / "partial"
+    partial.mkdir()
+    _init_git_repo(partial)
+    _write(partial / "TODO.md", "# Existing TODO\n")
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_install_signals(partial, calls))
+    assert cli.main(["init", "--target", str(partial), "--dry-run", "--format", "json"]) == 0
+    partial_payload = json.loads(capsys.readouterr().out)
+    assert partial_payload["repo_state"] == "partial_or_placeholder_state"
+    assert partial_payload["prompt_requirement"] == "required"
+    assert "TODO.md: partial module state detected" in partial_payload["needs_review"]
+
+
+def test_root_lifecycle_fixture_matrix_classifies_legacy_residue(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    _write(
+        target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md",
+        "# Task Context\n\n<CURRENT_FOCUS>\n",
+    )
+    compat_notice = "<!-- GENERATED COMPATIBILITY VIEW: authoritative source is .agentic-workspace/planning/state.toml -->"
+    _write(target / "TODO.md", f"{compat_notice}\n# TODO\n")
+    _write(target / "ROADMAP.md", f"{compat_notice}\n# ROADMAP\n")
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    flattened_actions = [
+        action
+        for report in payload["reports"]
+        for action in report.get("actions", [])
+        if isinstance(report, dict) and isinstance(action, dict)
+    ]
+    assert any(
+        action.get("role") == "current-memory-migration" and action.get("path") == ".agentic-workspace/memory/repo/current/task-context.md"
+        for action in flattened_actions
+    )
+    assert any(
+        action.get("kind") in {"warning", "suggested fix"}
+        and action.get("path") == "ROADMAP.md"
+        and "ROADMAP" in str(action.get("detail", ""))
+        for action in flattened_actions
+    )
+
+
+def test_lifecycle_safety_payload_advertises_root_fixture_matrix(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["upgrade", "--target", str(target), "--dry-run", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    matrix = payload["lifecycle_plan"]["mutation_safety"]["fixture_matrix"]
+    states = {entry["state"]: entry for entry in matrix}
+    assert set(states) == {
+        "empty repo",
+        "routing-only installed",
+        "memory-only installed",
+        "planning-only installed",
+        "full installed",
+        "old current-memory residue",
+        "old optional planning surfaces",
+        "custom AGENTS.md",
+        "partial managed state",
+        "local-only state",
+        "ambiguous ownership state",
+    }
+    advertised_commands = {command for entry in matrix for command in entry["commands"]}
+    assert advertised_commands >= {"init", "install", "adopt", "upgrade", "uninstall", "status", "doctor"}
+    assert states["old optional planning surfaces"]["expected_result"] == "classified through planning report/doctor warnings"
+
+
 def test_upgrade_preserves_repo_owned_agents_content_outside_workspace_fence(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

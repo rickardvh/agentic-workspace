@@ -1,0 +1,280 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Root Lifecycle Fixture Matrix",
+  "goal": [
+    "Add root-level synthetic fixture coverage for lifecycle behavior across realistic host-repo states."
+  ],
+  "non_goals": [
+    "Do not make destructive lifecycle operations automatic.",
+    "Do not exhaustively preserve every historical product shape when later lanes may remove or refuse them."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Root lifecycle commands have black-box coverage for the main host-repo states in issue #481.",
+      "constraints": "Use root agentic-workspace commands and preserve package boundaries.",
+      "latitude": "Add focused test helpers and compact coverage metadata where it clarifies the safety contract.",
+      "escalation": "Stop if the fixture matrix requires product behavior outside #481."
+    },
+    "execution": {
+      "milestone": "fixture-matrix",
+      "status": "active",
+      "next_step": "Implement tests and coverage payload updates for root lifecycle fixture states.",
+      "proof": "Run focused workspace CLI lifecycle tests, proof selector, and workflow closeout checks."
+    },
+    "scope": {
+      "touched": [
+        "tests/test_workspace_cli.py",
+        "src/agentic_workspace/cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/root-lifecycle-fixture-matrix.plan.json"
+      ],
+      "invariants": [
+        "Root commands remain the lifecycle front door.",
+        "Local-only state is preserved by default.",
+        "Ambiguous ownership requires review before mutation."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make lifecycle management straightforward, predictable, and low-judgment.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening",
+    "parent lane": "#478"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "follow-on detail": "#482, #483, and #484 remain after this fixture matrix lands.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #481 is proven and closed."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Lifecycle changes can be reviewed against a root synthetic matrix instead of ad hoc scenarios.",
+    "intentionally deferred": "Historical shape removal/refusal belongs to #483.",
+    "discovered implications": "The proof selector correctly flags direct root CLI edits for authority review; this edit stayed in derived lifecycle safety metadata rather than command/interface semantics.",
+    "proof achieved now": "Root lifecycle fixture matrix tests pass and lifecycle safety output advertises the requested state classes.",
+    "validation still needed": "None for #481 after closeout.",
+    "next likely slice": "#482"
+  },
+  "intent_interpretation": {
+    "literal request": "Reingest and repeat until out of issues.",
+    "inferred intended outcome": "Continue the open issue roadmap lane-by-lane using the package workflow.",
+    "chosen concrete what": "Implement #481 as the next open lifecycle hardening child.",
+    "interpretation distance": "low",
+    "review guidance": "Check that tests cover the requested fixture classes without turning product residue into new default surfaces."
+  },
+  "execution_bounds": {
+    "allowed paths": "Root CLI lifecycle implementation/tests plus planning execplan/state.",
+    "max changed files": "Prefer 4-6 files.",
+    "required validation commands": "Focused pytest, proof selector, ruff, workflow closeout commands.",
+    "ask-before-refactor threshold": "Stop before broad CLI lifecycle rewrites or module package internals.",
+    "stop before touching": "Branch switching, destructive cleanup, or package-local lifecycle behavior unrelated to the root matrix."
+  },
+  "stop_conditions": {
+    "stop when": "Focused lifecycle fixture coverage and closeout proof pass.",
+    "escalate when boundary reached": "The work requires broad lifecycle rewrites or destructive behavior changes.",
+    "escalate on scope drift": "A follow-up belongs to #482, #483, or #484 instead of #481.",
+    "escalate on proof failure": "A lifecycle fixture exposes an actual behavior regression outside this slice."
+  },
+  "context_budget": {
+    "live working set": "Issue #481, root lifecycle tests, lifecycle safety payload, and active execplan.",
+    "recoverable later": "Full historical archive and unrelated derived follow-up candidates.",
+    "externalize before shift": "Update this execplan with proof, closure, and continuation status.",
+    "pre-work config pull": "agentic-workspace summary and workflow_obligations report were used.",
+    "pre-work memory pull": "Not needed; this is a root lifecycle test slice.",
+    "tiny resumability note": "Continue by running focused lifecycle tests and proof selector.",
+    "context-shift triggers": "Before commit or if proof fails after implementation."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #481 end-to-end with root lifecycle fixture coverage.",
+    "hard constraints": "Stay on the current branch, commit after proof, and keep lifecycle authority at the root command.",
+    "agent may decide locally": "Exact helper shape, coverage metadata wording, and focused test grouping.",
+    "escalate when": "The fixture matrix requires destructive behavior changes or broad module rewrites."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#481",
+      "label": "root lifecycle fixture matrix",
+      "role": "source_intent",
+      "locator": "GitHub issue #481"
+    },
+    {
+      "kind": "issue",
+      "target": "#478",
+      "label": "lifecycle management hardening parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue #478"
+    },
+    {
+      "kind": "issue",
+      "target": "#482",
+      "label": "next lifecycle hardening child",
+      "role": "next_lane",
+      "locator": "GitHub issue #482"
+    }
+  ],
+  "active_milestone": {
+    "id": "fixture-matrix",
+    "status": "completed",
+    "scope": "Root lifecycle tests and compact fixture coverage metadata.",
+    "ready": "Issue #481 is open and current summary is clean.",
+    "blocked": "None.",
+    "optional_deps": "None."
+  },
+  "immediate_next_action": [
+    "Archive this plan, commit the milestone, close #481, refresh external evidence, then promote #482."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "tests/test_workspace_cli.py",
+    "src/agentic_workspace/cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/root-lifecycle-fixture-matrix.plan.json"
+  ],
+  "invariants": [
+    "Root lifecycle commands stay black-box from the host repo perspective.",
+    "Review-required states remain review-required."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"root_lifecycle_fixture_matrix or lifecycle_safety_payload_advertises_root_fixture_matrix or upgrade_lifecycle_plan_advertises_root_front_door\"",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace proof --target . --changed tests/test_workspace_cli.py src/agentic_workspace/cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/root-lifecycle-fixture-matrix.plan.json --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "make maintainer-surfaces",
+    "uv run agentic-workspace preflight --target . --format json",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace report --target . --section closeout_trust --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Fixture classes requested by #481 have root-level tests or explicit coverage metadata.",
+    "Upgrade dry-run/apply covers memory-only, planning-only, and full installed states.",
+    "Local-only state preservation and ambiguous ownership review remain covered.",
+    "Optional legacy surfaces are classified rather than silently ignored."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "Issue #481 plus workspace summary.",
+    "what happened": "Added root lifecycle fixture matrix tests for empty, routing-only, partial, memory-only, planning-only, full, legacy residue, local-only, and ambiguous ownership states; exposed the fixture matrix in lifecycle mutation-safety output.",
+    "scope touched": "Root workspace CLI lifecycle safety metadata, workspace CLI tests, and checked-in planning surfaces.",
+    "changed surfaces": "preflight, summary, report, proof, reconcile, doctor, skills, root_cli_authority defaults, maintainer-surfaces.",
+    "validations run": "focused lifecycle pytest; full tests/test_workspace_cli.py; ruff; proof selector; root CLI authority; planning doctor; planning surface check; maintainer-surfaces; preflight; summary; closeout_trust report; reconcile; skills dogfooding query.",
+    "result for continuation": "#481 is ready to close; lifecycle-management-hardening continues with #482, #483, and #484.",
+    "next step": "Archive plan, commit, push, close #481, refresh external evidence, then continue #482."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed in root lifecycle tests, compact lifecycle safety metadata, and planning records.",
+    "proof status": "passed",
+    "intent served": "yes; root lifecycle fixture classes requested by #481 now have black-box tests or explicit coverage metadata.",
+    "config compliance": "used package workflow surfaces and stayed on the current branch.",
+    "misinterpretation risk": "low; no destructive behavior was made automatic.",
+    "follow-on decision": "close #481 and continue lifecycle hardening with #482."
+  },
+  "proof_report": {
+    "validation proof": "197 workspace CLI tests passed; ruff passed; proof selector, root CLI authority, planning doctor, planning surface check, maintainer-surfaces, preflight, closeout_trust, reconcile, and skills query completed successfully.",
+    "proof achieved now": "Root lifecycle fixture matrix coverage is present and validated.",
+    "evidence for \"proof achieved\" state": "tests/test_workspace_cli.py::test_root_lifecycle_fixture_matrix_covers_upgrade_shapes, ::test_root_lifecycle_fixture_matrix_classifies_entry_states, ::test_root_lifecycle_fixture_matrix_classifies_legacy_residue, and ::test_lifecycle_safety_payload_advertises_root_fixture_matrix."
+  },
+  "intent_satisfaction": {
+    "original intent": "#481 Add root synthetic lifecycle fixture matrix.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The matrix covers empty, routing-only, memory-only, planning-only, full, old current-memory, old optional planning, custom AGENTS.md, partial managed, local-only, and ambiguous ownership states; upgrade dry-run/status/doctor are tested for memory-only, planning-only, and full installs.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Keep the product streamlined and low-judgment while preserving leverage.",
+    "slice shaping bias": "Prefer compact tests and coverage signals over new user-facing surfaces.",
+    "broader-lane validation question": "Does lifecycle management become easier to trust without adding first-contact residue?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Root synthetic lifecycle fixture matrix added for #481.",
+    "validation confirmed": "Focused and full workspace CLI tests, ruff, proof selector, root CLI authority, planning doctor, planning surface check, maintainer-surfaces, preflight, closeout_trust, reconcile, and skills dogfooding query passed.",
+    "follow-on routed to": "#482",
+    "post-work posterity capture": "Archive this plan after commit/closeout.",
+    "knowledge promoted (Memory/Docs/Config)": "No new durable memory/docs/config promotion needed; direct CLI authority friction is already covered by #410.",
+    "resume from": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Proof selector flagged direct CLI edits for authority review; existing root_cli_authority defaults and #410 cover the durable follow-up."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "#410 remains the extraction/guard owner for broader direct CLI authority work."
+    ],
+    "signals dismissed": [
+      "No new issue needed for this slice because the edit was derived lifecycle safety metadata and the existing authority review path classified it."
+    ],
+    "next owner": "#410 for future interface extraction/guard work; #482 for next lifecycle lane."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "One-off command output and temporary fixture debugging.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#482, #483, and #484 remain in lifecycle-management-hardening.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No new durable memory/docs/config promotion needed; direct CLI authority friction is already covered by #410.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No new durable memory/docs/config promotion needed; direct CLI authority friction is already covered by #410.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "No new durable memory/docs/config promotion needed; direct CLI authority friction is already covered by #410.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#410 already owns direct CLI authority extraction/guard follow-up.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #481 from lifecycle-management-hardening."
+  ]
+}

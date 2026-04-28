@@ -2924,6 +2924,77 @@ def _root_upgrade_front_door_payload(
     }
 
 
+def _lifecycle_fixture_matrix_payload() -> list[dict[str, Any]]:
+    return [
+        {
+            "state": "empty repo",
+            "commands": ["init", "install"],
+            "expected_result": "install-direct",
+            "proof": "tests/test_workspace_cli.py::test_root_lifecycle_fixture_matrix_classifies_entry_states",
+        },
+        {
+            "state": "routing-only installed",
+            "commands": ["init", "adopt"],
+            "expected_result": "preserve-existing-and-adopt",
+            "proof": "tests/test_workspace_cli.py::test_root_lifecycle_fixture_matrix_classifies_entry_states",
+        },
+        {
+            "state": "memory-only installed",
+            "commands": ["upgrade", "status", "doctor"],
+            "expected_result": "memory module selected from install signals",
+            "proof": "tests/test_workspace_cli.py::test_root_lifecycle_fixture_matrix_covers_upgrade_shapes",
+        },
+        {
+            "state": "planning-only installed",
+            "commands": ["upgrade", "status", "doctor"],
+            "expected_result": "planning module selected from install signals",
+            "proof": "tests/test_workspace_cli.py::test_root_lifecycle_fixture_matrix_covers_upgrade_shapes",
+        },
+        {
+            "state": "full installed",
+            "commands": ["upgrade", "status", "doctor"],
+            "expected_result": "planning and memory modules selected from install signals",
+            "proof": "tests/test_workspace_cli.py::test_root_lifecycle_fixture_matrix_covers_upgrade_shapes",
+        },
+        {
+            "state": "old current-memory residue",
+            "commands": ["status", "doctor"],
+            "expected_result": "classified as current-memory review instead of default startup input",
+            "proof": "tests/test_workspace_cli.py::test_root_lifecycle_fixture_matrix_classifies_legacy_residue",
+        },
+        {
+            "state": "old optional planning surfaces",
+            "commands": ["status", "doctor"],
+            "expected_result": "classified through planning report/doctor warnings",
+            "proof": "tests/test_workspace_cli.py::test_root_lifecycle_fixture_matrix_classifies_legacy_residue",
+        },
+        {
+            "state": "custom AGENTS.md",
+            "commands": ["init", "upgrade"],
+            "expected_result": "repo-owned prose preserved outside managed workspace fence",
+            "proof": "tests/test_workspace_cli.py::test_upgrade_preserves_repo_owned_agents_content_outside_workspace_fence",
+        },
+        {
+            "state": "partial managed state",
+            "commands": ["init", "upgrade", "doctor"],
+            "expected_result": "manual review or recovery action instead of silent overwrite",
+            "proof": "tests/test_workspace_cli.py::test_root_lifecycle_fixture_matrix_classifies_entry_states",
+        },
+        {
+            "state": "local-only state",
+            "commands": ["install", "upgrade", "uninstall"],
+            "expected_result": "local-only state preserved unless explicitly targeted",
+            "proof": "tests/test_workspace_cli.py::test_upgrade_apply_preserves_local_only_memory_and_integration_state",
+        },
+        {
+            "state": "ambiguous ownership state",
+            "commands": ["uninstall"],
+            "expected_result": "review required before destructive removal",
+            "proof": "tests/test_workspace_cli.py::test_uninstall_dry_run_requires_review_for_ambiguous_workspace_payload",
+        },
+    ]
+
+
 def _lifecycle_mutation_safety_payload(
     *,
     command_name: str,
@@ -2993,6 +3064,7 @@ def _lifecycle_mutation_safety_payload(
                 "proof": "tests/test_workspace_cli.py::test_upgrade_strict_preflight_requires_token",
             },
         ],
+        "fixture_matrix": _lifecycle_fixture_matrix_payload(),
     }
 
 
