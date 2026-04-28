@@ -3035,15 +3035,15 @@ def _lifecycle_surface_classifications_payload(
             review_required_for_surface=False,
         )
 
-    for path in _optional_legacy_surfaces(target_root=target_root):
+    for path in _unsupported_legacy_surfaces(target_root=target_root):
         add_entry(
             path=path,
             module="workspace",
-            action="retained",
-            reason_class="optional legacy retained",
-            reason="Optional legacy compatibility surface is retained and classified for review.",
-            source="legacy-scan",
-            review_required_for_surface=False,
+            action="manual review",
+            reason_class="legacy unsupported; migration/refusal required",
+            reason="Unsupported legacy compatibility surface requires manual migration or deletion.",
+            source="legacy-unsupported-scan",
+            review_required_for_surface=True,
         )
 
     if command_name == "uninstall" and review_required:
@@ -3082,9 +3082,10 @@ def _classify_lifecycle_action(*, path: str, action_kind: str, detail: str, comm
         return "ambiguous ownership manual-review", detail or "Manual review is required before applying this change."
     if action_kind in {"warning", "suggested fix"}:
         if path in {"TODO.md", "ROADMAP.md"} or "legacy" in detail_l or "compatibility" in detail_l:
-            if action_kind == "suggested fix" or "delete" in detail_l or "remove" in detail_l:
-                return "optional legacy removable", detail or "Optional legacy surface can be removed after review."
-            return "optional legacy retained", detail or "Optional legacy surface is retained for review."
+            return (
+                "legacy unsupported; migration/refusal required",
+                detail or "Legacy compatibility surface requires manual migration or deletion.",
+            )
         return "ambiguous ownership manual-review", detail or "Warning requires review."
     if action_kind in {"would remove", "removed"}:
         if command_name == "uninstall" and review_required:
@@ -3134,7 +3135,7 @@ def _local_only_surfaces(*, target_root: Path) -> list[str]:
     return paths
 
 
-def _optional_legacy_surfaces(*, target_root: Path) -> list[str]:
+def _unsupported_legacy_surfaces(*, target_root: Path) -> list[str]:
     paths: list[str] = []
     for relative in (Path("TODO.md"), Path("ROADMAP.md")):
         path = target_root / relative
@@ -3238,7 +3239,7 @@ def _lifecycle_fixture_matrix_payload() -> list[dict[str, Any]]:
         {
             "state": "old optional planning surfaces",
             "commands": ["status", "doctor"],
-            "expected_result": "classified through planning report/doctor warnings",
+            "expected_result": "classified as unsupported legacy surfaces with migration/refusal guidance",
             "proof": "tests/test_workspace_cli.py::test_root_lifecycle_fixture_matrix_classifies_legacy_residue",
         },
         {

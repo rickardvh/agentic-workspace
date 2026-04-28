@@ -1065,7 +1065,6 @@ def install_bootstrap(
         _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=force)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
-        _migrate_legacy_planning_surfaces(target_root, force=force)
         _ensure_state_toml_exists(target_root, overwrite=force)
         _remove_generated_planning_views(target_root, result=result)
         _backfill_execplan_records(target_root)
@@ -1095,7 +1094,6 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False, 
         _copy_bundled_skills(target_root=target_root, result=result, conservative=True, force=False)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
-        _migrate_legacy_planning_surfaces(target_root)
         _ensure_state_toml_exists(target_root)
         _remove_generated_planning_views(target_root, result=result)
         _backfill_execplan_records(target_root)
@@ -1121,7 +1119,6 @@ def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
 
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
-        _migrate_legacy_planning_surfaces(target_root)
         _ensure_state_toml_exists(target_root)
         _remove_generated_planning_views(target_root, result=result)
         _backfill_execplan_records(target_root)
@@ -7748,121 +7745,5 @@ def _remove_generated_planning_views(target_root: Path, *, result: InstallResult
                 result.add(
                     "manual review",
                     path,
-                    "managed compatibility view detected; delete manually if no longer needed",
+                    "unsupported legacy compatibility view detected; migrate any durable content to .agentic-workspace/planning/state.toml or delete manually",
                 )
-
-
-def _migrate_legacy_planning_surfaces(target_root: Path, *, force: bool = False) -> bool:
-    todo_path = target_root / "TODO.md"
-    roadmap_path = target_root / "ROADMAP.md"
-    state_path = target_root / PLANNING_STATE_PATH
-
-    if state_path.exists() and not force:
-        return False
-
-    if not todo_path.exists() and not roadmap_path.exists():
-        return False
-
-    is_todo_compat_view = _is_managed_compatibility_view(todo_path)
-    is_roadmap_compat_view = _is_managed_compatibility_view(roadmap_path)
-    todo_owned = is_todo_compat_view
-    roadmap_owned = is_roadmap_compat_view
-
-    # These filenames are common in repositories. Only auto-migrate/delete files that
-    # carry the managed compatibility marker.
-    if not todo_owned and not roadmap_owned:
-        return False
-
-    # Conflict detection: look for headers we don't recognize
-    # Whitelist expanded based on repo-specific findings
-    known_todo_headers = {"active queue", "next candidate queue", "completed tasks", "abandoned queue", "purpose", "now", "next"}
-    known_roadmap_headers = {
-        "candidate lanes",
-        "next candidate queue",
-        "purpose",
-        "scope",
-        "github issue intake",
-        "active handoff",
-        "reopen conditions",
-        "promotion rules",
-    }
-
-    guideline_sections = {"github issue intake", "scope", "reopen conditions", "promotion rules"}
-
-    extracted_guidelines = []
-
-    def extract_sections(p: Path, known: set[str], guidelines: set[str]) -> None:
-        if not p.exists():
-            return
-        c = p.read_text(encoding="utf-8")
-        if _COMPATIBILITY_VIEW_NOTICE in c:
-            return
-        headers = re.findall(r"^##\s+(.*)$", c, re.MULTILINE)
-        unknown = [h.strip() for h in headers if h.strip().lower() not in known]
-        if unknown:
-            raise ValueError(
-                f"Migration conflict in {p.name}: found unknown sections {unknown}. "
-                "These may contain custom user notes or non-standard work. "
-                "Please migrate them manually to state.toml or remove them from the root before continuing."
-            )
-
-        # Extract guideline sections
-        for h in headers:
-            h_clean = h.strip()
-            if h_clean.lower() in guidelines:
-                section_content = _section_lines(c.splitlines(), h_clean)
-                extracted_guidelines.append(f"## {h_clean}\n\n" + "\n".join(section_content))
-
-    if todo_owned:
-        extract_sections(todo_path, known_todo_headers, guideline_sections)
-    if roadmap_owned:
-        extract_sections(roadmap_path, known_roadmap_headers, guideline_sections)
-
-    if extracted_guidelines:
-        process_path = target_root / "docs" / "planning-process.md"
-        process_path.parent.mkdir(parents=True, exist_ok=True)
-        process_path.write_text("# Planning Process Guidelines\n\n" + "\n\n".join(extracted_guidelines) + "\n", encoding="utf-8")
-
-    # Read TODO.md
-    _, todo_items = _read_todo_items(todo_path) if todo_owned and todo_path.exists() and not is_todo_compat_view else ([], [])
-
-    # Read ROADMAP.md
-    roadmap_lanes = _roadmap_candidate_lanes(roadmap_path) if roadmap_owned and roadmap_path.exists() and not is_roadmap_compat_view else []
-    roadmap_candidates = _roadmap_candidates(roadmap_path) if roadmap_owned and roadmap_path.exists() and not is_roadmap_compat_view else []
-
-    # Construct state
-    active_items = []
-    queued_items = []
-    for item in todo_items:
-        status = item.fields.get("status", "").lower()
-        if any(kw in status for kw in ["active", "in-progress", "ongoing"]):
-            active_items.append(
-                {"id": item.fields.get("id", ""), "surface": item.fields.get("surface", ""), "why_now": item.fields.get("why now", "")}
-            )
-        else:
-            queued_items.append(
-                {
-                    "id": item.fields.get("id", ""),
-                    "surface": item.fields.get("surface", ""),
-                    "why_now": item.fields.get("why now", ""),
-                    "status": item.fields.get("status", ""),
-                }
-            )
-
-    state = {
-        "todo": {
-            "active_items": active_items,
-            "queued_items": queued_items,
-        },
-        "roadmap": {
-            "lanes": roadmap_lanes,
-            "candidates": roadmap_candidates,
-        },
-    }
-
-    _write_state_to_toml(target_root, state)
-
-    # Keep root files until a human confirms deletion. Filenames like TODO.md and
-    # ROADMAP.md are common and should never be removed implicitly during upgrade.
-
-    return True

@@ -5594,7 +5594,7 @@ def test_upgrade_lifecycle_surface_classifications_cover_reason_classes(
     assert by_path["AGENTS.md"]["reason_class"] == "repo-owned preserved"
     assert by_path["README.md"]["reason_class"] == "ambiguous ownership manual-review"
     assert by_path[".agentic-workspace/local/memory.toml"]["reason_class"] == "local-only preserved"
-    assert "optional legacy retained" in reason_classes or "optional legacy removable" in reason_classes
+    assert "legacy unsupported; migration/refusal required" in reason_classes
     assert classifications["summary_by_class"]["core refreshed"] >= 1
 
 
@@ -5880,7 +5880,9 @@ def test_lifecycle_safety_payload_advertises_root_fixture_matrix(tmp_path: Path,
     }
     advertised_commands = {command for entry in matrix for command in entry["commands"]}
     assert advertised_commands >= {"init", "install", "adopt", "upgrade", "uninstall", "status", "doctor"}
-    assert states["old optional planning surfaces"]["expected_result"] == "classified through planning report/doctor warnings"
+    assert states["old optional planning surfaces"]["expected_result"] == (
+        "classified as unsupported legacy surfaces with migration/refusal guidance"
+    )
 
 
 def test_upgrade_preserves_repo_owned_agents_content_outside_workspace_fence(tmp_path: Path, capsys) -> None:

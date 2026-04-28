@@ -1349,12 +1349,13 @@ def test_upgrade_bootstrap_flags_managed_compatibility_views_for_manual_review(t
     assert todo_path.exists()
     assert roadmap_path.exists()
     assert (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+    assert not (tmp_path / "docs" / "planning-process.md").exists()
     assert any(
-        action.kind == "manual review" and action.path == todo_path and "delete manually if no longer needed" in action.detail
+        action.kind == "manual review" and action.path == todo_path and "unsupported legacy compatibility view" in action.detail
         for action in result.actions
     )
     assert any(
-        action.kind == "manual review" and action.path == roadmap_path and "delete manually if no longer needed" in action.detail
+        action.kind == "manual review" and action.path == roadmap_path and "unsupported legacy compatibility view" in action.detail
         for action in result.actions
     )
 

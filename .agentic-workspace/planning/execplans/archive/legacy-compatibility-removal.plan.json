@@ -1,0 +1,265 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Legacy Compatibility Removal",
+  "goal": [
+    "Remove obsolete lifecycle compatibility machinery for unshipped planning shapes and replace hidden migration with explicit review/refusal guidance."
+  ],
+  "non_goals": [
+    "Do not remove support for current documented installs.",
+    "Do not delete unknown repo-owned TODO.md or ROADMAP.md content automatically.",
+    "Do not build a broad migration framework."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Planning lifecycle no longer auto-migrates old root TODO/ROADMAP compatibility views into state; old shapes are flagged explicitly.",
+      "constraints": "Keep current installs working and preserve repo-owned content.",
+      "latitude": "Remove dead/obsolete helper code and update tests/output wording.",
+      "escalation": "Stop before changing current state.toml or execplan semantics."
+    },
+    "execution": {
+      "milestone": "legacy-planning-surface-migration-removal",
+      "status": "completed",
+      "next_step": "Archive this execplan, commit, push, close #484, refresh external evidence, and evaluate parent #478.",
+      "proof": "Focused planning installer and workspace lifecycle tests, full planning installer tests, full workspace CLI tests, ruff, proof selector, root CLI authority, planning doctor, planning surface check, preflight, closeout reports, reconcile, and skills query passed."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/legacy-compatibility-removal.plan.json"
+      ],
+      "invariants": [
+        "Current documented installs still create state.toml.",
+        "Repo-owned TODO.md and ROADMAP.md remain untouched.",
+        "Legacy compatibility views are surfaced as unsupported/manual review rather than silently migrated."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make lifecycle management straightforward, predictable, and low-judgment.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening",
+    "parent lane": "#478"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "follow-on detail": "Lifecycle-management-hardening children #479-#484 will be complete after this slice.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After proof, close #484 and evaluate parent #478."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Old planning compatibility files no longer require hidden migration behavior in lifecycle code.",
+    "intentionally deferred": "Broader root orchestrator compression belongs to #485+.",
+    "discovered implications": "",
+    "proof achieved now": "Hidden TODO/ROADMAP migration was removed, unsupported compatibility guidance is explicit, and focused plus broad planning/workspace validation passed.",
+    "validation still needed": "None for #484.",
+    "next likely slice": "#485 or parent #478 closeout"
+  },
+  "intent_interpretation": {
+    "literal request": "Reingest and repeat until out of issues.",
+    "inferred intended outcome": "Finish the lifecycle hardening lane with #484.",
+    "chosen concrete what": "Remove the automatic legacy TODO/ROADMAP migration helper and classify compatibility views as unsupported migration/refusal surfaces.",
+    "interpretation distance": "medium; #484 is broad, so this slice targets the highest-confidence obsolete compatibility branch.",
+    "review guidance": "Verify removed behavior was for unshipped root planning views and that current installs still work."
+  },
+  "execution_bounds": {
+    "allowed paths": "Planning installer migration branch, root lifecycle classification output/tests, and planning surfaces.",
+    "max changed files": "Prefer 4-7 files.",
+    "required validation commands": "Focused pytest, package planning tests, workspace CLI tests, ruff, proof selector, planning checks.",
+    "ask-before-refactor threshold": "Stop before broad memory legacy-layout rewrites or command generation work.",
+    "stop before touching": "Branch switching, current install semantics, or destructive deletion of repo-owned files."
+  },
+  "stop_conditions": {
+    "stop when": "Obsolete migration helper is removed and tests prove explicit unsupported guidance.",
+    "escalate when boundary reached": "A current documented install depends on the legacy migration helper.",
+    "escalate on scope drift": "The work becomes root orchestrator split or memory legacy-layout redesign.",
+    "escalate on proof failure": "Current install/adopt/upgrade behavior regresses."
+  },
+  "context_budget": {
+    "live working set": "#484, planning installer legacy migration code, root lifecycle classification tests.",
+    "recoverable later": "Schema lane #502+ and planning maturity lane #496+.",
+    "externalize before shift": "Update this execplan with proof and closeout.",
+    "pre-work config pull": "summary, issue refresh, report next_action, and skills query used.",
+    "pre-work memory pull": "not needed.",
+    "tiny resumability note": "Remove hidden TODO/ROADMAP migration and classify compatibility views as unsupported.",
+    "context-shift triggers": "Before commit or if current install behavior depends on legacy migration."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #484 end-to-end.",
+    "hard constraints": "Stay on current branch, preserve current documented installs, do not delete repo-owned TODO/ROADMAP content.",
+    "agent may decide locally": "Exact unsupported wording and test shape.",
+    "escalate when": "A candidate removal needs a user-visible migration framework."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#484",
+      "label": "legacy compatibility removal",
+      "role": "source_intent",
+      "locator": "GitHub issue #484"
+    },
+    {
+      "kind": "issue",
+      "target": "#478",
+      "label": "lifecycle management hardening parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue #478"
+    }
+  ],
+  "active_milestone": {
+    "id": "legacy-planning-surface-migration-removal",
+    "status": "completed",
+    "scope": "Remove hidden legacy planning surface migration and update explicit unsupported guidance.",
+    "ready": "Issue #484 is open and #483 is closed.",
+    "blocked": "None.",
+    "optional_deps": "None."
+  },
+  "immediate_next_action": [
+    "Archive this execplan, commit, push, close #484, refresh external evidence, and evaluate parent #478."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/legacy-compatibility-removal.plan.json"
+  ],
+  "invariants": [
+    "No automatic deletion of repo-owned TODO.md or ROADMAP.md.",
+    "Current state.toml install path remains intact.",
+    "Old compatibility views receive explicit manual review/migration guidance."
+  ],
+  "validation_commands": [
+    "rg -n \"_migrate_legacy_planning_surfaces|optional legacy retained|optional legacy removable|delete manually if no longer needed\" src packages tests",
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"compatibility_views or preserves_unowned_root_todo or planning_lifecycle\"",
+    "uv run pytest tests/test_workspace_cli.py -q -k \"surface_classifications or legacy_residue or fixture_matrix\"",
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests packages/planning/src packages/planning/tests",
+    "uv run agentic-workspace proof --target . --changed packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py src/agentic_workspace/cli.py tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/legacy-compatibility-removal.plan.json --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace preflight --target . --format json",
+    "uv run agentic-workspace report --target . --section workflow_obligations --format json",
+    "uv run agentic-workspace report --target . --section closeout_trust --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Obsolete product-shape compatibility is deleted, isolated, or converted to explicit refusal/migration guidance.",
+    "Tests no longer require supporting old unshipped shapes unless intentionally retained.",
+    "Lifecycle code is smaller or clearer.",
+    "Upgrade output tells agents when an old shape is unsupported rather than silently preserving compatibility complexity."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "Issue #484 plus checked-in roadmap.",
+    "what happened": "Removed the hidden legacy TODO/ROADMAP migration helper from planning install/adopt/upgrade, changed managed compatibility-view guidance to explicit unsupported migration/deletion review, and updated lifecycle classification output/tests.",
+    "scope touched": "Planning installer, planning installer tests, workspace CLI lifecycle classification helpers, workspace CLI tests, and this execplan.",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; .agentic-workspace/planning/execplans/legacy-compatibility-removal.plan.json",
+    "validations run": "Focused legacy compatibility tests, full planning installer tests, full workspace CLI tests, ruff, proof selector, root CLI authority, planning doctor, planning surface check, preflight, workflow obligations report, closeout trust report, reconcile, and skills query.",
+    "result for continuation": "#484 is complete; after commit/push/close, parent #478 can be evaluated for closeout before moving to the next ingested lane.",
+    "next step": "Archive this execplan and close #484 after milestone commit."
+  },
+  "execution_summary": {
+    "outcome delivered": "Removed hidden legacy TODO/ROADMAP migration from planning lifecycle paths and replaced compatibility-view behavior with explicit unsupported migration/deletion guidance.",
+    "validation confirmed": "Focused legacy compatibility tests, full planning installer tests, full workspace CLI tests, ruff, proof selector, root CLI authority, planning doctor, planning surface check, preflight, workflow obligations report, closeout trust report, reconcile, and skills query passed.",
+    "follow-on routed to": "Close #484, evaluate parent #478, then continue with the next ingested issue lane.",
+    "post-work posterity capture": "Archived execplan carries the closeout evidence; no separate docs or Memory promotion needed.",
+    "knowledge promoted (memory/docs/config)": "None.",
+    "resume from": "Reingest external evidence after #484 closeout and choose the next open issue lane."
+  },
+  "proof_report": {
+    "validation proof": "Focused legacy compatibility tests, full planning installer tests, full workspace CLI tests, ruff, proof selector, root CLI authority, planning doctor, planning surface check, preflight, workflow obligations report, closeout trust report, reconcile, and skills query.",
+    "proof achieved now": "Hidden TODO/ROADMAP migration was removed, unsupported compatibility guidance is explicit, and focused plus broad planning/workspace validation passed.",
+    "evidence for \"proof achieved\" state": "Focused legacy compatibility tests, full planning installer tests, full workspace CLI tests, ruff, proof selector, root CLI authority, planning doctor, planning surface check, preflight, workflow obligations report, closeout trust report, reconcile, and skills query."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes; hidden obsolete compatibility migration was removed and unsupported guidance is explicit.",
+    "config compliance": "used preflight, summary/report/proof/reconcile/doctor/skills/root_cli_authority and planning surface checks.",
+    "misinterpretation risk": "low; current documented install behavior stayed covered by full planning installer and workspace CLI tests.",
+    "follow-on decision": "Close #484 and evaluate parent #478."
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded slice and larger intent are both complete.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "None unless new evidence shows the bounded closure was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "intent_satisfaction": {
+    "original intent": "Reingest and repeat until out of issues.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Close #484, evaluate parent #478, then continue with the next ingested issue lane.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "None.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "None.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "legacy compatibility removal",
+          "owner": "issue",
+          "source": "#484"
+        },
+        {
+          "summary": "lifecycle management hardening parent",
+          "owner": "issue",
+          "source": "#478"
+        }
+      ]
+    }
+  }
+}
