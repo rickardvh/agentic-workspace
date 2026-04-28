@@ -303,6 +303,14 @@ def _json_schema_findings(*, payload: dict[str, Any], schema_path: Path) -> list
     return findings
 
 
+def _write_schema_backed_planning_record(*, record_path: Path, record: dict[str, Any], schema_path: Path) -> None:
+    findings = _json_schema_findings(payload=record, schema_path=schema_path)
+    if findings:
+        raise ValueError(f"planning record does not validate against {schema_path.name}: {'; '.join(findings)}")
+    record_path.parent.mkdir(parents=True, exist_ok=True)
+    record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def planning_record_schema_findings(record_path: Path) -> list[str]:
     """Return JSON Schema validation findings for planning execplan/review records."""
 
@@ -623,8 +631,7 @@ def _render_execplan_markdown_from_record(record: dict[str, Any]) -> str:
 
 
 def _write_execplan_record(*, record_path: Path, record: dict[str, Any], render_markdown: bool = False) -> None:
-    record_path.parent.mkdir(parents=True, exist_ok=True)
-    record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _write_schema_backed_planning_record(record_path=record_path, record=record, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
     if render_markdown:
         markdown_path = _derived_execplan_markdown_path(record_path)
         markdown_path.write_text(_render_execplan_markdown_from_record(record), encoding="utf-8")
@@ -805,8 +812,7 @@ def _render_review_markdown_from_record(record: dict[str, Any]) -> str:
 
 
 def _write_review_record(*, record_path: Path, record: dict[str, Any], render_markdown: bool = False) -> None:
-    record_path.parent.mkdir(parents=True, exist_ok=True)
-    record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _write_schema_backed_planning_record(record_path=record_path, record=record, schema_path=REVIEW_RECORD_SCHEMA_PATH)
     if render_markdown:
         markdown_path = _derived_review_markdown_path(record_path)
         markdown_path.write_text(_render_review_markdown_from_record(record), encoding="utf-8")
@@ -1808,6 +1814,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                 "completed_execplans",
                 "ownership_review",
                 "work_maturity",
+                "writer_helpers",
                 "active",
                 "system_intent",
                 "closeout_distillation",
@@ -1841,6 +1848,29 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
         "completed_execplans": completed_execplans,
         "ownership_review": summary.get("ownership_review", {}),
         "work_maturity": work_maturity,
+        "writer_helpers": {
+            "status": "available",
+            "rule": "Use planning writer helpers before hand-authoring schema-backed planning records.",
+            "helpers": [
+                {
+                    "artifact": "execplan",
+                    "command": "agentic-planning-bootstrap promote-to-plan <todo-id> --target ./repo --format json",
+                    "writes": [
+                        ".agentic-workspace/planning/state.toml",
+                        ".agentic-workspace/planning/execplans/<slug>.plan.json",
+                    ],
+                    "proof": "agentic-planning-bootstrap doctor --target ./repo --format json",
+                },
+                {
+                    "artifact": "review_record",
+                    "command": "agentic-planning-bootstrap create-review <slug> --title <title> --target ./repo --format json",
+                    "writes": [
+                        ".agentic-workspace/planning/reviews/<slug>.review.json",
+                    ],
+                    "proof": "agentic-planning-bootstrap doctor --target ./repo --format json",
+                },
+            ],
+        },
         "active": {
             "planning_record": planning_record,
             "active_contract": active_contract,

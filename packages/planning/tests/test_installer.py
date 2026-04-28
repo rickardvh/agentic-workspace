@@ -5,6 +5,8 @@ import json
 import tomllib
 from pathlib import Path
 
+import pytest
+
 import repo_planning_bootstrap._render as render_module
 import repo_planning_bootstrap.cli as planning_cli
 import repo_planning_bootstrap.installer as installer_mod
@@ -1501,6 +1503,7 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
     assert record["execution_run"]["run status"] == "not-run-yet"
     assert record["finished_run_review"]["review status"] == "pending"
     assert record["delegated_judgment"]["requested outcome"] == "this thread needs a bounded execution contract."
+    assert installer_mod.planning_record_schema_findings(record_path) == []
     assert "Surface: .agentic-workspace/planning/execplans/direct-item.md" in todo_text
     assert "Next Action:" not in todo_text
     assert "Done When:" not in todo_text
@@ -2009,7 +2012,36 @@ def test_planning_cli_create_review_writes_valid_review_record(tmp_path: Path, c
     assert record["findings"] == []
     assert record["prose_templates"]["review_finding"]["field_map"]["Evidence"] == "findings[].evidence + findings[].source"
     assert record["prose_templates"]["handoff_or_closeout"]["sections"][-1] == "Next owner"
+    assert installer_mod.planning_record_schema_findings(record_path) == []
     assert payload["actions"][0]["kind"] == "created"
+
+
+def test_planning_record_writers_reject_invalid_schema_shapes(tmp_path: Path) -> None:
+    execplan = installer_mod._build_execplan_record_from_todo_item(
+        title="Bad Plan",
+        item_id="bad-plan",
+        status="in-progress",
+        why_now="prove writer validation.",
+        next_action="attempt invalid write.",
+        done_when="writer refuses malformed records.",
+    )
+    execplan["unexpected"] = "not allowed"
+    with pytest.raises(ValueError, match="planning-execplan.schema.json"):
+        installer_mod._write_execplan_record(
+            record_path=tmp_path / ".agentic-workspace/planning/execplans/bad-plan.plan.json",
+            record=execplan,
+        )
+
+    review = installer_mod._new_review_record(title="Bad Review", scope="review", classification="review")
+    review["unexpected"] = "not allowed"
+    with pytest.raises(ValueError, match="planning-review.schema.json"):
+        installer_mod._write_review_record(
+            record_path=tmp_path / ".agentic-workspace/planning/reviews/bad-review.review.json",
+            record=review,
+        )
+
+    assert not (tmp_path / ".agentic-workspace/planning/execplans/bad-plan.plan.json").exists()
+    assert not (tmp_path / ".agentic-workspace/planning/reviews/bad-review.review.json").exists()
 
 
 def test_planning_cli_create_review_dry_run_does_not_write(tmp_path: Path, capsys) -> None:
@@ -3772,6 +3804,9 @@ def test_planning_report_derives_compact_module_state_from_summary(tmp_path: Pat
     assert report["status"]["roadmap_lane_count"] == 0
     assert report["next_action"]["summary"] == "Add one checker."
     assert report["system_intent"]["canonical_doc"] == ".agentic-workspace/docs/system-intent-contract.md"
+    helpers = {helper["artifact"]: helper for helper in report["writer_helpers"]["helpers"]}
+    assert "promote-to-plan" in helpers["execplan"]["command"]
+    assert "create-review" in helpers["review_record"]["command"]
 
 
 def test_planning_report_flags_lower_trust_config_closeout(tmp_path: Path) -> None:

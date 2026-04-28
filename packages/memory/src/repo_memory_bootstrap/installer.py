@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Iterable, cast
 
 from repo_memory_bootstrap._installer_memory import (
     _audit_memory_doc_ownership,
@@ -34,6 +34,7 @@ from repo_memory_bootstrap._installer_memory import (
     _load_route_report_fixtures,
     _load_routing_feedback_cases,
     _lookup_manifest_note,
+    _memory_manifest_typed_validator_findings,
     _normalise_surface_name,
     _parse_recurring_friction_entries,
     _parse_route_sections,
@@ -172,6 +173,7 @@ __all__ = [
     "build_substitutions",
     "cleanup_bootstrap_workspace",
     "collect_status",
+    "create_memory_note",
     "detect_install_mode",
     "detect_bootstrap_layout",
     "doctor_bootstrap",
@@ -239,6 +241,188 @@ PAYLOAD_GUIDANCE_FRAGMENTS: dict[Path, tuple[str, ...]] = {
         "Prefer one live case per routing issue and prune resolved entries quickly",
     ),
 }
+
+
+def _safe_note_slug(slug: str) -> str:
+    safe = re.sub(r"[^a-zA-Z0-9._-]+", "-", slug.strip()).strip(".-_").lower()
+    return safe or "memory-note"
+
+
+def _title_from_slug(slug: str) -> str:
+    return " ".join(part.capitalize() for part in re.split(r"[-_]+", slug) if part) or "Memory Note"
+
+
+def _toml_string(value: str) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _toml_array(values: tuple[str, ...]) -> str:
+    return "[" + ", ".join(_toml_string(value) for value in values if value) + "]"
+
+
+def _normalise_string_tuple(values: Iterable[str] | None) -> tuple[str, ...]:
+    if not values:
+        return ()
+    return tuple(dict.fromkeys(str(value).strip() for value in values if str(value).strip()))
+
+
+def _render_memory_note_template(*, title: str, summary: str, use_when: tuple[str, ...], evidence: tuple[str, ...]) -> str:
+    load_when = ", ".join(use_when) if use_when else "when the manifest routes work here"
+    verified_against = ", ".join(evidence) if evidence else "add evidence when promoted beyond advisory context"
+    purpose = summary or "Capture the durable repo knowledge that should not be rediscovered."
+    return (
+        f"# {title}\n\n"
+        "## Status\n\n"
+        "- Authority: supporting\n"
+        "- Canonicality: agent_only\n"
+        "- Task relevance: optional\n\n"
+        "## Purpose\n\n"
+        f"{purpose}\n\n"
+        "## Load when\n\n"
+        f"- {load_when}\n\n"
+        "## Review when\n\n"
+        "- The manifest evidence, routing, or promotion metadata changes.\n\n"
+        "## Verify\n\n"
+        f"- {verified_against}\n\n"
+        "## Last confirmed\n\n"
+        "- Not yet confirmed.\n"
+    )
+
+
+def _append_manifest_note_entry(
+    *,
+    manifest_path: Path,
+    note_path: Path,
+    note_type: str,
+    summary: str,
+    applies_to: tuple[str, ...],
+    use_when: tuple[str, ...],
+    routes_from: tuple[str, ...],
+    stale_when: tuple[str, ...],
+    evidence: tuple[str, ...],
+    memory_role: str,
+    promotion_target: str,
+    promotion_trigger: str,
+    retention_after_promotion: str,
+) -> None:
+    relative = note_path.as_posix()
+    lines = [
+        "",
+        f"[notes.{_toml_string(relative)}]",
+        f"note_type = {_toml_string(note_type)}",
+        f"canonical_home = {_toml_string(relative)}",
+        'authority = "supporting"',
+        'audience = "human+agent"',
+        f"summary = {_toml_string(summary)}",
+        'canonicality = "agent_only"',
+        'task_relevance = "optional"',
+    ]
+    optional_arrays = {
+        "applies_to": applies_to,
+        "use_when": use_when,
+        "routes_from": routes_from,
+        "stale_when": stale_when,
+        "evidence": evidence,
+    }
+    for key, values in optional_arrays.items():
+        if values:
+            lines.append(f"{key} = {_toml_array(values)}")
+    optional_strings = {
+        "memory_role": memory_role,
+        "promotion_target": promotion_target,
+        "promotion_trigger": promotion_trigger,
+        "retention_after_promotion": retention_after_promotion,
+    }
+    for key, value in optional_strings.items():
+        if value:
+            lines.append(f"{key} = {_toml_string(value)}")
+
+    existing = manifest_path.read_text(encoding="utf-8").rstrip()
+    manifest_path.write_text(existing + "\n" + "\n".join(lines) + "\n", encoding="utf-8")
+
+
+def create_memory_note(
+    *,
+    slug: str,
+    title: str | None = None,
+    target: str | Path | None = None,
+    folder: str = "domains",
+    note_type: str = "domain",
+    summary: str = "",
+    applies_to: Iterable[str] | None = None,
+    use_when: Iterable[str] | None = None,
+    routes_from: Iterable[str] | None = None,
+    stale_when: Iterable[str] | None = None,
+    evidence: Iterable[str] | None = None,
+    memory_role: str = "",
+    promotion_target: str = "",
+    promotion_trigger: str = "",
+    retention_after_promotion: str = "",
+    dry_run: bool = False,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    safe_slug = _safe_note_slug(slug)
+    safe_folder = _safe_note_slug(folder).replace(".", "-")
+    note_relative = Path(".agentic-workspace") / "memory" / "repo" / safe_folder / f"{safe_slug}.md"
+    note_path = target_root / note_relative
+    manifest_path = target_root / MANIFEST_PATH
+    result = _new_result(target_root, dry_run=dry_run, message=f"Create memory note '{safe_slug}'")
+
+    if not manifest_path.exists():
+        result.add("manual review", manifest_path, "memory manifest is missing; install or repair Memory before creating notes")
+        return result
+    if note_path.exists():
+        result.add("manual review", note_path, "memory note already exists; choose a new slug or edit intentionally")
+        return result
+    manifest = _load_memory_manifest(manifest_path)
+    if manifest is not None and any(note.path == note_relative for note in manifest.notes):
+        result.add("manual review", manifest_path, f"manifest already has a note entry for {note_relative.as_posix()}")
+        return result
+
+    normalised_applies_to = _normalise_string_tuple(applies_to)
+    normalised_use_when = _normalise_string_tuple(use_when)
+    normalised_routes_from = _normalise_string_tuple(routes_from) or normalised_applies_to
+    normalised_stale_when = _normalise_string_tuple(stale_when) or normalised_routes_from
+    normalised_evidence = _normalise_string_tuple(evidence)
+    note_title = title.strip() if title and title.strip() else _title_from_slug(safe_slug)
+    note_summary = summary.strip() or note_title
+
+    if dry_run:
+        result.add("would create", note_path, "minimal Memory note markdown")
+        result.add("would update", manifest_path, "schema-valid manifest note entry")
+        return result
+
+    note_path.parent.mkdir(parents=True, exist_ok=True)
+    note_path.write_text(
+        _render_memory_note_template(
+            title=note_title,
+            summary=note_summary,
+            use_when=normalised_use_when,
+            evidence=normalised_evidence,
+        ),
+        encoding="utf-8",
+    )
+    _append_manifest_note_entry(
+        manifest_path=manifest_path,
+        note_path=note_relative,
+        note_type=note_type.strip() or "memory-note",
+        summary=note_summary,
+        applies_to=normalised_applies_to,
+        use_when=normalised_use_when,
+        routes_from=normalised_routes_from,
+        stale_when=normalised_stale_when,
+        evidence=normalised_evidence,
+        memory_role=memory_role.strip(),
+        promotion_target=promotion_target.strip(),
+        promotion_trigger=promotion_trigger.strip(),
+        retention_after_promotion=retention_after_promotion.strip(),
+    )
+    result.add("created", note_path, "minimal Memory note markdown")
+    result.add("updated", manifest_path, "schema-valid manifest note entry")
+    findings = _memory_manifest_typed_validator_findings(manifest_path)
+    if findings:
+        result.add("manual review", manifest_path, "generated manifest entry needs review: " + "; ".join(findings))
+    return result
 
 
 def install_bootstrap(
@@ -2629,6 +2813,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
                 "status",
                 "active",
                 "state_model",
+                "writer_helpers",
                 "durable_facts",
                 "habitual_pull",
                 "trust",
@@ -2654,6 +2839,21 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
             "route_report_summary": route_snapshot.route_report_summary,
         },
         "state_model": state_model,
+        "writer_helpers": {
+            "status": "available",
+            "rule": "Use writer helpers for schema-backed Memory artifacts before hand-authoring manifest entries.",
+            "helpers": [
+                {
+                    "artifact": "memory_note",
+                    "command": "agentic-memory-bootstrap create-note <slug> --target ./repo --summary <text> --format json",
+                    "writes": [
+                        ".agentic-workspace/memory/repo/<folder>/<slug>.md",
+                        MANIFEST_PATH.as_posix(),
+                    ],
+                    "proof": "agentic-memory-bootstrap doctor --target ./repo --format json",
+                }
+            ],
+        },
         "durable_facts": durable_facts,
         "habitual_pull": habitual_pull,
         "trust": {

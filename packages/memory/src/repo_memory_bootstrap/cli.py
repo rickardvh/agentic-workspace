@@ -15,6 +15,7 @@ from repo_memory_bootstrap.installer import (
     check_current_memory,
     cleanup_bootstrap_workspace,
     collect_status,
+    create_memory_note,
     detect_bootstrap_layout,
     doctor_bootstrap,
     format_actions,
@@ -222,6 +223,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_target_arguments(report_parser)
     _add_format_argument(report_parser)
+
+    create_note_parser = subparsers.add_parser(
+        "create-note",
+        help="Create a minimal Memory note and matching manifest entry.",
+    )
+    create_note_parser.add_argument("slug")
+    create_note_parser.add_argument("--title")
+    create_note_parser.add_argument("--folder", default="domains")
+    create_note_parser.add_argument("--note-type", default="domain")
+    create_note_parser.add_argument("--summary", default="")
+    create_note_parser.add_argument("--applies-to", nargs="*", default=[])
+    create_note_parser.add_argument("--use-when", nargs="*", default=[])
+    create_note_parser.add_argument("--routes-from", nargs="*", default=[])
+    create_note_parser.add_argument("--stale-when", nargs="*", default=[])
+    create_note_parser.add_argument("--evidence", nargs="*", default=[])
+    create_note_parser.add_argument("--memory-role", default="")
+    create_note_parser.add_argument("--promotion-target", default="")
+    create_note_parser.add_argument("--promotion-trigger", default="")
+    create_note_parser.add_argument("--retention-after-promotion", default="")
+    create_note_parser.add_argument("--dry-run", action="store_true")
+    _add_target_arguments(create_note_parser)
+    _add_format_argument(create_note_parser)
 
     search_parser = subparsers.add_parser(
         "search",
@@ -460,6 +483,31 @@ def _handle_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_create_note(args: argparse.Namespace) -> int:
+    _emit_result(
+        create_memory_note(
+            slug=args.slug,
+            title=args.title,
+            target=args.target,
+            folder=args.folder,
+            note_type=args.note_type,
+            summary=args.summary,
+            applies_to=args.applies_to,
+            use_when=args.use_when,
+            routes_from=args.routes_from,
+            stale_when=args.stale_when,
+            evidence=args.evidence,
+            memory_role=args.memory_role,
+            promotion_target=args.promotion_target,
+            promotion_trigger=args.promotion_trigger,
+            retention_after_promotion=args.retention_after_promotion,
+            dry_run=args.dry_run,
+        ),
+        output_format=args.format,
+    )
+    return 0
+
+
 def _handle_search(args: argparse.Namespace) -> int:
     _emit_result(
         search_memory(target=args.target, query=args.query),
@@ -498,6 +546,7 @@ COMMAND_HANDLERS = {
     "sync-memory": _handle_sync_memory,
     "promotion-report": _handle_promotion_report,
     "report": _handle_report,
+    "create-note": _handle_create_note,
     "search": _handle_search,
     "verify-payload": _handle_verify_payload,
     "bootstrap-cleanup": _handle_bootstrap_cleanup,

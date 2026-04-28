@@ -1,0 +1,247 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Schema Artifact Writer Helpers",
+  "goal": [
+    "structured-first-operating-updates next child; agents still repair several schema-backed artifacts manually after validators explain shape."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "structured-first-operating-updates next child; agents still repair several schema-backed artifacts manually after validators explain shape.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "schema-artifact-writer-helpers",
+      "status": "completed",
+      "next_step": "Archive this plan, close #526, and refresh the backlog.",
+      "proof": "Planning and Memory package tests, ruff, module doctors, planning-surface check, and proof selector for touched paths."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "packages/memory/src/repo_memory_bootstrap/installer.py",
+        "packages/memory/src/repo_memory_bootstrap/cli.py",
+        "packages/memory/tests/test_installer.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "structured-first-operating-updates next child; agents still repair several schema-backed artifacts manually after validators explain shape.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Planning reviews and Memory notes now have lower-friction valid-by-construction paths, and planning JSON writers reject invalid records before writing.",
+    "intentionally deferred": "Agent-aid manifest scaffolding until an actual aid-authoring lane or repeated manifest friction proves the need.",
+    "discovered implications": "Package-local reports are a useful place to advertise writer helpers without adding another first-line docs surface.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice",
+    "next likely slice": "refresh the backlog and continue the next open structured-first item"
+  },
+  "intent_interpretation": {
+    "literal request": "Schema Artifact Writer Helpers",
+    "inferred intended outcome": "structured-first-operating-updates next child; agents still repair several schema-backed artifacts manually after validators explain shape.",
+    "chosen concrete what": "Fill the execution contract and begin the first bounded implementation step.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Planning writer validation/report discovery, Memory note writer/report discovery, focused package tests, and this execplan/state.",
+    "max changed files": "about 7",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q; uv run pytest packages/memory/tests/test_installer.py -q; uv run ruff check packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Planning writers now validate records before writing; Memory has a create-note helper; reports expose writer helpers.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "structured-first-operating-updates next child; agents still repair several schema-backed artifacts manually after validators explain shape.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "schema-artifact-writer-helpers",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this plan and refresh the backlog."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "packages/memory/src/repo_memory_bootstrap/cli.py",
+    "packages/memory/tests/test_installer.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run pytest packages/memory/tests/test_installer.py -q",
+    "uv run ruff check packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests",
+    "uv run agentic-workspace proof --target . --changed <paths> --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "TODO item `schema-artifact-writer-helpers` is implemented, validated, and can leave the active queue."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with read-only subagent exploration",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Added Memory create-note writer helper; exposed Memory and planning writer helpers through module reports; made planning JSON record writers validate before writing.",
+    "scope touched": "Planning package writer/report/test surfaces; Memory package CLI/writer/report/test surfaces; active planning state.",
+    "changed surfaces": "packages/planning installer/tests; packages/memory installer/CLI/tests; planning state and execplan",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q; uv run pytest packages/memory/tests/test_installer.py -q; uv run ruff check packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace doctor --target . --modules memory --format json; uv run agentic-workspace proof --target . --changed <paths> --format json; cd packages/memory && uv run pytest tests/test_installer.py; cd packages/memory && uv run ruff check .; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "result for continuation": "slice complete; no new issue created because the remaining agent-aid helper idea needs repeated concrete use before adding another command.",
+    "next step": "Archive this plan and close #526."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close; defer agent-aid manifest helper until repeated aid-authoring friction"
+  },
+  "proof_report": {
+    "validation proof": "Planning and Memory package tests passed in root and package-local contexts; ruff passed; planning and memory doctors were healthy; planning-surface check was clean; proof selector accepted the touched paths and CLI authority classification.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "packages/planning tests: 163 passed; packages/memory tests: 204 passed; ruff passed; proof selected planning_surfaces, memory_package, cli_authority, and planning_package lanes."
+  },
+  "intent_satisfaction": {
+    "original intent": "structured-first-operating-updates next child; agents still repair several schema-backed artifacts manually after validators explain shape.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Planning reviews and Memory manifest-backed notes now have writer-helper coverage/discovery, and planning JSON writers validate records before writing.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Added writer-helper support and discovery for schema-backed planning review and Memory note artifacts.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none; agent-aid manifest scaffolding is deferred until concrete repeated aid-authoring friction",
+    "post-work posterity capture": "module reports and tests carry the helper discovery/behavior",
+    "knowledge promoted (Memory/Docs/Config)": "planning and memory module reports",
+    "resume from": "refreshed backlog"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The slice satisfied #526 with helper coverage for two non-execplan artifact classes and avoided adding speculative agent-aid command surface before repeated use proves it.",
+    "evidence carried forward": "Validated with planning/memory package tests in root and package contexts, ruff, planning/memory doctors, planning-surface check, proof selection, and root CLI authority query.",
+    "reopen trigger": "Reopen if agents still hand-author review records or Memory manifest entries because helper discovery or writer coverage is insufficient."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Parallel package test runs can race on the shared Windows coverage file.",
+      "Agent-aid manifests may later deserve a scaffold once aid-authoring becomes repeated work."
+    ],
+    "signals fixed": [
+      "Planning JSON writers now validate before writing instead of relying on later repair.",
+      "Memory note creation now writes note plus manifest entry together."
+    ],
+    "signals routed": [
+      "Coverage-race validation friction remains covered by the validation-friction lane.",
+      "Agent-aid scaffold is deferred until concrete repeated aid-authoring friction appears."
+    ],
+    "signals dismissed": [],
+    "next owner": "#528 for validation friction; future aid-authoring lane if repeated"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Discard subagent exploration detail; durable behavior is in writers, reports, and tests.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "none; agent-aid manifest scaffolding is deferred until concrete repeated aid-authoring friction",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "planning and memory module reports",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "planning and memory module reports",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-29: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: structured-first-operating-updates next child; agents still repair several schema-backed artifacts manually after validators explain shape.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Planning and Memory package tests passed in root and package-local contexts; ruff passed; planning and memory doctors were healthy; planning-surface check was clean; proof selector accepted the touched paths and CLI authority classification.\nChanged surfaces: packages/planning installer/tests; packages/memory installer/CLI/tests; planning state and execplan\nDurable residue: none (none)\nFollow-up: none; agent-aid manifest scaffolding is deferred until concrete repeated aid-authoring friction"
+  }
+}

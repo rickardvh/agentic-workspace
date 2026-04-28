@@ -2391,6 +2391,74 @@ def test_memory_report_derives_compact_module_state(tmp_path: Path) -> None:
     assert "usefulness_audit" in report
     assert report["usefulness_audit"]["status"] in {"measured", "needs-more-proof", "attention-needed", "actionable"}
     assert ".agentic-workspace/memory/repo/manifest.toml" in report["state_model"]["common_queries"]["structured_state_owner"]
+    assert report["writer_helpers"]["helpers"][0]["artifact"] == "memory_note"
+    assert "create-note" in report["writer_helpers"]["helpers"][0]["command"]
+
+
+def test_create_memory_note_writes_note_and_manifest_entry(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    result = installer.create_memory_note(
+        target=target,
+        slug="api-routing",
+        title="API Routing",
+        summary="Route API implementation reminders.",
+        applies_to=["src/api/**"],
+        use_when=["touching API routing"],
+        evidence=["tests/test_api.py"],
+        promotion_target="docs/api-routing.md",
+        promotion_trigger="guidance stabilises",
+        retention_after_promotion="stub",
+    )
+
+    note_path = target / ".agentic-workspace/memory/repo/domains/api-routing.md"
+    manifest_path = target / ".agentic-workspace/memory/repo/manifest.toml"
+    manifest = installer._load_memory_manifest(manifest_path)
+
+    assert result.counts()["created"] == 1
+    assert result.counts()["updated"] == 1
+    assert note_path.exists()
+    assert "Route API implementation reminders." in note_path.read_text(encoding="utf-8")
+    assert manifest is not None
+    note = next(record for record in manifest.notes if record.path.as_posix().endswith("api-routing.md"))
+    assert note.summary == "Route API implementation reminders."
+    assert note.applies_to == ("src/api/**",)
+    assert note.use_when == ("touching API routing",)
+    assert note.routes_from == ("src/api/**",)
+    assert note.stale_when == ("src/api/**",)
+    assert note.evidence == ("tests/test_api.py",)
+    assert note.promotion_target == "docs/api-routing.md"
+    assert note.promotion_trigger == "guidance stabilises"
+    assert note.retention_after_promotion == "stub"
+    assert installer._memory_manifest_typed_validator_findings(manifest_path) == []
+
+
+def test_memory_create_note_cli_writes_json_result(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    exit_code = cli.main(
+        [
+            "create-note",
+            "cli-routing",
+            "--target",
+            str(target),
+            "--summary",
+            "CLI routing memory.",
+            "--applies-to",
+            "src/cli.py",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["actions"][0]["kind"] == "created"
+    assert (target / ".agentic-workspace/memory/repo/domains/cli-routing.md").exists()
 
 
 def test_memory_report_exposes_habitual_pull_boundary_and_evidence(tmp_path: Path) -> None:
