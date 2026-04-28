@@ -12,6 +12,8 @@
     "required_fields",
     "kinds",
     "likely_remediations",
+    "validation_failure_classes",
+    "validation_remedy_order",
     "confidence",
     "recurrence",
     "immediate_actions",
@@ -54,6 +56,54 @@
       }
     },
     "likely_remediations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "validation_failure_classes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "class",
+          "signal_rule",
+          "route",
+          "preferred_remediations"
+        ],
+        "properties": {
+          "class": {
+            "enum": [
+              "user_or_content_error",
+              "environment_or_dependency_error",
+              "interface_design_error",
+              "unclear_proof_contract"
+            ]
+          },
+          "signal_rule": {
+            "type": "string",
+            "minLength": 1
+          },
+          "route": {
+            "type": "string",
+            "minLength": 1
+          },
+          "preferred_remediations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "validation_remedy_order": {
       "type": "array",
       "minItems": 1,
       "items": {

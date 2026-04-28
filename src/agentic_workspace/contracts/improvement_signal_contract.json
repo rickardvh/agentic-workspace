@@ -33,6 +33,11 @@
     "tests",
     "validation",
     "command",
+    "scaffold",
+    "writer_helper",
+    "alias",
+    "lifecycle_command",
+    "agent_aid",
     "skill",
     "refactor",
     "module_split",
@@ -40,6 +45,57 @@
     "make_optional",
     "unship",
     "unknown"
+  ],
+  "validation_failure_classes": [
+    {
+      "class": "user_or_content_error",
+      "signal_rule": "The failing check clearly identifies invalid user content or an ordinary implementation bug.",
+      "route": "fix the content or code directly; do not treat it as product/interface work by default",
+      "preferred_remediations": [
+        "tests",
+        "validation"
+      ]
+    },
+    {
+      "class": "environment_or_dependency_error",
+      "signal_rule": "The failure is caused by missing tools, local environment state, network state, or dependency setup.",
+      "route": "repair or document setup only when the failure repeats across environments",
+      "preferred_remediations": [
+        "docs",
+        "command",
+        "agent_aid"
+      ]
+    },
+    {
+      "class": "interface_design_error",
+      "signal_rule": "Otherwise straightforward work repeatedly fails because the package interface asks agents to hand-author, guess, rerun, or repair shape.",
+      "route": "prefer correct-by-design package surfaces before adding more validation text",
+      "preferred_remediations": [
+        "scaffold",
+        "writer_helper",
+        "alias",
+        "lifecycle_command",
+        "command",
+        "agent_aid"
+      ]
+    },
+    {
+      "class": "unclear_proof_contract",
+      "signal_rule": "The failure is mainly about selecting, sequencing, or re-entering proof rather than fixing domain behavior.",
+      "route": "tighten proof selection, recovery guidance, or a lifecycle command",
+      "preferred_remediations": [
+        "alias",
+        "command",
+        "lifecycle_command",
+        "docs"
+      ]
+    }
+  ],
+  "validation_remedy_order": [
+    "fix clear user/content errors directly",
+    "repair environment/setup failures only when they are real blockers",
+    "for repeated interface-design failures, prefer scaffold, writer helper, alias, lifecycle command, command, or agent aid before adding more validation prose",
+    "promote to planning or issue follow-up only when the owner and proof path are clear"
   ],
   "confidence": [
     "low",

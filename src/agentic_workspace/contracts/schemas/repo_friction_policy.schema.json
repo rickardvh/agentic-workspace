@@ -160,6 +160,9 @@
       "required": [
         "status",
         "rule",
+        "failure_classification",
+        "correct_by_design_remedy_order",
+        "repeated_failure_signal",
         "distinguish_from",
         "subtypes",
         "reporting_destinations"
@@ -169,6 +172,45 @@
           "type": "string"
         },
         "rule": {
+          "type": "string"
+        },
+        "failure_classification": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "class",
+              "route",
+              "interface_design_signal"
+            ],
+            "properties": {
+              "class": {
+                "enum": [
+                  "user_or_content_error",
+                  "environment_or_dependency_error",
+                  "interface_design_error",
+                  "unclear_proof_contract"
+                ]
+              },
+              "route": {
+                "type": "string"
+              },
+              "interface_design_signal": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "correct_by_design_remedy_order": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "repeated_failure_signal": {
           "type": "string"
         },
         "distinguish_from": {

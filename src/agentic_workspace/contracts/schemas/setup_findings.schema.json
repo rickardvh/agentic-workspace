@@ -55,6 +55,71 @@
           "why": {
             "type": "string",
             "minLength": 1
+          },
+          "observed_during": {
+            "type": "string",
+            "minLength": 1
+          },
+          "signal_kind": {
+            "type": "string",
+            "enum": [
+              "workflow_cost",
+              "architecture_cost",
+              "footprint_cost",
+              "validation_friction",
+              "docs_routing",
+              "module_boundary",
+              "repeated_human_steering",
+              "weak_agent_failure",
+              "shipped_footprint",
+              "default_feature_creep"
+            ]
+          },
+          "cost": {
+            "type": "string",
+            "minLength": 1
+          },
+          "suspected_owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "likely_remediation": {
+            "type": "string",
+            "enum": [
+              "docs",
+              "tests",
+              "validation",
+              "command",
+              "scaffold",
+              "writer_helper",
+              "alias",
+              "lifecycle_command",
+              "agent_aid",
+              "skill",
+              "refactor",
+              "module_split",
+              "remove",
+              "make_optional",
+              "unship",
+              "unknown"
+            ]
+          },
+          "recurrence": {
+            "type": "string",
+            "enum": [
+              "first_seen",
+              "repeated",
+              "human_confirmed"
+            ]
+          },
+          "validation_failure_class": {
+            "type": "string",
+            "enum": [
+              "user_or_content_error",
+              "environment_or_dependency_error",
+              "interface_design_error",
+              "unclear_proof_contract"
+            ]
           }
         },
         "additionalProperties": false

@@ -1,0 +1,237 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Validation Friction Improvement Routing",
+  "goal": [
+    "structured-first-operating-updates next child; repeated validation failures should become product/interface improvement signals, not just more repair instructions."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "structured-first-operating-updates next child; repeated validation failures should become product/interface improvement signals, not just more repair instructions.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "validation-friction-improvement-routing",
+      "status": "completed",
+      "next_step": "Extend the existing improvement_intake and repo_friction surfaces so repeated validation friction classifies owner/remedy without becoming a new analytics system.",
+      "proof": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace proof --target . --changed <paths> --format json"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/improvement_signal_contract.json",
+        "src/agentic_workspace/contracts/schemas/setup_findings.schema.json",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/reporting_support.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "structured-first-operating-updates next child; repeated validation failures should become product/interface improvement signals, not just more repair instructions.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Repeated validation friction can now be captured as an improvement signal with explicit failure class, owner, recurrence, and correct-by-design remedy.",
+    "intentionally deferred": "none",
+    "discovered implications": "Schema-backed contract edits need schema updates in the same slice; proof caught this before implementation could proceed on an invalid contract.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice",
+    "next likely slice": "continue structured-first-operating-updates with the remaining open issue selected by compact planning state"
+  },
+  "intent_interpretation": {
+    "literal request": "Validation Friction Improvement Routing",
+    "inferred intended outcome": "structured-first-operating-updates next child; repeated validation failures should become product/interface improvement signals, not just more repair instructions.",
+    "chosen concrete what": "Reuse improvement_intake and repo_friction as the routing point for repeated validation friction, adding only compact classification/remedy fields and tests.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Fill in the concrete write scope before implementation starts.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Slice complete; archive and continue with the next compact planning recommendation.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "structured-first-operating-updates next child; repeated validation failures should become product/interface improvement signals, not just more repair instructions.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "validation-friction-improvement-routing",
+    "status": "completed",
+    "scope": "Bounded updates to improvement signal contracts, setup-findings schema/loaders, report payload routing, and tests.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Extend improvement_intake/repo_friction validation-friction routing and validate with focused CLI tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/improvement_signal_contract.json",
+    "src/agentic_workspace/contracts/schemas/setup_findings.schema.json",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/reporting_support.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace proof --target . --changed <paths> --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "TODO item `validation-friction-improvement-routing` is implemented, validated, and can leave the active queue."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with Curie/Hilbert read-only subagent exploration",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Extended existing improvement_intake, repo_friction, setup-findings, and improvement-signal contract surfaces so repeated validation friction can route to correct-by-design remedies without a new analytics surface.",
+    "scope touched": "contracts/schemas, report/defaults payload assembly, CLI setup-finding normalization, focused CLI tests, and planning closeout state.",
+    "changed surfaces": "improvement_signal_contract, repo_friction_policy, setup_findings schema, report/defaults payloads, tests, active planning state.",
+    "validations run": "pytest tests/test_workspace_cli.py -q; ruff check src tests; check_contract_tooling_surfaces; check_structured_file_inventory; planning doctor; root_cli_authority defaults; contract-focused ruff; proof selection.",
+    "result for continuation": "continue with the next open issue in structured-first-operating-updates after archive and external evidence refresh",
+    "next step": "Archive this plan, close #528, refresh issues, and reingest the remaining backlog."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; reused existing report/defaults/intake surfaces and avoided log parsing or a new analytics system",
+    "proof status": "passed",
+    "intent served": "yes; validation friction now distinguishes ordinary content/environment errors from interface-design/proof-contract failures and routes repeated cases to scaffolds/helpers/aliases/lifecycle/aid remedies",
+    "config compliance": "yes; compact package queries and proof selection guided the work",
+    "misinterpretation risk": "low; tests assert the new classification and setup-finding routing behavior",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "pytest tests/test_workspace_cli.py -q; ruff check src tests; check_contract_tooling_surfaces; check_structured_file_inventory; planning doctor; root_cli_authority defaults; contract-focused ruff; proof selection",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "All selected proof commands passed after schema drift was caught and fixed."
+  },
+  "intent_satisfaction": {
+    "original intent": "structured-first-operating-updates next child; repeated validation failures should become product/interface improvement signals, not just more repair instructions.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Existing improvement_intake, repo_friction, setup-findings, and improvement-signal contract surfaces now distinguish validation failure classes and route repeated interface-design friction to correct-by-design remedies with focused tests.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Repeated validation friction routes through existing compact improvement surfaces with schema-backed failure classes and remedy ordering.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "remaining structured-first-operating-updates issues in planning state after #528 closes",
+    "post-work posterity capture": "contracts, schemas, tests, and this archived execplan",
+    "knowledge promoted (Memory/Docs/Config)": "contracts/schemas",
+    "resume from": "next compact summary recommendation"
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "Repeated validation friction should classify owner/remedy and prefer correct-by-design construction before more validation prose.",
+    "motivation worth preserving": "The package is cheapest when validation failures become interface-improvement signals with structured owners.",
+    "canonical owner now": "src/agentic_workspace/contracts/improvement_signal_contract.json and src/agentic_workspace/contracts/repo_friction_policy.json",
+    "promotion trigger": "new validation-friction classes or remedy kinds",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The slice reuses existing compact surfaces instead of adding a new analytics/logging surface, and proof covers contracts, CLI report/defaults behavior, structured inventory, and planning health.",
+    "evidence carried forward": "pytest tests/test_workspace_cli.py -q; ruff check src tests; check_contract_tooling_surfaces; check_structured_file_inventory; planning doctor; root_cli_authority defaults.",
+    "reopen trigger": "A repeated validation-friction class cannot be represented as a setup finding or improvement signal candidate, or the report/defaults routing stops distinguishing interface-design failures from ordinary content/environment errors."
+  },
+  "improvement_signal_review": {
+    "status": "fixed",
+    "signals found": [
+      "A schema-backed contract edit failed collection until the schema was updated; the package proof/check loop made the missing schema owner obvious."
+    ],
+    "signals fixed": [
+      "Validation friction taxonomy and setup-finding routing now preserve repeated interface-design failures as improvement signals."
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "No new issue for the one-off schema-drift miss; it is the exact class handled by this slice and now covered by tests/checks."
+    ],
+    "next owner": "remaining structured-first-operating-updates backlog"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Execution details and subagent exploration are archived only; reusable behavior lives in contracts, schemas, report/defaults payloads, and tests.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "remaining structured-first-operating-updates issues in planning state after #528 closes",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "contracts/schemas",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-29: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: structured-first-operating-updates next child; repeated validation failures should become product/interface improvement signals, not just more repair instructions.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: pytest tests/test_workspace_cli.py -q; ruff check src tests; check_contract_tooling_surfaces; check_structured_file_inventory; planning doctor; root_cli_authority defaults; contract-focused ruff; proof selection\nChanged surfaces: improvement_signal_contract, repo_friction_policy, setup_findings schema, report/defaults payloads, tests, active planning state.\nDurable residue: contract (src/agentic_workspace/contracts/improvement_signal_contract.json and src/agentic_workspace/contracts/repo_friction_policy.json)\nFollow-up: remaining structured-first-operating-updates issues in planning state after #528 closes"
+  }
+}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from collections.abc import Callable
 from difflib import get_close_matches
@@ -1102,6 +1103,7 @@ def repo_friction_payload(
     policy_payload: dict[str, Any],
     boundary_test_payload: dict[str, Any],
     external_setup_findings_payload: dict[str, Any] | None,
+    validation_friction_policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     hotspots = _repo_friction_hotspots(target_root=target_root)
     large_file_hotspots = [item.copy() for item in hotspots if int(item["line_count"]) >= REPO_FRICTION_LARGE_FILE_THRESHOLD][
@@ -1222,12 +1224,50 @@ def repo_friction_payload(
                 "ordinary report output without implicit active work",
             ],
         },
-        "validation_friction": {
+        "validation_friction": copy.deepcopy(validation_friction_policy)
+        if isinstance(validation_friction_policy, dict)
+        else {
             "status": "explicit-contract",
             "rule": (
                 "Treat validation friction as repo-friction evidence only when otherwise straightforward work keeps "
                 "stalling at validation because repo seams, tranche boundaries, proof expectations, or rerun/re-entry "
                 "paths stay unclear."
+            ),
+            "failure_classification": [
+                {
+                    "class": "user_or_content_error",
+                    "route": "fix content or implementation directly unless the same shape failure keeps recurring",
+                    "interface_design_signal": False,
+                },
+                {
+                    "class": "environment_or_dependency_error",
+                    "route": "repair setup or dependency guidance only when the failure repeats across environments",
+                    "interface_design_signal": False,
+                },
+                {
+                    "class": "interface_design_error",
+                    "route": "promote to correct-by-design remediation such as scaffold, writer helper, alias, lifecycle command, command, or agent aid",
+                    "interface_design_signal": True,
+                },
+                {
+                    "class": "unclear_proof_contract",
+                    "route": "tighten proof selection or recovery guidance before adding more validation prose",
+                    "interface_design_signal": True,
+                },
+            ],
+            "correct_by_design_remedy_order": [
+                "scaffold",
+                "writer_helper",
+                "alias",
+                "lifecycle_command",
+                "command",
+                "agent_aid",
+                "validation",
+                "docs",
+            ],
+            "repeated_failure_signal": (
+                "Repeated interface-design or unclear-proof validation failures should produce an improvement signal "
+                "with suspected_owner, likely_remediation, recurrence, and retention instead of only another repair note."
             ),
             "distinguish_from": [
                 "ordinary bug-fixing where the failing check and expected fix are already clear",

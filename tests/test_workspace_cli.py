@@ -1438,8 +1438,14 @@ def test_defaults_improvement_intake_section_selector_returns_unified_router(cap
     assert "dogfooding_friction" not in json.dumps(answer["payload"], sort_keys=True)
     review_route = next(item for item in answer["payload"]["subtypes"] if item["id"] == "review_finding")
     assert review_route["advanced_feature"] == "review_artifacts"
+    validation_route = next(item for item in answer["payload"]["subtypes"] if item["id"] == "validation_friction")
+    assert validation_route["classification"] == (
+        "user_or_content_error | environment_or_dependency_error | interface_design_error | unclear_proof_contract"
+    )
+    assert validation_route["correct_by_design_remedies"][:3] == ["scaffold", "writer_helper", "alias"]
     assert answer["payload"]["signal_contract"]["candidate_kind"] == "workspace-improvement-signal-candidate/v1"
     assert "found" in answer["payload"]["signal_contract"]["closeout_statuses"]
+    assert "interface_design_error" in answer["payload"]["signal_contract"]["validation_failure_classes"]
     assert "issue follow-up" in answer["payload"]["allowed_destinations"]
     assert answer["payload"]["setup_findings"]["status"] == "not-evaluated"
 
@@ -1455,6 +1461,10 @@ def test_defaults_improvement_signal_section_selector_returns_signal_contract(ca
     answer = payload["answer"]
     assert answer["payload"]["candidate_kind"] == "workspace-improvement-signal-candidate/v1"
     assert "workflow_cost" in answer["payload"]["kinds"]
+    assert "scaffold" in answer["payload"]["likely_remediations"]
+    failure_classes = {item["class"]: item for item in answer["payload"]["validation_failure_classes"]}
+    assert failure_classes["interface_design_error"]["preferred_remediations"][:2] == ["scaffold", "writer_helper"]
+    assert "proof selection" in failure_classes["unclear_proof_contract"]["route"]
     assert answer["payload"]["closeout_statuses"] == ["found", "fixed", "routed", "dismissed", "none"]
     assert "A signal is not a work item until an owner and proof path are chosen." in answer["payload"]["guardrails"]
 
@@ -3496,6 +3506,14 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["repo_friction"]["validation_friction"]["status"] == "explicit-contract"
     assert "weak_seam" in payload["repo_friction"]["validation_friction"]["subtypes"]
     assert "ordinary bug-fixing" in payload["repo_friction"]["validation_friction"]["distinguish_from"][0]
+    failure_classes = {item["class"]: item for item in payload["repo_friction"]["validation_friction"]["failure_classification"]}
+    assert failure_classes["user_or_content_error"]["interface_design_signal"] is False
+    assert failure_classes["interface_design_error"]["interface_design_signal"] is True
+    assert payload["repo_friction"]["validation_friction"]["correct_by_design_remedy_order"][:3] == [
+        "scaffold",
+        "writer_helper",
+        "alias",
+    ]
     assert payload["repo_friction"]["external_evidence"] == []
     assert payload["repo_friction"]["capture_shortcut"]["status"] == "available"
     assert "observed friction" in payload["repo_friction"]["capture_shortcut"]["minimum_record"]
@@ -5360,9 +5378,16 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
                 "findings": [
                     {
                         "class": "repo_friction_evidence",
-                        "summary": "Workspace CLI remains a shared hotspot.",
+                        "summary": "Validation repeatedly fails after agents hand-author schema shape.",
                         "confidence": 0.9,
                         "path": "src/agentic_workspace/cli.py",
+                        "observed_during": "uv run pytest tests/test_workspace_cli.py",
+                        "signal_kind": "validation_friction",
+                        "cost": "Agents spend extra repair loops fixing shape that a writer helper could construct.",
+                        "suspected_owner": "agentic-workspace create-review",
+                        "likely_remediation": "scaffold",
+                        "recurrence": "repeated",
+                        "validation_failure_class": "interface_design_error",
                         "refs": [".agentic-workspace/docs/reporting-contract.md"],
                     },
                     {
@@ -5391,7 +5416,15 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
     setup_findings = next(evidence for evidence in payload["repo_friction"]["external_evidence"] if evidence["kind"] == "setup-findings")
     assert setup_findings["path"] == "tools/setup-findings.json"
     assert setup_findings["items"][0]["path"] == "src/agentic_workspace/cli.py"
+    assert setup_findings["items"][0]["validation_failure_class"] == "interface_design_error"
     assert setup_findings["items"][0]["promotion_reason"] == "grounded friction evidence is worth preserving"
+    signal = payload["improvement_intake"]["improvement_signal_candidates"][0]
+    assert signal["kind"] == "validation_friction"
+    assert signal["observed_during"] == "uv run pytest tests/test_workspace_cli.py"
+    assert signal["suspected_owner"] == "agentic-workspace create-review"
+    assert signal["likely_remediation"] == "scaffold"
+    assert signal["recurrence"] == "repeated"
+    assert signal["validation_failure_class"] == "interface_design_error"
     assert payload["improvement_intake"]["setup_findings"]["status"] == "loaded"
     assert payload["improvement_intake"]["setup_findings"]["loaded_count"] == 2
     assert payload["improvement_intake"]["setup_findings"]["promotable_counts"]["repo_friction_evidence"] == 1

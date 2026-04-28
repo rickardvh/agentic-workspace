@@ -842,6 +842,25 @@ def _normalized_setup_finding(raw: Any) -> dict[str, Any] | None:
     why = raw.get("why")
     if isinstance(why, str) and why.strip():
         normalized["why"] = why.strip()
+    for field in ("observed_during", "cost", "suspected_owner"):
+        value = raw.get(field)
+        if isinstance(value, str) and value.strip():
+            normalized[field] = value.strip()
+    signal_kind = raw.get("signal_kind")
+    if isinstance(signal_kind, str) and signal_kind in _IMPROVEMENT_SIGNAL_CONTRACT["kinds"]:
+        normalized["signal_kind"] = signal_kind
+    likely_remediation = raw.get("likely_remediation")
+    if isinstance(likely_remediation, str) and likely_remediation in _IMPROVEMENT_SIGNAL_CONTRACT["likely_remediations"]:
+        normalized["likely_remediation"] = likely_remediation
+    recurrence = raw.get("recurrence")
+    if isinstance(recurrence, str) and recurrence in _IMPROVEMENT_SIGNAL_CONTRACT["recurrence"]:
+        normalized["recurrence"] = recurrence
+    validation_failure_class = raw.get("validation_failure_class")
+    validation_failure_classes = {
+        str(item.get("class", "")) for item in _IMPROVEMENT_SIGNAL_CONTRACT.get("validation_failure_classes", []) if isinstance(item, dict)
+    }
+    if isinstance(validation_failure_class, str) and validation_failure_class in validation_failure_classes:
+        normalized["validation_failure_class"] = validation_failure_class
     return normalized
 
 
@@ -936,6 +955,8 @@ def _improvement_signal_contract_payload() -> dict[str, Any]:
         "required_fields": list(_IMPROVEMENT_SIGNAL_CONTRACT["required_fields"]),
         "kinds": list(_IMPROVEMENT_SIGNAL_CONTRACT["kinds"]),
         "likely_remediations": list(_IMPROVEMENT_SIGNAL_CONTRACT["likely_remediations"]),
+        "validation_failure_classes": list(_IMPROVEMENT_SIGNAL_CONTRACT.get("validation_failure_classes", [])),
+        "validation_remedy_order": list(_IMPROVEMENT_SIGNAL_CONTRACT.get("validation_remedy_order", [])),
         "closeout_statuses": list(_IMPROVEMENT_SIGNAL_CONTRACT["closeout_statuses"]),
         "destinations": list(_IMPROVEMENT_SIGNAL_CONTRACT["destinations"]),
         "guardrails": list(_IMPROVEMENT_SIGNAL_CONTRACT["guardrails"]),
@@ -970,6 +991,18 @@ def _improvement_signal_candidate(
         "retention": retention,
         "source": source,
     }
+
+
+def _confidence_label(confidence: Any) -> str:
+    try:
+        score = float(confidence)
+    except (TypeError, ValueError):
+        return "medium"
+    if score >= 0.85:
+        return "high"
+    if score >= 0.55:
+        return "medium"
+    return "low"
 
 
 def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, Any] | None) -> list[dict[str, str]]:
@@ -1031,21 +1064,34 @@ def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, A
         for item in _list_payload(evidence.get("items")):
             if not isinstance(item, dict):
                 continue
-            candidates.append(
-                _improvement_signal_candidate(
-                    kind="workflow_cost",
-                    observed_during=str(item.get("source", "agentic-workspace setup")).strip() or "agentic-workspace setup",
-                    symptom=str(item.get("symptom", item.get("summary", "Promotable setup finding."))).strip(),
-                    cost=str(item.get("cost", "Setup finding indicates repeated friction or rediscovery cost.")).strip(),
-                    suspected_owner=str(item.get("path", item.get("owner", "unknown"))).strip() or "unknown",
-                    likely_remediation=str(item.get("suggested_remediation", "unknown")).strip() or "unknown",
-                    confidence=str(item.get("confidence", "medium")).strip() or "medium",
-                    recurrence=str(item.get("recurrence", "first_seen")).strip() or "first_seen",
-                    immediate_action="route",
-                    retention="shrink_after_fix",
-                    source="setup_findings.promotable.repo_friction_evidence",
-                )
+            validation_failure_class = str(item.get("validation_failure_class", "")).strip()
+            signal_kind = str(item.get("signal_kind", "")).strip() or (
+                "validation_friction" if validation_failure_class else "workflow_cost"
             )
+            if signal_kind not in _IMPROVEMENT_SIGNAL_CONTRACT["kinds"]:
+                signal_kind = "workflow_cost"
+            likely_remediation = (
+                str(item.get("likely_remediation", "")).strip() or str(item.get("suggested_remediation", "unknown")).strip()
+            )
+            if likely_remediation not in _IMPROVEMENT_SIGNAL_CONTRACT["likely_remediations"]:
+                likely_remediation = "unknown"
+            candidate = _improvement_signal_candidate(
+                kind=signal_kind,
+                observed_during=str(item.get("observed_during", item.get("source", "agentic-workspace setup"))).strip()
+                or "agentic-workspace setup",
+                symptom=str(item.get("symptom", item.get("summary", "Promotable setup finding."))).strip(),
+                cost=str(item.get("cost", "Setup finding indicates repeated friction or rediscovery cost.")).strip(),
+                suspected_owner=str(item.get("suspected_owner", item.get("path", item.get("owner", "unknown")))).strip() or "unknown",
+                likely_remediation=likely_remediation,
+                confidence=_confidence_label(item.get("confidence", "medium")),
+                recurrence=str(item.get("recurrence", "first_seen")).strip() or "first_seen",
+                immediate_action="route",
+                retention="shrink_after_fix",
+                source="setup_findings.promotable.repo_friction_evidence",
+            )
+            if validation_failure_class:
+                candidate["validation_failure_class"] = validation_failure_class
+            candidates.append(candidate)
     return candidates[:5]
 
 
@@ -1088,6 +1134,16 @@ def _improvement_intake_payload(
             "confidence_field": "repeated failure against otherwise straightforward work",
             "primary_route": "repo_friction evidence, config/check improvement, or proof-route cleanup",
             "selector": "agentic-workspace defaults --section improvement_latitude --format json",
+            "classification": "user_or_content_error | environment_or_dependency_error | interface_design_error | unclear_proof_contract",
+            "correct_by_design_remedies": [
+                "scaffold",
+                "writer_helper",
+                "alias",
+                "lifecycle_command",
+                "command",
+                "agent_aid",
+            ],
+            "repeat_route": "when interface-design or unclear-proof failures repeat, emit an improvement_signal_candidate instead of only adding validation prose",
         },
         {
             "id": "memory_improvement_signal",
@@ -1126,6 +1182,11 @@ def _improvement_intake_payload(
             "candidate_kind": _IMPROVEMENT_SIGNAL_CONTRACT["candidate_kind"],
             "required_fields": list(_IMPROVEMENT_SIGNAL_CONTRACT["required_fields"]),
             "closeout_statuses": list(_IMPROVEMENT_SIGNAL_CONTRACT["closeout_statuses"]),
+            "validation_failure_classes": [
+                item.get("class", "")
+                for item in _IMPROVEMENT_SIGNAL_CONTRACT.get("validation_failure_classes", [])
+                if isinstance(item, dict)
+            ],
         },
         "default_rule": (
             "Treat setup findings, review findings, validation friction, and memory improvement signals as one intake question: "
@@ -3760,6 +3821,7 @@ def _run_report_command(
         policy_payload=_improvement_latitude_payload(config.improvement_latitude),
         boundary_test_payload=_improvement_boundary_test_payload(),
         external_setup_findings_payload=_repo_friction_external_setup_findings_payload(target_root=target_root),
+        validation_friction_policy=_validation_friction_payload(),
     )
     repo_friction["capture_shortcut"] = _friction_capture_shortcut_payload()
     standing_intent = standing_intent_payload(
