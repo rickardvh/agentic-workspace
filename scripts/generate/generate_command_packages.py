@@ -11,10 +11,10 @@ for path in (SRC_ROOT, COMMAND_GENERATION_SRC):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from agentic_command_generation import generate_command_packages, render_outputs  # noqa: E402
-from agentic_workspace.contract_tooling import command_package_ir_manifest  # noqa: E402
+from agentic_command_generation import generate_command_packages, load_command_package_ir, render_outputs  # noqa: E402
 
 SOURCE_PATH = "src/agentic_workspace/contracts/command_package_ir.json"
+SCHEMA_PATH = "packages/command-generation/schemas/command_package_ir.schema.json"
 REGENERATE_COMMAND = "uv run python scripts/generate/generate_command_packages.py"
 
 
@@ -39,7 +39,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     stale_outputs = generate_command_packages(
-        command_package_ir_manifest(),
+        load_command_package_ir(REPO_ROOT / SOURCE_PATH, REPO_ROOT / SCHEMA_PATH),
         repo_root=REPO_ROOT,
         source_path=SOURCE_PATH,
         regenerate_command=REGENERATE_COMMAND,

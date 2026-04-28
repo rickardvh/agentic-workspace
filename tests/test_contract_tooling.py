@@ -347,6 +347,31 @@ def test_command_generation_schema_boundary_is_checked() -> None:
     assert workspace_schema.read_text(encoding="utf-8") == package_schema.read_text(encoding="utf-8")
 
 
+def test_command_generation_loader_uses_explicit_ir_and_schema_paths() -> None:
+    from agentic_command_generation import load_command_package_ir
+
+    repo_root = Path(__file__).resolve().parents[1]
+    ir_path = repo_root / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json"
+    schema_path = repo_root / "packages" / "command-generation" / "schemas" / "command_package_ir.schema.json"
+
+    manifest = load_command_package_ir(ir_path, schema_path)
+
+    assert manifest["schema_version"] == "agentic-workspace/command-package-ir/v1"
+    assert {package["program"] for package in manifest["packages"]} >= {
+        "agentic-workspace",
+        "agentic-planning-bootstrap",
+        "agentic-memory-bootstrap",
+    }
+
+
+def test_generate_command_packages_wrapper_uses_generic_loader() -> None:
+    wrapper = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_packages.py"
+    text = wrapper.read_text(encoding="utf-8")
+
+    assert "load_command_package_ir" in text
+    assert "agentic_workspace.contract_tooling" not in text
+
+
 def test_generated_python_command_package_metadata_is_current() -> None:
     from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE
 

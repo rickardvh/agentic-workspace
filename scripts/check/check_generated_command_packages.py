@@ -10,6 +10,11 @@ import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+COMMAND_GENERATION_SRC = REPO_ROOT / "packages" / "command-generation" / "src"
+if str(COMMAND_GENERATION_SRC) not in sys.path:
+    sys.path.insert(0, str(COMMAND_GENERATION_SRC))
+
+from agentic_command_generation import load_command_package_ir  # noqa: E402
 
 
 def _run(command: list[str]) -> int:
@@ -45,9 +50,7 @@ def _selected_defaults_fields(stdout: str) -> dict[str, object]:
         "section": payload.get("selector", {}).get("section") if isinstance(payload.get("selector"), dict) else None,
         "matched": payload.get("matched"),
         "default_canonical_agent_instructions_file": (
-            payload.get("answer", {}).get("default_canonical_agent_instructions_file")
-            if isinstance(payload.get("answer"), dict)
-            else None
+            payload.get("answer", {}).get("default_canonical_agent_instructions_file") if isinstance(payload.get("answer"), dict) else None
         ),
     }
 
@@ -90,10 +93,7 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
             env=_conformance_env(),
         )
         if canonical.returncode != 0:
-            return [
-                "runtime primitive failure: canonical defaults command exited "
-                f"{canonical.returncode}; stderr={canonical.stderr!r}"
-            ]
+            return [f"runtime primitive failure: canonical defaults command exited {canonical.returncode}; stderr={canonical.stderr!r}"]
         try:
             canonical_fields = _selected_defaults_fields(canonical.stdout)
         except json.JSONDecodeError as exc:
@@ -188,10 +188,18 @@ def _validate_static_surfaces() -> list[str]:
         "deferred",
     }
     ir_path = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json"
+    schema_path = REPO_ROOT / "packages" / "command-generation" / "schemas" / "command_package_ir.schema.json"
     if not ir_path.is_file():
         errors.append("src/agentic_workspace/contracts/command_package_ir.json is missing")
+    if not schema_path.is_file():
+        errors.append("packages/command-generation/schemas/command_package_ir.schema.json is missing")
+    if errors:
+        return errors
+    try:
+        ir = load_command_package_ir(ir_path, schema_path)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        errors.append(f"command-package IR validation failed: {exc}")
     else:
-        ir = json.loads(ir_path.read_text(encoding="utf-8"))
         maturity_policy = ir.get("generation_policy", {}).get("generated_package_maturity", {})
         level_ids = {level.get("id") for level in maturity_policy.get("levels", []) if isinstance(level, dict)}
         missing = expected_levels - level_ids

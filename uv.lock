@@ -14,6 +14,12 @@ members = [
 name = "agentic-command-generation"
 version = "0.0.0"
 source = { editable = "packages/command-generation" }
+dependencies = [
+    { name = "jsonschema" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "jsonschema" }]
 
 [[package]]
 name = "agentic-memory-bootstrap"

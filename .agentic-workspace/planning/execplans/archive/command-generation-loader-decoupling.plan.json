@@ -1,0 +1,211 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Command Generation Loader Decoupling",
+  "goal": [
+    "Implement #433 by making generic command-generation code load and validate explicit IR/schema paths without importing Agentic Workspace contract tooling."
+  ],
+  "non_goals": [
+    "Do not remove Agentic Workspace contract tooling.",
+    "Do not change command-package IR semantics.",
+    "Do not move runtime primitives into the generator.",
+    "Do not add first-contact product surfaces."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Generic generation and static checks can consume arbitrary command-package IR and schema paths.",
+      "constraints": "Agentic Workspace-specific imports remain only in wrapper or consumer integration surfaces.",
+      "latitude": "Add a generic loader module and update root wrappers/checks to pass explicit paths.",
+      "escalation": "Escalate if validation requires workspace runtime semantics."
+    },
+    "execution": {
+      "milestone": "command-generation-loader-decoupling",
+      "status": "complete",
+      "next_step": "Archive the completed execplan, commit, push, close #433, then continue #434.",
+      "proof": "proof selector plus generated package, contract tooling, ruff, planning, and focused tests."
+    },
+    "scope": {
+      "touched": [
+        "packages/command-generation/src/agentic_command_generation/",
+        "packages/command-generation/pyproject.toml",
+        "packages/command-generation/README.md",
+        "scripts/generate/generate_command_packages.py",
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_contract_tooling.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/command-generation-loader-decoupling.plan.json"
+      ],
+      "invariants": [
+        "Generated outputs remain current.",
+        "Workspace command-package IR stays workspace-owned.",
+        "Generic package code remains repository-agnostic."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#430 isolate generic command-generation machinery for future extraction",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap",
+    "parent lane": "#430"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap",
+    "activation trigger": "after #433 closeout, continue #434 consumer-boundary clarity"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Generic package can validate and render command-package IR without workspace contract-tooling imports.",
+    "intentionally deferred": "#434 consumer wrapper clarity and #435 lift-out criteria.",
+    "discovered implications": "The package build metadata also needed to include schemas so the boundary is not source-tree-only.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice.",
+    "next likely slice": "#434"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "hard constraints": "Dogfood package surfaces, use off-the-shelf validation where practical, commit/push milestone, close issue only after proof.",
+    "agent may decide locally": "Exact loader API shape and wrapper check placement.",
+    "escalate when": "A change would make the generic package depend on Agentic Workspace runtime internals."
+  },
+  "active_milestone": {
+    "id": "command-generation-loader-decoupling",
+    "status": "completed",
+    "scope": "generic IR loader and wrapper/check decoupling",
+    "ready": "yes",
+    "blocked": "no"
+  },
+  "immediate_next_action": [
+    "Archive completed plan and close #433 after commit/push."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/command-generation/src/agentic_command_generation/",
+    "packages/command-generation/pyproject.toml",
+    "packages/command-generation/README.md",
+    "scripts/generate/generate_command_packages.py",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_contract_tooling.py"
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run ruff check src tests scripts packages/command-generation/src",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed packages/command-generation/src/agentic_command_generation/ir.py packages/command-generation/src/agentic_command_generation/__init__.py packages/command-generation/pyproject.toml packages/command-generation/README.md scripts/generate/generate_command_packages.py scripts/check/check_generated_command_packages.py tests/test_contract_tooling.py uv.lock .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/command-generation-loader-decoupling.plan.json --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+    "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv build --package agentic-command-generation"
+  ],
+  "completion_criteria": [
+    "Generic command-generation package exposes a loader that validates explicit IR/schema paths.",
+    "Repo generator wrapper no longer imports agentic_workspace.contract_tooling.",
+    "Generated package static and conformance checks use the generic loader for IR validation.",
+    "Package schemas are included in package build metadata.",
+    "Proof selector required checks pass."
+  ],
+  "execution_run": {
+    "run status": "complete",
+    "executor": "Codex",
+    "handoff source": "GitHub issue #433 plus compact planning summary",
+    "what happened": "Added agentic_command_generation.ir.load_command_package_ir, switched repo generation and static checks to explicit IR/schema paths, added tests proving the wrapper uses the generic loader, and included schemas in command-generation package metadata.",
+    "scope touched": "command-generation internal package, command package generator/check wrappers, contract tooling tests, planning state",
+    "changed surfaces": "generic package API, build metadata, wrapper/check code, active execplan",
+    "validations run": "Generated package freshness/static/conformance/Docker/Docker-conformance, contract tooling surfaces, workspace CLI tests, ruff, planning doctor/check, and package build.",
+    "result for continuation": "#433 is complete; #434 remains for consumer-boundary clarity.",
+    "next step": "Archive this plan, commit, push, close #433, refresh external evidence, then promote #434."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used compact startup/planning/proof/report surfaces",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue #434"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_contract_tooling.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json; uv build --package agentic-command-generation"
+  },
+  "intent_satisfaction": {
+    "original intent": "Make command-generation code consume explicit file paths or validated payloads rather than importing Agentic Workspace-specific loaders for generic operation.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The generic package owns load_command_package_ir(ir_path, schema_path), the repo generator wrapper imports that loader instead of agentic_workspace.contract_tooling, and generated package checks validate through the same loader.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Generic loader/check boundary for command-package IR.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#434",
+    "post-work posterity capture": "archived execplan",
+    "knowledge promoted (Memory/Docs/Config)": "README and tests only; no Memory update needed.",
+    "resume from": "#434 consumer-boundary clarity"
+  },
+  "improvement_signal_review": {
+    "status": "fixed-in-slice",
+    "signals found": [
+      "Schema directory was not included in command-generation package build metadata."
+    ],
+    "signals fixed": [
+      "Added /schemas to package sdist include and wheel force-include."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#434 consumer wrapper clarity",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#435 lift-out criteria",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "README and tests only; no Memory update needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "README and tests only; no Memory update needed.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}
