@@ -392,6 +392,25 @@ def test_generic_command_generation_package_has_no_workspace_imports() -> None:
         assert "agentic_workspace" not in path.read_text(encoding="utf-8")
 
 
+def test_command_generation_readme_defines_lift_out_criteria() -> None:
+    readme = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "README.md"
+    text = readme.read_text(encoding="utf-8")
+
+    assert "## Lift-Out Readiness" in text
+    assert "Technical criteria:" in text
+    assert "Ownership criteria:" in text
+    assert "Migration criteria:" in text
+    assert "Stability criteria:" in text
+    for required in (
+        "no imports from `agentic_workspace`",
+        "Agentic Workspace command truth remains in workspace-owned contracts",
+        "Runtime primitives",
+        "Replace local path injection with normal package imports",
+        "schema versioning rules",
+    ):
+        assert required in text
+
+
 def test_generated_python_command_package_metadata_is_current() -> None:
     from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE
 

@@ -1,0 +1,205 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Command Generation Lift-Out Criteria",
+  "goal": [
+    "Implement #435 by adding explicit criteria for when the internal command-generation package is ready to be lifted out."
+  ],
+  "non_goals": [
+    "Do not create an external repository.",
+    "Do not publish packages.",
+    "Do not freeze the generator API prematurely.",
+    "Do not add a first-contact product surface."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Maintainers can intentionally defer or approve extraction using a concrete checklist.",
+      "constraints": "Keep generic generator infrastructure separate from Agentic Workspace command truth and runtime primitives.",
+      "latitude": "Add checklist documentation and focused tests.",
+      "escalation": "Escalate if extraction criteria require behavior changes beyond documentation and guard tests."
+    },
+    "execution": {
+      "milestone": "command-generation-lift-out-criteria",
+      "status": "complete",
+      "next_step": "Archive, commit, push, close #435, refresh external evidence, then close #430 if all children remain closed.",
+      "proof": "focused tests, generated package checks, ruff, planning checks, and proof selector."
+    },
+    "scope": {
+      "touched": [
+        "packages/command-generation/README.md",
+        "tests/test_contract_tooling.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/command-generation-lift-out-criteria.plan.json"
+      ],
+      "invariants": [
+        "Agentic Workspace command facts stay workspace-owned.",
+        "Runtime primitives remain outside the generator.",
+        "Extraction stays intentionally deferred until criteria are met."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#430 isolate generic command-generation machinery for future extraction",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "",
+    "parent lane": "#430"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "",
+    "activation trigger": ""
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Extraction readiness can be reviewed deliberately instead of by inertia.",
+    "intentionally deferred": "External publication and repository split.",
+    "discovered implications": "",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice.",
+    "next likely slice": "close #430 parent if all children remain closed."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "hard constraints": "Dogfood package surfaces, keep shipped package repo/tool/language agnostic, commit/push milestone, close issue only after proof.",
+    "agent may decide locally": "Exact checklist wording and guard-test placement.",
+    "escalate when": "A change would create a new top-level surface or premature publication workflow."
+  },
+  "active_milestone": {
+    "id": "command-generation-lift-out-criteria",
+    "status": "completed",
+    "scope": "README lift-out checklist and tests",
+    "ready": "yes",
+    "blocked": "no"
+  },
+  "immediate_next_action": [
+    "Archive, commit, push, close #435, refresh external evidence, then close #430 if all children remain closed."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/command-generation/README.md",
+    "tests/test_contract_tooling.py"
+  ],
+  "proof_expectations": [
+    "agentic-workspace preflight --target . --format json",
+    "agentic-workspace summary --target . --format json",
+    "agentic-workspace report --target . --section workflow_obligations --format json",
+    "agentic-workspace report --target . --section closeout_trust --format json",
+    "agentic-workspace proof --target . --changed <changed paths> --format json"
+  ],
+  "context_budget": {
+    "live working set": "command-generation README, focused contract-tooling tests, active planning record.",
+    "recoverable later": "Archived #431-#434 execplans and #430-#435 issue bodies.",
+    "externalize before shift": "Archive this plan, close #435, refresh external evidence, then reconcile and close #430 if appropriate.",
+    "pre-work config pull": "agentic-workspace summary --target . --format json",
+    "pre-work memory pull": "not needed; issue and package README contain the relevant facts",
+    "tiny resumability note": "Finish #435 checklist, then parent #430 closeout.",
+    "context-shift triggers": "Checklist expands into publication workflow, external repo creation, or new first-contact surface."
+  },
+  "validation_commands": [
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run ruff check src tests scripts packages/command-generation/src",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed packages/command-generation/README.md tests/test_contract_tooling.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/command-generation-lift-out-criteria.plan.json --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace preflight --target . --format json",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace report --target . --section workflow_obligations --format json",
+    "uv run agentic-workspace report --target . --section closeout_trust --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "completion_criteria": [
+    "README includes a clear extraction-readiness checklist.",
+    "Checklist distinguishes generic generator infrastructure from Agentic Workspace command truth.",
+    "Checklist names migration path for imports, schemas, checks, and generated outputs.",
+    "Checklist names stability prerequisites before extraction.",
+    "Focused tests guard the criteria from being lost."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "GitHub issue #435 plus agentic-workspace preflight, summary, report, proof, reconcile, and doctor surfaces",
+    "what happened": "Added a Lift-Out Readiness section to the command-generation package README and a focused guard test so extraction criteria remain visible and concrete.",
+    "scope touched": "packages/command-generation/README.md and tests/test_contract_tooling.py, plus planning closeout state.",
+    "changed surfaces": "Package README, contract tooling tests, active execplan, planning state.",
+    "validations run": "pytest tests/test_contract_tooling.py, ruff, generated command package check, planning surface check, proof selector, pytest tests/test_workspace_cli.py, planning doctor, preflight, summary, workflow obligations report, closeout trust report, reconcile.",
+    "result for continuation": "#435 is implemented and completes the final child slice of #430.",
+    "next step": "Archive this plan, commit, push, close #435, refresh evidence, then close #430 if no open children remain."
+  },
+  "proof_report": {
+    "validation proof": "yes",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "pytest tests/test_contract_tooling.py, ruff, generated command package check, planning surface check, proof selector, pytest tests/test_workspace_cli.py, planning doctor, preflight, summary, workflow obligations report, closeout trust report, reconcile."
+  },
+  "finished_run_review": {
+    "review status": "passed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "package workflow was dogfooded through preflight, summary, report, proof, reconcile, and doctor surfaces",
+    "misinterpretation risk": "low",
+    "follow-on decision": "close #435 and then close #430 parent if refreshed evidence confirms all children are closed"
+  },
+  "intent_satisfaction": {
+    "original intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded slice and larger intent are both complete.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "None unless new evidence shows the bounded closure was incomplete."
+  },
+  "execution_summary": {
+    "outcome delivered": "Maintainers can now decide when the command-generation package is ready to lift out using explicit technical, ownership, migration, and stability criteria.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#430 parent closeout only",
+    "post-work posterity capture": "archive this execplan and close the issue with validation evidence",
+    "knowledge promoted (memory/docs/config)": "README guardrail only; no Memory promotion needed",
+    "resume from": ".agentic-workspace/planning/state.toml after evidence refresh"
+  },
+  "improvement_signal_review": {
+    "friction": "The closeout_trust report only treats used package surfaces as present after the execplan records them, so evidence must be updated before closeout.",
+    "action": "Handled in this slice by recording the used surfaces in execution_run; no new issue needed."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#430 parent closeout only",
+          "owner": "",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "README guardrail only; no Memory promotion needed",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "README guardrail only; no Memory promotion needed",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}
