@@ -1,0 +1,233 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Durable Residue Closeout Gate",
+  "goal": [
+    "Complete #492 by making durable-residue routing explicit in execplan templates, closeout preparation, and archive validation."
+  ],
+  "non_goals": [
+    "Do not copy all archive history into Memory.",
+    "Do not turn Memory into a task tracker.",
+    "Do not add heavy knowledge-management workflow."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "completed plans must answer whether future-relevant residue exists and where it belongs before archive",
+      "constraints": "keep archive-only valid for evidence-only/no residue; keep checks cheap and package-local",
+      "latitude": "choose exact field names if they preserve the issue's routing meaning",
+      "escalation": "stop if this requires broad memory implementation rather than closeout/validation routing"
+    },
+    "execution": {
+      "milestone": "#492 durable residue routing gate",
+      "status": "completed",
+      "next_step": "Archive this plan, close #492, and continue #493/#494/#495 under #491.",
+      "proof": "planning package tests, planning surface check, proof selection"
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+        ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+        ".agentic-workspace/planning/execplans/README.md",
+        "packages/planning/tests/test_installer.py"
+      ],
+      "invariants": [
+        "archive-only durable residue must be evidence_only or none",
+        "future-relevant residue must name a Memory/docs/contracts/checks/planning owner",
+        "archives remain evidence/history, not ordinary operating input"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#491 route durable motivation and lessons out of planning archives",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane durable-residue-routing",
+    "parent lane": "durable-residue-routing"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane durable-residue-routing",
+    "activation trigger": "after #492 lands, continue #493/#494/#495 unless parent #491 can honestly close"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "archive gate can enforce explicit durable-residue routing",
+    "intentionally deferred": "Memory capture workflow and self-improvement closeout routing children",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "planning tests and archive-gate proof",
+    "next likely slice": "#493 or #494 depending on proof output"
+  },
+  "intent_interpretation": {
+    "literal request": "Add durable-residue routing to plan closeout and archive gates.",
+    "inferred intended outcome": "Make archive-only future motivation difficult to create accidentally.",
+    "chosen concrete what": "Add a durable_residue record, template guidance, renderer support, archive validation, and tests.",
+    "interpretation distance": "low",
+    "review guidance": "Reject broad Memory automation; this slice is an archive closeout contract."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning package installer/tests and planning execplan template/readme mirrors",
+    "max changed files": "6",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q; uv run python scripts/check/check_planning_surfaces.py",
+    "ask-before-refactor threshold": "stop before restructuring archive-plan command semantics beyond residue validation",
+    "stop before touching": "memory package implementation or self-improvement skill internals"
+  },
+  "stop_conditions": {
+    "stop when": "durable-residue routing needs automatic Memory writes",
+    "escalate when boundary reached": "the change cannot stay within closeout/archive validation",
+    "escalate on scope drift": "new durable surfaces beyond existing templates/checks become necessary",
+    "escalate on proof failure": "planning package tests no longer prove archive behavior"
+  },
+  "context_budget": {
+    "live working set": "#492 issue, archive_execplan gate, execplan template, planning tests",
+    "recoverable later": "#491 parent and child issues #493-#495",
+    "externalize before shift": "active next action, validation failure, and residue field semantics",
+    "pre-work config pull": "use compact workflow/config/proof surfaces before raw planning reads",
+    "pre-work memory pull": "none; this is closeout contract work",
+    "tiny resumability note": "active #492: add durable_residue closeout gate",
+    "context-shift triggers": "after tests pass or if archive validation semantics need broad redesign"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Plans cannot archive future-relevant residue as archive-only evidence.",
+    "hard constraints": "Keep the package repo-/agent-/tool-/language-agnostic and avoid heavy Memory automation.",
+    "agent may decide locally": "Field normalization and exact warning text.",
+    "escalate when": "The gate would require provider-specific or memory-specific runtime behavior."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#492",
+      "label": "durable residue archive gate",
+      "role": "closed_item",
+      "locator": "GitHub issue #492"
+    },
+    {
+      "kind": "issue",
+      "target": "#491",
+      "label": "durable residue routing parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue #491"
+    }
+  ],
+  "active_milestone": {
+    "id": "durable-residue-closeout-gate",
+    "status": "completed",
+    "scope": "planning closeout template/archive gate/tests",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this plan, close #492, and refresh external evidence."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/durable-residue-closeout-gate.plan.json"
+  ],
+  "invariants": [
+    "Archive-only closeout is valid only for none/evidence-only residue.",
+    "Future-relevant residue names a non-archive owner."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed <paths> --format json"
+  ],
+  "required_tools": [
+    "uv"
+  ],
+  "completion_criteria": [
+    "Template and rendered closeout include durable_residue fields.",
+    "Archive validation accepts none/evidence-only residue.",
+    "Archive validation accepts routed Memory/docs/contracts/checks/planning residue.",
+    "Archive validation rejects future-relevant residue whose owner is archive-only or missing."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "GitHub issue #492",
+    "what happened": "Added durable_residue fields to execplan templates and planning record handling, rendered the section in inactive residue, made archive-plan validate durable-residue routing, and updated planning checker status scanning so the new section is not treated as an active milestone.",
+    "scope touched": "planning package installer, planning tests, template/readme mirrors, planning-surface checker mirrors, and planning state.",
+    "changed surfaces": "existing planning closeout/template/checker surfaces only",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning && uv run ruff check .; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed <paths> --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run ruff check scripts packages/planning/src packages/planning/tests",
+    "result for continuation": "#492 is complete; #491 still has child work for Memory capture, archive-only warnings, and self-improvement closeout routing.",
+    "next step": "Archive #492 and continue #493/#494/#495."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no Memory automation or new first-line surface was added",
+    "proof status": "passed",
+    "intent served": "yes for #492",
+    "config compliance": "used compact summary/proof/doctor and active checked-in execplan",
+    "misinterpretation risk": "low; future-relevant residue is routed by explicit status and owner fields",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning && uv run ruff check .; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed <paths> --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run ruff check scripts packages/planning/src packages/planning/tests",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "134 planning tests and 206 workspace CLI tests passed; ruff passed for package/root scopes; planning doctor and planning-surface check were clean."
+  },
+  "intent_satisfaction": {
+    "original intent": "#492 add durable-residue routing to plan closeout and archive gates",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Archive validation now accepts no/evidence-only residue, accepts routed Memory residue, and rejects future-relevant residue without a non-archive owner; templates/guidance expose the durable_residue answer.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane durable-residue-routing"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Archives/reviews are evidence, not ordinary operating input; durable future meaning belongs in Memory/docs/contracts/checks/planning.",
+    "slice shaping bias": "tighten existing closeout gate instead of adding a new first-line surface",
+    "broader-lane validation question": "Does this make future-relevant motivation cheaper to find outside archives?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#492 is complete, but #491 still has child slices for Memory capture, archive-only warnings, and self-improvement closeout routing.",
+    "evidence carried forward": "durable_residue template fields plus archive validation tests for evidence-only, Memory-routed, and invalid archive-only future residue.",
+    "reopen trigger": "Reopen if archive-plan permits future-relevant residue with no non-archive owner."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "A new closeout field named Status can collide with broad status-row scanners unless checks scope status parsing to the owning section.",
+    "motivation worth preserving": "When adding structured closeout fields, validation must avoid treating similarly named fields as active milestone state.",
+    "canonical owner now": "scripts/check/check_planning_surfaces.py and planning package checker mirrors",
+    "promotion trigger": "when another non-milestone section adds a status-like field",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Durable-residue routing is explicit in planning closeout templates and enforced by archive-plan validation.",
+    "validation confirmed": "planning package tests, workspace CLI tests, ruff, proof, doctor, and planning-surface checks passed.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane durable-residue-routing",
+    "post-work posterity capture": "The status-scanner collision is captured in Durable Residue and fixed in checker mirrors.",
+    "knowledge promoted (Memory/Docs/Config)": "checker fix and tests; no Memory note needed yet.",
+    "resume from": "Continue #493/#494/#495 under #491."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Durable Residue `Status` initially triggered broad active-milestone status scanning."
+    ],
+    "signals fixed": [
+      "Planning checker mirrors now scope status-row classification to the Active Milestone section."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "#493/#494/#495 for the remaining durable-residue-routing parent lane."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #492 as first child of durable-residue-routing lane.",
+    "2026-04-28: Completed durable_residue template/archive gate and fixed checker status-scope collision."
+  ]
+}

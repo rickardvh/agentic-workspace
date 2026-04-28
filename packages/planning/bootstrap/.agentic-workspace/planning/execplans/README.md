@@ -24,7 +24,7 @@ This planning system is for execution. It is not intended to become a generic tr
 - Keep only active plans plus `README.md`, `TEMPLATE.md`, and `TEMPLATE.plan.json` at the top level.
 - Move completed plans into `.agentic-workspace/planning/execplans/archive/`.
 - Mark the active milestone `Status` as `completed` before archiving a finished plan.
-- Before archive, fill `## Proof Report`, `## Intent Satisfaction`, and `## Closure Check` so the lane-level closure evidence is explicit.
+- Before archive, fill `## Proof Report`, `## Intent Satisfaction`, `## Closure Check`, and `## Durable Residue` so proof, intent closure, and future-relevant residue routing are explicit.
 - Keep exactly one active milestone and one immediate next action by default.
 - Prefer feature-scoped plan files over growing broad shared hot files.
 - Skip `archive/` during normal startup unless the task explicitly needs historical plan context.
@@ -203,6 +203,17 @@ Use this section to distinguish bounded slice success from larger-intent closure
 `archive-and-close` is only honest when the larger intent is actually satisfied.
 `archive-but-keep-lane-open` is the honest path when the slice is complete but required continuation remains elsewhere.
 Do not force later contributors to infer this decision from drift prose, issue bodies, or chat residue.
+
+Durable residue routing belongs under `## Durable Residue` before archive:
+
+- `Status`: one of `none`, `evidence_only`, `memory`, `docs`, `contract`, `check`, or `planning`
+- `Learned constraint`
+- `Motivation worth preserving`
+- `Canonical owner now`
+- `Promotion trigger`
+- `Retention after promotion`: one of `retain`, `shrink`, `stub`, or `delete`
+
+Use `none` when the slice created no future-relevant learning. Use `evidence_only` when the archived plan is the right owner because the residue is only proof/history. If the residue should affect future work, route it to Memory, docs, contracts, checks, or Planning; do not leave that motivation owned only by the archive.
 
 ## Meaning Boundary
 

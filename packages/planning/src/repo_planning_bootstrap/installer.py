@@ -120,6 +120,20 @@ PLANNING_REFERENCE_CLOSURE_ROLES = frozenset(
         "closed_child",
     }
 )
+EXECPLAN_DURABLE_RESIDUE_STATUSES = frozenset(
+    {
+        "none",
+        "memory",
+        "docs",
+        "contract",
+        "check",
+        "planning",
+        "evidence_only",
+    }
+)
+EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES = frozenset({"none", "evidence_only"})
+EXECPLAN_DURABLE_RESIDUE_OWNER_VALUES = frozenset({"none", "n/a", "archive", "archives", "evidence", "evidence-only"})
+EXECPLAN_DURABLE_RESIDUE_RETENTION_VALUES = frozenset({"retain", "shrink", "stub", "delete"})
 
 PACKAGE_MANAGED_FILES = tuple(
     relative for relative in REQUIRED_PAYLOAD_FILES if relative not in ROOT_SURFACE_FILES and relative not in GENERATED_PAYLOAD_FILES
@@ -153,6 +167,7 @@ EXECPLAN_SECTION_ORDER: tuple[tuple[str, str, str], ...] = (
     ("Intent Satisfaction", "intent_satisfaction", "dict"),
     ("System Intent Alignment", "system_intent_alignment", "dict"),
     ("Closure Check", "closure_check", "dict"),
+    ("Durable Residue", "durable_residue", "dict"),
     ("Execution Summary", "execution_summary", "dict"),
     ("Drift Log", "drift_log", "list"),
 )
@@ -983,6 +998,7 @@ def _build_execplan_record_from_markdown(plan_path: Path) -> dict[str, Any]:
         "intent_satisfaction": _extract_kv_fields(_section_lines(lines, "Intent Satisfaction")),
         "system_intent_alignment": _extract_kv_fields(_section_lines(lines, "System Intent Alignment")),
         "closure_check": _extract_kv_fields(_section_lines(lines, "Closure Check")),
+        "durable_residue": _extract_kv_fields(_section_lines(lines, "Durable Residue")),
         "execution_summary": _extract_kv_fields(_section_lines(lines, "Execution Summary")),
         "drift_log": _extract_section_bullets(plan_path, "Drift Log"),
     }
@@ -5368,6 +5384,7 @@ def _render_inactive_execplan_residue(*, plan_path: Path, target_root: Path) -> 
     intent_satisfaction = _execplan_intent_satisfaction(plan_path)
     system_intent_alignment = _execplan_system_intent_alignment(plan_path)
     closure_check = _execplan_closure_check(plan_path)
+    durable_residue = _execplan_durable_residue(plan_path)
     execution_summary = _execplan_execution_summary(plan_path)
     relative = plan_path.relative_to(target_root).as_posix()
     lines = [
@@ -5515,6 +5532,17 @@ def _render_inactive_execplan_residue(*, plan_path: Path, target_root: Path) -> 
     ):
         if key in closure_check:
             lines.append(f"- {key[0].upper() + key[1:]}: {closure_check[key]}")
+    lines.extend(["", "## Durable Residue", ""])
+    for key in (
+        "status",
+        "learned constraint",
+        "motivation worth preserving",
+        "canonical owner now",
+        "promotion trigger",
+        "retention after promotion",
+    ):
+        if key in durable_residue:
+            lines.append(f"- {key[0].upper() + key[1:]}: {durable_residue[key]}")
     lines.extend(["", "## Execution Summary", ""])
     for key in (
         "outcome delivered",
@@ -5563,6 +5591,60 @@ def _prepared_closeout_proof_report(
         "proof achieved now": proof_now,
         'evidence for "proof achieved" state': proof_evidence,
     }
+
+
+def _prepared_durable_residue(record: dict[str, Any]) -> dict[str, str]:
+    existing = _record_section_dict(record, "durable_residue") or {}
+    if existing.get("status"):
+        prepared = dict(existing)
+    else:
+        prepared = {
+            "status": "evidence_only",
+            "learned constraint": "No future-relevant learning was identified beyond the archived proof record.",
+            "motivation worth preserving": "none beyond evidence-only archive",
+            "canonical owner now": "archive",
+            "promotion trigger": "none",
+            "retention after promotion": "retain",
+        }
+    prepared.setdefault("learned constraint", "")
+    prepared.setdefault("motivation worth preserving", "")
+    prepared.setdefault("canonical owner now", "archive" if prepared.get("status") in EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES else "")
+    prepared.setdefault("promotion trigger", "none")
+    prepared.setdefault("retention after promotion", "retain")
+    return prepared
+
+
+def _execplan_durable_residue(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "durable_residue")
+    if record is not None:
+        return record
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Durable Residue"))
+
+
+def _invalid_durable_residue_message(durable_residue: dict[str, str]) -> str | None:
+    status = durable_residue.get("status", "").strip().lower()
+    learned_constraint = durable_residue.get("learned constraint", "").strip()
+    motivation = durable_residue.get("motivation worth preserving", "").strip()
+    owner = durable_residue.get("canonical owner now", "").strip()
+    promotion_trigger = durable_residue.get("promotion trigger", "").strip()
+    retention = durable_residue.get("retention after promotion", "").strip().lower()
+
+    if status not in EXECPLAN_DURABLE_RESIDUE_STATUSES:
+        return "`durable_residue.status` must be one of `none`, `memory`, `docs`, `contract`, `check`, `planning`, or `evidence_only`"
+    if not learned_constraint or not motivation:
+        return "fill `Durable Residue` with the learned constraint and motivation routing answer before archiving"
+    if retention not in EXECPLAN_DURABLE_RESIDUE_RETENTION_VALUES:
+        return "`durable_residue.retention after promotion` must be one of `retain`, `shrink`, `stub`, or `delete`"
+    if status in EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES:
+        return None
+    if not owner or owner.lower() in EXECPLAN_DURABLE_RESIDUE_OWNER_VALUES:
+        return (
+            "future-relevant durable residue must name a non-archive canonical owner such as Memory, docs, contracts, checks, or planning"
+        )
+    if not promotion_trigger or promotion_trigger.lower() in {"none", "n/a", "pending", "todo", "tbd"}:
+        return "future-relevant durable residue must name a promotion trigger before archiving"
+    return None
 
 
 def _prepare_execplan_closeout(
@@ -5664,6 +5746,7 @@ def _prepare_execplan_closeout(
             "evidence carried forward": carried_evidence,
             "reopen trigger": reopen,
         },
+        "durable_residue": _prepared_durable_residue(record),
     }
 
     prepared_proof_report = _prepared_closeout_proof_report(
@@ -5798,6 +5881,7 @@ def archive_execplan(
     closure_reason = closure_check.get("why this decision is honest", "").strip()
     closure_evidence = closure_check.get("evidence carried forward", "").strip()
     reopen_trigger = closure_check.get("reopen trigger", "").strip()
+    durable_residue = _execplan_durable_residue(plan_path)
     validation_commands = _execplan_validation_commands(plan_path)
     if completes_larger_outcome == "no" and (not continuation_surface or continuation_surface.lower() in {"none", "n/a"}):
         result.warnings.append(
@@ -6084,6 +6168,17 @@ def archive_execplan(
                 "`closure_check.closure decision` must be one of `archive-and-close` or `archive-but-keep-lane-open`"
             ),
         )
+        return result
+    durable_residue_message = _invalid_durable_residue_message(durable_residue)
+    if durable_residue_message is not None:
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_durable_residue",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Completed execplan is missing valid durable-residue routing.",
+            }
+        )
+        result.add("manual review", plan_path, durable_residue_message)
         return result
     if _execplan_needs_reference_sweep(plan_path) and not _validation_has_reference_sweep(validation_commands):
         result.warnings.append(
@@ -6924,6 +7019,14 @@ def _build_execplan_record_from_todo_item(
             "post-work posterity capture": "pending",
             "knowledge promoted (Memory/Docs/Config)": "none",
             "resume from": "current milestone",
+        },
+        "durable_residue": {
+            "status": "none",
+            "learned constraint": "none yet",
+            "motivation worth preserving": "none yet",
+            "canonical owner now": "none",
+            "promotion trigger": "none",
+            "retention after promotion": "retain",
         },
         "closeout_distillation": {
             "buckets": {

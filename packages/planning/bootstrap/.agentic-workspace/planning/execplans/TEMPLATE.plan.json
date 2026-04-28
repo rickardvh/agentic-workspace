@@ -168,6 +168,14 @@
     "evidence carried forward": "",
     "reopen trigger": ""
   },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "",
+    "motivation worth preserving": "",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
   "execution_summary": {
     "outcome delivered": "",
     "validation confirmed": "",

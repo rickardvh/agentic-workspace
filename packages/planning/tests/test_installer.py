@@ -300,6 +300,15 @@ def _minimal_execplan(status: str = "in-progress") -> str:
         "- Evidence carried forward: validation and completion criteria are still pending.\n"
         "- Reopen trigger: finish the current milestone and reassess closure.\n"
     )
+    durable_residue = (
+        "\n## Durable Residue\n\n"
+        "- Status: evidence_only\n"
+        "- Learned constraint: no future-relevant learning beyond the archived proof record.\n"
+        "- Motivation worth preserving: none beyond evidence-only archive.\n"
+        "- Canonical owner now: archive\n"
+        "- Promotion trigger: none\n"
+        "- Retention after promotion: retain\n"
+    )
     return f"""
 # Plan Alpha
 
@@ -435,6 +444,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 {intent_satisfaction}
 {system_intent_alignment}
 {closure_check}
+{durable_residue}
 
 ## Drift Log
 
@@ -1969,6 +1979,63 @@ def test_archive_execplan_requires_post_work_posterity_capture(tmp_path: Path) -
         and "what should survive this slice and where it belongs" in action.detail
         for action in result.actions
     )
+
+
+def test_archive_execplan_requires_durable_residue_routing(tmp_path: Path) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
+    plan = _minimal_execplan(status="completed").split("\n## Durable Residue\n\n", 1)[0] + "\n"
+    _write(plan_path, plan)
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_missing_durable_residue" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review" and action.path == plan_path and "durable_residue.status" in action.detail
+        for action in result.actions
+    )
+
+
+def test_archive_execplan_rejects_future_residue_without_non_archive_owner(tmp_path: Path) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
+    _write(
+        plan_path,
+        _minimal_execplan(status="completed")
+        .replace("- Status: evidence_only", "- Status: memory")
+        .replace("- Canonical owner now: archive", "- Canonical owner now: archive"),
+    )
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_missing_durable_residue" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review" and action.path == plan_path and "non-archive canonical owner" in action.detail
+        for action in result.actions
+    )
+
+
+def test_archive_execplan_accepts_memory_routed_durable_residue(tmp_path: Path) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
+    _write(
+        plan_path,
+        _minimal_execplan(status="completed")
+        .replace("- Status: evidence_only", "- Status: memory")
+        .replace("- Canonical owner now: archive", "- Canonical owner now: .agentic-workspace/memory/repo/index.md")
+        .replace("- Promotion trigger: none", "- Promotion trigger: when the motivation recurs in another closeout"),
+    )
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert result.warnings == []
+    assert not plan_path.exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").exists()
 
 
 def test_archive_execplan_blocks_missing_proof_report(tmp_path: Path) -> None:

@@ -1160,15 +1160,16 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
             )
         )
 
+    active_milestone_section = _section_content(lines, "Active Milestone")
     active_status_rows = [
         line
-        for line in lowered_lines
+        for line in (section_line.lower() for section_line in active_milestone_section)
         if re.match(r"^\s*-\s*status\s*:\s*", line)
         and not re.search(r"\b(completed|done|closed|planned|not-started)\b", line)
         and re.search(r"\b(active|in-progress|in progress|current|ongoing)\b", line)
     ]
 
-    all_status_rows = [line for line in lowered_lines if re.match(r"^\s*-\s*status\s*:\s*", line)]
+    all_status_rows = [line.lower() for line in active_milestone_section if re.match(r"^\s*-\s*status\s*:\s*", line, re.IGNORECASE)]
     planned_only_rows = [line for line in all_status_rows if re.search(r"\b(planned|not-started|pending)\b", line)]
     completed_only_rows = [line for line in all_status_rows if re.search(r"\b(completed|done|closed)\b", line)]
     has_only_completed_status = bool(all_status_rows) and len(completed_only_rows) == len(all_status_rows)
@@ -1184,7 +1185,6 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
             )
         )
 
-    active_milestone_section = _section_content(lines, "Active Milestone")
     active_milestone_fields = _extract_kv_fields(active_milestone_section)
     intent_continuity_fields = _extract_kv_fields(_section_content(lines, "Intent Continuity"))
     required_continuation_fields = _extract_kv_fields(_section_content(lines, "Required Continuation"))
