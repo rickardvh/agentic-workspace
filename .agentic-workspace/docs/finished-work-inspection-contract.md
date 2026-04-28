@@ -8,6 +8,7 @@ Use it when you need to verify whether previously closed planning lanes still lo
 
 - archived checked-in execplan residue remains the primary closeout evidence
 - optional reopening evidence may lower trust, but must not replace the archive as source of record
+- source-owned external items may carry compact `reopens` refs; stale copied title/status snapshots are not authority
 - the product must work normally when no external or supplementary planning system exists
 - suspicious historical closeout should surface as a compact report signal, not only as a manual audit ritual
 - unsatisfied larger intent should produce an intent-derived continuation candidate, even when no human-created issue or external tracker item exists
@@ -17,7 +18,11 @@ Use it when you need to verify whether previously closed planning lanes still lo
 - `finished_work_inspection_contract` in `agentic-workspace summary --format json`
 - `finished_work_inspection` in `agentic-planning-bootstrap report --format json`
 
-## Optional Evidence Artifact
+## Reopening Evidence
+
+Preferred source: provider-agnostic external intent cache items may include `reopens` refs derived from source-owned issue bodies, tracker links, or equivalent host data.
+
+Legacy compatibility input, ignored by git in this repo:
 
 - `.agentic-workspace/planning/finished-work-evidence.json`
 
@@ -43,10 +48,10 @@ Accepted shape:
 
 - `system`: optional external or local source label such as `github`, `jira`, or `manual`
 - `id`: stable identifier for the newer follow-on or reopening work item
-- `title`: compact label for the newer work
-- `status`: `open` or `closed`
+- `title`: compact label for the newer work; source-owned external evidence should override stale copied labels
+- `status`: `open` or `closed`; source-owned external evidence should override stale copied status
 - `kind`: optional class such as `lane`, `slice`, `review`, or `task`
-- `reopens`: list of prior work-item refs that this newer item is evidence against
+- `reopens`: list of prior work-item refs that this newer item is evidence against; this is the compact non-reconstructable mapping when it cannot be derived from source-owned host data
 - `reason`: optional compact explanation for why the earlier closeout is now lower trust
 
 ## Classification Model

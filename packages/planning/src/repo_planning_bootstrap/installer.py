@@ -3777,7 +3777,10 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
     non_closure_reference_count = 0
 
     archived_paths = _archived_execplan_paths(archive_dir)
-    evidence_items = evidence.get("items", [])
+    evidence_items = _finished_work_reopening_evidence_items(
+        finished_evidence=evidence,
+        external_evidence=external_evidence,
+    )
 
     for path in archived_paths:
         reference_roles = _execplan_issue_reference_roles(path)
@@ -4524,6 +4527,7 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
             "status": str(raw.get("status", "")).strip().lower(),
             "kind": str(raw.get("kind", "")).strip(),
             "parent_id": str(raw.get("parent_id", "")).strip(),
+            "reopens": [str(entry).strip() for entry in raw.get("reopens", []) if str(entry).strip()],
             "planning_residue_expected": str(raw.get("planning_residue_expected", "optional")).strip().lower(),
         }
         if not item["id"]:
@@ -4639,6 +4643,34 @@ def _finished_work_reopeners(*, issue_refs: list[str], evidence_items: Any) -> l
             }
         )
     return reopeners
+
+
+def _finished_work_reopening_evidence_items(
+    *,
+    finished_evidence: dict[str, Any],
+    external_evidence: dict[str, Any],
+) -> list[dict[str, Any]]:
+    external_items = [item for item in external_evidence.get("items", []) if isinstance(item, dict)]
+    external_by_id = {str(item.get("id", "")).strip(): item for item in external_items if str(item.get("id", "")).strip()}
+    items: list[dict[str, Any]] = []
+    for raw in finished_evidence.get("items", []):
+        if not isinstance(raw, dict):
+            continue
+        item = dict(raw)
+        external_item = external_by_id.get(str(item.get("id", "")).strip())
+        if external_item:
+            item["status"] = str(external_item.get("status", "")).strip().lower()
+            item["title"] = str(external_item.get("title", "")).strip()
+        item["source"] = finished_evidence.get("path", "")
+        items.append(item)
+    for raw in external_items:
+        reopens = [str(entry).strip() for entry in raw.get("reopens", []) if str(entry).strip()]
+        if not reopens:
+            continue
+        item = dict(raw)
+        item["source"] = external_evidence.get("path", "")
+        items.append(item)
+    return items
 
 
 def _internal_continuation_signals(*, target_root: Path, roadmap_lanes: list[dict[str, Any]]) -> list[dict[str, Any]]:

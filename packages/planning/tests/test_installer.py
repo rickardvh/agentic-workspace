@@ -4447,6 +4447,104 @@ def test_planning_summary_exposes_finished_work_inspection_contract(tmp_path: Pa
     assert reopened_candidate["classification"] == "likely_premature_closeout"
 
 
+def test_finished_work_inspection_derives_reopeners_from_external_evidence(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    _write(
+        archive_dir / "closed-lane.md",
+        (
+            "# Closed Lane\n\n"
+            "## Intent Satisfaction\n\n"
+            "- Was original intent fully satisfied?: yes\n\n"
+            "## Closure Check\n\n"
+            "- Closure decision: archive-and-close\n"
+            "- Larger-intent status: closed\n\n"
+            "Implemented #1.\n"
+        ),
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#99",
+                "title": "Reopened externally",
+                "status": "open",
+                "kind": "issue",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+                "reopens": ["#1"],
+            }
+        ],
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    contract = summary["finished_work_inspection_contract"]
+    assert contract["counts"]["likely_premature_closeout_count"] == 1
+    assert contract["derived_follow_up_candidates"][0]["reopened_by"] == ["#99"]
+
+
+def test_finished_work_inspection_uses_external_status_over_stale_sidecar(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    _write(
+        archive_dir / "closed-lane.md",
+        (
+            "# Closed Lane\n\n"
+            "## Intent Satisfaction\n\n"
+            "- Was original intent fully satisfied?: yes\n\n"
+            "## Closure Check\n\n"
+            "- Closure decision: archive-and-close\n"
+            "- Larger-intent status: closed\n\n"
+            "Implemented #1.\n"
+        ),
+    )
+    _write_finished_work_evidence(
+        tmp_path / ".agentic-workspace/planning/finished-work-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#99",
+                "title": "Stale sidecar title",
+                "status": "open",
+                "kind": "issue",
+                "reopens": ["#1"],
+            }
+        ],
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#99",
+                "title": "Source-owned title",
+                "status": "closed",
+                "kind": "issue",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            }
+        ],
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    contract = summary["finished_work_inspection_contract"]
+    assert contract["counts"]["likely_premature_closeout_count"] == 0
+    assert contract["counts"]["derived_follow_up_candidate_count"] == 0
+
+
 def test_planning_summary_inspects_machine_first_archived_execplans_for_required_continuation(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write_external_intent_evidence(
@@ -5220,12 +5318,11 @@ def test_planning_summary_suppresses_reopened_archive_when_reopening_refs_are_cl
     summary = planning_summary(target=tmp_path)
     contract = summary["finished_work_inspection_contract"]
 
-    assert contract["counts"]["likely_premature_closeout_count"] == 1
-    assert contract["counts"]["externally_closed_continuation_count"] == 1
+    assert contract["counts"]["likely_premature_closeout_count"] == 0
+    assert contract["counts"]["externally_closed_continuation_count"] == 0
     assert contract["counts"]["derived_follow_up_candidate_count"] == 0
     inspection = contract["inspections"][0]
-    assert inspection["classification"] == "externally_closed_partial"
-    assert inspection["externally_closed_by"] == ["#900"]
+    assert inspection["classification"] == "clearly_landed"
     assert summary["execution_readiness"]["status"] == "narrow-direct-ready"
 
 

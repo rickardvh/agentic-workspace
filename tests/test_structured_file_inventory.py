@@ -44,14 +44,14 @@ def test_inventory_routes_known_schema_gaps() -> None:
     inventory = check_structured_file_inventory.load_inventory()
     gap_entries = [entry for entry in inventory["entries"] if entry["status"] == "freeform-prohibited-gap"]
 
-    assert {entry["routed_to"] for entry in gap_entries} >= {"#504", "#505", "#506", "#508", "#509"}
+    assert {entry["routed_to"] for entry in gap_entries} >= {"#504", "#505", "#508", "#509"}
     assert all(entry["generated"] is False for entry in gap_entries)
 
 
 def test_inventory_routes_reconstructable_storage_cleanup_children() -> None:
     inventory = check_structured_file_inventory.load_inventory()
 
-    assert check_structured_file_inventory.routed_storage_cleanup_issues(inventory) >= {"#537", "#538", "#539", "#540"}
+    assert check_structured_file_inventory.routed_storage_cleanup_issues(inventory) >= {"#538", "#539", "#540"}
 
 
 def test_generated_adapter_requires_regeneration_source() -> None:

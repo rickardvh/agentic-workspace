@@ -5186,6 +5186,7 @@ def _external_work_summary(item: dict[str, Any]) -> dict[str, Any]:
         "status": str(item.get("status", "")),
         "kind": str(item.get("kind", "")),
         "parent_id": str(item.get("parent_id", "")),
+        "reopens": [str(entry).strip() for entry in _list_payload(item.get("reopens")) if str(entry).strip()],
     }
 
 
@@ -5331,6 +5332,17 @@ def _infer_external_issue_parent_id(body: str) -> str:
     return ""
 
 
+def _infer_external_issue_reopens(body: str) -> list[str]:
+    refs: list[str] = []
+    for heading in ("Closed lane(s) to revisit", "Closed lanes to revisit", "Reopens"):
+        section_value = _markdown_section_value(body, heading)
+        for match in re.finditer(r"#(\d+)\b", section_value):
+            ref = f"#{match.group(1)}"
+            if ref not in refs:
+                refs.append(ref)
+    return refs
+
+
 def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -> dict[str, Any] | None:
     number = issue.get("number")
     try:
@@ -5349,6 +5361,7 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
         "status": state,
         "kind": _infer_external_issue_kind(body=body),
         "parent_id": _infer_external_issue_parent_id(body),
+        "reopens": _infer_external_issue_reopens(body),
         "planning_residue_expected": _github_planning_residue_expected(labels),
         "url": str(issue.get("url", "")).strip(),
         "source_repository": repo,

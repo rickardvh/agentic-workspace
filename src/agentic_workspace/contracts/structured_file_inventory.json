@@ -260,34 +260,6 @@
       }
     },
     {
-      "pattern": ".agentic-workspace/planning/finished-work-evidence.json",
-      "format": "json",
-      "owner": "planning-evidence",
-      "status": "freeform-prohibited-gap",
-      "schema_or_validator": "finished work evidence schema pending",
-      "editable_by_agents": true,
-      "generated": false,
-      "routed_to": "#506",
-      "notes": "Finished-work evidence needs a dedicated schema.",
-      "storage_class": "reconstructable-external-snapshot",
-      "checked_in_justification": "Temporary checked-in evidence snapshot retained for planning continuity while cleanup migrates to compact refs or regeneration.",
-      "reconstructable_from": [
-        "planning state closeout records",
-        "archived execplan closeout fields",
-        "external work item refs"
-      ],
-      "guardrails": {
-        "max_items": 200,
-        "max_bytes": 20000,
-        "preferred_refs": [
-          "issue ids",
-          "archived execplan paths",
-          "commit SHAs when available"
-        ],
-        "routed_to": "#537"
-      }
-    },
-    {
       "pattern": ".agentic-workspace/planning/agent-manifest.json",
       "format": "json",
       "owner": "planning-payload",

@@ -4317,7 +4317,7 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
                         "labels": [{"name": "planning"}],
                         "createdAt": "2026-04-01T00:00:00Z",
                         "updatedAt": "2026-04-27T00:00:00Z",
-                        "body": "## Issue kind\n\nChild slice\n\n## Parent issue or lane\n\n#10\n",
+                        "body": "## Issue kind\n\nChild slice\n\n## Parent issue or lane\n\n#10\n\n## Closed lane(s) to revisit\n\n#8, #9\n",
                         "comments": [{"body": "closeout"}],
                     },
                     {
@@ -4375,6 +4375,7 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
     assert refreshed["items"][0]["id"] == "#1"
     assert refreshed["items"][0]["kind"] == "slice"
     assert refreshed["items"][0]["parent_id"] == "#10"
+    assert refreshed["items"][0]["reopens"] == ["#8", "#9"]
     assert refreshed["items"][0]["labels"] == ["planning"]
     assert refreshed["items"][1]["status"] == "closed"
 
@@ -4526,10 +4527,10 @@ def test_report_surfaces_finished_work_inspection_findings(tmp_path: Path, capsy
         "Implemented #220.\n",
         encoding="utf-8",
     )
-    (target / ".agentic-workspace" / "planning" / "finished-work-evidence.json").write_text(
+    (target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json").write_text(
         json.dumps(
             {
-                "kind": "planning-finished-work-evidence/v1",
+                "kind": "planning-external-intent-evidence/v1",
                 "items": [
                     {
                         "system": "manual",
@@ -4537,6 +4538,8 @@ def test_report_surfaces_finished_work_inspection_findings(tmp_path: Path, capsy
                         "title": "Finished-work intent inspection",
                         "status": "open",
                         "kind": "lane",
+                        "parent_id": "",
+                        "planning_residue_expected": "required",
                         "reopens": ["#220"],
                     }
                 ],

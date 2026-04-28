@@ -1,0 +1,257 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Replace finished-work sidecar with source-owned reopeners",
+  "goal": [
+    "Implement #537 by deriving finished-work reopen mappings from source-owned external work items when available and removing the checked-in finished-work evidence sidecar from this repo.",
+    "Ensure stale copied title/status values in the legacy sidecar are not treated as checked-in truth."
+  ],
+  "non_goals": [
+    "Do not remove legacy compatibility loading for host repos that already have finished-work evidence.",
+    "Do not make GitHub required for core planning.",
+    "Do not implement audit artifact or generated mirror compression in this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "finished-work inspection uses source-owned reopen relationships or compact derived mappings instead of a checked-in status/title mirror",
+      "constraints": "tracker-agnostic, archive remains primary closeout evidence, stale sidecar facts cannot override source evidence",
+      "latitude": "may update external evidence normalization, finished-work inspection, docs, tests, inventory, ignore rules, and planning state",
+      "escalation": "stop if the change requires mandatory provider calls in planning package code"
+    },
+    "execution": {
+      "milestone": "#537",
+      "status": "completed",
+      "next_step": "archive #537 and continue the parent lane with #538",
+      "proof": "passed: workspace CLI tests, planning installer tests, root/package ruff, inventory check, planning surfaces check, contract tooling check, planning doctor"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "tests/test_workspace_cli.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/docs/finished-work-inspection-contract.md",
+        "packages/planning/bootstrap/.agentic-workspace/docs/finished-work-inspection-contract.md",
+        ".gitignore",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        ".agentic-workspace/planning/state.toml"
+      ],
+      "invariants": [
+        "archived execplans remain primary finished-work evidence",
+        "external tracker evidence is optional and provider-agnostic after normalization",
+        "legacy sidecar status/title are not authority when source evidence exists"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "stop checking in reconstructable artifact residue",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "reconstructable-artifact-policy"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#538, #539, and #540 remain after #537.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #537 lands"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "finished-work reopenings can be represented by source issue bodies/links and external cache instead of a repo sidecar mirror",
+    "intentionally deferred": "#538 #539 #540",
+    "discovered implications": "",
+    "proof achieved now": "Source-owned reopens are parsed into external evidence, stale sidecar values are overridden by external source truth, the tracked sidecar is removed, and summary remains quiet.",
+    "validation still needed": "None for #537; #538, #539, and #540 remain in the parent lane.",
+    "next likely slice": "#538"
+  },
+  "intent_interpretation": {
+    "literal request": "Finish the current lane, then take a break.",
+    "inferred intended outcome": "complete reconstructable-artifact compression without switching to unrelated review findings",
+    "chosen concrete what": "implement #537 after #536",
+    "interpretation distance": "low",
+    "review guidance": "verify stale sidecar status/title cannot drive finished-work truth"
+  },
+  "execution_bounds": {
+    "allowed paths": "finished-work inspection and evidence normalization surfaces plus tests/docs/planning state",
+    "max changed files": "12",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q; cd packages/planning && uv run pytest tests/test_installer.py; uv run ruff check src tests; cd packages/planning && uv run ruff check .; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "broad finished-work inspection rewrite",
+    "stop before touching": "audit artifact distillation or generated mirror compression"
+  },
+  "stop_conditions": {
+    "stop when": "tracked finished-work sidecar is removed and source-owned reopens are consumed",
+    "escalate when boundary reached": "provider-specific logic would enter planning package core",
+    "escalate on scope drift": "work starts implementing #538-#540",
+    "escalate on proof failure": "selected validation cannot pass"
+  },
+  "context_budget": {
+    "live working set": "#537, finished-work inspection code/tests, external evidence normalization",
+    "recoverable later": "#541 and #536 archives",
+    "externalize before shift": "this execplan",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "continue #537 from source-owned reopeners implementation",
+    "context-shift triggers": "before commit or after validation failure"
+  },
+  "delegated_judgment": {
+    "requested outcome": "read-only review of sidecar replacement approach",
+    "hard constraints": "do not edit; keep tracker-agnostic",
+    "agent may decide locally": "fallback mechanics and tests",
+    "escalate when": "recommendation requires deleting legacy support"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#537",
+      "label": "finished-work sidecar",
+      "role": "active slice",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/537"
+    }
+  ],
+  "active_milestone": {
+    "id": "#537",
+    "status": "completed",
+    "scope": "finished-work reopening evidence",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "subagent read-only review"
+  },
+  "immediate_next_action": [
+    "Continue reconstructable-artifact-policy with #538."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "tests/test_workspace_cli.py",
+    "packages/planning/tests/test_installer.py",
+    ".agentic-workspace/docs/finished-work-inspection-contract.md",
+    "packages/planning/bootstrap/.agentic-workspace/docs/finished-work-inspection-contract.md",
+    ".gitignore",
+    "src/agentic_workspace/contracts/structured_file_inventory.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "Do not add GitHub-specific parsing to planning package core.",
+    "Legacy sidecar remains compatibility input but is ignored by git in this repo.",
+    "Source-owned external status/title wins over copied sidecar facts."
+  ],
+  "contract_decisions_to_freeze": [
+    "External evidence items may carry provider-agnostic reopens refs.",
+    "Finished-work evidence sidecar is deprecated/legacy and not checked in by default."
+  ],
+  "open_questions_to_close": [
+    "Does the current GitHub issue body format carry enough source-owned reopens information?"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "uv run ruff check src tests",
+    "cd packages/planning && uv run ruff check .",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Tracked finished-work evidence sidecar is removed from the repo.",
+    "External evidence can carry reopens refs into finished-work inspection.",
+    "Tests prove stale sidecar status/title cannot override external source truth.",
+    "#537 closes and parent lane routes to #538."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "#537 and active checked-in execplan",
+    "what happened": "External intent normalization now derives provider-agnostic reopens refs from source-owned issue sections; finished-work inspection consumes those refs and treats legacy sidecar values as compatibility-only when external source truth exists.",
+    "scope touched": "finished-work inspection, external evidence normalization, docs, tests, structured-file inventory, gitignore, planning state",
+    "changed surfaces": "removed tracked .agentic-workspace/planning/finished-work-evidence.json; added ignored cache policy; updated CLI/planning code, docs, and tests",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q; cd packages/planning && uv run pytest tests/test_installer.py; uv run ruff check src tests packages/planning/src packages/planning/tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "#537 complete; parent reconstructable-artifact-policy should route to #538 next.",
+    "next step": "archive plan, close #537, commit, push, then continue #538"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used compact summary/proof and local cache; did not make GitHub mandatory in planning core",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-but-keep-lane-open for #538, #539, and #540"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "tests and checks listed in execution_run.validations run passed; compact summary reported derived_follow_up_candidate_count=0 and clean planning surface health."
+  },
+  "intent_satisfaction": {
+    "original intent": "Replace finished-work evidence sidecar with source-owned links or derived inspection.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "tracked sidecar removed, source-owned reopens parsed into external evidence, stale sidecar override behavior covered by tests, docs updated",
+    "unsolved intent passed to": "#538, #539, #540 for remaining reconstructable artifact residue classes"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve only context that is expensive to rediscover and necessary for safe continuation.",
+    "slice shaping bias": "source-owned links over checked-in mirrors",
+    "broader-lane validation question": "Does finished-work inspection stop depending on a stale sidecar mirror?",
+    "intent evidence source": ".agentic-workspace/system-intent/intent.toml"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#537 removed the finished-work sidecar residue but the parent lane still includes audit artifacts, generated mirrors, and duplicate payload copies.",
+    "evidence carried forward": ".agentic-workspace/planning/state.toml routes the parent lane to #538; archive retains #537 proof.",
+    "reopen trigger": "finished-work inspection again depends on checked-in copied issue status/title evidence instead of source-owned links or generated cache"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "finished-work reopens should live in source-owned links or compact provider-agnostic refs, not copied title/status mirrors",
+    "motivation worth preserving": "reduce checked-in evidence sidecars",
+    "canonical owner now": ".agentic-workspace/planning/state.toml",
+    "promotion trigger": "finished-work reopening behavior changes",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Finished-work reopening evidence no longer depends on a checked-in stale sidecar mirror in this repo.",
+    "validation confirmed": "workspace CLI tests, planning installer tests, ruff, inventory check, planning surfaces check, contract tooling check, and planning doctor passed",
+    "follow-on routed to": "#538",
+    "post-work posterity capture": "archive proof plus docs/contract updates; no Memory promotion needed",
+    "knowledge promoted (Memory/Docs/Config)": "finished-work inspection docs and structured-file inventory updated; no checked-in Memory change",
+    "resume from": ".agentic-workspace/planning/state.toml reconstructable-artifact-policy suggested_first_slice #538"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [
+      "No new package friction surfaced beyond the existing parent-lane child issues."
+    ],
+    "next owner": "#538"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        "transient validation command output"
+      ],
+      "continuation": [
+        "#538",
+        "#539",
+        "#540"
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "#538",
+        "#539",
+        "#540"
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #537 from reconstructable-artifact-policy lane."
+  ]
+}

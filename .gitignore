@@ -6,6 +6,7 @@ agentic-workspace.local.toml
 .agentic-workspace/delegation-outcomes.json
 agentic-workspace.delegation-outcomes.json
 .agentic-workspace/planning/external-intent-evidence.json
+.agentic-workspace/planning/finished-work-evidence.json
 .agentic-workspace/local/
 
 # Python caches
