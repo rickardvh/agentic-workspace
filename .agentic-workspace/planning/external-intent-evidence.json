@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T09:54:48+00:00",
+  "refreshed_at": "2026-04-28T10:05:37+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T09:54:48+00:00",
+    "refreshed_at": "2026-04-28T10:05:37+00:00",
     "item_count": 507,
-    "open_count": 35,
-    "closed_count": 472,
+    "open_count": 34,
+    "closed_count": 473,
     "limit": 600,
     "state": "all",
     "state_source": "previous_evidence",
@@ -7627,7 +7627,7 @@
       "system": "github",
       "id": "#487",
       "title": "[Workspace]: Review root package dependency footprint and first-party module coupling",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#485",
       "planning_residue_expected": "optional",
@@ -7637,8 +7637,8 @@
         "planning"
       ],
       "created_at": "2026-04-28T06:15:43Z",
-      "updated_at": "2026-04-28T06:35:53Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T10:05:10Z",
+      "comments_count": 1
     },
     {
       "system": "github",
@@ -8204,7 +8204,7 @@
     {
       "system": "github",
       "id": "#521",
-      "title": "[Workspace]: Promote proven validation aids into repo-native platform-independent checks",
+      "title": "[Workspace]: Promote proven agent aids into repo-native platform-independent surfaces",
       "status": "open",
       "kind": "slice",
       "parent_id": "#516",
@@ -8215,7 +8215,7 @@
         "planning"
       ],
       "created_at": "2026-04-28T09:52:06Z",
-      "updated_at": "2026-04-28T09:52:06Z",
+      "updated_at": "2026-04-28T09:54:44Z",
       "comments_count": 0
     }
   ]
