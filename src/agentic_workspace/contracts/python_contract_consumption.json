@@ -99,12 +99,6 @@
       "consumer": "agentic_workspace.cli:_repo_friction_payload"
     },
     {
-      "contract": "prose_surface_inventory.json",
-      "schema": "prose_surface_inventory.schema.json",
-      "loader": "prose_surface_inventory_manifest",
-      "consumer": "structured-first operating updates and contract tooling tests"
-    },
-    {
       "contract": "preflight_policy.json",
       "schema": "preflight_policy.schema.json",
       "loader": "preflight_policy_manifest",

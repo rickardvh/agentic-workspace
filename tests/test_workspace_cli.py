@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -3645,10 +3646,6 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert section_hints["effective_authority"]["command"] == (
         "agentic-workspace report --target ./repo --section effective_authority --format json"
     )
-    assert section_hints["prose_surface_inventory"]["command"] == (
-        "agentic-workspace report --target ./repo --section prose_surface_inventory --format json"
-    )
-    assert "prose-heavy" in section_hints["prose_surface_inventory"]["purpose"]
     assert any(item["detail_section"] == "closeout_trust" for item in maintenance["subcategories"])
 
     assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
@@ -3731,31 +3728,6 @@ def test_report_section_agent_aids_discovers_checked_in_and_local_aids(tmp_path:
     assert [entry["id"] for entry in answer["recommended_actions"]] == ["workspace-validation-wrapper"]
     assert answer["local_only"]["entries"][0]["id"] == "codex"
     assert answer["local_only"]["entries"][0]["authority"] == "none"
-
-
-def test_report_section_prose_surface_inventory_routes_follow_up_work(capsys) -> None:
-    assert cli.main(["report", "--section", "prose_surface_inventory", "--format", "json"]) == 0
-    payload = json.loads(capsys.readouterr().out)
-
-    assert payload["surface"] == "report"
-    assert payload["selector"] == {"section": "prose_surface_inventory"}
-    answer = payload["answer"]
-    assert answer["kind"] == "workspace-prose-surface-inventory/v1"
-    assert answer["command"] == "agentic-workspace report --target ./repo --section prose_surface_inventory --format json"
-    assert answer["summary"]["entry_count"] >= 8
-    assert answer["summary"]["ordinary_startup_count"] == 1
-    assert answer["summary"]["target_status_counts"]["generate"] >= 2
-    assert {candidate["issue"] for candidate in answer["top_follow_up_candidates"]} == {"#532", "#534", "#535"}
-    entries = {entry["id"]: entry for entry in answer["entries"]}
-    assert entries["execplan-closeout"]["target_status"] == "generate"
-    assert entries["memory-notes"]["target_status"] == "structure"
-    assert answer["ordinary_startup_entries"] == [
-        {
-            "id": "startup-adapters",
-            "surface": "AGENTS.md, llms.txt, tools/AGENT_QUICKSTART.md, tools/AGENT_ROUTING.md",
-            "target_status": "shrink",
-        }
-    ]
 
 
 def test_report_improvement_intake_keeps_dogfooding_source_checkout_only(tmp_path: Path, capsys) -> None:
@@ -6170,6 +6142,42 @@ def test_proof_changed_selector_flags_additive_only_durable_surface(tmp_path: Pa
     assert review["reviewed_paths"][0]["result"] == "flagged"
     assert review["reviewed_paths"][0]["disposition"] == "additive-only durable surface candidate"
     assert "what repeated cost does this remove?" in review["reviewed_paths"][0]["required_answers"]
+
+
+def test_proof_changed_selector_accepts_deleted_durable_surface(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
+    contract_path = tmp_path / "src" / "agentic_workspace" / "contracts" / "old_surface.json"
+    contract_path.parent.mkdir(parents=True)
+    contract_path.write_text("{}\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "seed"], cwd=tmp_path, check=True, capture_output=True)
+    contract_path.unlink()
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/contracts/old_surface.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    review = payload["answer"]["surface_value_review"]
+    assert review["status"] == "accepted"
+    assert review["accepted_count"] == 1
+    assert review["flagged_count"] == 0
+    assert review["reviewed_paths"][0]["result"] == "accepted"
+    assert review["reviewed_paths"][0]["disposition"] == "removed durable surface"
 
 
 def test_upgrade_strict_preflight_requires_token(tmp_path: Path, capsys) -> None:

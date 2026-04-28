@@ -92,10 +92,6 @@ def repo_friction_policy_manifest() -> dict[str, Any]:
     return load_validated_contract_json("repo_friction_policy.json", "repo_friction_policy.schema.json")
 
 
-def prose_surface_inventory_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("prose_surface_inventory.json", "prose_surface_inventory.schema.json")
-
-
 def preflight_policy_manifest() -> dict[str, Any]:
     return load_validated_contract_json("preflight_policy.json", "preflight_policy.schema.json")
 

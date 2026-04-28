@@ -1,0 +1,338 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Prose Inventory Compression",
+  "goal": [
+    "external evidence shows #546 is an untracked open corrective follow-up for #531/#530; resolve it before adding more template surface."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "external evidence shows #546 is an untracked open corrective follow-up for #531/#530; resolve it before adding more template surface.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "prose-inventory-compression",
+      "status": "completed",
+      "next_step": "Archive this plan, commit, push, close #546, and continue with #534.",
+      "proof": "uv run pytest tests/test_contract_tooling.py tests/test_structured_file_inventory.py tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src tests scripts; uv run agentic-workspace proof --target . --changed ... --format json"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contract_tooling.py",
+        "src/agentic_workspace/reporting_support.py",
+        "src/agentic_workspace/contracts/report_contract.json",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        "src/agentic_workspace/contracts/python_contract_consumption.json",
+        "src/agentic_workspace/contracts/contract_inventory.json",
+        "tests/test_contract_tooling.py",
+        "tests/test_structured_file_inventory.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/prose-inventory-compression.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "external evidence shows #546 is an untracked open corrective follow-up for #531/#530; resolve it before adding more template surface.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "The prose inventory is no longer a live report/contract surface; #532 now owns the concrete closeout prose reduction and #534/#535 carry remaining concrete work. The surface-value proof now treats deleted durable surfaces as removals instead of additive candidates.",
+    "intentionally deferred": "Constrained review/handoff/self-improvement templates and structured Memory metadata remain in #534/#535.",
+    "discovered implications": "Staging deletions before structured-file inventory proof is necessary because the checker evaluates tracked files from the Git index.",
+    "proof achieved now": "contract/report tests, contract tooling check, structured-file inventory check, ruff, unknown-section recovery, and surface-value deletion proof all passed.",
+    "validation still needed": "final proof selection and planning surface check before commit.",
+    "next likely slice": "#534 constrained templates."
+  },
+  "intent_interpretation": {
+    "literal request": "Prose Inventory Compression",
+    "inferred intended outcome": "external evidence shows #546 is an untracked open corrective follow-up for #531/#530; resolve it before adding more template surface.",
+    "chosen concrete what": "Remove the live prose_surface_inventory contract/report section and demote #531 residue to historical discovery evidence after #532 delivered actual generated closeout prose.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "root report/contract tooling code, report/contract/schema inventory metadata, tests, and planning state/execplan closeout.",
+    "max changed files": "about 15 files including deleted inventory/schema files and archived planning closeout.",
+    "required validation commands": "uv run pytest tests/test_contract_tooling.py tests/test_structured_file_inventory.py tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src tests scripts; uv run agentic-workspace report --target . --section prose_surface_inventory --format json (expected nonzero unknown section); uv run python scripts/check/check_planning_surfaces.py --strict",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Prose inventory live surface removal is implemented; run final proof, archive, commit, push, and close #546.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "external evidence shows #546 is an untracked open corrective follow-up for #531/#530; resolve it before adding more template surface.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#546",
+      "label": "[Workspace]: Convert prose-surface inventory into concrete prose-reduction actions",
+      "role": "closed_item"
+    },
+    {
+      "kind": "issue",
+      "target": "#531",
+      "label": "Inventory prose-heavy operating surfaces and classify essential vs generated prose",
+      "role": "corrected_item"
+    },
+    {
+      "kind": "issue",
+      "target": "#532",
+      "label": "[Planning]: Generate closeout and archive prose from structured fields",
+      "role": "evidence"
+    },
+    {
+      "kind": "issue",
+      "target": "#530",
+      "label": "[Workspace]: Reduce prose-authoring burden with structured-first operating updates",
+      "role": "parent_intent"
+    },
+    {
+      "kind": "issue",
+      "target": "#534",
+      "label": "[Workspace]: Add constrained templates for review, handoff, and self-improvement prose",
+      "role": "next_lane"
+    },
+    {
+      "kind": "issue",
+      "target": "#535",
+      "label": "[Memory]: Prefer structured note metadata over repeated explanatory prose",
+      "role": "next_lane"
+    },
+    {
+      "kind": "issue",
+      "target": "#547",
+      "label": "[Workspace]: Treat deleted durable surfaces as removals in surface-value proof",
+      "role": "closed_item"
+    }
+  ],
+  "active_milestone": {
+    "id": "prose-inventory-compression",
+    "status": "completed",
+    "scope": "Remove live prose inventory report/contract residue after concrete #532 prose reduction.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run final proof selection, archive this plan, commit, push, close #546, and continue with #534."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contract_tooling.py",
+    "src/agentic_workspace/reporting_support.py",
+    "src/agentic_workspace/contracts/report_contract.json",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "src/agentic_workspace/contracts/structured_file_inventory.json",
+    "src/agentic_workspace/contracts/python_contract_consumption.json",
+    "src/agentic_workspace/contracts/contract_inventory.json",
+    "src/agentic_workspace/contracts/prose_surface_inventory.json",
+    "src/agentic_workspace/contracts/schemas/prose_surface_inventory.schema.json",
+    "tests/test_contract_tooling.py",
+    "tests/test_structured_file_inventory.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_contract_tooling.py tests/test_structured_file_inventory.py tests/test_workspace_cli.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check src tests scripts",
+    "uv run agentic-workspace report --target . --section prose_surface_inventory --format json (expected nonzero unknown section)",
+    "rg -n \"prose_surface_inventory|prose-surface\" src tests scripts packages (expected no matches)",
+    "uv run python scripts/check/check_planning_surfaces.py --strict"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "#532 supplies concrete generated closeout prose from structured fields.",
+    "The live prose_surface_inventory report/contract/schema/test surface is removed.",
+    "Surface-value proof treats deleted durable surfaces as removals rather than additive candidates.",
+    "#531 residue is demoted to historical evidence in planning state.",
+    "The removed report section recovers through normal unknown-section guidance."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Removed the live prose_surface_inventory contract, schema, loader, report payload, report hints, report/schema entries, structured-file and contract-consumption metadata, and tests. Planning state now demotes #531 to historical evidence and routes concrete prose-reduction work to #532/#534/#535. Also fixed #547 so surface-value proof classifies deleted durable surfaces as removals.",
+    "scope touched": "root report/contract code, root contract metadata/schema, focused tests, planning state, and this execplan.",
+    "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/contract_tooling.py; src/agentic_workspace/reporting_support.py; src/agentic_workspace/contracts/* metadata; deleted prose_surface_inventory contract/schema; tests; .agentic-workspace/planning/state.toml",
+    "validations run": "uv run pytest tests/test_contract_tooling.py tests/test_structured_file_inventory.py tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src tests scripts; uv run agentic-workspace report --target . --section prose_surface_inventory --format json (expected nonzero unknown section); uv run agentic-workspace proof --target . --changed ... --format json; rg -n \"prose_surface_inventory|prose-surface\" src tests scripts packages (expected no matches)",
+    "result for continuation": "#546 and #547 are complete; continue #530 through #534/#535 and the remaining structured-first principles already listed in planning state.",
+    "next step": "Archive this plan, commit, push, close #546, and continue with #534."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "used compact summary, issue evidence, focused report/proof commands, and planning state.",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_contract_tooling.py tests/test_structured_file_inventory.py tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src tests scripts; uv run agentic-workspace report --target . --section prose_surface_inventory --format json returned the expected unknown-section error; uv run agentic-workspace proof --target . --changed ... --format json; rg -n \"prose_surface_inventory|prose-surface\" src tests scripts packages returned no matches.",
+    "proof achieved now": "selected contract/report and structured-file proof passed; removed report section is no longer available; deleted durable surfaces are accepted as removals in surface-value proof.",
+    "evidence for \"proof achieved\" state": "affected tests passed after staging deleted files so the structured-file checker saw the intended tracked-file set."
+  },
+  "intent_satisfaction": {
+    "original intent": "external evidence shows #546 is an untracked open corrective follow-up for #531/#530; resolve it before adding more template surface.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#532 reduced a recurring closeout prose workflow; this slice removed the live prose inventory/report residue, demoted #531 to historical discovery evidence, and fixed #547 proof friction for surface deletion.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Removed the live prose inventory report/contract surface, kept the concrete prose-reduction outcome in generated closeout behavior, and fixed deletion-aware surface-value proof.",
+    "validation confirmed": "contract/report tests, contract tooling, structured-file inventory, ruff, unknown-section recovery, and proof selector surface-value review passed.",
+    "follow-on routed to": "#534 and #535 for remaining concrete prose-reduction work; other structured-first principles remain listed in planning state.",
+    "post-work posterity capture": "planning state now records #531 as evidence-only archive residue instead of a live contract owner.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "compact summary after #546 close"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded slice and larger intent are both complete.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "None unless new evidence shows the bounded closure was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "signals found": [
+      "The structured-file checker reports deleted tracked JSON files until the deletion is staged.",
+      "Surface-value proof misclassified deleted durable surfaces as additive candidates."
+    ],
+    "signals fixed": [
+      "#547 fixed surface-value proof deletion classification."
+    ],
+    "signals routed": [
+      "The existing validation-friction lane remains the owner if staged-deletion validation friction recurs often enough to warrant interface guidance."
+    ],
+    "signals dismissed": [
+      "No new issue now; staging deletions before tracked-file validation is standard Git workflow and the error message was direct."
+    ],
+    "next owner": "validation-friction lane if recurrence proves this is more than one-off friction."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "The deleted prose inventory contract/report details remain recoverable only in the archived #531 evidence; they are not ordinary operating input.",
+          "owner": "discard",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#534 and #535 for remaining concrete prose-reduction work; other structured-first principles remain listed in planning state.",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "[Workspace]: Convert prose-surface inventory into concrete prose-reduction actions",
+          "owner": "issue",
+          "source": "#546"
+        },
+        {
+          "summary": "Inventory prose-heavy operating surfaces and classify essential vs generated prose",
+          "owner": "issue",
+          "source": "#531"
+        },
+        {
+          "summary": "[Planning]: Generate closeout and archive prose from structured fields",
+          "owner": "issue",
+          "source": "#532"
+        },
+        {
+          "summary": "[Workspace]: Reduce prose-authoring burden with structured-first operating updates",
+          "owner": "issue",
+          "source": "#530"
+        },
+        {
+          "summary": "[Workspace]: Add constrained templates for review, handoff, and self-improvement prose",
+          "owner": "issue",
+          "source": "#534"
+        },
+        {
+          "summary": "[Memory]: Prefer structured note metadata over repeated explanatory prose",
+          "owner": "issue",
+          "source": "#535"
+        },
+        {
+          "summary": "[Workspace]: Treat deleted durable surfaces as removals in surface-value proof",
+          "owner": "issue",
+          "source": "#547"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: external evidence shows #546 is an untracked open corrective follow-up for #531/#530; resolve it before adding more template surface.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest tests/test_contract_tooling.py tests/test_structured_file_inventory.py tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src tests scripts; uv run agentic-workspace report --target . --section prose_surface_inventory --format json returned the expected unknown-section error; uv run agentic-workspace proof --target . --changed ... --format json; rg -n \"prose_surface_inventory|prose-surface\" src tests scripts packages returned no matches.\nChanged surfaces: src/agentic_workspace/cli.py; src/agentic_workspace/contract_tooling.py; src/agentic_workspace/reporting_support.py; src/agentic_workspace/contracts/* metadata; deleted prose_surface_inventory contract/schema; tests; .agentic-workspace/planning/state.toml\nDurable residue: none (none)\nFollow-up: #534 and #535 for remaining concrete prose-reduction work; other structured-first principles remain listed in planning state."
+  }
+}

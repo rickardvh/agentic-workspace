@@ -330,17 +330,6 @@
       "notes": "Repo-friction policy payloads and boundary tests are manifest-backed instead of inline Python tables."
     },
     {
-      "area": "prose_surface_inventory",
-      "classification": "declarative",
-      "owner_surface": "src/agentic_workspace/contracts/prose_surface_inventory.json",
-      "consumers": [
-        "agentic_workspace.cli:_prose_surface_inventory_report_payload",
-        "structured-first operating update follow-up lanes",
-        "scripts/check/check_contract_tooling_surfaces.py"
-      ],
-      "notes": "Prose-heavy operating surfaces are classified in a contract-backed inventory so follow-up work can reduce prose burden without adding another handbook."
-    },
-    {
       "area": "preflight_policy",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/preflight_policy.json",
