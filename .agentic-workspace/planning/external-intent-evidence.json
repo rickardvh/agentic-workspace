@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T12:45:12+00:00",
+  "refreshed_at": "2026-04-28T12:56:35+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T12:45:12+00:00",
-    "item_count": 515,
+    "refreshed_at": "2026-04-28T12:56:35+00:00",
+    "item_count": 516,
     "open_count": 25,
-    "closed_count": 490,
+    "closed_count": 491,
     "limit": 600,
     "state": "all",
     "state_source": "explicit",
@@ -7814,7 +7814,7 @@
       "system": "github",
       "id": "#498",
       "title": "[Planning]: Add handoff role metadata for multi-agent team-style work",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#496",
       "planning_residue_expected": "optional",
@@ -7824,8 +7824,8 @@
         "planning"
       ],
       "created_at": "2026-04-28T08:55:27Z",
-      "updated_at": "2026-04-28T08:55:27Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T12:55:33Z",
+      "comments_count": 1
     },
     {
       "system": "github",
@@ -8353,6 +8353,21 @@
       "created_at": "2026-04-28T12:26:20Z",
       "updated_at": "2026-04-28T12:32:46Z",
       "comments_count": 1
+    },
+    {
+      "system": "github",
+      "id": "#533",
+      "title": "[Review]: Add a safe external evidence refresh helper",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/533",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [],
+      "created_at": "2026-04-28T12:59:28Z",
+      "updated_at": "2026-04-28T12:59:28Z",
+      "comments_count": 0
     }
   ]
 }

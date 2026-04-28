@@ -30,6 +30,14 @@ PLANNING_STATE_KIND = "agentic-planning-state"
 PLANNING_STATE_SCHEMA_VERSION = "planning-state/v1"
 PLANNING_STATE_MATURITIES = {"idea", "candidate", "shaped", "ready", "active", "closed"}
 PLANNING_STATE_STATUSES = {"deferred", "next", "active", "blocked", "done", "dismissed"}
+PLANNING_STATE_ROLE_FIELDS = (
+    "decision_owner",
+    "strategy_role",
+    "owner_role",
+    "delivery_role",
+    "review_role",
+    "knowledge_owner",
+)
 
 REQUIRED_PAYLOAD_FILES = (
     Path("AGENTS.template.md"),
@@ -1882,6 +1890,8 @@ def _planning_summary_schema() -> dict[str, Any]:
             ],
             "planning_record": [
                 "task",
+                "role_metadata",
+                "next_role_needed",
                 "requested_outcome",
                 "hard_constraints",
                 "agent_may_decide",
@@ -1910,6 +1920,8 @@ def _planning_summary_schema() -> dict[str, Any]:
             ],
             "active_contract": [
                 "todo_item",
+                "role_metadata",
+                "next_role_needed",
                 "intent",
                 "references",
                 "touched_scope",
@@ -2031,6 +2043,8 @@ def _planning_summary_schema() -> dict[str, Any]:
             "handoff_contract": [
                 "task",
                 "parent_lane",
+                "role_metadata",
+                "next_role_needed",
                 "requested_outcome",
                 "hard_constraints",
                 "agent_may_decide",
@@ -2433,6 +2447,8 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             dict(summary.get("planning_record", {})),
             fields=(
                 "task",
+                "role_metadata",
+                "next_role_needed",
                 "requested_outcome",
                 "next_action",
                 "review_residue",
@@ -2449,7 +2465,16 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         ),
         "active_contract": _compact_projection(
             dict(summary.get("active_contract", {})),
-            fields=("todo_item", "intent", "touched_scope", "proof_expectations", "tool_verification", "minimal_refs"),
+            fields=(
+                "todo_item",
+                "role_metadata",
+                "next_role_needed",
+                "intent",
+                "touched_scope",
+                "proof_expectations",
+                "tool_verification",
+                "minimal_refs",
+            ),
             idle_unavailable_reason=idle_unavailable_reason,
         ),
         "resumable_contract": _compact_projection(
@@ -2486,6 +2511,8 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             fields=(
                 "task",
                 "parent_lane",
+                "role_metadata",
+                "next_role_needed",
                 "requested_outcome",
                 "review_residue",
                 "next_action",
@@ -2904,14 +2931,30 @@ def _planning_state_v1_items(state: dict[str, Any]) -> list[tuple[str, dict[str,
     return items
 
 
+def _non_empty_string(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
 def _planning_state_v1_item_warnings(*, bucket_path: str, item_id: str, item: dict[str, Any], maturity: str) -> list[dict[str, str]]:
     warnings: list[dict[str, str]] = []
+    for role_field in PLANNING_STATE_ROLE_FIELDS:
+        if role_field in item and not _non_empty_string(item.get(role_field)):
+            warnings.append(
+                _planning_state_v1_warning(
+                    bucket_path,
+                    f"planning-state/v1 item {item_id} {role_field} must be a non-empty string.",
+                )
+            )
+    if "handoff_ready" in item and not isinstance(item.get("handoff_ready"), bool):
+        warnings.append(_planning_state_v1_warning(bucket_path, f"planning-state/v1 item {item_id} handoff_ready must be true or false."))
     if maturity == "ready":
         for field in ("next_action", "done_when", "proof", "review_role"):
             if not item.get(field):
                 warnings.append(_planning_state_v1_warning(bucket_path, f"ready item {item_id} requires {field}."))
-        if not (item.get("refs") or item.get("owner_role") or item.get("owner")):
+        if not (item.get("refs") or _non_empty_string(item.get("owner_role")) or _non_empty_string(item.get("owner"))):
             warnings.append(_planning_state_v1_warning(bucket_path, f"ready item {item_id} requires refs, owner_role, or owner."))
+        if item.get("handoff_ready") is not True:
+            warnings.append(_planning_state_v1_warning(bucket_path, f"ready item {item_id} requires handoff_ready = true."))
     if maturity == "active":
         surface = str(item.get("execplan") or item.get("surface") or "").strip()
         if not surface or not _surface_execplan_reference(surface):
@@ -2925,6 +2968,31 @@ def _planning_state_v1_item_warnings(*, bucket_path: str, item_id: str, item: di
                 _planning_state_v1_warning(bucket_path, f"closed item {item_id} requires durable_residue, residue, or closure routing.")
             )
     return warnings
+
+
+def _planning_state_role_metadata(item: dict[str, Any] | None) -> dict[str, Any]:
+    if not item:
+        return {}
+    metadata: dict[str, Any] = {}
+    for role_field in PLANNING_STATE_ROLE_FIELDS:
+        value = item.get(role_field)
+        if _non_empty_string(value):
+            metadata[role_field] = str(value).strip()
+    if isinstance(item.get("handoff_ready"), bool):
+        metadata["handoff_ready"] = item["handoff_ready"]
+    return metadata
+
+
+def _next_role_needed_from_metadata(role_metadata: dict[str, Any]) -> str:
+    if not role_metadata:
+        return ""
+    if role_metadata.get("handoff_ready") is True:
+        return str(role_metadata.get("delivery_role") or role_metadata.get("owner_role") or "implementation").strip()
+    if role_metadata.get("review_role"):
+        return str(role_metadata["review_role"]).strip()
+    if role_metadata.get("strategy_role"):
+        return str(role_metadata["strategy_role"]).strip()
+    return ""
 
 
 def _planning_state_v1_warning(path: str, message: str) -> dict[str, str]:
@@ -4548,6 +4616,8 @@ def _active_intent_contract(
     proof_expectations = _extract_section_bullets(plan_path, "Validation Commands")
     required_tools = [tool for tool in _extract_section_bullets(plan_path, "Required Tools") if tool.lower() not in {"none", "none."}]
     references = _execplan_references(plan_path)
+    role_metadata = _planning_state_role_metadata(active_item)
+    next_role_needed = _next_role_needed_from_metadata(role_metadata)
     minimal_refs = _dedupe(
         [
             ".agentic-workspace/planning/state.toml",
@@ -4563,6 +4633,8 @@ def _active_intent_contract(
             "surface": surface,
             "why_now": active_item.get("why_now", "").strip() if active_item else "",
         },
+        "role_metadata": role_metadata,
+        "next_role_needed": next_role_needed,
         "intent": {
             "requested_outcome": requested_outcome,
             "hard_constraints": hard_constraints,
@@ -4691,6 +4763,8 @@ def _canonical_planning_record(
         "hard_constraints": str(active_contract["intent"]["hard_constraints"]).strip(),
         "agent_may_decide": str(active_contract["intent"]["agent_may_decide"]).strip(),
         "capability_posture": dict(active_contract.get("capability_posture", {})),
+        "role_metadata": dict(active_contract.get("role_metadata", {})),
+        "next_role_needed": str(active_contract.get("next_role_needed", "")).strip(),
         "references": list(active_contract.get("references", [])),
         "review_residue": review_residue,
         "next_action": str(resumable_contract["current_next_action"]).strip(),
@@ -5393,6 +5467,8 @@ def _active_handoff_contract(
         "hard_constraints": str(planning_record.get("hard_constraints", "")).strip(),
         "agent_may_decide": str(planning_record.get("agent_may_decide", "")).strip(),
         "capability_posture": dict(planning_record.get("capability_posture", {})),
+        "role_metadata": dict(planning_record.get("role_metadata", {})),
+        "next_role_needed": str(planning_record.get("next_role_needed", "")).strip(),
         "references": list(planning_record.get("references", [])),
         "review_residue": list(planning_record.get("review_residue", [])),
         "next_action": str(planning_record.get("next_action", "")).strip(),

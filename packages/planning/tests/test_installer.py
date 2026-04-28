@@ -1490,7 +1490,7 @@ active_items = [
   { id = "active-plan", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json", why_now = "prove active maturity points to an execplan." },
 ]
 queued_items = [
-  { id = "ready-slice", maturity = "ready", status = "next", refs = ["#497"], owner_role = "implementation", review_role = "validation", next_action = "implement schema validation.", done_when = "tests prove required fields.", proof = ["uv run pytest packages/planning/tests/test_installer.py -q"] },
+  { id = "ready-slice", maturity = "ready", status = "next", refs = ["#497"], owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "implement schema validation.", done_when = "tests prove required fields.", proof = ["uv run pytest packages/planning/tests/test_installer.py -q"] },
 ]
 
 [roadmap]
@@ -1525,7 +1525,7 @@ active_items = [
   { id = "active-without-plan", maturity = "active", status = "active", surface = "direct" },
 ]
 queued_items = [
-  { id = "ready-missing-proof", maturity = "ready", status = "next", next_action = "do work.", done_when = "done." },
+  { id = "ready-missing-proof", maturity = "ready", status = "next", owner_role = ["implementation"], handoff_ready = "yes", next_action = "do work.", done_when = "done." },
 ]
 
 [roadmap]
@@ -1545,9 +1545,59 @@ candidates = [
     assert any("active item active-without-plan requires an execplan" in message for message in messages)
     assert any("ready item ready-missing-proof requires proof" in message for message in messages)
     assert any("ready item ready-missing-proof requires review_role" in message for message in messages)
+    assert any("ready item ready-missing-proof requires handoff_ready = true" in message for message in messages)
     assert any("ready item ready-missing-proof requires refs, owner_role, or owner" in message for message in messages)
+    assert any("ready-missing-proof owner_role must be a non-empty string" in message for message in messages)
+    assert any("ready-missing-proof handoff_ready must be true or false" in message for message in messages)
     assert any("bad-maturity must use one maturity" in message for message in messages)
     assert any("closed item closed-without-residue requires durable_residue" in message for message in messages)
+
+
+def test_planning_summary_projects_handoff_role_metadata(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json", why_now = "prove handoff role metadata is queryable.", decision_owner = "human", strategy_role = "product/architecture", owner_role = "implementation", delivery_role = "implementation", review_role = "validation", knowledge_owner = "planning/docs", handoff_ready = true },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_execplan_record(
+        tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json",
+        item_id="active-plan",
+        status="in-progress",
+    )
+
+    summary = planning_summary(target=tmp_path)
+    compact = planning_summary(target=tmp_path, profile="compact")
+    handoff = planning_handoff(target=tmp_path)
+
+    expected_role_metadata = {
+        "decision_owner": "human",
+        "strategy_role": "product/architecture",
+        "owner_role": "implementation",
+        "delivery_role": "implementation",
+        "review_role": "validation",
+        "knowledge_owner": "planning/docs",
+        "handoff_ready": True,
+    }
+    assert summary["active_contract"]["role_metadata"] == expected_role_metadata
+    assert summary["active_contract"]["next_role_needed"] == "implementation"
+    assert summary["planning_record"]["role_metadata"] == expected_role_metadata
+    assert summary["handoff_contract"]["role_metadata"] == expected_role_metadata
+    assert summary["handoff_contract"]["next_role_needed"] == "implementation"
+    assert compact["handoff_contract"]["role_metadata"] == expected_role_metadata
+    assert handoff["handoff_contract"]["role_metadata"] == expected_role_metadata
 
 
 def test_promote_todo_item_to_execplan_accepts_bom_prefixed_compact_toml(tmp_path: Path) -> None:

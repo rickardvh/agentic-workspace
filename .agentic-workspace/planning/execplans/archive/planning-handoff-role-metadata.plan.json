@@ -1,0 +1,256 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning Handoff Role Metadata",
+  "goal": [
+    "Add compact, generic role metadata to planning-state v1 so lanes and ready slices can express decision, delivery, review, and knowledge-transfer responsibilities."
+  ],
+  "non_goals": [
+    "Do not build a scheduler or assignment system.",
+    "Do not migrate state to work_items in this slice.",
+    "Do not encode agent vendor, tool, or personal preference assumptions."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Planning state accepts and summarizes generic handoff roles without forcing simple work to fill every role field.",
+      "constraints": "Keep fields repo-, agent-, tool-, and language-agnostic; keep role metadata advisory.",
+      "latitude": "Choose compact output fields and validation rules that make the next needed role visible.",
+      "escalation": "Stop before adding scheduling, assignment, or broad summary migration."
+    },
+    "execution": {
+      "milestone": "Define and expose planning-state handoff role metadata.",
+      "status": "completed",
+      "next_step": "Archive this plan, close #498, then continue with #499 when selected.",
+      "proof": "planning package tests, ruff, planning doctor, summary"
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/planning-handoff-role-metadata.plan.json"
+      ],
+      "invariants": [
+        "Role metadata is optional for simple work.",
+        "Roles remain generic strings, not runtime-specific targets.",
+        "Summary can identify the next role needed without becoming a dashboard."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Planning state supports progressive refinement and multi-agent handoff through explicit maturity, roles, promotion, and closeout state.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+    "parent lane": "planning-state-maturity (#496)"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+    "activation trigger": "After #498 lands, continue #499/#500/#501 when selected."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Role-aware planning records and compact routing for the next needed role.",
+    "intentionally deferred": "Maturity-aware summary redesign, state migration, and transition helpers.",
+    "discovered implications": "A malformed owner_role must not satisfy ready-slice ownership; the validator now requires typed role metadata before using it.",
+    "proof achieved now": "Focused and full planning package tests, ruff, planning doctor, planning-surface checker, and compact summary passed.",
+    "validation still needed": "None for #498; continue #499 for maturity-aware summary behavior.",
+    "next likely slice": "#499"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement #498 planning handoff role metadata.",
+    "inferred intended outcome": "Make team-style handoff responsibilities visible without adding ceremony.",
+    "chosen concrete what": "Add generic role fields to v1 validation/summary projections.",
+    "interpretation distance": "low",
+    "review guidance": "Reject changes that make roles mandatory for all work or act like scheduling."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning package state validation/summary code and tests; active planning files",
+    "max changed files": "Prefer under 6 files before archive.",
+    "required validation commands": "cd packages/planning; uv run pytest tests/test_installer.py; cd packages/planning; uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace summary --format json",
+    "ask-before-refactor threshold": "Any migration of state shape or broad handoff/orchestrator redesign.",
+    "stop before touching": "agent aid lifecycle, generated CLI, full state migration"
+  },
+  "stop_conditions": {
+    "stop when": "#498 acceptance is met with role metadata and focused tests.",
+    "escalate when boundary reached": "The next change would assign work to specific runtimes or require scheduling.",
+    "escalate on scope drift": "Work starts implementing #499-#501.",
+    "escalate on proof failure": "Summary or current v1 state reports warnings."
+  },
+  "context_budget": {
+    "live working set": "#498 issue body, planning-state v1 validation, summary roadmap projection",
+    "recoverable later": "parent #496 details and later child issues",
+    "externalize before shift": "execution_run, proof_report, closure_check",
+    "pre-work config pull": "uv run agentic-workspace summary --format json; uv run agentic-workspace skills --target . --task \"implement #498 planning handoff role metadata\" --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Continue #498 from planning-handoff-role-metadata.plan.json.",
+    "context-shift triggers": "subagent map shows broader impact than summary/validation."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Add compact handoff role metadata for planning-state work.",
+    "hard constraints": "No scheduler; no vendor/runtime assumptions; optional for simple work.",
+    "agent may decide locally": "Exact compact projection fields and validation warning names.",
+    "escalate when": "Roles need to become assignments or personal preferences."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#498",
+      "label": "Add handoff role metadata",
+      "role": "source_intent",
+      "locator": "GitHub issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#496",
+      "label": "Planning-state maturity parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue"
+    }
+  ],
+  "active_milestone": {
+    "id": "role-metadata",
+    "status": "completed",
+    "scope": "planning-state role metadata validation and summary",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "subagent map"
+  },
+  "immediate_next_action": [
+    "Archive this plan and continue #499 from the planning-state-maturity lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/planning-handoff-role-metadata.plan.json"
+  ],
+  "invariants": [
+    "Simple work remains lightweight.",
+    "Roles are advisory routing metadata.",
+    "No host or agent runtime assumptions enter shared state."
+  ],
+  "contract_decisions_to_freeze": [
+    "Supported role fields: decision_owner, strategy_role, delivery_role, review_role, knowledge_owner, owner_role, handoff_ready.",
+    "Ready slices can declare handoff_ready explicitly."
+  ],
+  "open_questions_to_close": [
+    "What compact summary answer should identify the next role needed?"
+  ],
+  "validation_commands": [
+    "cd packages/planning; uv run pytest tests/test_installer.py",
+    "cd packages/planning; uv run ruff check .",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Mature lanes/slices can carry decision, delivery, review, and knowledge-transfer roles.",
+    "Ready slices can declare handoff_ready.",
+    "Summary exposes a compact next-role-needed answer.",
+    "Tests cover role projection and keep simple work lightweight."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "planning-autopilot and self-improvement-dogfooding",
+    "what happened": "Added optional planning-state role metadata validation, ready-slice handoff_ready enforcement, and role projections in active planning/handoff summaries.",
+    "scope touched": "planning state validation/projection code, focused planning tests, and active planning state.",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/planning-handoff-role-metadata.plan.json",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"planning_state_v1 or handoff_role_metadata\"; cd packages/planning; uv run pytest tests/test_installer.py; cd packages/planning; uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json",
+    "result for continuation": "#498 is complete; #499 remains the next planning-state-maturity child issue.",
+    "next step": "Archive the plan and close #498."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; no scheduling, assignment, or runtime-specific fields were added.",
+    "proof status": "satisfied",
+    "intent served": "yes; state can carry generic roles and summary/handoff expose them compactly.",
+    "config compliance": "used summary/reconcile/skills and checked-in active planning before implementation",
+    "misinterpretation risk": "medium; avoid turning metadata into scheduling",
+    "follow-on decision": "continue #499"
+  },
+  "proof_report": {
+    "validation proof": "planning package tests, ruff, planning doctor, planning-surface checker, and compact summary passed.",
+    "proof achieved now": "Role metadata validation/projection works and active state remains clean.",
+    "evidence for \"proof achieved\" state": "145 planning tests passed; ruff passed; doctor healthy; planning-surface checker clean; summary warning_count 0."
+  },
+  "intent_satisfaction": {
+    "original intent": "Add handoff role metadata for multi-agent team-style work.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "planning-state v1 validates generic role fields and handoff_ready, and summary/handoff expose role_metadata plus next_role_needed.",
+    "unsolved intent passed to": "planning-state-maturity lane (#496)"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make restart, handoff, and delegation cheaper by preserving intent and responsibilities in queryable state.",
+    "slice shaping bias": "Add optional metadata and compact projection, not a scheduler.",
+    "broader-lane validation question": "Can summary say which role should act next without requiring raw state interpretation?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#498 is satisfied while parent #496 remains open for #499-#501.",
+    "evidence carried forward": "role metadata fields and ready handoff gate are in code and tests.",
+    "reopen trigger": "ready slices cannot expose handoff readiness or next needed role"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Role metadata should route handoff, not schedule execution.",
+    "motivation worth preserving": "Specialized agents need decision/delivery/review/knowledge boundaries visible in compact state.",
+    "canonical owner now": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+    "promotion trigger": "archive closeout for #498",
+    "retention after promotion": "shrink"
+  },
+  "execution_summary": {
+    "outcome delivered": "Planning-state v1 supports generic advisory handoff role metadata and compact next-role routing.",
+    "validation confirmed": "145 planning tests, ruff, doctor, planning-surface checker, and summary passed.",
+    "follow-on routed to": "#499 in planning-state-maturity lane.",
+    "post-work posterity capture": "Keep the role metadata contract in code/tests and continue maturity summary behavior in #499.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory or docs promotion needed; the durable contract lives in validation and tests.",
+    "resume from": ".agentic-workspace/planning/state.toml planning-state-maturity lane, suggested next slice #499"
+  },
+  "improvement_signal_review": {
+    "status": "none",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No local execution detail needs durable promotion beyond proof fields.",
+          "owner": "discard",
+          "source": "execution_summary"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Planning-state maturity continues through #499-#501 after role metadata.",
+          "owner": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Close #498 after proof.",
+          "owner": "github-issue",
+          "source": "#498"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #498 from planning-state-maturity roadmap lane into an active execplan."
+  ]
+}
