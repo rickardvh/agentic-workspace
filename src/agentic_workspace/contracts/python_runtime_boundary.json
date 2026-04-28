@@ -56,6 +56,26 @@
       "remaining_extractable_content": []
     },
     {
+      "id": "report-router-rendering",
+      "classification": "operation-contract-covered",
+      "owner_modules": [
+        "agentic_workspace.reporting_support",
+        "agentic_workspace.cli"
+      ],
+      "runtime_surfaces": [
+        "report --profile router",
+        "report --section",
+        "report section hints"
+      ],
+      "why_python_owned": "The report router is derived rendering over live report payloads and contract-backed sections; cli.py owns command wiring while reporting_support owns compact router shaping.",
+      "contract_surfaces": [
+        "src/agentic_workspace/contracts/report_contract.json",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        "src/agentic_workspace/contracts/operations/report.combined.json"
+      ],
+      "remaining_extractable_content": []
+    },
+    {
       "id": "runtime-preflight-token-validation",
       "classification": "procedural-owned",
       "owner_modules": [
@@ -206,8 +226,8 @@
         "id": "report-status-doctor-assembly",
         "responsibility_class": "derived-renderers",
         "status": "legitimate-runtime-ownership",
-        "evidence": "report/status/doctor combine live module detection, resolved config, installed-surface checks, and planning summaries.",
-        "next_review": "Add schema or report-contract coverage when a report section becomes stable cross-adapter authority."
+        "evidence": "report/status/doctor combine live module detection, resolved config, installed-surface checks, and planning summaries; report-router shaping lives in agentic_workspace.reporting_support.",
+        "next_review": "Keep stable report sections covered by report contracts and keep cli.py limited to command wiring plus live payload assembly."
       },
       {
         "id": "parser-and-dispatch",

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+from agentic_workspace.config import WorkspaceUsageError
 
 REPO_FRICTION_LARGE_FILE_THRESHOLD = 400
 REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD = 200
@@ -60,6 +63,424 @@ def output_contract_payload(
         "rendered_view_style": bias_payload["rendered_view_style"],
         "must_not_change": list(bias_payload["does_not_affect"]),
     }
+
+
+def report_profile_payload(*, context_router: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "default_profile": "router",
+        "full_profile": "full",
+        "context_router": context_router,
+        "section_selector": "--section <top-level-field>",
+        "default_command": "agentic-workspace report --target ./repo --format json",
+        "full_profile_command": "agentic-workspace report --target ./repo --profile full --format json",
+        "section_command": "agentic-workspace report --target ./repo --section <section> --format json",
+        "rule": (
+            "Default report output should route to decision-grade current state before exposing high-volume "
+            "module detail. Use --profile full or --section when deeper data is needed."
+        ),
+        "high_volume_sections": [
+            {
+                "section": "module_reports",
+                "reason": "deep module state can be large; inspect only after the router points there",
+            },
+            {
+                "section": "reports",
+                "reason": "lifecycle report detail is useful for diagnosis but not needed for first-contact routing",
+            },
+            {
+                "section": "registry",
+                "reason": "module registry metadata is stable lookup detail rather than current-action routing",
+            },
+            {
+                "section": "config",
+                "reason": "resolved config is authoritative, but current work usually needs only routed policy highlights first",
+            },
+        ],
+        "decision_grade_fields": [
+            "health",
+            "current_work",
+            "next_action",
+            "warning_summary",
+            "section_hints",
+            "effective_authority",
+            "execution_shape",
+            "improvement_intake",
+            "external_work_reconciliation",
+            "maintenance_pressure",
+        ],
+        "router_shape_guard": {
+            "status": "active",
+            "max_top_level_fields": 20,
+            "high_volume_sections_excluded": ["module_reports", "reports", "registry", "config"],
+            "warning_sample_limit": 5,
+            "rule": "Default router output should summarize health, current work, next action, warnings, and selectors before raw high-volume detail.",
+        },
+    }
+
+
+def select_report_payload(
+    payload: dict[str, Any],
+    *,
+    profile: str,
+    section: str | None,
+    compact_answer: Callable[..., dict[str, Any]],
+    context_router: dict[str, Any],
+) -> dict[str, Any]:
+    if section:
+        if profile != "router":
+            raise WorkspaceUsageError("report selectors are mutually exclusive; use either --profile or --section.")
+        if section not in payload:
+            available = ", ".join(sorted(str(key) for key in payload.keys()))
+            raise WorkspaceUsageError(f"Unknown report section {section!r}. Available sections: {available}")
+        return compact_answer(
+            surface="report",
+            selector={"section": section},
+            answer=payload[section],
+            refs=[
+                ".agentic-workspace/docs/reporting-contract.md",
+                "agentic-workspace report --target ./repo --profile full --format json",
+            ],
+        )
+    if profile == "full":
+        return payload
+    if profile == "router":
+        return report_router_payload(payload, context_router=context_router)
+    raise WorkspaceUsageError("report --profile must be one of: router, full")
+
+
+def report_router_payload(payload: dict[str, Any], *, context_router: dict[str, Any]) -> dict[str, Any]:
+    findings = [finding for finding in payload.get("findings", []) if isinstance(finding, dict)]
+    findings_by_severity: dict[str, int] = {}
+    findings_by_module: dict[str, int] = {}
+    for finding in findings:
+        severity = str(finding.get("severity", "info"))
+        module = str(finding.get("module", "workspace") or "workspace")
+        findings_by_severity[severity] = findings_by_severity.get(severity, 0) + 1
+        findings_by_module[module] = findings_by_module.get(module, 0) + 1
+    effective_authority = payload.get("effective_authority", {})
+    current_work = {}
+    if isinstance(effective_authority, dict):
+        current_work = dict(effective_authority.get("current_work", {}) or {})
+    execution_shape = payload.get("execution_shape", {})
+    if not current_work and isinstance(execution_shape, dict):
+        task_shape = execution_shape.get("task_shape", {})
+        if isinstance(task_shape, dict):
+            current_work = {
+                "status": str(task_shape.get("id", "unknown")),
+                "summary": str(task_shape.get("summary", "")),
+                "source": "execution_shape",
+            }
+    section_hints = report_section_hints(payload)
+    profile_payload = dict(payload.get("report_profile", report_profile_payload(context_router=context_router)))
+    profile_payload["ordinary_agent_path"] = _ordinary_agent_path_payload(payload=payload, findings=findings)
+    full_feature_tier = dict(payload.get("feature_tier", {})) if isinstance(payload.get("feature_tier"), dict) else {}
+    advanced_policy = (
+        dict(full_feature_tier.get("advanced_policy", {})) if isinstance(full_feature_tier.get("advanced_policy"), dict) else {}
+    )
+    advanced_policy.pop("available_features", None)
+    profile_payload["feature_tier"] = {key: value for key, value in full_feature_tier.items() if key not in {"available_tiers"}}
+    if advanced_policy:
+        profile_payload["feature_tier"]["advanced_policy"] = advanced_policy
+    decision_grade_fields = list(profile_payload.get("decision_grade_fields", []))
+    if "report_profile.ordinary_agent_path" not in decision_grade_fields:
+        decision_grade_fields.append("report_profile.ordinary_agent_path")
+    if "report_profile.feature_tier" not in decision_grade_fields:
+        decision_grade_fields.append("report_profile.feature_tier")
+    enabled_advanced_features = set(advanced_policy.get("enabled_features", []) if isinstance(advanced_policy, dict) else [])
+    maintenance_pressure_value = payload.get("maintenance_pressure", {})
+    maintenance_pressure_status = str(maintenance_pressure_value.get("status", "")) if isinstance(maintenance_pressure_value, dict) else ""
+    maintenance_pressure_relevant = maintenance_pressure_status == "attention"
+    if (
+        "maintenance_pressure" in decision_grade_fields
+        and "maintenance_pressure" not in enabled_advanced_features
+        and not maintenance_pressure_relevant
+    ):
+        decision_grade_fields.remove("maintenance_pressure")
+    profile_payload["decision_grade_fields"] = decision_grade_fields
+    router_payload = {
+        "kind": "workspace-report-router/v1",
+        "schema": {
+            "schema_version": "workspace-report-router-schema/v1",
+            "full_profile_command": "agentic-workspace report --target ./repo --profile full --format json",
+            "section_command": "agentic-workspace report --target ./repo --section <section> --format json",
+            "principle": "route first, inspect deep sections only when needed",
+        },
+        "command": "report",
+        "target": payload.get("target", ""),
+        "selected_modules": payload.get("selected_modules", []),
+        "installed_modules": payload.get("installed_modules", []),
+        "health": payload.get("health", "unknown"),
+        "output_contract": payload.get("output_contract", {}),
+        "report_profile": profile_payload,
+        "current_work": current_work,
+        "next_action": payload.get("next_action", {}),
+        "warning_summary": {
+            "total_count": len(findings),
+            "by_severity": findings_by_severity,
+            "by_module": findings_by_module,
+            "sample": findings[:5],
+            "raw_section": "findings",
+        },
+        "section_hints": section_hints,
+        "effective_authority": _report_router_effective_authority(payload.get("effective_authority", {})),
+        "execution_shape": _report_router_execution_shape(payload.get("execution_shape", {})),
+        "improvement_intake": _report_router_improvement_intake(payload.get("improvement_intake", {})),
+        "external_work_reconciliation": _report_router_external_work_reconciliation(payload.get("external_work_reconciliation", {})),
+        "surface_value_guardrail": {
+            "command": "agentic-workspace defaults --section surface_value_guardrail --format json",
+            "prefer": payload.get("surface_value_guardrail", {}).get("preference_order", []),
+            "first_contact_budget": payload.get("surface_value_guardrail", {}).get("first_contact_budget", {}),
+        },
+        "deeper_detail": {
+            "full_profile_command": "agentic-workspace report --target ./repo --profile full --format json",
+            "section_command": "agentic-workspace report --target ./repo --section <section> --format json",
+            "high_volume_sections": profile_payload.get("high_volume_sections", []),
+        },
+    }
+    router_payload["surface_value_guardrail"]["prefer"] = router_payload["surface_value_guardrail"]["prefer"][:3]
+    if "maintenance_pressure" in enabled_advanced_features or maintenance_pressure_relevant:
+        router_payload["maintenance_pressure"] = _report_router_maintenance_pressure(payload.get("maintenance_pressure", {}))
+    return router_payload
+
+
+def _support_list_payload(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _report_router_improvement_intake(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    return {
+        "kind": value.get("kind", "workspace-improvement-intake/v1"),
+        "role": value.get("role", "router-not-backlog"),
+        "command": value.get("command", "agentic-workspace report --target ./repo --section improvement_intake --format json"),
+        "audience_boundary": value.get("audience_boundary", {}),
+        "subtypes": [item.get("id", "") for item in _support_list_payload(value.get("subtypes")) if isinstance(item, dict)],
+        "allowed_destinations": value.get("allowed_destinations", []),
+        "signal_contract": value.get("signal_contract", {}),
+        "candidate_count": value.get("candidate_count", 0),
+        "candidate_sample": _support_list_payload(value.get("improvement_signal_candidates"))[:3],
+        "setup_findings": value.get("setup_findings", {}),
+        "advanced_review_route": value.get("advanced_review_route", {}),
+    }
+
+
+def _report_router_external_work_reconciliation(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    return {
+        "kind": value.get("kind", "planning-external-work-reconciliation/v1"),
+        "status": value.get("status", "unknown"),
+        "primary_owner": value.get("primary_owner", ".agentic-workspace/planning/state.toml"),
+        "provider_rule": value.get("provider_rule", ""),
+        "freshness": value.get("freshness", {}),
+        "external_work_state": value.get("external_work_state", {}),
+        "closeout_state": value.get("closeout_state", {}),
+        "landed_open_state": value.get("landed_open_state", {}),
+        "detail_sections": value.get("detail_sections", []),
+        "recommended_next_action": value.get("recommended_next_action", ""),
+        "section_command": "agentic-workspace report --target ./repo --section external_work_reconciliation --format json",
+    }
+
+
+def _report_router_maintenance_pressure(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    subcategories = [
+        {
+            "id": item.get("id", ""),
+            "status": item.get("status", "unknown"),
+            "count": item.get("count", 0),
+            "detail_section": item.get("detail_section", ""),
+            "section_command": item.get("section_command", ""),
+        }
+        for item in _support_list_payload(value.get("subcategories"))
+        if isinstance(item, dict)
+    ]
+    return {
+        "kind": value.get("kind", "workspace-maintenance-pressure/v1"),
+        "status": value.get("status", "unknown"),
+        "current_execution_separate": value.get("current_execution_separate", True),
+        "attention_category_count": value.get("attention_category_count", 0),
+        "active_category_count": value.get("active_category_count", 0),
+        "subcategories": subcategories,
+        "detail_sections": value.get("detail_sections", []),
+        "recommended_next_action": value.get("recommended_next_action", ""),
+    }
+
+
+def _report_router_effective_authority(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    return {
+        "status": value.get("status", "unknown"),
+        "current_work": value.get("current_work", {}),
+        "unresolved_gap_count": len(value.get("unresolved_gaps", []) or []),
+        "authority_concerns": [
+            entry.get("concern") for entry in value.get("authority_map", []) if isinstance(entry, dict) and entry.get("concern")
+        ],
+    }
+
+
+def _report_router_execution_shape(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    recommendation = value.get("recommendation", {})
+    task_shape = value.get("task_shape", {})
+    return {
+        "status": value.get("status", "unknown"),
+        "task_shape": task_shape if isinstance(task_shape, dict) else {},
+        "task_shape_recommender": value.get("task_shape_recommender", {}),
+        "narrow_work_fast_path": value.get("narrow_work_fast_path", {}),
+        "recommendation": recommendation if isinstance(recommendation, dict) else {},
+        "deviation_rule": value.get("deviation_rule", ""),
+    }
+
+
+def _ordinary_agent_path_payload(*, payload: dict[str, Any], findings: list[dict[str, Any]]) -> dict[str, Any]:
+    effective_authority = payload.get("effective_authority", {})
+    current_work = effective_authority.get("current_work", {}) if isinstance(effective_authority, dict) else {}
+    if not isinstance(current_work, dict):
+        current_work = {}
+    current_status = str(current_work.get("status", "unknown") or "unknown")
+    warning_count = len(findings)
+    ordinary_path = {
+        "status": "ready",
+        "entry_command": "agentic-workspace start --target ./repo --format json",
+        "state_command": "agentic-workspace report --target ./repo --format json",
+        "current_work_command": "agentic-workspace summary --format json",
+        "proof_command": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+        "deep_detail_rule": "Open section, memory, planning, or review artifacts only when compact output points there.",
+        "current_signal": {
+            "current_work_status": current_status,
+            "warning_count": warning_count,
+        },
+        "stop_or_escalate_when": [
+            "compact report health is not healthy",
+            "summary reports active broad work without a checked-in plan you can continue from",
+            "proof selection is ambiguous for the changed paths",
+            "the next change would alter product direction, authority boundaries, or system intent",
+        ],
+    }
+    ordinary_path["off_happy_path_recovery"] = _off_happy_path_recovery_payload()
+    return ordinary_path
+
+
+def _off_happy_path_recovery_payload() -> dict[str, Any]:
+    return {
+        "kind": "workspace-off-happy-path-recovery/v1",
+        "status": "available",
+        "rule": "When an agent starts from the wrong package surface, recover through compact commands before reading deep artifacts or hand-authoring durable state.",
+        "scenarios": [
+            {
+                "id": "opened-report-before-start",
+                "misuse": "agent starts from report detail before compact startup",
+                "recovery_signal": "report_profile.ordinary_agent_path.entry_command",
+                "recover_by": "agentic-workspace start --target ./repo --format json",
+            },
+            {
+                "id": "opened-deep-review-artifact",
+                "misuse": "agent opens review or module detail before compact routing points there",
+                "recovery_signal": "report_profile.ordinary_agent_path.deep_detail_rule",
+                "recover_by": "agentic-workspace report --target ./repo --format json, then only the named --section when needed",
+            },
+            {
+                "id": "invalid-near-miss-command",
+                "misuse": "agent runs an invalid or near-miss workspace command",
+                "recovery_signal": "parser suggestion plus startup/preflight fallback hint",
+                "recover_by": "agentic-workspace preflight --format json",
+            },
+            {
+                "id": "direct-generated-adapter-edit",
+                "misuse": "agent changes a generated adapter or executable CLI surface directly",
+                "recovery_signal": "proof selector generated-command or direct-cli-edit review",
+                "recover_by": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+            },
+            {
+                "id": "hand-authored-durable-artifact",
+                "misuse": "agent hand-authors a durable docs/planning/memory artifact without a compact proof route",
+                "recovery_signal": "proof selector surface_value_review",
+                "recover_by": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+            },
+        ],
+    }
+
+
+def report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    section_purposes = {
+        "effective_authority": "authority, current work, system-intent pressure, idle context, and unresolved gaps",
+        "execution_shape": "default execution posture and planning-backed work guidance",
+        "maintenance_pressure": "one compact router for audit, retention, footprint, external-evidence, and closeout residue",
+        "operational_compression": "falsifiable advisory measures for whether surfaces reduce total operational cost",
+        "findings": "raw warnings and attention signals grouped in router warning_summary",
+        "module_reports": "deep planning and memory module reports",
+        "reports": "workspace lifecycle report detail",
+        "surface_value_guardrail": "surface growth review pressure",
+        "closeout_trust": "closeout trust and lower-trust residue signals",
+        "external_work_reconciliation": "one provider-agnostic external-work route for evidence freshness, closeout reconciliation, and landed-open checks",
+        "external_work_delta": "provider-agnostic external-work snapshot or delta from prior evidence when available",
+        "discovery": "setup discovery and candidate surfaces",
+        "standing_intent": "effective standing intent and stronger-home guidance",
+        "improvement_intake": "unified routing for setup findings, review findings, validation friction, and memory improvement signals",
+        "repo_friction": "repo-friction and improvement pressure evidence",
+        "config": "resolved workspace config and local posture",
+        "registry": "module registry and lifecycle metadata",
+    }
+    findings = [finding for finding in payload.get("findings", []) if isinstance(finding, dict)]
+    current_work = (
+        payload.get("effective_authority", {}).get("current_work", {}) if isinstance(payload.get("effective_authority"), dict) else {}
+    )
+    current_status = str(current_work.get("status", "unknown") if isinstance(current_work, dict) else "unknown")
+    why_now = {
+        "effective_authority": ("inspect now if authority, idle state, or unresolved intent pressure affects whether work can proceed"),
+        "execution_shape": "inspect now to choose direct work, light planning, or checked-in execplan promotion",
+        "maintenance_pressure": "inspect now only when residue, retention, or closeout pressure affects the active lane",
+        "operational_compression": "inspect now when assessing whether package surfaces are reducing total work",
+        "findings": "inspect now because warnings are present" if findings else "skip unless diagnosing an absent-warning state",
+        "module_reports": "deep detail; inspect only when a compact router field points to planning or memory internals",
+        "reports": "deep lifecycle detail; inspect only for report/debug work",
+        "surface_value_guardrail": "inspect before adding or expanding a visible surface",
+        "closeout_trust": "inspect before closing broad work or auditing package-use evidence",
+        "external_work_reconciliation": "inspect when deciding whether checked-in planning, external work state, and landed evidence agree",
+        "external_work_delta": "inspect when external-work intake or closure state is part of the task",
+        "discovery": "inspect during setup, bootstrap, or missing-surface diagnosis",
+        "standing_intent": "inspect when product direction or stronger-home placement is the question",
+        "improvement_intake": "inspect when a product or workflow improvement signal needs routing, dismissal, or durable ownership",
+        "repo_friction": "inspect when choosing or routing improvement targets",
+        "config": "deep detail; inspect only when resolved config, posture, or obligations matter",
+        "registry": "deep detail; inspect only when module metadata or lifecycle registration matters",
+    }
+    if current_status in {"absent", "direct-or-no-active-plan"}:
+        why_now["effective_authority"] = "inspect now only if idle state, authority, or system-intent pressure is unclear"
+    feature_tier = payload.get("feature_tier", {})
+    advanced_policy = feature_tier.get("advanced_policy", {}) if isinstance(feature_tier, dict) else {}
+    enabled_advanced_features = set(advanced_policy.get("enabled_features", []) if isinstance(advanced_policy, dict) else [])
+    advanced_sections = {
+        "maintenance_pressure": "maintenance_pressure",
+        "operational_compression": "maintenance_pressure",
+        "closeout_trust": "review_artifacts",
+        "external_work_delta": "external_adapters",
+    }
+    maintenance_pressure_value = payload.get("maintenance_pressure", {})
+    maintenance_pressure_status = str(maintenance_pressure_value.get("status", "")) if isinstance(maintenance_pressure_value, dict) else ""
+    hints: list[dict[str, Any]] = []
+    for section, purpose in section_purposes.items():
+        if section in payload:
+            advanced_feature = advanced_sections.get(section)
+            relevant_advanced_section = section == "maintenance_pressure" and maintenance_pressure_status == "attention"
+            if advanced_feature and advanced_feature not in enabled_advanced_features and not relevant_advanced_section:
+                continue
+            hints.append(
+                {
+                    "section": section,
+                    "purpose": purpose,
+                    "why_now": why_now.get(section, "inspect when this section is named by compact routing output"),
+                    "command": f"agentic-workspace report --target ./repo --section {section} --format json",
+                    "volume": "high" if section in {"module_reports", "reports", "registry", "config"} else "normal",
+                    **({"advanced_feature": advanced_feature} if advanced_feature else {}),
+                }
+            )
+    return hints
 
 
 def standing_intent_payload(

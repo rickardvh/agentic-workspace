@@ -1,0 +1,256 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Root CLI Responsibility Split",
+  "goal": [
+    "Implement #488 by documenting root cli.py responsibility buckets and extracting one low-risk non-core cluster without changing public CLI behavior."
+  ],
+  "non_goals": [
+    "Do not rewrite the CLI from scratch.",
+    "Do not add public commands.",
+    "Do not move lifecycle mutation or live repo inspection into declarative contracts.",
+    "Do not start generated Python/TypeScript CLI package work in this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "cli.py becomes easier to reason about because responsibility buckets are explicit and at least one renderer/helper cluster no longer lives in the main procedural file.",
+      "constraints": "Stay on current branch; preserve command behavior; keep mutation and live inspection runtime-owned.",
+      "latitude": "Choose the smallest useful helper extraction and contract map update.",
+      "escalation": "Stop if the extraction would require broad parser or lifecycle rewrites."
+    },
+    "execution": {
+      "milestone": "root-cli-responsibility-split",
+      "status": "completed",
+      "next_step": "Archive this plan, commit, close #488, refresh external evidence, then continue #485 with the next routed child.",
+      "proof": "Run focused report/defaults tests, full workspace CLI tests, ruff, contract checks, proof selector, and planning closeout."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/reporting_support.py",
+        "src/agentic_workspace/contracts/python_runtime_boundary.json",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/root-cli-responsibility-split.plan.json"
+      ],
+      "invariants": [
+        "No public CLI behavior changes.",
+        "Report/defaults output remains contract-compatible.",
+        "Lifecycle mutation and live inspection stay procedural-owned."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Keep the root orchestrator thin, boring, generic, and strictly bounded.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression",
+    "parent lane": "#485"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "follow-on detail": "#490 and #510-#514 remain after #488.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #488 closes, reingest and promote the next module-boundary-compression child."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Future module-profile and adapter-boundary work can rely on a clearer root CLI responsibility map.",
+    "intentionally deferred": "Deep parser generation, lifecycle primitive extraction, and generic module manifest implementation.",
+    "discovered implications": "",
+    "proof achieved now": "report-router rendering helpers moved out of cli.py and python_runtime_boundary records the split.",
+    "validation still needed": "Archive plan and commit after closeout checks.",
+    "next likely slice": "#490 or #510 depending on refreshed issue priority."
+  },
+  "intent_interpretation": {
+    "literal request": "Split root cli.py responsibilities into runtime primitives, renderers, and orchestration glue.",
+    "inferred intended outcome": "Make root CLI growth harder to hide in one procedural file while preserving a small, stable command surface.",
+    "chosen concrete what": "Move report-router rendering helpers to reporting_support.py and record responsibility buckets in python_runtime_boundary.json.",
+    "interpretation distance": "low",
+    "review guidance": "Review whether the extracted support module is still generic and whether the CLI wrappers are only glue."
+  },
+  "execution_bounds": {
+    "allowed paths": "cli.py, reporting_support.py, python_runtime_boundary.json, focused tests, planning surfaces.",
+    "max changed files": "Prefer 5-7 files.",
+    "required validation commands": "focused report/defaults tests, full workspace CLI tests, ruff, contract tooling, proof selector, planning checks.",
+    "ask-before-refactor threshold": "Stop before broad parser, lifecycle, config-loader, or package topology changes.",
+    "stop before touching": "pyproject dependencies, generated packages, lifecycle mutation semantics, public command definitions."
+  },
+  "stop_conditions": {
+    "stop when": "One non-core cluster is extracted, responsibility mapping is updated, and existing behavior is proven.",
+    "escalate when boundary reached": "The smallest useful extraction needs a larger architecture change.",
+    "escalate on scope drift": "The work becomes generated CLI package implementation or command-interface redesign.",
+    "escalate on proof failure": "Report/defaults behavior changes unexpectedly."
+  },
+  "context_budget": {
+    "live working set": "cli.py report-router helpers, reporting_support.py, python_runtime_boundary.json, tests/test_workspace_cli.py, issue #488.",
+    "recoverable later": "Full cli.py decomposition and generated CLI package roadmap.",
+    "externalize before shift": "Record any larger extraction target as a follow-up issue if discovered.",
+    "pre-work config pull": "uv run agentic-workspace summary --target . --format json",
+    "pre-work memory pull": "Not needed unless compact output points to Memory.",
+    "tiny resumability note": "Bounded helper extraction only; preserve CLI behavior.",
+    "context-shift triggers": "Parser generation, lifecycle behavior, or broad report contract redesign."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make root CLI responsibilities explicit and extract a low-risk non-core cluster.",
+    "hard constraints": "Preserve behavior and keep runtime-owned behavior in Python.",
+    "agent may decide locally": "Exact support-module API and responsibility-map wording.",
+    "escalate when": "Extraction no longer stays low-risk."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#488",
+      "label": "root cli responsibility split",
+      "role": "source_intent",
+      "locator": "GitHub issue #488"
+    },
+    {
+      "kind": "issue",
+      "target": "#485",
+      "label": "module boundary compression",
+      "role": "parent_intent",
+      "locator": "GitHub issue #485"
+    }
+  ],
+  "active_milestone": {
+    "id": "root-cli-responsibility-split",
+    "status": "completed",
+    "scope": "Extract report-router helpers and update root CLI responsibility metadata.",
+    "ready": "#488 is the selected next child for #485.",
+    "blocked": "None.",
+    "optional_deps": "None."
+  },
+  "immediate_next_action": [
+    "Move report-router helper logic out of cli.py while keeping thin wrappers or direct imports for compatibility."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/reporting_support.py",
+    "src/agentic_workspace/contracts/python_runtime_boundary.json",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/root-cli-responsibility-split.plan.json"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"report\"",
+    "uv run pytest tests/test_contract_tooling.py -q -k \"python_runtime_boundary or generated_command_adapter_module\"",
+    "uv run ruff check src/agentic_workspace/cli.py src/agentic_workspace/reporting_support.py tests/test_contract_tooling.py",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py src/agentic_workspace/reporting_support.py src/agentic_workspace/contracts/python_runtime_boundary.json tests/test_contract_tooling.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/root-cli-responsibility-split.plan.json --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace report --target . --format json"
+  ],
+  "completion_criteria": [
+    "cli.py has a documented responsibility map or points to one.",
+    "At least one clearly non-core helper cluster is extracted or marked for extraction.",
+    "CLI behavior is preserved by focused and full tests.",
+    "Future additions have a clearer owner than adding more code to cli.py."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "Issue #488 and checked-in roadmap.",
+    "what happened": "Moved report-router profile selection, section hints, ordinary-agent path, and compact router shaping from cli.py into reporting_support.py; left cli.py as thin command wiring; updated python_runtime_boundary and tests.",
+    "scope touched": "Root CLI helper extraction, runtime-boundary contract metadata, contract-tooling tests, planning closeout.",
+    "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/reporting_support.py; src/agentic_workspace/contracts/python_runtime_boundary.json; tests/test_contract_tooling.py.",
+    "validations run": "focused report tests, focused runtime-boundary tests, contract tooling, combined workspace CLI/contract tests, ruff, proof selector, root CLI authority query, planning doctor, report smoke.",
+    "result for continuation": "#488 is satisfied; #490 and #510-#514 remain routed under #485.",
+    "next step": "Archive this plan, commit, close #488, refresh external evidence, then continue the module-boundary-compression lane."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no parser, lifecycle mutation, package topology, or public command behavior changed.",
+    "proof status": "passed selected proof lanes and focused/full local validation.",
+    "intent served": "yes; cli.py now delegates report-router rendering and the responsibility map names the owner boundary.",
+    "config compliance": "used compact package summary/report/proof/doctor/defaults workflow and checked-in plan closeout.",
+    "misinterpretation risk": "low; this was a bounded extraction, not a claim that cli.py decomposition is complete.",
+    "follow-on decision": "archive this slice but keep #485 open through #490 and #510-#514."
+  },
+  "proof_report": {
+    "validation proof": "Local checks pass for report behavior, runtime-boundary contract tooling, full workspace CLI tests, ruff, proof selection, and planning doctor.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "report-router tests still pass; python_runtime_boundary declares report-router-rendering owner_modules as reporting_support plus cli; root_cli_authority output names the split."
+  },
+  "intent_satisfaction": {
+    "original intent": "#488",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "cli.py has a responsibility-map owner in python_runtime_boundary and one non-core renderer cluster is extracted into reporting_support.py with test coverage.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane module-boundary-compression"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Root orchestrator should stay thin, generic, and bounded; implementation work should not keep expanding cli.py.",
+    "slice shaping bias": "Prefer one small extraction plus responsibility metadata over a large rewrite.",
+    "broader-lane validation question": "Does this make #490 generic module profiles easier to add without growing cli.py?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane module-boundary-compression activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Report-router rendering extracted from cli.py and responsibility map updated.",
+    "validation confirmed": "Focused and combined CLI/contract tests, ruff, contract tooling, proof selector, root authority query, planning checks, and report smoke passed.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml lane module-boundary-compression.",
+    "post-work posterity capture": "Archived execplan plus python_runtime_boundary contract metadata.",
+    "knowledge promoted (Memory/Docs/Config)": "Durable owner mapping lives in python_runtime_boundary.json; no Memory update needed.",
+    "resume from": "Reingest open issues and choose the next #485 child after closing #488."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "report --section repo_friction still flags cli.py as a large-file hotspot; this slice reduces that hotspot by extracting report-router helpers."
+    ],
+    "signals fixed": [
+      "one report-router helper cluster no longer lives in cli.py"
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "#485 remaining children"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#490 and #510-#514 remain under #485.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": ""
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Durable owner mapping lives in python_runtime_boundary.json; no Memory update needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Continue root module boundary compression.",
+          "owner": "#485",
+          "source": ""
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Initial plan created from #488."
+  ]
+}

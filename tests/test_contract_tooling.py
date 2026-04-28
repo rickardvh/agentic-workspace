@@ -481,6 +481,12 @@ def test_python_runtime_boundary_declares_root_cli_authority_audit() -> None:
     classes = {item["id"]: item for item in audit["responsibility_classes"]}
     assert classes["runtime-primitives"]["authority_class"] == "allowed-root-runtime"
     assert classes["remaining-interface-authority"]["authority_class"] == "remaining-interface-authority"
+    boundaries = {item["id"]: item for item in manifest["boundaries"]}
+    assert boundaries["report-router-rendering"]["owner_modules"] == [
+        "agentic_workspace.reporting_support",
+        "agentic_workspace.cli",
+    ]
+    assert boundaries["report-router-rendering"]["classification"] == "operation-contract-covered"
     statuses = {item["status"] for item in audit["current_audit"]}
     assert "legitimate-runtime-ownership" in statuses
     assert "extract-or-guard-candidate" in statuses
