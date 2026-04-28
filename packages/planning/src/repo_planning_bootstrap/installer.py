@@ -26,6 +26,10 @@ PLANNING_STATE_PATH = PLANNING_MANAGED_ROOT / "state.toml"
 PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "external-intent-evidence.json"
 PLANNING_FINISHED_WORK_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "finished-work-evidence.json"
 PLANNING_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
+PLANNING_STATE_KIND = "agentic-planning-state"
+PLANNING_STATE_SCHEMA_VERSION = "planning-state/v1"
+PLANNING_STATE_MATURITIES = {"idea", "candidate", "shaped", "ready", "active", "closed"}
+PLANNING_STATE_STATUSES = {"deferred", "next", "active", "blocked", "done", "dismissed"}
 
 REQUIRED_PAYLOAD_FILES = (
     Path("AGENTS.template.md"),
@@ -1392,7 +1396,9 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
             archived_json = sum(1 for path in archive_dir.glob("*.plan.json") if path.is_file())
             archived_execplans = max(archived_md, archived_json)
 
+    state = _read_state_from_toml(target_root)
     warnings = _run_planning_checker(target_root)
+    warnings.extend(_planning_state_v1_warnings(target_root=target_root, state=state))
     warnings.extend(_completed_execplan_warnings(completed_execplans))
     drift = _detect_payload_drift(target_root)
     warnings.extend(drift)
@@ -2843,6 +2849,90 @@ def _completed_execplan_warnings(completed_execplans: list[dict[str, Any]]) -> l
             }
         )
     return warnings
+
+
+def _planning_state_v1_warnings(*, target_root: Path, state: dict[str, Any] | None) -> list[dict[str, str]]:
+    del target_root
+    if not isinstance(state, dict):
+        return []
+    if state.get("schema_version") != PLANNING_STATE_SCHEMA_VERSION:
+        return []
+    warnings: list[dict[str, str]] = []
+    if state.get("kind") != PLANNING_STATE_KIND:
+        warnings.append(_planning_state_v1_warning("kind", 'planning-state/v1 requires kind = "agentic-planning-state".'))
+
+    for bucket_path, item in _planning_state_v1_items(state):
+        item_id = str(item.get("id", "")).strip() or "<missing-id>"
+        maturity = str(item.get("maturity", "")).strip()
+        status = str(item.get("status", "")).strip()
+        if maturity not in PLANNING_STATE_MATURITIES:
+            warnings.append(
+                _planning_state_v1_warning(
+                    bucket_path,
+                    f"planning-state/v1 item {item_id} must use one maturity from {sorted(PLANNING_STATE_MATURITIES)}.",
+                )
+            )
+            continue
+        if status and status not in PLANNING_STATE_STATUSES:
+            warnings.append(
+                _planning_state_v1_warning(
+                    bucket_path,
+                    f"planning-state/v1 item {item_id} status must be empty or one of {sorted(PLANNING_STATE_STATUSES)}.",
+                )
+            )
+        warnings.extend(_planning_state_v1_item_warnings(bucket_path=bucket_path, item_id=item_id, item=item, maturity=maturity))
+    return warnings
+
+
+def _planning_state_v1_items(state: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
+    items: list[tuple[str, dict[str, Any]]] = []
+    todo = state.get("todo")
+    if isinstance(todo, dict):
+        for bucket in ("active_items", "queued_items"):
+            raw_items = todo.get(bucket, [])
+            if isinstance(raw_items, list):
+                items.extend((f"todo.{bucket}", item) for item in raw_items if isinstance(item, dict))
+    roadmap = state.get("roadmap")
+    if isinstance(roadmap, dict):
+        for bucket in ("lanes", "candidates"):
+            raw_items = roadmap.get(bucket, [])
+            if isinstance(raw_items, list):
+                items.extend((f"roadmap.{bucket}", item) for item in raw_items if isinstance(item, dict))
+    raw_work_items = state.get("work_items", [])
+    if isinstance(raw_work_items, list):
+        items.extend(("work_items", item) for item in raw_work_items if isinstance(item, dict))
+    return items
+
+
+def _planning_state_v1_item_warnings(*, bucket_path: str, item_id: str, item: dict[str, Any], maturity: str) -> list[dict[str, str]]:
+    warnings: list[dict[str, str]] = []
+    if maturity == "ready":
+        for field in ("next_action", "done_when", "proof", "review_role"):
+            if not item.get(field):
+                warnings.append(_planning_state_v1_warning(bucket_path, f"ready item {item_id} requires {field}."))
+        if not (item.get("refs") or item.get("owner_role") or item.get("owner")):
+            warnings.append(_planning_state_v1_warning(bucket_path, f"ready item {item_id} requires refs, owner_role, or owner."))
+    if maturity == "active":
+        surface = str(item.get("execplan") or item.get("surface") or "").strip()
+        if not surface or not _surface_execplan_reference(surface):
+            warnings.append(_planning_state_v1_warning(bucket_path, f"active item {item_id} requires an execplan or execplan surface."))
+    if maturity == "closed":
+        residue = str(item.get("durable_residue") or item.get("residue") or item.get("closure") or "").strip()
+        if str(item.get("status", "")).strip() not in {"done", "dismissed"}:
+            warnings.append(_planning_state_v1_warning(bucket_path, f"closed item {item_id} requires status done or dismissed."))
+        if not residue:
+            warnings.append(
+                _planning_state_v1_warning(bucket_path, f"closed item {item_id} requires durable_residue, residue, or closure routing.")
+            )
+    return warnings
+
+
+def _planning_state_v1_warning(path: str, message: str) -> dict[str, str]:
+    return {
+        "warning_class": "planning_state_v1_schema",
+        "path": f"{PLANNING_STATE_PATH.as_posix()}#{path}",
+        "message": message,
+    }
 
 
 def _planning_handoff_schema() -> dict[str, Any]:
@@ -7997,6 +8087,11 @@ def _merge_todo_state_from_toml_lines(state: dict[str, Any], lines: list[str]) -
 
 def _state_to_toml_lines(state: dict[str, Any]) -> list[str]:
     lines = []
+    for key in ("kind", "schema_version"):
+        if key in state:
+            lines.append(f"{key} = {json.dumps(state[key])}")
+    if lines:
+        lines.append("")
     if "todo" in state:
         lines.append("[todo]")
         for key in ["active_items", "queued_items"]:
@@ -8036,6 +8131,8 @@ def _ensure_state_toml_exists(target_root: Path, *, overwrite: bool = False) -> 
         return
 
     state = {
+        "kind": PLANNING_STATE_KIND,
+        "schema_version": PLANNING_STATE_SCHEMA_VERSION,
         "todo": {
             "active_items": [],
             "queued_items": [],

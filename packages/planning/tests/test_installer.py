@@ -1445,9 +1445,12 @@ def test_promote_todo_item_to_execplan_supports_compact_toml_active_items(tmp_pa
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
         """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
 [todo]
 active_items = [
-  { id = "compact-item", status = "in-progress", surface = "direct", why_now = "this thread needs the package command to dogfood compact state.", next_action = "promote the compact item.", done_when = "the command creates a plan." },
+  { id = "compact-item", maturity = "active", status = "active", surface = "direct", why_now = "this thread needs the package command to dogfood compact state.", next_action = "promote the compact item.", done_when = "the command creates a plan." },
 ]
 queued_items = []
 
@@ -1466,10 +1469,85 @@ candidates = []
     assert record["kind"] == "planning-execplan/v1"
     assert record["active_milestone"]["id"] == "compact-item"
     assert record["delegated_judgment"]["requested outcome"] == "this thread needs the package command to dogfood compact state."
+    assert 'kind = "agentic-planning-state"' in state_text
+    assert 'schema_version = "planning-state/v1"' in state_text
     assert 'surface = ".agentic-workspace/planning/execplans/compact-item.plan.json"' in state_text
     assert "next_action" not in state_text
     assert "done_when" not in state_text
     assert any(action.kind == "created" and action.path == record_path for action in result.actions)
+
+
+def test_planning_summary_validates_planning_state_v1_maturity_contract(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json", why_now = "prove active maturity points to an execplan." },
+]
+queued_items = [
+  { id = "ready-slice", maturity = "ready", status = "next", refs = ["#497"], owner_role = "implementation", review_role = "validation", next_action = "implement schema validation.", done_when = "tests prove required fields.", proof = ["uv run pytest packages/planning/tests/test_installer.py -q"] },
+]
+
+[roadmap]
+lanes = [
+  { id = "maturity-lane", maturity = "shaped", status = "deferred", title = "Maturity lane", issues = ["#496"], outcome = "explicit maturity", reason = "avoid bucket inference", promotion_signal = "select a ready slice" },
+]
+candidates = []
+""",
+    )
+    _write_execplan_record(
+        tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json",
+        item_id="active-plan",
+        status="in-progress",
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    assert summary["planning_surface_health"]["status"] == "clean"
+    assert summary["warning_count"] == 0
+
+
+def test_planning_summary_warns_for_invalid_planning_state_v1_maturity_contract(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-without-plan", maturity = "active", status = "active", surface = "direct" },
+]
+queued_items = [
+  { id = "ready-missing-proof", maturity = "ready", status = "next", next_action = "do work.", done_when = "done." },
+]
+
+[roadmap]
+lanes = [
+  { id = "bad-maturity", maturity = "someday", status = "later", title = "Bad maturity" },
+]
+candidates = [
+  { id = "closed-without-residue", maturity = "closed", status = "done" },
+]
+""",
+    )
+
+    summary = planning_summary(target=tmp_path)
+    messages = [warning["message"] for warning in summary["planning_surface_health"]["warnings"]]
+
+    assert summary["planning_surface_health"]["status"] == "not-clean"
+    assert any("active item active-without-plan requires an execplan" in message for message in messages)
+    assert any("ready item ready-missing-proof requires proof" in message for message in messages)
+    assert any("ready item ready-missing-proof requires review_role" in message for message in messages)
+    assert any("ready item ready-missing-proof requires refs, owner_role, or owner" in message for message in messages)
+    assert any("bad-maturity must use one maturity" in message for message in messages)
+    assert any("closed item closed-without-residue requires durable_residue" in message for message in messages)
 
 
 def test_promote_todo_item_to_execplan_accepts_bom_prefixed_compact_toml(tmp_path: Path) -> None:

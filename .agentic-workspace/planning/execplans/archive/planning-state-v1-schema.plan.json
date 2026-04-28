@@ -1,0 +1,251 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning State V1 Schema",
+  "goal": [
+    "Define a compact planning-state/v1 contract that makes work maturity explicit without migrating the current state file in this slice."
+  ],
+  "non_goals": [
+    "Do not migrate .agentic-workspace/planning/state.toml to the new shape in this slice.",
+    "Do not implement all maturity-aware summary behavior in this slice.",
+    "Do not build a full project-management schema."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Planning state has a schema-backed maturity vocabulary and validation coverage for ready and active items.",
+      "constraints": "Keep the contract repo-, tracker-, agent-, and language-agnostic; preserve current state compatibility until #500.",
+      "latitude": "Choose JSON Schema or typed validation as the smallest durable contract, and add docs only when they reduce future guesswork.",
+      "escalation": "Stop before rewriting summary/reconcile around the new shape or migrating current state."
+    },
+    "execution": {
+      "milestone": "Define planning-state/v1 and validate representative maturity states.",
+      "status": "completed",
+      "next_step": "Archive this slice and continue the planning-state-maturity lane through #498-#501 when selected.",
+      "proof": "planning package tests, ruff, planning doctor, planning summary, and planning-surface checks"
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "packages/planning/bootstrap/.agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/planning-state-v1-schema.plan.json"
+      ],
+      "invariants": [
+        "Current state.toml remains readable.",
+        "New maturity states do not become a second active-planning authority until migration is selected.",
+        "Ready slices require enough handoff detail to prevent trial-and-error implementation."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Planning state should model broad direction, lanes, ready slices, active execplans, review, closeout, and durable residue explicitly for multi-agent handoff.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+    "parent lane": "planning-state-maturity (#496)"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+    "activation trigger": "After #497 lands, continue with #498/#499/#500/#501 as selected by summary/reconcile."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A schema vocabulary for maturity-based planning state.",
+    "intentionally deferred": "State migration, summary rewrite, role metadata, and closeout transition helpers.",
+    "discovered implications": "Roadmap promotion still needs a package helper; #526/#528 already own that correct-by-design gap.",
+    "proof achieved now": "planning-state/v1 metadata, allowed maturity values, and ready/active/closed validation are implemented for opted-in state files.",
+    "validation still needed": "Future slices must validate role metadata, maturity-aware summary output, migration, and closeout transitions.",
+    "next likely slice": "#498 or #499 depending on whether role metadata or summary query behavior blocks migration."
+  },
+  "intent_interpretation": {
+    "literal request": "Repeat until done; roadmap selected #497 as the next planning-state-maturity slice.",
+    "inferred intended outcome": "Make planning state less vague by defining explicit maturity semantics before migration.",
+    "chosen concrete what": "Define planning-state/v1 schema/validator coverage without migrating current state.",
+    "interpretation distance": "low",
+    "review guidance": "Check that this slice defines semantics and validation, not just prose."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning package contract/schema/parser/tests, planning bootstrap state template if needed, active planning files",
+    "max changed files": "Prefer under 8 files before archive.",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning; uv run ruff check .; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json",
+    "ask-before-refactor threshold": "Any migration of current state shape or broad summary/reconcile rewrite.",
+    "stop before touching": "generated CLI migration, agent aid lifecycle, full structured-file inventory"
+  },
+  "stop_conditions": {
+    "stop when": "planning-state/v1 semantics and representative validation are landed and #497 can be closed honestly.",
+    "escalate when boundary reached": "The next needed change is migration or multi-command authoring scaffolds rather than schema definition.",
+    "escalate on scope drift": "Work starts implementing #498-#501 in the same slice.",
+    "escalate on proof failure": "Existing state compatibility breaks or summary cannot read current state."
+  },
+  "context_budget": {
+    "live working set": "issue #497, current state parser/writer, planning tests, this execplan",
+    "recoverable later": "full roadmap lane #496, historical archived plans, unrelated open issues",
+    "externalize before shift": "Update execution_run, proof_report, intent_satisfaction, closure_check, and closeout_distillation.",
+    "pre-work config pull": "uv run agentic-workspace summary --format json; uv run agentic-workspace skills --target . --task \"planning-state v1 schema\" --format json",
+    "pre-work memory pull": "not needed unless parser context proves unclear",
+    "tiny resumability note": "Continue #497 from planning-state-v1-schema.plan.json and focused planning package tests.",
+    "context-shift triggers": "subagent findings contradict this scope, tests reveal migration is inseparable, or contract tooling already owns this schema."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make planning state explicit about maturity states.",
+    "hard constraints": "Do not migrate current state yet; keep host/provider/language assumptions out of the schema.",
+    "agent may decide locally": "Exact schema file location and whether validation is JSON Schema, typed validator, or both.",
+    "escalate when": "Schema choices force broad state migration or compatibility policy decisions."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#497",
+      "label": "Define planning-state v1 schema with explicit maturity states",
+      "role": "source_intent",
+      "locator": "GitHub issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#496",
+      "label": "Planning state maturity parent lane",
+      "role": "parent_intent",
+      "locator": "GitHub issue"
+    }
+  ],
+  "active_milestone": {
+    "id": "define-planning-state-v1",
+    "status": "completed",
+    "scope": "schema/validator contract and focused tests",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "subagent code map"
+  },
+  "immediate_next_action": [
+    "Archive this completed #497 slice and continue #498-#501 when selected."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/planning-state-v1-schema.plan.json"
+  ],
+  "invariants": [
+    "Current state.toml remains readable.",
+    "Ready and active maturity states have concrete required fields.",
+    "Schema remains implementation-independent."
+  ],
+  "contract_decisions_to_freeze": [
+    "Maturity values: idea, candidate, shaped, ready, active, closed.",
+    "Active items point to execplans instead of duplicating implementation detail."
+  ],
+  "open_questions_to_close": [
+    "Slices may be represented as first-class work_items in the v1 contract while existing todo/roadmap buckets remain compatibility views until #500."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "cd packages/planning; uv run ruff check .",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "planning-state/v1 allowed maturity values and required fields are defined.",
+    "Ready items require next_action, done_when, proof, refs or owner, and review role.",
+    "Active items require an execplan reference.",
+    "Tests cover valid and invalid maturity records.",
+    "Current state compatibility remains intact."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "planning-autopilot and self-improvement-dogfooding",
+    "what happened": "Added planning-state/v1 constants, opt-in state validation warnings, top-level metadata preservation in the state serializer, and focused tests for valid and invalid maturity records.",
+    "scope touched": "planning package state validation and tests plus active planning state",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/planning-state-v1-schema.plan.json",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"planning_state_v1 or compact_toml or planning_cli_dogfoods\"; cd packages/planning; uv run pytest tests/test_installer.py; cd packages/planning; uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace summary --format json",
+    "result for continuation": "The schema contract slice is complete; planning-state-maturity remains open for role metadata, summary behavior, migration, and closeout transitions.",
+    "next step": "Archive this slice and close #497."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes for #497; parent #496 remains open",
+    "config compliance": "used summary/report/reconcile/skills and promoted checked-in planning before implementation",
+    "misinterpretation risk": "medium; schema definition must not become migration",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "proof_report": {
+    "validation proof": "cd packages/planning; uv run pytest tests/test_installer.py; cd packages/planning; uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace summary --format json",
+    "proof achieved now": "planning-state/v1 validation accepts valid active/ready/shaped records and warns on invalid maturity, ready, active, and closed records while preserving legacy compatibility.",
+    "evidence for \"proof achieved\" state": "144 planning package tests passed, ruff passed, planning doctor reported healthy, and live summary showed planning-backed state with zero warnings."
+  },
+  "intent_satisfaction": {
+    "original intent": "Define planning-state v1 schema with explicit maturity states.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "planning-state/v1 kind/schema_version, maturity/status vocabulary, ready/active/closed validation, and tests are implemented.",
+    "unsolved intent passed to": "planning-state-maturity lane (#496)"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make package use cheaper by making current state queryable and explicit instead of inferred from vague buckets.",
+    "slice shaping bias": "Define compact machine-readable semantics before broader migration.",
+    "broader-lane validation question": "Can agents tell whether work is idea, shaped, ready, active, or closed without interpreting bucket names?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#497 is satisfied, but parent #496 still includes #498-#501 for roles, query behavior, migration, and closeout integration.",
+    "evidence carried forward": "planning package tests, ruff, planning doctor, summary, and planning-surface checks",
+    "reopen trigger": "planning state still requires inference from todo/roadmap buckets after #497"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Maturity semantics belong in planning contracts before migration rewrites current state.",
+    "motivation worth preserving": "Agents should not infer work maturity from vague buckets.",
+    "canonical owner now": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+    "promotion trigger": "archive closeout for #497",
+    "retention after promotion": "shrink"
+  },
+  "execution_summary": {
+    "outcome delivered": "Defined planning-state/v1 as an opt-in checked-in state contract with explicit maturity/status values and required-field validation for ready, active, and closed records.",
+    "validation confirmed": "144 planning tests passed, planning ruff passed, planning doctor healthy, live summary warning_count 0.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity (#498-#501)",
+    "post-work posterity capture": "Contract behavior is encoded in installer validation tests; no Memory note needed.",
+    "knowledge promoted (Memory/Docs/Config)": "planning state contract in package code/tests and current state metadata",
+    "resume from": "planning-state-maturity lane, likely #498 or #499"
+  },
+  "improvement_signal_review": {
+    "status": "routed",
+    "signals found": [
+      "Roadmap-to-active promotion still required manual state and execplan construction."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "#526 and #528 cover scaffold/helper routing for schema-backed artifacts and validation friction."
+    ],
+    "signals dismissed": [],
+    "next owner": "#526/#528"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        {
+          "summary": "Planning-state maturity continues after #497 through #498-#501.",
+          "owner": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #497 from roadmap-needs-promotion state into an active execplan.",
+    "2026-04-28: Implemented planning-state/v1 validation as an opt-in contract without migrating current state shape."
+  ]
+}
