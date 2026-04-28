@@ -1,0 +1,207 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Stale Current Memory Planning Check",
+  "goal": [
+    "Implement #437 so optional/deprecated current-memory notes are checked against planning state and stale active-work claims are cheap to repair."
+  ],
+  "non_goals": [
+    "Do not make current-memory authoritative over planning.",
+    "Do not reintroduce current-memory seed notes into this repo or package payloads.",
+    "Do not add a new command surface."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "If current-memory notes claim active work that contradicts .agentic-workspace/planning/state.toml, current check reports a compact repair recommendation.",
+      "constraints": "Memory remains weak-authority and optional; planning state remains authoritative for current active work.",
+      "latitude": "Use the existing memory current check/report path and tests.",
+      "escalation": "Escalate if detecting this requires broad planning parser reuse or a new shipped workflow surface."
+    },
+    "execution": {
+      "milestone": "stale-current-memory-planning-check",
+      "status": "completed",
+      "next_step": "Archive, commit, push, close #437, refresh evidence, and continue the next footprint slice.",
+      "proof": "memory installer tests, memory ruff, live current check, planning surfaces, summary/reconcile/proof dogfooding, planning doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/stale-current-memory-planning-check.plan.json",
+        "packages/memory/src/repo_memory_bootstrap/installer.py",
+        "packages/memory/tests/test_installer.py"
+      ],
+      "invariants": [
+        "Current-memory notes stay optional/deprecated and weak-authority.",
+        "No current-memory notes are recreated in this repo unless needed as fixtures.",
+        "Ordinary startup remains unchanged."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#436 adds footprint pressure for long-running package artifacts; #449 makes package use cheaper than bypassing it.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane operational-footprint-pressure",
+    "parent lane": "#436 and #449"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #437, continue #439/#440/#441 footprint slices or the next higher-priority roadmap lane"
+  },
+  "active_milestone": {
+    "id": "stale-current-memory-planning-check",
+    "status": "completed",
+    "scope": "Detect planning/current-memory contradiction and keep repo current notes absent.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make stale current-memory against planning state visible and repairable.",
+    "hard constraints": "Do not add authority to current-memory.",
+    "agent may decide locally": "Exact heuristic and repair wording.",
+    "escalate when": "The fix would require a new command or broad planner parser dependency."
+  },
+  "immediate_next_action": [
+    "Archive, commit, push, close #437, refresh evidence, and continue the next footprint slice."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/stale-current-memory-planning-check.plan.json",
+    "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "packages/memory/tests/test_installer.py"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/memory/tests/test_installer.py -q",
+    "uv run ruff check packages/memory/src packages/memory/tests",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/stale-current-memory-planning-check.plan.json packages/memory/src/repo_memory_bootstrap/installer.py packages/memory/tests/test_installer.py --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "cd packages/memory && uv run pytest tests/test_installer.py",
+    "cd packages/memory && uv run ruff check .",
+    "uv run agentic-memory-bootstrap current check --target . --format json",
+    "rg \"April 13|old active execplan|older April proof pass\" .agentic-workspace packages/memory -n"
+  ],
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/437",
+      "label": "#437 stale current-memory against planning state",
+      "role": "source_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/436",
+      "label": "#436 footprint parent",
+      "role": "parent_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/449",
+      "label": "#449 operating-cost parent",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "completion_criteria": [
+    "Current-memory check flags a deprecated/current note that claims active work while planning state has no active item.",
+    "The warning recommends update, shrink, clear, or delete/disable instead of treating current-memory as authority.",
+    "The current repo still has no stale current-memory project/task notes.",
+    "Proof and closeout route the larger footprint lane forward."
+  ],
+  "execution_summary": {
+    "outcome delivered": "current-memory check now compares existing deprecated/current project-state and task-context notes against planning state; when planning has no active item but a note claims active/current work, it emits a compact manual-review action with shrink-or-remove remediation.",
+    "validation confirmed": "focused current-memory tests, full memory installer tests, memory ruff, live current check, planning surfaces, summary, reconcile, proof selection, planning doctor, and package-local proof commands passed.",
+    "follow-on routed to": "remaining roadmap lanes",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next footprint or command-generation roadmap slice after evidence refresh",
+    "post-work posterity capture": "Keep regression tests and the current check remediation fields as durable evidence; discard transient test-process crash output because the same test and full suite reran cleanly. The stale-reference sweep only found the intentional regression fixture."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Transient Windows Python access violation from the first full memory test run; targeted and full reruns passed cleanly.",
+          "owner": "discard",
+          "source": "validation rerun"
+        },
+        {
+          "summary": "Intermediate command transcripts and fixture setup details.",
+          "owner": "discard",
+          "source": "execution detail"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue remaining footprint-control child slices and the operating-cost parent lane.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "intent_continuity"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "packages/memory/tests/test_installer.py guards idle-planning contradiction detection and allows inactive current-memory wording.",
+          "owner": "packages/memory/tests/test_installer.py",
+          "source": "regression tests"
+        },
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Close #437 with proof; keep #436 and #449 open until remaining child slices land.",
+          "owner": "github-issue",
+          "source": "#437"
+        }
+      ]
+    }
+  },
+  "intent_satisfaction": {
+    "original intent": "Detect stale current-memory notes against planning state and make repair cheap.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "current check flags active/current claims when planning state has no active item, exposes shrink-or-remove remediation, and live repo current check reports no stale notes.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane operational-footprint-pressure"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane operational-footprint-pressure activates a fresh bounded slice."
+  },
+  "cost_assessment": {
+    "signals consumed": [
+      "#437",
+      "#436",
+      "#449"
+    ],
+    "signals still accumulating": [
+      "remaining footprint-control child slices",
+      "command-generation extraction lane"
+    ],
+    "operating_cost_delta": "lower",
+    "reason": "Weak agents get a direct repair signal from an existing check instead of reading stale current-context notes or manually comparing memory against planning."
+  },
+  "improvement_signal_review": {
+    "status": "fixed",
+    "finding": "Optional current-memory could reintroduce stale active-work context after planning became idle.",
+    "resolution": "The existing current check now treats planning as authoritative and recommends update, shrink, clear, or delete/disable."
+  },
+  "drift_log": [
+    "2026-04-28: Repo current-memory notes are already absent; the durable fix is to make stale reintroduction detectable through existing current check."
+  ],
+  "proof_report": {
+    "validation proof": "focused current-memory tests, full memory installer tests, memory ruff, live current check, planning surfaces, summary, reconcile, proof selection, planning doctor, and package-local proof commands passed.",
+    "proof achieved now": "yes; validation evidence is recorded in execution summary.",
+    "evidence for \"proof achieved\" state": "focused current-memory tests, full memory installer tests, memory ruff, live current check, planning surfaces, summary, reconcile, proof selection, planning doctor, and package-local proof commands passed."
+  }
+}

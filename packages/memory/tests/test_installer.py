@@ -1283,6 +1283,69 @@ def test_current_check_flags_project_state_planning_state_residue(tmp_path: Path
     )
 
 
+def test_current_check_flags_current_memory_that_contradicts_idle_planning_state(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "planning").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "planning" / "state.toml").write_text(
+        "[todo]\nactive_items = []\nqueued_items = []\n",
+        encoding="utf-8",
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
+    note_path = target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md"
+    note_path.write_text(
+        "# Task Context\n\n"
+        "## Status\n\nActive\n\n"
+        "## Scope\n\n- Optional continuation context.\n\n"
+        "## Active goal\n\nFinish the April proof pass.\n\n"
+        "## Touched surfaces\n\n- src/example.py\n\n"
+        "## Blocking assumptions\n\n- None.\n\n"
+        "## Next validation\n\n- pytest\n\n"
+        "## Resume cues\n\n- Continue the old active execplan.\n\n"
+        "## Last confirmed\n\n2026-04-28\n",
+        encoding="utf-8",
+    )
+
+    result = installer.check_current_memory(target=target)
+
+    assert any(
+        action.path == note_path
+        and action.role == "current-memory"
+        and action.remediation_kind == "shrink-or-remove"
+        and action.memory_action == "update, shrink, clear, or delete/disable the stale current-memory note"
+        and "planning state has no active item" in action.detail
+        for action in result.actions
+    )
+
+
+def test_current_check_allows_inactive_current_memory_when_planning_state_is_idle(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "planning").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "planning" / "state.toml").write_text(
+        "[todo]\nactive_items = []\nqueued_items = []\n",
+        encoding="utf-8",
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
+    note_path = target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md"
+    note_path.write_text(
+        "# Task Context\n\n"
+        "## Status\n\nIdle\n\n"
+        "## Scope\n\n- Optional continuation context.\n\n"
+        "## Active goal\n\nNo active work; use planning state.\n\n"
+        "## Touched surfaces\n\n- None.\n\n"
+        "## Blocking assumptions\n\n- None.\n\n"
+        "## Next validation\n\n- None.\n\n"
+        "## Resume cues\n\n- Use summary.\n\n"
+        "## Last confirmed\n\n2026-04-28\n",
+        encoding="utf-8",
+    )
+
+    result = installer.check_current_memory(target=target)
+
+    assert not any(action.path == note_path and "planning state has no active item" in action.detail for action in result.actions)
+
+
 def test_current_check_allows_next_validation_heading(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)

@@ -863,6 +863,7 @@ def show_current_memory(target: str | Path | None = None) -> CurrentViewResult:
 def check_current_memory(target: str | Path | None = None) -> InstallResult:
     target_root = resolve_target_root(target)
     result = _new_result(target_root, dry_run=True, message="Current-memory check")
+    planning_context = _read_current_planning_context(target_root)
     for relative_path in (*CURRENT_MEMORY_BASELINE, *DEPRECATED_CURRENT_MEMORY_FILES):
         note_path = target_root / relative_path
         if not note_path.exists():
@@ -933,7 +934,112 @@ def check_current_memory(target: str | Path | None = None) -> InstallResult:
                 source=relative_path.as_posix(),
                 category="current-memory-review",
             )
+        planning_finding = _current_memory_planning_contradiction(
+            relative_path=relative_path,
+            text=text,
+            planning_context=planning_context,
+        )
+        if planning_finding is not None:
+            result.add(
+                "manual review",
+                note_path,
+                planning_finding,
+                role="current-memory",
+                safety="manual",
+                source=relative_path.as_posix(),
+                category="current-memory-review",
+                remediation_kind="shrink-or-remove",
+                remediation_target=relative_path.as_posix(),
+                remediation_reason="current-memory is weak-authority and contradicts the planning surface",
+                remediation_confidence="high",
+                memory_action="update, shrink, clear, or delete/disable the stale current-memory note",
+            )
     return result
+
+
+def _read_current_planning_context(target_root: Path) -> dict[str, object]:
+    state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
+    if not state_path.exists():
+        return {"status": "missing", "active_count": None}
+    text = state_path.read_text(encoding="utf-8")
+    active_match = re.search(r"(?ms)^active_items\s*=\s*\[(.*?)\]", text)
+    if active_match is None:
+        return {"status": "unknown", "active_count": None}
+    active_body = active_match.group(1)
+    active_count = active_body.count("{")
+    active_titles = re.findall(r'title\s*=\s*"([^"]+)"', active_body)
+    active_ids = re.findall(r'id\s*=\s*"([^"]+)"', active_body)
+    return {
+        "status": "loaded",
+        "active_count": active_count,
+        "active_titles": active_titles,
+        "active_ids": active_ids,
+    }
+
+
+def _current_memory_planning_contradiction(*, relative_path: Path, text: str, planning_context: dict[str, object]) -> str | None:
+    if planning_context.get("status") != "loaded" or planning_context.get("active_count") != 0:
+        return None
+    note_kind = relative_path.name.removesuffix(".md")
+    claims = _current_memory_active_claims(text)
+    if not claims:
+        return None
+    return (
+        f"{note_kind} note claims active/current work while planning state has no active item "
+        f"({'; '.join(claims[:3])}); treat planning state as authoritative and update, shrink, clear, "
+        "or delete/disable the stale current-memory note instead of routing agents through old execution context"
+    )
+
+
+def _current_memory_active_claims(text: str) -> list[str]:
+    claims: list[str] = []
+    lines = text.splitlines()
+    for heading in ("Active goal", "Current focus", "Status"):
+        value = _first_non_empty_section_line(lines, heading)
+        if value and _looks_like_active_current_memory_claim(value):
+            claims.append(f"{heading}: {value}")
+    for line in lines:
+        stripped = line.strip().strip("-* ")
+        if re.search(r"\bactive\s+execplan\b", stripped, re.IGNORECASE):
+            claims.append(stripped)
+            break
+    return claims
+
+
+def _first_non_empty_section_line(lines: list[str], heading: str) -> str:
+    target = f"## {heading}".lower()
+    for index, line in enumerate(lines):
+        if line.strip().lower() != target:
+            continue
+        for follow in lines[index + 1 :]:
+            stripped = follow.strip()
+            if not stripped:
+                continue
+            if stripped.startswith("## "):
+                return ""
+            return stripped.strip("-* ").strip()
+    return ""
+
+
+def _looks_like_active_current_memory_claim(value: str) -> bool:
+    normalized = value.strip().lower()
+    if not normalized:
+        return False
+    inactive_markers = (
+        "none",
+        "no active",
+        "no current",
+        "not active",
+        "idle",
+        "absent",
+        "n/a",
+        "unknown",
+        "optional",
+        "shared overview only",
+    )
+    if any(marker in normalized for marker in inactive_markers):
+        return False
+    return any(marker in normalized for marker in ("active", "current", "in progress", "focus", "execplan", "lane", "proof pass"))
 
 
 def route_memory(
