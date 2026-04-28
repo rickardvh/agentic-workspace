@@ -49,6 +49,18 @@
       ]
     },
     {
+      "id": "contract-tooling",
+      "lane": "contract_tooling",
+      "exact": [
+        "tests/test_structured_file_inventory.py"
+      ],
+      "prefixes": [
+        "src/agentic_workspace/contracts/",
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "scripts/check/check_structured_file_inventory.py"
+      ]
+    },
+    {
       "id": "workspace-cli",
       "lane": "workspace_cli",
       "exact": [

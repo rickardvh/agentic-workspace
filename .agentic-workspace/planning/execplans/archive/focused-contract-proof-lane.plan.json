@@ -1,0 +1,193 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Add focused proof lane for contract and inventory changes",
+  "goal": [
+    "Implement #543 by routing contract/schema/inventory-check-only changes to focused validation before broad workspace CLI proof.",
+    "Keep mixed runtime or CLI changes broad and conservative."
+  ],
+  "non_goals": [
+    "Do not weaken proof for src/agentic_workspace/cli.py or runtime behavior changes.",
+    "Do not add a new command.",
+    "Do not add repo-specific path exceptions."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "proof selection helps agents finish contract/check-only work with the smallest defensible validation lane",
+      "constraints": "implementation-agnostic; existing proof command; broaden on mixed runtime paths",
+      "latitude": "may update proof selection contracts, defaults rendering, focused tests, and planning state",
+      "escalation": "stop if proof selection cannot distinguish contract data from runtime paths without brittle repo-specific logic"
+    },
+    "execution": {
+      "milestone": "#543",
+      "status": "completed",
+      "next_step": "archive #543 and return to #540",
+      "proof": "passed: focused proof selector tests, full workspace CLI tests, ruff, contract tooling, structured inventory, planning surfaces, planning doctor, root CLI authority"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/proof_selection_rules.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml"
+      ],
+      "invariants": [
+        "runtime CLI edits still select workspace_cli and cli_authority",
+        "generated command package outputs still route to generated package proof",
+        "cross-lane changes still carry escalation guidance"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "dogfood package feedback immediately after each slice",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "workflow-friction-polish"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "Return to #540 after #543 unless new blocking dogfooding friction appears.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #543 lands"
+  },
+  "delegated_judgment": {
+    "requested outcome": "bounded implementation of proof selector tuning",
+    "hard constraints": "no new command; no weaker proof for runtime paths; no repo-specific assumptions",
+    "agent may decide locally": "specific lane name, command list, and tests",
+    "escalate when": "matching requires brittle negative path rules"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "contract/check-only proof selection is cheaper",
+    "intentionally deferred": "#540",
+    "discovered implications": "The package feedback loop worked quickly: the #539 closeout signal became #543, then a focused proof lane was implemented before returning to background lane work.",
+    "proof achieved now": "Contract/check-only paths now select contract_tooling without full workspace CLI proof; mixed contract plus CLI paths still broaden and escalate.",
+    "validation still needed": "None for #543; return to #540.",
+    "next likely slice": "#540"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#543",
+      "label": "focused proof lane",
+      "role": "active slice",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/543"
+    }
+  ],
+  "active_milestone": {
+    "id": "#543",
+    "status": "completed",
+    "scope": "proof selector lane tuning",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Return to reconstructable-artifact-policy with #540."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/proof_selection_rules.json",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py::test_proof_changed_selector_routes_contract_only_changes_to_focused_lane tests/test_workspace_cli.py::test_proof_changed_selector_broadens_contract_plus_cli_changes -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py"
+  ],
+  "completion_criteria": [
+    "Contract/check-only changed paths select focused contract tooling proof instead of full workspace CLI proof.",
+    "Mixed contract plus runtime CLI paths still select broad proof and escalation.",
+    "#543 closes and planning state returns to #540."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "#543 and active checked-in execplan",
+    "what happened": "Added a contract_tooling proof lane and proof-selection rules for contract/schema/inventory/check-only paths; mixed runtime CLI paths still select workspace_cli and cli_authority.",
+    "scope touched": "proof selection contract, defaults rendering, tests, planning state",
+    "changed surfaces": "proof_selection_rules and proof output validation lanes",
+    "validations run": "uv run pytest tests/test_workspace_cli.py::test_proof_changed_selector_routes_contract_only_changes_to_focused_lane tests/test_workspace_cli.py::test_proof_changed_selector_broadens_contract_plus_cli_changes -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "result for continuation": "#543 complete; return to #540.",
+    "next step": "archive plan, close #543, commit, then continue #540"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used proof_selection contract rather than hard-coded repo-specific path exceptions",
+    "misinterpretation risk": "low",
+    "follow-on decision": "return to #540"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "focused and broadened proof selector tests passed; full workspace CLI tests, ruff, contract tooling, structured inventory, planning surfaces, planning doctor, and root CLI authority passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Add focused proof lane for contract and inventory-only changes.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "contract/check-only proof query now selects contract_tooling and omits workspace CLI tests; mixed CLI changes remain broad",
+    "unsolved intent passed to": "#540"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#543 is complete, but the workflow-friction-polish parent lane still has other open issues and the active work should return to #540.",
+    "evidence carried forward": "proof_selection_rules contract and tests/test_workspace_cli.py coverage",
+    "reopen trigger": "contract/check-only paths again require full workspace CLI proof without runtime behavior changes"
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "proof selection should distinguish stable contract/check changes from runtime CLI behavior",
+    "motivation worth preserving": "lower repeated proof cost without lowering confidence",
+    "canonical owner now": "src/agentic_workspace/contracts/proof_selection_rules.json",
+    "promotion trigger": "proof selection lanes change",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Proof selection now has a focused lane for contract/check-only changes.",
+    "validation confirmed": "focused proof selector tests, full workspace CLI tests, ruff, contract tooling, structured inventory, planning surfaces, planning doctor, and root CLI authority passed",
+    "follow-on routed to": "#540",
+    "post-work posterity capture": "archive proof plus contract/test updates",
+    "knowledge promoted (Memory/Docs/Config)": "proof_selection_rules contract updated; no Memory promotion needed",
+    "resume from": ".agentic-workspace/planning/state.toml reconstructable-artifact-policy suggested_first_slice #540"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "The package helped finish #543 quickly because #543 came from a concrete proof output mismatch; no additional feature is needed beyond this tuning."
+    ],
+    "signals fixed": [
+      "#543"
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "No further issue created: the remaining manual execplan authoring friction is already covered by #515/#531."
+    ],
+    "next owner": "#540"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        "transient validation output"
+      ],
+      "continuation": [
+        "#540"
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "#540"
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #543 from #539 dogfooding feedback."
+  ]
+}

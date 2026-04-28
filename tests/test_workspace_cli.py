@@ -5558,6 +5558,33 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     assert generated["regeneration_path"] == "uv run python scripts/check/check_generated_command_packages.py"
 
 
+def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--changed",
+                "src/agentic_workspace/contracts/structured_file_inventory.json",
+                "scripts/check/check_structured_file_inventory.py",
+                "tests/test_structured_file_inventory.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["contract_tooling"]
+    assert answer["required_commands"] == [
+        "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+        "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+        "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
+    ]
+    assert "uv run pytest tests/test_workspace_cli.py -q" not in answer["required_commands"]
+
+
 def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
     assert cli.main(["proof", "--changed", "src/agentic_workspace/cli.py", "--format", "json"]) == 0
 
@@ -5578,6 +5605,28 @@ def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
     assert "normal interface authoring belongs in command contracts" in review["rule"]
     assert "runtime primitive implementation and live workspace inspection" in review["allowed_direct_cli_work"]
     assert "route interface or generated-surface changes back" in review["recovery_signal"]
+
+
+def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--changed",
+                "src/agentic_workspace/contracts/proof_selection_rules.json",
+                "src/agentic_workspace/cli.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["contract_tooling", "workspace_cli", "cli_authority"]
+    assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
+    assert "uv run pytest tests/test_workspace_cli.py -q" in answer["required_commands"]
 
 
 def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None:

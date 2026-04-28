@@ -7948,6 +7948,27 @@ def _defaults_payload() -> dict[str, Any]:
             "recovery_signal": "Use cli_authority_review to decide whether the edit is allowed runtime work or must route back to source contracts and regeneration.",
         },
         {
+            "id": "contract_tooling",
+            "when": [
+                "workspace contract, schema, or contract-check surfaces change without runtime behavior changes",
+                "the trust question is contract freshness, schema validation, or inventory/check policy",
+            ],
+            "enough_proof": [
+                "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+                "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+                "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
+            ],
+            "broaden_when": [
+                "the change also touches runtime CLI behavior, report/startup rendering, generated adapters, or package payloads",
+            ],
+            "escalate_when": [
+                "contract-only validation no longer proves the touched behavior boundary",
+            ],
+            "recovery_signal": (
+                "Contract/check-only changes should use focused contract and inventory proof before broad workspace CLI tests."
+            ),
+        },
+        {
             "id": "workspace_cli",
             "when": [
                 "root workspace CLI changes",
