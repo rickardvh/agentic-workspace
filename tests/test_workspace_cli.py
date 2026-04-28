@@ -3357,6 +3357,67 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "not ordinary operating input" in historical_reviews["role"]
     assert "Do not read historical review artifacts during startup" in historical_reviews["rule"]
     assert "Shrink, stub, or delete stale review artifacts" in historical_reviews["retention_guidance"][1]
+    assert historical_reviews["retention_policy"]["kind"] == "workspace-review-retention-policy/v1"
+    assert historical_reviews["retention_policy"]["advisory_only"] is True
+
+
+def test_report_surfaces_review_retention_cleanup_pressure(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    review_dir = target / ".agentic-workspace" / "planning" / "reviews"
+    docs_review_dir = target / "docs" / "reviews"
+    docs_review_dir.mkdir(parents=True)
+    _write_json(review_dir / "missing.review.json", {"kind": "planning-review/v1", "title": "Missing Retention"})
+    _write_json(
+        review_dir / "resolved.review.json",
+        {
+            "kind": "planning-review/v1",
+            "title": "Resolved Review",
+            "issue_classifications": [
+                {
+                    "id": "#1",
+                    "classification": "evidence-present",
+                    "live_state": "closed",
+                    "resolution": "implemented",
+                }
+            ],
+            "retention": {
+                "closeout shape": "shrink after findings are routed",
+                "trigger": "after issue closeout",
+                "proof surface": "report closeout_trust",
+            },
+            "padding": [f"line {index}" for index in range(90)],
+        },
+    )
+    _write(docs_review_dir / "historical.md", "# Historical Review\n\nImplemented and superseded.\n")
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout_payload = json.loads(capsys.readouterr().out)
+    retention = closeout_payload["answer"]["historical_review_artifacts"]["retention_policy"]
+    assert retention["status"] == "attention"
+    assert retention["artifact_count"] >= 3
+    assert retention["missing_retention_metadata_count"] >= 2
+    signals = {candidate["signal"]: candidate for candidate in retention["candidates"]}
+    assert signals["missing-retention-metadata"]["recommended_outcome"] == "add-retention-metadata"
+    assert signals["retention-shape-shrink"]["recommended_outcome"] == "shrink"
+    assert retention["default_outcome"] == "retain"
+    assert "never deletes" in retention["rule"]
+
+    assert cli.main(["report", "--target", str(target), "--section", "operational_compression", "--format", "json"]) == 0
+    operational_payload = json.loads(capsys.readouterr().out)
+    measures = operational_payload["answer"]["measures"]
+    assert measures["review_retention_policy"]["candidate_count"] >= 2
+    assert any(signal["measure"] == "review_retention_policy" for signal in operational_payload["answer"]["signals"])
+
+    assert cli.main(["report", "--target", str(target), "--section", "maintenance_pressure", "--format", "json"]) == 0
+    maintenance_payload = json.loads(capsys.readouterr().out)
+    categories = {entry["id"]: entry for entry in maintenance_payload["answer"]["subcategories"]}
+    assert categories["review_retention"]["status"] == "attention"
+    assert "cleanup candidates" in categories["review_retention"]["summary"]
 
 
 def test_report_section_selector_returns_compact_section_answer(tmp_path: Path, capsys) -> None:
@@ -3440,6 +3501,10 @@ def test_report_section_selector_returns_operational_compression_measures(tmp_pa
     assert archive_retention["default_outcome"] == "retain"
     assert archive_retention["candidate_count"] == 0
     assert "never deletes" in archive_retention["rule"]
+    review_retention = measures["review_retention_policy"]
+    assert review_retention["kind"] == "workspace-review-retention-policy/v1"
+    assert review_retention["advisory_only"] is True
+    assert review_retention["default_outcome"] == "retain"
     footprint = measures["artifact_footprint_by_class"]
     assert footprint["rule"].startswith("Footprint classes are advisory")
     classes = {entry["id"]: entry for entry in footprint["classes"]}

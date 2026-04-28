@@ -1,0 +1,225 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Review Artifact Retention Cleanup",
+  "goal": [
+    "Implement #440 by surfacing review artifact retention as actionable, advisory cleanup pressure."
+  ],
+  "non_goals": [
+    "Do not delete review artifacts automatically.",
+    "Do not make review artifacts ordinary startup input.",
+    "Do not add a second review-tracking system."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Report missing review-retention metadata and stale/superseded full-size review artifacts as selector-backed cleanup candidates.",
+      "constraints": "Keep historical reviews evidence-only and advisory.",
+      "latitude": "Reuse closeout_trust, operational_compression, and maintenance_pressure surfaces.",
+      "escalation": "Escalate if retention cleanup requires authoritative issue-tracker coupling or automatic deletion."
+    },
+    "execution": {
+      "milestone": "review-artifact-retention-cleanup",
+      "status": "completed",
+      "next_step": "Archive this plan, close #440, then continue the footprint lane with #441.",
+      "proof": "workspace CLI tests, ruff, planning surface checks, proof selector, root CLI authority audit, planning doctor, reconcile, and live report selectors passed."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/review-artifact-retention-cleanup.plan.json"
+      ],
+      "invariants": [
+        "Ordinary startup remains unaffected.",
+        "Review retention remains advisory.",
+        "Historical review artifacts are not promoted to authority."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#436 operational footprint pressure for long-running package artifacts",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap",
+    "parent lane": "#436"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap",
+    "activation trigger": "after #440 is closed, continue with #441 unless new higher-priority footprint friction appears"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Review-retention cleanup pressure becomes visible without manual directory scans.",
+    "intentionally deferred": "#441 generated-output footprint classification.",
+    "discovered implications": "Manual execplan authoring can omit projection-friendly fields; the plan was fixed immediately by adding context_budget before closeout.",
+    "proof achieved now": "yes",
+    "validation still needed": "None for #440.",
+    "next likely slice": "#441"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make package use smaller and cheaper while preserving leverage.",
+    "hard constraints": "Dogfood package surfaces, commit/push milestone, close the issue only after proof.",
+    "agent may decide locally": "Exact compact field shape and candidate grouping.",
+    "escalate when": "Cleanup requires deleting user-owned review history."
+  },
+  "context_budget": {
+    "live working set": "Issue #440, active execplan, closeout_trust selector, operational_compression selector, and focused workspace CLI tests.",
+    "recoverable later": "Archived execplan plus commit history after milestone closeout.",
+    "externalize before shift": "Update execution_run, proof_report, closure_check, and closeout_distillation before archiving.",
+    "pre-work config pull": "uv run agentic-workspace summary --target . --format json",
+    "pre-work memory pull": "uv run agentic-workspace report --target . --section operational_compression --format json",
+    "tiny resumability note": "Review-retention cleanup is advisory selector output, not artifact deletion.",
+    "context-shift triggers": "validation failure, scope pressure to delete artifacts, or new higher-priority dogfooding friction"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#440",
+      "label": "review artifact retention cleanup",
+      "role": "closed_item",
+      "locator": "closeout_trust.historical_review_artifacts.retention_policy"
+    },
+    {
+      "kind": "issue",
+      "target": "#436",
+      "label": "operational footprint pressure parent",
+      "role": "parent_intent",
+      "locator": ".agentic-workspace/planning/state.toml roadmap"
+    }
+  ],
+  "active_milestone": {
+    "id": "review-artifact-retention-cleanup",
+    "status": "completed",
+    "scope": "closeout_trust/operational_compression/maintenance report surfaces and tests",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement compact review-retention policy output and tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/review-artifact-retention-cleanup.plan.json"
+  ],
+  "invariants": [
+    "Review artifacts remain evidence/history.",
+    "Retention pressure is advisory and selector-driven.",
+    "No automatic deletion or issue-tracker-specific policy is introduced."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/review-artifact-retention-cleanup.plan.json --format json"
+  ],
+  "completion_criteria": [
+    "Review retention metadata and cleanup candidates are visible in report/check output.",
+    "Reviews without retention shape are flagged or routed for update.",
+    "Stale or superseded full-size reviews receive advisory cleanup recommendations.",
+    "Ordinary startup remains unaffected."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace summary --target . --format json; uv run agentic-workspace preflight --target . --format json",
+    "what happened": "Added selector-backed review-retention policy output to closeout_trust, mirrored the pressure in operational_compression, routed maintenance_pressure attention, and covered missing metadata plus cleanup recommendations in workspace CLI tests.",
+    "scope touched": "workspace report runtime, workspace CLI tests, and planning residue",
+    "changed surfaces": "src/agentic_workspace/cli.py; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/review-artifact-retention-cleanup.plan.json",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/review-artifact-retention-cleanup.plan.json --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace report --target . --section closeout_trust --format json; uv run agentic-workspace report --target . --section operational_compression --format json; uv run agentic-workspace report --target . --section workflow_obligations --format json; uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json",
+    "result for continuation": "continue #436 with #441",
+    "next step": "Archive plan, commit, push, close #440, refresh external evidence."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes; review artifacts now surface retention metadata gaps and cleanup recommendations without becoming startup input",
+    "config compliance": "used compact summary, report selectors, proof selection, workflow obligations, and package skill routing",
+    "misinterpretation risk": "low; no artifact deletion or authoritative review-tracker behavior was added",
+    "follow-on decision": "continue parent #436 with #441"
+  },
+  "proof_report": {
+    "validation proof": "workspace CLI tests, ruff, planning surfaces, proof selector, root CLI authority audit, planning doctor, reconcile, and live selectors passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "187 workspace CLI tests passed; ruff passed; planning surface health clean; proof selected workspace_cli, cli_authority, and planning_surfaces lanes; root CLI edit classified as derived-renderer/runtime report output."
+  },
+  "intent_satisfaction": {
+    "original intent": "#440 review artifact retention cleanup pressure",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "closeout_trust.historical_review_artifacts.retention_policy now reports missing retention metadata, retention-shape cleanup candidates, and resolved full-size review candidates; operational_compression and maintenance_pressure route the same pressure.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Review artifact retention is actionable in selector-backed report output.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#441 under parent #436",
+    "post-work posterity capture": "archive this execplan after commit",
+    "knowledge promoted (Memory/Docs/Config)": "none; the behavior is encoded in report output and regression tests",
+    "resume from": ".agentic-workspace/planning/state.toml roadmap #436/#441"
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "signals found": [
+      "Manual execplan authoring initially omitted context_budget, making hierarchy projection less complete."
+    ],
+    "signals fixed": [
+      "Added context_budget before closeout."
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "No new issue; the package already surfaced the projection gap and the local plan was corrected immediately."
+    ],
+    "next owner": "#441"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Transient command/test iteration details are not durable product knowledge.",
+          "owner": "discard",
+          "source": "execution_run"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue parent #436 with #441 generated-output footprint classification.",
+          "owner": ".agentic-workspace/planning/state.toml roadmap",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "none; the behavior is encoded in report output and regression tests",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Close #440 after commit/push.",
+          "owner": "issue",
+          "source": "#440"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #440 into active planning from refreshed issue intake.",
+    "2026-04-28: Implemented and proved review-retention cleanup pressure; ready to archive."
+  ]
+}

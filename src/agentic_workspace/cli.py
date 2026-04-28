@@ -3056,7 +3056,7 @@ def _run_report_command(
     execution_shape = _execution_shape_payload(config=config, module_reports=module_reports)
     branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
     local_memory = _local_memory_payload(config=config)
-    closeout_trust = _report_closeout_trust_payload(module_reports=module_reports)
+    closeout_trust = _report_closeout_trust_payload(module_reports=module_reports, target_root=target_root)
     surface_value_guardrail = _surface_value_guardrail_payload()
     external_work_delta = _external_work_delta_payload(target_root=target_root)
     external_work_reconciliation = _external_work_reconciliation_payload(
@@ -3184,6 +3184,12 @@ def _operational_compression_payload(
         archived_distillation=archived_distillation,
         artifact_footprint=artifact_footprint,
     )
+    closeout_trust = report_payload.get("closeout_trust", {})
+    closeout_trust = closeout_trust if isinstance(closeout_trust, dict) else {}
+    historical_reviews = closeout_trust.get("historical_review_artifacts", {})
+    historical_reviews = historical_reviews if isinstance(historical_reviews, dict) else {}
+    review_retention = historical_reviews.get("retention_policy", {})
+    review_retention = review_retention if isinstance(review_retention, dict) else {}
     intent_validation = planning_report.get("intent_validation", {}) if isinstance(planning_report, dict) else {}
     intent_counts = intent_validation.get("counts", {}) if isinstance(intent_validation, dict) else {}
     current_external_work = intent_validation.get("current_external_work", {}) if isinstance(intent_validation, dict) else {}
@@ -3258,6 +3264,7 @@ def _operational_compression_payload(
         },
         "artifact_footprint_by_class": artifact_footprint,
         "archive_retention_policy": archive_retention,
+        "review_retention_policy": review_retention,
         "unresolved_external_work_routing": {
             "status": current_external_work.get("status", "unavailable") if isinstance(current_external_work, dict) else "unavailable",
             "tracked_open_count": intent_counts.get("tracked_external_open_count"),
@@ -3339,6 +3346,15 @@ def _operational_compression_payload(
                 "count": archive_retention.get("candidate_count", 0),
             }
         )
+    if review_retention.get("status") == "attention":
+        advisory_signals.append(
+            {
+                "severity": "advisory",
+                "measure": "review_retention_policy",
+                "message": "Review artifact retention pressure is present; inspect candidates before expanding review residue.",
+                "count": review_retention.get("candidate_count", 0),
+            }
+        )
 
     return {
         "kind": "workspace-operational-compression/v1",
@@ -3408,6 +3424,9 @@ def _maintenance_pressure_payload(
     warning_count = len(findings)
     historical_attention_count = _as_int(finished_counts.get("attention_count")) + _as_int(intent_counts.get("closeout_needs_audit_count"))
     review_item_count = _as_int(historical_reviews.get("item_count"))
+    review_retention = historical_reviews.get("retention_policy", {})
+    review_retention = review_retention if isinstance(review_retention, dict) else {}
+    review_retention_count = _as_int(review_retention.get("candidate_count"))
     archive_missing_count = _as_int(archived_distillation.get("post_contract_missing_distillation_count"))
     adapter_missing_count = _as_int(adapter_lifecycle.get("missing_removal_path_count"))
     external_changed_count = _as_int(external_work_delta.get("changed_count")) + _as_int(external_work_delta.get("closed_count"))
@@ -3437,9 +3456,13 @@ def _maintenance_pressure_payload(
         ),
         _category(
             category_id="review_retention",
-            status="evidence-only" if review_item_count else "quiet",
-            count=review_item_count,
-            summary="Historical review artifacts are evidence/history, not ordinary operating input.",
+            status="attention" if review_retention_count else ("evidence-only" if review_item_count else "quiet"),
+            count=review_retention_count or review_item_count,
+            summary=(
+                "Review artifact retention has advisory cleanup candidates."
+                if review_retention_count
+                else "Historical review artifacts are evidence/history, not ordinary operating input."
+            ),
             detail_section="closeout_trust",
             selector_hint="Inspect when a selected issue or audit path asks for review history.",
         ),
@@ -4296,7 +4319,7 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return hints
 
 
-def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> dict[str, Any]:
+def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]], target_root: Path | None = None) -> dict[str, Any]:
     planning_report = next(
         (report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"),
         None,
@@ -4307,7 +4330,11 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
             "reason": "planning module is not installed",
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report={}),
             "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report={}),
-            "historical_review_artifacts": _historical_review_artifacts_policy(planning_report={}, intent_validation={}),
+            "historical_review_artifacts": _historical_review_artifacts_policy(
+                planning_report={},
+                intent_validation={},
+                target_root=target_root,
+            ),
         }
 
     intent_validation = planning_report.get("intent_validation", {})
@@ -4320,6 +4347,7 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report=planning_report,
                 intent_validation={},
+                target_root=target_root,
             ),
         }
 
@@ -4358,12 +4386,18 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
         "historical_review_artifacts": _historical_review_artifacts_policy(
             planning_report=planning_report,
             intent_validation=intent_validation,
+            target_root=target_root,
         ),
         "recommended_next_action": recommended_next_action,
     }
 
 
-def _historical_review_artifacts_policy(*, planning_report: dict[str, Any], intent_validation: dict[str, Any]) -> dict[str, Any]:
+def _historical_review_artifacts_policy(
+    *,
+    planning_report: dict[str, Any],
+    intent_validation: dict[str, Any],
+    target_root: Path | None = None,
+) -> dict[str, Any]:
     historical = intent_validation.get("historical_audit_references", {}) if isinstance(intent_validation, dict) else {}
     if not isinstance(historical, dict):
         historical = {}
@@ -4381,12 +4415,204 @@ def _historical_review_artifacts_policy(*, planning_report: dict[str, Any], inte
         "item_count": item_count,
         "rule": "Do not read historical review artifacts during startup unless a selected issue, audit, or report section points there.",
         "selection_path": "agentic-workspace report --target ./repo --section closeout_trust --format json",
+        "retention_policy": _review_artifact_retention_policy(target_root=target_root),
         "retention_guidance": [
             "Promote durable findings to planning, canonical docs, checks, or Memory before treating them as current authority.",
             "Shrink, stub, or delete stale review artifacts once findings are promoted, dismissed, or superseded.",
             "Keep review artifacts out of ordinary startup and compact recovery unless the selected work explicitly asks for historical evidence.",
         ],
     }
+
+
+def _review_artifact_retention_policy(*, target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {
+            "kind": "workspace-review-retention-policy/v1",
+            "status": "unavailable",
+            "advisory_only": True,
+            "artifact_count": 0,
+            "missing_retention_metadata_count": 0,
+            "cleanup_candidate_count": 0,
+            "candidate_count": 0,
+            "candidates": [],
+            "rule": "Review-retention pressure is advisory and selector-driven; it never deletes review artifacts automatically.",
+        }
+
+    roots = [
+        ("planning-review-record", target_root / ".agentic-workspace" / "planning" / "reviews", "*.review.json"),
+        ("docs-review-artifact", target_root / "docs" / "reviews", "*"),
+    ]
+    artifact_count = 0
+    missing_retention: list[str] = []
+    cleanup: dict[str, list[str]] = {"shrink": [], "stub": [], "delete": []}
+    resolved_full_size: list[str] = []
+
+    for artifact_class, root, pattern in roots:
+        if not root.exists():
+            continue
+        for path in sorted(item for item in root.glob(pattern) if item.is_file()):
+            artifact_count += 1
+            relative = _relative_posix(path, target_root)
+            try:
+                text = path.read_text(encoding="utf-8")
+            except OSError:
+                missing_retention.append(relative)
+                continue
+
+            retention: dict[str, Any] = {}
+            resolved = False
+            if path.suffix == ".json":
+                try:
+                    payload = json.loads(text)
+                except json.JSONDecodeError:
+                    payload = {}
+                if isinstance(payload, dict):
+                    retention_value = payload.get("retention")
+                    retention = retention_value if isinstance(retention_value, dict) else {}
+                    resolved = _review_artifact_has_resolved_findings(payload)
+            else:
+                retention = _markdown_retention_metadata(text)
+                resolved = _review_markdown_has_resolved_findings(text)
+
+            shape = _review_retention_field(retention, "closeout shape", "closeout_shape", "shape")
+            trigger = _review_retention_field(retention, "trigger")
+            proof_surface = _review_retention_field(retention, "proof surface", "proof_surface")
+            if not (shape and trigger and proof_surface):
+                missing_retention.append(relative)
+
+            outcome = _review_retention_outcome(shape)
+            if outcome in cleanup:
+                cleanup[outcome].append(relative)
+            if artifact_class == "docs-review-artifact" and not shape:
+                cleanup["shrink"].append(relative)
+            if resolved and len(text.splitlines()) > 80 and not shape.lower().startswith("retain"):
+                resolved_full_size.append(relative)
+
+    candidates: list[dict[str, Any]] = []
+    if missing_retention:
+        candidates.append(
+            {
+                "signal": "missing-retention-metadata",
+                "count": len(missing_retention),
+                "recommended_outcome": "add-retention-metadata",
+                "candidate_paths": missing_retention[:5],
+                "why": "Review artifacts without closeout shape, trigger, and proof surface need routing metadata before they can be safely shrunk or retained.",
+            }
+        )
+    for outcome in ("shrink", "stub", "delete"):
+        paths = cleanup[outcome]
+        if paths:
+            candidates.append(
+                {
+                    "signal": f"retention-shape-{outcome}",
+                    "count": len(paths),
+                    "recommended_outcome": outcome,
+                    "candidate_paths": paths[:5],
+                    "why": f"Review artifacts whose own retention shape points to {outcome} should be revisited after findings are promoted, dismissed, or superseded.",
+                }
+            )
+    if resolved_full_size:
+        candidates.append(
+            {
+                "signal": "resolved-full-size-review",
+                "count": len(resolved_full_size),
+                "recommended_outcome": "shrink",
+                "candidate_paths": resolved_full_size[:5],
+                "why": "Resolved full-size reviews are candidates for compact evidence once durable findings live in planning, docs, checks, issues, or Memory.",
+            }
+        )
+
+    return {
+        "kind": "workspace-review-retention-policy/v1",
+        "status": "attention" if candidates else "quiet",
+        "advisory_only": True,
+        "applies_to": [
+            ".agentic-workspace/planning/reviews/*.review.json",
+            "docs/reviews/*",
+        ],
+        "outcomes": [
+            "retain",
+            "shrink",
+            "stub",
+            "delete",
+            "add-retention-metadata",
+        ],
+        "default_outcome": "retain",
+        "artifact_count": artifact_count,
+        "missing_retention_metadata_count": len(missing_retention),
+        "cleanup_candidate_count": sum(len(paths) for paths in cleanup.values()) + len(resolved_full_size),
+        "candidate_count": len(candidates),
+        "candidates": candidates,
+        "before_shrink_or_delete": [
+            "promote durable findings to planning, canonical docs, checks, issues, or Memory",
+            "preserve enough evidence for audit, trust, and continuation",
+            "keep historical reviews out of ordinary startup and compact recovery paths",
+        ],
+        "rule": "Review-retention pressure is advisory and selector-driven; it recommends cleanup outcomes but never deletes review artifacts automatically.",
+    }
+
+
+def _review_retention_field(retention: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = retention.get(key)
+        if str(value or "").strip():
+            return str(value).strip()
+    return ""
+
+
+def _review_retention_outcome(shape: str) -> str:
+    normalized = shape.lower()
+    if "delete" in normalized:
+        return "delete"
+    if "stub" in normalized:
+        return "stub"
+    if "shrink" in normalized or "archive" in normalized or "compact" in normalized:
+        return "shrink"
+    return "retain" if "retain" in normalized or "keep" in normalized else ""
+
+
+def _review_artifact_has_resolved_findings(payload: dict[str, Any]) -> bool:
+    try:
+        text = json.dumps(
+            {field: payload.get(field) for field in ("findings", "issue_classifications", "classified_items", "closeout_items")},
+            sort_keys=True,
+        ).lower()
+    except TypeError:
+        text = ""
+    resolved_markers = (
+        "closed by implementation",
+        "evidence-present",
+        '"live_state": "closed',
+        'follow_up": ""',
+        'follow_up": "none"',
+        "resolution",
+        "superseded",
+        "dismiss",
+        "addressed",
+    )
+    return any(marker in text for marker in resolved_markers)
+
+
+def _markdown_retention_metadata(text: str) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    lower = text.lower()
+    for line in text.splitlines():
+        stripped = line.strip()
+        normalized = stripped.lower()
+        if normalized.startswith("closeout shape:"):
+            metadata["closeout shape"] = stripped.split(":", 1)[1].strip()
+        elif normalized.startswith("trigger:"):
+            metadata["trigger"] = stripped.split(":", 1)[1].strip()
+        elif normalized.startswith("proof surface:"):
+            metadata["proof surface"] = stripped.split(":", 1)[1].strip()
+    if "retention" in lower and not metadata:
+        metadata["shape"] = "retain"
+    return metadata
+
+
+def _review_markdown_has_resolved_findings(text: str) -> bool:
+    normalized = text.lower()
+    return any(marker in normalized for marker in ("closed", "implemented", "superseded", "dismissed", "addressed"))
 
 
 def _package_workflow_evidence_payload(*, planning_report: dict[str, Any]) -> dict[str, Any]:
