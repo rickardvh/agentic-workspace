@@ -1,0 +1,256 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning Maturity Summary",
+  "goal": [
+    "Update planning summary/query behavior so explicit maturity and status fields answer active, ready, shaping, deferred, blocked, and residue-routing questions."
+  ],
+  "non_goals": [
+    "Do not build a project-management dashboard.",
+    "Do not broadly scan archives by default.",
+    "Do not migrate state storage to work_items in this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Compact and full summary expose maturity-specific planning buckets from explicit state fields instead of bucket location inference.",
+      "constraints": "Keep output small, generic, and repo-/agent-/tool-agnostic.",
+      "latitude": "Choose exact field names and compact projection shape that satisfy #499 without adding a new command.",
+      "escalation": "Stop before state migration, dashboard expansion, or archive-wide default reads."
+    },
+    "execution": {
+      "milestone": "Expose explicit maturity buckets in planning summary.",
+      "status": "completed",
+      "next_step": "Archive this plan, close #499, then continue with #500 when selected.",
+      "proof": "planning package tests, ruff, planning doctor, summary"
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/planning-maturity-summary.plan.json"
+      ],
+      "invariants": [
+        "Active execplans remain the execution authority.",
+        "Ready slices are visible without raw lane reads.",
+        "Closed items missing residue are maintenance pressure, not active work."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Planning state supports progressive refinement and multi-agent handoff through explicit maturity, roles, promotion, and closeout state.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+    "parent lane": "planning-state-maturity (#496)"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+    "activation trigger": "After #499 lands, continue #500/#501 when selected."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Summary and report now expose explicit maturity buckets for active, ready, shaping, deferred, blocked, and residue-routing work.",
+    "intentionally deferred": "State migration and promotion/closeout transition helpers.",
+    "discovered implications": "Legacy Markdown state must keep working; work_maturity falls back to active execplan compatibility when TOML state is unavailable.",
+    "proof achieved now": "Focused maturity/report tests, root summary CLI tests, full planning package tests, ruff, doctor, planning-surface checker, summary, and report passed.",
+    "validation still needed": "None for #499; continue #500/#501 for migration and transitions.",
+    "next likely slice": "#500"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement #499 planning summary/query behavior for explicit work maturity.",
+    "inferred intended outcome": "Make state maturity cheap to inspect without opening raw planning files.",
+    "chosen concrete what": "Add maturity-specific summary buckets and compact tests.",
+    "interpretation distance": "low",
+    "review guidance": "Reject changes that make summary large or infer maturity from storage location."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning package summary/projection code and tests; active planning files",
+    "max changed files": "Prefer under 6 files before archive.",
+    "required validation commands": "cd packages/planning; uv run pytest tests/test_installer.py; cd packages/planning; uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace summary --format json",
+    "ask-before-refactor threshold": "Any migration of state shape or broad report/dashboard redesign.",
+    "stop before touching": "generated CLI, structured-file schemas, agent aid lifecycle"
+  },
+  "stop_conditions": {
+    "stop when": "#499 acceptance is met with maturity buckets and focused tests.",
+    "escalate when boundary reached": "The next change needs a new command or broad dashboard behavior.",
+    "escalate on scope drift": "Work starts implementing #500 or #501.",
+    "escalate on proof failure": "Summary or current v1 state reports warnings."
+  },
+  "context_budget": {
+    "live working set": "#499 issue body, planning-state v1 validation, planning summary projections",
+    "recoverable later": "parent #496 details and later child issues",
+    "externalize before shift": "execution_run, proof_report, closure_check",
+    "pre-work config pull": "uv run agentic-workspace summary --format json; uv run agentic-workspace proof --changed <paths> --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Continue #499 from planning-maturity-summary.plan.json.",
+    "context-shift triggers": "subagent map shows broader impact than summary/query behavior."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Expose explicit maturity buckets in compact planning summary.",
+    "hard constraints": "No dashboard; no archive-wide default scan; active execplans remain execution authority.",
+    "agent may decide locally": "Exact field names and tests for maturity bucket projection.",
+    "escalate when": "Maturity behavior needs state migration or transition automation."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#499",
+      "label": "Maturity summary behavior",
+      "role": "source_intent",
+      "locator": "GitHub issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#496",
+      "label": "Planning-state maturity parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue"
+    }
+  ],
+  "active_milestone": {
+    "id": "maturity-summary",
+    "status": "completed",
+    "scope": "planning summary maturity buckets",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "subagent map"
+  },
+  "immediate_next_action": [
+    "Archive this plan and continue #500 from the planning-state-maturity lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/planning-maturity-summary.plan.json"
+  ],
+  "invariants": [
+    "Explicit maturity/status fields drive the answer.",
+    "Summary remains router-shaped.",
+    "Maintenance residue is separated from execution pressure."
+  ],
+  "contract_decisions_to_freeze": [
+    "Maturity buckets should be visible from summary without opening raw state."
+  ],
+  "open_questions_to_close": [
+    "Which compact field should own active/ready/shaping/deferred/blocked/residue bucket answers?"
+  ],
+  "validation_commands": [
+    "cd packages/planning; uv run pytest tests/test_installer.py",
+    "cd packages/planning; uv run ruff check .",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Summary uses explicit maturity/status fields rather than bucket inference.",
+    "Ready slices are visible without opening all lanes.",
+    "Active execplans remain the execution source.",
+    "Closed items missing durable-residue routing surface as maintenance pressure.",
+    "Tests cover compact and full summary output for the new state shape."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "planning-autopilot and self-improvement-dogfooding",
+    "what happened": "Added the work_maturity projection to full and compact planning summary plus planning report, with maturity bucket tests.",
+    "scope touched": "planning summary/report projection code, planning package tests, root summary CLI tests by validation, and active planning state.",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/planning-maturity-summary.plan.json",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"maturity or summary_compact_profile or planning_report\"; uv run pytest tests/test_workspace_summary_cli.py -q; cd packages/planning; uv run pytest tests/test_installer.py; cd packages/planning; uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; uv run agentic-planning-bootstrap report --target . --format json",
+    "result for continuation": "#499 is complete; #500/#501 remain in the planning-state-maturity lane.",
+    "next step": "Archive the plan and close #499."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; no dashboard, archive-wide default scan, state migration, or new command was added.",
+    "proof status": "satisfied",
+    "intent served": "yes; summary/report now expose explicit maturity buckets.",
+    "config compliance": "respected repo and local config by using compact summary, proof selection, checked-in active planning, and bounded package/planning surfaces before implementation",
+    "misinterpretation risk": "medium; avoid dashboard creep",
+    "follow-on decision": "continue #500"
+  },
+  "proof_report": {
+    "validation proof": "focused maturity/report tests, root summary CLI tests, full planning package tests, ruff, doctor, planning-surface checker, summary, and report passed.",
+    "proof achieved now": "Explicit maturity buckets are queryable in compact/full summary and report while active execplans remain execution authority.",
+    "evidence for \"proof achieved\" state": "146 planning tests passed; 4 root summary CLI tests passed; ruff passed; doctor healthy; planning-surface checker clean; summary warning_count 0; report health active."
+  },
+  "intent_satisfaction": {
+    "original intent": "Update summary and query behavior for explicit work maturity.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "work_maturity exposes active_execplans, ready_slices, needs_shaping, deferred_lanes, blocked_items, and residue_routing_needed from explicit maturity/status fields.",
+    "unsolved intent passed to": "planning-state-maturity lane (#496)"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make restart, handoff, and delegation cheaper through compact queryable state.",
+    "slice shaping bias": "Expose small routing buckets, not a full dashboard.",
+    "broader-lane validation question": "Can an agent see maturity state cheaply without raw planning reads?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#499 is satisfied while parent #496 remains open for #500/#501.",
+    "evidence carried forward": "work_maturity projection and tests cover explicit maturity buckets.",
+    "reopen trigger": "summary does not expose ready/shaping/deferred/blocked/residue buckets from explicit maturity"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Explicit maturity should make summary cheaper without making it bigger than a router.",
+    "motivation worth preserving": "Agents should not have to infer maturity from raw TOML bucket placement.",
+    "canonical owner now": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+    "promotion trigger": "archive closeout for #499",
+    "retention after promotion": "shrink"
+  },
+  "execution_summary": {
+    "outcome delivered": "Planning summary/report expose explicit maturity buckets without dashboard creep.",
+    "validation confirmed": "146 planning tests, 4 root summary CLI tests, ruff, doctor, planning-surface checker, summary, and report passed.",
+    "follow-on routed to": "#500/#501 in planning-state-maturity lane.",
+    "post-work posterity capture": "Keep maturity-bucket contract in code/tests and continue migration/transition behavior in #500/#501.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory/docs/config promotion needed; durable contract lives in summary/report tests.",
+    "resume from": ".agentic-workspace/planning/state.toml planning-state-maturity lane, suggested next slice #500"
+  },
+  "improvement_signal_review": {
+    "status": "none",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No local execution detail needs durable promotion beyond proof fields.",
+          "owner": "discard",
+          "source": "execution_summary"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Planning-state maturity continues through #500-#501 after maturity summary behavior.",
+          "owner": ".agentic-workspace/planning/state.toml roadmap lane planning-state-maturity",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Close #499 after proof.",
+          "owner": "github-issue",
+          "source": "#499"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #499 from planning-state-maturity roadmap lane into an active execplan."
+  ]
+}

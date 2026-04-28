@@ -1466,6 +1466,7 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
         roadmap_lanes=roadmap_lanes,
     )
     finished_work_inspection_contract = _finished_work_inspection_contract(target_root=target_root)
+    work_maturity = _planning_work_maturity_projection(state=state, active_execplans=active_execplans)
     execution_readiness = _execution_readiness_payload(
         active_items=active_items,
         active_execplans=active_execplans,
@@ -1512,6 +1513,7 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
             "archived_count": archived_execplans,
         },
         "machine_first_planning": _machine_first_planning_payload(active_execplans=active_execplans),
+        "work_maturity": work_maturity,
         "execution_readiness": execution_readiness,
         "autopilot_loop": _autopilot_loop_status(
             execution_readiness=execution_readiness,
@@ -1584,6 +1586,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
     finished_work_inspection_contract = summary.get("finished_work_inspection_contract", {})
     hierarchy_contract = summary.get("hierarchy_contract", {})
     handoff_contract = summary.get("handoff_contract", {})
+    work_maturity = summary.get("work_maturity", {})
     warnings = list(summary.get("warnings", []))
     findings = [
         {
@@ -1656,6 +1659,10 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
     elif summary["todo"]["active_count"]:
         first_item = summary["todo"]["active_items"][0]
         next_action = f"Continue active TODO item {first_item.get('id', '')}: {first_item.get('surface', '')}".strip(": ")
+    elif isinstance(work_maturity, dict) and work_maturity.get("ready_slices"):
+        first_ready = work_maturity["ready_slices"][0]
+        next_action = f"Promote ready slice {first_ready.get('id', '')} from explicit maturity state.".strip()
+        commands.append("Inspect work_maturity in agentic-planning-bootstrap report --format json")
     elif summary["roadmap"]["candidate_count"]:
         next_action = "Promote the highest-priority roadmap candidate when the next bounded slice is ready."
         commands.append("Inspect roadmap lanes in .agentic-workspace/planning/state.toml")
@@ -1688,6 +1695,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                 "status",
                 "completed_execplans",
                 "ownership_review",
+                "work_maturity",
                 "active",
                 "system_intent",
                 "closeout_distillation",
@@ -1709,12 +1717,18 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "completed_execplan_count": summary["execplans"].get("completed_count", 0),
             "roadmap_lane_count": summary["roadmap"].get("lane_count", 0),
             "roadmap_candidate_count": summary["roadmap"]["candidate_count"],
+            "ready_slice_count": work_maturity.get("counts", {}).get("ready_slices", 0) if isinstance(work_maturity, dict) else 0,
+            "blocked_item_count": work_maturity.get("counts", {}).get("blocked_items", 0) if isinstance(work_maturity, dict) else 0,
+            "residue_routing_needed_count": work_maturity.get("counts", {}).get("residue_routing_needed", 0)
+            if isinstance(work_maturity, dict)
+            else 0,
             "intent_validation_attention_count": intent_validation_contract.get("counts", {}).get("attention_count", 0),
             "finished_work_inspection_attention_count": finished_work_inspection_contract.get("counts", {}).get("attention_count", 0),
             "warning_count": summary["warning_count"],
         },
         "completed_execplans": completed_execplans,
         "ownership_review": summary.get("ownership_review", {}),
+        "work_maturity": work_maturity,
         "active": {
             "planning_record": planning_record,
             "active_contract": active_contract,
@@ -1851,6 +1865,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "todo",
             "execplans",
             "machine_first_planning",
+            "work_maturity",
             "execution_readiness",
             "autopilot_loop",
             "ownership_review",
@@ -1880,6 +1895,17 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "human_view_extension",
                 "active_canonical_count",
                 "active_markdown_fallback_count",
+                "rule",
+            ],
+            "work_maturity": [
+                "active_execplans",
+                "ready_slices",
+                "needs_shaping",
+                "deferred_lanes",
+                "blocked_items",
+                "residue_routing_needed",
+                "counts",
+                "recommended_next_action",
                 "rule",
             ],
             "planning_surface_health": [
@@ -2323,6 +2349,7 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "todo",
             "execplans",
             "machine_first_planning",
+            "work_maturity",
             "execution_readiness",
             "autopilot_loop",
             "planning_surface_health",
@@ -2370,6 +2397,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     todo = dict(summary.get("todo", {}))
     execplans = dict(summary.get("execplans", {}))
     machine_first_planning = dict(summary.get("machine_first_planning", {}))
+    work_maturity = dict(summary.get("work_maturity", {}))
     execution_readiness = dict(summary.get("execution_readiness", {}))
     roadmap = dict(summary.get("roadmap", {}))
     planning_surface_health = dict(summary.get("planning_surface_health", {}))
@@ -2423,6 +2451,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "active_markdown_fallback_count": machine_first_planning.get("active_markdown_fallback_count", 0),
             "rule": machine_first_planning.get("rule", ""),
         },
+        "work_maturity": _compact_work_maturity_projection(work_maturity),
         "execution_readiness": {
             "status": execution_readiness.get("status", "unknown"),
             "broad_work_allowed": bool(execution_readiness.get("broad_work_allowed", False)),
@@ -2583,6 +2612,21 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         "warning_count": summary.get("warning_count", 0),
     }
     return compact_summary
+
+
+def _compact_work_maturity_projection(work_maturity: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "status": work_maturity.get("status", "unknown"),
+        "active_execplans": list(work_maturity.get("active_execplans", [])),
+        "ready_slices": list(work_maturity.get("ready_slices", [])),
+        "needs_shaping": list(work_maturity.get("needs_shaping", [])),
+        "deferred_lanes": list(work_maturity.get("deferred_lanes", [])),
+        "blocked_items": list(work_maturity.get("blocked_items", [])),
+        "residue_routing_needed": list(work_maturity.get("residue_routing_needed", [])),
+        "counts": dict(work_maturity.get("counts", {})),
+        "recommended_next_action": str(work_maturity.get("recommended_next_action", "")).strip(),
+        "rule": str(work_maturity.get("rule", "")).strip(),
+    }
 
 
 def _compact_current_execution_pressure(summary: dict[str, Any]) -> dict[str, Any]:
@@ -2981,6 +3025,124 @@ def _planning_state_role_metadata(item: dict[str, Any] | None) -> dict[str, Any]
     if isinstance(item.get("handoff_ready"), bool):
         metadata["handoff_ready"] = item["handoff_ready"]
     return metadata
+
+
+def _planning_state_item_summary(*, bucket_path: str, item: dict[str, Any]) -> dict[str, Any]:
+    item_id = str(item.get("id", "")).strip()
+    title = str(item.get("title") or item.get("summary") or "").strip()
+    maturity = str(item.get("maturity", "")).strip()
+    status = str(item.get("status", "")).strip()
+    surface = str(item.get("execplan") or item.get("surface") or "").strip()
+    refs = [str(ref).strip() for ref in item.get("refs", []) if str(ref).strip()] if isinstance(item.get("refs"), list) else []
+    issues = [str(issue).strip() for issue in item.get("issues", []) if str(issue).strip()] if isinstance(item.get("issues"), list) else []
+    summary: dict[str, Any] = {
+        "id": item_id,
+        "title": title,
+        "maturity": maturity,
+        "status": status,
+        "source_bucket": bucket_path,
+    }
+    for key, value in (
+        ("surface", surface),
+        ("next_action", str(item.get("next_action", "")).strip()),
+        ("why_now", str(item.get("why_now", "")).strip()),
+        ("reason", str(item.get("reason", "")).strip()),
+        ("suggested_first_slice", str(item.get("suggested_first_slice", "")).strip()),
+    ):
+        if value:
+            summary[key] = value
+    if refs:
+        summary["refs"] = refs
+    if issues:
+        summary["issues"] = issues
+    role_metadata = _planning_state_role_metadata(item)
+    if role_metadata:
+        summary["role_metadata"] = role_metadata
+    return summary
+
+
+def _planning_state_residue_routed(item: dict[str, Any]) -> bool:
+    return bool(str(item.get("durable_residue") or item.get("residue") or item.get("closure") or "").strip())
+
+
+def _planning_work_maturity_projection(*, state: dict[str, Any] | None, active_execplans: list[dict[str, str]]) -> dict[str, Any]:
+    buckets: dict[str, list[dict[str, Any]]] = {
+        "active_execplans": [],
+        "ready_slices": [],
+        "needs_shaping": [],
+        "deferred_lanes": [],
+        "blocked_items": [],
+        "residue_routing_needed": [],
+    }
+    seen_active_surfaces: set[str] = set()
+    for bucket_path, item in _planning_state_v1_items(state or {}):
+        summary = _planning_state_item_summary(bucket_path=bucket_path, item=item)
+        maturity = str(item.get("maturity", "")).strip()
+        status = str(item.get("status", "")).strip()
+        if status == "blocked":
+            buckets["blocked_items"].append(summary)
+            continue
+        if status == "deferred":
+            buckets["deferred_lanes"].append(summary)
+            continue
+        if maturity == "closed":
+            if not _planning_state_residue_routed(item):
+                buckets["residue_routing_needed"].append(summary)
+            continue
+        if maturity == "active" or status == "active":
+            buckets["active_execplans"].append(summary)
+            surface = str(summary.get("surface", "")).strip()
+            if surface:
+                seen_active_surfaces.add(surface)
+            continue
+        if maturity == "ready":
+            buckets["ready_slices"].append(summary)
+            continue
+        if maturity in {"idea", "candidate", "shaped"}:
+            buckets["needs_shaping"].append(summary)
+
+    for execplan in active_execplans:
+        surface = str(execplan.get("path", "")).strip()
+        if surface and surface not in seen_active_surfaces:
+            buckets["active_execplans"].append(
+                {
+                    "id": Path(surface).name.removesuffix(".plan.json").removesuffix(".md"),
+                    "title": "",
+                    "maturity": "active",
+                    "status": str(execplan.get("status", "")).strip(),
+                    "source_bucket": "execplans.active",
+                    "surface": surface,
+                }
+            )
+
+    counts = {name: len(items) for name, items in buckets.items()}
+    status = "idle"
+    recommended_next_action = "No explicit maturity work is active or queued."
+    if buckets["active_execplans"]:
+        status = "active"
+        recommended_next_action = "Continue the active execplan from planning_record or handoff_contract."
+    elif buckets["ready_slices"]:
+        status = "ready"
+        recommended_next_action = "Promote or execute the highest-priority ready slice."
+    elif buckets["blocked_items"]:
+        status = "blocked"
+        recommended_next_action = "Resolve blocked planning items before promoting new broad work."
+    elif buckets["residue_routing_needed"]:
+        status = "maintenance"
+        recommended_next_action = "Route durable residue for closed planning items before treating them as settled."
+    elif buckets["needs_shaping"]:
+        status = "needs-shaping"
+        recommended_next_action = "Shape the next candidate before promoting it to active execution."
+    elif buckets["deferred_lanes"]:
+        status = "deferred"
+        recommended_next_action = "No ready slice; deferred lanes remain background planning state."
+    return {
+        "status": status,
+        **buckets,
+        "counts": counts,
+        "recommended_next_action": recommended_next_action,
+        "rule": "Explicit planning-state maturity and status fields drive this projection; storage bucket location is not maturity authority.",
+    }
 
 
 def _next_role_needed_from_metadata(role_metadata: dict[str, Any]) -> str:

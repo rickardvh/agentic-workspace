@@ -1600,6 +1600,67 @@ candidates = []
     assert handoff["handoff_contract"]["role_metadata"] == expected_role_metadata
 
 
+def test_planning_summary_projects_explicit_work_maturity_buckets(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Active plan", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json", why_now = "active maturity owns execution.", handoff_ready = true },
+]
+queued_items = [
+  { id = "ready-slice", title = "Ready slice", maturity = "ready", status = "next", refs = ["#499"], owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "implement ready slice.", done_when = "ready slice done.", proof = ["uv run pytest tests/test_installer.py"] },
+  { id = "shape-candidate", title = "Shape candidate", maturity = "candidate", status = "next", next_action = "shape the candidate." },
+  { id = "blocked-ready", title = "Blocked ready", maturity = "ready", status = "blocked", owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "unblock.", done_when = "unblocked.", proof = ["manual proof"] },
+]
+
+[roadmap]
+lanes = [
+  { id = "deferred-lane", title = "Deferred lane", maturity = "shaped", status = "deferred", issues = ["#496"], outcome = "later.", reason = "not now.", promotion_signal = "later." },
+]
+candidates = [
+  { id = "closed-needs-residue", title = "Closed needs residue", maturity = "closed", status = "done" },
+]
+""",
+    )
+    _write_execplan_record(
+        tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json",
+        item_id="active-plan",
+        status="in-progress",
+    )
+
+    summary = planning_summary(target=tmp_path)
+    compact = planning_summary(target=tmp_path, profile="compact")
+    report = planning_report(target=tmp_path)
+
+    work_maturity = summary["work_maturity"]
+    assert work_maturity["status"] == "active"
+    assert work_maturity["active_execplans"][0]["id"] == "active-plan"
+    assert work_maturity["active_execplans"][0]["source_bucket"] == "todo.active_items"
+    assert work_maturity["ready_slices"][0]["id"] == "ready-slice"
+    assert work_maturity["needs_shaping"][0]["id"] == "shape-candidate"
+    assert work_maturity["deferred_lanes"][0]["id"] == "deferred-lane"
+    assert work_maturity["blocked_items"][0]["id"] == "blocked-ready"
+    assert work_maturity["residue_routing_needed"][0]["id"] == "closed-needs-residue"
+    assert work_maturity["counts"] == {
+        "active_execplans": 1,
+        "ready_slices": 1,
+        "needs_shaping": 1,
+        "deferred_lanes": 1,
+        "blocked_items": 1,
+        "residue_routing_needed": 1,
+    }
+    assert compact["work_maturity"]["ready_slices"][0]["id"] == "ready-slice"
+    assert compact["work_maturity"]["residue_routing_needed"][0]["id"] == "closed-needs-residue"
+    assert report["work_maturity"]["blocked_items"][0]["id"] == "blocked-ready"
+    assert report["status"]["ready_slice_count"] == 1
+    assert any("closed item closed-needs-residue requires durable_residue" in warning["message"] for warning in summary["warnings"])
+
+
 def test_promote_todo_item_to_execplan_accepts_bom_prefixed_compact_toml(tmp_path: Path) -> None:
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"
     state_path.parent.mkdir(parents=True, exist_ok=True)
