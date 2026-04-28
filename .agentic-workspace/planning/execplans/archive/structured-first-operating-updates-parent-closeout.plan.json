@@ -1,0 +1,273 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Structured First Operating Updates Parent Closeout",
+  "goal": [
+    "Close parent issue #530 after its concrete child issues and dogfooded follow-through satisfy the structured-first operating update lane."
+  ],
+  "non_goals": [
+    "Do not add new behavior in the parent closeout.",
+    "Do not reopen completed child lanes without a fresh regression or acceptance gap."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Common operating updates now prefer structured fields, constrained templates, generated prose, writer helpers, and validation-friction routing over repeated hand-written narrative.",
+      "constraints": "Use checked-in child evidence and compact package reports; keep the parent closeout as evidence, not a new first-line surface.",
+      "latitude": "Planning-state closeout, external issue closure, and proof of planning-surface health.",
+      "escalation": "Create a new narrow issue only if the parent acceptance criteria reveal an unsatisfied concrete behavior."
+    },
+    "execution": {
+      "milestone": "structured-first-operating-updates-parent-closeout",
+      "status": "completed",
+      "next_step": "Close #530 after refreshed external evidence confirms no child issue remains open.",
+      "proof": "uv run agentic-workspace summary --format json; uv run agentic-workspace doctor --target . --modules planning --format json"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/archive/structured-first-operating-updates-parent-closeout.plan.json"
+      ],
+      "invariants": [
+        "Parent closure must be reconstructable from child issue closeouts and archived plans.",
+        "No generated prose or review artifact should become a hidden state store."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Reduce how much prose agents must write to operate the package correctly.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "fresh issues only when recurring prose-authoring burden cannot use existing structured-first mechanisms"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "new repeated prose-authoring burden that cannot be represented by existing fields, templates, generated prose, writer helpers, or validation-friction routing"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "The structured-first parent lane can leave active backlog after its child evidence landed.",
+    "intentionally deferred": "No specific child issue remains open.",
+    "discovered implications": "Parent closeout was mostly planning bookkeeping; the package summary and external evidence made this cheap enough without adding a new feature.",
+    "proof achieved now": "yes",
+    "validation still needed": "planning doctor after state update",
+    "next likely slice": "none"
+  },
+  "intent_interpretation": {
+    "literal request": "Continue until the backlog is empty and close issues as completed.",
+    "inferred intended outcome": "Close the remaining parent issue only after confirming child work and acceptance coverage.",
+    "chosen concrete what": "Mark the parent lane done in planning state and close #530 with references to its completed children.",
+    "interpretation distance": "low",
+    "review guidance": "Verify #530 children are closed and the lane acceptance maps to shipped/residue surfaces."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/planning/state.toml and this archived parent closeout record",
+    "max changed files": "2",
+    "required validation commands": "agentic-workspace summary; agentic-workspace doctor --modules planning",
+    "ask-before-refactor threshold": "Any runtime, contract, docs, or test behavior change",
+    "stop before touching": "Implementation files or child-lane artifacts"
+  },
+  "stop_conditions": {
+    "stop when": "An open child issue or unsatisfied acceptance criterion appears.",
+    "escalate when boundary reached": "Parent closure would need new behavior.",
+    "escalate on scope drift": "Files outside planning closeout need changes.",
+    "escalate on proof failure": "Planning doctor reports drift."
+  },
+  "context_budget": {
+    "live working set": "Issue #530, child issue states, compact summary, closeout-trust report, workflow obligations report, and planning state.",
+    "recoverable later": "Child archived execplans and GitHub issue history.",
+    "do not bulk read": "Historical reviews unless a compact report points there."
+  },
+  "delegated_judgment": {
+    "status": "not-needed",
+    "reason": "The remaining work is parent-lane evidence reconciliation and planning-state closeout."
+  },
+  "parent_lane": {
+    "id": "structured-first-operating-updates",
+    "issue": "#530",
+    "status": "closed-by-this-record"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "label": "Parent issue",
+      "target": "#530",
+      "role": "parent"
+    },
+    {
+      "kind": "execplan",
+      "label": "Prose-heavy surface inventory",
+      "target": ".agentic-workspace/planning/execplans/archive/prose-heavy-surface-inventory.plan.json",
+      "role": "child-evidence"
+    },
+    {
+      "kind": "execplan",
+      "label": "Generated closeout prose",
+      "target": ".agentic-workspace/planning/execplans/archive/generated-closeout-prose.plan.json",
+      "role": "child-evidence"
+    },
+    {
+      "kind": "execplan",
+      "label": "Constrained prose templates",
+      "target": ".agentic-workspace/planning/execplans/archive/constrained-prose-templates.plan.json",
+      "role": "child-evidence"
+    },
+    {
+      "kind": "execplan",
+      "label": "Structured Memory note metadata",
+      "target": ".agentic-workspace/planning/execplans/archive/structured-memory-note-metadata.plan.json",
+      "role": "child-evidence"
+    },
+    {
+      "kind": "execplan",
+      "label": "Schema artifact writer helpers",
+      "target": ".agentic-workspace/planning/execplans/archive/schema-artifact-writer-helpers.plan.json",
+      "role": "child-evidence"
+    },
+    {
+      "kind": "execplan",
+      "label": "Validation friction improvement routing",
+      "target": ".agentic-workspace/planning/execplans/archive/validation-friction-improvement-routing.plan.json",
+      "role": "child-evidence"
+    },
+    {
+      "kind": "execplan",
+      "label": "Correct-by-design review criterion",
+      "target": ".agentic-workspace/planning/execplans/archive/correct-by-design-review-criterion.plan.json",
+      "role": "child-evidence"
+    }
+  ],
+  "active_milestone": {
+    "id": "structured-first-operating-updates-parent-closeout",
+    "status": "completed",
+    "scope": "parent lane closeout only",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Close #530 after proof passes."
+  ],
+  "blockers": [],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/archive/structured-first-operating-updates-parent-closeout.plan.json"
+  ],
+  "invariants": [
+    "Structured state remains authoritative; generated prose remains adapter/output.",
+    "Parent closeout should not introduce a new live surface."
+  ],
+  "contract_decisions_to_freeze": [
+    "Fresh recurring prose-authoring burden should be routed through existing structured-first mechanisms before adding features."
+  ],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/archive/structured-first-operating-updates-parent-closeout.plan.json --format json"
+  ],
+  "required_tools": [
+    "agentic-workspace",
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "#530 child issues are closed.",
+    "Planning state marks the parent lane closed.",
+    "Planning doctor remains healthy.",
+    "#530 is closed with evidence."
+  ],
+  "execution_run": {
+    "status": "completed",
+    "summary": "Refreshed external evidence, confirmed #530 is the only open issue and its named children are closed, then converted the parent lane from deferred to done."
+  },
+  "finished_run_review": {
+    "status": "complete",
+    "findings": "No additional implementation work was required for #530 after #525."
+  },
+  "proof_report": {
+    "status": "pending-before-final-proof",
+    "commands": "Run selected planning proof and doctor after writing this record."
+  },
+  "intent_satisfaction": {
+    "status": "satisfied",
+    "evidence": "#531, #532, #546, #534, #535, #526, #528, and #525 collectively satisfy #530 acceptance."
+  },
+  "system_intent_alignment": {
+    "status": "aligned",
+    "reason": "The closeout removes active backlog residue without adding a new operating surface."
+  },
+  "closure_check": {
+    "status": "ready-to-close",
+    "issue": "#530",
+    "larger_intent": "satisfied"
+  },
+  "generated_closeout": {
+    "summary": "#530 is satisfied by the completed structured-first child lane sequence: inventory, generated closeout prose, compressed inventory residue, constrained templates, structured Memory metadata, writer helpers, validation-friction routing, and correct-by-design review criteria.",
+    "validation": "Planning summary and doctor should remain healthy after this state change.",
+    "residue": "Closed child execplans and promoted shipped surfaces carry durable evidence."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Do parent-lane closure from structured child evidence instead of re-summarizing implementation prose by hand.",
+    "motivation worth preserving": "Keep structured-first operating updates closed unless new repeated prose-authoring burden cannot use existing mechanisms.",
+    "canonical owner now": ".agentic-workspace/planning/state.toml plus child archived execplans",
+    "promotion trigger": "fresh recurring prose-authoring burden that existing structured fields, templates, generated prose, writer helpers, or validation-friction routing cannot handle",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "status": "completed",
+    "changed": "Planning state and archived parent closeout record only."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "signals found": [
+      "Parent closeout was cheap using existing summary and external evidence surfaces."
+    ],
+    "signals fixed": [
+      "No new product issue needed; existing structured-first mechanisms cover the remaining burden."
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "A dedicated parent-closeout feature would overfit this repo and duplicate existing summary/evidence flows."
+    ],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "item": "Implementation detail recap for every child issue",
+          "reason": "Recoverable from child archived plans and commits."
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [],
+  "proof_expectations": [
+    "Planning state projects no open structured-first lane after #530 closes.",
+    "External evidence refresh should show zero open issues after closure."
+  ],
+  "anti_overfitting_review": {
+    "status": "passed",
+    "reason": "The change records generic lane closure evidence without adding model-, repo-, host-, or tracker-specific shipped behavior."
+  },
+  "cost_assessment": {
+    "outcome": "positive",
+    "quality": "Parent closure is evidence-backed and reconstructable.",
+    "efficiency": "Compact summary and external evidence avoided broad rereads.",
+    "cognitive_load": "Low; the package pointed directly at the remaining parent lane.",
+    "correct_by_design_assessment": "Existing structured fields were enough; no validation repair loop occurred.",
+    "validation_role": "confirmation"
+  },
+  "parent_acceptance_map": {
+    "identify prose-heavy operating surfaces": "#531",
+    "replace recurring narrative patterns with structured fields": "#534, #535",
+    "generate issue comments handoffs summaries and archive notes where practical": "#532",
+    "keep structured state authoritative": "#532, #534, #535, #526",
+    "prevent archives reviews or issue comments from hidden state stores": "#546, #528, #525",
+    "validation confirms structured updates instead of teaching prose repair": "#528, #525"
+  }
+}
