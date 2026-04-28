@@ -1,0 +1,325 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Add schemas for root contract manifests",
+  "goal": [
+    "Implement #508 by adding explicit JSON schemas and validated loading for high-priority root contract manifests that currently load as freeform JSON.",
+    "Keep custom checks for cross-file invariants that are awkward or brittle in JSON Schema.",
+    "Update structured-file inventory and tests so future manifest shape changes have an obvious schema owner."
+  ],
+  "non_goals": [
+    "Do not rewrite all root contracts at once.",
+    "Do not generate CLI code or alter public command behavior as part of this slice.",
+    "Do not make schemas so strict that additive extension becomes difficult.",
+    "Do not move runtime-only procedural behavior out of Python."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "selected high-priority root contract manifests are schema-backed and loaded through validation paths with actionable diagnostics",
+      "constraints": "repo/tool/language agnostic; preserve extensibility; keep #502 open for remaining child issues; avoid increasing ordinary startup burden",
+      "latitude": "may choose the smallest safe manifest subset, add schemas, add validated-loader helpers, update checker/tests/inventory, and preserve existing custom invariant checks",
+      "escalation": "stop if validation requires a broad schema for every contract manifest or creates behavior changes outside diagnostics"
+    },
+    "execution": {
+      "milestone": "#508",
+      "status": "completed",
+      "next_step": "archive this slice, close #508, refresh external evidence, then continue #509/#544 under #502",
+      "proof": "passed"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/root-contract-manifest-schemas.plan.json",
+        "src/agentic_workspace/contract_tooling.py",
+        "src/agentic_workspace/contracts/",
+        "src/agentic_workspace/contracts/schemas/",
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "tests/test_contract_tooling.py",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        "tests/test_structured_file_inventory.py"
+      ],
+      "invariants": [
+        "schema-backed manifests still allow future optional fields unless intentionally frozen",
+        "custom checks remain for cross-file and semantic invariants",
+        "invalid manifests produce actionable diagnostics",
+        "schemas stay machinery, not first-contact reading"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "all machine-readable files are schema-backed, typed-validator-backed, generated/derived, or explicitly classified diagnostics",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "structured-file-contract"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #508 closes, continue #509/#544 or refreshed higher-priority issue"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "validated root contract manifest loading for the highest-value manifests",
+    "intentionally deferred": "#509 package-local classification/extraction schemas and #544 executable inventory-claim validation",
+    "discovered implications": "structured inventory claims can be descriptive unless delegated validators are explicit; #544 now owns making those claims executable where feasible",
+    "proof achieved now": "contract tooling, structured inventory, workspace CLI, ruff, planning doctor, and proof-selected commands passed",
+    "validation still needed": "none for #508; #509/#544 continue the parent structured-file-contract lane",
+    "next likely slice": "#509"
+  },
+  "intent_interpretation": {
+    "literal request": "Continue backlog lane-by-lane while dogfooding the package and creating issues for actionable improvement signals.",
+    "inferred intended outcome": "reduce freeform root contract JSON without broad codegen or product-shape expansion",
+    "chosen concrete what": "schema-backed validation for a focused subset of root contract manifests",
+    "interpretation distance": "low",
+    "review guidance": "verify the chosen subset removes real freeform risk while preserving extension points"
+  },
+  "execution_bounds": {
+    "allowed paths": "root contract schemas/manifests/loaders/checkers/tests, structured-file inventory/tests, active plan/state",
+    "max changed files": "about 16 unless proof reveals a narrow additional owner",
+    "required validation commands": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run pytest tests/test_structured_file_inventory.py tests/test_contract_tooling.py -q; uv run ruff check src tests scripts",
+    "ask-before-refactor threshold": "before introducing a new contract package or replacing existing loader architecture",
+    "stop before touching": "code generation, public CLI behavior, or provider-specific behavior"
+  },
+  "stop_conditions": {
+    "stop when": "schemas would need to freeze intentionally extensible contract fields",
+    "escalate when boundary reached": "root manifests cannot be validated without changing runtime semantics",
+    "escalate on scope drift": "changes spill into generated CLI/package roadmap or unrelated report behavior",
+    "escalate on proof failure": "existing tests prove selected schema boundaries are too strict"
+  },
+  "context_budget": {
+    "live working set": "issue #508, active plan, summary, contract_tooling loader/checker code, structured inventory",
+    "recoverable later": "historical archive evidence and unrelated backlog",
+    "externalize before shift": "update this plan with chosen manifest subset and proof",
+    "pre-work config pull": "uv run agentic-workspace config --target . --format json",
+    "pre-work memory pull": "none unless compact commands point there",
+    "tiny resumability note": "schema-back root manifests through existing contract tooling; do not broaden into codegen",
+    "context-shift triggers": "before broad loader refactor or if manifest schemas require cross-file generation"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the bounded #508 slice with explicit schemas and validated loading for high-priority root manifests.",
+    "hard constraints": "Preserve extension flexibility and keep custom semantic checks where schemas are the wrong tool.",
+    "agent may decide locally": "Manifest subset, helper placement, schema strictness, and focused tests.",
+    "escalate when": "The slice cannot be made valuable without validating every root contract manifest."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#508",
+      "label": "Root contract manifest schema child issue",
+      "role": "source",
+      "locator": "GitHub issue #508"
+    },
+    {
+      "kind": "issue",
+      "target": "#502",
+      "label": "Structured-file contract parent lane",
+      "role": "parent",
+      "locator": "GitHub issue #502"
+    }
+  ],
+  "active_milestone": {
+    "id": "#508",
+    "status": "completed",
+    "scope": "root contract manifest schemas, validated loaders, diagnostics, and inventory status",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "read-only subagent inspection"
+  },
+  "immediate_next_action": [
+    "Archive this plan, close #508, refresh external evidence, then promote the next prioritized structured-file-contract slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/root-contract-manifest-schemas.plan.json"
+  ],
+  "invariants": [
+    "schemas are machinery and should not become first-contact surfaces",
+    "root contract manifests remain extensible unless a field is known closed",
+    "cross-file invariants remain in checks"
+  ],
+  "contract_decisions_to_freeze": [
+    "selected manifest subset",
+    "schema location naming",
+    "invalid manifest diagnostic shape"
+  ],
+  "open_questions_to_close": [
+    "which candidate manifests already have schema or typed validation",
+    "which subset gives the best value without over-broad schema work",
+    "whether load_contract_json should accept optional schema validation or selected callers should wrap it"
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run pytest tests/test_structured_file_inventory.py tests/test_contract_tooling.py -q",
+    "uv run ruff check src tests scripts"
+  ],
+  "required_tools": [
+    "uv",
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "Selected high-priority root contract manifests have explicit schemas.",
+    "Validated loaders are used for selected schema-backed manifests.",
+    "Invalid selected manifests produce actionable diagnostics.",
+    "Custom checks remain for cross-file invariants.",
+    "Inventory marks selected manifests schema-backed and points to schema owners.",
+    "Proof-selected validation passes."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": ".agentic-workspace/planning/execplans/root-contract-manifest-schemas.plan.json",
+    "what happened": "Added explicit schemas for operation_contracts, operation_primitives, conformance_contracts, and improvement_signal_contract; switched high-priority root contract manifest loaders to load_validated_contract_json; recorded validated loader consumption; kept semantic and cross-file checks in check_contract_tooling_surfaces; updated structured-file inventory and tests so the root contract gap is no longer routed to #508.",
+    "scope touched": "root contract schemas, contract tooling loaders, contract checker, python contract consumption policy, structured-file inventory/tests, active plan/state",
+    "changed surfaces": "src/agentic_workspace/contracts/schemas/*.schema.json additions; src/agentic_workspace/contract_tooling.py; scripts/check/check_contract_tooling_surfaces.py; src/agentic_workspace/contracts/python_contract_consumption.json; src/agentic_workspace/contracts/structured_file_inventory.json; tests/test_structured_file_inventory.py",
+    "validations run": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run pytest tests/test_structured_file_inventory.py tests/test_contract_tooling.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace proof --target . --changed ... --format json; uv run agentic-workspace preflight --format json; uv run agentic-workspace report --target . --section closeout_trust --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json",
+    "result for continuation": "#508 complete; #502 remains open for #509/#544",
+    "next step": "archive plan and close #508 after commit"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed in root contract schemas/loaders/checks, structured-file inventory/tests, and active planning surfaces",
+    "proof status": "passed",
+    "intent served": "yes for #508; high-priority root manifests now have schema-backed validation or typed validator coverage through existing tooling",
+    "config compliance": "used summary, report, proof, preflight, doctor, reconcile, skills, and delegated read-only inspection through checked-in planning",
+    "misinterpretation risk": "low; schemas cover shape while custom checks preserve semantic and cross-file validation",
+    "follow-on decision": "continue #509/#544 under #502 rather than expanding this slice"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "proof-selected planning_surfaces, workspace_cli, and contract_tooling lanes all passed",
+    "evidence for \"proof achieved\" state": "contract checker, structured inventory checker, focused contract/inventory tests, workspace CLI tests, ruff checks, and planning doctor all exited successfully"
+  },
+  "intent_satisfaction": {
+    "original intent": "#508: add schemas and validated loaders for high-priority root contract manifests.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#508 delivered schemas for root registry manifests, validated loaders for high-priority root contracts, python_contract_consumption bindings, contract checker coverage, and structured inventory classification.",
+    "unsolved intent passed to": "#509/#544 remain open under #502 for remaining structured-file contract work."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "prefer schema-backed diagnostics through existing tooling over new first-line surfaces",
+    "broader-lane validation question": "Does this reduce machine-readable ambiguity without adding startup burden?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Bounded #508 is complete; parent #502 remains open for remaining structured-file contract children.",
+    "evidence carried forward": "Proof-selected planning_surfaces, workspace_cli, and contract_tooling commands passed, including contract tooling checks, structured inventory checks, focused tests, workspace CLI tests, ruff, and planning doctor.",
+    "reopen trigger": "Reopen #508 if high-priority root manifests again load without schema or typed validation, or if src/agentic_workspace/contracts/*.json returns to a freeform gap."
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "root manifest schemas should cover shape while Python checks keep semantic and cross-file invariants",
+    "motivation worth preserving": "validated loaders make contract changes fail at consumption instead of relying on later broad checker context",
+    "canonical owner now": "contracts/checks: schemas, contract_tooling validated loaders, python_contract_consumption policy, and check_contract_tooling_surfaces",
+    "promotion trigger": "when adding or changing root contract manifests, update schema plus python_contract_consumption or the delegated validator entry",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "high-priority root contract manifests are now schema-backed or typed-validator-backed through existing contract tooling",
+    "validation confirmed": "contract checker, structured inventory checker, focused tests, workspace CLI tests, ruff, planning doctor, and proof selection passed",
+    "follow-on routed to": "#509/#544 under #502",
+    "post-work posterity capture": "durable constraints live in schemas/checks/inventory and this archived execplan",
+    "knowledge promoted (Memory/Docs/Config)": "no Memory promotion; contracts/checks are the durable owner",
+    "resume from": "refresh external evidence and promote #509 unless refreshed evidence reprioritizes"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "structured inventory schema_or_validator claims were useful for routing but not themselves executable proof",
+      "large root CLI and test-file hotspots remain visible in improvement_intake"
+    ],
+    "signals fixed": [
+      "root contract freeform gap removed from structured_file_inventory for #508"
+    ],
+    "signals routed": [
+      "#544 created and added to the structured-file-contract lane for executable inventory-claim validation",
+      "existing large-surface backlog owns root CLI/test file hotspots"
+    ],
+    "signals dismissed": [],
+    "next owner": "#509/#544"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "raw subagent mapping output and detailed command output",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#509 package-local classification/extraction schemas",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#544 executable inventory-claim validation",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "none; durable rule is encoded in contracts/checks",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "no Memory promotion; contracts/checks are the durable owner",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "new root manifest schemas",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "contract_tooling validated loaders",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "python_contract_consumption validated loader policy",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "check_contract_tooling_surfaces.py",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "no Memory promotion; contracts/checks are the durable owner",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#509",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#544",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #508 after closing #506."
+  ]
+}

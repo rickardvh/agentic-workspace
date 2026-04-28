@@ -41,7 +41,7 @@ def compact_contract_manifest() -> dict[str, Any]:
 
 
 def proof_routes_manifest() -> dict[str, Any]:
-    return load_contract_json("proof_routes.json")
+    return load_validated_contract_json("proof_routes.json", "proof_routes_manifest.schema.json")
 
 
 def proof_selection_rules_manifest() -> dict[str, Any]:
@@ -53,23 +53,23 @@ def authority_markers_manifest() -> dict[str, Any]:
 
 
 def report_contract_manifest() -> dict[str, Any]:
-    return load_contract_json("report_contract.json")
+    return load_validated_contract_json("report_contract.json", "report_contract_manifest.schema.json")
 
 
 def contract_inventory_manifest() -> dict[str, Any]:
-    return load_contract_json("contract_inventory.json")
+    return load_validated_contract_json("contract_inventory.json", "contract_inventory.schema.json")
 
 
 def workspace_surfaces_manifest() -> dict[str, Any]:
-    return load_contract_json("workspace_surfaces.json")
+    return load_validated_contract_json("workspace_surfaces.json", "workspace_surfaces_manifest.schema.json")
 
 
 def setup_findings_policy_manifest() -> dict[str, Any]:
-    return load_contract_json("setup_findings_policy.json")
+    return load_validated_contract_json("setup_findings_policy.json", "setup_findings_policy.schema.json")
 
 
 def workflow_artifact_profiles_manifest() -> dict[str, Any]:
-    return load_contract_json("workflow_artifact_profiles.json")
+    return load_validated_contract_json("workflow_artifact_profiles.json", "workflow_artifact_profiles.schema.json")
 
 
 def workflow_definition_format_manifest() -> dict[str, Any]:
@@ -77,43 +77,43 @@ def workflow_definition_format_manifest() -> dict[str, Any]:
 
 
 def improvement_latitude_policy_manifest() -> dict[str, Any]:
-    return load_contract_json("improvement_latitude_policy.json")
+    return load_validated_contract_json("improvement_latitude_policy.json", "improvement_latitude_policy.schema.json")
 
 
 def improvement_signal_contract_manifest() -> dict[str, Any]:
-    return load_contract_json("improvement_signal_contract.json")
+    return load_validated_contract_json("improvement_signal_contract.json", "improvement_signal_contract.schema.json")
 
 
 def optimization_bias_policy_manifest() -> dict[str, Any]:
-    return load_contract_json("optimization_bias_policy.json")
+    return load_validated_contract_json("optimization_bias_policy.json", "optimization_bias_policy.schema.json")
 
 
 def repo_friction_policy_manifest() -> dict[str, Any]:
-    return load_contract_json("repo_friction_policy.json")
+    return load_validated_contract_json("repo_friction_policy.json", "repo_friction_policy.schema.json")
 
 
 def preflight_policy_manifest() -> dict[str, Any]:
-    return load_contract_json("preflight_policy.json")
+    return load_validated_contract_json("preflight_policy.json", "preflight_policy.schema.json")
 
 
 def module_registry_manifest() -> dict[str, Any]:
-    return load_contract_json("module_registry.json")
+    return load_validated_contract_json("module_registry.json", "module_registry.schema.json")
 
 
 def cli_commands_manifest() -> dict[str, Any]:
-    return load_contract_json("cli_commands.json")
+    return load_validated_contract_json("cli_commands.json", "cli_commands.schema.json")
 
 
 def cli_option_groups_manifest() -> dict[str, Any]:
-    return load_contract_json("cli_option_groups.json")
+    return load_validated_contract_json("cli_option_groups.json", "cli_option_groups.schema.json")
 
 
 def operation_contracts_manifest() -> dict[str, Any]:
-    return load_contract_json("operation_contracts.json")
+    return load_validated_contract_json("operation_contracts.json", "operation_contracts.schema.json")
 
 
 def conformance_contracts_manifest() -> dict[str, Any]:
-    return load_contract_json("conformance_contracts.json")
+    return load_validated_contract_json("conformance_contracts.json", "conformance_contracts.schema.json")
 
 
 def command_adapter_generation_manifest() -> dict[str, Any]:
@@ -133,7 +133,7 @@ def conformance_contract_manifest(relative_path: str) -> dict[str, Any]:
 
 
 def operation_primitives_manifest() -> dict[str, Any]:
-    return load_contract_json("operation_primitives.json")
+    return load_validated_contract_json("operation_primitives.json", "operation_primitives.schema.json")
 
 
 def operation_manifest(relative_path: str) -> dict[str, Any]:
@@ -141,7 +141,7 @@ def operation_manifest(relative_path: str) -> dict[str, Any]:
 
 
 def python_extraction_map_manifest() -> dict[str, Any]:
-    return load_contract_json("python_extraction_map.json")
+    return load_validated_contract_json("python_extraction_map.json", "python_extraction_map.schema.json")
 
 
 def python_contract_consumption_manifest() -> dict[str, Any]:

@@ -22,6 +22,7 @@ from agentic_workspace.contract_tooling import (
     contract_inventory_manifest,
     contract_schema,
     improvement_latitude_policy_manifest,
+    improvement_signal_contract_manifest,
     lifecycle_generation_readiness_manifest,
     module_registry_manifest,
     operation_contracts_manifest,
@@ -1233,11 +1234,13 @@ def main(argv: list[str] | None = None) -> int:
         ),
         (
             "operation contracts registry",
-            _validate_operation_registry(operation_contracts_manifest()),
+            _validate(operation_contracts_manifest(), "operation_contracts.schema.json")
+            + _validate_operation_registry(operation_contracts_manifest()),
         ),
         (
             "conformance contracts registry",
-            _validate_conformance_registry(conformance_contracts_manifest()),
+            _validate(conformance_contracts_manifest(), "conformance_contracts.schema.json")
+            + _validate_conformance_registry(conformance_contracts_manifest()),
         ),
         (
             "command adapter generation manifest",
@@ -1264,7 +1267,12 @@ def main(argv: list[str] | None = None) -> int:
         ),
         (
             "operation primitives registry",
-            _validate_operation_primitives(operation_primitives_manifest()),
+            _validate(operation_primitives_manifest(), "operation_primitives.schema.json")
+            + _validate_operation_primitives(operation_primitives_manifest()),
+        ),
+        (
+            "improvement signal contract",
+            _validate(improvement_signal_contract_manifest(), "improvement_signal_contract.schema.json"),
         ),
         (
             "python extraction map",

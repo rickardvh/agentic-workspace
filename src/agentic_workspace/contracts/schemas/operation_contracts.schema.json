@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/operation-contracts.schema.json",
+  "title": "Agentic Workspace Operation Contracts Registry",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "summary",
+    "primitive_registry",
+    "schema",
+    "operations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/operation-contracts/v1"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "primitive_registry": {
+      "const": "operation_primitives.json"
+    },
+    "schema": {
+      "const": "schemas/operation.schema.json"
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "command",
+          "migration_status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^operations/[a-z0-9_.-]+\\.json$"
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1
+          },
+          "migration_status": {
+            "type": "string",
+            "enum": [
+              "draft-contract-only",
+              "validated-contract",
+              "runtime-consumed"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

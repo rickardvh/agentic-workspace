@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/conformance-contracts.schema.json",
+  "title": "Agentic Workspace Conformance Contracts Registry",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "summary",
+    "schema",
+    "contracts"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/conformance-contracts/v1"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schema": {
+      "const": "schemas/conformance.schema.json"
+    },
+    "contracts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "operation_id",
+          "path",
+          "adapter_kind"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "operation_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^conformance/[a-z0-9_.-]+\\.json$"
+          },
+          "adapter_kind": {
+            "type": "string",
+            "enum": [
+              "process"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
