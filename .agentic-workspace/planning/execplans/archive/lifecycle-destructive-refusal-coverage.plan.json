@@ -1,0 +1,292 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Lifecycle Destructive Refusal Coverage",
+  "goal": [
+    "Harden root lifecycle uninstall coverage so destructive operations refuse ambiguous ownership, preserve repo-owned and local-only state by default, and keep dry-run/apply planning aligned."
+  ],
+  "non_goals": [
+    "Do not automatically delete ambiguous files.",
+    "Do not remove repo-owned content outside managed fences.",
+    "Do not redesign lifecycle module installers."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Root lifecycle uninstall behavior is proven by black-box fixtures for ambiguous and safe managed-only states.",
+      "constraints": "Keep behavior conservative; destructive output must stay actionable and compact.",
+      "latitude": "Add focused tests and small lifecycle output/plan fixes if the tests reveal drift.",
+      "escalation": "Stop before changing package ownership semantics or broad installer internals."
+    },
+    "execution": {
+      "milestone": "destructive-refusal-fixtures",
+      "status": "completed",
+      "next_step": "Archive this plan, commit the milestone, close #483, refresh external evidence, then continue #484.",
+      "proof": "Focused uninstall lifecycle tests, relevant package installer tests, full workspace CLI tests, ruff, proof selector, authority checks, planning checks, preflight, closeout trust, skills query, and reconcile ran."
+    },
+    "scope": {
+      "touched": [
+        "tests/test_workspace_cli.py",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/workspace_output.py",
+        "packages/planning/tests/test_installer.py",
+        "packages/memory/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/lifecycle-destructive-refusal-coverage.plan.json"
+      ],
+      "invariants": [
+        "Uninstall refuses ambiguous ownership unless explicitly safe.",
+        "Local-only state is preserved by default.",
+        "Dry-run and apply use the same destructive planner."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make lifecycle management straightforward, predictable, and low-judgment.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening",
+    "parent lane": "#478"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "follow-on detail": "#484 remains after #483.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #483 is proven and closed."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Agents can trust uninstall refusal and preservation behavior from black-box fixtures.",
+    "intentionally deferred": "Legacy compatibility machinery removal belongs to #484.",
+    "discovered implications": "",
+    "proof achieved now": "Root uninstall refuses root shared-layer removals when any shared-layer payload is ambiguous, preserves local-only and repo-owned startup state by default, and has dry-run/apply agreement fixtures for safe managed-only removals.",
+    "validation still needed": "None for #483 after closeout.",
+    "next likely slice": "#484"
+  },
+  "intent_interpretation": {
+    "literal request": "Reingest and repeat until out of issues.",
+    "inferred intended outcome": "Continue the lifecycle hardening lane with #483 after #482 closed.",
+    "chosen concrete what": "Add destructive uninstall/refusal coverage and fix narrow drift if found.",
+    "interpretation distance": "low",
+    "review guidance": "Verify safe managed-only uninstall, ambiguous refusal, local-only preservation, and dry-run/apply agreement."
+  },
+  "execution_bounds": {
+    "allowed paths": "Root lifecycle code/output/tests, module installer tests if needed, and planning surfaces.",
+    "max changed files": "Prefer 4-7 files.",
+    "required validation commands": "Focused pytest, relevant package installer pytest, ruff, proof selector, planning checks.",
+    "ask-before-refactor threshold": "Stop before broad lifecycle primitive extraction or module installer rewrites.",
+    "stop before touching": "Branch switching, unrelated planning maturity work, or generated package work."
+  },
+  "stop_conditions": {
+    "stop when": "Acceptance fixtures pass and closeout proof is recorded.",
+    "escalate when boundary reached": "Safe uninstall requires changing ownership semantics.",
+    "escalate on scope drift": "The work becomes #484 legacy removal/refusal policy.",
+    "escalate on proof failure": "Dry-run/apply agreement cannot be shown without broader behavior changes."
+  },
+  "context_budget": {
+    "live working set": "#483, root uninstall planner/output, workspace CLI tests, package installer tests, active execplan.",
+    "recoverable later": "New planning maturity lane and historical derived follow-up backlog.",
+    "externalize before shift": "Update this execplan with proof and closeout.",
+    "pre-work config pull": "summary, report next_action, issue refresh, and skills query used.",
+    "pre-work memory pull": "not needed.",
+    "tiny resumability note": "Implement #483 black-box destructive lifecycle refusal coverage.",
+    "context-shift triggers": "Before commit or if uninstall behavior requires package installer semantic changes."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #483 end-to-end.",
+    "hard constraints": "Stay on current branch, commit after proof, preserve conservative destructive behavior.",
+    "agent may decide locally": "Fixture arrangement, assertion shape, and minor output clarity fixes.",
+    "escalate when": "A change would delete ambiguous or repo-owned state automatically."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#483",
+      "label": "destructive lifecycle refusal coverage",
+      "role": "source_intent",
+      "locator": "GitHub issue #483"
+    },
+    {
+      "kind": "issue",
+      "target": "#478",
+      "label": "lifecycle management hardening parent",
+      "role": "parent_intent",
+      "locator": "GitHub issue #478"
+    },
+    {
+      "kind": "issue",
+      "target": "#484",
+      "label": "next lifecycle hardening child",
+      "role": "next_lane",
+      "locator": "GitHub issue #484"
+    }
+  ],
+  "active_milestone": {
+    "id": "destructive-refusal-fixtures",
+    "status": "completed",
+    "scope": "Root lifecycle uninstall refusal and preservation coverage.",
+    "ready": "Issue #483 is open and #482 is closed.",
+    "blocked": "None.",
+    "optional_deps": "None."
+  },
+  "immediate_next_action": [
+    "Archive this plan, commit the milestone, close #483, refresh external evidence, then promote #484."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/lifecycle-destructive-refusal-coverage.plan.json"
+  ],
+  "invariants": [
+    "Destructive uninstall must refuse ambiguous ownership.",
+    "Local-only state is preserved unless --local-only is selected.",
+    "Dry-run and apply remain aligned."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"uninstall_dry_run_requires_review or uninstall_apply_refuses or uninstall_dry_run_and_apply_agree or uninstall_invokes_selected_module\"",
+    "uv run pytest packages/planning/tests/test_installer.py -q -k uninstall",
+    "uv run pytest packages/memory/tests/test_installer.py -q -k uninstall",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests packages/planning/tests/test_installer.py packages/memory/tests/test_installer.py",
+    "uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/lifecycle-destructive-refusal-coverage.plan.json --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace preflight --target . --format json",
+    "uv run agentic-workspace report --target . --section workflow_obligations --format json",
+    "uv run agentic-workspace report --target . --section closeout_trust --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Uninstall refuses ambiguous ownership with an actionable reason.",
+    "Local-only state is preserved by default.",
+    "Repo-owned startup files and unfenced content are preserved.",
+    "Dry-run and apply agree on planned destructive actions.",
+    "Tests cover at least one ambiguous ownership case and one safe managed-only uninstall."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "Issue #483 plus checked-in roadmap.",
+    "what happened": "Added conservative root shared-layer uninstall refusal: if any root workspace payload differs from the managed payload, otherwise removable root shared-layer payloads are skipped until manual review. Added black-box root fixtures for ambiguous apply refusal, safe managed-only dry-run/apply agreement, local-only preservation, repo-owned AGENTS preservation, and selected module uninstall dispatch.",
+    "scope touched": "Root lifecycle uninstall runtime, workspace CLI tests, and checked-in planning surfaces.",
+    "changed surfaces": "preflight, summary, report, proof, reconcile, doctor, skills, root_cli_authority defaults, planning surface check.",
+    "validations run": "Focused uninstall lifecycle tests; planning package uninstall tests; memory package uninstall tests; full tests/test_workspace_cli.py; ruff; proof selector; root CLI authority; planning doctor; planning surface check; preflight; workflow_obligations and closeout_trust reports; reconcile; dogfooding skills query.",
+    "result for continuation": "#483 is ready to close; lifecycle-management-hardening continues with #484.",
+    "next step": "Archive plan, commit, push, close #483, refresh external evidence, then continue #484."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed in root lifecycle uninstall behavior, workspace CLI tests, and planning state.",
+    "proof status": "passed",
+    "intent served": "yes; acceptance fixtures cover ambiguous ownership refusal, local-only preservation, repo-owned startup preservation, dry-run/apply agreement, and safe managed-only uninstall.",
+    "config compliance": "used package workflow surfaces and stayed on the current branch.",
+    "misinterpretation risk": "low; the behavior is conservative and only tightens destructive root shared-layer removal.",
+    "follow-on decision": "close #483 and continue lifecycle hardening with #484."
+  },
+  "proof_report": {
+    "validation proof": "204 workspace CLI tests passed; focused root uninstall tests passed; planning and memory package uninstall subsets passed; ruff passed; proof selector, root CLI authority, planning doctor, planning surface check, summary, preflight, workflow_obligations, closeout_trust, reconcile, and skills query completed.",
+    "proof achieved now": "Uninstall refuses ambiguous root shared-layer deletion and preserves local-only and repo-owned startup state by default.",
+    "evidence for \"proof achieved\" state": "tests/test_workspace_cli.py::test_uninstall_apply_refuses_workspace_payload_removal_when_ambiguous, ::test_uninstall_dry_run_and_apply_agree_for_safe_managed_payloads, ::test_uninstall_dry_run_requires_review_for_ambiguous_workspace_payload, and ::test_uninstall_invokes_selected_module_uninstall."
+  },
+  "intent_satisfaction": {
+    "original intent": "#483 Harden uninstall and destructive lifecycle refusal coverage.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Root uninstall now skips otherwise removable shared-layer payloads when another shared-layer file is ambiguous; tests verify actionable review output, safe managed-only dry-run/apply agreement, local-only preservation, repo-owned AGENTS preservation, and module dispatch.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Conservative runtime guard plus tests; no new top-level command or broad lifecycle redesign.",
+    "broader-lane validation question": "Does lifecycle uninstall reduce judgment without increasing first-contact burden?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Root lifecycle uninstall is more conservative and better proven for destructive refusal and preservation behavior.",
+    "validation confirmed": "Focused and full workspace CLI tests, package uninstall subsets, ruff, proof selector, root CLI authority, planning doctor, planning surface check, summary, preflight, closeout reports, reconcile, and skills query passed.",
+    "follow-on routed to": "#484",
+    "post-work posterity capture": "Archive this plan after commit/closeout.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory/docs/config promotion needed.",
+    "resume from": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "A plausible compact report selector, current_work, is rejected even though the concept appears in summary; route after this slice unless already covered."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "#507"
+    ],
+    "signals dismissed": [],
+    "next owner": "#507"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#484",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No Memory/docs/config promotion needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No Memory/docs/config promotion needed.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "No Memory/docs/config promotion needed.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "destructive lifecycle refusal coverage",
+          "owner": "issue",
+          "source": "#483"
+        },
+        {
+          "summary": "lifecycle management hardening parent",
+          "owner": "issue",
+          "source": "#478"
+        },
+        {
+          "summary": "next lifecycle hardening child",
+          "owner": "issue",
+          "source": "#484"
+        }
+      ]
+    }
+  }
+}

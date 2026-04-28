@@ -2119,7 +2119,8 @@ def _workspace_init_or_upgrade_report(
 def _workspace_uninstall_report(*, target_root: Path, dry_run: bool, local_only_repo_root: Path | None = None) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
-    removable: list[Path] = []
+    removable_candidates: list[Path] = []
+    ambiguous_payloads: list[Path] = []
 
     for relative in WORKSPACE_PAYLOAD_FILES:
         destination = target_root / relative
@@ -2127,15 +2128,9 @@ def _workspace_uninstall_report(*, target_root: Path, dry_run: bool, local_only_
             actions.append({"kind": "skipped", "path": destination.as_posix(), "detail": "already absent"})
             continue
         if destination.read_bytes() == _workspace_payload_bytes(relative):
-            removable.append(relative)
-            actions.append(
-                {
-                    "kind": "would remove" if dry_run else "removed",
-                    "path": relative.as_posix(),
-                    "detail": "matches managed workspace payload content",
-                }
-            )
+            removable_candidates.append(relative)
             continue
+        ambiguous_payloads.append(relative)
         actions.append(
             {
                 "kind": "manual review",
@@ -2143,6 +2138,27 @@ def _workspace_uninstall_report(*, target_root: Path, dry_run: bool, local_only_
                 "detail": "local workspace shared-layer file differs from managed payload; remove manually if intended",
             }
         )
+
+    if ambiguous_payloads:
+        for relative in removable_candidates:
+            actions.append(
+                {
+                    "kind": "skipped",
+                    "path": relative.as_posix(),
+                    "detail": "blocked by ambiguous workspace shared-layer ownership; review before destructive uninstall",
+                }
+            )
+        removable: list[Path] = []
+    else:
+        removable = list(removable_candidates)
+        for relative in removable:
+            actions.append(
+                {
+                    "kind": "would remove" if dry_run else "removed",
+                    "path": relative.as_posix(),
+                    "detail": "matches managed workspace payload content",
+                }
+            )
 
     if not dry_run:
         for relative in removable:

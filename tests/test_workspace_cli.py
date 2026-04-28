@@ -5652,10 +5652,78 @@ def test_uninstall_dry_run_requires_review_for_ambiguous_workspace_payload(tmp_p
     assert lifecycle_plan["next_safe_command"]["status"] == "review-required"
     safety = lifecycle_plan["mutation_safety"]
     assert safety["classification"] == "destructive-mutation"
-    assert safety["destructive_risk"]["planned_removal_count"] >= 1
+    assert ".agentic-workspace/WORKFLOW.md" not in safety["destructive_risk"]["planned_removals"]
     assert safety["review_required_before_apply"] is True
     scenarios = {entry["scenario"]: entry for entry in safety["fixture_coverage"]}
     assert scenarios["ambiguous ownership uninstall refuses deletion"]["status"] == "covered"
+
+
+def test_uninstall_apply_refuses_workspace_payload_removal_when_ambiguous(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    workflow_path = target / ".agentic-workspace" / "WORKFLOW.md"
+    ownership_path = target / ".agentic-workspace" / "OWNERSHIP.toml"
+    workflow_path.write_text(workflow_path.read_text(encoding="utf-8") + "\nLocal owner edit.\n", encoding="utf-8")
+
+    assert cli.main(["uninstall", "--modules", "planning", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert workflow_path.exists()
+    assert ownership_path.exists()
+    assert (
+        ".agentic-workspace/WORKFLOW.md: local workspace shared-layer file differs from managed payload; remove manually if intended"
+        in payload["needs_review"]
+    )
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    actions_by_path = {action["path"]: action for action in workspace_report["actions"]}
+    assert actions_by_path[".agentic-workspace/OWNERSHIP.toml"]["kind"] == "skipped"
+    assert "blocked by ambiguous workspace shared-layer ownership" in actions_by_path[".agentic-workspace/OWNERSHIP.toml"]["detail"]
+    assert payload["lifecycle_plan"]["next_safe_command"]["status"] == "review-required"
+
+
+def test_uninstall_dry_run_and_apply_agree_for_safe_managed_payloads(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    local_memory = target / ".agentic-workspace" / "local" / "memory.toml"
+    local_memory.parent.mkdir(parents=True)
+    local_memory.write_text('kind = "local-memory"\n', encoding="utf-8")
+    agents_path = target / "AGENTS.md"
+    agents_text = agents_path.read_text(encoding="utf-8")
+
+    assert cli.main(["uninstall", "--modules", "planning", "--target", str(target), "--dry-run", "--format", "json"]) == 0
+    dry_run_payload = json.loads(capsys.readouterr().out)
+    dry_run_removals = set(dry_run_payload["lifecycle_plan"]["mutation_safety"]["destructive_risk"]["planned_removals"])
+
+    assert cli.main(["uninstall", "--modules", "planning", "--target", str(target), "--format", "json"]) == 0
+
+    apply_payload = json.loads(capsys.readouterr().out)
+    apply_removals = set(apply_payload["lifecycle_plan"]["mutation_safety"]["destructive_risk"]["planned_removals"])
+    assert dry_run_removals == apply_removals
+    assert ".agentic-workspace/WORKFLOW.md" in apply_removals
+    assert ".agentic-workspace/OWNERSHIP.toml" in apply_removals
+    assert agents_path.read_text(encoding="utf-8") == agents_text
+    assert local_memory.read_text(encoding="utf-8") == 'kind = "local-memory"\n'
+    assert not (target / ".agentic-workspace" / "WORKFLOW.md").exists()
+    assert not (target / ".agentic-workspace" / "OWNERSHIP.toml").exists()
+
+
+def test_uninstall_invokes_selected_module_uninstall(monkeypatch, tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["uninstall", "--modules", "planning", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert [(module_name, command_name) for module_name, command_name, _kwargs in calls] == [("planning", "uninstall")]
+    assert payload["modules"] == ["planning"]
+    assert payload["reports"][0]["module"] == "planning"
 
 
 def test_upgrade_apply_preserves_local_only_memory_and_integration_state(tmp_path: Path, capsys) -> None:
