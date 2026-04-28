@@ -1,0 +1,203 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Command Package Schema Boundary",
+  "goal": [
+    "Implement #432 by giving the generic command-package IR schema a lift-out-friendly owner while keeping Agentic Workspace command facts workspace-owned."
+  ],
+  "non_goals": [
+    "Do not move workspace command-package IR data out of src/agentic_workspace/contracts.",
+    "Do not publish an external schema package.",
+    "Do not change command semantics.",
+    "Do not add first-contact product surfaces."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Generic command-generation schema ownership is visible under packages/command-generation and checked for drift against the workspace validation path.",
+      "constraints": "Keep root contract validation working and avoid startup expansion.",
+      "latitude": "Mirror the generic schema and add a contract-tooling drift check.",
+      "escalation": "Escalate if schema movement would break existing workspace contract loading."
+    },
+    "execution": {
+      "milestone": "command-package-schema-boundary",
+      "status": "complete",
+      "next_step": "Archive the completed execplan, commit, push, close #432, then continue #433.",
+      "proof": "contract tooling checks, generated package checks, ruff, planning surfaces, and proof selector."
+    },
+    "scope": {
+      "touched": [
+        "packages/command-generation/schemas/",
+        "packages/command-generation/README.md",
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "tests/test_contract_tooling.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/command-package-schema-boundary.plan.json"
+      ],
+      "invariants": [
+        "Workspace command-package IR data remains workspace-owned.",
+        "Workspace contract validation remains unchanged for consumers.",
+        "The generic schema mirror cannot drift silently."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#430 isolate generic command-generation machinery for future extraction",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap",
+    "parent lane": "#430"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap",
+    "activation trigger": "after #432 closeout, continue #433 loader/check decoupling"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Generic schema ownership becomes visible before loader/check decoupling.",
+    "intentionally deferred": "#433 generic loader/check decoupling, #434 consumer wrapper clarity, #435 lift-out criteria.",
+    "discovered implications": "",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice.",
+    "next likely slice": "#433"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "hard constraints": "Dogfood package surfaces, commit/push milestone, close issue only after proof.",
+    "agent may decide locally": "Exact schema mirror wording and drift-check placement.",
+    "escalate when": "A change would move workspace command facts or break existing contract validation."
+  },
+  "active_milestone": {
+    "id": "command-package-schema-boundary",
+    "status": "completed",
+    "scope": "generic schema mirror and drift check",
+    "ready": "yes",
+    "blocked": "no"
+  },
+  "immediate_next_action": [
+    "Archive completed plan and close #432 after commit/push."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/command-generation/schemas/",
+    "packages/command-generation/README.md",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "tests/test_contract_tooling.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/command-package-schema-boundary.plan.json"
+  ],
+  "invariants": [
+    "No workspace command facts move in this slice.",
+    "Existing contract tooling remains the workspace consumer path.",
+    "Schema drift is visible through ordinary checks."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace preflight --target . --format json",
+    "uv run agentic-workspace proof --target . --changed packages/command-generation/schemas/ packages/command-generation/README.md scripts/check/check_contract_tooling_surfaces.py tests/test_contract_tooling.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/command-package-schema-boundary.plan.json --format json",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests scripts packages/command-generation/src",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace report --target . --section workflow_obligations --format json",
+    "uv run agentic-workspace report --target . --section closeout_trust --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "completion_criteria": [
+    "Generic command-package schema has a lift-out-friendly package-owned copy.",
+    "Workspace command-package IR data remains workspace-owned.",
+    "Root contract tooling verifies the package-owned schema mirror does not drift.",
+    "No first-contact product surface is added."
+  ],
+  "execution_run": {
+    "run status": "complete",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace summary --target . --format json",
+    "what happened": "Mirrored the generic command-package IR schema under packages/command-generation/schemas, documented the ownership split in the internal package README, and added a contract-tooling drift check plus regression coverage.",
+    "scope touched": "generic schema mirror, contract-tooling check, contract-tooling tests, internal package README, planning residue",
+    "changed surfaces": "packages/command-generation/schemas/command_package_ir.schema.json, packages/command-generation/README.md, scripts/check/check_contract_tooling_surfaces.py, tests/test_contract_tooling.py, active execplan",
+    "validations run": "uv run agentic-workspace preflight --target . --format json; uv run agentic-workspace proof --target . --changed packages/command-generation/schemas/ packages/command-generation/README.md scripts/check/check_contract_tooling_surfaces.py tests/test_contract_tooling.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/command-package-schema-boundary.plan.json --format json; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_contract_tooling.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests scripts packages/command-generation/src; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace report --target . --section workflow_obligations --format json; uv run agentic-workspace report --target . --section closeout_trust --format json; uv run agentic-workspace reconcile --format json",
+    "result for continuation": "#432 is satisfied; #430 remains open and should continue with #433 generic loader/check decoupling.",
+    "next step": "Archive plan, commit, push, close #432, refresh external evidence, then promote #433."
+  },
+  "execution_summary": {
+    "outcome delivered": "Generic command-package schema ownership is now visible under packages/command-generation while Agentic Workspace command facts remain workspace-owned.",
+    "validation confirmed": "Contract tooling, generated package checks, contract tooling tests, workspace CLI tests, ruff, planning surfaces, proof selection, planning doctor, workflow obligations, closeout trust, and reconcile passed.",
+    "follow-on routed to": "#433 loader/check decoupling under parent #430.",
+    "post-work posterity capture": "Archived execplan, package README, contract-tooling check output, and #432 closure comment carry the durable evidence.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory or config promotion was needed.",
+    "resume from": "Promote #433 from the #430 roadmap lane."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Contract tooling reports the command-generation schema boundary as current; contract tooling tests passed (28); workspace CLI tests passed (188); generated package static proof, ruff, planning surfaces, proof selector, planning doctor, workflow obligations, closeout trust, and reconcile passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "#432 generic schema ownership split",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "packages/command-generation/schemas/command_package_ir.schema.json mirrors the workspace validation schema, README documents generic schema ownership versus workspace-owned IR data, and contract tooling enforces mirror parity.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#433 loader/check decoupling remains the next #430 child.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No Memory or config promotion was needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No Memory or config promotion was needed.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#432 can close after this milestone is committed and pushed.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #432 after closing #431 package boundary.",
+    "2026-04-28: Added package-owned generic schema mirror and contract-tooling drift check."
+  ]
+}

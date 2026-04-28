@@ -66,6 +66,17 @@ def _validate(instance: object, schema_name: str) -> list[str]:
     return [error.message for error in validator.iter_errors(instance)]
 
 
+def _validate_command_generation_schema_boundary() -> list[str]:
+    workspace_schema = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "schemas" / "command_package_ir.schema.json"
+    package_schema = REPO_ROOT / "packages" / "command-generation" / "schemas" / "command_package_ir.schema.json"
+    errors: list[str] = []
+    if not package_schema.is_file():
+        return ["packages/command-generation/schemas/command_package_ir.schema.json is missing"]
+    if workspace_schema.read_text(encoding="utf-8") != package_schema.read_text(encoding="utf-8"):
+        errors.append("packages/command-generation/schemas/command_package_ir.schema.json drifted from workspace validation schema")
+    return errors
+
+
 def _sample_compact_answer() -> dict[str, object]:
     return cli._compact_contract_answer(  # type: ignore[attr-defined]
         surface="defaults",
@@ -1240,6 +1251,10 @@ def main(argv: list[str] | None = None) -> int:
             + _validate_command_package_ir(command_package_ir_manifest()),
         ),
         (
+            "command-generation schema boundary",
+            _validate_command_generation_schema_boundary(),
+        ),
+        (
             "generated command adapter output",
             _validate_generated_command_adapter_output(),
         ),
@@ -1614,6 +1629,7 @@ def main(argv: list[str] | None = None) -> int:
         generated_adapter_statuses, _ = _generated_command_adapter_statuses()
         print("Contract tooling health report")
         print("- No contract-tooling drift warnings detected.")
+        print("- Command-generation schema boundary: packages/command-generation/schemas/command_package_ir.schema.json mirrors workspace validation schema.")
         print("- Generated command adapter status:")
         for status in generated_adapter_statuses:
             commands = ", ".join(str(command) for command in status["command_surfaces"])

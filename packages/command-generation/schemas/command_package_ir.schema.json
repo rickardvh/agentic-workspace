@@ -1,0 +1,456 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/command-package-ir.schema.json",
+  "title": "Agentic Workspace Command Package IR",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "summary",
+    "schema",
+    "source_contracts",
+    "generation_policy",
+    "packages"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/command-package-ir/v1"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schema": {
+      "const": "schemas/command_package_ir.schema.json"
+    },
+    "source_contracts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "generation_policy": {
+      "type": "object",
+      "required": [
+        "authority_rule",
+        "runtime_boundary",
+        "ordinary_development_environment",
+        "test_environment",
+        "custom_codegen_boundary",
+        "shell_adapter_policy",
+        "direct_cli_edit_policy",
+        "generated_package_maturity",
+        "non_python_runtime_binding"
+      ],
+      "properties": {
+        "authority_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtime_boundary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ordinary_development_environment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "test_environment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "custom_codegen_boundary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "shell_adapter_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direct_cli_edit_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generated_package_maturity": {
+          "type": "object",
+          "required": [
+            "routing_rule",
+            "levels"
+          ],
+          "properties": {
+            "routing_rule": {
+              "type": "string",
+              "minLength": 1
+            },
+            "levels": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/maturity_level"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "non_python_runtime_binding": {
+          "type": "object",
+          "required": [
+            "selected_model",
+            "scope",
+            "universal_contract_owns",
+            "target_projection_owns",
+            "runtime_owns",
+            "error_mapping"
+          ],
+          "properties": {
+            "selected_model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "scope": {
+              "type": "string",
+              "minLength": 1
+            },
+            "universal_contract_owns": {
+              "$ref": "#/$defs/non_empty_strings"
+            },
+            "target_projection_owns": {
+              "$ref": "#/$defs/non_empty_strings"
+            },
+            "runtime_owns": {
+              "$ref": "#/$defs/non_empty_strings"
+            },
+            "error_mapping": {
+              "$ref": "#/$defs/non_empty_strings"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "packages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/package"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "package": {
+      "type": "object",
+      "required": [
+        "id",
+        "program",
+        "package_role",
+        "targets",
+        "commands"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+        },
+        "program": {
+          "type": "string",
+          "minLength": 1
+        },
+        "package_role": {
+          "enum": [
+            "root-workspace-cli",
+            "planning-module-cli",
+            "memory-module-cli"
+          ]
+        },
+        "targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/target"
+          }
+        },
+        "commands": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/command"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "target": {
+      "type": "object",
+      "required": [
+        "kind",
+        "package_name",
+        "generated_root",
+        "entrypoints",
+        "test_environment",
+        "maturity_level_ref"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "python",
+            "typescript",
+            "bash",
+            "powershell"
+          ]
+        },
+        "package_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generated_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entrypoints": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "test_environment": {
+          "enum": [
+            "python-dev",
+            "docker"
+          ]
+        },
+        "maturity_level_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generation_status": {
+          "enum": [
+            "supported-now",
+            "proof-fixture",
+            "runnable-read-only-adapter",
+            "deferred"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "maturity_level": {
+      "type": "object",
+      "required": [
+        "id",
+        "summary",
+        "runnable",
+        "runtime_backed",
+        "weak_agent_routing",
+        "promotion_requires"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runnable": {
+          "type": "boolean"
+        },
+        "runtime_backed": {
+          "type": "boolean"
+        },
+        "weak_agent_routing": {
+          "enum": [
+            "forbidden",
+            "review-required",
+            "allowed-read-only",
+            "allowed-mutation-with-review"
+          ]
+        },
+        "promotion_requires": {
+          "$ref": "#/$defs/non_empty_strings"
+        }
+      },
+      "additionalProperties": false
+    },
+    "command": {
+      "type": "object",
+      "required": [
+        "adapter_id",
+        "status",
+        "command",
+        "operation_ref",
+        "runtime_binding",
+        "schemas",
+        "effect_hints",
+        "conformance_refs",
+        "projection_boundary"
+      ],
+      "properties": {
+        "adapter_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+        },
+        "status": {
+          "enum": [
+            "generated",
+            "proof-fixture",
+            "deferred"
+          ]
+        },
+        "command": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "subcommand": {
+              "type": "string",
+              "minLength": 1
+            },
+            "manifest_ref": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "operation_ref": {
+          "type": "object",
+          "required": [
+            "id",
+            "path"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "path": {
+              "type": "string",
+              "pattern": "^operations/[A-Za-z0-9_.-]+\\.json$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "runtime_binding": {
+          "type": "object",
+          "required": [
+            "kind",
+            "primitive_refs"
+          ],
+          "properties": {
+            "kind": {
+              "const": "operation-primitive-sequence"
+            },
+            "primitive_refs": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "schemas": {
+          "type": "object",
+          "required": [
+            "input",
+            "output"
+          ],
+          "properties": {
+            "input": {
+              "$ref": "#/$defs/schema_refs"
+            },
+            "output": {
+              "$ref": "#/$defs/schema_refs"
+            }
+          },
+          "additionalProperties": false
+        },
+        "effect_hints": {
+          "type": "object",
+          "required": [
+            "read_only",
+            "destructive",
+            "idempotent",
+            "writes_repo_state",
+            "requires_preflight_gate"
+          ],
+          "properties": {
+            "read_only": {
+              "type": "boolean"
+            },
+            "destructive": {
+              "type": "boolean"
+            },
+            "idempotent": {
+              "type": "boolean"
+            },
+            "writes_repo_state": {
+              "type": "boolean"
+            },
+            "requires_preflight_gate": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "conformance_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "projection_boundary": {
+          "type": "object",
+          "required": [
+            "universal",
+            "target_specific",
+            "runtime_owned"
+          ],
+          "properties": {
+            "universal": {
+              "$ref": "#/$defs/non_empty_strings"
+            },
+            "target_specific": {
+              "$ref": "#/$defs/non_empty_strings"
+            },
+            "runtime_owned": {
+              "$ref": "#/$defs/non_empty_strings"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "schema_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_.-]+\\.schema\\.json$"
+      }
+    },
+    "non_empty_strings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

@@ -332,6 +332,21 @@ def test_generated_command_package_docker_conformance_surface_exists() -> None:
     assert "COPY generated/typescript ./generated/typescript" in text
 
 
+def test_command_generation_schema_boundary_is_checked() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module._validate_command_generation_schema_boundary() == []
+    workspace_schema = (
+        Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "contracts" / "schemas" / "command_package_ir.schema.json"
+    )
+    package_schema = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "schemas" / "command_package_ir.schema.json"
+    assert workspace_schema.read_text(encoding="utf-8") == package_schema.read_text(encoding="utf-8")
+
+
 def test_generated_python_command_package_metadata_is_current() -> None:
     from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE
 
