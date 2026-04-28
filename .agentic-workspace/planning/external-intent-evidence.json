@@ -3,11 +3,11 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T02:14:27+00:00",
+  "refreshed_at": "2026-04-28T02:16:02+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T02:14:27+00:00",
+    "refreshed_at": "2026-04-28T02:16:02+00:00",
     "item_count": 462,
     "open_count": 0,
     "closed_count": 462,
