@@ -1,0 +1,363 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Root Upgrade Front Door",
+  "goal": [
+    "Implement #479 so host-repo update guidance has one ordinary front door: agentic-workspace upgrade --target <repo> --dry-run, then apply, then doctor."
+  ],
+  "non_goals": [
+    "Do not remove package-specific CLIs.",
+    "Do not implement the full #478 lifecycle matrix in this slice.",
+    "Do not generate mutating lifecycle adapters."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Host-repo docs, command output, and tests point agents to root agentic-workspace upgrade first while preserving module-specific commands as fallback/debug surfaces.",
+      "constraints": "Keep lifecycle management repo-/tool-/language-agnostic and preserve module debugging entrypoints.",
+      "latitude": "Adjust docs, CLI output, contracts, and targeted tests as needed.",
+      "escalation": "Escalate if making root upgrade authoritative requires deleting module package CLIs or broad lifecycle redesign."
+    },
+    "execution": {
+      "milestone": "root-upgrade-front-door",
+      "status": "complete",
+      "next_step": "Archive this plan, commit, push, close #479, refresh external evidence, then promote the next lifecycle child issue.",
+      "proof": "workspace CLI lifecycle tests, docs/output assertions, proof selector, planning closeout"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/docs/agent-installation.md",
+        ".agentic-workspace/docs/lifecycle-and-config-contract.md",
+        "packages/planning/bootstrap/.agentic-workspace/docs/lifecycle-and-config-contract.md",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/root-upgrade-front-door.plan.json"
+      ],
+      "invariants": [
+        "Root upgrade is the ordinary host-repo update path.",
+        "Dry-run is the first safe step.",
+        "Module-specific upgrade commands remain reachable for package-local debugging/fallback.",
+        "Output names selected modules, planned changes or manual-review items, and next safe command."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#478 lifecycle management hardening",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening",
+    "parent lane": "#478"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#480-#484 remain open after this slice.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #479 closeout, promote the next lifecycle child issue"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Host-repo lifecycle guidance can converge on root upgrade before deeper fixture/refusal cleanup.",
+    "intentionally deferred": "#480 stale helper instructions, #481 fixture matrix, #482 plan action classification, #483 destructive lifecycle refusal coverage, and #484 legacy machinery removal.",
+    "discovered implications": "Dogfooding root upgrade dry-run showed installed managed docs must be changed with the package payload source or upgrade will fight local edits; this slice fixed that for the lifecycle contract and #480 already covers remaining stale upgrade-guidance drift.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #479.",
+    "next likely slice": "#480 stale upgrade instructions unless reingestion reprioritizes."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/479",
+      "label": "#479 root upgrade front door",
+      "role": "closed_item",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/478",
+      "label": "#478 lifecycle parent",
+      "role": "parent_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/480",
+      "label": "#480 stale upgrade instructions",
+      "role": "next_lane",
+      "locator": "state.toml roadmap"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/481",
+      "label": "#481 lifecycle fixture matrix",
+      "role": "next_lane",
+      "locator": "state.toml roadmap"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/482",
+      "label": "#482 lifecycle plan classification",
+      "role": "next_lane",
+      "locator": "state.toml roadmap"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/483",
+      "label": "#483 destructive lifecycle refusal coverage",
+      "role": "next_lane",
+      "locator": "state.toml roadmap"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/484",
+      "label": "#484 legacy compatibility cleanup",
+      "role": "next_lane",
+      "locator": "state.toml roadmap"
+    }
+  ],
+  "context_budget": {
+    "live working set": ".agentic-workspace/planning/state.toml, this execplan, #479/#478 issue bodies, lifecycle docs, root upgrade implementation/tests",
+    "recoverable later": "full external issue evidence, historical review/closeout archives, package-local bootstrap internals outside touched lifecycle docs",
+    "externalize before shift": "update execution_run, validation_commands, proof_report, intent_satisfaction, and closure_check",
+    "pre-work config pull": "uv run agentic-workspace summary --target . --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Active issue is #479 root upgrade front door.",
+    "context-shift triggers": "Before changing module package CLIs, deleting legacy lifecycle branches, or expanding into fixture matrix work.",
+    "read_first": [
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/root-upgrade-front-door.plan.json",
+      ".agentic-workspace/docs/agent-installation.md",
+      ".agentic-workspace/docs/lifecycle-and-config-contract.md"
+    ],
+    "avoid_bulk_reads": [
+      ".agentic-workspace/planning/execplans/archive/",
+      ".agentic-workspace/planning/reviews/"
+    ],
+    "deep_context_loaded": "Lifecycle docs, root upgrade CLI implementation/tests, package lifecycle payload doc, proof/closeout outputs."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make root upgrade the single authoritative host-repo update path.",
+    "hard constraints": "Dogfood package surfaces; commit/push milestone; close issue only after proof.",
+    "agent may decide locally": "Exact wording and output field names for root-front-door guidance.",
+    "escalate when": "The change would remove package-specific CLIs or expand into the whole lifecycle fixture matrix."
+  },
+  "active_milestone": {
+    "id": "root-upgrade-front-door",
+    "status": "completed",
+    "scope": "docs, root upgrade output, tests, and planning state",
+    "ready": "yes",
+    "blocked": "no"
+  },
+  "immediate_next_action": [
+    "Archive, commit, push, close #479, refresh evidence, and promote the next lifecycle child issue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/docs/agent-installation.md",
+    ".agentic-workspace/docs/lifecycle-and-config-contract.md",
+    "packages/planning/bootstrap/.agentic-workspace/docs/lifecycle-and-config-contract.md",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "proof_expectations": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace proof --target . --changed <changed paths> --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests"
+  ],
+  "validation_commands": [
+    {
+      "command": "uv run pytest tests/test_workspace_cli.py -q -k \"upgrade_lifecycle_plan_advertises_root_front_door or upgrade_json_collects_summary_categories\"",
+      "result": "pass: 4 passed"
+    },
+    {
+      "command": "uv run pytest tests/test_workspace_cli.py -q",
+      "result": "pass: 191 passed"
+    },
+    {
+      "command": "uv run pytest packages/planning/tests/test_check_planning_surfaces.py packages/planning/tests/test_installer.py -q",
+      "result": "pass: 159 passed"
+    },
+    {
+      "command": "Set-Location packages/planning; uv run pytest tests/test_installer.py",
+      "result": "pass: 130 passed"
+    },
+    {
+      "command": "uv run ruff check src tests",
+      "result": "pass"
+    },
+    {
+      "command": "Set-Location packages/planning; uv run ruff check .",
+      "result": "pass"
+    },
+    {
+      "command": "uv run ruff check src tests packages/planning",
+      "result": "pass"
+    },
+    {
+      "command": "uv run python scripts/check/check_planning_surfaces.py",
+      "result": "pass"
+    },
+    {
+      "command": "make maintainer-surfaces",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace proof --target . --changed .agentic-workspace/docs/agent-installation.md .agentic-workspace/docs/lifecycle-and-config-contract.md packages/planning/bootstrap/.agentic-workspace/docs/lifecycle-and-config-contract.md src/agentic_workspace/cli.py tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/root-upgrade-front-door.plan.json --format json",
+      "result": "pass: selected workspace_cli, planning_package, cli_authority, planning_surfaces"
+    },
+    {
+      "command": "uv run agentic-workspace defaults --section root_cli_authority --format json",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace doctor --target . --modules planning --format json",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace upgrade --target . --dry-run --format json",
+      "result": "pass: lifecycle_plan includes root_upgrade_front_door and lifecycle-and-config-contract.md is current against package payload"
+    },
+    {
+      "command": "uv run agentic-workspace preflight --target . --format json",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace summary --target . --format json",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace report --target . --section workflow_obligations --format json",
+      "result": "pass"
+    },
+    {
+      "command": "uv run agentic-workspace report --target . --section closeout_trust --format json",
+      "result": "pass: surfaced need to record workflow evidence and preserve #478 continuation"
+    },
+    {
+      "command": "uv run agentic-workspace reconcile --format json",
+      "result": "pass"
+    }
+  ],
+  "completion_criteria": [
+    "Host-repo docs point to root agentic-workspace upgrade as the first update path.",
+    "Root upgrade dry-run output is clearly safe and informative.",
+    "Package-specific upgrade commands are documented as fallback/debugging surfaces.",
+    "Tests cover root upgrade command routing for memory-only, planning-only, and full selections."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "GitHub issue #479 plus refreshed external-intent evidence",
+    "what happened": "Added root-upgrade-front-door guidance to upgrade lifecycle plans, updated host-repo lifecycle docs to prefer root upgrade dry-run/apply/doctor, aligned the planning package payload lifecycle contract, and added module-selection tests for memory-only, planning-only, and full upgrade routing.",
+    "scope touched": "Root workspace CLI lifecycle plan rendering, root workspace CLI tests, installed lifecycle docs, planning package payload lifecycle docs, and planning state.",
+    "changed surfaces": ".agentic-workspace/docs/agent-installation.md; .agentic-workspace/docs/lifecycle-and-config-contract.md; packages/planning/bootstrap/.agentic-workspace/docs/lifecycle-and-config-contract.md; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; planning state.",
+    "validations run": "focused and full workspace CLI tests, planning package installer/check tests, ruff, planning surface checks, maintainer-surfaces, proof selector, root CLI authority, doctor, upgrade dry-run, preflight, summary, workflow_obligations, closeout_trust, reconcile.",
+    "package workflow surfaces used": [
+      "preflight",
+      "summary",
+      "report",
+      "proof",
+      "reconcile",
+      "doctor",
+      "upgrade"
+    ],
+    "result for continuation": "#479 satisfied; #478 remains open with #480-#484 as required continuation.",
+    "next step": "Archive, commit, push, close #479, refresh evidence, and promote #480 unless reingestion reprioritizes."
+  },
+  "proof_report": {
+    "validation proof": "yes",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "focused and full workspace CLI tests, planning package installer/check tests, ruff, planning surface checks, maintainer-surfaces, proof selector, root CLI authority, doctor, upgrade dry-run, preflight, summary, workflow_obligations, closeout_trust, reconcile."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low; package-specific CLIs remain available but are framed as fallback/debug surfaces.",
+    "follow-on decision": "#478 remains open; continue #480-#484."
+  },
+  "intent_satisfaction": {
+    "original intent": "Make root upgrade the single authoritative host-repo update path.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Made root agentic-workspace upgrade the authoritative host-repo update front door for #479.",
+    "validation confirmed": "yes",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening (#480-#484).",
+    "post-work posterity capture": "Archived plan plus docs/tests; no Memory promotion needed.",
+    "knowledge promoted (Memory/Docs/Config)": "Docs and tests now encode root-upgrade-first guidance; no Memory promotion.",
+    "resume from": ".agentic-workspace/planning/state.toml"
+  },
+  "improvement_signal_review": {
+    "signals": [
+      {
+        "summary": "Root upgrade dry-run exposed managed-doc source/payload drift when installed docs changed without payload docs.",
+        "routed_to": "#480 covers stale upgrade guidance and checks for drift against default installs.",
+        "new_issue_needed": "no"
+      }
+    ],
+    "new_issues_created": []
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/state.toml roadmap lane lifecycle-management-hardening (#480-#484).",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Docs and tests now encode root-upgrade-first guidance; no Memory promotion.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "Docs and tests now encode root-upgrade-first guidance; no Memory promotion.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "Docs and tests now encode root-upgrade-first guidance; no Memory promotion.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#479 root upgrade front door",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/479"
+        },
+        {
+          "summary": "#478 lifecycle parent",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/478"
+        }
+      ]
+    }
+  }
+}

@@ -5535,6 +5535,41 @@ def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, c
     assert scenarios["upgrade dry-run on installed repo"]["status"] == "covered"
 
 
+@pytest.mark.parametrize(
+    ("args", "expected_modules"),
+    [
+        (["--modules", "memory"], ["memory"]),
+        (["--modules", "planning"], ["planning"]),
+        (["--preset", "full"], ["planning", "memory"]),
+    ],
+)
+def test_upgrade_lifecycle_plan_advertises_root_front_door_for_module_selections(
+    monkeypatch, tmp_path: Path, capsys, args: list[str], expected_modules: list[str]
+) -> None:
+    _init_git_repo(tmp_path)
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), *args, "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    front_door = payload["lifecycle_plan"]["root_upgrade_front_door"]
+    assert front_door["status"] == "authoritative-host-repo-path"
+    assert front_door["selected_modules"] == expected_modules
+    assert front_door["dry_run_first"] is True
+    assert front_door["package_specific_upgrade_role"] == "fallback-debug-only"
+    assert front_door["ordinary_sequence"][0]["step"] == "inspect"
+    assert front_door["ordinary_sequence"][0]["safe"] is True
+    assert "--dry-run" in front_door["ordinary_sequence"][0]["command"]
+    assert "selected modules" in front_door["ordinary_sequence"][0]["reason"]
+    assert front_door["ordinary_sequence"][1]["step"] == "apply"
+    assert "--dry-run" not in front_door["ordinary_sequence"][1]["command"]
+    assert front_door["ordinary_sequence"][2]["command"].startswith("agentic-workspace doctor --target ")
+    assert [(module_name, command_name) for module_name, command_name, _kwargs in calls] == [
+        (module_name, "upgrade") for module_name in expected_modules
+    ]
+
+
 def test_uninstall_dry_run_requires_review_for_ambiguous_workspace_payload(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

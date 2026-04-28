@@ -2838,7 +2838,7 @@ def _lifecycle_plan_payload(
         selected_modules=selected_modules,
         local_only=local_only,
     )
-    return {
+    plan = {
         "kind": "workspace-lifecycle-plan/v1",
         "command": command_name,
         "target_root": target_root.as_posix(),
@@ -2864,6 +2864,63 @@ def _lifecycle_plan_payload(
             "command": next_command,
             "reason": "Resolve review_items before applying changes." if review_required else "Dry-run plan has no review blockers.",
         },
+    }
+    if command_name == "upgrade":
+        plan["root_upgrade_front_door"] = _root_upgrade_front_door_payload(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            dry_run=dry_run,
+            next_command=next_command,
+            review_required=review_required,
+        )
+    return plan
+
+
+def _root_upgrade_front_door_payload(
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    dry_run: bool,
+    next_command: str,
+    review_required: bool,
+) -> dict[str, Any]:
+    target = target_root.as_posix()
+    module_args: list[str] = []
+    for module_name in selected_modules:
+        module_args.extend(["--module", module_name])
+    dry_run_command = " ".join(["agentic-workspace", "upgrade", "--target", target, *module_args, "--dry-run", "--format", "json"])
+    apply_command = next_command
+    return {
+        "kind": "workspace-root-upgrade-front-door/v1",
+        "status": "authoritative-host-repo-path",
+        "selected_modules": selected_modules,
+        "ordinary_sequence": [
+            {
+                "step": "inspect",
+                "command": dry_run_command,
+                "safe": True,
+                "reason": "Dry-run is the first host-repo update step and reports selected modules, planned changes, review items, and the next safe command.",
+            },
+            {
+                "step": "apply",
+                "command": apply_command,
+                "safe": not review_required,
+                "reason": "Apply only after review_items are resolved when review is required.",
+            },
+            {
+                "step": "verify",
+                "command": f"agentic-workspace doctor --target {target} --format json",
+                "safe": True,
+                "reason": "Doctor verifies the host repo after lifecycle changes settle.",
+            },
+        ],
+        "package_specific_upgrade_role": "fallback-debug-only",
+        "fallback_rule": (
+            "Use module package CLIs only for package-local debugging or when root agentic-workspace upgrade cannot run; "
+            "host-repo guidance should route through the root command first."
+        ),
+        "dry_run_first": True,
+        "review_required_before_apply": review_required,
     }
 
 

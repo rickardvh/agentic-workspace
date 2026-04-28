@@ -23,7 +23,7 @@ Reconciliation is required when:
 
 ### Authority
 - **`.agentic-workspace/config.toml`**: Repo-owned source of truth for module sources, update intent, and shared lifecycle defaults.
-- **`.agentic-workspace/config.local.toml`**: Optional local override for capability/cost posture and agent-posture settings.
+- **`.agentic-workspace/config.local.toml`**: Optional local override for machine-local invocation, capability/cost posture, and agent-posture settings.
 - **`.agentic-workspace/`**: Product-managed module state. This directory should not be edited directly; use the owning package or CLI.
 
 ### Configuration Fields
@@ -38,10 +38,11 @@ Reconciliation is required when:
 When normal work is blocked by repo-state ambiguity, interrupted bootstrap, or environment drift:
 
 ### Recovery Path
-1. **Inspect State**: Run `agentic-workspace status` and `agentic-workspace doctor`.
-2. **Reconfirm Defaults**: Query `agentic-workspace defaults` and `config`.
-3. **Refresh Contracts**: If the issue is package-contract freshness, run `uv run agentic-<module>-bootstrap upgrade`.
-4. **Narrow Validation**: Run the narrowest proving lane (e.g. `pytest tests/test_workspace_cli.py`).
+1. **Inspect State**: Run `agentic-workspace status --target ./repo` and `agentic-workspace doctor --target ./repo`.
+2. **Reconfirm Defaults**: Query `agentic-workspace defaults` and `agentic-workspace config --target ./repo`.
+3. **Refresh Contracts**: Run `agentic-workspace upgrade --target ./repo --dry-run --format json`, resolve review items, then run `agentic-workspace upgrade --target ./repo --format json`.
+4. **Verify**: Run `agentic-workspace doctor --target ./repo --format json`.
+5. **Package-local fallback**: Use module bootstrap CLIs only for package-local debugging or when the root command cannot run.
 
 ### Interrupted Handoff
 - **`llms.txt`**: Canonical external-agent entry surface.
@@ -55,3 +56,4 @@ When normal work is blocked by repo-state ambiguity, interrupted bootstrap, or e
 - `agentic-workspace config --target ./repo --format json`: Inspect effective posture and configuration.
 - `agentic-workspace doctor --target ./repo`: Identify and remediate environment drift.
 - `agentic-workspace status --target ./repo`: Check module and repo-state health.
+- `agentic-workspace upgrade --target ./repo --dry-run --format json`: Ordinary safe first step for host-repo updates.

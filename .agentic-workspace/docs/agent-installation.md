@@ -21,13 +21,19 @@ Preferred install or adopt intent:
 - agentic-workspace install --target ./repo --preset full
 - agentic-workspace install --target ./repo --preset full --local-only
 
-Preferred follow-up commands:
+Preferred host-repo update path:
+
+- agentic-workspace upgrade --target ./repo --dry-run --format json
+- agentic-workspace upgrade --target ./repo --format json
+- agentic-workspace doctor --target ./repo --format json
+
+Additional lifecycle commands:
 
 - agentic-workspace status --target ./repo
-- agentic-workspace doctor --target ./repo
 - agentic-workspace uninstall --target ./repo --local-only
 - agentic-workspace skills --target ./repo --task "<task>" --format json
-- agentic-workspace upgrade --target ./repo
+
+Package-specific bootstrap CLIs are fallback/debug surfaces for package-local work. For host-repo updates, use the root `agentic-workspace upgrade` path first.
 
 Quick state check:
 
