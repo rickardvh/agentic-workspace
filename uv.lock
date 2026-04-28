@@ -4,10 +4,16 @@ requires-python = ">=3.11"
 
 [manifest]
 members = [
+    "agentic-command-generation",
     "agentic-memory-bootstrap",
     "agentic-planning-bootstrap",
     "agentic-workspace",
 ]
+
+[[package]]
+name = "agentic-command-generation"
+version = "0.0.0"
+source = { editable = "packages/command-generation" }
 
 [[package]]
 name = "agentic-memory-bootstrap"

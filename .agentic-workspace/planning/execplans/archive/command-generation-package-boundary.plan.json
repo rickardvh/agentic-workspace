@@ -1,0 +1,227 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Command Generation Package Boundary",
+  "goal": [
+    "Implement #431 by creating an internal, lift-out-friendly package boundary for generic command generation."
+  ],
+  "non_goals": [
+    "Do not publish an external package.",
+    "Do not move workspace command definitions out of src/agentic_workspace/contracts.",
+    "Do not change command semantics or generated output locations.",
+    "Do not add first-contact product surfaces."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Generic command-generation rendering lives behind a distinct internal package boundary, with root scripts acting as wrappers.",
+      "constraints": "Preserve existing generated outputs, proof routes, and workspace-owned command facts.",
+      "latitude": "Add package skeleton, move generic render helpers, and route root generation through the package.",
+      "escalation": "Escalate if the boundary requires publishing or moving runtime primitives."
+    },
+    "execution": {
+      "milestone": "command-generation-package-boundary",
+      "status": "complete",
+      "next_step": "Archive the completed execplan, commit, push, close #431, then continue #432.",
+      "proof": "generated package checks, contract tooling tests, ruff, planning surfaces, and proof selector."
+    },
+    "scope": {
+      "touched": [
+        "packages/command-generation/",
+        "scripts/generate/generate_command_packages.py",
+        "pyproject.toml",
+        "uv.lock",
+        "tests/test_contract_tooling.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/command-generation-package-boundary.plan.json"
+      ],
+      "invariants": [
+        "Root scripts remain available as maintainer entrypoints.",
+        "Generated outputs remain byte-for-byte current.",
+        "Agentic Workspace command facts stay workspace-owned."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#430 isolate generic command-generation machinery for future extraction",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap",
+    "parent lane": "#430"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap",
+    "activation trigger": "after #431 closeout, continue #432 schema ownership split"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A concrete internal package boundary for later schema/check decoupling.",
+    "intentionally deferred": "#432 schema ownership, #433 generic loader/check decoupling, #434 consumer wrapper clarity, #435 lift-out criteria.",
+    "discovered implications": "",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice.",
+    "next likely slice": "#432"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "hard constraints": "Dogfood package surfaces, commit/push milestone, close issue only after proof.",
+    "agent may decide locally": "Exact internal module names and wrapper shape.",
+    "escalate when": "A change would alter command semantics or require an external package split."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#431",
+      "label": "command-generation package boundary",
+      "role": "closed_item",
+      "locator": "packages/command-generation"
+    },
+    {
+      "kind": "issue",
+      "target": "#430",
+      "label": "command-generation extraction parent",
+      "role": "parent_intent",
+      "locator": ".agentic-workspace/planning/state.toml roadmap"
+    }
+  ],
+  "active_milestone": {
+    "id": "command-generation-package-boundary",
+    "status": "completed",
+    "scope": "internal package skeleton and generator wrapper boundary",
+    "ready": "yes",
+    "blocked": "no"
+  },
+  "immediate_next_action": [
+    "Archive completed plan and close #431 after commit/push."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/command-generation/",
+    "scripts/generate/generate_command_packages.py",
+    "pyproject.toml",
+    "uv.lock",
+    "tests/test_contract_tooling.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/command-generation-package-boundary.plan.json"
+  ],
+  "invariants": [
+    "Generated outputs remain unchanged after regeneration.",
+    "Root maintainer commands remain stable.",
+    "No first-contact surface is added."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace preflight --target . --format json",
+    "uv run agentic-workspace proof --target . --changed packages/command-generation/ scripts/generate/generate_command_packages.py pyproject.toml tests/test_contract_tooling.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/command-generation-package-boundary.plan.json --format json",
+    "uv run agentic-workspace proof --target . --changed packages/command-generation/ scripts/generate/generate_command_packages.py pyproject.toml uv.lock tests/test_contract_tooling.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/command-generation-package-boundary.plan.json --format json",
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+    "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests scripts packages/command-generation/src",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace report --target . --section workflow_obligations --format json",
+    "uv run agentic-workspace report --target . --section closeout_trust --format json",
+    "uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "completion_criteria": [
+    "A distinct internal package boundary exists for generic command generation.",
+    "The root generation script delegates to that package.",
+    "Existing generated package freshness checks still pass.",
+    "The boundary is not a new first-contact product surface."
+  ],
+  "execution_run": {
+    "run status": "complete",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace summary --target . --format json",
+    "what happened": "Created packages/command-generation as an internal workspace package, moved generic command package rendering and freshness comparison into agentic_command_generation.generator, kept scripts/generate/generate_command_packages.py as a thin Agentic Workspace integration wrapper, and preserved existing generated outputs.",
+    "scope touched": "internal package boundary, root generator wrapper, workspace packaging metadata, planning residue",
+    "changed surfaces": "packages/command-generation, pyproject workspace members, uv.lock, root generation script, active execplan",
+    "validations run": "uv run agentic-workspace preflight --target . --format json; uv run agentic-workspace proof --target . --changed packages/command-generation/ scripts/generate/generate_command_packages.py pyproject.toml uv.lock tests/test_contract_tooling.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/command-generation-package-boundary.plan.json --format json; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run pytest tests/test_contract_tooling.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests scripts packages/command-generation/src; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace report --target . --section workflow_obligations --format json; uv run agentic-workspace report --target . --section closeout_trust --format json; uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json; uv run agentic-workspace reconcile --format json",
+    "result for continuation": "#431 is satisfied; #430 remains open and should continue with #432 schema ownership split.",
+    "next step": "Archive plan, commit, push, close #431, refresh external evidence, then promote #432."
+  },
+  "execution_summary": {
+    "outcome delivered": "A distinct internal package boundary now owns generic command package rendering and freshness comparison.",
+    "validation confirmed": "Generated outputs stayed current and all selected generated-package, contract-tooling, workspace CLI, lint, Docker, planning, and closeout checks passed.",
+    "follow-on routed to": "#432 schema ownership split under parent #430.",
+    "post-work posterity capture": "Archived execplan, package README, tests/checks, and #431 closure comment carry the durable evidence.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory or config promotion was needed.",
+    "resume from": "Promote #432 from the #430 roadmap lane."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Generated-package freshness/static/conformance/Docker/Docker-conformance checks passed; contract tooling passed; contract tooling tests passed (27); workspace CLI tests passed (188); ruff passed; planning surfaces, proof selector, planning doctor, workflow obligations, closeout trust, skills, and reconcile passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "#431 internal command-generation package boundary",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "packages/command-generation exists as a workspace package, agentic_command_generation.generator owns generic rendering/freshness comparison, and the root script delegates to it while keeping workspace IR loading in the wrapper.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#432 schema ownership split remains the next #430 child.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No Memory or config promotion was needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No Memory or config promotion was needed.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#431 can close after this milestone is committed and pushed.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #431 as first #430 child after closing #436 and #449 parent lanes.",
+    "2026-04-28: Added internal agentic-command-generation package boundary and root generator wrapper."
+  ]
+}

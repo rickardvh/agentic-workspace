@@ -37,6 +37,7 @@ agentic-planning-bootstrap = { workspace = true }
 
 [tool.uv.workspace]
 members = [
+  "packages/command-generation",
   "packages/memory",
   "packages/planning",
 ]
@@ -64,7 +65,7 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 140
 target-version = "py311"
-src = ["src", "tests"]
+src = ["src", "tests", "packages/command-generation/src"]
 
 [tool.ruff.lint]
 ignore = ["E501"]
