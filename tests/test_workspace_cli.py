@@ -528,6 +528,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert agent_aids["candidate_root"] == ".agentic-workspace/agent-aids"
     assert agent_aids["candidate_root_exists"] is False
     assert agent_aids["ordinary_startup"] is False
+    assert agent_aids["manifest_name"] == "manifest.json"
+    assert agent_aids["manifest_kind"] == "agentic-workspace/agent-aid/v1"
+    assert agent_aids["manifest_schema"] == "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json"
     assert {entry["class"] for entry in agent_aids["storage_classes"]} == {
         "local-only",
         "checked-in-candidate",
@@ -1097,6 +1100,7 @@ def test_defaults_section_selector_returns_agent_aid_storage_answer(capsys) -> N
     assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/agent-aids-storage.md"
     assert payload["answer"]["candidate_root"] == ".agentic-workspace/agent-aids"
     assert payload["answer"]["ordinary_startup"] is False
+    assert payload["answer"]["manifest_check"] == "python scripts/check/check_agent_aids.py"
     assert [entry["class"] for entry in payload["answer"]["storage_classes"]] == [
         "local-only",
         "checked-in-candidate",

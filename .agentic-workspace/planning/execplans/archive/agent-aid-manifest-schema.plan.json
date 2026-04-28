@@ -1,0 +1,242 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Agent Aid Manifest Schema",
+  "goal": [
+    "agent-created-aids-lifecycle next child; #517 routed candidate structured aid metadata here so checked-in aids do not become freeform state."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "agent-created-aids-lifecycle next child; #517 routed candidate structured aid metadata here so checked-in aids do not become freeform state.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "agent-aid-manifest-schema",
+      "status": "completed",
+      "next_step": "archive this plan, close #518, and continue with #519.",
+      "proof": "Focused aid/structured/workspace tests and the proof-selected workspace, contract, CLI-authority, and planning checks passed."
+    },
+    "scope": {
+      "touched": [
+        "Makefile",
+        "scripts/check/check_agent_aids.py",
+        "tests/test_agent_aids.py",
+        "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        "tests/test_structured_file_inventory.py",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/docs/agent-aids-storage.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/agent-aid-manifest-schema.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "agent-created-aids-lifecycle next child; #517 routed candidate structured aid metadata here so checked-in aids do not become freeform state.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Checked-in aid directories can carry schema-backed manifest metadata and aid files can be checked for nearby manifest coverage.",
+    "intentionally deferred": "Executable portability/safety policy depth, discovery output, and promotion mechanics remain in #519-#521.",
+    "discovered implications": "JSON is the smallest schema-backed manifest format because current structured inventory proof executes JSON Schema for JSON files.",
+    "proof achieved now": "passed",
+    "validation still needed": "none for #518",
+    "next likely slice": "#519"
+  },
+  "intent_interpretation": {
+    "literal request": "Agent Aid Manifest Schema",
+    "inferred intended outcome": "agent-created-aids-lifecycle next child; #517 routed candidate structured aid metadata here so checked-in aids do not become freeform state.",
+    "chosen concrete what": "Add a JSON Schema-backed manifest plus a focused aid manifest checker, and expose the manifest rule through the existing compact storage answer.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Makefile; scripts/check/check_agent_aids.py; tests/test_agent_aids.py; src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json; src/agentic_workspace/contracts/structured_file_inventory.json; tests/test_structured_file_inventory.py; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; .agentic-workspace/docs/agent-aids-storage.md; .agentic-workspace/planning/state.toml; this execplan.",
+    "max changed files": "11 active files plus archive output at closeout.",
+    "required validation commands": "uv run pytest tests/test_agent_aids.py tests/test_structured_file_inventory.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/check/check_agent_aids.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check src tests scripts/check/check_agent_aids.py; make agent-aids; make maintainer-surfaces; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "validate and close the schema-backed agent aid manifest slice.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "agent-created-aids-lifecycle next child; #517 routed candidate structured aid metadata here so checked-in aids do not become freeform state.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "agent-aid-manifest-schema",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "validate the schema, checker, compact payload, and planning surfaces."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "Makefile",
+    "scripts/check/check_agent_aids.py",
+    "tests/test_agent_aids.py",
+    "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
+    "src/agentic_workspace/contracts/structured_file_inventory.json",
+    "tests/test_structured_file_inventory.py",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/docs/agent-aids-storage.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/agent-aid-manifest-schema.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_agent_aids.py tests/test_structured_file_inventory.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run python scripts/check/check_agent_aids.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run ruff check src tests scripts/check/check_agent_aids.py",
+    "make agent-aids",
+    "make maintainer-surfaces",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run python scripts/check/check_planning_surfaces.py --strict",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "checked-in aids have schema-backed metadata",
+    "executable aids cannot be checked in without safety and portability fields",
+    "promotion and retirement criteria are required",
+    "validation commands are declared or intentionally absent with justification",
+    "structured-file checks recognize aid manifests"
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with Curie and Hilbert read-only inspections",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Added a schema-backed `manifest.json` contract for checked-in agent aids, a focused checker requiring nearby manifest coverage for aid files, structured-inventory classification, compact storage payload fields, docs, Makefile wiring, and tests.",
+    "scope touched": "agent aid schema/checker/docs/defaults/inventory/tests plus planning state and execplan.",
+    "changed surfaces": "Makefile; scripts/check/check_agent_aids.py; tests/test_agent_aids.py; src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json; src/agentic_workspace/contracts/structured_file_inventory.json; tests/test_structured_file_inventory.py; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; .agentic-workspace/docs/agent-aids-storage.md; .agentic-workspace/planning/state.toml; this execplan.",
+    "validations run": "uv run pytest tests/test_agent_aids.py tests/test_structured_file_inventory.py -q; uv run pytest tests/test_workspace_cli.py -q -k \"agent_aid_storage or config_command_reports_effective_defaults_without_repo_file or defaults\"; uv run python scripts/check/check_agent_aids.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check scripts/check/check_agent_aids.py tests/test_agent_aids.py src/agentic_workspace/cli.py tests/test_workspace_cli.py tests/test_structured_file_inventory.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run agentic-workspace proof --target . --changed ... --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests scripts/check/check_agent_aids.py; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make agent-aids; make maintainer-surfaces; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run python scripts/check/check_planning_surfaces.py --strict; uv run agentic-workspace doctor --target . --modules planning --format json; git diff --check.",
+    "result for continuation": "#518 complete; continue with #519.",
+    "next step": "archive this plan, close #518, refresh external evidence, and ingest #519."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue planned lifecycle children #519-#521."
+  },
+  "proof_report": {
+    "validation proof": "Aid manifest tests, structured inventory tests/check, full workspace CLI tests, contract tooling, ruff, Makefile aid check, maintainer surfaces, root CLI authority, planning strict check, planning doctor, and git diff --check passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "216 workspace CLI tests passed; 31 focused aid/inventory tests passed; contract, planning, maintainer, and checker gates passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "agent-created-aids-lifecycle next child; #517 routed candidate structured aid metadata here so checked-in aids do not become freeform state.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Checked-in aid manifests are schema-backed at `.agentic-workspace/agent-aids/**/manifest.json`; the checker requires nearby manifests for aid files and enforces safety, portability, validation, promotion, and retirement fields.",
+    "unsolved intent passed to": "#519 for deeper executable portability/safety policy; #520-#521 for discovery and promotion."
+  },
+  "execution_summary": {
+    "outcome delivered": "Schema-backed checked-in agent aid manifests and manifest coverage checks.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#519",
+    "post-work posterity capture": "this execplan and .agentic-workspace/docs/agent-aids-storage.md",
+    "knowledge promoted (Memory/Docs/Config)": "agent aid manifest schema, checker, structured inventory, docs, and compact defaults payload.",
+    "resume from": "#519"
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "Keep the first checked-in aid manifest format JSON because current structured inventory proof executes JSON Schema for JSON files.",
+    "motivation worth preserving": "Manifest metadata prevents checked-in aids from becoming unowned scripts while keeping ordinary startup unchanged.",
+    "canonical owner now": "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json and scripts/check/check_agent_aids.py",
+    "promotion trigger": "when aid manifest shape, aid storage, or candidate-aid validation changes",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "partial",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#518 was the manifest/schema slice; portability/safety depth, discovery, and promotion remain planned children.",
+    "evidence carried forward": "schema, checker, structured inventory, compact defaults payload, and docs.",
+    "reopen trigger": "checked-in aid files can bypass manifest metadata, or manifest metadata cannot express required safety, validation, promotion, and retirement fields."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Subagent inspection shortened the manifest-format decision and prevented a TOML/YAML schema claim the current checker cannot execute.",
+      "The proof selector correctly surfaced direct CLI/defaults edits as needing root CLI authority review."
+    ],
+    "signals fixed": [
+      "Adopted `manifest.json` and kept TOML/YAML support out of this slice.",
+      "Ran root CLI authority proof instead of treating the defaults edit as ordinary contract-only work."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "#519"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "#519 handles deeper executable portability and safety rules.",
+        "#520-#521 handle discovery and promotion."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        ".agentic-workspace/docs/agent-aids-storage.md"
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

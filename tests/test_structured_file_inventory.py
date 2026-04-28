@@ -44,32 +44,34 @@ def test_inventory_routes_known_schema_gaps() -> None:
     inventory = check_structured_file_inventory.load_inventory()
     gap_entries = [entry for entry in inventory["entries"] if entry["status"] == "freeform-prohibited-gap"]
 
-    assert {entry["pattern"] for entry in gap_entries} == {
-        ".agentic-workspace/agent-aids/**/*.json",
-        ".agentic-workspace/agent-aids/**/*.toml",
-        ".agentic-workspace/agent-aids/**/*.yaml",
-        ".agentic-workspace/agent-aids/**/*.yml",
-    }
-    for entry in gap_entries:
-        assert entry["owner"] == "agent-aids"
-        assert entry["routed_to"] == "#518"
-        assert entry["schema_or_validator"] == "agent aid manifest/schema contract pending in #518"
+    assert gap_entries == []
 
 
-def test_agent_aid_candidate_structured_files_are_routed_to_manifest_contract() -> None:
+def test_agent_aid_manifest_is_schema_backed() -> None:
+    inventory = check_structured_file_inventory.load_inventory()
+    entry = next(entry for entry in inventory["entries"] if entry["pattern"] == ".agentic-workspace/agent-aids/**/manifest.json")
+
+    assert entry["status"] == "schema-backed"
+    assert entry["schema_or_validator"] == "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json"
+    assert entry["storage_class"] == "source-of-truth"
+
+
+def test_agent_aid_manifest_is_classified_but_other_structured_aid_files_are_not_freeform() -> None:
     inventory = check_structured_file_inventory.load_inventory()
 
+    assert (
+        check_structured_file_inventory.unmatched_structured_files(
+            [".agentic-workspace/agent-aids/scripts/demo/manifest.json"],
+            inventory,
+        )
+        == []
+    )
     findings = check_structured_file_inventory.unmatched_structured_files(
-        [
-            ".agentic-workspace/agent-aids/scripts/demo.json",
-            ".agentic-workspace/agent-aids/skills/demo.toml",
-            ".agentic-workspace/agent-aids/runbooks/demo.yaml",
-            ".agentic-workspace/agent-aids/prompts/demo.yml",
-        ],
+        [".agentic-workspace/agent-aids/scripts/demo/freeform.json"],
         inventory,
     )
-
-    assert findings == []
+    assert len(findings) == 1
+    assert findings[0].path == ".agentic-workspace/agent-aids/scripts/demo/freeform.json"
 
 
 def test_root_contract_manifests_are_typed_validator_backed() -> None:

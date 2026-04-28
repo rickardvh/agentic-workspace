@@ -13,7 +13,7 @@ COMPACT_RUN = uv run python scripts/check/run_compact_command.py
 	format format-workspace format-memory format-planning \
 	format-check format-check-workspace format-check-memory format-check-planning \
 	verify verify-workspace verify-memory verify-planning \
-	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict structured-file-inventory source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-external-agent-handoff absolute-paths \
+	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict structured-file-inventory agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-external-agent-handoff absolute-paths \
 	check check-memory check-planning check-all
 
 help:
@@ -36,6 +36,7 @@ help:
 	@echo "  recurring-friction-ledger  Run the root recurring-friction ledger audit."
 	@echo "  planning-surfaces    Run the root planning surface audit."
 	@echo "  structured-file-inventory  Check tracked JSON/TOML/YAML/YML files against the inventory."
+	@echo "  agent-aids           Check checked-in agent aid manifests and coverage."
 	@echo "  source-payload-operational-install  Run source/payload/root-install boundary checks."
 	@echo "  maintainer-surfaces  Run maintainer-surface freshness and liveness checks."
 	@echo "  render-agent-docs    Regenerate root planning docs from the managed manifest."
@@ -150,6 +151,9 @@ planning-surfaces-strict:
 structured-file-inventory:
 	@$(COMPACT_RUN) --label "structured file inventory" -- uv run python scripts/check/check_structured_file_inventory.py
 
+agent-aids:
+	@$(COMPACT_RUN) --label "agent aid manifests" -- uv run python scripts/check/check_agent_aids.py
+
 source-payload-operational-install:
 	@$(COMPACT_RUN) --label "source-payload boundary" -- uv run python scripts/check/check_source_payload_operational_install.py
 
@@ -175,6 +179,6 @@ check-memory: sync-all test-memory lint-memory typecheck-memory verify-memory me
 
 check-planning: sync-all test-planning lint-planning typecheck-planning maintainer-surfaces memory-freshness
 
-check: sync-all test lint typecheck format-check verify memory-freshness-strict maintainer-surfaces structured-file-inventory absolute-paths
+check: sync-all test lint typecheck format-check verify memory-freshness-strict maintainer-surfaces structured-file-inventory agent-aids absolute-paths
 
 check-all: check-memory check-planning

@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/agent_aid_manifest.schema.json",
+  "title": "Agent Aid Manifest",
+  "type": "object",
+  "required": [
+    "kind",
+    "id",
+    "type",
+    "status",
+    "scope",
+    "portability",
+    "owner",
+    "created_because",
+    "use_when",
+    "entrypoint",
+    "safety",
+    "validation",
+    "promotion",
+    "retirement"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/agent-aid/v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "script",
+        "skill",
+        "runbook",
+        "prompt",
+        "check",
+        "template"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "candidate",
+        "shared",
+        "promoted",
+        "retired"
+      ]
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "repo-shared",
+        "module-owned",
+        "source-checkout-only"
+      ]
+    },
+    "portability": {
+      "type": "string",
+      "enum": [
+        "runtime-specific",
+        "platform-specific",
+        "cross-platform"
+      ]
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_because": {
+      "type": "string",
+      "minLength": 1
+    },
+    "use_when": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "entrypoint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "safety": {
+      "type": "object",
+      "required": [
+        "read_only",
+        "writes_repo",
+        "destructive",
+        "network",
+        "requires_review"
+      ],
+      "properties": {
+        "read_only": {
+          "type": "boolean"
+        },
+        "writes_repo": {
+          "type": "boolean"
+        },
+        "destructive": {
+          "type": "boolean"
+        },
+        "network": {
+          "type": "boolean"
+        },
+        "requires_review": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "validation": {
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "commands"
+          ]
+        },
+        {
+          "required": [
+            "absent_reason"
+          ]
+        }
+      ],
+      "properties": {
+        "commands": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "absent_reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "promotion": {
+      "type": "object",
+      "required": [
+        "target",
+        "trigger",
+        "retention_after_promotion"
+      ],
+      "properties": {
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trigger": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retention_after_promotion": {
+          "type": "string",
+          "enum": [
+            "delete",
+            "archive",
+            "shrink",
+            "keep"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "retirement": {
+      "type": "object",
+      "required": [
+        "trigger",
+        "retention_after_retirement"
+      ],
+      "properties": {
+        "trigger": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retention_after_retirement": {
+          "type": "string",
+          "enum": [
+            "delete",
+            "archive",
+            "keep"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

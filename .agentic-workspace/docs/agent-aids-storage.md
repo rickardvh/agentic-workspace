@@ -18,7 +18,9 @@ Root: `.agentic-workspace/agent-aids/`
 
 Use this for repo-shared aids that are still proving value. Suggested subfolders are `scripts/`, `skills/`, `runbooks/`, `prompts/`, `checks/`, and `templates/`.
 
-Checked-in candidate aids are reviewable repo state. They should have structured metadata once the aid manifest contract is available.
+Checked-in candidate aids are reviewable repo state. Put each aid in its own directory under the relevant subfolder and add `manifest.json` beside the aid files. The manifest kind is `agentic-workspace/agent-aid/v1`; it records type, status, scope, portability, owner, why it exists, when to use it, entrypoint, safety, validation, promotion, and retirement criteria.
+
+Run `python scripts/check/check_agent_aids.py` or `make agent-aids` to validate checked-in aid manifests and ensure aid files are covered by nearby metadata.
 
 ### Promoted Repo-Native
 

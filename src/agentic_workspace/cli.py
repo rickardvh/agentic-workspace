@@ -224,7 +224,11 @@ def _agent_aid_storage_payload(*, target_root: Path | None = None) -> dict[str, 
         "candidate_subdirs": list(WORKSPACE_AGENT_AID_SUBDIRS),
         "candidate_root_exists": exists,
         "ordinary_startup": False,
-        "manifest_required": "for checked-in shared aids once the manifest contract is enabled",
+        "manifest_name": "manifest.json",
+        "manifest_kind": "agentic-workspace/agent-aid/v1",
+        "manifest_schema": "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
+        "manifest_check": "python scripts/check/check_agent_aids.py",
+        "manifest_required": "for checked-in shared aids",
         "storage_classes": [
             {
                 "class": "local-only",
