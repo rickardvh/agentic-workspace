@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T09:02:21+00:00",
+  "refreshed_at": "2026-04-28T09:13:31+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T09:02:21+00:00",
-    "item_count": 487,
-    "open_count": 20,
-    "closed_count": 467,
+    "refreshed_at": "2026-04-28T09:13:31+00:00",
+    "item_count": 495,
+    "open_count": 27,
+    "closed_count": 468,
     "limit": 600,
     "state": "all",
     "state_source": "previous_evidence",
@@ -7559,7 +7559,7 @@
       "system": "github",
       "id": "#483",
       "title": "[Workspace]: Harden uninstall and destructive lifecycle refusal coverage",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#478",
       "planning_residue_expected": "optional",
@@ -7569,8 +7569,8 @@
         "planning"
       ],
       "created_at": "2026-04-28T06:06:25Z",
-      "updated_at": "2026-04-28T06:06:25Z",
-      "comments_count": 0
+      "updated_at": "2026-04-28T09:13:12Z",
+      "comments_count": 1
     },
     {
       "system": "github",
@@ -7876,6 +7876,142 @@
       ],
       "created_at": "2026-04-28T08:58:02Z",
       "updated_at": "2026-04-28T08:59:05Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#502",
+      "title": "[Workspace]: Require schemas or typed validators for all machine-readable files",
+      "status": "open",
+      "kind": "lane",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/502",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:05:47Z",
+      "updated_at": "2026-04-28T09:10:50Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#503",
+      "title": "[Workspace]: Add a structured-file inventory and no-freeform check",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#502",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/503",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:06:23Z",
+      "updated_at": "2026-04-28T09:06:23Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#504",
+      "title": "[Memory]: Add a schema or typed validator for memory manifest TOML",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#502",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/504",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:07:09Z",
+      "updated_at": "2026-04-28T09:07:09Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#505",
+      "title": "[Planning]: Add schemas for execplan and review JSON records",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#502",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/505",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:07:44Z",
+      "updated_at": "2026-04-28T09:07:44Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#506",
+      "title": "[Planning]: Add schemas for external intent and finished-work evidence",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#502",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/506",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:08:22Z",
+      "updated_at": "2026-04-28T09:08:22Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#507",
+      "title": "[Review]: Add aliases or guidance for common report selectors",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/507",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:09:04Z",
+      "updated_at": "2026-04-28T09:09:04Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#508",
+      "title": "[Workspace]: Add schemas for root contract manifests that are still loaded unvalidated",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#502",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/508",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:09:04Z",
+      "updated_at": "2026-04-28T09:09:04Z",
+      "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#509",
+      "title": "[Planning]: Add schemas for package-local classification and extraction artifacts",
+      "status": "open",
+      "kind": "slice",
+      "parent_id": "#502",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/509",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T09:09:48Z",
+      "updated_at": "2026-04-28T09:09:48Z",
       "comments_count": 0
     }
   ]
