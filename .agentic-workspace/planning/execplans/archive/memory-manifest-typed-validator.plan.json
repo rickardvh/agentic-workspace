@@ -56,6 +56,22 @@
     "agent may decide locally": "Implementation shape, focused tests, docs wording, inventory status text, and proof breadth.",
     "escalate when": "A separate schema language, new top-level command, or rigid note-content schema becomes necessary."
   },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#504",
+      "label": "Memory manifest typed-validator child issue",
+      "role": "source",
+      "locator": "GitHub issue #504"
+    },
+    {
+      "kind": "issue",
+      "target": "#502",
+      "label": "Structured-file contract parent lane",
+      "role": "parent",
+      "locator": "GitHub issue #502"
+    }
+  ],
   "active_milestone": {
     "id": "#504",
     "status": "completed",
