@@ -3,18 +3,18 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-28T12:21:08+00:00",
+  "refreshed_at": "2026-04-28T12:33:15+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-28T12:21:08+00:00",
-    "item_count": 514,
+    "refreshed_at": "2026-04-28T12:33:15+00:00",
+    "item_count": 515,
     "open_count": 26,
-    "closed_count": 488,
+    "closed_count": 489,
     "limit": 600,
     "state": "all",
-    "state_source": "previous_evidence",
-    "limit_source": "previous_evidence",
+    "state_source": "explicit",
+    "limit_source": "explicit",
     "command": "gh issue list --state all --json number,title,state,url,labels,createdAt,updatedAt,body,comments"
   },
   "items": [
@@ -8336,6 +8336,23 @@
       "created_at": "2026-04-28T12:13:24Z",
       "updated_at": "2026-04-28T12:13:24Z",
       "comments_count": 0
+    },
+    {
+      "system": "github",
+      "id": "#529",
+      "title": "[Planning]: Require actionable owners before intent-derived continuation promotion",
+      "status": "closed",
+      "kind": "slice",
+      "parent_id": "#528",
+      "planning_residue_expected": "optional",
+      "url": "https://github.com/rickardvh/agentic-workspace/issues/529",
+      "source_repository": "rickardvh/agentic-workspace",
+      "labels": [
+        "planning"
+      ],
+      "created_at": "2026-04-28T12:26:20Z",
+      "updated_at": "2026-04-28T12:32:46Z",
+      "comments_count": 1
     }
   ]
 }

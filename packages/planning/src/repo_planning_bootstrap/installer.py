@@ -3362,6 +3362,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
     likely_premature = 0
     superseded_continuation = 0
     externally_closed_continuation = 0
+    unowned_continuation = 0
     role_aware_reference_plan_count = 0
     non_closure_reference_count = 0
 
@@ -3538,6 +3539,48 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
         ]
     derived_follow_up_candidates = active_externally_closed_follow_up_candidates
 
+    unowned_source_plans: set[str] = set()
+    active_owned_follow_up_candidates: list[dict[str, Any]] = []
+    for candidate in derived_follow_up_candidates:
+        if _finished_work_continuation_lacks_actionable_owner(target_root=target_root, candidate=candidate):
+            unowned_continuation += 1
+            source_plan = str(candidate.get("source_plan", ""))
+            unowned_source_plans.add(source_plan)
+            candidate["recommended_action"] = (
+                "do not promote directly; route this historical continuation to a concrete active issue, roadmap item, "
+                "or existing planning path first"
+            )
+            for inspection in inspections:
+                if inspection.get("plan") == source_plan:
+                    inspection["classification"] = "unowned_partial"
+                    inspection["reason"] = (
+                        "Archived residue left larger intent open, but the continuation does not name an actionable owner "
+                        "that can be promoted safely."
+                    )
+                    break
+            continue
+        active_owned_follow_up_candidates.append(candidate)
+    if unowned_source_plans:
+        signals = [
+            signal
+            for signal in signals
+            if not (signal.get("kind") == "intent_continuation_required" and signal.get("path") in unowned_source_plans)
+        ]
+        for source_plan in sorted(unowned_source_plans):
+            signals.append(
+                {
+                    "kind": "unowned_intent_continuation",
+                    "severity": "info",
+                    "path": source_plan,
+                    "message": (
+                        f"Archived closeout {source_plan} left larger intent open but did not name an actionable "
+                        "continuation owner; route it before promotion."
+                    ),
+                    "refs": [source_plan],
+                }
+            )
+    derived_follow_up_candidates = active_owned_follow_up_candidates
+
     routed_source_plans: set[str] = set()
     active_routed_follow_up_candidates: list[dict[str, Any]] = []
     routed_continuation = 0
@@ -3591,6 +3634,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
         "likely_premature_closeout_count": likely_premature,
         "superseded_continuation_count": superseded_continuation,
         "externally_closed_continuation_count": externally_closed_continuation,
+        "unowned_continuation_count": unowned_continuation,
         "routed_continuation_count": routed_continuation,
         "archive_only_durable_residue_count": len(archive_only_durable_residue),
         "role_aware_reference_plan_count": role_aware_reference_plan_count,
@@ -3755,28 +3799,57 @@ def _finished_work_continuation_closed_by_external_evidence(
 ) -> list[str]:
     if external_evidence.get("status") != "loaded":
         return []
-    if candidate.get("reopened_by"):
-        return []
     reference_roles = candidate.get("reference_roles", {})
     if not isinstance(reference_roles, dict):
         return []
-    non_closure_refs = sorted({str(ref).strip() for ref in reference_roles.get("non_closure_refs", []) if str(ref).strip()})
-    legacy_roleless_refs: list[str] = []
-    if not non_closure_refs and reference_roles.get("status") != "present":
-        legacy_roleless_refs = sorted({str(ref).strip() for ref in candidate.get("tracked_refs", []) if str(ref).strip()})
-    refs_to_check = non_closure_refs or legacy_roleless_refs
-    if not refs_to_check:
-        return []
-
     status_by_id = {
         str(item.get("id", "")).strip(): str(item.get("status", "")).strip().lower()
         for item in external_evidence.get("items", [])
         if isinstance(item, dict) and str(item.get("id", "")).strip()
     }
     closed_statuses = {"closed", "complete", "completed", "done"}
+    reopened_refs = sorted({str(ref).strip() for ref in candidate.get("reopened_by", []) if str(ref).strip()})
+    if reopened_refs:
+        if all(status_by_id.get(ref, "") in closed_statuses for ref in reopened_refs):
+            return reopened_refs
+        return []
+    non_closure_refs = sorted({str(ref).strip() for ref in reference_roles.get("non_closure_refs", []) if str(ref).strip()})
+    legacy_roleless_refs: list[str] = []
+    if not non_closure_refs and reference_roles.get("status") != "present":
+        legacy_roleless_refs = sorted({str(ref).strip() for ref in candidate.get("tracked_refs", []) if str(ref).strip()})
+    unsolved_intent_refs = sorted(_issue_refs_from_text(str(candidate.get("unsolved_intent", ""))))
+    refs_to_check = non_closure_refs or legacy_roleless_refs or unsolved_intent_refs
+    if not refs_to_check:
+        return []
+
     if all(status_by_id.get(ref, "") in closed_statuses for ref in refs_to_check):
         return refs_to_check
     return []
+
+
+def _finished_work_continuation_lacks_actionable_owner(*, target_root: Path, candidate: dict[str, Any]) -> bool:
+    if candidate.get("reopened_by"):
+        return False
+    reference_roles = candidate.get("reference_roles", {})
+    if isinstance(reference_roles, dict):
+        non_closure_refs = [str(ref).strip() for ref in reference_roles.get("non_closure_refs", []) if str(ref).strip()]
+        if non_closure_refs:
+            return False
+        if reference_roles.get("status") != "present":
+            legacy_refs = [str(ref).strip() for ref in candidate.get("tracked_refs", []) if str(ref).strip()]
+            if legacy_refs:
+                return False
+    unsolved_intent = str(candidate.get("unsolved_intent", "")).strip()
+    if not unsolved_intent or unsolved_intent.lower() in {"none", "n/a", "none yet"}:
+        return True
+    if _issue_refs_from_text(unsolved_intent):
+        return False
+    for token in re.findall(r"(?:^|\s)(\.agentic-workspace/[^\s,;]+)", unsolved_intent):
+        normalized = token.rstrip(".,;:")
+        path = target_root / normalized
+        if path.exists() and "/archive/" not in normalized.replace("\\", "/"):
+            return False
+    return True
 
 
 def _finished_work_continuation_routed_by_roadmap(*, target_root: Path, candidate: dict[str, Any]) -> list[str]:
