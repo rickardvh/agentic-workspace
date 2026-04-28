@@ -1,0 +1,228 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Command Generation Consumer Boundary",
+  "goal": [
+    "Implement #434 by making the Agentic Workspace side of command generation an explicit, narrow consumer integration over the isolated command-generation package."
+  ],
+  "non_goals": [
+    "Do not move workspace command definitions out of this repo.",
+    "Do not move runtime primitives into the generator.",
+    "Do not publish the generator externally.",
+    "Do not add a first-contact product surface."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agentic Workspace owns command facts and runtime primitives while consuming generic rendering/loading through one repo integration layer.",
+      "constraints": "Generic package code must not import Agentic Workspace runtime internals.",
+      "latitude": "Add or tighten wrapper code, make/check routing, and contributor docs.",
+      "escalation": "Escalate if the consumer layer starts duplicating generic generation behavior."
+    },
+    "execution": {
+      "milestone": "command-generation-consumer-boundary",
+      "status": "complete",
+      "next_step": "Archive the completed execplan, commit, push, close #434, then continue #435.",
+      "proof": "proof selector plus generated package, contract tooling, ruff, planning, and focused tests."
+    },
+    "scope": {
+      "touched": [
+        "scripts/generate/",
+        "scripts/check/check_generated_command_packages.py",
+        "docs/contributor-playbook.md",
+        "tests/test_contract_tooling.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/command-generation-consumer-boundary.plan.json"
+      ],
+      "invariants": [
+        "Workspace command-package IR stays workspace-owned.",
+        "Generic generator package remains repo-agnostic.",
+        "Generated outputs remain reproducible."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#430 isolate generic command-generation machinery for future extraction",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap",
+    "parent lane": "#430"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap",
+    "activation trigger": "after #434 closeout, continue #435 lift-out criteria"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A maintainer can see and test which code is repo-specific integration versus generic generation.",
+    "intentionally deferred": "#435 lift-out criteria.",
+    "discovered implications": "The generic renderer still carried a workspace-specific runtime fallback; moved that value into workspace-owned IR so the package renders host-provided runtime binding data.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice.",
+    "next likely slice": "#435"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "hard constraints": "Dogfood package surfaces, keep repo/tool/language assumptions out of the shipped package, commit/push milestone, close issue only after proof.",
+    "agent may decide locally": "Exact wrapper module location and contributor-doc wording.",
+    "escalate when": "A change would make the generic package depend on Agentic Workspace runtime internals."
+  },
+  "active_milestone": {
+    "id": "command-generation-consumer-boundary",
+    "status": "completed",
+    "scope": "repo consumer wrapper and ownership guidance",
+    "ready": "yes",
+    "blocked": "no"
+  },
+  "immediate_next_action": [
+    "Archive completed plan and close #434 after commit/push."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "scripts/generate/",
+    "scripts/check/check_generated_command_packages.py",
+    "docs/contributor-playbook.md",
+    "tests/test_contract_tooling.py"
+  ],
+  "proof_expectations": [
+    "agentic-workspace preflight --target . --format json",
+    "agentic-workspace summary --target . --format json",
+    "agentic-workspace report --target . --section workflow_obligations --format json",
+    "agentic-workspace report --target . --section closeout_trust --format json",
+    "agentic-workspace proof --target . --changed <changed paths> --format json"
+  ],
+  "context_budget": {
+    "live working set": "scripts/generate/workspace_command_generation.py plus generator/check wrappers, command-package IR/schema, generated package outputs, and focused tests.",
+    "recoverable later": "Archived execplans for #431-#433 and issue bodies for #430-#435.",
+    "externalize before shift": "Archive this plan with proof summary and close #434 before starting #435.",
+    "pre-work config pull": "agentic-workspace summary --target . --format json",
+    "pre-work memory pull": "not needed; issue and planning surfaces were sufficient",
+    "tiny resumability note": "Continue with #435 lift-out criteria after #434 evidence refresh.",
+    "context-shift triggers": "Validation failure, generated output drift, or package importing Agentic Workspace runtime internals."
+  },
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed scripts/generate/workspace_command_generation.py scripts/generate/generate_command_packages.py scripts/check/check_generated_command_packages.py packages/command-generation/src/agentic_command_generation/generator.py packages/command-generation/schemas/command_package_ir.schema.json src/agentic_workspace/contracts/command_package_ir.json src/agentic_workspace/contracts/schemas/command_package_ir.schema.json generated/typescript/workspace-cli/src/cli.mjs generated/typescript/workspace-cli/package.json generated/typescript/planning-cli/package.json generated/typescript/memory-cli/package.json src/agentic_workspace/generated_cli_package/__init__.py packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py docs/contributor-playbook.md tests/test_contract_tooling.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/command-generation-consumer-boundary.plan.json --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+    "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "make maintainer-surfaces",
+    "uv run agentic-workspace preflight --target . --format json",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace report --target . --section workflow_obligations --format json",
+    "uv run agentic-workspace report --target . --section closeout_trust --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "completion_criteria": [
+    "Agentic Workspace path/config decisions live in one integration wrapper.",
+    "Generate/check scripts consume the wrapper instead of duplicating path wiring.",
+    "Contributor docs state the ownership split.",
+    "Generic command-generation package remains free of Agentic Workspace imports.",
+    "Existing generated outputs and checks remain reproducible."
+  ],
+  "execution_run": {
+    "run status": "complete",
+    "executor": "Codex",
+    "handoff source": "GitHub issue #434 plus agentic-workspace summary, agentic-workspace preflight, agentic-workspace report, and agentic-workspace proof",
+    "what happened": "Added scripts/generate/workspace_command_generation.py as the Agentic Workspace consumer wrapper, routed generate/check scripts through it, documented the ownership split, moved the TypeScript runtime fallback into workspace-owned command-package IR, regenerated derived outputs, and added boundary tests so the generic package does not know Agentic Workspace runtime internals.",
+    "scope touched": "command-generation package renderer, workspace command-package IR/schema, generated package outputs, repo integration scripts, contributor playbook, focused tests, planning state",
+    "changed surfaces": "workspace consumer integration wrapper, workspace-owned IR, generated command package projections, maintainer playbook, active execplan",
+    "validations run": "agentic-workspace proof selected workspace_cli, generated_command_packages, cli_authority, maintainer_surfaces, and planning_surfaces; ran generated package freshness/static/conformance/Docker/Docker-conformance, tests/test_contract_tooling.py, tests/test_workspace_cli.py, ruff, contract-tooling surfaces, root_cli_authority defaults, planning doctor/check, maintainer-surfaces, agentic-workspace preflight, agentic-workspace summary, agentic-workspace report workflow_obligations, agentic-workspace report closeout_trust, and agentic-workspace reconcile.",
+    "result for continuation": "#434 is complete; #435 remains for lift-out criteria.",
+    "next step": "Archive this plan, commit, push, close #434, refresh external evidence, then promote #435."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used compact startup, summary, proof, report, doctor, and reconcile surfaces",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue #435"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_contract_tooling.py -q; uv run ruff check src tests; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace defaults --section root_cli_authority --format json; make maintainer-surfaces; uv run agentic-workspace doctor --target . --modules planning --format json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Make Agentic Workspace integration with the internal command-generation package explicit and minimal.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Workspace path/config concerns now live in scripts/generate/workspace_command_generation.py, generate/check scripts consume that wrapper, workspace runtime fallback is declared in workspace-owned IR, and tests prevent Agentic Workspace imports from the generic package.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Explicit Agentic Workspace consumer layer over isolated command generation.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#435",
+    "post-work posterity capture": "archived execplan and tests",
+    "knowledge promoted (Memory/Docs/Config)": "contributor playbook updated; no Memory update needed",
+    "resume from": "#435 lift-out criteria"
+  },
+  "improvement_signal_review": {
+    "status": "fixed-in-slice",
+    "signals found": [
+      "Generic renderer had a hard-coded Agentic Workspace runtime fallback."
+    ],
+    "signals fixed": [
+      "Moved the fallback into workspace-owned command-package IR and added a no-Agentic-Workspace-import test for the generic package."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No durable local execution detail needs preservation beyond this archived proof.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#435 lift-out criteria",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "contributor playbook updated; no Memory update needed",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "contributor playbook updated; no Memory update needed",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "docs/contributor-playbook.md ownership split",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  }
+}

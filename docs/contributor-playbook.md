@@ -64,6 +64,7 @@ The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`,
 - Root workspace: shared lifecycle orchestration, root planning surfaces, memory notes, root validation entrypoints, and the thin `agentic-workspace` CLI.
 - `packages/memory/`: reusable `agentic-memory-bootstrap` source, packaged payload, package skills, and memory-specific tests.
 - `packages/planning/`: reusable `agentic-planning-bootstrap` source, packaged payload, planning helpers, and planning-specific tests.
+- `packages/command-generation/`: generic command-package IR loading and rendering machinery. Agentic Workspace consumes it through `scripts/generate/workspace_command_generation.py`; workspace command facts remain in `src/agentic_workspace/contracts/`, and runtime behavior remains in hand-written workspace/package code.
 
 ## Pick The Right Surface
 
@@ -124,7 +125,7 @@ Use `agentic-workspace defaults --format json` first when you need the structure
 - Maintainer-surface, generated-doc, or installed-contract payload changes: `make maintainer-surfaces`
 - Planning-surface changes only: `make planning-surfaces`; rerun `make render-agent-docs` when the planning manifest or generated routing docs change
 - Declarative contract manifests or schemas for workspace proof/report/selectors: `uv run python scripts/check/check_contract_tooling_surfaces.py`
-- Generated command package outputs or command-package IR changes: `uv run python scripts/check/check_generated_command_packages.py`, then `uv run python scripts/check/check_generated_command_packages.py --docker` when Docker is available
+- Generated command package outputs, command-package IR, or the workspace command-generation consumer wrapper: `uv run python scripts/check/check_generated_command_packages.py`, then `uv run python scripts/check/check_generated_command_packages.py --conformance --require-node`, `uv run python scripts/check/check_generated_command_packages.py --docker --require-docker`, and `uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker` when Node and Docker are available
 - Memory note/current-state changes: `uv run agentic-workspace doctor --target . --format json` and `uv run agentic-workspace report --target . --format json`
 - Absolute-path hygiene across tracked files: `make absolute-paths`
 

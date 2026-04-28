@@ -10,11 +10,11 @@ import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-COMMAND_GENERATION_SRC = REPO_ROOT / "packages" / "command-generation" / "src"
-if str(COMMAND_GENERATION_SRC) not in sys.path:
-    sys.path.insert(0, str(COMMAND_GENERATION_SRC))
+GENERATOR_SCRIPT_ROOT = REPO_ROOT / "scripts" / "generate"
+if str(GENERATOR_SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(GENERATOR_SCRIPT_ROOT))
 
-from agentic_command_generation import load_command_package_ir  # noqa: E402
+from workspace_command_generation import SCHEMA_PATH, SOURCE_PATH, load_workspace_command_package_ir  # noqa: E402
 
 
 def _run(command: list[str]) -> int:
@@ -187,8 +187,8 @@ def _validate_static_surfaces() -> list[str]:
         "mutation-capable-adapter",
         "deferred",
     }
-    ir_path = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json"
-    schema_path = REPO_ROOT / "packages" / "command-generation" / "schemas" / "command_package_ir.schema.json"
+    ir_path = REPO_ROOT / SOURCE_PATH
+    schema_path = REPO_ROOT / SCHEMA_PATH
     if not ir_path.is_file():
         errors.append("src/agentic_workspace/contracts/command_package_ir.json is missing")
     if not schema_path.is_file():
@@ -196,7 +196,7 @@ def _validate_static_surfaces() -> list[str]:
     if errors:
         return errors
     try:
-        ir = load_command_package_ir(ir_path, schema_path)
+        ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         errors.append(f"command-package IR validation failed: {exc}")
     else:

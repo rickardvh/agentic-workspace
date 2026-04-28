@@ -364,12 +364,32 @@ def test_command_generation_loader_uses_explicit_ir_and_schema_paths() -> None:
     }
 
 
-def test_generate_command_packages_wrapper_uses_generic_loader() -> None:
+def test_workspace_command_generation_integration_owns_repo_paths() -> None:
+    module_path = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "workspace_command_generation.py"
+    spec = importlib.util.spec_from_file_location("workspace_command_generation", module_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module.SOURCE_PATH == "src/agentic_workspace/contracts/command_package_ir.json"
+    assert module.SCHEMA_PATH == "packages/command-generation/schemas/command_package_ir.schema.json"
+    manifest = module.load_workspace_command_package_ir()
+    assert manifest["schema_version"] == "agentic-workspace/command-package-ir/v1"
+
+
+def test_generate_command_packages_wrapper_uses_workspace_consumer_integration() -> None:
     wrapper = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_packages.py"
     text = wrapper.read_text(encoding="utf-8")
 
-    assert "load_command_package_ir" in text
+    assert "workspace_command_generation" in text
+    assert "load_command_package_ir" not in text
     assert "agentic_workspace.contract_tooling" not in text
+
+
+def test_generic_command_generation_package_has_no_workspace_imports() -> None:
+    package_root = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "agentic_command_generation"
+    for path in package_root.rglob("*.py"):
+        assert "agentic_workspace" not in path.read_text(encoding="utf-8")
 
 
 def test_generated_python_command_package_metadata_is_current() -> None:

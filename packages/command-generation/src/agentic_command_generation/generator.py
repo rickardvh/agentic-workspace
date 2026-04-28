@@ -93,9 +93,17 @@ def _typescript_module(package: dict[str, Any], *, source_path: str, regenerate_
     )
 
 
-def _typescript_cli_module(package: dict[str, Any], target: dict[str, Any], *, source_path: str, regenerate_command: str) -> str:
+def _typescript_cli_module(
+    package: dict[str, Any],
+    target: dict[str, Any],
+    runtime_binding: dict[str, Any],
+    *,
+    source_path: str,
+    regenerate_command: str,
+) -> str:
     command_names = sorted(command["command"]["name"] for command in package["commands"])
     rendered_commands = json.dumps(command_names)
+    default_runtime_command = json.dumps(str(runtime_binding["default_runtime_command"]))
     return (
         "#!/usr/bin/env node\n"
         "// Generated runnable read-only adapter.\n"
@@ -116,7 +124,7 @@ def _typescript_cli_module(package: dict[str, Any], target: dict[str, Any], *, s
         "  console.error(`Unsupported generated command: ${command}`);\n"
         "  process.exit(2);\n"
         "}\n\n"
-        "const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME || 'python -m agentic_workspace.cli';\n"
+        f"const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME || {default_runtime_command};\n"
         "const result = spawnSync(runtimeCommand, argv, { encoding: 'utf8', shell: true });\n"
         "if (result.error) {\n"
         "  console.error(`Adapter runtime handoff failed: ${result.error.message}`);\n"
@@ -237,7 +245,13 @@ def render_outputs(
                     outputs.append(
                         GeneratedOutput(
                             root / "src" / "cli.mjs",
-                            _typescript_cli_module(package, target, source_path=source_path, regenerate_command=regenerate_command),
+                            _typescript_cli_module(
+                                package,
+                                target,
+                                runtime_binding,
+                                source_path=source_path,
+                                regenerate_command=regenerate_command,
+                            ),
                         )
                     )
                     outputs.append(GeneratedOutput(root / "test" / "mock-runtime.mjs", _typescript_mock_runtime()))

@@ -20,6 +20,7 @@
     },
     "program": "agentic-planning-bootstrap",
     "runtimeBinding": {
+      "default_runtime_command": "python -m agentic_workspace.cli",
       "error_mapping": [
         "Generated adapter failures before process handoff are adapter failures.",
         "Non-zero exits returned by the delegated canonical process are runtime failures unless the conformance case expects the error.",

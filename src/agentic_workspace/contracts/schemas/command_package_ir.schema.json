@@ -97,6 +97,7 @@
           "type": "object",
           "required": [
             "selected_model",
+            "default_runtime_command",
             "scope",
             "universal_contract_owns",
             "target_projection_owns",
@@ -105,6 +106,10 @@
           ],
           "properties": {
             "selected_model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "default_runtime_command": {
               "type": "string",
               "minLength": 1
             },

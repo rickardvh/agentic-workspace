@@ -109,6 +109,7 @@
     },
     "non_python_runtime_binding": {
       "selected_model": "generated parser/help with process handoff to canonical Python CLI",
+      "default_runtime_command": "python -m agentic_workspace.cli",
       "scope": "Read-only generated non-Python adapters may invoke the existing Python command surface as the runtime boundary; mutation-capable commands remain deferred until lifecycle dry-run, preflight, and refusal conformance are explicit.",
       "universal_contract_owns": [
         "command identity",

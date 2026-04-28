@@ -5,29 +5,15 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SRC_ROOT = REPO_ROOT / "src"
-COMMAND_GENERATION_SRC = REPO_ROOT / "packages" / "command-generation" / "src"
-for path in (SRC_ROOT, COMMAND_GENERATION_SRC):
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
+SCRIPT_ROOT = REPO_ROOT / "scripts" / "generate"
+if str(SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_ROOT))
 
-from agentic_command_generation import generate_command_packages, load_command_package_ir, render_outputs  # noqa: E402
-
-SOURCE_PATH = "src/agentic_workspace/contracts/command_package_ir.json"
-SCHEMA_PATH = "packages/command-generation/schemas/command_package_ir.schema.json"
-REGENERATE_COMMAND = "uv run python scripts/generate/generate_command_packages.py"
+from workspace_command_generation import generate_workspace_command_packages, render_workspace_command_package_outputs  # noqa: E402
 
 
 def _render_outputs(manifest: dict[str, object]) -> list[tuple[Path, str]]:
-    return [
-        (output.path, output.content)
-        for output in render_outputs(
-            manifest,
-            repo_root=REPO_ROOT,
-            source_path=SOURCE_PATH,
-            regenerate_command=REGENERATE_COMMAND,
-        )
-    ]
+    return [(output.path, output.content) for output in render_workspace_command_package_outputs(manifest, repo_root=REPO_ROOT)]
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -38,13 +24,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    stale_outputs = generate_command_packages(
-        load_command_package_ir(REPO_ROOT / SOURCE_PATH, REPO_ROOT / SCHEMA_PATH),
-        repo_root=REPO_ROOT,
-        source_path=SOURCE_PATH,
-        regenerate_command=REGENERATE_COMMAND,
-        check=bool(args.check),
-    )
+    stale_outputs = generate_workspace_command_packages(repo_root=REPO_ROOT, check=bool(args.check))
     if args.check:
         if stale_outputs:
             for output in stale_outputs:

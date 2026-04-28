@@ -22,7 +22,7 @@ if (!supportedCommands.has(command)) {
   process.exit(2);
 }
 
-const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME || 'python -m agentic_workspace.cli';
+const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME || "python -m agentic_workspace.cli";
 const result = spawnSync(runtimeCommand, argv, { encoding: 'utf8', shell: true });
 if (result.error) {
   console.error(`Adapter runtime handoff failed: ${result.error.message}`);
