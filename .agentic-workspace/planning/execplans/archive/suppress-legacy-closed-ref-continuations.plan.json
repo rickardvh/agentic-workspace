@@ -1,0 +1,245 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Suppress Legacy Closed Ref Continuations",
+  "goal": [
+    "Stop role-less legacy archived continuations from becoming active autopilot work when all tracked refs are externally closed."
+  ],
+  "non_goals": [
+    "Do not delete or rewrite old archives.",
+    "Do not assume GitHub inside core planning.",
+    "Do not suppress archives with missing, open, or reopened refs."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Legacy historical archives with all known-closed refs stay inspection evidence instead of blocking the next live lane.",
+      "constraints": "Use provider-neutral external evidence and keep open/missing refs active.",
+      "latitude": "Extend finished-work inspection suppression and tests.",
+      "escalation": "Escalate if suppression would hide a candidate without closed external proof."
+    },
+    "execution": {
+      "milestone": "#527",
+      "status": "closed",
+      "next_step": "Archive, commit/push, close #527, refresh evidence, then reingest.",
+      "proof": "planning package tests, planning lint, planning doctor, proof selector"
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py"
+      ],
+      "invariants": [
+        "Role-aware refs stay preferred.",
+        "Legacy role-less suppression requires all tracked refs to be known closed.",
+        "Reopened evidence must keep attention pressure."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Remove small package-use friction discovered during dogfooding.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane workflow-friction-polish",
+    "parent lane": "workflow-friction-polish (#507/#515/#522/#523/#527)"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane workflow-friction-polish",
+    "activation trigger": "Continue remaining workflow-friction-polish issues after #527 closes."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Old role-less archive residue stops outranking live issue lanes when external evidence proves all tracked refs are closed.",
+    "intentionally deferred": "Other workflow-friction-polish issues and broader planning maturity.",
+    "discovered implications": "Reopened evidence is inspection pressure but does not always drive execution readiness in small fixtures; #527 only needs it to remain visible and unsuppressed.",
+    "proof achieved now": "Planning package tests, planning lint, planning surface check, proof selector, summary, and planning doctor pass.",
+    "validation still needed": "None for this bounded slice.",
+    "next likely slice": "Reingest after #527 closeout."
+  },
+  "intent_interpretation": {
+    "literal request": "Repeat until done.",
+    "inferred intended outcome": "Continue planned work while removing dogfooding friction that blocks routing.",
+    "chosen concrete what": "Implement #527 because summary still promotes old role-less closed-ref archive continuations.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm open, missing, or reopened refs are not suppressed."
+  },
+  "execution_bounds": {
+    "allowed paths": "packages/planning/src/repo_planning_bootstrap/installer.py, packages/planning/tests/test_installer.py, this execplan, planning state.",
+    "max changed files": "about 4",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning; uv run ruff check .; uv run python scripts/check/check_planning_surfaces.py",
+    "ask-before-refactor threshold": "Any broad rewrite of finished-work inspection.",
+    "stop before touching": "Root CLI or roadmap maturity code."
+  },
+  "stop_conditions": {
+    "stop when": "#527 acceptance is met, validated, archived, committed, pushed, closed, and evidence refreshed.",
+    "escalate when boundary reached": "If a legacy candidate lacks enough external evidence to classify safely.",
+    "escalate on scope drift": "If implementation starts rewriting old archives.",
+    "escalate on proof failure": "If open or missing refs are suppressed."
+  },
+  "context_budget": {
+    "live working set": "finished-work inspection code, planning package tests, active execplan.",
+    "recoverable later": "Issue #527 and current summary output.",
+    "externalize before shift": "Update this execplan with proof and closeout.",
+    "pre-work config pull": "summary and external evidence already run.",
+    "pre-work memory pull": "not needed.",
+    "tiny resumability note": "Implementing #527 role-less legacy closed-ref suppression.",
+    "context-shift triggers": "Before choosing next lane after #527."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Repeat until done.",
+    "hard constraints": "Dogfood package; commit/push per milestone; stay on current branch.",
+    "agent may decide locally": "Exact metadata name and focused test shape.",
+    "escalate when": "Suppression would depend on host-specific evidence."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#527",
+      "label": "legacy closed-ref continuation suppression",
+      "role": "source_intent",
+      "locator": "GitHub issue #527"
+    },
+    {
+      "kind": "issue",
+      "target": "#524",
+      "label": "explicit closed-ref suppression predecessor",
+      "role": "related-work",
+      "locator": "GitHub issue #524"
+    }
+  ],
+  "active_milestone": {
+    "id": "suppress-legacy-closed-ref-continuations",
+    "status": "closed",
+    "scope": "planning summary legacy archive suppression",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Extend provider-neutral closed-ref suppression to role-less tracked refs."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/suppress-legacy-closed-ref-continuations.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "invariants": [
+    "Missing external evidence remains active pressure.",
+    "Open refs remain active pressure.",
+    "Reopened evidence remains warning pressure."
+  ],
+  "contract_decisions_to_freeze": [
+    "For legacy role-less archives only, all tracked refs known closed is enough to suppress active continuation promotion."
+  ],
+  "open_questions_to_close": [
+    "Should reopened_by block legacy closed-ref suppression?"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "cd packages/planning; uv run ruff check .",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Legacy archived continuation candidates with all tracked refs externally closed no longer become top autopilot recommendations.",
+    "Open, missing, or reopened refs still preserve pressure.",
+    "Detailed inspection records the suppression reason.",
+    "Core planning remains provider-agnostic."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "repeat until done",
+    "what happened": "Extended finished-work inspection closed-ref suppression to legacy role-less candidates by using tracked_refs only when reference roles are absent and every tracked ref is known closed in provider-neutral external evidence. Added tests for all-closed legacy refs, open/missing refs, and reopened refs.",
+    "scope touched": "planning package finished-work inspection logic, planning package tests, planning state, and active execplan",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/suppress-legacy-closed-ref-continuations.plan.json; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q; cd packages/planning; uv run ruff check .; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/suppress-legacy-closed-ref-continuations.plan.json packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "#527 acceptance is met; remaining workflow-friction-polish work stays in roadmap/open issues.",
+    "next step": "Archive this plan, commit/push, close #527, refresh evidence, then reingest."
+  },
+  "finished_run_review": {
+    "review status": "reviewed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "summary and external evidence used before promotion",
+    "misinterpretation risk": "low",
+    "follow-on decision": "Continue remaining workflow-friction-polish issues after closeout."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "planning package tests, planning lint, planning surface check, proof selector, summary, and planning doctor passed",
+    "evidence for \"proof achieved\" state": "139 planning package tests passed; ruff passed; planning surface health clean; planning doctor healthy"
+  },
+  "intent_satisfaction": {
+    "original intent": "#527 acceptance criteria",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Legacy role-less archived continuation candidates with all tracked refs externally closed are now suppressed with externally_closed_partial inspection metadata; tests prove open, missing, and reopened refs remain visible.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane workflow-friction-polish"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Remove stale historical pressure without making archives ordinary startup input.",
+    "broader-lane validation question": "Does summary recover to live work after stale legacy archives are suppressed?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#527 is implemented and validated, while the broader workflow-friction-polish lane still has other open issues.",
+    "evidence carried forward": "packages/planning/tests/test_installer.py covers all-closed legacy suppression plus open/missing/reopened negative cases.",
+    "reopen trigger": "Summary again promotes a role-less legacy archive whose tracked refs are all externally closed."
+  },
+  "durable_residue": {
+    "status": "check",
+    "learned constraint": "Legacy archive suppression must handle pre-role-reference plans using provider-neutral tracked-ref status.",
+    "motivation worth preserving": "Otherwise historical residue keeps blocking live issue lanes after closed-ref suppression lands.",
+    "canonical owner now": "packages/planning/src/repo_planning_bootstrap/installer.py and packages/planning/tests/test_installer.py",
+    "promotion trigger": "Already promoted into planning package behavior and tests.",
+    "retention after promotion": "shrink"
+  },
+  "execution_summary": {
+    "outcome delivered": "Legacy role-less archive continuations are suppressed when all tracked refs are externally closed.",
+    "validation confirmed": "yes",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane workflow-friction-polish",
+    "post-work posterity capture": "Rule promoted to planning package code and tests.",
+    "knowledge promoted (Memory/Docs/Config)": "Check/code promotion; no Memory note needed.",
+    "resume from": "Refresh summary and continue remaining open issues."
+  },
+  "improvement_signal_review": {
+    "status": "fixed",
+    "signals found": [
+      "After #524, summary still promoted role-less legacy archives with all tracked refs closed."
+    ],
+    "signals fixed": [
+      "Role-less legacy archive continuations with all tracked refs closed no longer become active autopilot recommendations."
+    ],
+    "signals routed": [
+      "Remaining workflow-friction-polish issues stay in external evidence and roadmap."
+    ],
+    "signals dismissed": [],
+    "next owner": "#527"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "Continue remaining workflow-friction-polish issues after #527."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "Continue remaining workflow-friction-polish issues after #527."
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted #527 after summary still recommended role-less legacy archive continuations with all tracked refs externally closed.",
+    "2026-04-28: Implemented and validated legacy role-less closed-ref suppression with open, missing, and reopened negative coverage."
+  ]
+}

@@ -3525,7 +3525,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
                     inspection["externally_closed_by"] = externally_closed_by
                     inspection["reason"] = (
                         "Archived residue left larger intent open, but refreshed external evidence marks the explicit "
-                        "parent or continuation refs as closed."
+                        "parent, continuation, or legacy tracked refs as closed."
                     )
                     break
             continue
@@ -3755,11 +3755,17 @@ def _finished_work_continuation_closed_by_external_evidence(
 ) -> list[str]:
     if external_evidence.get("status") != "loaded":
         return []
+    if candidate.get("reopened_by"):
+        return []
     reference_roles = candidate.get("reference_roles", {})
     if not isinstance(reference_roles, dict):
         return []
     non_closure_refs = sorted({str(ref).strip() for ref in reference_roles.get("non_closure_refs", []) if str(ref).strip()})
-    if not non_closure_refs:
+    legacy_roleless_refs: list[str] = []
+    if not non_closure_refs and reference_roles.get("status") != "present":
+        legacy_roleless_refs = sorted({str(ref).strip() for ref in candidate.get("tracked_refs", []) if str(ref).strip()})
+    refs_to_check = non_closure_refs or legacy_roleless_refs
+    if not refs_to_check:
         return []
 
     status_by_id = {
@@ -3768,8 +3774,8 @@ def _finished_work_continuation_closed_by_external_evidence(
         if isinstance(item, dict) and str(item.get("id", "")).strip()
     }
     closed_statuses = {"closed", "complete", "completed", "done"}
-    if all(status_by_id.get(ref, "") in closed_statuses for ref in non_closure_refs):
-        return non_closure_refs
+    if all(status_by_id.get(ref, "") in closed_statuses for ref in refs_to_check):
+        return refs_to_check
     return []
 
 

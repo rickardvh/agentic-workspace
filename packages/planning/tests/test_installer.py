@@ -4547,6 +4547,174 @@ def test_planning_summary_suppresses_archived_child_when_parent_ref_is_externall
     assert summary["execution_readiness"]["status"] == "narrow-direct-ready"
 
 
+def test_planning_summary_suppresses_legacy_archived_child_when_all_tracked_refs_are_closed(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#700",
+                "title": "Closed parent",
+                "status": "closed",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "optional",
+            },
+            {
+                "system": "manual",
+                "id": "#701",
+                "title": "Closed child",
+                "status": "closed",
+                "kind": "issue",
+                "parent_id": "#700",
+                "planning_residue_expected": "optional",
+            },
+        ],
+    )
+
+    archive_dir = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    child_path = archive_dir / "legacy-completed-child.plan.json"
+    _write_execplan_record(child_path, item_id="legacy-completed-child", status="completed", references=[])
+    child_record = json.loads(child_path.read_text(encoding="utf-8"))
+    child_record["intent_satisfaction"]["was original intent fully satisfied?"] = "yes"
+    child_record["intent_satisfaction"]["unsolved intent passed to"] = ".agentic-workspace/planning/state.toml roadmap"
+    child_record["closure_check"]["larger-intent status"] = "open"
+    child_record["closure_check"]["closure decision"] = "archive-but-keep-lane-open"
+    child_record["proof_report"]['evidence for "proof achieved" state'] = "Closed historical refs #700 and #701."
+    installer_mod._write_execplan_record(record_path=child_path, record=child_record)
+
+    summary = planning_summary(target=tmp_path)
+    contract = summary["finished_work_inspection_contract"]
+
+    assert contract["counts"]["partial_count"] == 1
+    assert contract["counts"]["externally_closed_continuation_count"] == 1
+    assert contract["counts"]["derived_follow_up_candidate_count"] == 0
+    inspection = contract["inspections"][0]
+    assert inspection["classification"] == "externally_closed_partial"
+    assert inspection["externally_closed_by"] == ["#700", "#701"]
+    assert contract["signals"] == []
+    assert contract["derived_follow_up_candidates"] == []
+    assert summary["execution_readiness"]["status"] == "narrow-direct-ready"
+
+
+def test_planning_summary_keeps_legacy_archived_child_active_when_any_tracked_ref_is_open_or_missing(
+    tmp_path: Path,
+) -> None:
+    install_bootstrap(target=tmp_path)
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#700",
+                "title": "Closed parent",
+                "status": "closed",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "optional",
+            },
+            {
+                "system": "manual",
+                "id": "#701",
+                "title": "Open child",
+                "status": "open",
+                "kind": "issue",
+                "parent_id": "#700",
+                "planning_residue_expected": "required",
+            },
+        ],
+    )
+
+    archive_dir = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    child_path = archive_dir / "legacy-open-child.plan.json"
+    _write_execplan_record(child_path, item_id="legacy-open-child", status="completed", references=[])
+    child_record = json.loads(child_path.read_text(encoding="utf-8"))
+    child_record["intent_satisfaction"]["was original intent fully satisfied?"] = "yes"
+    child_record["intent_satisfaction"]["unsolved intent passed to"] = ".agentic-workspace/planning/state.toml roadmap"
+    child_record["closure_check"]["larger-intent status"] = "open"
+    child_record["closure_check"]["closure decision"] = "archive-but-keep-lane-open"
+    child_record["proof_report"]['evidence for "proof achieved" state'] = "Mixed historical refs #700, #701, and MISSING-1."
+    installer_mod._write_execplan_record(record_path=child_path, record=child_record)
+
+    summary = planning_summary(target=tmp_path)
+    contract = summary["finished_work_inspection_contract"]
+
+    assert contract["counts"]["externally_closed_continuation_count"] == 0
+    assert contract["counts"]["derived_follow_up_candidate_count"] == 1
+    candidate = contract["derived_follow_up_candidates"][0]
+    assert candidate["source_plan"] == ".agentic-workspace/planning/execplans/archive/legacy-open-child.plan.json"
+    assert candidate["tracked_refs"] == ["#700", "#701", "MISSING-1"]
+    assert summary["execution_readiness"]["status"] == "intent-continuation-needs-promotion"
+
+
+def test_planning_summary_keeps_reopened_legacy_archived_child_active_even_when_refs_are_closed(
+    tmp_path: Path,
+) -> None:
+    install_bootstrap(target=tmp_path)
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#700",
+                "title": "Closed parent",
+                "status": "closed",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "optional",
+            },
+            {
+                "system": "manual",
+                "id": "#701",
+                "title": "Closed child",
+                "status": "closed",
+                "kind": "issue",
+                "parent_id": "#700",
+                "planning_residue_expected": "optional",
+            },
+        ],
+    )
+    _write_finished_work_evidence(
+        tmp_path / ".agentic-workspace/planning/finished-work-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#900",
+                "title": "Reopened closed historical refs",
+                "status": "open",
+                "kind": "issue",
+                "reopens": ["#700", "#701"],
+            }
+        ],
+    )
+
+    archive_dir = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    child_path = archive_dir / "legacy-reopened-child.plan.json"
+    _write_execplan_record(child_path, item_id="legacy-reopened-child", status="completed", references=[])
+    child_record = json.loads(child_path.read_text(encoding="utf-8"))
+    child_record["intent_satisfaction"]["was original intent fully satisfied?"] = "yes"
+    child_record["intent_satisfaction"]["unsolved intent passed to"] = ".agentic-workspace/planning/state.toml roadmap"
+    child_record["closure_check"]["larger-intent status"] = "open"
+    child_record["closure_check"]["closure decision"] = "archive-but-keep-lane-open"
+    child_record["proof_report"]['evidence for "proof achieved" state'] = "Closed but reopened historical refs #700 and #701."
+    installer_mod._write_execplan_record(record_path=child_path, record=child_record)
+
+    summary = planning_summary(target=tmp_path)
+    contract = summary["finished_work_inspection_contract"]
+
+    assert contract["counts"]["externally_closed_continuation_count"] == 0
+    assert contract["counts"]["likely_premature_closeout_count"] == 1
+    assert contract["counts"]["derived_follow_up_candidate_count"] == 1
+    candidate = contract["derived_follow_up_candidates"][0]
+    assert candidate["classification"] == "likely_premature_closeout"
+    assert candidate["tracked_refs"] == ["#700", "#701"]
+    assert candidate["reopened_by"] == ["#900"]
+
+
 def test_planning_summary_uses_reference_roles_before_prose_issue_refs(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
