@@ -5997,14 +5997,27 @@ def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> No
     assert answer["required_commands"] == ["agentic-workspace doctor --target ./repo --modules planning --format json"]
     assert answer["validation_plan"]["kind"] == "validation-plan/v1"
     assert answer["validation_plan"]["status"] == "inspect-before-run"
-    assert answer["validation_plan"]["required"][0] == {
-        "order": 1,
-        "command": "agentic-workspace doctor --target ./repo --modules planning --format json",
-        "cwd": ".",
-        "run": "agentic-workspace doctor --target ./repo --modules planning --format json",
-        "required": True,
-        "lane_id": "planning_surfaces",
-    }
+    first_step = answer["validation_plan"]["required"][0]
+    assert first_step["order"] == 1
+    assert first_step["command"] == "agentic-workspace doctor --target ./repo --modules planning --format json"
+    assert first_step["cwd"] == "."
+    assert first_step["run"].endswith("agentic-workspace doctor --target ./repo --modules planning --format json")
+    assert first_step["required"] is True
+    assert first_step["lane_id"] == "planning_surfaces"
+
+
+def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", ".agentic-workspace/planning/state.toml", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    step = payload["answer"]["validation_plan"]["required"][0]
+    assert step["command"] == "agentic-workspace doctor --target ./repo --modules planning --format json"
+    assert step["run"] == "uv run agentic-workspace doctor --target ./repo --modules planning --format json"
 
 
 def test_proof_changed_selector_routes_generated_command_packages(capsys) -> None:

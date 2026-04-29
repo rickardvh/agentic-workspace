@@ -9899,7 +9899,14 @@ def _normalize_changed_paths(paths: list[str]) -> list[str]:
     return normalized
 
 
-def _validation_plan_step(*, command: str, index: int, required: bool, lane_id: str | None = None) -> dict[str, Any]:
+def _validation_plan_step(
+    *,
+    command: str,
+    index: int,
+    required: bool,
+    lane_id: str | None = None,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
     cwd = "."
     runnable_command = command
     prefix = "cd "
@@ -9908,6 +9915,7 @@ def _validation_plan_step(*, command: str, index: int, required: bool, lane_id: 
         cwd_part, command_part = command.split(separator, 1)
         cwd = cwd_part.removeprefix(prefix).strip() or "."
         runnable_command = command_part.strip()
+    runnable_command = str(_command_with_cli_invoke(command=runnable_command, cli_invoke=cli_invoke))
     step = {
         "order": index,
         "command": command,
@@ -9924,6 +9932,7 @@ def _validation_plan_for_proof(
     *,
     selected_lanes: list[dict[str, Any]],
     optional_commands: list[str],
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
     steps: list[dict[str, Any]] = []
     seen_required: set[str] = set()
@@ -9939,10 +9948,12 @@ def _validation_plan_for_proof(
                     index=len(steps) + 1,
                     required=True,
                     lane_id=str(lane["id"]),
+                    cli_invoke=cli_invoke,
                 )
             )
     optional_steps = [
-        _validation_plan_step(command=str(command), index=index, required=False) for index, command in enumerate(optional_commands, start=1)
+        _validation_plan_step(command=str(command), index=index, required=False, cli_invoke=cli_invoke)
+        for index, command in enumerate(optional_commands, start=1)
     ]
     return {
         "kind": "validation-plan/v1",
@@ -9957,6 +9968,9 @@ def _validation_plan_for_proof(
 
 def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root: Path | None = None) -> dict[str, Any]:
     defaults = _defaults_payload()
+    cli_invoke = DEFAULT_CLI_INVOKE
+    if target_root is not None:
+        cli_invoke = _load_workspace_config(target_root=target_root).cli_invoke
     validation_lanes = defaults["validation"]["lanes"]
     cli_authority_lane = _PROOF_SELECTION_RULES.get("cli_authority", {}).get("lane")
 
@@ -10023,6 +10037,7 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
         "validation_plan": _validation_plan_for_proof(
             selected_lanes=selected_lanes,
             optional_commands=optional_commands,
+            cli_invoke=cli_invoke,
         ),
         "broaden_when": broaden_when,
         "escalate_when": escalate_when,
