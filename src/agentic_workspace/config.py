@@ -17,6 +17,7 @@ LEGACY_WORKSPACE_DELEGATION_OUTCOMES_PATH = Path("agentic-workspace.delegation-o
 WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH = Path(".agentic-workspace/local/memory.toml")
 WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH = Path(".agentic-workspace/local/integrations")
 WORKSPACE_LOCAL_INTEGRATION_SUBFOLDER_CONVENTION = "<vendor-or-runtime>/"
+WORKSPACE_LOCAL_SCRATCH_ROOT_PATH = Path(".agentic-workspace/local/scratch")
 WORKSPACE_AGENT_AID_ROOT_PATH = Path(".agentic-workspace/agent-aids")
 WORKSPACE_AGENT_AID_SUBDIRS = (
     "scripts",

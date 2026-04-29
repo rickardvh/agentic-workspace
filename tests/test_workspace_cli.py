@@ -530,8 +530,11 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["mixed_agent"]["local_integration_area"]["subfolder_convention"] == "<vendor-or-runtime>/"
     assert payload["mixed_agent"]["local_integration_area"]["authoritative"] is False
     assert payload["mixed_agent"]["local_integration_area"]["git_ignored"] is True
+    assert payload["mixed_agent"]["local_integration_area"]["scratch"]["root"] == ".agentic-workspace/local/scratch"
+    assert payload["mixed_agent"]["local_integration_area"]["scratch"]["safe_to_delete"] is True
     assert payload["mixed_agent"]["local_integration_area"]["canonical_doc"] == ".agentic-workspace/docs/local-integration-area.md"
     assert "not a plugin registry or shared compatibility framework" in payload["mixed_agent"]["local_integration_area"]["boundary_rules"]
+    assert payload["mixed_agent"]["local_scratch"]["sign"].startswith("Go ahead and use this")
     agent_aids = payload["mixed_agent"]["agent_aid_storage"]
     assert agent_aids["command"] == "agentic-workspace defaults --section agent_aid_storage --format json"
     assert agent_aids["candidate_root"] == ".agentic-workspace/agent-aids"
@@ -854,6 +857,15 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
         "root": ".agentic-workspace/local/integrations",
         "subfolder_convention": "<vendor-or-runtime>/",
         "example_subfolder": ".agentic-workspace/local/integrations/codex",
+        "scratch": {
+            "root": ".agentic-workspace/local/scratch",
+            "status": "ready-local-only",
+            "exists": False,
+            "git_ignored": True,
+            "authoritative": False,
+            "safe_to_delete": True,
+            "sign": "Go ahead and use this for whatever temporary working files you need.",
+        },
         "status": "available-local-only",
         "exists": False,
         "authoritative": False,
@@ -875,6 +887,15 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
             "not a plugin registry or shared compatibility framework",
         ],
         "rule": "local-only vendor/runtime aids; may reduce local operating cost, but must not become shared workflow authority",
+    }
+    assert payload["mixed_agent"]["local_scratch"] == {
+        "root": ".agentic-workspace/local/scratch",
+        "status": "ready-local-only",
+        "exists": False,
+        "git_ignored": True,
+        "authoritative": False,
+        "safe_to_delete": True,
+        "sign": "Go ahead and use this for whatever temporary working files you need.",
     }
     agent_aids = payload["mixed_agent"]["agent_aid_storage"]
     assert agent_aids["canonical_doc"] == ".agentic-workspace/docs/agent-aids-storage.md"
@@ -2843,6 +2864,7 @@ def test_install_local_only_uses_agentic_workspace_local_only_root_and_updates_g
     assert (install_root / "AGENTS.md").exists()
     assert (install_root / ".agentic-workspace" / "planning" / "state.toml").exists()
     assert (install_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+    assert (install_root / ".agentic-workspace" / "local" / "scratch").is_dir()
     assert (install_root / "LOCAL-ONLY.toml").read_text(encoding="utf-8").startswith('schema_version = 1\nmode = "local-only"')
     git_exclude_text = (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
     assert ".agentic-workspace/" in git_exclude_text
@@ -4549,6 +4571,8 @@ def test_report_surfaces_local_only_memory_status(tmp_path: Path, capsys) -> Non
     assert local_memory["path"] == ".agentic-workspace/local/memory.toml"
     assert local_memory["git_ignored"] is True
     assert local_memory["safe_to_delete"] is True
+    assert local_memory["scratch"]["root"] == ".agentic-workspace/local/scratch"
+    assert local_memory["scratch"]["exists"] is True
     assert "checked-in Memory" in local_memory["promotion_guidance"]
 
 
@@ -6674,7 +6698,7 @@ def test_uninstall_dry_run_and_apply_agree_for_safe_managed_payloads(tmp_path: P
     assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
     capsys.readouterr()
     local_memory = target / ".agentic-workspace" / "local" / "memory.toml"
-    local_memory.parent.mkdir(parents=True)
+    local_memory.parent.mkdir(parents=True, exist_ok=True)
     local_memory.write_text('kind = "local-memory"\n', encoding="utf-8")
     agents_path = target / "AGENTS.md"
     agents_text = agents_path.read_text(encoding="utf-8")
@@ -6717,7 +6741,7 @@ def test_upgrade_apply_preserves_local_only_memory_and_integration_state(tmp_pat
     capsys.readouterr()
     local_memory = target / ".agentic-workspace" / "local" / "memory.toml"
     local_integration = target / ".agentic-workspace" / "local" / "integrations" / "tool" / "state.txt"
-    local_memory.parent.mkdir(parents=True)
+    local_memory.parent.mkdir(parents=True, exist_ok=True)
     local_integration.parent.mkdir(parents=True)
     local_memory.write_text('kind = "local-memory"\n', encoding="utf-8")
     local_integration.write_text("private state\n", encoding="utf-8")

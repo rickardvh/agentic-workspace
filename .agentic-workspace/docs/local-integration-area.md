@@ -23,6 +23,10 @@ Examples:
 
 Subfolders may contain prompt helpers, wrappers, export/import shims, native-workflow adapters, resumable handoff helpers, or runtime scratch files.
 
+## Scratch Space
+
+Use `.agentic-workspace/local/scratch/` freely for temporary agent working files. It is git-ignored local space and is there so agents do not need to invent a repo-specific scratch convention.
+
 ## Boundary Rules
 
 - The area is local-only and git-ignored.

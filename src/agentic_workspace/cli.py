@@ -59,6 +59,7 @@ from agentic_workspace.config import (
     WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH,
     WORKSPACE_LOCAL_INTEGRATION_SUBFOLDER_CONVENTION,
     WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
+    WORKSPACE_LOCAL_SCRATCH_ROOT_PATH,
     WORKSPACE_POINTER_BLOCK,
     WORKSPACE_SYSTEM_INTENT_MIRROR_PATH,
     WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH,
@@ -196,12 +197,15 @@ if str(_OPTIMIZATION_BIAS_POLICY["default_mode"]) != DEFAULT_OPTIMIZATION_BIAS:
 
 def _local_integration_area_payload(*, target_root: Path | None = None) -> dict[str, Any]:
     exists = False
+    scratch_exists = False
     if target_root is not None:
         exists = (target_root / WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH).exists()
+        scratch_exists = (target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH).exists()
     return {
         "root": WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH.as_posix(),
         "subfolder_convention": WORKSPACE_LOCAL_INTEGRATION_SUBFOLDER_CONVENTION,
         "example_subfolder": (WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH / "codex").as_posix(),
+        "scratch": _local_scratch_payload(exists=scratch_exists),
         "status": "available-local-only",
         "exists": exists,
         "authoritative": False,
@@ -209,6 +213,18 @@ def _local_integration_area_payload(*, target_root: Path | None = None) -> dict[
         "canonical_doc": ".agentic-workspace/docs/local-integration-area.md",
         "allowed_aid_kinds": list(WORKSPACE_LOCAL_INTEGRATION_ALLOWED_AID_KINDS),
         "boundary_rules": list(WORKSPACE_LOCAL_INTEGRATION_BOUNDARY_RULES),
+    }
+
+
+def _local_scratch_payload(*, exists: bool = False) -> dict[str, Any]:
+    return {
+        "root": WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix(),
+        "status": "ready-local-only",
+        "exists": exists,
+        "git_ignored": True,
+        "authoritative": False,
+        "safe_to_delete": True,
+        "sign": "Go ahead and use this for whatever temporary working files you need.",
     }
 
 
@@ -492,8 +508,10 @@ def _local_memory_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     enabled = bool(local_override.local_memory_enabled)
     relative_path = local_override.local_memory_path or WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH
     exists = False
+    scratch_exists = False
     if config.target_root is not None:
         exists = (config.target_root / relative_path).exists()
+        scratch_exists = (config.target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH).exists()
     return {
         "status": "enabled" if enabled else "disabled",
         "enabled": enabled,
@@ -505,6 +523,7 @@ def _local_memory_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "advisory_only": True,
         "git_ignored": True,
         "safe_to_delete": True,
+        "scratch": _local_scratch_payload(exists=scratch_exists),
         "record_shape": {
             "kind": "agentic-workspace/local-memory/v1",
             "fields": ["id", "summary", "scope", "source", "confidence", "promotion_candidate"],
@@ -1941,6 +1960,15 @@ def _workspace_status_report(
         if not exists:
             warnings.append({"path": relative.as_posix(), "message": "required workspace file missing"})
 
+    scratch_path = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
+    actions.append(
+        {
+            "kind": "current" if scratch_path.is_dir() else "available",
+            "path": WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix(),
+            "detail": "gitignored local scratch space for temporary agent working files",
+        }
+    )
+
     agents_path = target_root / agents_relative
     if not agents_path.exists():
         actions.append({"kind": "missing", "path": agents_relative.as_posix(), "detail": "root startup entrypoint missing"})
@@ -2221,6 +2249,23 @@ def _write_local_only_state(*, target_root: Path, dry_run: bool) -> dict[str, st
     }
 
 
+def _ensure_local_scratch(*, target_root: Path, dry_run: bool) -> dict[str, str]:
+    scratch_path = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
+    if scratch_path.is_dir():
+        return {
+            "kind": "current",
+            "path": WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix(),
+            "detail": "local scratch space ready for temporary agent working files",
+        }
+    if not dry_run:
+        scratch_path.mkdir(parents=True, exist_ok=True)
+    return {
+        "kind": "would create" if dry_run else "created",
+        "path": WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix(),
+        "detail": "create gitignored local scratch space for temporary agent working files",
+    }
+
+
 def _remove_local_only_state(*, target_root: Path, dry_run: bool) -> dict[str, str]:
     state_path = _local_only_state_path(target_root=target_root)
     if not state_path.exists():
@@ -2489,6 +2534,8 @@ def _workspace_init_or_upgrade_report(
                 "detail": "refresh canonical external-agent handoff surface",
             }
         )
+
+    actions.append(_ensure_local_scratch(target_root=target_root, dry_run=dry_run))
 
     policy_actions, policy_warnings = _sync_update_policy_actions(
         target_root=target_root,
@@ -9240,6 +9287,7 @@ def _defaults_payload() -> dict[str, Any]:
                     "but shared workflow truth must stay in repo-owned workspace, planning, and memory surfaces."
                 ),
             },
+            "local_scratch": _local_scratch_payload(),
             "agent_aid_storage": _agent_aid_storage_payload(),
             "local_memory": {
                 "path": WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH.as_posix(),
@@ -10756,6 +10804,7 @@ def _product_managed_enclave_payload(*, target_root: Path, ownership_payload: di
         ".agentic-workspace/delegation-outcomes.local.json",
         WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
         WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH.as_posix(),
+        WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix(),
     ]
     gitignore = target_root / ".gitignore"
     local_ignore_status = (
@@ -11532,6 +11581,9 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             **_local_integration_area_payload(target_root=config.target_root),
             "rule": ("local-only vendor/runtime aids; may reduce local operating cost, but must not become shared workflow authority"),
         },
+        "local_scratch": _local_scratch_payload(
+            exists=(config.target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH).exists() if config.target_root is not None else False
+        ),
         "agent_aid_storage": _agent_aid_storage_payload(target_root=config.target_root),
         "local_memory": _local_memory_payload(config=config),
         "runtime_inference": {
