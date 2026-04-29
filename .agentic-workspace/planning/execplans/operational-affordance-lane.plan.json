@@ -49,9 +49,9 @@
     "what this slice enabled": "A planned affordance lane with context-size and cognitive-burden review built into closeout.",
     "intentionally deferred": "Generated CLI roadmap and unrelated backlog.",
     "discovered implications": "",
-    "proof achieved now": "#557 focused and selected proof passed.",
+    "proof achieved now": "#557, #558, and #559 focused and selected proof passed.",
     "validation still needed": "proof selection, targeted tests, make check before final lane closeout",
-    "next likely slice": "#558/#559 first-contact and action objects"
+    "next likely slice": "#562 lifecycle affordances"
   },
   "intent_interpretation": {
     "literal request": "Ingest and implement the new issues #556+ on the affordances lane.",
@@ -105,15 +105,15 @@
     }
   ],
   "active_milestone": {
-    "id": "first-contact-action-affordances",
+    "id": "lifecycle-residue-aid-affordances",
     "status": "active",
-    "scope": "#558 and #559",
+    "scope": "#562, #563, and #564",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Implement #558 and #559 by reshaping compact first-contact/proof/closeout outputs around structured primary actions."
+    "Implement #562, #563, and #564 by making lifecycle, durable-residue, and agent-aid flows self-routing by affordance."
   ],
   "blockers": [
     "None."
@@ -151,12 +151,12 @@
     "run status": "active",
     "executor": "Codex",
     "handoff source": "user request plus GitHub issue intake",
-    "what happened": "#557 added operational-affordance review to maintainer guidance and self-improvement closeout.",
-    "scope touched": "docs/contributor-playbook.md; tools/skills/self-improvement-dogfooding/SKILL.md; tests/test_maintainer_surfaces.py; planning state",
-    "changed surfaces": "existing maintainer docs, repo-local skill, focused tests, active execplan",
-    "validations run": "make maintainer-surfaces; uv run pytest tests/test_maintainer_surfaces.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json",
-    "result for continuation": "#557 ready to close after commit.",
-    "next step": "Inspect first-contact, proof, closeout, lifecycle, residue, and agent-aid output shapes."
+    "what happened": "#557 added operational-affordance review; #558/#559 added primary action objects to startup/preflight/proof/closeout outputs and localized remaining startup commands.",
+    "scope touched": "docs/contributor-playbook.md; tools/skills/self-improvement-dogfooding/SKILL.md; src/agentic_workspace/cli.py; startup schema; tests; planning state",
+    "changed surfaces": "existing maintainer docs, repo-local skill, compact command outputs, startup schema, focused tests, active execplan",
+    "validations run": "make maintainer-surfaces; uv run pytest tests/test_maintainer_surfaces.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "#557, #558, and #559 ready to close after commit.",
+    "next step": "Inspect lifecycle, durable-residue, and agent-aid output shapes."
   },
   "finished_run_review": {
     "review status": "pending",
@@ -169,8 +169,8 @@
   },
   "proof_report": {
     "validation proof": "",
-    "proof achieved now": "#557 review guidance implemented.",
-    "evidence for \"proof achieved\" state": "make maintainer-surfaces; uv run pytest tests/test_maintainer_surfaces.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json"
+    "proof achieved now": "#557 review guidance and #558/#559 action-object affordances implemented.",
+    "evidence for \"proof achieved\" state": "make maintainer-surfaces; uv run pytest tests/test_maintainer_surfaces.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json"
   },
   "intent_satisfaction": {
     "original intent": "Implement #556+ affordance lane while dogfooding and evaluating context-size burden.",
@@ -220,13 +220,15 @@
       "External work reconciliation identifies untracked issue pressure but does not provide a copyable promotion action for a selected issue range."
     ],
     "signals fixed": [
-      "#557 now requires operational-affordance review for changed operational surfaces."
+      "#557 now requires operational-affordance review for changed operational surfaces.",
+      "#558/#559 compact startup, preflight, proof, and closeout outputs now expose primary action objects with risk, inputs, and next proof where applicable.",
+      "Startup feature-tier and skill-routing command fields now honor resolved local invocation."
     ],
     "signals routed": [
-      "Evaluate external-work promotion and proof-lane breadth during #558/#559 output action-object work before creating new issues."
+      "Evaluate whether broad external-work promotion needs a writer/scaffold helper after #562-#564 are complete."
     ],
     "signals dismissed": [],
-    "next owner": "#558 or new narrow issue if not solved by existing outputs"
+    "next owner": "#562-#564, then final lane closeout"
   },
   "closeout_distillation": {
     "buckets": {

@@ -94,12 +94,45 @@
     "immediate_next_allowed_action": {
       "type": "object",
       "required": [
+        "action",
         "summary",
+        "command",
+        "run",
+        "risk",
+        "required_inputs",
+        "next_proof",
         "read_first",
         "open_execplan_only_when"
       ],
       "properties": {
+        "action": {
+          "type": "string"
+        },
         "summary": {
+          "type": "string"
+        },
+        "command": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "run": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "risk": {
+          "type": "string"
+        },
+        "required_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "next_proof": {
           "type": "string"
         },
         "read_first": {

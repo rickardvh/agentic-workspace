@@ -5703,6 +5703,10 @@ def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None
     assert startup["entrypoint"] == "AGENTS.md"
     assert "first_compact_queries" in startup
     assert any("agentic-workspace" in q for q in startup["first_compact_queries"])
+    assert startup["primary_next_action"]["action"] in {"continue-active-planning-record", "run-first-compact-query"}
+    assert startup["primary_next_action"]["risk"] == "read-only routing"
+    assert startup["primary_next_action"]["required_inputs"] == ["target repo", "current task"]
+    assert startup["primary_next_action"]["next_proof"] == "select proof after changed paths are known"
     assert startup["skill_routing"]["status"] == "advisory"
     configured_cli = payload["resolved_config"]["workspace_config"]["cli_invoke"]
     assert startup["skill_routing"]["query"] == f'{configured_cli} skills --target ./repo --task "<task>" --format json'
@@ -5769,6 +5773,12 @@ def test_preflight_surfaces_closeout_workflow_obligations_for_active_scope(tmp_p
     obligations = payload["closeout_obligations"]["required_before_lane_closeout"]
     assert payload["workflow_obligations"]["configured_count"] == 1
     assert payload["closeout_obligations"]["status"] == "present"
+    primary = payload["closeout_obligations"]["primary_next_action"]
+    assert primary["action"] == "run-closeout-obligation"
+    assert primary["id"] == "dogfooding_lane_closeout"
+    assert primary["command"] == "agentic-workspace skills --target . --task dogfooding --format json"
+    assert primary["required_inputs"] == ["active planning record", "validation results", "issue or lane scope"]
+    assert "route durable residue" in primary["next_proof"]
     assert obligations[0]["id"] == "dogfooding_lane_closeout"
     assert obligations[0]["stage"] == "closeout"
 
@@ -5869,6 +5879,11 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
         "uv run agentic-workspace config --target ./repo --format json",
         "uv run agentic-workspace summary --format json",
     ]
+    assert payload["immediate_next_allowed_action"]["action"] == "follow-startup-router"
+    assert payload["immediate_next_allowed_action"]["command"] == "uv run agentic-workspace defaults --section startup --format json"
+    assert payload["immediate_next_allowed_action"]["risk"] == "read-only routing"
+    assert payload["immediate_next_allowed_action"]["required_inputs"] == ["target repo", "current task"]
+    assert payload["immediate_next_allowed_action"]["next_proof"] == "run proof selection once changed paths are known"
     assert payload["active_state_summary"]["todo_active_count"] == 1
     assert payload["authority_markers"][0] == {
         "path": "AGENTS.md",
@@ -5881,7 +5896,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["skill_routing"]["status"] == "advisory"
     assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
     assert "planning-autopilot" not in {route["skill"] for route in payload["skill_routing"]["preferred_routes"]}
-    assert payload["skill_routing"]["available_advanced_route_command"] == "agentic-workspace modules --target ./repo --format json"
+    assert payload["skill_routing"]["available_advanced_route_command"] == "uv run agentic-workspace modules --target ./repo --format json"
     assert any("WORKFLOW.md" in step for step in payload["skill_routing"]["fallback_when_skills_unavailable"])
     assert payload["proof"]["required_commands"] == [
         "uv run pytest tests/test_workspace_cli.py -q",
@@ -6031,6 +6046,12 @@ def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> No
     assert first_step["run"].endswith("agentic-workspace doctor --target ./repo --modules planning --format json")
     assert first_step["required"] is True
     assert first_step["lane_id"] == "planning_surfaces"
+    assert first_step["action"] == "run-validation-command"
+    assert first_step["risk"] == "read-only validation"
+    assert first_step["required_inputs"] == ["changed_paths", "selected_lanes"]
+    assert first_step["next_proof"] == "continue to the next required step, then rerun proof selection if changed paths expand"
+    assert answer["validation_plan"]["primary_next_action"] == first_step
+    assert answer["validation_plan"]["next_proof"] == "proof is complete when all required steps pass for the current changed paths"
 
 
 def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, capsys) -> None:

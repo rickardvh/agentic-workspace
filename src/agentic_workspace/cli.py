@@ -2660,13 +2660,14 @@ def _feature_tier_payload(
         "activation": str(active_profile.get("activation", "")),
         "source": active_source,
     }
+    cli_invoke = config.cli_invoke if config is not None else DEFAULT_CLI_INVOKE
     payload: dict[str, Any] = {
         "schema_version": "workspace-feature-tiers/v1",
         "compatibility_status": "deprecated-alias-for-module-profiles",
-        "canonical_surface": "agentic-workspace modules --target ./repo --format json -> module_profiles",
+        "canonical_surface": f"{cli_invoke} modules --target ./repo --format json -> module_profiles",
         "active": active,
         "default_rule": "Use the smallest module profile whose selected modules match the repo footprint; source-checkout maintainer tooling is not a shipped tier.",
-        "detail_command": "agentic-workspace modules --target ./repo --format json",
+        "detail_command": f"{cli_invoke} modules --target ./repo --format json",
         "advanced_policy": _advanced_feature_policy_payload(config=config, include_catalog=not compact),
     }
     if compact:
@@ -2689,6 +2690,7 @@ def _feature_tier_payload(
 
 def _advanced_feature_policy_payload(*, config: WorkspaceConfig | None, include_catalog: bool = False) -> dict[str, Any]:
     enabled = list(config.advanced_features) if config is not None else []
+    cli_invoke = config.cli_invoke if config is not None else DEFAULT_CLI_INVOKE
     payload: dict[str, Any] = {
         "schema_version": "workspace-advanced-feature-policy/v1",
         "enabled_features": enabled,
@@ -2696,7 +2698,7 @@ def _advanced_feature_policy_payload(*, config: WorkspaceConfig | None, include_
         "default_rule": "Advanced host-repo diagnostics are opt-in; source-checkout-only maintainer tooling is not a shipped feature tier.",
         "ordinary_startup_rule": "Use start, summary, report, defaults, and proof first; inspect advanced review or external-adapter diagnostics only by selector or explicit enabled feature.",
         "config_field": "workspace.advanced_features",
-        "detail_command": "agentic-workspace modules --target ./repo --format json",
+        "detail_command": f"{cli_invoke} modules --target ./repo --format json",
     }
     if include_catalog:
         payload["available_features"] = [
@@ -5967,6 +5969,12 @@ def _run_preflight_command(
         ),
         cli_invoke=config.cli_invoke,
     )
+    planning_record_present = isinstance(planning_record, dict) and planning_record.get("status") == "present"
+    preflight_primary_command = (
+        _command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=config.cli_invoke)
+        if planning_record_present
+        else (first_compact_queries[0] if first_compact_queries else None)
+    )
 
     # Get config
     config_payload = _config_payload(config=config)
@@ -5985,6 +5993,19 @@ def _run_preflight_command(
                 command=str(tiny_safe_model.get("entry_query", "agentic-workspace preflight --format json")),
                 cli_invoke=config.cli_invoke,
             ),
+            "primary_next_action": {
+                "action": "continue-active-planning-record" if planning_record_present else "run-first-compact-query",
+                "summary": (
+                    str(planning_record.get("next_action", "") or "Continue from the active planning record.")
+                    if planning_record_present
+                    else "Run the first compact query before opening raw workspace files."
+                ),
+                "command": preflight_primary_command,
+                "run": preflight_primary_command,
+                "risk": "read-only routing",
+                "required_inputs": ["target repo", "current task"],
+                "next_proof": "select proof after changed paths are known",
+            },
             "first_compact_queries": first_compact_queries,
             "escalation_rules": escalation_rules,  # Top 2 most common
             "skill_routing": skill_routing,
@@ -6243,6 +6264,11 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
                 agent_instructions_file=preflight.get("resolved_config", {}).get("agent_instructions_file", "AGENTS.md")
             )
         step["command"] = _command_with_cli_invoke(command=step.get("command"), cli_invoke=config.cli_invoke)
+    primary_command = (
+        _command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=config.cli_invoke)
+        if isinstance(planning_record, dict) and planning_record.get("status") == "present"
+        else (preflight.get("startup_guidance", {}).get("first_compact_queries", []) or [None])[0]
+    )
 
     payload: dict[str, Any] = {
         "kind": "startup-context/v1",
@@ -6264,20 +6290,33 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
         "package_boundary": _package_boundary_payload(target_root=target_root),
         "authority_markers": _authority_markers_for_startup(active_execplan=active_execplan),
         "immediate_next_allowed_action": {
+            "action": (
+                "continue-active-planning-record"
+                if isinstance(planning_record, dict) and planning_record.get("status") == "present"
+                else "follow-startup-router"
+            ),
             "summary": next_action,
+            "command": primary_command,
+            "run": primary_command,
+            "risk": "read-only routing",
+            "required_inputs": ["target repo", "current task"],
+            "next_proof": "run proof selection once changed paths are known",
             "read_first": preflight.get("startup_guidance", {}).get("first_compact_queries", []),
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         },
         "workflow_obligations": preflight.get("workflow_obligations", {}),
         "closeout_obligations": preflight.get("closeout_obligations", {}),
-        "skill_routing": _startup_skill_routing_payload(
+        "skill_routing": _guidance_with_cli_invoke(
+            value=_startup_skill_routing_payload(
+                cli_invoke=config.cli_invoke,
+                enabled_advanced_features=config.advanced_features,
+            ),
             cli_invoke=config.cli_invoke,
-            enabled_advanced_features=config.advanced_features,
         ),
     }
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths:
-        payload["proof"] = _proof_selection_for_changed_paths(changed_paths=normalized_paths)
+        payload["proof"] = _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root)
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     return payload
 
@@ -6597,11 +6636,28 @@ def _closeout_workflow_obligations_payload(workflow_obligations: dict[str, Any])
     closeout_relevant = [
         obligation for obligation in relevant if isinstance(obligation, dict) and str(obligation.get("stage", "")) in closeout_stages
     ]
+    primary_obligation = closeout_relevant[0] if closeout_relevant else None
+    primary_commands = primary_obligation.get("commands", []) if isinstance(primary_obligation, dict) else []
+    primary_command = str(primary_commands[0]) if isinstance(primary_commands, list) and primary_commands else ""
     return {
         "status": "present" if closeout_relevant else "none-configured-for-current-work",
         "rule": (
             "Before claiming a lane or milestone is complete, run relevant closeout obligations from repo config; "
             "validation success alone is not a closeout."
+        ),
+        "primary_next_action": (
+            {
+                "action": "run-closeout-obligation",
+                "id": str(primary_obligation.get("id", "")),
+                "summary": str(primary_obligation.get("summary", "")),
+                "command": primary_command,
+                "run": primary_command,
+                "risk": "may surface required closeout work but should not mutate repo state unless the command itself says so",
+                "required_inputs": ["active planning record", "validation results", "issue or lane scope"],
+                "next_proof": "record closeout evidence, route durable residue, then rerun summary/reconcile before issue closure",
+            }
+            if isinstance(primary_obligation, dict)
+            else None
         ),
         "required_before_lane_closeout": closeout_relevant,
         "recommended_next_action": (
@@ -9961,10 +10017,14 @@ def _validation_plan_step(
     runnable_command = str(_command_with_cli_invoke(command=runnable_command, cli_invoke=cli_invoke))
     step = {
         "order": index,
+        "action": "run-validation-command",
         "command": command,
         "cwd": cwd,
         "run": runnable_command,
         "required": required,
+        "risk": "read-only validation",
+        "required_inputs": ["changed_paths", "selected_lanes"],
+        "next_proof": "continue to the next required step, then rerun proof selection if changed paths expand",
     }
     if lane_id:
         step["lane_id"] = lane_id
@@ -9998,14 +10058,17 @@ def _validation_plan_for_proof(
         _validation_plan_step(command=str(command), index=index, required=False, cli_invoke=cli_invoke)
         for index, command in enumerate(optional_commands, start=1)
     ]
+    primary_action = steps[0] if steps else (optional_steps[0] if optional_steps else None)
     return {
         "kind": "validation-plan/v1",
         "status": "inspect-before-run",
         "rule": "Commands are selected proof, not hidden automation; inspect the plan before executing it.",
+        "primary_next_action": primary_action,
         "required_count": len(steps),
         "optional_count": len(optional_steps),
         "required": steps,
         "optional": optional_steps,
+        "next_proof": "proof is complete when all required steps pass for the current changed paths",
     }
 
 
