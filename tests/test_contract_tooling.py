@@ -90,6 +90,20 @@ def test_agent_feedback_schema_validates_normalized_feedback_artifact() -> None:
     assert errors == []
 
 
+def test_workspace_config_schema_accepts_supported_system_intent_declaration() -> None:
+    schema = contract_tooling.contract_schema("workspace_config.schema.json")
+    sample = {
+        "schema_version": 1,
+        "system_intent": {
+            "sources": ["SYSTEM_INTENT.md", "README.md"],
+            "preferred_source": "SYSTEM_INTENT.md",
+        },
+    }
+
+    errors = list(Draft202012Validator(schema).iter_errors(sample))
+    assert errors == []
+
+
 def test_command_adapter_generation_contract_identifies_defaults_candidate() -> None:
     manifest = contract_tooling.command_adapter_generation_manifest()
     adapters = {adapter["id"]: adapter for adapter in manifest["adapters"]}

@@ -1014,6 +1014,20 @@ def test_config_command_reports_system_intent_source_declaration(tmp_path: Path,
     assert payload["workspace"]["system_intent"]["mirror_path"] == ".agentic-workspace/system-intent/intent.toml"
 
 
+def test_config_command_warns_about_unsupported_top_level_repo_config_fields(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".agentic-workspace").mkdir(exist_ok=True)
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        "schema_version = 1\nunsupported_top_level = true\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["warnings"] == [".agentic-workspace/config.toml contains unsupported top-level field(s): unsupported_top_level."]
+
+
 def test_config_command_autodetects_conservative_system_intent_sources_when_no_explicit_source_declared(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / "README.md").write_text("# README\n", encoding="utf-8")

@@ -146,6 +146,10 @@ def _sample_workspace_config_payload() -> dict[str, object]:
                 "review_hint": "Use when startup routing, llms, or generated agent docs changed.",
             }
         },
+        "system_intent": {
+            "sources": ["SYSTEM_INTENT.md", "README.md"],
+            "preferred_source": "SYSTEM_INTENT.md",
+        },
     }
 
 

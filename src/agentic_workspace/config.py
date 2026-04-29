@@ -876,6 +876,11 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             f"{WORKSPACE_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current workspace config contract."
         )
 
+    unknown_top_level = sorted(set(payload) - {"schema_version", "workspace", "update", "workflow_obligations", "system_intent"})
+    if unknown_top_level:
+        unknown_text = ", ".join(unknown_top_level)
+        warnings.append(f"{WORKSPACE_CONFIG_PATH.as_posix()} contains unsupported top-level field(s): {unknown_text}.")
+
     raw_workspace = payload.get("workspace", {})
     if raw_workspace is None:
         raw_workspace = {}
