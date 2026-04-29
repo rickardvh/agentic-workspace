@@ -3645,17 +3645,14 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert ordinary_path["proof_command"] == "agentic-workspace proof --target ./repo --changed <paths> --format json"
     recovery = ordinary_path["off_happy_path_recovery"]
     assert recovery["kind"] == "workspace-off-happy-path-recovery/v1"
-    scenarios = {item["id"]: item for item in recovery["scenarios"]}
-    assert set(scenarios) >= {
+    assert set(recovery["scenario_ids"]) >= {
         "opened-report-before-start",
         "opened-deep-review-artifact",
         "invalid-near-miss-command",
         "direct-generated-adapter-edit",
         "hand-authored-durable-artifact",
     }
-    assert scenarios["opened-report-before-start"]["recover_by"] == "agentic-workspace start --target ./repo --format json"
-    assert "deep_detail_rule" in scenarios["opened-deep-review-artifact"]["recovery_signal"]
-    assert scenarios["hand-authored-durable-artifact"]["recovery_signal"] == "proof selector surface_value_review"
+    assert recovery["recover_by_default"] == "agentic-workspace start --target ./repo --format json"
     assert "report_profile.ordinary_agent_path" in payload["report_profile"]["decision_grade_fields"]
     guard = payload["report_profile"]["router_shape_guard"]
     assert guard["status"] == "active"
@@ -3679,7 +3676,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     intake = payload["improvement_intake"]
     assert intake["kind"] == "workspace-improvement-intake/v1"
     assert intake["role"] == "router-not-backlog"
-    assert intake["signal_contract"]["candidate_kind"] == "workspace-improvement-signal-candidate/v1"
+    assert intake["detail_section"] == "improvement_intake"
     assert isinstance(intake["candidate_count"], int)
     assert len(intake["candidate_sample"]) <= 3
     assert intake["subtypes"] == [
@@ -3689,13 +3686,10 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
         "memory_improvement_signal",
         "repair_recurrence",
     ]
-    assert intake["audience_boundary"]["status"] == "target-repo"
     assert "dogfooding_friction" not in json.dumps(intake, sort_keys=True)
-    assert intake["advanced_review_route"]["enabled"] is False
     assert "improvement_intake" in payload["report_profile"]["decision_grade_fields"]
     reconciliation = payload["external_work_reconciliation"]
     assert reconciliation["kind"] == "planning-external-work-reconciliation/v1"
-    assert "provider-agnostic" in reconciliation["provider_rule"]
     assert "external_work_reconciliation" in payload["report_profile"]["decision_grade_fields"]
     assert payload["surface_value_guardrail"]["first_contact_budget"]["status"] == "active"
     assert payload["deeper_detail"]["high_volume_sections"][0]["section"] == "module_reports"
@@ -3706,14 +3700,15 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert section_hints["improvement_intake"]["volume"] == "normal"
     assert "improvement signal" in section_hints["improvement_intake"]["why_now"]
     assert section_hints["external_work_reconciliation"]["volume"] == "normal"
-    assert "external-work" in section_hints["external_work_reconciliation"]["purpose"]
+    assert "external-work" in section_hints["external_work_reconciliation"]["purpose_summary"]
     assert "operational_compression" not in section_hints
     assert "external_work_delta" not in section_hints
-    assert "idle context" in section_hints["effective_authority"]["purpose"]
+    assert "idle context" in section_hints["effective_authority"]["purpose_summary"]
     assert "idle state" in section_hints["effective_authority"]["why_now"]
     assert section_hints["effective_authority"]["command"] == (
         "agentic-workspace report --target ./repo --section effective_authority --format json"
     )
+    assert len(json.dumps(payload, sort_keys=True)) < 30000
 
     assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
     closeout_payload = json.loads(capsys.readouterr().out)
@@ -3747,8 +3742,8 @@ def test_report_router_uses_resolved_cli_invoke_for_copyable_commands(tmp_path: 
     assert ordinary_path["state_command"] == "uv run agentic-workspace report --target ./repo --format json"
     assert ordinary_path["current_work_command"] == "uv run agentic-workspace summary --format json"
     assert ordinary_path["proof_command"] == "uv run agentic-workspace proof --target ./repo --changed <paths> --format json"
-    scenarios = {item["id"]: item for item in ordinary_path["off_happy_path_recovery"]["scenarios"]}
-    assert scenarios["opened-report-before-start"]["recover_by"] == "uv run agentic-workspace start --target ./repo --format json"
+    recovery = ordinary_path["off_happy_path_recovery"]
+    assert recovery["recover_by_default"] == "uv run agentic-workspace start --target ./repo --format json"
     assert payload["section_hints"][0]["command"].startswith("uv run agentic-workspace report ")
     if "maintenance_pressure" in payload:
         assert payload["maintenance_pressure"]["subcategories"][0]["section_command"].startswith("uv run agentic-workspace report ")
@@ -6113,7 +6108,13 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
     assert "planning-autopilot" not in {route["skill"] for route in payload["skill_routing"]["preferred_routes"]}
     assert payload["skill_routing"]["available_advanced_route_command"] == "uv run agentic-workspace modules --target ./repo --format json"
-    assert any("WORKFLOW.md" in step for step in payload["skill_routing"]["fallback_when_skills_unavailable"])
+    assert payload["skill_routing"]["fallback_when_skills_unavailable_count"] == 3
+    assert "compact CLI routers" in payload["skill_routing"]["fallback_detail"]
+    assert payload["workflow_obligations"]["configured_count"] == 0
+    assert "configured" not in payload["workflow_obligations"]
+    assert payload["closeout_obligations"]["required_before_lane_closeout_count"] == 0
+    assert "required_before_lane_closeout" not in payload["closeout_obligations"]
+    assert len(json.dumps(payload, sort_keys=True)) < 14000
     assert payload["proof"]["required_commands"] == [
         "uv run pytest tests -q",
         "uv run ruff check src tests",

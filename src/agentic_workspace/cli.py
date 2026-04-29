@@ -1245,7 +1245,7 @@ def _improvement_intake_payload(
     ]
     if source_checkout:
         subtypes[1:1] = source_checkout_only_subtypes
-    payload = {
+    payload: dict[str, Any] = {
         "kind": "workspace-improvement-intake/v1",
         "role": "router-not-backlog",
         "command": "agentic-workspace report --target ./repo --section improvement_intake --format json",
@@ -3807,7 +3807,7 @@ def _run_lifecycle_command(
     placeholders.extend(summary["placeholders"])
     stale_generated_surfaces.extend(summary["stale_generated_surfaces"])
 
-    payload = {
+    payload: dict[str, Any] = {
         "command": command_name,
         "target": target_root.as_posix(),
         "modules": selected_modules,
@@ -7053,6 +7053,8 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
         else (preflight.get("startup_guidance", {}).get("first_compact_queries", []) or [None])[0]
     )
 
+    workflow_obligations = preflight.get("workflow_obligations", {})
+    compact_workflow_obligations = _compact_start_workflow_obligations(workflow_obligations)
     payload: dict[str, Any] = {
         "kind": "startup-context/v1",
         "target": target_root.as_posix(),
@@ -7087,12 +7089,13 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
             "read_first": preflight.get("startup_guidance", {}).get("first_compact_queries", []),
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         },
-        "workflow_obligations": preflight.get("workflow_obligations", {}),
-        "closeout_obligations": preflight.get("closeout_obligations", {}),
+        "workflow_obligations": compact_workflow_obligations,
+        "closeout_obligations": _compact_start_closeout_obligations(preflight.get("closeout_obligations", {})),
         "skill_routing": _guidance_with_cli_invoke(
             value=_startup_skill_routing_payload(
                 cli_invoke=config.cli_invoke,
                 enabled_advanced_features=config.advanced_features,
+                compact=True,
             ),
             cli_invoke=config.cli_invoke,
         ),
@@ -7102,6 +7105,45 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
         payload["proof"] = _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root)
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     return payload
+
+
+def _compact_start_workflow_obligations(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    relevant = value.get("relevant_to_current_work", [])
+    if not isinstance(relevant, list):
+        relevant = []
+    match_evidence = value.get("match_evidence", {})
+    if not isinstance(match_evidence, dict):
+        match_evidence = {}
+    configured_count = int(value.get("configured_count", 0) or 0)
+    match_count = int(match_evidence.get("match_count", len(relevant)) or 0)
+    return {
+        "status": "matched" if match_count else "none-matched",
+        "configured_count": configured_count,
+        "match_count": match_count,
+        "current_scope_tags": value.get("current_scope_tags", []),
+        "relevant_ids": [str(item.get("id", "")) for item in relevant if isinstance(item, dict)],
+        "detail_command": "agentic-workspace preflight --format json",
+        "rule": value.get("rule", ""),
+    }
+
+
+def _compact_start_closeout_obligations(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    required = value.get("required_before_lane_closeout", [])
+    if not isinstance(required, list):
+        required = []
+    primary = value.get("primary_next_action")
+    return {
+        "status": value.get("status", "unknown"),
+        "required_before_lane_closeout_count": len(required),
+        "required_before_lane_closeout_ids": [str(item.get("id", "")) for item in required if isinstance(item, dict)],
+        "primary_next_action": primary if isinstance(primary, dict) else None,
+        "recommended_next_action": value.get("recommended_next_action", ""),
+        "detail_command": "agentic-workspace preflight --format json",
+    }
 
 
 def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None = None) -> dict[str, Any]:
@@ -9304,6 +9346,7 @@ def _startup_skill_routing_payload(
     *,
     cli_invoke: str = DEFAULT_CLI_INVOKE,
     enabled_advanced_features: Sequence[str] = (),
+    compact: bool = False,
 ) -> dict[str, Any]:
     skill_command = _command_with_cli_invoke(
         command='agentic-workspace skills --target ./repo --task "<task>" --format json',
@@ -9343,7 +9386,7 @@ def _startup_skill_routing_payload(
         },
     ]
     advanced_routes = [route for route in available_advanced_routes if str(route.get("feature", "")) in configured_features]
-    payload = {
+    payload: dict[str, Any] = {
         "status": "advisory",
         "rule": "Prefer task-specific package skills when the runtime supports them; keep compact CLI and workflow docs as the fallback. Advanced host-repo diagnostics are opt-in.",
         "query": skill_command,
@@ -9359,6 +9402,13 @@ def _startup_skill_routing_payload(
         payload["enabled_advanced_routes"] = [route["feature"] for route in advanced_routes]
     else:
         payload["available_advanced_route_command"] = "agentic-workspace modules --target ./repo --format json"
+    if compact:
+        fallback_items = payload.pop("fallback_when_skills_unavailable", [])
+        payload["preferred_routes"] = [
+            {"task_shape": route["task_shape"], "skill": route["skill"]} for route in payload["preferred_routes"] if isinstance(route, dict)
+        ]
+        payload["fallback_when_skills_unavailable_count"] = len(fallback_items) if isinstance(fallback_items, list) else 0
+        payload["fallback_detail"] = "Use AGENTS.md and compact CLI routers when skills are unavailable."
     return payload
 
 

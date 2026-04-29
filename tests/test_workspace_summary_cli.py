@@ -252,6 +252,7 @@ candidates = []
     reconciliation = payload["intent_validation_contract"]["external_work_reconciliation"]
     assert reconciliation["kind"] == "planning-external-work-reconciliation/v1"
     assert reconciliation["freshness"]["fresh_enough_to_trust"] is True
-    assert reconciliation["freshness"]["refresh_metadata"]["adapter"] == "manual-fixture"
-    assert reconciliation["freshness"]["path"] == ".agentic-workspace/local/cache/external-intent-evidence.json"
+    assert "refresh_metadata" not in reconciliation["freshness"]
+    assert "path" not in reconciliation["freshness"]
+    assert "profile full" in reconciliation["detail"]
     assert reconciliation["external_work_state"]["open_count"] == 1

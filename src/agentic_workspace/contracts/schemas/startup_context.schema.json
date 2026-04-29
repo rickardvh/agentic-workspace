@@ -258,7 +258,6 @@
         "status",
         "rule",
         "query",
-        "fallback_when_skills_unavailable",
         "preferred_routes"
       ],
       "properties": {
@@ -289,14 +288,20 @@
             "type": "string"
           }
         },
+        "fallback_when_skills_unavailable_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fallback_detail": {
+          "type": "string"
+        },
         "preferred_routes": {
           "type": "array",
           "items": {
             "type": "object",
             "required": [
               "task_shape",
-              "skill",
-              "fallback"
+              "skill"
             ],
             "properties": {
               "task_shape": {

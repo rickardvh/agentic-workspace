@@ -2564,6 +2564,14 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         intent_validation_contract["historical_audit_references"] = _compact_historical_audit_references(
             intent_validation_contract["historical_audit_references"]
         )
+    if "external_work_reconciliation" in intent_validation_contract:
+        intent_validation_contract["external_work_reconciliation"] = _compact_external_work_reconciliation(
+            intent_validation_contract["external_work_reconciliation"]
+        )
+    if "current_external_work" in intent_validation_contract:
+        intent_validation_contract["current_external_work"] = _compact_current_external_work(
+            intent_validation_contract["current_external_work"]
+        )
     if "closeout_reconciliation" in intent_validation_contract:
         intent_validation_contract["closeout_reconciliation"] = _compact_closeout_reconciliation(
             intent_validation_contract["closeout_reconciliation"]
@@ -3006,6 +3014,48 @@ def _compact_landed_open_issue_reconciliation(reconciliation: Any) -> dict[str, 
         "omitted_item_count": max(0, len(items) - max_items),
         "detail": "Use `agentic-workspace summary --format json --profile full` for full landed-open issue evidence.",
     }
+
+
+def _compact_external_work_reconciliation(reconciliation: Any) -> dict[str, Any]:
+    if not isinstance(reconciliation, dict):
+        return {}
+    freshness = reconciliation.get("freshness", {})
+    if isinstance(freshness, dict):
+        freshness = {key: freshness[key] for key in ("status", "refreshed_at", "fresh_enough_to_trust") if key in freshness}
+    else:
+        freshness = {}
+    return {
+        "kind": reconciliation.get("kind", "planning-external-work-reconciliation/v1"),
+        "status": reconciliation.get("status", "absent"),
+        "primary_owner": reconciliation.get("primary_owner", ""),
+        "freshness": freshness,
+        "external_work_state": reconciliation.get("external_work_state", {}),
+        "closeout_state": reconciliation.get("closeout_state", {}),
+        "landed_open_state": reconciliation.get("landed_open_state", {}),
+        "recommended_next_action": reconciliation.get("recommended_next_action", ""),
+        "detail": "Use `agentic-workspace summary --format json --profile full` for provider rules and source detail.",
+    }
+
+
+def _compact_current_external_work(current_external_work: Any) -> dict[str, Any]:
+    if not isinstance(current_external_work, dict):
+        return {}
+    items = current_external_work.get("items", [])
+    if not isinstance(items, list):
+        items = []
+    max_items = 3
+    compact = {
+        "status": current_external_work.get("status", "absent"),
+        "open_count": current_external_work.get("open_count", 0),
+        "closed_count": current_external_work.get("closed_count", 0),
+        "provider_count": current_external_work.get("provider_count", 0),
+        "sample_items": items[:max_items],
+        "omitted_item_count": max(0, len(items) - max_items),
+        "detail": "Use `agentic-workspace summary --format json --profile full` for all external work items.",
+    }
+    if "invalid_reason" in current_external_work:
+        compact["invalid_reason"] = current_external_work["invalid_reason"]
+    return compact
 
 
 def _compact_finished_work_inspection(contract: dict[str, Any]) -> dict[str, Any]:

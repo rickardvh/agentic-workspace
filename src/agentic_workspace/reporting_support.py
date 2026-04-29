@@ -267,7 +267,9 @@ def report_router_payload(
                 "source": "execution_shape",
             }
     section_hints = report_section_hints(payload, cli_invoke=cli_invoke)
+    compact_section_hints = _compact_report_section_hints(section_hints)
     profile_payload = dict(payload.get("report_profile", report_profile_payload(context_router=context_router, cli_invoke=cli_invoke)))
+    profile_payload = _compact_report_profile(profile_payload)
     profile_payload["ordinary_agent_path"] = _ordinary_agent_path_payload(payload=payload, findings=findings, cli_invoke=cli_invoke)
     profile_payload["config_enforcement"] = _report_router_config_enforcement(payload.get("config_enforcement", {}))
     full_feature_tier = dict(payload.get("feature_tier", {})) if isinstance(payload.get("feature_tier"), dict) else {}
@@ -275,7 +277,9 @@ def report_router_payload(
         dict(full_feature_tier.get("advanced_policy", {})) if isinstance(full_feature_tier.get("advanced_policy"), dict) else {}
     )
     advanced_policy.pop("available_features", None)
-    profile_payload["feature_tier"] = {key: value for key, value in full_feature_tier.items() if key not in {"available_tiers"}}
+    profile_payload["feature_tier"] = {
+        key: value for key, value in full_feature_tier.items() if key not in {"available_tiers", "available_module_profiles"}
+    }
     if advanced_policy:
         profile_payload["feature_tier"]["advanced_policy"] = advanced_policy
     decision_grade_fields = list(profile_payload.get("decision_grade_fields", []))
@@ -311,7 +315,7 @@ def report_router_payload(
         "selected_modules": payload.get("selected_modules", []),
         "installed_modules": payload.get("installed_modules", []),
         "health": payload.get("health", "unknown"),
-        "output_contract": payload.get("output_contract", {}),
+        "output_contract": _report_router_output_contract(payload.get("output_contract", {})),
         "report_profile": profile_payload,
         "current_work": current_work,
         "next_action": payload.get("next_action", {}),
@@ -322,7 +326,7 @@ def report_router_payload(
             "sample": findings[:5],
             "raw_section": "findings",
         },
-        "section_hints": section_hints,
+        "section_hints": compact_section_hints,
         "effective_authority": _report_router_effective_authority(payload.get("effective_authority", {})),
         "execution_shape": _report_router_execution_shape(payload.get("execution_shape", {})),
         "improvement_intake": _report_router_improvement_intake(payload.get("improvement_intake", {})),
@@ -342,6 +346,7 @@ def report_router_payload(
                 "agentic-workspace report --target ./repo --section <section> --format json", cli_invoke=cli_invoke
             ),
             "high_volume_sections": profile_payload.get("high_volume_sections", []),
+            "omitted_section_hint_count": max(0, len(section_hints) - len(compact_section_hints)),
         },
     }
     router_payload["surface_value_guardrail"]["prefer"] = router_payload["surface_value_guardrail"]["prefer"][:3]
@@ -350,25 +355,102 @@ def report_router_payload(
     return _localize_command_fields(router_payload, cli_invoke=cli_invoke)
 
 
+def _compact_report_profile(value: dict[str, Any]) -> dict[str, Any]:
+    context_router = value.get("context_router", {})
+    compact_context_router = {}
+    if isinstance(context_router, dict):
+        compact_context_router = {
+            key: context_router[key] for key in ("first_view", "current_state_view", "proof_view", "fallback_view") if key in context_router
+        }
+    high_volume = value.get("high_volume_sections", [])
+    if isinstance(high_volume, list):
+        compact_high_volume = [
+            {"section": item.get("section", ""), "reason": item.get("reason", "")} for item in high_volume if isinstance(item, dict)
+        ]
+    else:
+        compact_high_volume = []
+    return {
+        key: value[key]
+        for key in (
+            "default_profile",
+            "full_profile",
+            "section_selector",
+            "default_command",
+            "full_profile_command",
+            "section_command",
+            "rule",
+            "decision_grade_fields",
+            "router_shape_guard",
+        )
+        if key in value
+    } | {
+        "context_router": compact_context_router,
+        "high_volume_sections": compact_high_volume,
+    }
+
+
+def _compact_report_section_hints(hints: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    priority = {
+        "effective_authority": 0,
+        "execution_shape": 1,
+        "improvement_intake": 2,
+        "external_work_reconciliation": 3,
+        "module_reports": 4,
+        "findings": 5,
+    }
+    ordered = sorted(
+        hints,
+        key=lambda item: (priority.get(str(item.get("section", "")), 99), str(item.get("section", ""))),
+    )
+    compact: list[dict[str, Any]] = []
+    for item in ordered[:6]:
+        compact.append(
+            {key: item[key] for key in ("section", "why_now", "command", "volume", "advanced_feature") if key in item}
+            | ({"purpose_summary": str(item.get("purpose", ""))[:96]} if item.get("purpose") else {})
+        )
+    return compact
+
+
 def _support_list_payload(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
+
+
+def _report_router_output_contract(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    budget = value.get("verbosity_budget", {})
+    return {
+        "optimization_bias": value.get("optimization_bias", ""),
+        "optimization_bias_source": value.get("optimization_bias_source", ""),
+        "report_density": value.get("report_density", ""),
+        "rendered_view_style": value.get("rendered_view_style", ""),
+        "default_detail": budget.get("default_detail", "") if isinstance(budget, dict) else "",
+        "deep_detail": budget.get("deep_detail", "") if isinstance(budget, dict) else "",
+        "detail_section": "output_contract",
+    }
 
 
 def _report_router_improvement_intake(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {"status": "unavailable"}
+    candidates = [
+        {key: item[key] for key in ("kind", "source", "summary", "recommended_destination") if isinstance(item, dict) and key in item}
+        for item in _support_list_payload(value.get("improvement_signal_candidates"))[:3]
+    ]
     return {
         "kind": value.get("kind", "workspace-improvement-intake/v1"),
         "role": value.get("role", "router-not-backlog"),
         "command": value.get("command", "agentic-workspace report --target ./repo --section improvement_intake --format json"),
-        "audience_boundary": value.get("audience_boundary", {}),
+        "audience_boundary": {
+            "status": value.get("audience_boundary", {}).get("status", "target-repo")
+            if isinstance(value.get("audience_boundary"), dict)
+            else "target-repo"
+        },
         "subtypes": [item.get("id", "") for item in _support_list_payload(value.get("subtypes")) if isinstance(item, dict)],
-        "allowed_destinations": value.get("allowed_destinations", []),
-        "signal_contract": value.get("signal_contract", {}),
         "candidate_count": value.get("candidate_count", 0),
-        "candidate_sample": _support_list_payload(value.get("improvement_signal_candidates"))[:3],
+        "candidate_sample": candidates,
         "setup_findings": value.get("setup_findings", {}),
-        "advanced_review_route": value.get("advanced_review_route", {}),
+        "detail_section": "improvement_intake",
     }
 
 
@@ -382,8 +464,11 @@ def _report_router_config_enforcement(value: Any) -> dict[str, Any]:
         "kind": value.get("kind", "workspace-config-enforcement/v1"),
         "status": value.get("status", "unknown"),
         "field_count_by_class": value.get("field_count_by_class", {}),
-        "classes": value.get("classes", {}),
-        "weak_field_routes": weak_routes[:4],
+        "class_ids": sorted(str(key) for key in (value.get("classes", {}) or {}).keys())
+        if isinstance(value.get("classes", {}), dict)
+        else [],
+        "weak_field_route_count": len(weak_routes),
+        "weak_field_route_sample": weak_routes[:2],
         "detail_section": "config_enforcement",
         "section_command": "agentic-workspace report --target ./repo --section config_enforcement --format json",
     }
@@ -392,16 +477,19 @@ def _report_router_config_enforcement(value: Any) -> dict[str, Any]:
 def _report_router_external_work_reconciliation(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {"status": "unavailable"}
+    freshness = value.get("freshness", {})
+    if isinstance(freshness, dict):
+        freshness = {key: freshness[key] for key in ("status", "refreshed_at", "fresh_enough_to_trust") if key in freshness}
+    else:
+        freshness = {}
     return {
         "kind": value.get("kind", "planning-external-work-reconciliation/v1"),
         "status": value.get("status", "unknown"),
         "primary_owner": value.get("primary_owner", ".agentic-workspace/planning/state.toml"),
-        "provider_rule": value.get("provider_rule", ""),
-        "freshness": value.get("freshness", {}),
+        "freshness": freshness,
         "external_work_state": value.get("external_work_state", {}),
         "closeout_state": value.get("closeout_state", {}),
         "landed_open_state": value.get("landed_open_state", {}),
-        "detail_sections": value.get("detail_sections", []),
         "recommended_next_action": value.get("recommended_next_action", ""),
         "section_command": "agentic-workspace report --target ./repo --section external_work_reconciliation --format json",
     }
@@ -427,7 +515,7 @@ def _report_router_maintenance_pressure(value: Any) -> dict[str, Any]:
         "current_execution_separate": value.get("current_execution_separate", True),
         "attention_category_count": value.get("attention_category_count", 0),
         "active_category_count": value.get("active_category_count", 0),
-        "subcategories": subcategories,
+        "subcategories": [{key: item[key] for key in ("id", "status", "count", "detail_section") if key in item} for item in subcategories],
         "detail_sections": value.get("detail_sections", []),
         "recommended_next_action": value.get("recommended_next_action", ""),
     }
@@ -451,11 +539,32 @@ def _report_router_execution_shape(value: Any) -> dict[str, Any]:
         return {"status": "unavailable"}
     recommendation = value.get("recommendation", {})
     task_shape = value.get("task_shape", {})
+    recommender = value.get("task_shape_recommender", {})
+    if isinstance(recommender, dict):
+        shapes = recommender.get("shapes", [])
+        recommender = {
+            "status": recommender.get("status", "unknown"),
+            "rule": recommender.get("rule", ""),
+            "shape_ids": [str(item.get("id", "")) for item in shapes if isinstance(item, dict)],
+            "detail_section": "execution_shape",
+        }
+    else:
+        recommender = {}
+    fast_path = value.get("narrow_work_fast_path", {})
+    if isinstance(fast_path, dict):
+        fast_path = {
+            "status": fast_path.get("status", "unknown"),
+            "one_compact_check": fast_path.get("one_compact_check", ""),
+            "rule": fast_path.get("rule", ""),
+            "promote_when_count": len(fast_path.get("promote_when", []) if isinstance(fast_path.get("promote_when"), list) else []),
+        }
+    else:
+        fast_path = {}
     return {
         "status": value.get("status", "unknown"),
         "task_shape": task_shape if isinstance(task_shape, dict) else {},
-        "task_shape_recommender": value.get("task_shape_recommender", {}),
-        "narrow_work_fast_path": value.get("narrow_work_fast_path", {}),
+        "task_shape_recommender": recommender,
+        "narrow_work_fast_path": fast_path,
         "recommendation": recommendation if isinstance(recommendation, dict) else {},
         "deviation_rule": value.get("deviation_rule", ""),
     }
@@ -470,7 +579,7 @@ def _ordinary_agent_path_payload(
         current_work = {}
     current_status = str(current_work.get("status", "unknown") or "unknown")
     warning_count = len(findings)
-    ordinary_path = {
+    ordinary_path: dict[str, Any] = {
         "status": "ready",
         "entry_command": _command_with_cli_invoke("agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
         "state_command": _command_with_cli_invoke("agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke),
@@ -483,14 +592,18 @@ def _ordinary_agent_path_payload(
             "current_work_status": current_status,
             "warning_count": warning_count,
         },
-        "stop_or_escalate_when": [
-            "compact report health is not healthy",
-            "summary reports active broad work without a checked-in plan you can continue from",
-            "proof selection is ambiguous for the changed paths",
-            "the next change would alter product direction, authority boundaries, or system intent",
-        ],
+        "stop_or_escalate_when_count": 4,
+        "stop_or_escalate_rule": "Stop when health, active-plan continuity, proof ambiguity, or product/authority intent is unclear.",
     }
-    ordinary_path["off_happy_path_recovery"] = _off_happy_path_recovery_payload(cli_invoke=cli_invoke)
+    recovery = _off_happy_path_recovery_payload(cli_invoke=cli_invoke)
+    scenarios = recovery.get("scenarios", [])
+    ordinary_path["off_happy_path_recovery"] = {
+        "kind": recovery.get("kind", "workspace-off-happy-path-recovery/v1"),
+        "status": recovery.get("status", "available"),
+        "scenario_ids": [str(item.get("id", "")) for item in scenarios if isinstance(item, dict)],
+        "detail_section": "report_profile",
+        "recover_by_default": _command_with_cli_invoke("agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
+    }
     return ordinary_path
 
 
