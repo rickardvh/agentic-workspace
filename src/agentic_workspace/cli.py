@@ -5918,6 +5918,14 @@ def _run_preflight_command(
         _command_with_cli_invoke(command=str(query), cli_invoke=config.cli_invoke)
         for query in tiny_safe_model.get("first_compact_queries", [])
     ]
+    escalation_rules = _guidance_with_cli_invoke(value=startup_payload.get("escalation_cues", [])[:2], cli_invoke=config.cli_invoke)
+    skill_routing = _guidance_with_cli_invoke(
+        value=_startup_skill_routing_payload(
+            cli_invoke=config.cli_invoke,
+            enabled_advanced_features=config.advanced_features,
+        ),
+        cli_invoke=config.cli_invoke,
+    )
 
     # Get config
     config_payload = _config_payload(config=config)
@@ -5937,11 +5945,8 @@ def _run_preflight_command(
                 cli_invoke=config.cli_invoke,
             ),
             "first_compact_queries": first_compact_queries,
-            "escalation_rules": startup_payload.get("escalation_cues", [])[:2],  # Top 2 most common
-            "skill_routing": _startup_skill_routing_payload(
-                cli_invoke=config.cli_invoke,
-                enabled_advanced_features=config.advanced_features,
-            ),
+            "escalation_rules": escalation_rules,  # Top 2 most common
+            "skill_routing": skill_routing,
         },
         "resolved_config": {
             "workspace_config": config_payload.get("workspace", {}),
@@ -6349,6 +6354,25 @@ def _command_with_cli_invoke(*, command: str | None, cli_invoke: str) -> str | N
     if command == "agentic-workspace" or command.startswith("agentic-workspace "):
         return f"{cli_invoke}{command.removeprefix('agentic-workspace')}"
     return command
+
+
+def _text_with_cli_invoke(*, text: str, cli_invoke: str) -> str:
+    if text == "agentic-workspace" or text.startswith("agentic-workspace "):
+        return str(_command_with_cli_invoke(command=text, cli_invoke=cli_invoke))
+    if text.startswith("use agentic-workspace "):
+        command = str(_command_with_cli_invoke(command=text.removeprefix("use "), cli_invoke=cli_invoke))
+        return f"use {command}"
+    return text
+
+
+def _guidance_with_cli_invoke(*, value: Any, cli_invoke: str) -> Any:
+    if isinstance(value, str):
+        return _text_with_cli_invoke(text=value, cli_invoke=cli_invoke)
+    if isinstance(value, list):
+        return [_guidance_with_cli_invoke(value=item, cli_invoke=cli_invoke) for item in value]
+    if isinstance(value, dict):
+        return {key: _guidance_with_cli_invoke(value=nested, cli_invoke=cli_invoke) for key, nested in value.items()}
+    return value
 
 
 def _preflight_active_state_payload(*, target_root: Path) -> dict[str, Any]:
@@ -8468,8 +8492,8 @@ def _defaults_payload() -> dict[str, Any]:
             "primary": [
                 "For one-call takeover context, run `agentic-workspace preflight --format json`.",
                 "Read the configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`).",
-                "Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary`.",
-                "Read the active execplan only when `state.toml` points to one.",
+                "Use `agentic-workspace summary --format json` for current planning state before opening raw planning files.",
+                "Open `.agentic-workspace/planning/state.toml` or an active execplan only when compact output points there.",
             ],
             "tiny_safe_model": {
                 "summary": "Start from one repo entrypoint, one cheap takeover query, and conditional deeper reads.",
@@ -8481,7 +8505,7 @@ def _defaults_payload() -> dict[str, Any]:
                     "agentic-workspace summary --format json",
                 ],
                 "deeper_reads_become_valid_when": [
-                    "the active summary points at an execplan or raw planning detail is still needed",
+                    "the active summary points at an execplan or raw planning detail is still needed for direct planning maintenance",
                     "startup or routing ambiguity survives the compact startup answer",
                     "the task crosses a planning, memory, or lifecycle boundary that the small model cannot settle safely",
                 ],
@@ -8523,10 +8547,10 @@ def _defaults_payload() -> dict[str, Any]:
                 },
                 {
                     "surface": ".agentic-workspace/planning/state.toml",
-                    "role": "canonical active queue after startup",
+                    "role": "planning source behind compact summary, not ordinary first-contact reading",
                     "owner": "repo",
                     "kind": "canonical",
-                    "edit_rule": "edit directly as the active queue surface",
+                    "edit_rule": "edit directly only when maintaining planning state or when compact output points here",
                 },
                 {
                     "surface": "llms.txt",
@@ -8549,7 +8573,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "rule": "Use `llms.txt` only to bootstrap or adopt the workspace, then return to the configured startup entrypoint for ordinary repo work.",
             },
             "secondary": [
-                "Check the roadmap in `state.toml` (authoritative) only when promoting work.",
+                "Use `agentic-workspace summary --format json` before checking raw planning state for promotion work.",
                 "Read package-local `AGENTS.md` only for the package being edited.",
                 "Read memory only when installed and the task needs durable context.",
             ],
@@ -8569,8 +8593,9 @@ def _defaults_payload() -> dict[str, Any]:
                     "cue": "The task needs active sequencing, blockers, proof expectations, promotion decisions, or cross-session continuation.",
                     "load_next": [
                         "agentic-workspace summary --format json",
-                        ".agentic-workspace/planning/state.toml",
-                        ".agentic-workspace/planning/execplans/",
+                        "agentic-workspace summary --format json --profile full",
+                        ".agentic-workspace/planning/state.toml only when the summary points there",
+                        ".agentic-workspace/planning/execplans/ only when the summary points at an active execplan",
                     ],
                     "why": "Planning owns active execution state and near-term follow-through.",
                 },

@@ -435,6 +435,16 @@ def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: 
     assert not any(warning.warning_class == "startup_policy_drift" for warning in warnings)
 
 
+def test_contributor_playbook_routes_first_contact_through_compact_queries() -> None:
+    text = (WORKSPACE_ROOT / "docs" / "contributor-playbook.md").read_text(encoding="utf-8")
+    startup_section = text.split("## Start Here", 1)[1].split("##", 1)[0].lower()
+
+    assert "agentic-workspace start --format json" in startup_section
+    assert "agentic-workspace summary --format json" in startup_section
+    assert startup_section.index("agentic-workspace start --format json") < startup_section.index(".agentic-workspace/planning/state.toml")
+    assert "only when compact output points there" in startup_section
+
+
 def test_maintainer_surface_role_guidance_warns_when_readme_docs_map_drifts(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "maintainer_surfaces_drift")
     _write_planning_surfaces(tmp_path)

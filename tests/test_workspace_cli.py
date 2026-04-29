@@ -297,6 +297,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["startup"]["tiny_safe_model"]["entry_query"] == "agentic-workspace preflight --format json"
     assert payload["startup"]["tiny_safe_model"]["first_compact_queries"][0] == "agentic-workspace defaults --section startup --format json"
     assert payload["startup"]["tiny_safe_model"]["deeper_reads_become_valid_when"][0].startswith("the active summary points")
+    assert ".agentic-workspace/planning/state.toml" not in payload["startup"]["primary"][2]
     assert payload["startup"]["first_queries"][0]["command"] == "agentic-workspace preflight --format json"
     assert payload["startup"]["first_queries"][0]["field"] == "startup_guidance"
     assert payload["startup"]["first_queries"][1]["command"] == "agentic-workspace defaults --section startup --format json"
@@ -307,9 +308,16 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         role.get("surface") == "llms.txt" and role.get("role") == "external install/adopt handoff only"
         for role in payload["startup"]["surface_roles"]
     )
+    state_role = next(role for role in payload["startup"]["surface_roles"] if role["surface"] == ".agentic-workspace/planning/state.toml")
+    assert state_role["role"] == "planning source behind compact summary, not ordinary first-contact reading"
+    assert "only when" in state_role["edit_rule"]
     assert payload["startup"]["surface_roles"][3]["kind"] == "managed"
     assert payload["startup"]["escalation_cues"][0]["boundary"] == "workspace"
     assert payload["startup"]["escalation_cues"][1]["boundary"] == "planning"
+    planning_load_next = payload["startup"]["escalation_cues"][1]["load_next"]
+    assert planning_load_next[0] == "agentic-workspace summary --format json"
+    assert planning_load_next[1] == "agentic-workspace summary --format json --profile full"
+    assert "only when" in planning_load_next[2]
     assert payload["startup"]["top_level_capabilities"][2]["module"] == "memory"
     assert any("current agent does not natively look for `AGENTS.md`" in step for step in payload["startup"]["fallbacks"])
     skill_routing = payload["startup"]["skill_routing"]
@@ -666,7 +674,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     )
     assert gemini_profile["native_artifacts"] == ["implementation_plan.md", "task.md", "walkthrough.md"]
     assert gemini_profile["canonical_surfaces"] == [".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/execplans/"]
-    assert any("state.toml" in step for step in payload["startup"]["secondary"])
+    assert any("summary --format json" in step and "raw planning state" in step for step in payload["startup"]["secondary"])
     assert payload["startup"]["workflow_recovery"] == [
         (
             "When startup, first-contact routing, or recovery is unclear, prefer "
@@ -5769,6 +5777,10 @@ def test_preflight_full_includes_active_todo_without_execplan(tmp_path: Path, ca
     target.mkdir()
     _init_git_repo(target)
     _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+    _write(
         target / ".agentic-workspace" / "planning" / "state.toml",
         "[todo]\n"
         "active_items = [\n"
@@ -5787,6 +5799,10 @@ def test_preflight_full_includes_active_todo_without_execplan(tmp_path: Path, ca
     assert active_state["planning_record"]["status"] == "unavailable"
     assert active_state["todo"]["active_count"] == 1
     assert active_state["todo"]["active_items"][0]["next_action"] == "land the preflight fix."
+    guidance = payload["startup_guidance"]
+    assert guidance["entry_query"] == "uv run agentic-workspace preflight --format json"
+    assert guidance["escalation_rules"][0]["load_next"][0] == "uv run agentic-workspace defaults --section startup --format json"
+    assert guidance["skill_routing"]["preferred_routes"][0]["fallback"] == "uv run agentic-workspace summary --format json"
 
 
 def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, capsys) -> None:
@@ -7159,6 +7175,7 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     assert "startup_guidance" in preflight_payload
     assert preflight_payload["startup_guidance"]["entry_query"] == "agentic-workspace preflight --format json"
     assert "agentic-workspace preflight --format json" not in preflight_payload["startup_guidance"]["first_compact_queries"]
+    assert preflight_payload["startup_guidance"]["escalation_rules"][0]["load_next"][0].startswith("agentic-workspace ")
     assert "resolved_config" in preflight_payload
     assert "active_planning_state" in preflight_payload
 

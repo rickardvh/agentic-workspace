@@ -142,7 +142,7 @@ Final repo sync after package work:
 - Lifecycle orchestration or root CLI: start at `src/agentic_workspace/` and `README.md`.
 - Memory bootstrap behavior: start at `packages/memory/AGENTS.md`, then `packages/memory/README.md` and `packages/memory/src/`.
 - Planning bootstrap behavior: start at `packages/planning/AGENTS.md`, then `packages/planning/README.md` and `packages/planning/src/`.
-- Planning contract or archive behavior: start at `.agentic-workspace/planning/state.toml`, the active execplan, and `.agentic-workspace/docs/execution-flow-contract.md`.
+- Planning contract or archive behavior: start with `agentic-workspace summary --format json`; open `.agentic-workspace/planning/state.toml`, the active execplan, or `.agentic-workspace/docs/execution-flow-contract.md` only when the compact answer or the maintenance task points there.
 
 Generated guidance lives under `tools/`, but the source of truth for that guidance is `.agentic-workspace/planning/agent-manifest.json`. When routing docs drift, update the managed manifest and rerender instead of editing generated files directly.
 
@@ -166,4 +166,4 @@ Use `docs/installed-contract-design-checklist.md` when a package change adds or 
 
 - Preserve package boundaries and independent CLI entrypoints.
 - Prefer explicit adapters, manifests, and generated artifacts over private cross-package assumptions.
-- Capture meaningful follow-up work in `.agentic-workspace/planning/state.toml` (`roadmap` or `todo.active_items`) or an execplan instead of leaving it in chat-only residue.
+- Capture meaningful follow-up work through the planning helpers or the narrowest current planning surface instead of leaving it in chat-only residue.
