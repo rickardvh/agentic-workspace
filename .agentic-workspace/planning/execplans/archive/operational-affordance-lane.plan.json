@@ -17,8 +17,8 @@
     },
     "execution": {
       "milestone": "review guidance, first-contact/action objects, lifecycle/residue/aid routing",
-      "status": "active",
-      "next_step": "Run final lane validation, close external issues, then archive or prune the active plan.",
+      "status": "completed",
+      "next_step": "No further lane work remains; this plan is archived as proof.",
       "proof": "Use agentic-workspace proof for changed paths plus targeted pytest/ruff; run make check before final closeout."
     },
     "scope": {
@@ -41,9 +41,9 @@
     "parent lane": "#556"
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "yes",
-    "owner surface": "open child issues until each acceptance target is implemented and closed",
-    "activation trigger": "each completed child issue should update proof and closeout before moving to the next child"
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "closed issue set #556-#559 and #562-#564 plus archived plan",
+    "activation trigger": "reopen only if a new affordance issue or validation regression appears"
   },
   "iterative_follow_through": {
     "what this slice enabled": "Operational outputs now expose compact primary actions for review guidance, first-contact/proof/closeout, lifecycle mutation review, durable-residue routing, and agent-aid discovery.",
@@ -106,14 +106,14 @@
   ],
   "active_milestone": {
     "id": "final-lane-closeout",
-    "status": "active",
+    "status": "completed",
     "scope": "#556 parent plus children #557, #558, #559, #562, #563, and #564",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Run make check, close the completed issues with proof, refresh external intent evidence, then archive or prune this active plan."
+    "None; the lane is complete and archived."
   ],
   "blockers": [
     "None."
@@ -148,24 +148,24 @@
     "Context-size and cognitive-burden improvement opportunities are fixed, routed, or dismissed."
   ],
   "execution_run": {
-    "run status": "active",
+    "run status": "completed",
     "executor": "Codex",
     "handoff source": "user request plus GitHub issue intake",
     "what happened": "#557 added operational-affordance review; #558/#559 added primary action objects to startup/preflight/proof/closeout outputs and localized remaining startup commands; #562/#563/#564 added lifecycle, durable-residue, and agent-aid primary actions.",
     "scope touched": "docs/contributor-playbook.md; tools/skills/self-improvement-dogfooding/SKILL.md; src/agentic_workspace/cli.py; startup schema; tests; planning state",
     "changed surfaces": "existing maintainer docs, repo-local skill, compact command outputs, startup schema, focused tests, active execplan",
-    "validations run": "make maintainer-surfaces; uv run pytest tests/test_maintainer_surfaces.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py tests/test_workspace_cli.py .agentic-workspace/planning/execplans/operational-affordance-lane.plan.json --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
-    "result for continuation": "All child issue implementations are ready for final make check, issue closeout, and active-plan archive/prune.",
-    "next step": "Run final make check and close the lane."
+    "validations run": "make maintainer-surfaces; uv run pytest tests/test_maintainer_surfaces.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py tests/test_workspace_cli.py .agentic-workspace/planning/execplans/operational-affordance-lane.plan.json --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json; make check",
+    "result for continuation": "No continuation remains for the #556 affordance lane; all child issues and parent are closed.",
+    "next step": "Archived plan remains proof/history only."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "",
-    "proof status": "",
-    "intent served": "",
-    "config compliance": "",
-    "misinterpretation risk": "",
-    "follow-on decision": ""
+    "review status": "complete",
+    "scope respected": "yes; changes stayed within existing docs, skill, CLI/report outputs, tests, and planning closeout.",
+    "proof status": "passed",
+    "intent served": "yes; outputs now route common package workflows through compact primary actions without adding first-line surfaces.",
+    "config compliance": "yes; copyable commands use resolved invocation where local config applies.",
+    "misinterpretation risk": "low; review-required lifecycle actions now stay non-mutating.",
+    "follow-on decision": "no active follow-on; context-size hotspots remain general architecture candidates rather than this lane's unfinished work."
   },
   "proof_report": {
     "validation proof": "selected proof passed for current changed paths; full make check still needed before parent closeout",
@@ -174,9 +174,9 @@
   },
   "intent_satisfaction": {
     "original intent": "Implement #556+ affordance lane while dogfooding and evaluating context-size burden.",
-    "was original intent fully satisfied?": "pending",
-    "evidence of intent satisfaction": "",
-    "unsolved intent passed to": "#556 child issues"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "All child issues and parent issue were closed with proof comments after make check passed.",
+    "unsolved intent passed to": ""
   },
   "system_intent_alignment": {
     "relevant system intent": "Make the package cheaper to enter, recover, verify, and trust through compact router views and progressive disclosure.",
@@ -185,10 +185,10 @@
     "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
   },
   "closure_check": {
-    "slice status": "active",
-    "larger-intent status": "open",
-    "closure decision": "do-not-archive-yet",
-    "why this decision is honest": "child issues remain open",
+    "slice status": "completed",
+    "larger-intent status": "satisfied-for-this-lane",
+    "closure decision": "archive",
+    "why this decision is honest": "all planned child issues and the parent were implemented, validated, and closed",
     "evidence carried forward": "this execplan and external issue references",
     "reopen trigger": "new affordance issue or validation failure"
   },
@@ -199,20 +199,20 @@
     "text": ""
   },
   "durable_residue": {
-    "status": "planning",
+    "status": "none",
     "learned constraint": "Context-size review should be part of affordance closeout, not a separate handbook.",
     "motivation worth preserving": "Future agents should be able to use compact command outputs instead of loading issue threads and raw planning files.",
-    "canonical owner now": ".agentic-workspace/planning/execplans/operational-affordance-lane.plan.json",
-    "promotion trigger": "if repeated across lanes, route into docs/contracts/checks or issue follow-up",
+    "canonical owner now": "implemented behavior and tests in commits 3391bad, 62a797b, and 35c29eb",
+    "promotion trigger": "none for this lane; repeated future friction should route through improvement intake",
     "retention after promotion": "shrink"
   },
   "execution_summary": {
-    "outcome delivered": "pending",
-    "validation confirmed": "pending",
-    "follow-on routed to": "#556 child issues",
-    "post-work posterity capture": "pending",
-    "knowledge promoted (Memory/Docs/Config)": "pending",
-    "resume from": ".agentic-workspace/planning/execplans/operational-affordance-lane.plan.json"
+    "outcome delivered": "#556 operational affordance lane completed.",
+    "validation confirmed": "make check passed after selected proof and targeted tests.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archived execplan and closed issues",
+    "knowledge promoted (Memory/Docs/Config)": "no new durable Memory needed; context-size learning was fixed in bounded report action output.",
+    "resume from": "no active resume point"
   },
   "improvement_signal_review": {
     "status": "found",
