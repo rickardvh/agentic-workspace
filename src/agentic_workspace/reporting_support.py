@@ -7,7 +7,7 @@ from difflib import get_close_matches
 from pathlib import Path
 from typing import Any
 
-from agentic_workspace.config import WorkspaceUsageError
+from agentic_workspace.config import DEFAULT_CLI_INVOKE, WorkspaceUsageError
 
 REPO_FRICTION_LARGE_FILE_THRESHOLD = 400
 REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD = 200
@@ -74,15 +74,46 @@ def output_contract_payload(
     }
 
 
-def report_profile_payload(*, context_router: dict[str, Any]) -> dict[str, Any]:
+def _command_with_cli_invoke(command: str, *, cli_invoke: str) -> str:
+    if cli_invoke == DEFAULT_CLI_INVOKE or not command.startswith(DEFAULT_CLI_INVOKE):
+        return command
+    return f"{cli_invoke}{command.removeprefix(DEFAULT_CLI_INVOKE)}"
+
+
+def _localize_command_fields(value: Any, *, cli_invoke: str) -> Any:
+    if isinstance(value, dict):
+        localized: dict[str, Any] = {}
+        for key, nested in value.items():
+            if isinstance(nested, str) and (key == "command" or key == "recover_by" or key.endswith("_command")):
+                localized[key] = _command_with_cli_invoke(nested, cli_invoke=cli_invoke)
+            elif key == "commands" and isinstance(nested, list):
+                localized[key] = [
+                    _command_with_cli_invoke(item, cli_invoke=cli_invoke)
+                    if isinstance(item, str)
+                    else _localize_command_fields(item, cli_invoke=cli_invoke)
+                    for item in nested
+                ]
+            else:
+                localized[key] = _localize_command_fields(nested, cli_invoke=cli_invoke)
+        return localized
+    if isinstance(value, list):
+        return [_localize_command_fields(item, cli_invoke=cli_invoke) for item in value]
+    return value
+
+
+def report_profile_payload(*, context_router: dict[str, Any], cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
     return {
         "default_profile": "router",
         "full_profile": "full",
         "context_router": context_router,
         "section_selector": "--section <top-level-field>",
-        "default_command": "agentic-workspace report --target ./repo --format json",
-        "full_profile_command": "agentic-workspace report --target ./repo --profile full --format json",
-        "section_command": "agentic-workspace report --target ./repo --section <section> --format json",
+        "default_command": _command_with_cli_invoke("agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke),
+        "full_profile_command": _command_with_cli_invoke(
+            "agentic-workspace report --target ./repo --profile full --format json", cli_invoke=cli_invoke
+        ),
+        "section_command": _command_with_cli_invoke(
+            "agentic-workspace report --target ./repo --section <section> --format json", cli_invoke=cli_invoke
+        ),
         "rule": (
             "Default report output should route to decision-grade current state before exposing high-volume "
             "module detail. Use --profile full or --section when deeper data is needed."
@@ -134,6 +165,7 @@ def select_report_payload(
     section: str | None,
     compact_answer: Callable[..., dict[str, Any]],
     context_router: dict[str, Any],
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
     if section:
         if profile != "router":
@@ -156,7 +188,7 @@ def select_report_payload(
     if profile == "full":
         return payload
     if profile == "router":
-        return report_router_payload(payload, context_router=context_router)
+        return report_router_payload(payload, context_router=context_router, cli_invoke=cli_invoke)
     raise WorkspaceUsageError("report --profile must be one of: router, full")
 
 
@@ -190,7 +222,9 @@ def _unknown_report_section_message(section: str, payload: dict[str, Any]) -> st
     return f"Unknown report section {section!r}.{suggestions} Available sections: {available}.{recovery}"
 
 
-def report_router_payload(payload: dict[str, Any], *, context_router: dict[str, Any]) -> dict[str, Any]:
+def report_router_payload(
+    payload: dict[str, Any], *, context_router: dict[str, Any], cli_invoke: str = DEFAULT_CLI_INVOKE
+) -> dict[str, Any]:
     findings = [finding for finding in payload.get("findings", []) if isinstance(finding, dict)]
     findings_by_severity: dict[str, int] = {}
     findings_by_module: dict[str, int] = {}
@@ -212,9 +246,9 @@ def report_router_payload(payload: dict[str, Any], *, context_router: dict[str, 
                 "summary": str(task_shape.get("summary", "")),
                 "source": "execution_shape",
             }
-    section_hints = report_section_hints(payload)
-    profile_payload = dict(payload.get("report_profile", report_profile_payload(context_router=context_router)))
-    profile_payload["ordinary_agent_path"] = _ordinary_agent_path_payload(payload=payload, findings=findings)
+    section_hints = report_section_hints(payload, cli_invoke=cli_invoke)
+    profile_payload = dict(payload.get("report_profile", report_profile_payload(context_router=context_router, cli_invoke=cli_invoke)))
+    profile_payload["ordinary_agent_path"] = _ordinary_agent_path_payload(payload=payload, findings=findings, cli_invoke=cli_invoke)
     full_feature_tier = dict(payload.get("feature_tier", {})) if isinstance(payload.get("feature_tier"), dict) else {}
     advanced_policy = (
         dict(full_feature_tier.get("advanced_policy", {})) if isinstance(full_feature_tier.get("advanced_policy"), dict) else {}
@@ -243,8 +277,12 @@ def report_router_payload(payload: dict[str, Any], *, context_router: dict[str, 
         "kind": "workspace-report-router/v1",
         "schema": {
             "schema_version": "workspace-report-router-schema/v1",
-            "full_profile_command": "agentic-workspace report --target ./repo --profile full --format json",
-            "section_command": "agentic-workspace report --target ./repo --section <section> --format json",
+            "full_profile_command": _command_with_cli_invoke(
+                "agentic-workspace report --target ./repo --profile full --format json", cli_invoke=cli_invoke
+            ),
+            "section_command": _command_with_cli_invoke(
+                "agentic-workspace report --target ./repo --section <section> --format json", cli_invoke=cli_invoke
+            ),
             "principle": "route first, inspect deep sections only when needed",
         },
         "command": "report",
@@ -269,20 +307,26 @@ def report_router_payload(payload: dict[str, Any], *, context_router: dict[str, 
         "improvement_intake": _report_router_improvement_intake(payload.get("improvement_intake", {})),
         "external_work_reconciliation": _report_router_external_work_reconciliation(payload.get("external_work_reconciliation", {})),
         "surface_value_guardrail": {
-            "command": "agentic-workspace defaults --section surface_value_guardrail --format json",
+            "command": _command_with_cli_invoke(
+                "agentic-workspace defaults --section surface_value_guardrail --format json", cli_invoke=cli_invoke
+            ),
             "prefer": payload.get("surface_value_guardrail", {}).get("preference_order", []),
             "first_contact_budget": payload.get("surface_value_guardrail", {}).get("first_contact_budget", {}),
         },
         "deeper_detail": {
-            "full_profile_command": "agentic-workspace report --target ./repo --profile full --format json",
-            "section_command": "agentic-workspace report --target ./repo --section <section> --format json",
+            "full_profile_command": _command_with_cli_invoke(
+                "agentic-workspace report --target ./repo --profile full --format json", cli_invoke=cli_invoke
+            ),
+            "section_command": _command_with_cli_invoke(
+                "agentic-workspace report --target ./repo --section <section> --format json", cli_invoke=cli_invoke
+            ),
             "high_volume_sections": profile_payload.get("high_volume_sections", []),
         },
     }
     router_payload["surface_value_guardrail"]["prefer"] = router_payload["surface_value_guardrail"]["prefer"][:3]
     if "maintenance_pressure" in enabled_advanced_features or maintenance_pressure_relevant:
         router_payload["maintenance_pressure"] = _report_router_maintenance_pressure(payload.get("maintenance_pressure", {}))
-    return router_payload
+    return _localize_command_fields(router_payload, cli_invoke=cli_invoke)
 
 
 def _support_list_payload(value: Any) -> list[Any]:
@@ -379,7 +423,9 @@ def _report_router_execution_shape(value: Any) -> dict[str, Any]:
     }
 
 
-def _ordinary_agent_path_payload(*, payload: dict[str, Any], findings: list[dict[str, Any]]) -> dict[str, Any]:
+def _ordinary_agent_path_payload(
+    *, payload: dict[str, Any], findings: list[dict[str, Any]], cli_invoke: str = DEFAULT_CLI_INVOKE
+) -> dict[str, Any]:
     effective_authority = payload.get("effective_authority", {})
     current_work = effective_authority.get("current_work", {}) if isinstance(effective_authority, dict) else {}
     if not isinstance(current_work, dict):
@@ -388,10 +434,12 @@ def _ordinary_agent_path_payload(*, payload: dict[str, Any], findings: list[dict
     warning_count = len(findings)
     ordinary_path = {
         "status": "ready",
-        "entry_command": "agentic-workspace start --target ./repo --format json",
-        "state_command": "agentic-workspace report --target ./repo --format json",
-        "current_work_command": "agentic-workspace summary --format json",
-        "proof_command": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+        "entry_command": _command_with_cli_invoke("agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
+        "state_command": _command_with_cli_invoke("agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke),
+        "current_work_command": _command_with_cli_invoke("agentic-workspace summary --format json", cli_invoke=cli_invoke),
+        "proof_command": _command_with_cli_invoke(
+            "agentic-workspace proof --target ./repo --changed <paths> --format json", cli_invoke=cli_invoke
+        ),
         "deep_detail_rule": "Open section, memory, planning, or review artifacts only when compact output points there.",
         "current_signal": {
             "current_work_status": current_status,
@@ -404,11 +452,11 @@ def _ordinary_agent_path_payload(*, payload: dict[str, Any], findings: list[dict
             "the next change would alter product direction, authority boundaries, or system intent",
         ],
     }
-    ordinary_path["off_happy_path_recovery"] = _off_happy_path_recovery_payload()
+    ordinary_path["off_happy_path_recovery"] = _off_happy_path_recovery_payload(cli_invoke=cli_invoke)
     return ordinary_path
 
 
-def _off_happy_path_recovery_payload() -> dict[str, Any]:
+def _off_happy_path_recovery_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
     return {
         "kind": "workspace-off-happy-path-recovery/v1",
         "status": "available",
@@ -418,37 +466,44 @@ def _off_happy_path_recovery_payload() -> dict[str, Any]:
                 "id": "opened-report-before-start",
                 "misuse": "agent starts from report detail before compact startup",
                 "recovery_signal": "report_profile.ordinary_agent_path.entry_command",
-                "recover_by": "agentic-workspace start --target ./repo --format json",
+                "recover_by": _command_with_cli_invoke("agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
             },
             {
                 "id": "opened-deep-review-artifact",
                 "misuse": "agent opens review or module detail before compact routing points there",
                 "recovery_signal": "report_profile.ordinary_agent_path.deep_detail_rule",
-                "recover_by": "agentic-workspace report --target ./repo --format json, then only the named --section when needed",
+                "recover_by": (
+                    _command_with_cli_invoke("agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke)
+                    + ", then only the named --section when needed"
+                ),
             },
             {
                 "id": "invalid-near-miss-command",
                 "misuse": "agent runs an invalid or near-miss workspace command",
                 "recovery_signal": "parser suggestion plus startup/preflight fallback hint",
-                "recover_by": "agentic-workspace preflight --format json",
+                "recover_by": _command_with_cli_invoke("agentic-workspace preflight --format json", cli_invoke=cli_invoke),
             },
             {
                 "id": "direct-generated-adapter-edit",
                 "misuse": "agent changes a generated adapter or executable CLI surface directly",
                 "recovery_signal": "proof selector generated-command or direct-cli-edit review",
-                "recover_by": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+                "recover_by": _command_with_cli_invoke(
+                    "agentic-workspace proof --target ./repo --changed <paths> --format json", cli_invoke=cli_invoke
+                ),
             },
             {
                 "id": "hand-authored-durable-artifact",
                 "misuse": "agent hand-authors a durable docs/planning/memory artifact without a compact proof route",
                 "recovery_signal": "proof selector surface_value_review",
-                "recover_by": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+                "recover_by": _command_with_cli_invoke(
+                    "agentic-workspace proof --target ./repo --changed <paths> --format json", cli_invoke=cli_invoke
+                ),
             },
         ],
     }
 
 
-def report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
+def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CLI_INVOKE) -> list[dict[str, Any]]:
     section_purposes = {
         "effective_authority": "authority, current work, system-intent pressure, idle context, and unresolved gaps",
         "execution_shape": "default execution posture and planning-backed work guidance",
@@ -517,7 +572,9 @@ def report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
                     "section": section,
                     "purpose": purpose,
                     "why_now": why_now.get(section, "inspect when this section is named by compact routing output"),
-                    "command": f"agentic-workspace report --target ./repo --section {section} --format json",
+                    "command": _command_with_cli_invoke(
+                        f"agentic-workspace report --target ./repo --section {section} --format json", cli_invoke=cli_invoke
+                    ),
                     "volume": "high" if section in {"module_reports", "reports", "registry", "config"} else "normal",
                     **({"advanced_feature": advanced_feature} if advanced_feature else {}),
                 }

@@ -3697,6 +3697,33 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert historical_reviews["retention_policy"]["advisory_only"] is True
 
 
+def test_report_router_uses_resolved_cli_invoke_for_copyable_commands(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"]["full_profile_command"] == "uv run agentic-workspace report --target ./repo --profile full --format json"
+    assert payload["report_profile"]["default_command"] == "uv run agentic-workspace report --target ./repo --format json"
+    ordinary_path = payload["report_profile"]["ordinary_agent_path"]
+    assert ordinary_path["entry_command"] == "uv run agentic-workspace start --target ./repo --format json"
+    assert ordinary_path["state_command"] == "uv run agentic-workspace report --target ./repo --format json"
+    assert ordinary_path["current_work_command"] == "uv run agentic-workspace summary --format json"
+    assert ordinary_path["proof_command"] == "uv run agentic-workspace proof --target ./repo --changed <paths> --format json"
+    scenarios = {item["id"]: item for item in ordinary_path["off_happy_path_recovery"]["scenarios"]}
+    assert scenarios["opened-report-before-start"]["recover_by"] == "uv run agentic-workspace start --target ./repo --format json"
+    assert payload["section_hints"][0]["command"].startswith("uv run agentic-workspace report ")
+    assert payload["maintenance_pressure"]["subcategories"][0]["section_command"].startswith("uv run agentic-workspace report ")
+
+
 def test_report_section_agent_aids_discovers_checked_in_and_local_aids(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -6385,6 +6412,27 @@ def test_upgrade_lifecycle_plan_advertises_root_front_door_for_module_selections
     assert [(module_name, command_name) for module_name, command_name, _kwargs in calls] == [
         (module_name, "upgrade") for module_name in expected_modules
     ]
+
+
+def test_lifecycle_plan_uses_resolved_cli_invoke_for_next_actions(monkeypatch, tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--modules", "planning", "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    lifecycle_plan = payload["lifecycle_plan"]
+    assert lifecycle_plan["next_safe_command"]["command"].startswith("uv run agentic-workspace upgrade ")
+    front_door = lifecycle_plan["root_upgrade_front_door"]
+    assert front_door["ordinary_sequence"][0]["command"].startswith("uv run agentic-workspace upgrade ")
+    assert front_door["ordinary_sequence"][1]["command"].startswith("uv run agentic-workspace upgrade ")
+    assert front_door["ordinary_sequence"][2]["command"].startswith("uv run agentic-workspace doctor ")
+    assert payload["next_steps"][0].startswith("Run uv run agentic-workspace doctor ")
 
 
 @pytest.mark.parametrize("dry_run_arg", [["--dry-run"], []])

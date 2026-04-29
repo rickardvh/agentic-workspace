@@ -1496,6 +1496,7 @@ def main(argv: list[str] | None = None) -> int:
             selected_modules=selected_modules,
             dry_run=args.dry_run,
             local_only=bool(args.local_only),
+            cli_invoke=config.cli_invoke,
         )
         _emit_payload(payload=payload, format_name=args.format)
         return 0
@@ -3198,7 +3199,12 @@ def _run_lifecycle_command(
             }
             for entry in registry
         ],
-        "next_steps": _lifecycle_next_steps(command_name=command_name, target_root=target_root, warnings=warnings),
+        "next_steps": _lifecycle_next_steps(
+            command_name=command_name,
+            target_root=target_root,
+            warnings=warnings,
+            cli_invoke=config.cli_invoke,
+        ),
         "reports": reports,
         "config": _config_payload(config=config),
     }
@@ -3209,6 +3215,7 @@ def _run_lifecycle_command(
         selected_modules=selected_modules,
         dry_run=dry_run,
         local_only=local_only_repo_root is not None,
+        cli_invoke=config.cli_invoke,
     )
     return payload
 
@@ -3221,6 +3228,7 @@ def _lifecycle_plan_payload(
     selected_modules: list[str],
     dry_run: bool,
     local_only: bool,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
     planned_removals: list[str] = []
     for report in payload.get("module_reports", []) + payload.get("reports", []):
@@ -3239,6 +3247,7 @@ def _lifecycle_plan_payload(
         target_root=target_root,
         selected_modules=selected_modules,
         local_only=local_only,
+        cli_invoke=cli_invoke,
     )
     plan = {
         "kind": "workspace-lifecycle-plan/v1",
@@ -3282,6 +3291,7 @@ def _lifecycle_plan_payload(
             dry_run=dry_run,
             next_command=next_command,
             review_required=review_required,
+            cli_invoke=cli_invoke,
         )
     return plan
 
@@ -3543,12 +3553,16 @@ def _root_upgrade_front_door_payload(
     dry_run: bool,
     next_command: str,
     review_required: bool,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
     target = target_root.as_posix()
     module_args: list[str] = []
     for module_name in selected_modules:
         module_args.extend(["--module", module_name])
-    dry_run_command = " ".join(["agentic-workspace", "upgrade", "--target", target, *module_args, "--dry-run", "--format", "json"])
+    dry_run_command = _command_with_cli_invoke(
+        command=" ".join(["agentic-workspace", "upgrade", "--target", target, *module_args, "--dry-run", "--format", "json"]),
+        cli_invoke=cli_invoke,
+    )
     apply_command = next_command
     return {
         "kind": "workspace-root-upgrade-front-door/v1",
@@ -3569,7 +3583,9 @@ def _root_upgrade_front_door_payload(
             },
             {
                 "step": "verify",
-                "command": f"agentic-workspace doctor --target {target} --format json",
+                "command": _command_with_cli_invoke(
+                    command=f"agentic-workspace doctor --target {target} --format json", cli_invoke=cli_invoke
+                ),
                 "safe": True,
                 "reason": "Doctor verifies the host repo after lifecycle changes settle.",
             },
@@ -3728,14 +3744,21 @@ def _lifecycle_mutation_safety_payload(
     }
 
 
-def _lifecycle_apply_command(*, command_name: str, target_root: Path, selected_modules: list[str], local_only: bool) -> str:
+def _lifecycle_apply_command(
+    *,
+    command_name: str,
+    target_root: Path,
+    selected_modules: list[str],
+    local_only: bool,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> str:
     parts = ["agentic-workspace", command_name, "--target", target_root.as_posix()]
     for module_name in selected_modules:
         parts.extend(["--module", module_name])
     if local_only:
         parts.append("--local-only")
     parts.extend(["--format", "json"])
-    return " ".join(parts)
+    return str(_command_with_cli_invoke(command=" ".join(parts), cli_invoke=cli_invoke))
 
 
 def _run_report_command(
@@ -3867,7 +3890,7 @@ def _run_report_command(
             config=config,
         ),
         "health": status_payload["health"],
-        "report_profile": _report_profile_payload(),
+        "report_profile": _report_profile_payload(cli_invoke=config.cli_invoke),
         "output_contract": output_contract_payload(
             optimization_bias=config.optimization_bias,
             optimization_bias_source=config.optimization_bias_source,
@@ -4872,22 +4895,36 @@ def _as_int(value: Any) -> int:
         return 0
 
 
-def _report_profile_payload() -> dict[str, Any]:
-    return report_profile_payload(context_router=_context_router_family_payload(compact=True))
+def _report_profile_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    return report_profile_payload(
+        context_router=_context_router_family_payload(cli_invoke=cli_invoke, compact=True),
+        cli_invoke=cli_invoke,
+    )
 
 
 def _select_report_payload(payload: dict[str, Any], *, profile: str, section: str | None) -> dict[str, Any]:
+    config_payload = payload.get("config", {})
+    workspace_config = config_payload.get("workspace", {}) if isinstance(config_payload, dict) else {}
+    cli_invoke = str(workspace_config.get("cli_invoke", DEFAULT_CLI_INVOKE)) if isinstance(workspace_config, dict) else DEFAULT_CLI_INVOKE
     return select_report_payload(
         payload,
         profile=profile,
         section=section,
         compact_answer=_compact_contract_answer,
-        context_router=_context_router_family_payload(compact=True),
+        context_router=_context_router_family_payload(cli_invoke=cli_invoke, compact=True),
+        cli_invoke=cli_invoke,
     )
 
 
 def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    return report_router_payload(payload, context_router=_context_router_family_payload(compact=True))
+    config_payload = payload.get("config", {})
+    workspace_config = config_payload.get("workspace", {}) if isinstance(config_payload, dict) else {}
+    cli_invoke = str(workspace_config.get("cli_invoke", DEFAULT_CLI_INVOKE)) if isinstance(workspace_config, dict) else DEFAULT_CLI_INVOKE
+    return report_router_payload(
+        payload,
+        context_router=_context_router_family_payload(cli_invoke=cli_invoke, compact=True),
+        cli_invoke=cli_invoke,
+    )
 
 
 def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -7513,14 +7550,16 @@ def _init_next_steps(
     return steps
 
 
-def _lifecycle_next_steps(*, command_name: str, target_root: Path, warnings: list[str]) -> list[str]:
+def _lifecycle_next_steps(*, command_name: str, target_root: Path, warnings: list[str], cli_invoke: str = DEFAULT_CLI_INVOKE) -> list[str]:
     target = target_root.as_posix()
     if command_name == "status":
-        return [] if not warnings else [f"Run agentic-workspace doctor --target {target} to inspect the reported warnings."]
+        command = _command_with_cli_invoke(command=f"agentic-workspace doctor --target {target}", cli_invoke=cli_invoke)
+        return [] if not warnings else [f"Run {command} to inspect the reported warnings."]
     if command_name == "doctor":
         return [] if not warnings else ["Review the warning list and apply the narrowest remediation that closes each issue."]
     if command_name == "upgrade":
-        return [f"Run agentic-workspace doctor --target {target} after the refresh completes."]
+        command = _command_with_cli_invoke(command=f"agentic-workspace doctor --target {target}", cli_invoke=cli_invoke)
+        return [f"Run {command} after the refresh completes."]
     if command_name == "uninstall":
         return ["Manually review any preserved repo-owned content before deleting it."]
     return []
