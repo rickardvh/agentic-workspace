@@ -53,6 +53,24 @@ def output_contract_payload(
     bias_payload: dict[str, Any],
     surface: str,
 ) -> dict[str, Any]:
+    budget_by_density = {
+        "compact": {
+            "default_detail": "router-only",
+            "section_hint_limit": 8,
+            "deep_detail": "selectors-required",
+        },
+        "balanced": {
+            "default_detail": "router-with-brief-context",
+            "section_hint_limit": 12,
+            "deep_detail": "selectors-preferred",
+        },
+        "explanatory": {
+            "default_detail": "router-with-extra-labels",
+            "section_hint_limit": 16,
+            "deep_detail": "selectors-still-required-for-high-volume-sections",
+        },
+    }
+    verbosity_budget = budget_by_density.get(str(bias_payload["report_density"]), budget_by_density["balanced"])
     return {
         "owner_surface": "workspace",
         "surface": surface,
@@ -69,6 +87,7 @@ def output_contract_payload(
         ],
         "surface_boundary": bias_payload["surface_boundary"],
         "report_density": bias_payload["report_density"],
+        "verbosity_budget": verbosity_budget,
         "residue_density": bias_payload["residue_density"],
         "rendered_view_style": bias_payload["rendered_view_style"],
         "must_not_change": list(bias_payload["does_not_affect"]),
@@ -250,6 +269,7 @@ def report_router_payload(
     section_hints = report_section_hints(payload, cli_invoke=cli_invoke)
     profile_payload = dict(payload.get("report_profile", report_profile_payload(context_router=context_router, cli_invoke=cli_invoke)))
     profile_payload["ordinary_agent_path"] = _ordinary_agent_path_payload(payload=payload, findings=findings, cli_invoke=cli_invoke)
+    profile_payload["config_enforcement"] = _report_router_config_enforcement(payload.get("config_enforcement", {}))
     full_feature_tier = dict(payload.get("feature_tier", {})) if isinstance(payload.get("feature_tier"), dict) else {}
     advanced_policy = (
         dict(full_feature_tier.get("advanced_policy", {})) if isinstance(full_feature_tier.get("advanced_policy"), dict) else {}
@@ -349,6 +369,23 @@ def _report_router_improvement_intake(value: Any) -> dict[str, Any]:
         "candidate_sample": _support_list_payload(value.get("improvement_signal_candidates"))[:3],
         "setup_findings": value.get("setup_findings", {}),
         "advanced_review_route": value.get("advanced_review_route", {}),
+    }
+
+
+def _report_router_config_enforcement(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    weak_routes = value.get("weak_field_routes", [])
+    if not isinstance(weak_routes, list):
+        weak_routes = []
+    return {
+        "kind": value.get("kind", "workspace-config-enforcement/v1"),
+        "status": value.get("status", "unknown"),
+        "field_count_by_class": value.get("field_count_by_class", {}),
+        "classes": value.get("classes", {}),
+        "weak_field_routes": weak_routes[:4],
+        "detail_section": "config_enforcement",
+        "section_command": "agentic-workspace report --target ./repo --section config_enforcement --format json",
     }
 
 
@@ -522,6 +559,7 @@ def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_C
         "improvement_intake": "unified routing for setup findings, review findings, validation friction, and memory improvement signals",
         "repo_friction": "repo-friction and improvement pressure evidence",
         "config": "resolved workspace config and local posture",
+        "config_enforcement": "config fields classified by actual enforcement strength and operational routes",
         "registry": "module registry and lifecycle metadata",
     }
     findings = [finding for finding in payload.get("findings", []) if isinstance(finding, dict)]
@@ -546,6 +584,7 @@ def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_C
         "improvement_intake": "inspect when a product or workflow improvement signal needs routing, dismissal, or durable ownership",
         "repo_friction": "inspect when choosing or routing improvement targets",
         "config": "deep detail; inspect only when resolved config, posture, or obligations matter",
+        "config_enforcement": "inspect when deciding whether a config field is hard, operational, advisory, or local-only",
         "registry": "deep detail; inspect only when module metadata or lifecycle registration matters",
     }
     if current_status in {"absent", "direct-or-no-active-plan"}:

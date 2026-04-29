@@ -3891,6 +3891,17 @@ def _lifecycle_plan_payload(
     warnings = list(payload.get("warnings", []))
     review_items = list(payload.get("needs_review", [])) + list(payload.get("placeholders", []))
     review_required = bool(review_items or warnings or payload.get("prompt_requirement") in {"required", "recommended"})
+    config_payload = payload.get("config", {})
+    update_payload = config_payload.get("update", {}) if isinstance(config_payload, dict) else {}
+    module_policy_payloads = update_payload.get("modules", []) if isinstance(update_payload, dict) else []
+    module_update_freshness = [
+        {
+            "module": str(module.get("module", "")),
+            "freshness": module.get("freshness", {}),
+        }
+        for module in module_policy_payloads
+        if isinstance(module, dict) and str(module.get("module", "")) in set(selected_modules)
+    ]
     next_command = _lifecycle_apply_command(
         command_name=command_name,
         target_root=target_root,
@@ -3931,6 +3942,7 @@ def _lifecycle_plan_payload(
         "review_required": review_required,
         "review_items": review_items,
         "local_only_state_interaction": "install-root" if local_only else "not-requested",
+        "module_update_freshness": module_update_freshness,
         "mutation_safety": _lifecycle_mutation_safety_payload(
             command_name=command_name,
             dry_run=dry_run,
@@ -4588,6 +4600,7 @@ def _run_report_command(
             bias_payload=_optimization_bias_payload(config.optimization_bias),
             surface="report",
         ),
+        "config_enforcement": _config_enforcement_payload(config=config),
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
         "agent_aids": _agent_aids_report_payload(target_root=target_root, cli_invoke=config.cli_invoke),
@@ -6760,6 +6773,7 @@ def _run_preflight_command(
         },
         "resolved_config": {
             "workspace_config": config_payload.get("workspace", {}),
+            "config_enforcement": config_payload.get("config_enforcement", {}),
             "optimization_bias": config_payload.get("optimization_bias"),
             "agent_instructions_file": config_payload.get("workspace", {}).get("agent_instructions_file", "AGENTS.md"),
         },
@@ -7335,6 +7349,152 @@ def _workflow_obligation_payloads(config: WorkspaceConfig) -> list[dict[str, Any
     ]
 
 
+def _config_field_enforcement_entries() -> list[dict[str, Any]]:
+    return [
+        {
+            "field": "schema_version",
+            "enforcement": "hard",
+            "scope": "repo-config",
+            "used_by": ["config loader", "all workspace commands"],
+        },
+        {
+            "field": "workspace.default_preset",
+            "enforcement": "operational",
+            "scope": "repo-config",
+            "used_by": ["setup", "install", "init", "module selection"],
+        },
+        {
+            "field": "workspace.agent_instructions_file",
+            "enforcement": "operational",
+            "scope": "repo-config",
+            "used_by": ["startup adapters", "install", "init"],
+        },
+        {
+            "field": "workspace.workflow_artifact_profile",
+            "enforcement": "operational",
+            "scope": "repo-config",
+            "used_by": ["startup adapters", "handoff guidance"],
+        },
+        {
+            "field": "workspace.improvement_latitude",
+            "enforcement": "advisory",
+            "scope": "repo-config",
+            "used_by": ["report.repo_friction", "report.improvement_intake", "defaults.improvement_latitude"],
+        },
+        {
+            "field": "workspace.optimization_bias",
+            "enforcement": "advisory",
+            "scope": "repo-config",
+            "used_by": ["report.output_contract", "report section hints", "rendered output density"],
+        },
+        {
+            "field": "workspace.advanced_features",
+            "enforcement": "operational",
+            "scope": "repo-config",
+            "used_by": ["report advanced sections", "skills routing", "startup guidance"],
+        },
+        {
+            "field": "system_intent.sources",
+            "enforcement": "operational",
+            "scope": "repo-config",
+            "used_by": ["config", "system-intent", "report.system_intent_mirror"],
+        },
+        {
+            "field": "system_intent.preferred_source",
+            "enforcement": "operational",
+            "scope": "repo-config",
+            "used_by": ["config", "system-intent", "report.system_intent_mirror"],
+        },
+        {
+            "field": "workflow_obligations.<name>.*",
+            "enforcement": "advisory",
+            "scope": "repo-config",
+            "used_by": ["report.workflow_obligations", "preflight.closeout_obligations"],
+        },
+        {
+            "field": "update.modules.<module>.*",
+            "enforcement": "operational",
+            "scope": "repo-config",
+            "used_by": ["config.update", "status/doctor/upgrade source metadata"],
+        },
+        {
+            "field": "workspace.cli_invoke",
+            "enforcement": "operational",
+            "scope": "local-config",
+            "used_by": ["copyable commands", "startup/report/proof/lifecycle guidance"],
+        },
+        {
+            "field": "runtime|handoff|safety|delegation_targets",
+            "enforcement": "local-advisory",
+            "scope": "local-config",
+            "used_by": ["mixed_agent.runtime_resolution", "delegated_run_guardrail", "handoff guidance"],
+        },
+        {
+            "field": "local_memory.enabled/path",
+            "enforcement": "local-advisory",
+            "scope": "local-config",
+            "used_by": ["config.local_memory", "report.local_memory"],
+        },
+    ]
+
+
+def _config_enforcement_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    entries = _config_field_enforcement_entries()
+    counts: dict[str, int] = {}
+    for entry in entries:
+        enforcement = str(entry["enforcement"])
+        counts[enforcement] = counts.get(enforcement, 0) + 1
+    return {
+        "kind": "workspace-config-enforcement/v1",
+        "status": "present",
+        "rule": (
+            "Config fields declare policy and posture at different strengths; advisory fields must stay visible as "
+            "advisory instead of being mistaken for hard execution gates."
+        ),
+        "config_exists": config.exists,
+        "local_override_applied": config.local_override.applied,
+        "classes": {
+            "hard": "invalid values stop command execution",
+            "operational": "validated values directly change package output or lifecycle behavior",
+            "advisory": "validated values shape compact guidance but do not execute work",
+            "local-advisory": "machine-local posture that may shape guidance but cannot become shared repo authority",
+        },
+        "field_count_by_class": counts,
+        "fields": entries,
+        "weak_field_routes": [
+            {
+                "field": "workspace.improvement_latitude",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --section repo_friction --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+            },
+            {
+                "field": "workspace.optimization_bias",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --section output_contract --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+            },
+            {
+                "field": "workflow_obligations.<name>.*",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --section workflow_obligations --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+            },
+            {
+                "field": "local runtime/delegation posture",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace config --target ./repo --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "field_path": "mixed_agent.runtime_resolution",
+            },
+        ],
+    }
+
+
 def _scope_tags_for_current_work(*, active_planning_record: dict[str, Any] | None) -> list[str]:
     tags: set[str] = set()
     touched_scope = active_planning_record.get("touched_scope", []) if isinstance(active_planning_record, dict) else []
@@ -7362,7 +7522,24 @@ def _workflow_obligations_report_payload(
 ) -> dict[str, Any]:
     configured = _workflow_obligation_payloads(config)
     current_tags = _scope_tags_for_current_work(active_planning_record=active_planning_record)
-    relevant = [obligation for obligation in configured if set(obligation["scope_tags"]) & set(current_tags)]
+    matching: list[dict[str, Any]] = []
+    relevant: list[dict[str, Any]] = []
+    current_tag_set = set(current_tags)
+    for obligation in configured:
+        obligation_tags = {str(tag) for tag in obligation["scope_tags"]}
+        matched_tags = sorted(obligation_tags & current_tag_set)
+        matched = bool(matched_tags)
+        if matched:
+            relevant.append(obligation)
+        matching.append(
+            {
+                "id": obligation["id"],
+                "matched": matched,
+                "matched_scope_tags": matched_tags,
+                "non_match_reason": "" if matched else "no overlap with current_scope_tags",
+                "stage": obligation["stage"],
+            }
+        )
     return {
         "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
         "rule": (
@@ -7371,6 +7548,16 @@ def _workflow_obligations_report_payload(
         ),
         "configured_count": len(configured),
         "current_scope_tags": current_tags,
+        "match_evidence": {
+            "observed_scope_source": (
+                "active planning record touched_scope plus active-planning presence"
+                if active_planning_record
+                else "no active planning record"
+            ),
+            "current_scope_tags": current_tags,
+            "match_count": len(relevant),
+            "matching": matching,
+        },
         "configured": configured,
         "relevant_to_current_work": relevant,
     }
@@ -11525,6 +11712,13 @@ def _module_update_policy_payload(*, config: WorkspaceConfig, target_root: Path 
                 "metadata_path": metadata_relative.as_posix(),
                 "sync_status": sync_status,
                 "current_source": current_source,
+                "freshness": _module_update_freshness_payload(
+                    module_name=module_name,
+                    sync_status=sync_status,
+                    current_source=current_source,
+                    policy=policy,
+                    cli_invoke=config.cli_invoke,
+                ),
             }
         )
     return payload
@@ -11677,6 +11871,7 @@ def _delegated_run_guardrail_payload(
     *,
     defaults: dict[str, Any],
     profile_payloads: list[dict[str, Any]],
+    local_override: Any | None = None,
 ) -> dict[str, Any]:
     lower_trust_profiles = [
         profile.get("name", "")
@@ -11686,10 +11881,39 @@ def _delegated_run_guardrail_payload(
         and profile["closeout_gate"].get("trust") == "lower-trust"
     ]
     guardrail_defaults = defaults.get("delegated_run_guardrail", {})
+    configured_profiles = sorted([str(profile.get("name", "")) for profile in profile_payloads if isinstance(profile, dict)])
+    has_runtime_posture = bool(
+        local_override
+        and any(
+            value is not None
+            for value in (
+                local_override.supports_internal_delegation,
+                local_override.strong_planner_available,
+                local_override.cheap_bounded_executor_available,
+                local_override.prefer_internal_delegation_when_available,
+            )
+        )
+    )
     return {
         "status": "present",
         "rule": guardrail_defaults.get("rule", ""),
         "required_preflight_checks": list(guardrail_defaults.get("required_preflight_checks", [])),
+        "local_posture_effect": {
+            "status": "configured" if configured_profiles or has_runtime_posture else "available-not-set",
+            "advisory_only": True,
+            "configured_profiles": [name for name in configured_profiles if name],
+            "runtime_posture_configured": has_runtime_posture,
+            "handoff_guidance": (
+                "Use profile advisory and runtime_resolution to size handoff detail; keep local posture out of shared repo authority."
+                if configured_profiles or has_runtime_posture
+                else "No local delegation posture configured; use ordinary bounded handoff guidance."
+            ),
+            "proof_burden": (
+                "lower-trust profiles require explicit execution residue and human review before closeout"
+                if lower_trust_profiles
+                else "normal bounded proof burden"
+            ),
+        },
         "closeout_gate": {
             **dict(guardrail_defaults.get("closeout_gate", {})),
             "lower_trust_profiles": sorted([name for name in lower_trust_profiles if name]),
@@ -12190,6 +12414,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "delegated_run_guardrail": _delegated_run_guardrail_payload(
             defaults=defaults,
             profile_payloads=profile_payloads,
+            local_override=local_override,
         ),
         "runtime_resolution": _runtime_resolution_payload(config=config),
         "strong_handoff_packet": _strong_handoff_packet_template(),
@@ -12204,6 +12429,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "exists": config.exists,
         "schema_version": config.schema_version,
         "warnings": list(config.warnings),
+        "config_enforcement": _config_enforcement_payload(config=config),
         "workspace": {
             "default_preset": config.default_preset,
             "agent_instructions_file": config.agent_instructions_file,
@@ -12422,6 +12648,58 @@ def _current_module_upgrade_source_state(
     ):
         return current_payload, "current"
     return current_payload, "drift"
+
+
+def _module_update_freshness_payload(
+    *,
+    module_name: str,
+    sync_status: str,
+    current_source: dict[str, Any] | None,
+    policy: ModuleUpdatePolicy,
+    cli_invoke: str,
+) -> dict[str, Any]:
+    recorded_at = current_source.get("recorded_at") if isinstance(current_source, dict) else None
+    status = "unknown"
+    age_days: int | None = None
+    reason = "module upgrade source metadata has no recorded_at timestamp"
+    if sync_status == "missing":
+        status = "unknown"
+        reason = "module upgrade source metadata is missing"
+    elif sync_status == "drift":
+        status = "stale"
+        reason = "module upgrade source metadata differs from the resolved workspace policy"
+    elif isinstance(recorded_at, str) and recorded_at.strip():
+        try:
+            age_days = (date.today() - date.fromisoformat(recorded_at.strip())).days
+            if age_days > policy.recommended_upgrade_after_days:
+                status = "stale"
+                reason = "module upgrade source metadata is older than recommended_upgrade_after_days"
+            else:
+                status = "fresh"
+                reason = "module upgrade source metadata is within recommended_upgrade_after_days"
+        except ValueError:
+            status = "unknown"
+            reason = "module upgrade source metadata recorded_at is not an ISO date"
+    return {
+        "status": status,
+        "recorded_at": recorded_at,
+        "age_days": age_days,
+        "recommended_upgrade_after_days": policy.recommended_upgrade_after_days,
+        "sync_status": sync_status,
+        "reason": reason,
+        "next_action": (
+            {
+                "action": "inspect-upgrade-plan",
+                "command": f"{cli_invoke} upgrade --modules {module_name} --dry-run --format json",
+                "run": f"{cli_invoke} upgrade --modules {module_name} --dry-run --format json",
+                "risk": "read-only lifecycle inspection",
+                "required_inputs": ["module", "resolved workspace policy"],
+                "next_proof": "apply upgrade only after inspecting the dry-run lifecycle plan",
+            }
+            if status in {"stale", "unknown"}
+            else None
+        ),
+    }
 
 
 def _render_upgrade_source_text(*, policy: ModuleUpdatePolicy, recorded_at: str) -> str:

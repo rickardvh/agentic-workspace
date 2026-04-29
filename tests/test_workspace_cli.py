@@ -843,8 +843,11 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["agent_configuration_substrate"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["workspace"]["agent_configuration_substrate"]["owner_surface"] == ".agentic-workspace/config.toml"
     assert payload["workspace"]["workflow_obligations"] == []
+    assert payload["config_enforcement"]["field_count_by_class"]["hard"] >= 1
+    assert any(field["field"] == "workspace.improvement_latitude" for field in payload["config_enforcement"]["fields"])
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
+    assert {item["freshness"]["status"] for item in payload["update"]["modules"]} == {"unknown"}
     assert payload["mixed_agent"]["status"] == "reporting-only"
     assert payload["mixed_agent"]["repo_policy"]["source"] == "product-defaults"
     assert payload["mixed_agent"]["repo_policy"]["path"] == ".agentic-workspace/config.toml"
@@ -2102,6 +2105,10 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
     }
     assert planner["closeout_gate"]["trust"] == "normal"
     assert payload["mixed_agent"]["delegated_run_guardrail"]["closeout_gate"]["lower_trust_profiles"] == ["fast_docs"]
+    posture_effect = payload["mixed_agent"]["delegated_run_guardrail"]["local_posture_effect"]
+    assert posture_effect["status"] == "configured"
+    assert posture_effect["configured_profiles"] == ["fast_docs", "primary_planner"]
+    assert posture_effect["proof_burden"].startswith("lower-trust profiles require")
 
 
 def test_defaults_command_reports_runtime_resolution_policy(capsys) -> None:
@@ -3468,6 +3475,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "standing_intent" in payload["schema"]["shared_fields"]
     assert "repo_friction" in payload["schema"]["shared_fields"]
     assert "output_contract" in payload["schema"]["shared_fields"]
+    assert "config_enforcement" in payload["schema"]["shared_fields"]
     assert "agent_configuration_queries" in payload["schema"]["shared_fields"]
     assert "system_intent_mirror" in payload["schema"]["shared_fields"]
     assert "workflow_obligations" in payload["schema"]["shared_fields"]
@@ -3487,8 +3495,11 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["output_contract"]["optimization_bias_source"] == "product-default"
     assert payload["output_contract"]["surface"] == "report"
     assert payload["output_contract"]["rendered_view_style"] == "brief-explanatory"
+    assert payload["output_contract"]["verbosity_budget"]["default_detail"] == "router-with-brief-context"
     assert payload["output_contract"]["surface_boundary"]["honors_bias"][1] == "rendered human-facing views"
     assert "ownership semantics" in payload["output_contract"]["surface_boundary"]["stays_invariant"]
+    assert payload["config_enforcement"]["status"] == "present"
+    assert any(route["field"] == "workspace.optimization_bias" for route in payload["config_enforcement"]["weak_field_routes"])
     assert payload["agent_configuration_system"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["agent_configuration_system"]["startup_entrypoint"] == "AGENTS.md"
     assert payload["agent_configuration_system"]["workflow_artifact_profile"] == "repo-owned"
@@ -3499,6 +3510,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["system_intent_mirror"]["mirror_surface"] == ".agentic-workspace/system-intent/intent.toml"
     assert payload["system_intent_mirror"]["mirror"]["status"] in {"missing", "present"}
     assert payload["workflow_obligations"]["configured_count"] == 0
+    assert payload["workflow_obligations"]["match_evidence"]["match_count"] == 0
     assert payload["workflow_obligations"]["relevant_to_current_work"] == []
     assert "product_managed_enclave" in payload["schema"]["shared_fields"]
     enclave = payload["product_managed_enclave"]
@@ -3625,6 +3637,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert payload["report_profile"]["default_profile"] == "router"
     assert payload["report_profile"]["full_profile"] == "full"
     assert payload["report_profile"]["context_router"]["first_view"] == "start"
+    assert payload["report_profile"]["config_enforcement"]["detail_section"] == "config_enforcement"
     assert payload["report_profile"]["decision_grade_fields"][0] == "health"
     ordinary_path = payload["report_profile"]["ordinary_agent_path"]
     assert ordinary_path["entry_command"] == "agentic-workspace start --target ./repo --format json"
@@ -5994,6 +6007,8 @@ def test_preflight_surfaces_closeout_workflow_obligations_for_active_scope(tmp_p
     payload = json.loads(capsys.readouterr().out)
     obligations = payload["closeout_obligations"]["required_before_lane_closeout"]
     assert payload["workflow_obligations"]["configured_count"] == 1
+    assert payload["workflow_obligations"]["match_evidence"]["match_count"] == 1
+    assert payload["workflow_obligations"]["match_evidence"]["matching"][0]["matched_scope_tags"] == ["planning"]
     assert payload["closeout_obligations"]["status"] == "present"
     primary = payload["closeout_obligations"]["primary_next_action"]
     assert primary["action"] == "run-closeout-obligation"
@@ -6678,6 +6693,9 @@ def test_lifecycle_plan_uses_resolved_cli_invoke_for_next_actions(monkeypatch, t
     assert primary_action["risk"] == "may mutate repo-managed workspace surfaces"
     assert primary_action["required_inputs"] == ["target repo", "selected modules", "dry-run plan"]
     assert primary_action["next_proof"] == "run doctor after apply and inspect surface classifications"
+    freshness = lifecycle_plan["module_update_freshness"][0]["freshness"]
+    assert freshness["status"] in {"fresh", "unknown"}
+    assert freshness["next_action"] is None or freshness["next_action"]["command"].startswith("uv run agentic-workspace upgrade ")
     front_door = lifecycle_plan["root_upgrade_front_door"]
     assert front_door["ordinary_sequence"][0]["command"].startswith("uv run agentic-workspace upgrade ")
     assert front_door["ordinary_sequence"][1]["command"].startswith("uv run agentic-workspace upgrade ")
