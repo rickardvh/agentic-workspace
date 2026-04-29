@@ -40,7 +40,7 @@ Bundled skills:
 
 - The package ships planning skills under `skills/`, but new default installs do not copy them into target repositories.
 - Use `agentic-planning-bootstrap list-files --format json` to discover bundled skills and optional payload surfaces when a repo chooses to enable richer planning workflows.
-- Pass `--include-optional` to `install`, `adopt`, or `upgrade` to copy those optional docs and bundled skills into a repo that intentionally wants the richer workflow.
+- Pass `--include-optional` to `install`, `adopt`, or `upgrade` to copy optional review/intake surfaces, machine capability data, and bundled skills into a repo that intentionally wants the richer workflow.
 
 ## Quick Start
 
@@ -130,23 +130,19 @@ Treat these files as the current planning compatibility contract surfaces that s
 - `.agentic-workspace/docs/workspace-config-contract.md`
 - `.agentic-workspace/planning/agent-manifest.json`
 
-Treat optional package payload and generated mirrors as lower-stability support surfaces unless a stricter promise is stated later. That lower-stability set currently includes bundled skills, review/intake docs, and advanced reporting/orchestration/capability docs. Root-level generated adapter mirrors such as `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and `tools/AGENT_ROUTING.md` are target-repo generated surfaces, not planning bootstrap payload. Executable behavior belongs in the CLI/package source, so bootstrap payload files must remain declarative and non-executable.
+Treat optional package payload and generated mirrors as lower-stability support surfaces unless a stricter promise is stated later. That lower-stability set currently includes bundled skills, review/intake surfaces, and machine-readable capability data. Root-level generated adapter mirrors such as `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and `tools/AGENT_ROUTING.md` are target-repo generated surfaces, not planning bootstrap payload. Executable behavior belongs in the CLI/package source, so bootstrap payload files must remain declarative and non-executable.
 
 Generated mirrors inherit stability from their canonical source relationships, not from their exact rendered text. If the manifest contract stays stable, the generated wording may still evolve when the renderer improves.
 
 ## Direct Execution Or Execplan
 
-`.agentic-workspace/docs/capability-aware-execution.md` is the canonical contract for capability fit: when cheap direct execution is still safe, when medium reasoning is enough, when stronger planning should come first, when bounded autopilot is appropriate, when delegation may save cost, when silent shaping should replace noisy executor-prompting, and when the agent should stop and escalate.
-It also defines the bounded-initiative rule: improve means locally, but do not silently widen the requested outcome, owned surface, or time horizon.
 `.agentic-workspace/docs/execution-flow-contract.md` is the front-door companion for delegated judgment, active intent continuity, resumability, and execution summaries.
-`.agentic-workspace/docs/orchestrator-workflow-contract.md` defines the delegated planner-to-worker workflow and `agentic-planning-bootstrap handoff --format json` surface for agent-agnostic bounded handoff.
-`.agentic-workspace/docs/standing-intent-contract.md` defines the standing-intent classification and promotion contract used by the workspace report to route durable repo-wide guidance into the right owner surface.
 `.agentic-workspace/docs/system-intent-contract.md` defines how a bounded slice preserves the larger intended outcome and how closure decisions stay honest when the slice completes before the broader lane or issue does.
 `.agentic-workspace/docs/execution-flow-contract.md` also defines the restart and execution-summary expectations carried by the canonical `planning_record`.
 `.agentic-workspace/docs/lifecycle-and-config-contract.md` defines the ordered environment-recovery path when lifecycle work, repo-state inspection, or validation restart becomes ambiguous.
 `.agentic-workspace/docs/execution-flow-contract.md` defines the compact completion summary that archived slices should leave behind.
-`.agentic-workspace/docs/context-budget-contract.md` defines the live-working-set versus recoverable-later distinction, the minimum residue that must be externalized before a context shift, the compact pre-work retrieval prompt, the tiny resumability-note form, and the main context-switch triggers.
 `.agentic-workspace/docs/routing-contract.md` defines the hierarchy and routing rules between `.agentic-workspace/planning/state.toml`, execplans, and reviews.
+Advanced capability fit, orchestration, standing-intent, reporting, and context-budget behavior is exposed by compact CLI report sections and optional skills rather than shipped target-repo prose docs.
 
 For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. The `machine_first_planning` summary block reports whether active execplans are being read from canonical `.plan.json` sidecars or from Markdown compatibility fallback. `active_contract`, `resumable_contract`, `follow_through_contract`, `context_budget_contract`, `hierarchy_contract`, and `handoff_contract` remain thinner views over that record. `system_intent_alignment` records which higher-level intent materially shapes the slice, how it biases the slice shape, and what lane-level validation question remains. `context_budget_contract` now also carries the explicit pre-work retrieval prompt so ordinary work can ask what durable understanding should be recovered before execution and which area it concerns, while leaving Memory optional rather than required.
 When an execplan has a sibling `.plan.json` file, that sidecar is the canonical execplan artifact and the `.md` file is treated as a derived human-readable view.
@@ -254,7 +250,7 @@ Keep this README as the package entrypoint. Use the installed contracts for deep
 - `.agentic-workspace/docs/execution-flow-contract.md`: active state, execplans, handoff, restart, and closeout.
 - `.agentic-workspace/docs/routing-contract.md`: hierarchy between state, execplans, and reviews.
 
-Optional packaged contracts remain discoverable through `agentic-planning-bootstrap list-files --format json` when a repo needs capability-aware execution, review promotion, upstream-task intake, richer reporting, or orchestration workflows.
+Optional packaged affordances remain discoverable through `agentic-planning-bootstrap list-files --format json` when a repo needs review promotion, upstream-task intake, machine-readable capability data, or bundled planning skills.
 Use `--include-optional` with `install`, `adopt`, or `upgrade` only when the repo intentionally wants those richer workflow surfaces copied into its checkout.
 Package maintainers can use `extraction-candidates.json` to review which planning-adjacent capabilities should stay internal, remain optional extensions, or wait for future extraction evidence.
 
@@ -287,19 +283,7 @@ The package ships these payload files:
 
 The package also ships optional payload files that are not copied by default. Use `--include-optional` with `install`, `adopt`, or `upgrade` to copy them on purpose:
 
-- `.agentic-workspace/docs/candidate-lanes-contract.md`
-- `.agentic-workspace/docs/capability-aware-execution.md`
 - `.agentic-workspace/docs/capability-contract.json`
-- `.agentic-workspace/docs/context-budget-contract.md`
-- `.agentic-workspace/docs/external-intent-evidence-contract.md`
-- `.agentic-workspace/docs/extraction-and-discovery-contract.md`
-- `.agentic-workspace/docs/finished-work-inspection-contract.md`
-- `.agentic-workspace/docs/installer-behavior.md`
-- `.agentic-workspace/docs/knowledge-promotion-workflow.md`
-- `.agentic-workspace/docs/orchestrator-workflow-contract.md`
-- `.agentic-workspace/docs/reporting-contract.md`
-- `.agentic-workspace/docs/signal-hygiene-contract.md`
-- `.agentic-workspace/docs/standing-intent-contract.md`
 - `.agentic-workspace/planning/pre-ingestion-refinement.md`
 - `.agentic-workspace/planning/reviews/README.md`
 - `.agentic-workspace/planning/reviews/TEMPLATE.review.json`
@@ -309,9 +293,10 @@ The package also ships optional payload files that are not copied by default. Us
 It packages:
 
 - the planning contract
-- the module-managed planning manifest and helper scripts
+- the module-managed planning manifest
 - optional review-artifact contract surfaces under `.agentic-workspace/planning/reviews/`
 - optional upstream-task intake contract surfaces under `.agentic-workspace/planning/upstream-task-intake.md`
+- optional machine-readable capability data under `.agentic-workspace/docs/capability-contract.json`
 - environment and recovery contract surfaces under `.agentic-workspace/docs/lifecycle-and-config-contract.md`
 - file-native helper commands for promotion, archiving, and summary
 - starter surfaces

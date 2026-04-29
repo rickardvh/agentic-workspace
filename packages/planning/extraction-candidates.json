@@ -55,7 +55,7 @@
     {
       "id": "external-work-intake-and-reconciliation",
       "capability": "External work intake, external intent evidence, and reconciliation",
-      "current_home": "Planning state, external-intent evidence contract, reconcile output, and optional intake skill",
+      "current_home": "Planning state, external-intent evidence schema, reconcile output, and optional intake skill",
       "decision": "extraction candidate",
       "candidate_boundary": "A tracker-agnostic intake package could own external work evidence schemas, intake/refinement rules, stale-state reconciliation, and provider adapter boundaries.",
       "why_not_core_planning": "Core planning should preserve active execution state without assuming any external tracker; intake and reconciliation are valuable only for repos with external work systems.",
@@ -69,7 +69,7 @@
         "Intake and reconciliation still depend on planning state shape for closeout and continuation decisions."
       ],
       "candidate_surfaces": [
-        "packages/planning/bootstrap/.agentic-workspace/docs/external-intent-evidence-contract.md",
+        "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
         "packages/planning/bootstrap/.agentic-workspace/planning/upstream-task-intake.md",
         "packages/planning/bootstrap/.agentic-workspace/planning/pre-ingestion-refinement.md",
         "packages/planning/skills/planning-intake-upstream-task/SKILL.md"
@@ -81,7 +81,7 @@
     {
       "id": "advanced-agent-operation",
       "capability": "Autopilot, bounded delegated judgment, orchestration, and capability-aware execution",
-      "current_home": "Optional planning docs, planning skills, mixed-agent config reporting, and workspace defaults",
+      "current_home": "Machine-readable capability data, planning skills, mixed-agent config reporting, and workspace defaults",
       "decision": "optional extension for now",
       "candidate_boundary": "A future operation package could own capability-fit rules, delegated judgment packets, autopilot loop semantics, and orchestration handoffs.",
       "why_not_core_planning": "These workflows can be high leverage, but they depend heavily on agent/runtime availability and should not burden the smallest valid planning install.",
@@ -95,8 +95,6 @@
         "Delegation and autopilot wording still needs compression before becoming product-general."
       ],
       "candidate_surfaces": [
-        "packages/planning/bootstrap/.agentic-workspace/docs/capability-aware-execution.md",
-        "packages/planning/bootstrap/.agentic-workspace/docs/orchestrator-workflow-contract.md",
         "packages/planning/bootstrap/.agentic-workspace/docs/capability-contract.json",
         "packages/planning/skills/planning-autopilot/SKILL.md",
         "packages/planning/skills/planning-orchestrator-workflow/SKILL.md"
@@ -109,7 +107,7 @@
     {
       "id": "reporting-signal-and-knowledge-promotion",
       "capability": "Reporting, signal hygiene, standing intent, and knowledge-promotion workflow",
-      "current_home": "Optional planning docs, workspace reports, and memory/planning coordination",
+      "current_home": "Workspace reports, planning skills, and memory/planning coordination",
       "decision": "optional extension for now",
       "candidate_boundary": "A future reporting or signal package would own compact report sections, signal routing, and durable-knowledge promotion contracts across modules.",
       "why_not_core_planning": "Core planning should expose compact active execution state; high-volume reporting and promotion policy should stay behind selectors or module-specific outputs.",
@@ -123,10 +121,6 @@
         "The feature-tier lane has not yet decided how much advanced reporting belongs in optional tiers."
       ],
       "candidate_surfaces": [
-        "packages/planning/bootstrap/.agentic-workspace/docs/reporting-contract.md",
-        "packages/planning/bootstrap/.agentic-workspace/docs/signal-hygiene-contract.md",
-        "packages/planning/bootstrap/.agentic-workspace/docs/knowledge-promotion-workflow.md",
-        "packages/planning/bootstrap/.agentic-workspace/docs/standing-intent-contract.md",
         "packages/planning/skills/planning-reporting/SKILL.md"
       ],
       "existing_follow_up": [

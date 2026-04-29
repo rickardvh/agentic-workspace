@@ -67,19 +67,7 @@ REQUIRED_PAYLOAD_FILES = (
 )
 
 OPTIONAL_PAYLOAD_FILES = (
-    Path(".agentic-workspace/docs/extraction-and-discovery-contract.md"),
-    Path(".agentic-workspace/docs/reporting-contract.md"),
-    Path(".agentic-workspace/docs/capability-aware-execution.md"),
-    Path(".agentic-workspace/docs/orchestrator-workflow-contract.md"),
     Path(".agentic-workspace/docs/capability-contract.json"),
-    Path(".agentic-workspace/docs/signal-hygiene-contract.md"),
-    Path(".agentic-workspace/docs/knowledge-promotion-workflow.md"),
-    Path(".agentic-workspace/docs/standing-intent-contract.md"),
-    Path(".agentic-workspace/docs/candidate-lanes-contract.md"),
-    Path(".agentic-workspace/docs/context-budget-contract.md"),
-    Path(".agentic-workspace/docs/external-intent-evidence-contract.md"),
-    Path(".agentic-workspace/docs/finished-work-inspection-contract.md"),
-    Path(".agentic-workspace/docs/installer-behavior.md"),
     Path(".agentic-workspace/planning/reviews/README.md"),
     Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json"),
     Path(".agentic-workspace/planning/upstream-task-intake.md"),

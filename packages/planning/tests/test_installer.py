@@ -541,8 +541,9 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
 def test_install_bootstrap_include_optional_copies_optional_payload_and_skills(tmp_path: Path) -> None:
     result = install_bootstrap(target=tmp_path, include_optional=True)
 
-    assert (tmp_path / ".agentic-workspace" / "docs" / "capability-aware-execution.md").exists()
-    assert (tmp_path / ".agentic-workspace" / "docs" / "extraction-and-discovery-contract.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "docs" / "capability-contract.json").exists()
+    assert not (tmp_path / ".agentic-workspace" / "docs" / "capability-aware-execution.md").exists()
+    assert not (tmp_path / ".agentic-workspace" / "docs" / "extraction-and-discovery-contract.md").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "reviews" / "README.md").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.review.json").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "upstream-task-intake.md").exists()
@@ -628,9 +629,10 @@ def test_ownership_module_root_matches_workspace_ledger() -> None:
 
 def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path("AGENTS.template.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path(".agentic-workspace/docs/capability-aware-execution.md") in OPTIONAL_PAYLOAD_FILES
     assert Path(".agentic-workspace/docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path(".agentic-workspace/docs/orchestrator-workflow-contract.md") in OPTIONAL_PAYLOAD_FILES
+    assert Path(".agentic-workspace/docs/capability-contract.json") in OPTIONAL_PAYLOAD_FILES
+    assert Path(".agentic-workspace/docs/capability-aware-execution.md") not in OPTIONAL_PAYLOAD_FILES
+    assert Path(".agentic-workspace/docs/orchestrator-workflow-contract.md") not in OPTIONAL_PAYLOAD_FILES
     assert Path(".agentic-workspace/docs/minimum-operating-model.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/reviews/README.md") in OPTIONAL_PAYLOAD_FILES
@@ -824,7 +826,7 @@ def test_verify_payload_reports_contract_surface_shortlists() -> None:
         action.path.name == "agent-manifest.json"
         and action.kind == "current"
         and "optional packaged payload files:" in action.detail
-        and ".agentic-workspace/docs/capability-aware-execution.md" in action.detail
+        and ".agentic-workspace/docs/capability-contract.json" in action.detail
         and ".agentic-workspace/planning/upstream-task-intake.md" in action.detail
         for action in result.actions
     )
@@ -836,9 +838,9 @@ def test_list_files_json_separates_default_optional_and_skill_payloads(capsys) -
     assert result == 0
     payload = json.loads(capsys.readouterr().out)
     assert ".agentic-workspace/docs/execution-flow-contract.md" in payload["default_files"]
-    assert ".agentic-workspace/docs/capability-aware-execution.md" in payload["optional_files"]
+    assert ".agentic-workspace/docs/capability-contract.json" in payload["optional_files"]
     assert "planning-autopilot/SKILL.md" in payload["bundled_skill_files"]
-    assert ".agentic-workspace/docs/capability-aware-execution.md" in payload["files"]
+    assert ".agentic-workspace/docs/capability-contract.json" in payload["files"]
     assert "skills/planning-autopilot/SKILL.md" not in payload["files"]
     assert "agentic-planning-bootstrap install --include-optional" in payload["optional_enable_commands"]
 
@@ -890,31 +892,6 @@ def test_bootstrap_review_template_includes_mode_and_cap_fields() -> None:
         "Durable residue",
         "Next owner",
     ]
-
-
-def test_bootstrap_capability_aware_execution_doc_defines_categories() -> None:
-    text = (installer_mod.payload_root() / ".agentic-workspace" / "docs" / "capability-aware-execution.md").read_text(encoding="utf-8")
-
-    assert "# Capability-Aware Execution" in text
-    assert "## Operating Stance" in text
-    assert "## Task-Shape Dimensions" in text
-    assert "### Cheap Direct Execution" in text
-    assert "### Stronger Planning First" in text
-    assert "### Autopilot-Suitable" in text
-    assert "### Delegation-Friendly" in text
-    assert "### Stop And Escalate" in text
-    assert "## Silent Shaping And Non-Interference" in text
-    assert "## Bounded Initiative And Scope Expansion" in text
-    assert "## Complexity-Reduction Feedback" in text
-    assert "automatic capability selection" in text
-    assert "Prefer changing the work shape over interrupting execution with capability advice." in text
-    assert "make more future tasks safe for cheaper execution paths" in text
-    assert "task-shape based" in text
-    assert "Intent is sticky" in text
-    assert "do not silently replace the requested outcome" in text
-    assert "improve means locally" in text
-    assert "do not rewrite ends locally" in text
-    assert "present it as a promotion or escalation decision" in text
 
 
 def test_bootstrap_delegated_judgment_doc_is_part_of_contract() -> None:
@@ -1051,16 +1028,6 @@ def test_bootstrap_iterative_follow_through_contract_is_part_of_payload() -> Non
     assert Path(".agentic-workspace/docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
-def test_bootstrap_intent_contract_is_part_of_payload() -> None:
-    text = (installer_mod.payload_root() / ".agentic-workspace" / "docs" / "standing-intent-contract.md").read_text(encoding="utf-8")
-    assert Path(".agentic-workspace/docs/standing-intent-contract.md") in OPTIONAL_PAYLOAD_FILES
-    assert "Standing Intent Contract" in text
-    assert "active_directional_intent" in text
-    assert "repo_doctrine" in text
-    assert "config_policy" in text
-    assert "agentic-workspace report" in text
-
-
 def test_bootstrap_resumable_execution_contract_is_part_of_payload() -> None:
     text = (installer_mod.payload_root() / ".agentic-workspace" / "docs" / "execution-flow-contract.md").read_text(encoding="utf-8")
     assert Path(".agentic-workspace/docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
@@ -1093,7 +1060,7 @@ def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
         action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
         and action.kind == "current"
         and "optional packaged payload files:" in action.detail
-        and ".agentic-workspace/docs/capability-aware-execution.md" in action.detail
+        and ".agentic-workspace/docs/capability-contract.json" in action.detail
         and ".agentic-workspace/planning/upstream-task-intake.md" in action.detail
         for action in result.actions
     )

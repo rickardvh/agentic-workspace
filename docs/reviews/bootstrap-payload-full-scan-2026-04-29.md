@@ -45,8 +45,8 @@ Normalized shipped payload or skill entries:
 | --- | ---: | --- | ---: | ---: |
 | memory wheel | 42 | 14 machine-data, 16 prose-doc, 9 structural-doc, 3 template | 0 | 0 |
 | memory sdist | 42 | 14 machine-data, 16 prose-doc, 9 structural-doc, 3 template | 0 | 0 |
-| planning wheel | 42 | 6 machine-data, 27 prose-doc, 4 schema, 5 structural-doc | 0 | 0 |
-| planning sdist | 42 | 6 machine-data, 27 prose-doc, 4 schema, 5 structural-doc | 0 | 0 |
+| planning wheel | 30 | 6 machine-data, 15 prose-doc, 4 schema, 5 structural-doc | 0 | 0 |
+| planning sdist | 30 | 6 machine-data, 15 prose-doc, 4 schema, 5 structural-doc | 0 | 0 |
 
 ## Source Tree Observations
 
@@ -68,19 +68,19 @@ This is acceptable product shape as long as those skills remain declarative and 
 
 ### Planning
 
-The planning bootstrap source contains 33 files:
+The planning bootstrap source contains 21 files:
 
 - `AGENTS.template.md`
 - core planning contract docs
-- optional/deep contract docs
+- machine-readable capability data
 - planning manifest and upgrade metadata
 - execplan and review templates
 - planning schemas
 - review/intake guidance files
 
-Default install copies the required payload only. The package artifact still ships optional/deep planning docs and bundled planning skills so they can be installed with `--include-optional`.
+Default install copies the required payload only. The package artifact now ships only core planning docs, machine-readable capability data, review/intake optional surfaces, and bundled declarative planning skills.
 
-The unclear boundary is package-shipped optional prose. This may be acceptable for optional install support, but it means the package still distributes a larger checked-in surface than the smallest default target repo needs.
+The previous unclear boundary was package-shipped optional prose. That surface has been compressed out of the planning bootstrap payload; advanced/deep behavior should route through compact CLI report sections, package README/source docs, or optional skills instead of target-repo prose docs.
 
 ## Architecture Assessment
 
@@ -93,7 +93,7 @@ The remaining architecture question is whether "shipped payload" should mean:
 
 Today the implementation mixes both:
 
-- planning has a smaller default install, but still ships optional/deep surfaces in the artifact;
+- planning has a smaller default install and no longer ships optional/deep prose docs in the artifact;
 - memory installs all managed memory skills and the temporary bootstrap workspace by default;
 - skills are treated as checked-in declarative workflow affordances, which is valid when they stay language-agnostic and route execution back through package CLIs or host-provided commands.
 
@@ -104,5 +104,5 @@ If the intended product shape is "smallest checked-in target repo by default, wi
 1. Add a memory payload classification record matching `packages/planning/payload-surface-classification.json`.
 2. Split memory default payload into the smallest durable install plus clearly managed declarative skills where they provide leverage.
 3. Add checks or review guidance that shipped skills stay runtime-agnostic: they may route to package CLIs or host-declared commands, but must not ship or require language-specific helper code in target repos.
-4. Decide whether planning optional/deep docs should remain shipped in the artifact, move into package source query output, or become a separate optional resource bundle.
+4. Keep advanced planning behavior discoverable through compact CLI report sections, package README/source docs, or optional skills rather than target-repo prose docs.
 5. Extend the source/payload checker with a non-failing payload-shape section that reports structural, machine, template, schema, prose, skill, optional, and temporary-lifecycle counts. This would make future scans cheap without making current architecture fail before the policy is settled.

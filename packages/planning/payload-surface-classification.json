@@ -52,14 +52,10 @@
   },
   "compression_candidates": [
     {
-      "target": "default payload",
-      "classification": "discoverable-on-demand support",
+      "target": "remaining optional machine capability payload",
+      "classification": "config-enabled extension",
       "candidate_paths": [
-        "packages/planning/bootstrap/.agentic-workspace/docs/capability-aware-execution.md",
-        "packages/planning/bootstrap/.agentic-workspace/docs/context-budget-contract.md",
-        "packages/planning/bootstrap/.agentic-workspace/docs/extraction-and-discovery-contract.md",
-        "packages/planning/bootstrap/.agentic-workspace/docs/reporting-contract.md",
-        "packages/planning/bootstrap/.agentic-workspace/docs/signal-hygiene-contract.md"
+        "packages/planning/bootstrap/.agentic-workspace/docs/capability-contract.json"
       ],
       "next_issue": "https://github.com/rickardvh/agentic-workspace/issues/463"
     },
@@ -173,95 +169,11 @@
       "rationale": "Defines repo and local configuration authority needed to avoid hard-coded host assumptions."
     },
     {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/extraction-and-discovery-contract.md",
-      "installed_path": ".agentic-workspace/docs/extraction-and-discovery-contract.md",
-      "classification": "discoverable-on-demand support",
-      "owner": "planning package payload",
-      "rationale": "Useful for package evolution and modularization, but ordinary active work should not need it in the default working set."
-    },
-    {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/reporting-contract.md",
-      "installed_path": ".agentic-workspace/docs/reporting-contract.md",
-      "classification": "discoverable-on-demand support",
-      "owner": "planning package payload",
-      "rationale": "Report shape matters for advanced inspection, but compact commands should hide this detail until requested."
-    },
-    {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/capability-aware-execution.md",
-      "installed_path": ".agentic-workspace/docs/capability-aware-execution.md",
-      "classification": "discoverable-on-demand support",
-      "owner": "planning package payload",
-      "rationale": "Helps tune delegation and capability fit, but core planning can route by summary and proof without reading it first."
-    },
-    {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/orchestrator-workflow-contract.md",
-      "installed_path": ".agentic-workspace/docs/orchestrator-workflow-contract.md",
-      "classification": "config-enabled extension",
-      "owner": "planning package payload",
-      "rationale": "Needed when a repo uses orchestrated handoffs, but not required for single-agent daily planning."
-    },
-    {
       "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/capability-contract.json",
       "installed_path": ".agentic-workspace/docs/capability-contract.json",
       "classification": "config-enabled extension",
       "owner": "planning package payload",
       "rationale": "Machine-readable capability routing is valuable when enabled, but should not expand the default prose surface."
-    },
-    {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/signal-hygiene-contract.md",
-      "installed_path": ".agentic-workspace/docs/signal-hygiene-contract.md",
-      "classification": "discoverable-on-demand support",
-      "owner": "planning package payload",
-      "rationale": "Keeps long-running planning clean, but should be reached through warnings or reports rather than first-contact reading."
-    },
-    {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/knowledge-promotion-workflow.md",
-      "installed_path": ".agentic-workspace/docs/knowledge-promotion-workflow.md",
-      "classification": "config-enabled extension",
-      "owner": "planning package payload",
-      "rationale": "Coordinates with memory or docs when configured; planning must still work without that layer."
-    },
-    {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/standing-intent-contract.md",
-      "installed_path": ".agentic-workspace/docs/standing-intent-contract.md",
-      "classification": "config-enabled extension",
-      "owner": "planning package payload",
-      "rationale": "Durable standing intent is useful in richer installs, but direct active planning can run without it."
-    },
-    {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/candidate-lanes-contract.md",
-      "installed_path": ".agentic-workspace/docs/candidate-lanes-contract.md",
-      "classification": "config-enabled extension",
-      "owner": "planning package payload",
-      "rationale": "Roadmap candidate shaping belongs behind broader planning mode rather than the smallest daily-operation core."
-    },
-    {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/context-budget-contract.md",
-      "installed_path": ".agentic-workspace/docs/context-budget-contract.md",
-      "classification": "discoverable-on-demand support",
-      "owner": "planning package payload",
-      "rationale": "Important during context pressure, but summary and handoff outputs should surface it only when relevant."
-    },
-    {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/external-intent-evidence-contract.md",
-      "installed_path": ".agentic-workspace/docs/external-intent-evidence-contract.md",
-      "classification": "config-enabled extension",
-      "owner": "planning package payload",
-      "rationale": "External intent evidence is optional and provider-agnostic; ordinary planning should not assume it exists."
-    },
-    {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/finished-work-inspection-contract.md",
-      "installed_path": ".agentic-workspace/docs/finished-work-inspection-contract.md",
-      "classification": "config-enabled extension",
-      "owner": "planning package payload",
-      "rationale": "Post-closeout inspection is valuable for audit-heavy repos, but it is not needed for the default execution loop."
-    },
-    {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/docs/installer-behavior.md",
-      "installed_path": ".agentic-workspace/docs/installer-behavior.md",
-      "classification": "maintainer/development only",
-      "owner": "planning package maintainers",
-      "rationale": "Describes package install mechanics and should be package-local or on-demand rather than target-repo operating input."
     },
     {
       "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md",
