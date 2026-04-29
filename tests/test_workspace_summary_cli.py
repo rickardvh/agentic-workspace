@@ -177,7 +177,7 @@ candidates = []
         if command[:3] == ["gh", "repo", "view"]:
             return Result(json.dumps({"nameWithOwner": "acme/project"}))
         assert command[:3] == ["gh", "issue", "list"]
-        assert command[command.index("--state") + 1] == "open"
+        assert command[command.index("--state") + 1] == "all"
         return Result(
             json.dumps(
                 [
@@ -206,7 +206,7 @@ candidates = []
     cache_path = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
     assert cache_path.exists()
     cache_payload = json.loads(cache_path.read_text(encoding="utf-8"))
-    assert cache_payload["refresh_metadata"]["state"] == "open"
+    assert cache_payload["refresh_metadata"]["state"] == "all"
 
 
 def test_workspace_summary_json_surfaces_external_work_reconciliation(tmp_path: Path, capsys) -> None:

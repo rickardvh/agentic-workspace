@@ -4832,7 +4832,7 @@ def test_external_intent_refresh_github_rejects_count_drift(tmp_path: Path, monk
     assert "refresh_metadata.item_count must equal 1 from items" in capsys.readouterr().err
 
 
-def test_external_intent_refresh_github_uses_product_defaults_instead_of_previous_audit_scope(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_external_intent_refresh_github_uses_product_defaults_instead_of_previous_cache_scope(tmp_path: Path, monkeypatch, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -4891,14 +4891,14 @@ def test_external_intent_refresh_github_uses_product_defaults_instead_of_previou
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert observed_commands[-1][observed_commands[-1].index("--state") + 1] == "open"
+    assert observed_commands[-1][observed_commands[-1].index("--state") + 1] == "all"
     assert observed_commands[-1][observed_commands[-1].index("--limit") + 1] == "1000"
-    assert payload["state"] == "open"
+    assert payload["state"] == "all"
     assert payload["limit"] == 1000
     assert payload["state_source"] == "product_default"
     assert payload["limit_source"] == "product_default"
     refreshed = json.loads(evidence_path.read_text(encoding="utf-8"))
-    assert refreshed["refresh_metadata"]["state"] == "open"
+    assert refreshed["refresh_metadata"]["state"] == "all"
     assert refreshed["refresh_metadata"]["limit"] == 1000
     assert refreshed["refresh_metadata"]["state_source"] == "product_default"
     assert refreshed["refresh_metadata"]["limit_source"] == "product_default"

@@ -5775,7 +5775,7 @@ def _refresh_github_external_intent_evidence(
     resolved_state = str(state).strip() if state is not None else ""
     state_source = "explicit" if resolved_state else "default"
     if not resolved_state:
-        resolved_state = "open"
+        resolved_state = "all"
         state_source = "product_default"
     if resolved_state not in {"open", "closed", "all"}:
         raise WorkspaceUsageError("--state must be one of: open, closed, all.")
