@@ -2713,6 +2713,86 @@ def test_archive_plan_prepare_closeout_handles_open_parent_lane(tmp_path: Path, 
     assert archived["closeout_distillation"]["buckets"]["continuation"][0]["owner"] == ".agentic-workspace/planning/state.toml"
 
 
+def test_archive_plan_parent_lane_closeout_creates_schema_valid_record_without_active_plan(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+work_items = [
+  { id = "parent-lane", type = "lane", title = "Parent Lane", maturity = "ready", status = "next", priority = "1", issues = ["EXT-1", "EXT-2"], outcome = "Child work has landed.", reason = "Parent evidence is complete.", promotion_signal = "none", suggested_first_slice = "none", durable_residue = "evidence_only" },
+]
+
+[active]
+execplans = []
+
+[todo]
+active_items = []
+queued_items = []
+""",
+    )
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "--parent-lane-closeout",
+                "parent-lane",
+                "--target",
+                str(tmp_path),
+                "--intent-evidence",
+                "EXT-1 and EXT-2 are complete.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "parent-lane.plan.json"
+    archived = json.loads(archived_record_path.read_text(encoding="utf-8"))
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+
+    assert payload["warnings"] == []
+    assert any(action["kind"] == "created" and action["path"].endswith("parent-lane.plan.json") for action in payload["actions"])
+    assert archived["parent_lane"]["id"] == "parent-lane"
+    assert archived["parent_acceptance_map"]["child_refs"] == ["EXT-1", "EXT-2"]
+    assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
+    assert archived["closure_check"]["closure decision"] == "archive-and-close"
+    assert archived["proof_report"]["validation proof"] == "schema-backed writer validation"
+    assert "EXT-1" in json.dumps(archived["references"])
+    assert state["work_items"] == []
+    assert planning_summary(target=tmp_path)["work_maturity"]["counts"]["closed_items"] == 0
+
+
+def test_archive_plan_parent_lane_closeout_dry_run_does_not_mutate_state(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+work_items = [
+  { id = "parent-lane", type = "lane", title = "Parent Lane", maturity = "ready", status = "next", issues = ["EXT-1"], outcome = "Child work has landed.", reason = "Parent evidence is complete.", promotion_signal = "none", suggested_first_slice = "none" },
+]
+""",
+    )
+
+    assert (
+        planning_cli.main(
+            ["archive-plan", "--parent-lane-closeout", "parent-lane", "--target", str(tmp_path), "--dry-run", "--format", "json"]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert any(action["kind"] == "would create" for action in payload["actions"])
+    assert any(action["kind"] == "would update" for action in payload["actions"])
+    assert not (tmp_path / ".agentic-workspace/planning/execplans/archive/parent-lane.plan.json").exists()
+    assert "parent-lane" in (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+
+
 def test_archive_execplan_allows_partial_intent_when_continuation_is_explicit(tmp_path: Path) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")

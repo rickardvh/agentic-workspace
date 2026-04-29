@@ -10,6 +10,7 @@ from repo_planning_bootstrap.generated_command_adapters import GENERATED_COMMAND
 from repo_planning_bootstrap.installer import (
     adopt_bootstrap,
     archive_execplan,
+    archive_parent_lane_closeout,
     collect_status,
     create_review_record,
     doctor_bootstrap,
@@ -113,8 +114,8 @@ def build_parser() -> argparse.ArgumentParser:
     promote_parser.add_argument("--dry-run", action="store_true")
     promote_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    archive_parser = subparsers.add_parser("archive-plan", help="Archive a completed execplan.")
-    archive_parser.add_argument("plan")
+    archive_parser = subparsers.add_parser("archive-plan", help="Archive a completed execplan or parent lane closeout.")
+    archive_parser.add_argument("plan", nargs="?")
     archive_parser.add_argument("--target")
     archive_parser.add_argument("--dry-run", action="store_true")
     archive_parser.add_argument(
@@ -126,6 +127,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--prepare-closeout",
         action="store_true",
         help="Write package-normalized closeout fields before archive validation runs.",
+    )
+    archive_parser.add_argument(
+        "--parent-lane-closeout",
+        help="Close a parent lane from structured planning state without hand-authoring an execplan record.",
     )
     archive_parser.add_argument(
         "--closure-decision",
@@ -237,6 +242,24 @@ def main(argv: list[str] | None = None) -> int:
             args.format,
         )
     if args.command == "archive-plan":
+        if args.parent_lane_closeout:
+            return _emit(
+                archive_parent_lane_closeout(
+                    args.parent_lane_closeout,
+                    target=args.target,
+                    dry_run=args.dry_run,
+                    intent_satisfied=args.intent_satisfied,
+                    intent_evidence=args.intent_evidence,
+                    closure_reason=args.closure_reason,
+                    closure_evidence=args.closure_evidence,
+                    reopen_trigger=args.reopen_trigger,
+                    discard_summary=args.discard_summary,
+                    continuation_summary=args.continuation_summary,
+                ),
+                args.format,
+            )
+        if not args.plan:
+            parser.error("archive-plan requires PLAN unless --parent-lane-closeout is used")
         return _emit(
             archive_execplan(
                 args.plan,

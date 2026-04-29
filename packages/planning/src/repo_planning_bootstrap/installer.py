@@ -6814,6 +6814,236 @@ def _prepare_execplan_closeout(
     return True
 
 
+def _parent_lane_state_item(state: dict[str, Any] | None, parent_id: str) -> tuple[str, dict[str, Any]] | None:
+    if not isinstance(state, dict):
+        return None
+    raw_work_items = state.get("work_items", [])
+    if isinstance(raw_work_items, list):
+        for raw in raw_work_items:
+            if isinstance(raw, dict) and str(raw.get("id", "")) == parent_id and str(raw.get("type", "")) == "lane":
+                return "work_items", raw
+    roadmap = state.get("roadmap")
+    if isinstance(roadmap, dict):
+        raw_lanes = roadmap.get("lanes", [])
+        if isinstance(raw_lanes, list):
+            for raw in raw_lanes:
+                if isinstance(raw, dict) and str(raw.get("id", "")) == parent_id:
+                    return "roadmap.lanes", raw
+    return None
+
+
+def _reference_records_for_parent_lane(item: dict[str, Any]) -> list[dict[str, str]]:
+    references: list[dict[str, str]] = [
+        {
+            "kind": "planning-state",
+            "target": ".agentic-workspace/planning/state.toml",
+            "label": str(item.get("id", "")),
+            "role": "parent_intent",
+        }
+    ]
+    raw_refs = item.get("refs", [])
+    if isinstance(raw_refs, list):
+        for ref in raw_refs:
+            ref_text = str(ref).strip()
+            if ref_text:
+                references.append({"kind": "reference", "target": ref_text, "label": ref_text, "role": "child_reference"})
+    raw_issues = item.get("issues", [])
+    if isinstance(raw_issues, list):
+        for issue in raw_issues:
+            issue_text = str(issue).strip()
+            if issue_text:
+                references.append({"kind": "external-work", "target": issue_text, "label": issue_text, "role": "child_reference"})
+    return references
+
+
+def _closed_parent_lane_state(state: dict[str, Any], parent_id: str, item: dict[str, Any]) -> dict[str, Any]:
+    next_state = dict(state)
+    raw_work_items = state.get("work_items", [])
+    if isinstance(raw_work_items, list):
+        next_state["work_items"] = [
+            raw for raw in raw_work_items if not (isinstance(raw, dict) and str(raw.get("id", "")) == parent_id and raw is item)
+        ]
+    roadmap = state.get("roadmap")
+    if isinstance(roadmap, dict):
+        next_roadmap = dict(roadmap)
+        raw_lanes = roadmap.get("lanes", [])
+        if isinstance(raw_lanes, list):
+            next_roadmap["lanes"] = [raw for raw in raw_lanes if not (isinstance(raw, dict) and str(raw.get("id", "")) == parent_id)]
+        next_state["roadmap"] = next_roadmap
+    return next_state
+
+
+def _parent_lane_durable_residue(item: dict[str, Any]) -> dict[str, str]:
+    status = str(item.get("durable_residue") or item.get("residue") or "evidence_only").strip()
+    if status not in EXECPLAN_DURABLE_RESIDUE_STATUSES:
+        status = "evidence_only"
+    owner = str(item.get("residue_owner") or item.get("residue_routing") or "").strip()
+    if not owner or owner == ".agentic-workspace/planning/state.toml":
+        owner = "archive" if status in EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES else ""
+    return {
+        "status": status,
+        "learned constraint": str(item.get("outcome") or item.get("reason") or "Parent lane closeout evidence is archived.").strip(),
+        "motivation worth preserving": str(
+            item.get("promotion_signal") or "Parent lane is no longer current or future planning pressure."
+        ).strip(),
+        "canonical owner now": owner,
+        "promotion trigger": str(item.get("residue_promotion_trigger") or "none").strip(),
+        "retention after promotion": str(item.get("residue_retention") or "retain").strip(),
+    }
+
+
+def archive_parent_lane_closeout(
+    parent_id: str,
+    *,
+    target: str | Path | None = None,
+    dry_run: bool = False,
+    intent_satisfied: str | None = None,
+    intent_evidence: str | None = None,
+    closure_reason: str | None = None,
+    closure_evidence: str | None = None,
+    reopen_trigger: str | None = None,
+    discard_summary: str | None = None,
+    continuation_summary: str | None = None,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = InstallResult(target_root=target_root, message=f"Archive parent lane closeout '{parent_id}'", dry_run=dry_run)
+    state = _read_state_from_toml(target_root)
+    matched = _parent_lane_state_item(state, parent_id)
+    state_path = target_root / PLANNING_STATE_PATH
+    if matched is None or state is None:
+        result.add("manual review", state_path, f"parent lane '{parent_id}' was not found in planning state")
+        return result
+    bucket_path, item = matched
+    if _is_closed_planning_state_item(item):
+        result.add("manual review", state_path, f"parent lane '{parent_id}' is already closed")
+        return result
+
+    normalized_intent_satisfied = (intent_satisfied or "yes").strip().lower()
+    if normalized_intent_satisfied not in {"yes", "true", "no", "false"}:
+        result.add("manual review", state_path, "--intent-satisfied must be one of yes, no, true, or false")
+        return result
+    intent_answer = "yes" if normalized_intent_satisfied in {"yes", "true"} else "no"
+    closure_decision = "archive-and-close" if intent_answer == "yes" else "archive-but-keep-lane-open"
+    larger_status = "closed" if intent_answer == "yes" else "open"
+    unsolved_owner = (
+        "none"
+        if intent_answer == "yes"
+        else str(item.get("residue_routing") or item.get("residue_owner") or PLANNING_STATE_PATH.as_posix())
+    )
+    slug = _slugify(parent_id)
+    record_path = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive" / f"{slug}.plan.json"
+    if record_path.exists():
+        result.add("manual review", record_path, "parent closeout record already exists")
+        return result
+
+    title = str(item.get("title") or _title_from_slug(slug)).strip()
+    outcome = str(item.get("outcome") or item.get("reason") or f"Parent lane {parent_id} is closed from structured child evidence.").strip()
+    record = _build_execplan_record_from_todo_item(
+        title=title,
+        item_id=parent_id,
+        status="completed",
+        why_now=outcome,
+        next_action="archive the parent lane closeout record.",
+        done_when="the parent lane has schema-valid closeout evidence and no first-line planning residue.",
+    )
+    child_refs = [
+        str(ref).strip()
+        for ref in [
+            *(item.get("issues", []) if isinstance(item.get("issues"), list) else []),
+            *(item.get("refs", []) if isinstance(item.get("refs"), list) else []),
+        ]
+        if str(ref).strip()
+    ]
+    record.update(
+        {
+            "parent_lane": {
+                "id": parent_id,
+                "title": title,
+                "priority": str(item.get("priority", "")).strip(),
+                "issues": ", ".join(str(issue) for issue in item.get("issues", []) if str(issue).strip())
+                if isinstance(item.get("issues"), list)
+                else "",
+                "source": bucket_path,
+            },
+            "references": _reference_records_for_parent_lane(item),
+            "parent_acceptance_map": {
+                "status": "satisfied" if intent_answer == "yes" else "partial",
+                "child_refs": child_refs,
+                "evidence": intent_evidence or outcome,
+            },
+            "execution_run": {
+                "run status": "completed",
+                "executor": "agentic-planning-bootstrap archive-plan --parent-lane-closeout",
+                "handoff source": "structured planning state",
+                "what happened": "created a schema-valid parent lane closeout from structured state fields.",
+                "scope touched": PLANNING_STATE_PATH.as_posix(),
+                "changed surfaces": f"{PLANNING_STATE_PATH.as_posix()}; {record_path.relative_to(target_root).as_posix()}",
+                "validations run": "schema-backed writer validation",
+                "result for continuation": unsolved_owner,
+                "next step": "none" if intent_answer == "yes" else f"continue in {unsolved_owner}",
+            },
+            "finished_run_review": {
+                "review status": "completed",
+                "scope respected": "yes",
+                "proof status": "satisfied",
+                "intent served": intent_answer,
+                "config compliance": "host-tracker-specific issue closure stayed outside core planning.",
+                "misinterpretation risk": "low",
+                "follow-on decision": closure_decision,
+            },
+            "proof_report": {
+                "validation proof": "schema-backed writer validation",
+                "proof achieved now": "parent lane closeout record validated against planning-execplan.schema.json.",
+                'evidence for "proof achieved" state': intent_evidence or outcome,
+            },
+            "intent_satisfaction": {
+                "original intent": str(item.get("outcome") or item.get("title") or title).strip(),
+                "was original intent fully satisfied?": intent_answer,
+                "evidence of intent satisfaction": intent_evidence or outcome,
+                "unsolved intent passed to": unsolved_owner,
+            },
+            "closure_check": {
+                "slice status": "completed",
+                "larger-intent status": larger_status,
+                "closure decision": closure_decision,
+                "why this decision is honest": closure_reason or "Structured child evidence and parent acceptance fields were recorded.",
+                "evidence carried forward": closure_evidence or "Parent lane closeout record, child references, and schema-backed proof.",
+                "reopen trigger": reopen_trigger or "None unless new evidence shows the parent lane was not actually satisfied.",
+            },
+            "durable_residue": _parent_lane_durable_residue(item),
+        }
+    )
+    buckets = {"discard": [], "continuation": [], "memory": [], "config_check": [], "docs": [], "issue_follow_up": []}
+    buckets["discard"].append(
+        {
+            "summary": discard_summary or "Historical parent-lane bookkeeping is reconstructable from the archive record and child refs.",
+            "owner": "discard",
+            "source": "archive-plan --parent-lane-closeout",
+        }
+    )
+    if intent_answer == "no":
+        buckets["continuation"].append(
+            {
+                "summary": continuation_summary or f"Unsolved parent intent continues in {unsolved_owner}.",
+                "owner": unsolved_owner,
+                "source": "archive-plan --parent-lane-closeout",
+            }
+        )
+    record["closeout_distillation"] = {"buckets": buckets}
+    record["generated_closeout"] = _generated_closeout_adapter(record=record, patch=record)
+
+    if dry_run:
+        result.add("would create", record_path, "schema-valid parent lane closeout record")
+        result.add("would update", state_path, f"remove closed parent lane '{parent_id}' from first-line planning state")
+        return result
+
+    _write_execplan_record(record_path=record_path, record=record)
+    _write_state_to_toml(target_root, _closed_parent_lane_state(state, parent_id, item))
+    result.add("created", record_path, "schema-valid parent lane closeout record")
+    result.add("updated", state_path, f"removed closed parent lane '{parent_id}' from first-line planning state")
+    return result
+
+
 def archive_execplan(
     plan: str,
     *,
