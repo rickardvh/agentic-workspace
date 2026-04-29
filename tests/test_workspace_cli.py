@@ -427,7 +427,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     workspace_lane = next(lane for lane in payload["validation"]["lanes"] if lane["id"] == "workspace_cli")
     assert "root workspace CLI changes" in workspace_lane["when"]
     assert workspace_lane["enough_proof"] == [
-        "uv run pytest tests/test_workspace_cli.py -q",
+        "uv run pytest tests -q",
         "uv run ruff check src tests",
     ]
     assert "the change also touches generated maintainer docs" in workspace_lane["broaden_when"]
@@ -6115,7 +6115,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["skill_routing"]["available_advanced_route_command"] == "uv run agentic-workspace modules --target ./repo --format json"
     assert any("WORKFLOW.md" in step for step in payload["skill_routing"]["fallback_when_skills_unavailable"])
     assert payload["proof"]["required_commands"] == [
-        "uv run pytest tests/test_workspace_cli.py -q",
+        "uv run pytest tests -q",
         "uv run ruff check src tests",
         "agentic-workspace defaults --section root_cli_authority --format json",
     ]
@@ -6171,7 +6171,7 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
     assert payload["required_validation_commands"] == [
         "cd packages/planning && uv run pytest tests/test_installer.py",
         "cd packages/planning && uv run ruff check .",
-        "uv run pytest tests/test_workspace_cli.py -q",
+        "uv run pytest tests -q",
         "uv run ruff check src tests",
         "agentic-workspace defaults --section root_cli_authority --format json",
     ]
@@ -6446,7 +6446,7 @@ def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(cap
         "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
         "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
     ]
-    assert "uv run pytest tests/test_workspace_cli.py -q" not in answer["required_commands"]
+    assert "uv run pytest tests -q" not in answer["required_commands"]
 
 
 def test_proof_changed_selector_routes_agent_aid_changes_to_manifest_lane(capsys) -> None:
@@ -6469,7 +6469,7 @@ def test_proof_changed_selector_routes_agent_aid_changes_to_manifest_lane(capsys
     assert [lane["id"] for lane in answer["selected_lanes"]] == ["agent_aid_manifests"]
     assert answer["required_commands"] == ["uv run python scripts/check/check_agent_aids.py --quiet-success"]
     assert "candidate aids" in answer["selected_lanes"][0]["recovery_signal"]
-    assert "uv run pytest tests/test_workspace_cli.py -q" not in answer["required_commands"]
+    assert "uv run pytest tests -q" not in answer["required_commands"]
 
 
 def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
@@ -6513,7 +6513,7 @@ def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> No
     answer = payload["answer"]
     assert [lane["id"] for lane in answer["selected_lanes"]] == ["contract_tooling", "workspace_cli", "cli_authority"]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
-    assert "uv run pytest tests/test_workspace_cli.py -q" in answer["required_commands"]
+    assert "uv run pytest tests -q" in answer["required_commands"]
 
 
 def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None:

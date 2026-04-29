@@ -1355,16 +1355,22 @@ def _with_agent_instructions_file(config: WorkspaceConfig, *, filename: str, sou
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    descriptors = _module_operations()
-    _validate_descriptor_contract(descriptors)
-    _configure_parser_contract(parser=parser, descriptors=descriptors)
+    try:
+        descriptors = _module_operations()
+        _validate_descriptor_contract(descriptors)
+        _configure_parser_contract(parser=parser, descriptors=descriptors)
+    except WorkspaceUsageError as exc:
+        parser.error(str(exc))
 
     if args.command == "modules":
-        target_root = _resolve_target_root(args.target) if args.target else None
-        if target_root is not None:
-            _validate_target_root(command_name="modules", target_root=target_root)
-        _emit_modules(format_name=args.format, target_root=target_root)
-        return 0
+        try:
+            target_root = _resolve_target_root(args.target) if args.target else None
+            if target_root is not None:
+                _validate_target_root(command_name="modules", target_root=target_root)
+            _emit_modules(format_name=args.format, target_root=target_root)
+            return 0
+        except WorkspaceUsageError as exc:
+            parser.error(str(exc))
 
     generated_adapter = _generated_adapter_for_command(str(args.command))
     if generated_adapter is not None:
@@ -1374,9 +1380,9 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(str(exc))
 
     if args.command == "summary":
-        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-        _validate_target_root(command_name="summary", target_root=target_root)
         try:
+            target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+            _validate_target_root(command_name="summary", target_root=target_root)
             from repo_planning_bootstrap.cli import _print_summary
             from repo_planning_bootstrap.installer import format_summary_json, planning_summary
 
@@ -1389,37 +1395,48 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         except ImportError:
             parser.error("The planning module must be installed to use the summary command.")
+        except WorkspaceUsageError as exc:
+            parser.error(str(exc))
 
     if args.command == "start":
-        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-        _validate_target_root(command_name="start", target_root=target_root)
-        payload = _start_payload(
-            target_root=target_root,
-            changed_paths=list(getattr(args, "changed", []) or []),
-        )
-        _emit_payload(payload=payload, format_name=args.format)
-        return 0
+        try:
+            target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+            _validate_target_root(command_name="start", target_root=target_root)
+            payload = _start_payload(
+                target_root=target_root,
+                changed_paths=list(getattr(args, "changed", []) or []),
+            )
+            _emit_payload(payload=payload, format_name=args.format)
+            return 0
+        except WorkspaceUsageError as exc:
+            parser.error(str(exc))
 
     if args.command == "implement":
-        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-        _validate_target_root(command_name="implement", target_root=target_root)
-        payload = _implement_payload(
-            target_root=target_root,
-            changed_paths=list(getattr(args, "changed", []) or []),
-            task_text=getattr(args, "task", None),
-        )
-        _emit_payload(payload=payload, format_name=args.format)
-        return 0
+        try:
+            target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+            _validate_target_root(command_name="implement", target_root=target_root)
+            payload = _implement_payload(
+                target_root=target_root,
+                changed_paths=list(getattr(args, "changed", []) or []),
+                task_text=getattr(args, "task", None),
+            )
+            _emit_payload(payload=payload, format_name=args.format)
+            return 0
+        except WorkspaceUsageError as exc:
+            parser.error(str(exc))
 
     if args.command == "preflight":
-        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-        _validate_target_root(command_name="preflight", target_root=target_root)
-        payload = _run_preflight_command(
-            target_root=target_root,
-            active_only=getattr(args, "active_only", False),
-        )
-        _emit_payload(payload=payload, format_name=args.format)
-        return 0
+        try:
+            target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+            _validate_target_root(command_name="preflight", target_root=target_root)
+            payload = _run_preflight_command(
+                target_root=target_root,
+                active_only=getattr(args, "active_only", False),
+            )
+            _emit_payload(payload=payload, format_name=args.format)
+            return 0
+        except WorkspaceUsageError as exc:
+            parser.error(str(exc))
 
     if args.command in {"proof", "ownership", "config", "note-delegation-outcome"}:
         try:
@@ -1491,11 +1508,14 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(str(exc))
 
     if args.command == "skills":
-        target_root = _resolve_target_root(args.target) if args.target else None
-        if target_root is not None:
-            _validate_target_root(command_name="skills", target_root=target_root)
-        _emit_skills(format_name=args.format, target_root=target_root, task_text=args.task)
-        return 0
+        try:
+            target_root = _resolve_target_root(args.target) if args.target else None
+            if target_root is not None:
+                _validate_target_root(command_name="skills", target_root=target_root)
+            _emit_skills(format_name=args.format, target_root=target_root, task_text=args.task)
+            return 0
+        except WorkspaceUsageError as exc:
+            parser.error(str(exc))
 
     if args.command == "system-intent":
         try:
@@ -9435,11 +9455,11 @@ def _defaults_payload() -> dict[str, Any]:
             "id": "workspace_cli",
             "when": [
                 "root workspace CLI changes",
-                "tests/test_workspace_cli.py changes",
+                "root tests changes",
                 "root src/agentic_workspace changes",
             ],
             "enough_proof": [
-                "uv run pytest tests/test_workspace_cli.py -q",
+                "uv run pytest tests -q",
                 "uv run ruff check src tests",
             ],
             "broaden_when": [
@@ -10222,7 +10242,7 @@ def _defaults_payload() -> dict[str, Any]:
                 ],
             },
             "default_routes": {
-                "workspace_cli": "uv run pytest tests/test_workspace_cli.py",
+                "workspace_cli": "uv run pytest tests -q",
                 "planning_package": "cd packages/planning && uv run pytest tests/test_installer.py",
                 "memory_package": "cd packages/memory && uv run pytest tests/test_installer.py",
                 "maintainer_surfaces": "make maintainer-surfaces",
