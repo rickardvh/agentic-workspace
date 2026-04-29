@@ -1,0 +1,132 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Context-size affordances lane",
+  "goal": [
+    "Implement issues #565, #566, and #567 so context-size improvement signals are cheaper to act on and external-work promotion is less manual."
+  ],
+  "non_goals": [
+    "Do not perform broad CLI or package installer extraction in this slice.",
+    "Do not make shipped code depend on GitHub, Codex, or this repository."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Reduce context overhead in improvement intake by separating regenerable cache residue from source refactor signals, adding action routing to large-file hotspots, and exposing a provider-agnostic external-work promotion affordance.",
+      "constraints": "Use existing report/summary/planning surfaces; prefer compact action metadata over new commands.",
+      "latitude": "Choose field names and test placement that fit current report contracts.",
+      "escalation": "Stop before adding a new top-level command or attempting broad file decomposition."
+    },
+    "execution": {
+      "milestone": "context-size signal routing",
+      "status": "active",
+      "next_step": "Commit the implemented signal-routing milestone, then run final make check and close issues.",
+      "proof": "Use agentic-workspace proof for changed paths, targeted pytest, ruff, planning doctor, and make check before closeout."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/reporting_support.py",
+        "src/agentic_workspace/cli.py",
+        "tests for workspace report and planning summary surfaces",
+        ".agentic-workspace planning artifacts"
+      ],
+      "invariants": [
+        "Regenerable local caches must not become repo-directed refactor candidates.",
+        "Large-file signals should route to compact next actions instead of requiring broad file reads.",
+        "External tracker details remain provider-agnostic after ingestion."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#565, #566, #567",
+    "parent lane": ""
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "open issues #565-#567 until implemented and closed",
+    "activation trigger": "each completed issue should update proof and closeout before archiving this plan"
+  },
+  "active_milestone": {
+    "id": "context-size-routing",
+    "status": "implemented",
+    "scope": "#565, #566, #567",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "immediate_next_action": [
+    "Commit the #565-#567 implementation, then run final make check."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py packages/planning/tests/test_installer.py -q",
+    "uv run ruff check src tests packages/planning",
+    "make check"
+  ],
+  "required_tools": [
+    "uv",
+    "gh"
+  ],
+  "completion_criteria": [
+    "#565, #566, and #567 are implemented or explicitly routed with proof.",
+    "Issues are closed after validation.",
+    "Planning summary returns to idle with no active lane once complete."
+  ],
+  "execution_run": {
+    "run status": "active",
+    "executor": "Codex",
+    "handoff source": "dogfooding context-size findings promoted to issues #565-#567",
+    "what happened": "Created issues #565, #566, and #567; implemented regenerable-cache filtering, context-aware large-file hotspot action metadata, and provider-neutral external-work promotion actions.",
+    "scope touched": ".agentic-workspace planning state; src/agentic_workspace report and CLI assembly; packages/planning intent reconciliation; focused tests",
+    "changed surfaces": "active planning state, repo_friction/improvement_intake report fields, external_work_reconciliation fields, tests",
+    "validations run": "uv run agentic-workspace summary --format json; uv run agentic-workspace report --target . --section improvement_intake --format json; uv run agentic-workspace external-intent refresh-github --format json; uv run pytest focused workspace/planning tests -q; uv run ruff check focused files; uv run agentic-workspace proof --target . --changed <paths> --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace defaults --section root_cli_authority --format json; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "#565, #566, and #567 are implemented and selected proof has passed.",
+    "next step": "Commit, run make check, close issues, refresh external evidence, and archive this plan."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "",
+    "proof status": "",
+    "intent served": "",
+    "config compliance": "",
+    "misinterpretation risk": "",
+    "follow-on decision": ""
+  },
+  "proof_report": {
+    "validation proof": "selected proof passed; final make check still needed before issue closeout",
+    "proof achieved now": "#565 regenerable cache filtering, #566 context-aware hotspot actions, and #567 external-work promotion action implemented.",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace defaults --section root_cli_authority --format json; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Create issues for context-size findings and implement them.",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": "#565, #566, #567"
+  },
+  "closure_check": {
+    "slice status": "active",
+    "larger-intent status": "open",
+    "closure decision": "do-not-archive-yet",
+    "why this decision is honest": "new issues remain open",
+    "evidence carried forward": "this execplan and issue links",
+    "reopen trigger": "new context-size friction or validation failure"
+  },
+  "durable_residue": {
+    "status": "pending",
+    "learned constraint": "Context-size findings should be routed through compact action metadata before broad refactor lanes.",
+    "motivation worth preserving": "Avoid sending agents into huge files or regenerable caches when the package can identify the cheaper action.",
+    "canonical owner now": ".agentic-workspace/planning/execplans/context-size-affordances-lane.plan.json",
+    "promotion trigger": "promote only if repeated after the output affordances land",
+    "retention after promotion": "shrink"
+  },
+  "execution_summary": {
+    "outcome delivered": "pending",
+    "validation confirmed": "pending",
+    "follow-on routed to": "#565, #566, #567",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "pending",
+    "resume from": ".agentic-workspace/planning/execplans/context-size-affordances-lane.plan.json"
+  }
+}

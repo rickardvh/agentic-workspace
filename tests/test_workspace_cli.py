@@ -4287,6 +4287,15 @@ def test_report_section_selector_returns_external_work_reconciliation(tmp_path: 
     assert answer["freshness"]["fresh_enough_to_trust"] is True
     assert answer["freshness"]["refresh_metadata"]["adapter"] == "manual-fixture"
     assert answer["external_work_state"]["open_count"] == 1
+    assert answer["external_work_state"]["untracked_open_count"] == 1
+    promotion_action = answer["promotion_action"]
+    assert promotion_action["action"] == "promote-external-work-to-planning"
+    assert promotion_action["provider_neutral"] is True
+    assert promotion_action["target_surfaces"] == [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/<lane>.plan.json",
+    ]
+    assert "do not duplicate active state" in promotion_action["state_rule"]
     assert answer["workspace_report_view"]["delta_section"] == "external_work_delta"
 
 
@@ -5388,11 +5397,42 @@ def test_report_surfaces_large_file_hotspots_as_repo_friction_evidence(tmp_path:
     assert payload["repo_friction"]["large_file_hotspots"]["items"][0]["path"] == "src/big_module.py"
     assert payload["repo_friction"]["large_file_hotspots"]["items"][0]["line_count"] == 450
     assert payload["repo_friction"]["large_file_hotspots"]["items"][0]["kind"] == "code"
+    hotspot = payload["repo_friction"]["large_file_hotspots"]["items"][0]
+    assert hotspot["classification"] == "large-source-hotspot"
+    assert hotspot["suggested_action"] == "inspect-symbols-before-refactor"
+    assert "Use search and focused symbols first" in hotspot["context_strategy"]
+    assert hotspot["primary_next_action"]["action"] == "inspect-symbols-before-refactor"
+    assert hotspot["primary_next_action"]["run"] == hotspot["primary_next_action"]["command"]
     signal = payload["improvement_intake"]["improvement_signal_candidates"][0]
     assert signal["candidate_kind"] == "workspace-improvement-signal-candidate/v1"
     assert signal["kind"] == "architecture_cost"
     assert signal["suspected_owner"] == "src/big_module.py"
     assert signal["immediate_action"] == "route"
+    assert signal["classification"] == "large-source-hotspot"
+    assert signal["suggested_action"] == "inspect-symbols-before-refactor"
+    assert signal["primary_next_action"]["action"] == "inspect-symbols-before-refactor"
+
+
+def test_report_does_not_promote_regenerable_cache_as_large_file_friction(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    cache_path = target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text("\n".join(f"line_{index}" for index in range(950)) + "\n", encoding="utf-8")
+
+    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    large_files = payload["repo_friction"]["large_file_hotspots"]
+    assert large_files["count"] == 0
+    assert large_files["ignored_regenerable_cache_count"] == 1
+    ignored = large_files["ignored_regenerable_caches"][0]
+    assert ignored["path"] == ".agentic-workspace/local/cache/external-intent-evidence.json"
+    assert ignored["surface_role"] == "regenerable-local-cache"
+    assert ignored["suggested_action"] == "do-not-refactor"
+    assert "local cache" in large_files["cache_rule"]
+    assert payload["improvement_intake"]["improvement_signal_candidates"] == []
 
 
 def test_report_surfaces_concept_hotspots_as_repo_friction_evidence(tmp_path: Path, capsys) -> None:

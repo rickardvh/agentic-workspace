@@ -1038,7 +1038,7 @@ def _confidence_label(confidence: Any) -> str:
     return "low"
 
 
-def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, Any] | None) -> list[dict[str, str]]:
+def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, Any] | None) -> list[dict[str, Any]]:
     if not isinstance(repo_friction, dict):
         return []
     candidates: list[dict[str, str]] = []
@@ -1051,21 +1051,26 @@ def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, A
         line_count = str(item.get("line_count", "")).strip()
         if not path:
             continue
-        candidates.append(
-            _improvement_signal_candidate(
-                kind="architecture_cost",
-                observed_during="agentic-workspace report --section repo_friction",
-                symptom=f"{path} has {line_count} lines and exceeds the large-file friction threshold.",
-                cost="Large surfaces increase reading, review, and change-localization cost.",
-                suspected_owner=path,
-                likely_remediation="refactor",
-                confidence="medium",
-                recurrence="first_seen",
-                immediate_action="route",
-                retention="shrink_after_fix",
-                source="repo_friction.large_file_hotspots",
-            )
+        likely_remediation = str(item.get("likely_remediation", "refactor")).strip() or "refactor"
+        if likely_remediation not in _IMPROVEMENT_SIGNAL_CONTRACT["likely_remediations"]:
+            likely_remediation = "refactor"
+        candidate = _improvement_signal_candidate(
+            kind="architecture_cost",
+            observed_during="agentic-workspace report --section repo_friction",
+            symptom=f"{path} has {line_count} lines and exceeds the large-file friction threshold.",
+            cost="Large surfaces increase reading, review, and change-localization cost.",
+            suspected_owner=path,
+            likely_remediation=likely_remediation,
+            confidence="medium",
+            recurrence="first_seen",
+            immediate_action="route",
+            retention="shrink_after_fix",
+            source="repo_friction.large_file_hotspots",
         )
+        for field in ("surface_role", "classification", "suggested_action", "context_strategy", "primary_next_action"):
+            if field in item:
+                candidate[field] = copy.deepcopy(item[field])
+        candidates.append(candidate)
     for item in _list_payload(
         repo_friction.get("concept_surface_hotspots", {}).get("items")
         if isinstance(repo_friction.get("concept_surface_hotspots"), dict)
@@ -3925,6 +3930,7 @@ def _run_report_command(
         boundary_test_payload=_improvement_boundary_test_payload(),
         external_setup_findings_payload=_repo_friction_external_setup_findings_payload(target_root=target_root),
         validation_friction_policy=_validation_friction_payload(),
+        cli_invoke=config.cli_invoke,
     )
     repo_friction["capture_shortcut"] = _friction_capture_shortcut_payload()
     standing_intent = standing_intent_payload(
@@ -3949,6 +3955,7 @@ def _run_report_command(
     external_work_reconciliation = _external_work_reconciliation_payload(
         module_reports=module_reports,
         external_work_delta=external_work_delta,
+        cli_invoke=config.cli_invoke,
     )
     payload = {
         "kind": "workspace-report/v1",
@@ -5607,6 +5614,7 @@ def _external_work_reconciliation_payload(
     *,
     module_reports: list[dict[str, Any]],
     external_work_delta: dict[str, Any],
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
     planning_report = next(
         (report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"),
@@ -5636,6 +5644,35 @@ def _external_work_reconciliation_payload(
             "closed_count": external_work_delta.get("closed_count", 0),
         },
     }
+    if "promotion_action" not in payload:
+        external_state = payload.get("external_work_state", {}) if isinstance(payload.get("external_work_state"), dict) else {}
+        untracked_open = int(external_state.get("untracked_open_count", 0) or 0)
+        promotion_action = {
+            "action": "promote-external-work-to-planning",
+            "summary": (
+                "Create one checked-in active execplan/state entry for selected untracked external work."
+                if untracked_open
+                else "No external-work promotion is currently needed."
+            ),
+            "command": _command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=cli_invoke),
+            "risk": "planning mutation; inspect selected external items before editing checked-in planning state",
+            "required_inputs": ["selected external item ids", "requested outcome", "proof expectations", "owner surface"],
+            "target_surfaces": [
+                ".agentic-workspace/planning/state.toml",
+                ".agentic-workspace/planning/execplans/<lane>.plan.json",
+            ],
+            "state_rule": "Represent promoted work once as the active item and point it at one execplan; do not duplicate active state.",
+            "provider_neutral": True,
+            "next_proof": "rerun summary and planning doctor after promotion; active_count should be one for a broad active lane",
+        }
+        promotion_action["run"] = promotion_action["command"]
+        payload["promotion_action"] = promotion_action
+    elif isinstance(payload.get("promotion_action"), dict):
+        action = payload["promotion_action"]
+        command = str(action.get("command", "")).strip()
+        if command:
+            action["command"] = _command_with_cli_invoke(command=command, cli_invoke=cli_invoke)
+            action["run"] = action["command"]
     payload.setdefault(
         "detail_sections",
         [

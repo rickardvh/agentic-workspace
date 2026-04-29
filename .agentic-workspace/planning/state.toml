@@ -7,5 +7,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = []
+active_items = [
+  { id = "context-size-affordances-lane", title = "Context-size affordances lane", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/context-size-affordances-lane.plan.json", why_now = "Issues #565-#567 should reduce context overhead by classifying large-file/cache signals and external-work promotion paths.", handoff_ready = true }
+]
 queued_items = []

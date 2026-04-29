@@ -34,6 +34,7 @@ REPO_FRICTION_SKIP_DIRS = {
     "dist",
     "build",
 }
+REPO_FRICTION_REGENERABLE_CACHE_PREFIXES = (".agentic-workspace/local/cache/",)
 
 STANDING_INTENT_CANONICAL_DOC = ".agentic-workspace/docs/standing-intent-contract.md"
 
@@ -1161,8 +1162,10 @@ def repo_friction_payload(
     boundary_test_payload: dict[str, Any],
     external_setup_findings_payload: dict[str, Any] | None,
     validation_friction_policy: dict[str, Any] | None = None,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
-    hotspots = _repo_friction_hotspots(target_root=target_root)
+    hotspots = _repo_friction_hotspots(target_root=target_root, cli_invoke=cli_invoke)
+    regenerable_cache_hotspots = _repo_friction_regenerable_cache_hotspots(target_root=target_root, cli_invoke=cli_invoke)
     large_file_hotspots = [item.copy() for item in hotspots if int(item["line_count"]) >= REPO_FRICTION_LARGE_FILE_THRESHOLD][
         :REPO_FRICTION_MAX_HOTSPOTS
     ]
@@ -1251,6 +1254,9 @@ def repo_friction_payload(
             "threshold_lines": REPO_FRICTION_LARGE_FILE_THRESHOLD,
             "count": len(large_file_hotspots),
             "items": large_file_hotspots,
+            "ignored_regenerable_cache_count": len(regenerable_cache_hotspots),
+            "ignored_regenerable_caches": regenerable_cache_hotspots,
+            "cache_rule": "Regenerable local cache files are context-size evidence, not repo-directed refactor candidates.",
         },
         "concept_surface_hotspots": {
             "threshold_lines": REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD,
@@ -1357,6 +1363,8 @@ def _repo_friction_kind_for_path(path: Path) -> str:
 
 
 def _repo_friction_surface_role(relative_path: str) -> str:
+    if _repo_friction_is_regenerable_cache(relative_path):
+        return "regenerable-local-cache"
     if relative_path in {
         "AGENTS.md",
         ".agentic-workspace/planning/state.toml",
@@ -1376,7 +1384,93 @@ def _repo_friction_surface_role(relative_path: str) -> str:
     return "repo-surface"
 
 
-def _repo_friction_hotspots(*, target_root: Path) -> list[dict[str, Any]]:
+def _repo_friction_is_regenerable_cache(relative_path: str) -> bool:
+    return any(relative_path.startswith(prefix) for prefix in REPO_FRICTION_REGENERABLE_CACHE_PREFIXES)
+
+
+def _repo_friction_context_strategy(*, relative_path: str, kind: str, surface_role: str) -> dict[str, str]:
+    if surface_role == "regenerable-local-cache":
+        return {
+            "classification": "ignore-or-refresh-cache",
+            "suggested_action": "do-not-refactor",
+            "context_strategy": "Do not open broadly; refresh or delete the local cache if stale.",
+            "likely_remediation": "remove",
+        }
+    if relative_path.startswith("tests/") or "/tests/" in relative_path:
+        return {
+            "classification": "test-hotspot",
+            "suggested_action": "split-focused-tests",
+            "context_strategy": "Use test selectors and extract focused test modules before reading the whole file.",
+            "likely_remediation": "tests",
+        }
+    if relative_path == "src/agentic_workspace/cli.py":
+        return {
+            "classification": "root-cli-runtime-hotspot",
+            "suggested_action": "extract-runtime-or-renderer-helper",
+            "context_strategy": "Inspect symbols first; move bounded runtime/rendering helpers behind existing contracts before broad edits.",
+            "likely_remediation": "module_split",
+        }
+    if relative_path.endswith("/installer.py"):
+        return {
+            "classification": "module-installer-hotspot",
+            "suggested_action": "extract-module-helper",
+            "context_strategy": "Inspect the relevant function range and extract cohesive helpers only inside the owning package boundary.",
+            "likely_remediation": "module_split",
+        }
+    if kind == "docs":
+        return {
+            "classification": "concept-surface-hotspot",
+            "suggested_action": "compress-or-route",
+            "context_strategy": "Prefer compact selectors, summaries, or section routing before adding more prose.",
+            "likely_remediation": "docs",
+        }
+    if kind == "config":
+        return {
+            "classification": "structured-surface-hotspot",
+            "suggested_action": "query-or-schema-route",
+            "context_strategy": "Use structured queries and schema-backed selectors instead of manual broad reads.",
+            "likely_remediation": "validation",
+        }
+    return {
+        "classification": "large-source-hotspot",
+        "suggested_action": "inspect-symbols-before-refactor",
+        "context_strategy": "Use search and focused symbols first; promote a bounded refactor only after repeated evidence.",
+        "likely_remediation": "refactor",
+    }
+
+
+def _repo_friction_hotspot_payload(
+    *, path: Path, target_root: Path, line_count: int, cli_invoke: str = DEFAULT_CLI_INVOKE
+) -> dict[str, Any]:
+    relative = path.relative_to(target_root).as_posix()
+    kind = _repo_friction_kind_for_path(path)
+    surface_role = _repo_friction_surface_role(relative)
+    strategy = _repo_friction_context_strategy(relative_path=relative, kind=kind, surface_role=surface_role)
+    primary_action = {
+        "action": strategy["suggested_action"],
+        "summary": strategy["context_strategy"],
+        "command": str(
+            _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section repo_friction --format json",
+                cli_invoke=cli_invoke,
+            )
+        ),
+        "risk": "read-only routing unless a bounded refactor is explicitly promoted",
+        "required_inputs": ["target path", "line count", "surface role", "repeated friction evidence"],
+        "next_proof": "use proof selection after changed paths are known",
+    }
+    primary_action["run"] = primary_action["command"]
+    return {
+        "path": relative,
+        "line_count": line_count,
+        "kind": kind,
+        "surface_role": surface_role,
+        **strategy,
+        "primary_next_action": primary_action,
+    }
+
+
+def _repo_friction_hotspots(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> list[dict[str, Any]]:
     hotspots: list[dict[str, Any]] = []
     for path in sorted(target_root.rglob("*")):
         if not path.is_file():
@@ -1392,16 +1486,30 @@ def _repo_friction_hotspots(*, target_root: Path) -> list[dict[str, Any]]:
         if line_count < REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD:
             continue
         relative = path.relative_to(target_root).as_posix()
-        hotspots.append(
-            {
-                "path": relative,
-                "line_count": line_count,
-                "kind": _repo_friction_kind_for_path(path),
-                "surface_role": _repo_friction_surface_role(relative),
-            }
-        )
+        if _repo_friction_is_regenerable_cache(relative):
+            continue
+        hotspots.append(_repo_friction_hotspot_payload(path=path, target_root=target_root, line_count=line_count, cli_invoke=cli_invoke))
     hotspots.sort(key=lambda item: (-int(item["line_count"]), str(item["path"])))
     return hotspots
+
+
+def _repo_friction_regenerable_cache_hotspots(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> list[dict[str, Any]]:
+    hotspots: list[dict[str, Any]] = []
+    cache_root = target_root / ".agentic-workspace" / "local" / "cache"
+    if not cache_root.exists():
+        return hotspots
+    for path in sorted(cache_root.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in REPO_FRICTION_SCAN_SUFFIXES:
+            continue
+        try:
+            line_count = sum(1 for _ in path.open("r", encoding="utf-8"))
+        except (UnicodeDecodeError, OSError):
+            continue
+        if line_count < REPO_FRICTION_LARGE_FILE_THRESHOLD:
+            continue
+        hotspots.append(_repo_friction_hotspot_payload(path=path, target_root=target_root, line_count=line_count, cli_invoke=cli_invoke))
+    hotspots.sort(key=lambda item: (-int(item["line_count"]), str(item["path"])))
+    return hotspots[:REPO_FRICTION_MAX_HOTSPOTS]
 
 
 def _int_or_none(value: Any) -> int | None:

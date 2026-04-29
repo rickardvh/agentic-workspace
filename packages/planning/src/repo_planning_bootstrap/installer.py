@@ -3661,6 +3661,26 @@ def _intent_validation_contract(
     elif internal_signals:
         recommended_next_action = "Restore missing checked-in continuation ownership for partially archived intent."
 
+    promotion_action = {
+        "action": "promote-external-work-to-planning",
+        "summary": (
+            "Create one checked-in active execplan/state entry for selected untracked external work."
+            if untracked_open
+            else "No external-work promotion is currently needed."
+        ),
+        "command": "agentic-workspace summary --format json",
+        "risk": "planning mutation; inspect selected external items before editing checked-in planning state",
+        "required_inputs": ["selected external item ids", "requested outcome", "proof expectations", "owner surface"],
+        "target_surfaces": [
+            ".agentic-workspace/planning/state.toml",
+            ".agentic-workspace/planning/execplans/<lane>.plan.json",
+        ],
+        "state_rule": "Represent promoted work once as the active item and point it at one execplan; do not duplicate active state.",
+        "provider_neutral": True,
+        "next_proof": "rerun summary and planning doctor after promotion; active_count should be one for a broad active lane",
+    }
+    promotion_action["run"] = promotion_action["command"]
+
     external_work_reconciliation = {
         "kind": "planning-external-work-reconciliation/v1",
         "status": (
@@ -3707,6 +3727,7 @@ def _intent_validation_contract(
             "closeout_reconciliation",
             "landed_open_issue_reconciliation",
         ],
+        "promotion_action": promotion_action,
         "recommended_next_action": recommended_next_action,
     }
 

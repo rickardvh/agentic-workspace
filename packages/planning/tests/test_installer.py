@@ -4089,6 +4089,14 @@ candidates = [
     assert reconciliation["provider_rule"].startswith("Core planning consumes provider-agnostic")
     assert reconciliation["freshness"]["fresh_enough_to_trust"] is True
     assert reconciliation["external_work_state"]["untracked_open_count"] == 1
+    promotion_action = reconciliation["promotion_action"]
+    assert promotion_action["action"] == "promote-external-work-to-planning"
+    assert promotion_action["provider_neutral"] is True
+    assert promotion_action["target_surfaces"] == [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/<lane>.plan.json",
+    ]
+    assert "do not duplicate active state" in promotion_action["state_rule"]
     assert reconciliation["closeout_state"]["needs_audit_count"] == 1
     assert reconciliation["landed_open_state"]["implemented_and_unclosed_count"] == 0
     assert contract["historical_audit_references"]["status"] == "needs-audit"
@@ -4151,6 +4159,8 @@ def test_planning_summary_surfaces_external_intent_refresh_metadata(tmp_path: Pa
     reconciliation = summary["intent_validation_contract"]["external_work_reconciliation"]
     assert reconciliation["freshness"]["refreshed_at"] == "2026-04-27T12:00:00+00:00"
     assert reconciliation["freshness"]["refresh_metadata"]["adapter"] == "github-gh-cli"
+    assert reconciliation["promotion_action"]["action"] == "promote-external-work-to-planning"
+    assert reconciliation["promotion_action"]["provider_neutral"] is True
 
 
 def test_planning_summary_accepts_bom_external_intent_evidence(tmp_path: Path) -> None:
