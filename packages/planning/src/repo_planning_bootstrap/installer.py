@@ -9045,6 +9045,10 @@ def _restore_todo_empty_state_for_heading(lines: list[str], heading: str) -> lis
 def _cleanup_compact_todo_archive_followup(todo_path: Path, plan_path: Path, target_root: Path) -> dict[str, Any]:
     if not todo_path.exists():
         return {"changed": False, "text": None, "details": []}
+    if todo_path.name == "state.toml":
+        state_cleanup = _cleanup_state_toml_archive_followup(todo_path, plan_path, target_root)
+        if state_cleanup["changed"]:
+            return state_cleanup
 
     lines = _read_lines(todo_path)
     relative = plan_path.relative_to(target_root).as_posix()
@@ -9068,6 +9072,64 @@ def _cleanup_compact_todo_archive_followup(todo_path: Path, plan_path: Path, tar
         return {"changed": False, "text": None, "details": []}
     lines = _restore_todo_empty_state(lines)
     return {"changed": True, "text": "\n".join(lines).rstrip() + "\n", "details": details}
+
+
+def _cleanup_state_toml_archive_followup(todo_path: Path, plan_path: Path, target_root: Path) -> dict[str, Any]:
+    state = _read_state_from_toml(target_root)
+    if not state:
+        return {"changed": False, "text": None, "details": []}
+
+    relative = plan_path.relative_to(target_root).as_posix()
+    changed = False
+    details: list[str] = []
+    next_state = dict(state)
+    active = next_state.get("active")
+    if isinstance(active, dict) and isinstance(active.get("execplans"), list):
+        kept_execplans: list[Any] = []
+        removed_count = 0
+        for raw in active["execplans"]:
+            if isinstance(raw, dict):
+                matches = _active_execplan_reference(raw) == relative
+            else:
+                matches = _surface_execplan_reference(str(raw)) == relative or str(raw).strip() == relative
+            if matches:
+                removed_count += 1
+                continue
+            kept_execplans.append(raw)
+        if removed_count:
+            next_active = dict(active)
+            next_active["execplans"] = kept_execplans
+            next_state["active"] = next_active
+            changed = True
+            details.append(f"remove {removed_count} active execplan reference(s) to the archived plan")
+
+    for bucket_name in ("work_items",):
+        raw_items = next_state.get(bucket_name, [])
+        if not isinstance(raw_items, list):
+            continue
+        kept_items = [item for item in raw_items if not (isinstance(item, dict) and _active_execplan_reference(item) == relative)]
+        if len(kept_items) != len(raw_items):
+            next_state[bucket_name] = kept_items
+            changed = True
+            details.append(f"remove {bucket_name} item(s) pointing at the archived plan")
+
+    todo_state = next_state.get("todo")
+    if isinstance(todo_state, dict):
+        next_todo = dict(todo_state)
+        for bucket_name in ("active_items", "queued_items"):
+            raw_items = next_todo.get(bucket_name, [])
+            if not isinstance(raw_items, list):
+                continue
+            kept_items = [item for item in raw_items if not (isinstance(item, dict) and _active_execplan_reference(item) == relative)]
+            if len(kept_items) != len(raw_items):
+                next_todo[bucket_name] = kept_items
+                changed = True
+                details.append(f"remove todo.{bucket_name} item(s) pointing at the archived plan")
+        next_state["todo"] = next_todo
+
+    if not changed:
+        return {"changed": False, "text": None, "details": []}
+    return {"changed": True, "text": "\n".join(_state_to_toml_lines(next_state)).rstrip() + "\n", "details": details}
 
 
 def _cleanup_todo_action_section(lines: list[str], relative_plan_path: str) -> tuple[list[str], bool]:

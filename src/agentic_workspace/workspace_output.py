@@ -53,6 +53,15 @@ def _emit_lifecycle_text(payload: dict[str, Any]) -> None:
     _print_path_list("Warnings", payload["warnings"])
     _print_path_list("Placeholders", payload["placeholders"])
     _print_path_list("Stale generated surfaces", payload["stale_generated_surfaces"])
+    repair_plan = _first_workspace_repair_plan(payload)
+    if repair_plan:
+        print(
+            "Repair: "
+            f"{repair_plan.get('status', 'unknown')} "
+            f"({repair_plan.get('repair_action_count', 0)} safe, "
+            f"{repair_plan.get('manual_review_action_count', 0)} manual); "
+            "rerun with --format json for repair_actions."
+        )
     classifications = payload.get("lifecycle_plan", {}).get("surface_classifications", {})
     if payload.get("command") == "upgrade" and isinstance(classifications, dict):
         summary = classifications.get("summary_by_class", {})
@@ -326,6 +335,16 @@ def _print_path_list(heading: str, values: list[str]) -> None:
     print(f"{heading}:")
     for value in values:
         print(f"- {value}")
+
+
+def _first_workspace_repair_plan(payload: dict[str, Any]) -> dict[str, Any] | None:
+    for report in payload.get("reports", []):
+        if not isinstance(report, dict) or report.get("module") != "workspace":
+            continue
+        repair_plan = report.get("repair_plan")
+        if isinstance(repair_plan, dict):
+            return repair_plan
+    return None
 
 
 def _display_path(path_value: str, target_root: Path) -> str:

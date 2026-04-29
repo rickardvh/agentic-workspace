@@ -1,0 +1,271 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Quiet Self-Repair And Drift Recovery Lane",
+  "goal": [
+    "Implement issues #568-#574 so diagnostics classify recurring drift, expose affordance-shaped repair/manual-review actions, and route repeated repairs into improvement signals."
+  ],
+  "non_goals": [
+    "Do not auto-apply ambiguous repairs.",
+    "Do not add provider-specific core dependencies.",
+    "Do not create a broad healing framework beyond the current concrete repair affordances."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Diagnostics identify failed invariants, classify faults, offer safe repair or manual-review next actions, and feed repeated repair classes into improvement routing.",
+      "constraints": "Keep outputs compact, invocation-aware, implementation-agnostic, and compatible with existing workspace/planning commands.",
+      "latitude": "Prefer shaping existing doctor/defaults/report affordances over adding new commands.",
+      "escalation": "Stop if safe repair would require guessing human intent or destructive mutation."
+    },
+    "execution": {
+      "milestone": "repair-drift-recovery",
+      "status": "active",
+      "next_step": "Implement repair taxonomy and structured doctor actions.",
+      "proof": "Focused pytest, proof selection, doctor/summary checks, make check."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/repair-drift-recovery-lane.plan.json"
+      ],
+      "invariants": [
+        "Doctor output stays compact while JSON exposes actionable repair detail.",
+        "Copyable commands use resolved invocation policy.",
+        "Planning state holds current work only and is archived after completion."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "this slice completes the larger intended outcome": "yes for the current open repair/drift issue lane if no new issues remain open",
+    "continuation surface": "none unless implementation discovers a new improvement lane",
+    "parent lane": "#568"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Future diagnostics can route drift to repair, manual review, or improvement signals without requiring broad internal knowledge.",
+    "intentionally deferred": "Automatic repair application for ambiguous/destructive cases.",
+    "discovered implications": "",
+    "proof achieved now": "",
+    "validation still needed": "Focused tests and make check.",
+    "next likely slice": "none unless proof or dogfooding finds a concrete improvement issue"
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest and implement open issues.",
+    "inferred intended outcome": "Finish the open repair/drift recovery lane end-to-end using package dogfooding.",
+    "chosen concrete what": "One implementation milestone covering #568-#574.",
+    "interpretation distance": "low",
+    "review guidance": "Check that outputs are operational affordances, not diagnostic dumps."
+  },
+  "execution_bounds": {
+    "allowed paths": "CLI/reporting tests and planning state for this lane.",
+    "max changed files": "small, but tests may require adjacent fixtures.",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q; uv run agentic-workspace proof --target . --changed ... --format json; make check",
+    "ask-before-refactor threshold": "Stop before broad CLI generation or package layout refactors.",
+    "stop before touching": "Provider-specific adapters beyond local tests."
+  },
+  "stop_conditions": {
+    "stop when": "Issues #568-#574 are implemented, tested, closed, and archived.",
+    "escalate when boundary reached": "Repair would need destructive or ambiguous state mutation.",
+    "escalate on scope drift": "New capability work beyond repair affordance shaping appears necessary.",
+    "escalate on proof failure": "make check fails for reasons outside this lane."
+  },
+  "context_budget": {
+    "live working set": "Issues #568-#574, doctor/defaults/report repair affordances, tests around workspace CLI.",
+    "recoverable later": "Issue bodies and archived prior plans.",
+    "externalize before shift": "Update this execplan execution_run and summary before interruption.",
+    "pre-work config pull": "agentic-workspace summary --format json",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "Implement repair taxonomy/defaults and doctor repair/manual-review actions.",
+    "context-shift triggers": "Long test failure triage or broad command-design changes."
+  },
+  "delegated_judgment": {
+    "requested outcome": "End-to-end implementation of the open repair lane.",
+    "hard constraints": "Resolved invocation, compact output, no ambiguous auto-repair.",
+    "agent may decide locally": "Exact JSON field names and helper placement when tests and issue intent are satisfied.",
+    "escalate when": "A repair action cannot be made safe without a new command or policy decision."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#568",
+      "label": "Parent repair/drift recovery lane",
+      "role": "scope",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/568"
+    },
+    {
+      "kind": "issue",
+      "target": "#569-#574",
+      "label": "Child issues",
+      "role": "acceptance",
+      "locator": "GitHub issues"
+    }
+  ],
+  "active_milestone": {
+    "id": "repair-drift-recovery",
+    "status": "completed",
+    "scope": "Taxonomy, doctor repair actions, deterministic helper recommendations, package bug signals, improvement routing, affordance output.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement repair taxonomy/defaults and structured doctor repair/manual-review actions."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/repair-drift-recovery-lane.plan.json"
+  ],
+  "invariants": [
+    "Repair output has one primary next action when safe.",
+    "Repair actions include invariant, fault_class, risk, safe_to_apply, command/helper, dry-run/apply distinction, and proof_after.",
+    "Repeated repair classes can be consumed as improvement signals.",
+    "Planning state is cleaned up after closeout."
+  ],
+  "contract_decisions_to_freeze": [
+    "Repair taxonomy is compact and stable enough for diagnostics to reference.",
+    "Package-command-created invalid state is a distinct fault class."
+  ],
+  "open_questions_to_close": [
+    "Which existing command should represent safe deterministic repair for generated/workspace surface drift?"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/repair-drift-recovery-lane.plan.json --format json",
+    "make check"
+  ],
+  "required_tools": [
+    "uv",
+    "make",
+    "gh"
+  ],
+  "completion_criteria": [
+    "Issues #568-#574 acceptance signals are satisfied.",
+    "Tests cover at least one safe repair action and one manual-review action.",
+    "Proof passes.",
+    "Issues are closed and changes are committed/pushed."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "current thread",
+    "what happened": "Implemented repair taxonomy/defaults, structured doctor repair and manual-review actions, top-level repair aggregation, package-command bug signal shape, and repair recurrence improvement routing.",
+    "scope touched": "workspace CLI diagnostics/defaults/text output, tests, and planning state",
+    "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/workspace_output.py; tests/test_workspace_cli.py; planning execplan/state",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json; make check",
+    "result for continuation": "No required continuation remains for #568-#574.",
+    "next step": "Archive plan, close issues, commit and push."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "make check passed",
+    "intent served": "yes; diagnostics now classify faults, emit repair/manual actions, and route recurrence",
+    "config compliance": "copyable commands use resolved invocation policy",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "make check",
+    "proof achieved now": "workspace, memory, and planning tests/lint/typecheck/format/payload/report/surface checks passed",
+    "evidence for \"proof achieved\" state": "make check completed successfully after focused workspace CLI tests and selected proof commands"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement open issues.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Implemented #568-#574 repair taxonomy, doctor repair/manual-review actions, repair recurrence improvement routing, package-command bug signal shape, root aggregation, and tests; make check passes.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Correct-by-design first, self-detecting second, self-repairing when safe, self-routing when repair needs judgment, self-improving when repeated.",
+    "slice shaping bias": "Simplify existing affordances before adding new commands.",
+    "broader-lane validation question": "Does this reduce agent repair loops without adding first-contact overhead?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The current open repair/drift recovery lane is implemented and validated; no required continuation remains.",
+    "evidence carried forward": "make check passed; workspace CLI tests passed; planning doctor clean.",
+    "reopen trigger": "New repair drift issue, failed repair-output proof, or recurring repair class not covered by current taxonomy."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No new durable repo knowledge is needed beyond the shipped repair taxonomy/defaults, tests, and archived proof.",
+    "motivation worth preserving": "Repair recurrence should route through the new improvement-intake subtype instead of becoming planning history.",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Repair/drift recovery diagnostics now have a compact taxonomy, structured doctor repair/manual-review actions, recurrence routing, and package-command bug signal shape.",
+    "validation confirmed": "make check passed",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archived execplan plus tests",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "archived execplan if future repair lane context is needed"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [],
+    "signals fixed": [
+      "planning-state schema warning caught during dogfooding and fixed before closeout"
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Parent repair/drift recovery lane",
+          "owner": "issue",
+          "source": "#568"
+        },
+        {
+          "summary": "Child issues",
+          "owner": "issue",
+          "source": "#569-#574"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-29: Created plan from open issues #568-#574."
+  ],
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement open issues.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: make check\nChanged surfaces: src/agentic_workspace/cli.py; src/agentic_workspace/workspace_output.py; tests/test_workspace_cli.py; planning execplan/state\nDurable residue: none (none)\nFollow-up: none"
+  }
+}

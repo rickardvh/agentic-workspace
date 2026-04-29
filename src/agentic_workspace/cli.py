@@ -1211,6 +1211,25 @@ def _improvement_intake_payload(
             "primary_route": "Memory note, config/check follow-up, docs clarification, or issue follow-up",
             "selector": "agentic-workspace report --target ./repo --section repo_friction --format json",
         },
+        {
+            "id": "repair_recurrence",
+            "audience": "target-repo",
+            "source": "doctor.repair_actions or doctor.manual_review_actions",
+            "evidence_class": "repeated invariant/fault repair class",
+            "confidence_field": "recurrence plus affected invariant and proof-after result",
+            "primary_route": "correct-by-design remedy, agent aid, regression test, or issue follow-up",
+            "selector": "agentic-workspace defaults --section repair_recovery --format json",
+            "classification": "first_seen | repeated | human_confirmed",
+            "correct_by_design_remedies": [
+                "remove_or_merge_wrong_path",
+                "affordance",
+                "scaffold",
+                "writer_helper",
+                "agent_aid",
+                "regression_test",
+            ],
+            "repeat_route": "when the same invariant/fault pair repeats, prefer making the right action cheaper before adding more diagnostic prose",
+        },
     ]
     source_checkout_only_subtypes = [
         {
@@ -1835,8 +1854,11 @@ def _workspace_report(
     dry_run: bool,
     actions: list[dict[str, str]],
     warnings: list[dict[str, str]],
+    repair_actions: list[dict[str, Any]] | None = None,
+    manual_review_actions: list[dict[str, Any]] | None = None,
+    repair_plan: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
+    payload: dict[str, Any] = {
         "module": "workspace",
         "message": message,
         "target_root": target_root.as_posix(),
@@ -1844,6 +1866,502 @@ def _workspace_report(
         "actions": actions,
         "warnings": warnings,
     }
+    if repair_actions is not None:
+        payload["repair_actions"] = repair_actions
+    if manual_review_actions is not None:
+        payload["manual_review_actions"] = manual_review_actions
+    if repair_plan is not None:
+        payload["repair_plan"] = repair_plan
+    return payload
+
+
+def _repair_recovery_taxonomy_payload() -> dict[str, Any]:
+    return {
+        "kind": "workspace-repair-recovery-taxonomy/v1",
+        "role": "compact diagnostic vocabulary, not a backlog",
+        "command": "agentic-workspace defaults --section repair_recovery --format json",
+        "fault_classes": [
+            {
+                "id": "user_content_fault",
+                "likely_owner": "repo owner",
+                "repairability": "manual-review-first",
+                "escalation": "ask for human intent when content authority is ambiguous",
+            },
+            {
+                "id": "agent_operation_fault",
+                "likely_owner": "current agent",
+                "repairability": "safe helper when the affected surface is managed or generated",
+                "escalation": "manual review when ownership or intent is unclear",
+            },
+            {
+                "id": "package_affordance_fault",
+                "likely_owner": "package maintainers",
+                "repairability": "route to interface/scaffold/helper improvement",
+                "escalation": "create an improvement signal when the same class repeats",
+            },
+            {
+                "id": "package_command_bug",
+                "likely_owner": "package maintainers",
+                "repairability": "safe repair may recover state, but the command path needs regression work",
+                "escalation": "capture command, invariant, actual state, affected surfaces, reproduction, and regression-test hint",
+            },
+            {
+                "id": "stale_external_evidence",
+                "likely_owner": "evidence adapter or operator",
+                "repairability": "refresh or mark stale before acting on counts",
+                "escalation": "do not treat stale provider data as current execution pressure",
+            },
+            {
+                "id": "generated_artifact_drift",
+                "likely_owner": "generator or agent operation",
+                "repairability": "regenerate from declared source when source authority is clear",
+                "escalation": "manual review when generated and source surfaces disagree ambiguously",
+            },
+            {
+                "id": "ambiguous_ownership",
+                "likely_owner": "repo owner",
+                "repairability": "manual-review-only",
+                "escalation": "do not overwrite local owner edits without explicit intent",
+            },
+            {
+                "id": "local_only_leakage",
+                "likely_owner": "agent/runtime integration",
+                "repairability": "move or remove from shared authority when unambiguous",
+                "escalation": "manual review if shared state may already depend on it",
+            },
+        ],
+        "invariants": [
+            {
+                "id": "workspace.required_surface_present",
+                "owner": "workspace",
+                "severity": "warning",
+                "repair_class": "safe-deterministic",
+                "fault_classes": ["agent_operation_fault", "package_command_bug"],
+            },
+            {
+                "id": "workspace.external_handoff_current",
+                "owner": "workspace",
+                "severity": "warning",
+                "repair_class": "safe-deterministic",
+                "fault_classes": ["generated_artifact_drift", "package_command_bug"],
+            },
+            {
+                "id": "workspace.startup_pointer_present",
+                "owner": "repo",
+                "severity": "warning",
+                "repair_class": "manual-review",
+                "fault_classes": ["agent_operation_fault", "ambiguous_ownership"],
+            },
+            {
+                "id": "workspace.no_absolute_paths",
+                "owner": "repo",
+                "severity": "warning",
+                "repair_class": "manual-review",
+                "fault_classes": ["user_content_fault", "local_only_leakage"],
+            },
+            {
+                "id": "planning.active_execplan_exists",
+                "owner": "planning",
+                "severity": "warning",
+                "repair_class": "safe-deterministic-when-row-is-stale",
+                "fault_classes": ["agent_operation_fault", "package_command_bug"],
+            },
+            {
+                "id": "planning.no_closed_work_in_live_state",
+                "owner": "planning",
+                "severity": "warning",
+                "repair_class": "safe-deterministic-when-closeout-is-unambiguous",
+                "fault_classes": ["agent_operation_fault", "package_affordance_fault", "package_command_bug"],
+            },
+            {
+                "id": "structured.schema_valid",
+                "owner": "surface owner",
+                "severity": "error",
+                "repair_class": "manual-review-unless-generated",
+                "fault_classes": ["user_content_fault", "agent_operation_fault", "package_command_bug"],
+            },
+            {
+                "id": "memory.no_active_task_state",
+                "owner": "memory",
+                "severity": "warning",
+                "repair_class": "route-to-planning-or-discard",
+                "fault_classes": ["agent_operation_fault", "package_affordance_fault"],
+            },
+            {
+                "id": "local_only.not_shared_authority",
+                "owner": "workspace",
+                "severity": "warning",
+                "repair_class": "manual-review",
+                "fault_classes": ["local_only_leakage"],
+            },
+            {
+                "id": "external_evidence.aggregates_match_items",
+                "owner": "evidence adapter",
+                "severity": "warning",
+                "repair_class": "safe-deterministic-when-items-are-authoritative",
+                "fault_classes": ["stale_external_evidence", "package_command_bug"],
+            },
+        ],
+        "repair_action_shape": {
+            "required_fields": [
+                "id",
+                "invariant",
+                "fault_class",
+                "severity",
+                "owner",
+                "safe_to_apply",
+                "risk",
+                "command",
+                "dry_run",
+                "proof_after",
+                "current_fault_summary",
+                "do_not",
+            ],
+            "rule": "Prefer one primary next action, with detail available in repair_actions or manual_review_actions.",
+        },
+        "package_command_bug_signal": {
+            "required_fields": [
+                "command_run",
+                "expected_invariant",
+                "actual_broken_state",
+                "affected_surfaces",
+                "safe_repair_available",
+                "reproduction_command",
+                "suggested_regression_test",
+            ],
+            "route": "improvement_signal candidate or issue follow-up when a package-owned command violates its postcondition",
+        },
+        "recurrence_to_improvement": {
+            "first_seen": "repair or review the state without promoting product work by default",
+            "repeated": "ask whether the wrong path can be removed, merged, scaffolded, or made obvious",
+            "human_confirmed": "route to issue, planning, config/check, docs, or agent aid with provenance",
+            "preferred_remedies": ["remove_or_merge_wrong_path", "affordance", "scaffold", "writer_helper", "agent_aid", "regression_test"],
+        },
+        "operational_affordance_rule": (
+            "Repair output should show current fault summary, one primary safe next action when possible, resolved command, "
+            "risk, dry-run/apply distinction, proof_after, and do_not guidance."
+        ),
+    }
+
+
+def _workspace_repair_payload(
+    *,
+    target_root: Path,
+    actions: list[dict[str, str]],
+    warnings: list[dict[str, str]],
+    command_name: str,
+    cli_invoke: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+    if command_name != "doctor":
+        return [], [], _empty_repair_plan(command_name=command_name)
+
+    repair_actions: list[dict[str, Any]] = []
+    manual_review_actions: list[dict[str, Any]] = []
+    missing_workspace_surfaces: list[str] = []
+    generated_handoff_surfaces: list[str] = []
+    missing_startup_surfaces: list[str] = []
+    pointer_surfaces: list[str] = []
+    absolute_path_surfaces: list[str] = []
+    contract_drift_surfaces: list[str] = []
+
+    for action in actions:
+        path = str(action.get("path", ""))
+        kind = str(action.get("kind", ""))
+        detail = str(action.get("detail", ""))
+        if kind == "missing" and path in {relative.as_posix() for relative in WORKSPACE_PAYLOAD_FILES}:
+            missing_workspace_surfaces.append(path)
+        if path == WORKSPACE_EXTERNAL_AGENT_PATH.as_posix() and kind in {"missing", "warning"}:
+            generated_handoff_surfaces.append(path)
+        if kind == "missing" and "root startup entrypoint missing" in detail:
+            missing_startup_surfaces.append(path)
+        if "workspace workflow pointer block missing" in detail:
+            pointer_surfaces.append(path)
+        if "absolute path found" in detail:
+            absolute_path_surfaces.append(path)
+
+    for warning in warnings:
+        path = str(warning.get("path", ""))
+        message = str(warning.get("message", ""))
+        if "contract drift:" in message:
+            contract_drift_surfaces.append(path)
+
+    if missing_workspace_surfaces:
+        repair_actions.append(
+            _workspace_safe_repair_action(
+                id="restore-missing-workspace-surface",
+                invariant="workspace.required_surface_present",
+                fault_class="agent_operation_fault",
+                owner="workspace",
+                target_root=target_root,
+                cli_invoke=cli_invoke,
+                affected_surfaces=missing_workspace_surfaces,
+                current_fault_summary="Required product-managed workspace surface(s) are missing.",
+                risk="low; regenerates managed workspace surfaces from package payloads",
+                do_not=[
+                    "Do not hand-author managed workspace payloads when upgrade can recreate them.",
+                    "Do not treat the missing surface as repo-owned without checking ownership metadata.",
+                ],
+            )
+        )
+    if generated_handoff_surfaces:
+        repair_actions.append(
+            _workspace_safe_repair_action(
+                id="refresh-generated-agent-handoff",
+                invariant="workspace.external_handoff_current",
+                fault_class="generated_artifact_drift",
+                owner="workspace",
+                target_root=target_root,
+                cli_invoke=cli_invoke,
+                affected_surfaces=generated_handoff_surfaces,
+                current_fault_summary="Generated external-agent handoff surface is missing or stale.",
+                risk="low; refreshes generated adapter text from declared workspace/module state",
+                do_not=[
+                    "Do not make llms.txt a second handbook.",
+                    "Do not edit generated adapter doctrine instead of refreshing from source authority.",
+                ],
+            )
+        )
+
+    for surface in missing_startup_surfaces:
+        manual_review_actions.append(
+            _workspace_manual_review_action(
+                id="restore-startup-entrypoint-manually",
+                invariant="workspace.startup_entrypoint_present",
+                fault_class="ambiguous_ownership",
+                owner="repo",
+                target_root=target_root,
+                cli_invoke=cli_invoke,
+                affected_surfaces=[surface],
+                current_fault_summary="Configured root startup entrypoint is missing.",
+                risk="manual review required; startup files are repo-owned authority surfaces",
+                do_not=[
+                    "Do not overwrite repo-owned startup policy without explicit intent.",
+                    "Do not assume AGENTS.md is the configured entrypoint when config says otherwise.",
+                ],
+            )
+        )
+    for surface in pointer_surfaces:
+        manual_review_actions.append(
+            _workspace_manual_review_action(
+                id="restore-workspace-pointer-manually",
+                invariant="workspace.startup_pointer_present",
+                fault_class="agent_operation_fault",
+                owner="repo",
+                target_root=target_root,
+                cli_invoke=cli_invoke,
+                affected_surfaces=[surface],
+                current_fault_summary="Root startup entrypoint no longer points at the workspace workflow.",
+                risk="manual review required; the surrounding startup file is repo-owned",
+                do_not=[
+                    "Do not replace unfenced repo instructions while restoring the workspace pointer.",
+                    "Do not widen the pointer into a second workflow handbook.",
+                ],
+            )
+        )
+    if absolute_path_surfaces:
+        manual_review_actions.append(
+            _workspace_manual_review_action(
+                id="remove-or-localize-absolute-paths",
+                invariant="workspace.no_absolute_paths",
+                fault_class="local_only_leakage",
+                owner="repo",
+                target_root=target_root,
+                cli_invoke=cli_invoke,
+                affected_surfaces=absolute_path_surfaces,
+                current_fault_summary="Shared workspace surface contains absolute local path(s).",
+                risk="manual review required; local paths may encode environment-specific assumptions",
+                do_not=[
+                    "Do not preserve machine-local paths in shared authority surfaces.",
+                    "Do not delete path context if the repo needs a portable replacement.",
+                ],
+            )
+        )
+    if contract_drift_surfaces:
+        manual_review_actions.append(
+            _workspace_manual_review_action(
+                id="investigate-contract-drift",
+                invariant="structured.schema_valid",
+                fault_class="package_command_bug",
+                owner="package",
+                target_root=target_root,
+                cli_invoke=cli_invoke,
+                affected_surfaces=contract_drift_surfaces,
+                current_fault_summary="Workspace contract integrity check reported drift.",
+                risk="manual review required; contract drift may indicate a package-command or generation bug",
+                do_not=[
+                    "Do not silence contract drift without adding or updating regression proof.",
+                    "Do not classify package-created invalid state as an ordinary user edit.",
+                ],
+                package_command_bug_signal={
+                    "command_run": f"{cli_invoke} doctor --target {target_root.as_posix()} --format json",
+                    "expected_invariant": "structured.schema_valid",
+                    "actual_broken_state": "contract integrity check failed",
+                    "affected_surfaces": contract_drift_surfaces,
+                    "safe_repair_available": False,
+                    "reproduction_command": f"{cli_invoke} doctor --target {target_root.as_posix()} --format json",
+                    "suggested_regression_test": "Add a focused contract integrity regression covering the drifted contract surface.",
+                },
+            )
+        )
+
+    return (
+        repair_actions,
+        manual_review_actions,
+        _repair_plan_payload(
+            command_name=command_name,
+            repair_actions=repair_actions,
+            manual_review_actions=manual_review_actions,
+        ),
+    )
+
+
+def _empty_repair_plan(*, command_name: str) -> dict[str, Any]:
+    return {
+        "kind": "workspace-repair-plan/v1",
+        "command": command_name,
+        "status": "not-evaluated",
+        "primary_next_action": {
+            "action": "none",
+            "summary": "Repair actions are emitted by doctor diagnostics.",
+            "safe_to_apply": False,
+        },
+        "repair_action_count": 0,
+        "manual_review_action_count": 0,
+        "detail_sections": ["repair_actions", "manual_review_actions"],
+    }
+
+
+def _repair_plan_payload(
+    *,
+    command_name: str,
+    repair_actions: list[dict[str, Any]],
+    manual_review_actions: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if repair_actions:
+        primary = repair_actions[0]
+        status = "safe-action-available"
+    elif manual_review_actions:
+        primary = manual_review_actions[0]
+        status = "manual-review-required"
+    else:
+        primary = {
+            "action": "none",
+            "summary": "No repair or manual-review action is needed for workspace diagnostics.",
+            "safe_to_apply": False,
+        }
+        status = "clean"
+    return {
+        "kind": "workspace-repair-plan/v1",
+        "command": command_name,
+        "status": status,
+        "primary_next_action": primary,
+        "repair_action_count": len(repair_actions),
+        "manual_review_action_count": len(manual_review_actions),
+        "detail_sections": ["repair_actions", "manual_review_actions"],
+        "affordance_rule": "Show one primary next action first; keep alternatives and evidence in JSON detail sections.",
+    }
+
+
+def _workspace_safe_repair_action(
+    *,
+    id: str,
+    invariant: str,
+    fault_class: str,
+    owner: str,
+    target_root: Path,
+    cli_invoke: str,
+    affected_surfaces: list[str],
+    current_fault_summary: str,
+    risk: str,
+    do_not: list[str],
+) -> dict[str, Any]:
+    dry_run = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target_root.as_posix()} --dry-run --format json",
+        cli_invoke=cli_invoke,
+    )
+    command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target_root.as_posix()} --format json",
+        cli_invoke=cli_invoke,
+    )
+    proof_after = [
+        _command_with_cli_invoke(
+            command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json",
+            cli_invoke=cli_invoke,
+        )
+    ]
+    return {
+        "id": id,
+        "action": "run-workspace-upgrade",
+        "invariant": invariant,
+        "fault_class": fault_class,
+        "severity": "warning",
+        "owner": owner,
+        "safe_to_apply": True,
+        "risk": risk,
+        "command": command,
+        "run": command,
+        "dry_run": dry_run,
+        "proof_after": proof_after,
+        "affected_surfaces": affected_surfaces,
+        "current_fault_summary": current_fault_summary,
+        "do_not": do_not,
+        "recurrence": "first_seen",
+        "improvement_signal_candidate": {
+            "when": "repeated",
+            "kind": "repair_recurrence",
+            "route": "agentic-workspace defaults --section improvement_intake --format json",
+            "preferred_remedy": "remove, merge, scaffold, or make the correct action more obvious before adding prose",
+        },
+    }
+
+
+def _workspace_manual_review_action(
+    *,
+    id: str,
+    invariant: str,
+    fault_class: str,
+    owner: str,
+    target_root: Path,
+    cli_invoke: str,
+    affected_surfaces: list[str],
+    current_fault_summary: str,
+    risk: str,
+    do_not: list[str],
+    package_command_bug_signal: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    proof_after = [
+        _command_with_cli_invoke(
+            command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json",
+            cli_invoke=cli_invoke,
+        )
+    ]
+    payload: dict[str, Any] = {
+        "id": id,
+        "action": "manual-review",
+        "invariant": invariant,
+        "fault_class": fault_class,
+        "severity": "warning",
+        "owner": owner,
+        "safe_to_apply": False,
+        "risk": risk,
+        "command": None,
+        "run": None,
+        "dry_run": None,
+        "proof_after": proof_after,
+        "affected_surfaces": affected_surfaces,
+        "current_fault_summary": current_fault_summary,
+        "do_not": do_not,
+        "recurrence": "first_seen",
+        "improvement_signal_candidate": {
+            "when": "repeated",
+            "kind": "repair_recurrence",
+            "route": "agentic-workspace defaults --section improvement_intake --format json",
+            "preferred_remedy": "turn repeated manual repair into a clearer affordance, scaffold, or regression test",
+        },
+    }
+    if package_command_bug_signal is not None:
+        payload["package_command_bug_signal"] = package_command_bug_signal
+    return payload
 
 
 def _workspace_agents_template(
@@ -1973,12 +2491,22 @@ def _workspace_status_report(
     if not agents_path.exists():
         actions.append({"kind": "missing", "path": agents_relative.as_posix(), "detail": "root startup entrypoint missing"})
         warnings.append({"path": agents_relative.as_posix(), "message": "root startup entrypoint missing"})
+        repair_actions, manual_review_actions, repair_plan = _workspace_repair_payload(
+            target_root=target_root,
+            actions=actions,
+            warnings=warnings,
+            command_name=command_name,
+            cli_invoke=config.cli_invoke,
+        )
         return _workspace_report(
             target_root=target_root,
             message=f"{command_name.title()} report",
             dry_run=False,
             actions=actions,
             warnings=warnings,
+            repair_actions=repair_actions,
+            manual_review_actions=manual_review_actions,
+            repair_plan=repair_plan,
         )
 
     agents_text = agents_path.read_text(encoding="utf-8")
@@ -2089,12 +2617,23 @@ def _workspace_status_report(
         for error in integrity_errors:
             warnings.append({"path": "src/agentic_workspace/contracts/", "message": f"contract drift: {error}"})
 
+    repair_actions, manual_review_actions, repair_plan = _workspace_repair_payload(
+        target_root=target_root,
+        actions=actions,
+        warnings=warnings,
+        command_name=command_name,
+        cli_invoke=config.cli_invoke,
+    )
+
     return _workspace_report(
         target_root=target_root,
         message=f"{command_name.title()} report",
         dry_run=False,
         actions=actions,
         warnings=warnings,
+        repair_actions=repair_actions,
+        manual_review_actions=manual_review_actions,
+        repair_plan=repair_plan,
     )
 
 
@@ -3303,7 +3842,31 @@ def _run_lifecycle_command(
         local_only=local_only_repo_root is not None,
         cli_invoke=config.cli_invoke,
     )
+    if command_name in {"status", "doctor"}:
+        repair_actions, manual_review_actions = _aggregate_repair_actions_from_reports(reports)
+        payload["repair_actions"] = repair_actions
+        payload["manual_review_actions"] = manual_review_actions
+        payload["repair_plan"] = _repair_plan_payload(
+            command_name=command_name,
+            repair_actions=repair_actions,
+            manual_review_actions=manual_review_actions,
+        )
     return payload
+
+
+def _aggregate_repair_actions_from_reports(
+    reports: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    repair_actions: list[dict[str, Any]] = []
+    manual_review_actions: list[dict[str, Any]] = []
+    for report in reports:
+        for action in report.get("repair_actions", []):
+            if isinstance(action, dict):
+                repair_actions.append(action)
+        for action in report.get("manual_review_actions", []):
+            if isinstance(action, dict):
+                manual_review_actions.append(action)
+    return repair_actions, manual_review_actions
 
 
 def _lifecycle_plan_payload(
@@ -9144,6 +9707,7 @@ def _defaults_payload() -> dict[str, Any]:
             "rule": "Use one improvement-intake router before treating setup findings, review findings, validation friction, or memory improvement signals as separate mechanisms.",
             "payload": _improvement_intake_payload(),
         },
+        "repair_recovery": _repair_recovery_taxonomy_payload(),
         "improvement_signal": {
             "canonical_doc": "src/agentic_workspace/contracts/improvement_signal_contract.json",
             "command": "agentic-workspace defaults --section improvement_signal --format json",

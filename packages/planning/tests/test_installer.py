@@ -3195,6 +3195,46 @@ execplans = [
     assert any(action.kind == "updated" and "remove TODO item 'module-manifest-components'" in action.detail for action in result.actions)
 
 
+def test_archive_execplan_apply_cleanup_removes_work_item_and_string_execplan_pointer(tmp_path: Path) -> None:
+    plan_ref = ".agentic-workspace/planning/execplans/repair-drift-recovery-lane.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        f"""
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+work_items = [
+  {{ id = "repair-drift-recovery-lane", maturity = "active", status = "active", execplan = "{plan_ref}" }},
+]
+
+[active]
+execplans = [
+  "{plan_ref}",
+]
+
+[todo]
+active_items = []
+queued_items = []
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / plan_ref
+    _write_execplan_record(plan_path, item_id="repair-drift-recovery-lane", status="completed")
+
+    result = archive_execplan("repair-drift-recovery-lane", target=tmp_path, apply_cleanup=True)
+
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/repair-drift-recovery-lane.plan.json"
+
+    assert archived_path.exists()
+    assert not plan_path.exists()
+    assert "repair-drift-recovery-lane" not in state_text
+    assert "work_items = []" in state_text
+    assert "execplans = []" in state_text
+    assert any(action.kind == "updated" and "active execplan reference" in action.detail for action in result.actions)
+    assert any(action.kind == "updated" and "work_items item" in action.detail for action in result.actions)
+
+
 def test_archive_execplan_apply_cleanup_merges_compact_state_todo_and_roadmap_cleanup(tmp_path: Path) -> None:
     plan_ref = ".agentic-workspace/planning/execplans/planning-backed-dogfooding-guardrail.plan.json"
     _write(

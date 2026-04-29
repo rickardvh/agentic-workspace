@@ -1467,6 +1467,7 @@ def test_defaults_improvement_intake_section_selector_returns_unified_router(cap
         "review_finding",
         "validation_friction",
         "memory_improvement_signal",
+        "repair_recurrence",
     }
     assert answer["payload"]["audience_boundary"]["status"] == "target-repo"
     assert answer["payload"]["source_checkout_only"]["hidden_subtype_count"] == 1
@@ -3679,6 +3680,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
         "review_finding",
         "validation_friction",
         "memory_improvement_signal",
+        "repair_recurrence",
     ]
     assert intake["audience_boundary"]["status"] == "target-repo"
     assert "dogfooding_friction" not in json.dumps(intake, sort_keys=True)
@@ -3744,6 +3746,105 @@ def test_report_router_uses_resolved_cli_invoke_for_copyable_commands(tmp_path: 
     assert scenarios["opened-report-before-start"]["recover_by"] == "uv run agentic-workspace start --target ./repo --format json"
     assert payload["section_hints"][0]["command"].startswith("uv run agentic-workspace report ")
     assert payload["maintenance_pressure"]["subcategories"][0]["section_command"].startswith("uv run agentic-workspace report ")
+
+
+def test_defaults_repair_recovery_section_reports_fault_taxonomy(capsys) -> None:
+    assert cli.main(["defaults", "--section", "repair_recovery", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    fault_classes = {item["id"] for item in answer["fault_classes"]}
+    invariants = {item["id"] for item in answer["invariants"]}
+    assert "package_command_bug" in fault_classes
+    assert "workspace.required_surface_present" in invariants
+    assert "planning.active_execplan_exists" in invariants
+    assert "external_evidence.aggregates_match_items" in invariants
+    assert answer["package_command_bug_signal"]["required_fields"] == [
+        "command_run",
+        "expected_invariant",
+        "actual_broken_state",
+        "affected_surfaces",
+        "safe_repair_available",
+        "reproduction_command",
+        "suggested_regression_test",
+    ]
+    assert "repeated" in answer["recurrence_to_improvement"]
+    assert "proof_after" in answer["repair_action_shape"]["required_fields"]
+
+
+def test_improvement_intake_includes_repair_recurrence_subtype(capsys) -> None:
+    assert cli.main(["defaults", "--section", "improvement_intake", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    subtypes = {item["id"]: item for item in payload["answer"]["payload"]["subtypes"]}
+    repair = subtypes["repair_recurrence"]
+    assert repair["source"] == "doctor.repair_actions or doctor.manual_review_actions"
+    assert repair["selector"] == "agentic-workspace defaults --section repair_recovery --format json"
+    assert "affordance" in repair["correct_by_design_remedies"]
+
+
+def test_doctor_emits_affordance_shaped_repair_and_manual_review_actions(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    (target / ".agentic-workspace" / "WORKFLOW.md").unlink()
+    agents_path = target / "AGENTS.md"
+    agents_path.write_text(agents_path.read_text(encoding="utf-8").replace(cli.WORKSPACE_POINTER_BLOCK, ""), encoding="utf-8")
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    safe_action = workspace_report["repair_actions"][0]
+    assert safe_action["id"] == "restore-missing-workspace-surface"
+    assert safe_action["invariant"] == "workspace.required_surface_present"
+    assert safe_action["safe_to_apply"] is True
+    assert safe_action["command"].startswith("agentic-workspace upgrade --target ")
+    assert "--dry-run" in safe_action["dry_run"]
+    assert safe_action["proof_after"][0].startswith("agentic-workspace doctor --target ")
+    assert safe_action["do_not"]
+    assert safe_action["improvement_signal_candidate"]["kind"] == "repair_recurrence"
+
+    manual_action = workspace_report["manual_review_actions"][0]
+    assert manual_action["id"] == "restore-workspace-pointer-manually"
+    assert manual_action["invariant"] == "workspace.startup_pointer_present"
+    assert manual_action["safe_to_apply"] is False
+    assert manual_action["command"] is None
+    assert manual_action["proof_after"][0].startswith("agentic-workspace doctor --target ")
+
+    repair_plan = workspace_report["repair_plan"]
+    assert repair_plan["status"] == "safe-action-available"
+    assert repair_plan["primary_next_action"]["id"] == "restore-missing-workspace-surface"
+    assert repair_plan["repair_action_count"] == 1
+    assert repair_plan["manual_review_action_count"] == 1
+    assert payload["repair_plan"]["primary_next_action"]["id"] == "restore-missing-workspace-surface"
+    assert payload["repair_actions"][0]["id"] == "restore-missing-workspace-surface"
+    assert payload["manual_review_actions"][0]["id"] == "restore-workspace-pointer-manually"
+
+
+def test_doctor_repair_actions_use_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+    (target / "llms.txt").unlink()
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    action = workspace_report["repair_actions"][0]
+    assert action["id"] == "refresh-generated-agent-handoff"
+    assert action["command"].startswith("uv run agentic-workspace upgrade ")
+    assert action["dry_run"].startswith("uv run agentic-workspace upgrade ")
+    assert action["proof_after"][0].startswith("uv run agentic-workspace doctor ")
 
 
 def test_report_section_agent_aids_discovers_checked_in_and_local_aids(tmp_path: Path, capsys) -> None:
@@ -3867,6 +3968,7 @@ def test_report_improvement_intake_keeps_dogfooding_source_checkout_only(tmp_pat
         "review_finding",
         "validation_friction",
         "memory_improvement_signal",
+        "repair_recurrence",
     ]
 
 
