@@ -74,7 +74,6 @@ Treat these files as the current memory compatibility contract surfaces that sho
 - `.agentic-workspace/memory/repo/domains/README.md`
 - `.agentic-workspace/memory/repo/invariants/README.md`
 - `.agentic-workspace/memory/repo/runbooks/README.md`
-- `.agentic-workspace/memory/repo/mistakes/recurring-failures.md`
 - `.agentic-workspace/memory/repo/decisions/README.md`
 
 Treat upgrade metadata, audit scripts, bootstrap workspace files, shipped shared skills, and repo-created routing-feedback calibration as lower-stability helpers unless a stricter promise is stated later. Those helper surfaces matter operationally, but they remain easier to refine than the core installed memory contract above.
@@ -362,13 +361,13 @@ The installed `WORKFLOW.md` under `.agentic-workspace/memory/` is the full refer
 - **Promote when stable.** If a note matures into general guidance, move it into canonical docs and leave memory as a stub.
 - **Do not make memory the default answer to repo complexity.** Durable truth may stay or grow when justified, but improvement-signal notes should push agents toward clearer docs, safer tests, stronger tooling, or simpler structure when those fixes are feasible.
 
-Starter note templates are part of that installed contract too. Use `.agentic-workspace/memory/repo/templates/memory-note-template.md`, `.agentic-workspace/memory/repo/templates/invariant-template.md`, and `.agentic-workspace/memory/repo/templates/runbook-template.md` when you replace the shipped starter examples or add the first real repo-specific notes for those classes.
+Starter note templates are part of that installed contract too. Use `.agentic-workspace/memory/repo/templates/memory-note.template.md`, `.agentic-workspace/memory/repo/templates/invariant.template.md`, and `.agentic-workspace/memory/repo/templates/runbook.template.md` when you add the first real repo-specific notes for those classes.
 
 For manifest discoverability, the quickest installed guidance path is:
 
 - `.agentic-workspace/memory/repo/manifest.toml` for the machine-readable note map and optional improvement-pressure fields
 - `.agentic-workspace/memory/WORKFLOW.md` for the short explanation of when fields such as `memory_role`, `preferred_remediation`, `improvement_note`, `elimination_target`, and `retention_justification` should be used
-- `.agentic-workspace/memory/repo/templates/memory-note-template.md` for the compact note-level reminder of how improvement-signal notes should point at an upstream remediation target
+- `.agentic-workspace/memory/repo/templates/memory-note.template.md` for the compact note-level reminder of how improvement-signal notes should point at an upstream remediation target
 
 ## Command Summary
 

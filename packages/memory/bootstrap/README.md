@@ -90,7 +90,7 @@ Review and replace repo-specific placeholders such as:
 The installer can also fill these placeholders when you pass the matching explicit CLI flags.
 
 Delete unused routing examples once the target repository has concrete notes.
-When replacing those starter examples or adding the first repo-specific note of a class, start from `.agentic-workspace/memory/repo/templates/memory-note-template.md`, `.agentic-workspace/memory/repo/templates/invariant-template.md`, or `.agentic-workspace/memory/repo/templates/runbook-template.md` instead of copying old prose by hand.
+When adding the first repo-specific note of a class, start from `.agentic-workspace/memory/repo/templates/memory-note.template.md`, `.agentic-workspace/memory/repo/templates/invariant.template.md`, or `.agentic-workspace/memory/repo/templates/runbook.template.md` instead of copying old prose by hand.
 
 `AGENTS.md` should stay short and point to `.agentic-workspace/memory/WORKFLOW.md` for the shared operating model.
 Bootstrap should modify `AGENTS.md` only through the managed workflow pointer block. Repo-specific `AGENTS.md` prose outside that block is repo-owned and should not be treated as shared upgradeable guidance.

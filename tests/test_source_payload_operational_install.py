@@ -207,6 +207,62 @@ def test_sync_proof_warns_on_unclassified_source_extra(monkeypatch, tmp_path: Pa
     ]
 
 
+def test_memory_bootstrap_boundary_flags_repo_specific_payload(monkeypatch, tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_boundary_memory_repo_payload")
+    _write_root_surfaces(tmp_path)
+    _write(tmp_path / "packages" / "memory" / "bootstrap" / ".agentic-workspace" / "memory" / "repo" / "index.md", "# index")
+    _write(
+        tmp_path / "packages" / "memory" / "bootstrap" / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "README.md",
+        "# Runbooks",
+    )
+    _write(
+        tmp_path / "packages" / "memory" / "bootstrap" / ".agentic-workspace" / "memory" / "repo" / "templates" / "runbook.template.md",
+        "# Template",
+    )
+    _write(
+        tmp_path
+        / "packages"
+        / "memory"
+        / "bootstrap"
+        / ".agentic-workspace"
+        / "memory"
+        / "repo"
+        / "runbooks"
+        / "dogfooding-usage-ledger.md",
+        "# Repo-specific runbook",
+    )
+    _write(
+        tmp_path / "packages" / "memory" / "pyproject.toml",
+        """
+        [tool.hatch.build.targets.wheel.force-include]
+        "bootstrap" = "src/repo_memory_bootstrap/_payload"
+        """,
+    )
+    monkeypatch.setattr(mod, "_planning_expected_payload_files", lambda _repo_root: [])
+    monkeypatch.setattr(mod, "_memory_expected_payload_files", lambda _repo_root: [".agentic-workspace/memory/repo/index.md"])
+
+    warnings = mod.gather_boundary_warnings(repo_root=tmp_path)
+    proof = mod.gather_sync_proof(repo_root=tmp_path)
+
+    assert any(warning.warning_class == "payload_inventory_drift" for warning in warnings)
+    inventory = proof["packages"][1]["source_to_payload_inventory"]
+    assert inventory["unexpected"] == [".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md"]
+    assert inventory["classification_counts"] == {"intentional-source-extra": 2, "unexpected-source-extra": 1}
+
+
+def test_boundary_checker_warns_on_legacy_memory_tree(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_boundary_legacy_memory")
+    _write_root_surfaces(tmp_path)
+    _write(tmp_path / "packages" / "memory" / "memory" / "runbooks" / "dogfooding-usage-ledger.md", "# Legacy")
+
+    warnings = mod.gather_boundary_warnings(repo_root=tmp_path)
+
+    assert any(
+        warning.warning_class == "package_local_install_drift" and str(warning.path).endswith("packages/memory/memory")
+        for warning in warnings
+    )
+
+
 def test_planning_checker_has_single_full_source() -> None:
     canonical = WORKSPACE_ROOT / "packages" / "planning" / "scripts" / "check" / "check_planning_surfaces.py"
     root_wrapper = WORKSPACE_ROOT / "scripts" / "check" / "check_planning_surfaces.py"

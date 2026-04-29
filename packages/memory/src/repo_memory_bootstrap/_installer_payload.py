@@ -115,8 +115,6 @@ def _target_relative_path(relative_path: Path, *, target_layout: str) -> Path:
         return Path(".agentic-workspace/memory/skills") / relative_path.relative_to(LEGACY_SHIPPED_SKILLS_ROOT)
     if path_str.startswith("memory/"):
         return Path(".agentic-workspace/memory/repo") / relative_path.relative_to("memory")
-    if relative_path.name.endswith(".template.md"):
-        relative_path = relative_path.with_name(relative_path.name.replace(".template.md", ".md"))
     return relative_path
 
 

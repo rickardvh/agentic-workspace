@@ -2950,14 +2950,10 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
         )
 
     for required in PAYLOAD_REQUIRED_FILES:
-        target_required = required
-        if target_required.name.endswith(".template.md"):
-            target_required = target_required.with_name(target_required.name.replace(".template.md", ".md"))
-
-        present = target_required in payload_paths
+        present = required in payload_paths
         result.add(
             "current" if present else "manual review",
-            target_root / target_required,
+            target_root / required,
             "required payload file present" if present else "required payload file missing",
             role="payload-contract",
             safety="safe" if present else "manual",

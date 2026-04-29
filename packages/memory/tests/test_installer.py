@@ -1035,13 +1035,7 @@ Last seen
 
     assert ledger_path.read_text(encoding="utf-8").startswith("# Recurring Friction Ledger")
     assert "recurring-ledger-preservation" in ledger_path.read_text(encoding="utf-8")
-    assert any(
-        action.path == ledger_path
-        and action.kind == "customised"
-        and action.category == "customisation-present"
-        and "preserving repo-local customisation during upgrade" in action.detail
-        for action in result.actions
-    )
+    assert not any(action.path == ledger_path and action.kind in {"removed", "updated", "created"} for action in result.actions)
 
 
 def test_list_payload_files_excludes_agent_work_templates_and_gitignore_append(
@@ -1087,42 +1081,6 @@ def test_install_does_not_write_current_memory_seed_notes(tmp_path: Path) -> Non
         ".agentic-workspace/memory/repo/current/task-context.md",
     ):
         assert not (target / relative).exists()
-
-
-def test_install_writes_audit_clean_recurring_failures_seed_date(
-    tmp_path: Path,
-) -> None:
-    target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True, exist_ok=True)
-
-    installer.install_bootstrap(target=target)
-
-    text = (target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").read_text(encoding="utf-8")
-    assert "<LAST_CONFIRMED_DATE>" not in text
-    assert "## Last confirmed\n\n20" in text
-
-
-def test_bootstrap_recurring_failures_note_clarifies_anti_trap_contract() -> None:
-    text = (installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").read_text(
-        encoding="utf-8"
-    )
-
-    assert "anti-trap memory, not a bug tracker, issue mirror, or backlog" in text
-    assert "one verified incident that clearly exposes a trap likely to recur" in text
-    assert (
-        "Move one-off bugs, active debugging, and status tracking into tests, canonical docs, issues, or the planning surface instead."
-        in text
-    )
-
-
-def test_bootstrap_recurring_friction_ledger_clarifies_pre_backlog_evidence_contract() -> None:
-    text = (installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "recurring-friction-ledger.md").read_text(
-        encoding="utf-8"
-    )
-
-    assert "without opening a new issue yet" in text
-    assert "This note is pre-backlog evidence, not a backlog, issue mirror, or execution log." in text
-    assert "A later promotion decision can cite concrete recurrence bullets instead of chat memory." in text
 
 
 def test_install_writes_upgrade_source_metadata(tmp_path: Path) -> None:
@@ -2870,7 +2828,7 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
     assert "`use_when`" in text
     assert "`evidence`" in text
     assert "## Starter templates" in text
-    assert ".agentic-workspace/memory/repo/templates/memory-note-template.md" in text
+    assert ".agentic-workspace/memory/repo/templates/memory-note.template.md" in text
     assert "## Improvement metadata quick reference" in text
     assert "`retention_justification`" in text
     assert "`summary`, `applies_to`, `use_when`, and `evidence`" in text
@@ -2879,15 +2837,12 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
 def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() -> None:
     text = (installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "index.md").read_text(encoding="utf-8")
 
-    assert "## Common task bundles" in text
-    assert "monorepo memory-package work" in text
-    assert "workspace ownership or package-boundary change" in text
+    assert "## Starter templates" in text
+    assert "memory-note.template.md" in text
     assert "## Task routing" in text
-    assert "If touching `packages/memory/**`, load `.agentic-workspace/memory/repo/domains/memory-package-context.md`." in text
-    assert "not a task tracker, issue mirror, or broad fallback handbook" in text
-    assert "## Loading rule" in text
+    assert "not a task tracker, issue mirror, execution log, or broad fallback handbook" in text
+    assert "Create repo-specific notes only from local evidence in the target repository." in text
     assert "## One-home reminder" in text
-    assert "live decision review: the active planning slice plus `.agentic-workspace/memory/repo/decisions/README.md`" in text
 
 
 def test_bootstrap_readme_includes_optional_patterns_and_current_memory_migration_shape() -> None:
@@ -2922,23 +2877,24 @@ def test_bootstrap_readme_includes_optional_patterns_and_current_memory_migratio
     assert "`retention_justification`" in text
 
 
-def test_bootstrap_payload_includes_starter_examples_for_primary_note_classes() -> None:
+def test_bootstrap_payload_uses_templates_not_repo_specific_starter_notes() -> None:
     payload_root = installer.payload_root()
+    repo_root = payload_root / ".agentic-workspace" / "memory" / "repo"
 
-    assert (payload_root / ".agentic-workspace" / "memory" / "repo" / "domains" / "example-runtime-boundary.md").exists()
-    assert (payload_root / ".agentic-workspace" / "memory" / "repo" / "invariants" / "example-response-contract.md").exists()
-    assert (payload_root / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "example-release-check.md").exists()
-    assert (payload_root / ".agentic-workspace" / "memory" / "repo" / "decisions" / "example-cli-selection.md").exists()
+    assert (repo_root / "templates" / "memory-note.template.md").exists()
+    assert (repo_root / "templates" / "invariant.template.md").exists()
+    assert (repo_root / "templates" / "runbook.template.md").exists()
+    assert not (repo_root / "runbooks" / "dogfooding-usage-ledger.md").exists()
+    assert not (repo_root / "domains" / "example-runtime-boundary.md").exists()
+    assert not (repo_root / "skills").exists()
 
-    manifest_text = (payload_root / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").read_text(encoding="utf-8")
-    assert '[notes.".agentic-workspace/memory/repo/domains/example-runtime-boundary.md"]' in manifest_text
-    assert '[notes.".agentic-workspace/memory/repo/invariants/example-response-contract.md"]' in manifest_text
-    assert '[notes.".agentic-workspace/memory/repo/runbooks/example-release-check.md"]' in manifest_text
-    assert '[notes.".agentic-workspace/memory/repo/decisions/example-cli-selection.md"]' in manifest_text
+    manifest_text = (repo_root / "manifest.toml").read_text(encoding="utf-8")
+    assert '[notes.".agentic-workspace/memory/repo/index.md"]' in manifest_text
+    assert "dogfooding-usage-ledger.md" not in manifest_text
 
 
 def test_memory_note_template_includes_improvement_signal_metadata() -> None:
-    text = (installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "templates" / "memory-note-template.md").read_text(
+    text = (installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "templates" / "memory-note.template.md").read_text(
         encoding="utf-8"
     )
 

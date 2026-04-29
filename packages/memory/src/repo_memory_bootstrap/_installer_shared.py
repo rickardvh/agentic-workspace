@@ -36,11 +36,10 @@ DEPRECATED_CURRENT_MEMORY_FILES = (
 )
 OPTIONAL_CURRENT_MEMORY_FILES = (Path(".agentic-workspace/memory/repo/current/routing-feedback.md"),)
 ROUTING_BASELINE = (Path(".agentic-workspace/memory/repo/index.md"),)
-STARTER_EXAMPLE_FILES = (
-    Path(".agentic-workspace/memory/repo/domains/example-runtime-boundary.md"),
-    Path(".agentic-workspace/memory/repo/invariants/example-response-contract.md"),
-    Path(".agentic-workspace/memory/repo/runbooks/example-release-check.md"),
-    Path(".agentic-workspace/memory/repo/decisions/example-cli-selection.md"),
+STARTER_TEMPLATE_FILES = (
+    Path(".agentic-workspace/memory/repo/templates/invariant.template.md"),
+    Path(".agentic-workspace/memory/repo/templates/memory-note.template.md"),
+    Path(".agentic-workspace/memory/repo/templates/runbook.template.md"),
 )
 BOOTSTRAP_WORKSPACE_FILES = (
     BOOTSTRAP_WORKSPACE_ROOT / "README.md",
@@ -71,11 +70,10 @@ PAYLOAD_REQUIRED_FILES = (
     WORKFLOW_PATH,
     UPGRADE_SOURCE_PATH,
     Path(".agentic-workspace/memory/repo/domains/README.md"),
-    *STARTER_EXAMPLE_FILES,
     Path(".agentic-workspace/memory/repo/invariants/README.md"),
     Path(".agentic-workspace/memory/repo/runbooks/README.md"),
-    Path(".agentic-workspace/memory/repo/mistakes/recurring-failures.md"),
     Path(".agentic-workspace/memory/repo/decisions/README.md"),
+    *STARTER_TEMPLATE_FILES,
     Path(".agentic-workspace/docs/memory-metadata-contract.md"),
     Path(".agentic-workspace/docs/installer-behavior.md"),
     *BOOTSTRAP_WORKSPACE_FILES,
@@ -90,7 +88,6 @@ MEMORY_COMPATIBILITY_CONTRACT_FILES = (
     Path(".agentic-workspace/memory/repo/domains/README.md"),
     Path(".agentic-workspace/memory/repo/invariants/README.md"),
     Path(".agentic-workspace/memory/repo/runbooks/README.md"),
-    Path(".agentic-workspace/memory/repo/mistakes/recurring-failures.md"),
     Path(".agentic-workspace/memory/repo/decisions/README.md"),
     Path(".agentic-workspace/docs/memory-metadata-contract.md"),
 )

@@ -21,9 +21,9 @@ EXPECTED_CORE_MANAGED_PATHS = {
     "bootstrap/README.md",
     "bootstrap/.agentic-workspace/memory/repo/index.md",
     "bootstrap/.agentic-workspace/memory/repo/manifest.toml",
-    "bootstrap/.agentic-workspace/memory/repo/mistakes/recurring-failures.md",
-    "bootstrap/.agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md",
-    "bootstrap/.agentic-workspace/memory/repo/skills/README.md",
+    "bootstrap/.agentic-workspace/memory/repo/templates/memory-note.template.md",
+    "bootstrap/.agentic-workspace/memory/repo/templates/invariant.template.md",
+    "bootstrap/.agentic-workspace/memory/repo/templates/runbook.template.md",
     "skills/README.md",
     "skills/bootstrap-adoption/SKILL.md",
     "skills/bootstrap-upgrade/SKILL.md",
@@ -62,6 +62,27 @@ def test_current_memory_has_no_required_shipped_baseline() -> None:
     assert CURRENT_MEMORY_BASELINE == ()
     assert Path(".agentic-workspace/memory/repo/current/routing-feedback.md") in OPTIONAL_CURRENT_MEMORY_FILES
     assert all(not path.as_posix().startswith(".agentic-workspace/memory/repo/current/") for path in PAYLOAD_REQUIRED_FILES)
+
+
+def test_memory_bootstrap_repo_payload_excludes_repo_specific_content() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        wheel_path = _build_artifact("wheel", Path(tmpdir))
+        inventory = _artifact_inventory(wheel_path)
+
+    repo_payload = sorted(
+        path.removeprefix("bootstrap/.agentic-workspace/memory/repo/")
+        for path in inventory
+        if path.startswith("bootstrap/.agentic-workspace/memory/repo/")
+    )
+    disallowed = [
+        path
+        for path in repo_payload
+        if not (path == "index.md" or path == "manifest.toml" or path.endswith("/README.md") or path.endswith(".template.md"))
+    ]
+
+    assert disallowed == []
+    assert "runbooks/dogfooding-usage-ledger.md" not in repo_payload
+    assert not any(path.startswith("skills/") for path in repo_payload)
 
 
 def test_memory_wheel_excludes_generated_cli_package_metadata() -> None:

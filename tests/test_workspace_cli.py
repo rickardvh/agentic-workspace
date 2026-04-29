@@ -3669,31 +3669,11 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert payload["health"] == "healthy"
     assert "module_reports" not in payload
     assert "reports" not in payload
-    assert "maintenance_pressure" in payload
-    assert payload["maintenance_pressure"]["status"] == "attention"
+    assert "maintenance_pressure" not in payload
     assert payload["report_profile"]["feature_tier"]["advanced_policy"]["enabled_features"] == []
     assert "operational_compression" not in payload
     assert "closeout_trust" not in payload
     assert "external_work_delta" not in payload
-    maintenance = payload["maintenance_pressure"]
-    assert maintenance["kind"] == "workspace-maintenance-pressure/v1"
-    assert maintenance["current_execution_separate"] is True
-    subcategories = {item["id"]: item for item in maintenance["subcategories"]}
-    assert set(subcategories) >= {
-        "current_state_stale",
-        "historical_audit",
-        "archive_only_residue",
-        "review_retention",
-        "archive_retention",
-        "generated_output_footprint",
-        "external_evidence_stale",
-        "closeout_reconciliation",
-    }
-    assert subcategories["archive_only_residue"]["detail_section"] == "module_reports"
-    assert subcategories["closeout_reconciliation"]["detail_section"] == "closeout_trust"
-    assert subcategories["external_evidence_stale"]["section_command"] == (
-        "agentic-workspace report --target ./repo --section external_work_delta --format json"
-    )
     assert payload["execution_shape"]["task_shape_recommender"]["status"] == "available"
     assert payload["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
     intake = payload["improvement_intake"]
@@ -3722,8 +3702,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     section_hints = {item["section"]: item for item in payload["section_hints"]}
     assert section_hints["module_reports"]["volume"] == "high"
     assert "compact router field" in section_hints["module_reports"]["why_now"]
-    assert section_hints["maintenance_pressure"]["volume"] == "normal"
-    assert "residue" in section_hints["maintenance_pressure"]["purpose"]
+    assert "maintenance_pressure" not in section_hints
     assert section_hints["improvement_intake"]["volume"] == "normal"
     assert "improvement signal" in section_hints["improvement_intake"]["why_now"]
     assert section_hints["external_work_reconciliation"]["volume"] == "normal"
@@ -3735,7 +3714,6 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert section_hints["effective_authority"]["command"] == (
         "agentic-workspace report --target ./repo --section effective_authority --format json"
     )
-    assert any(item["detail_section"] == "closeout_trust" for item in maintenance["subcategories"])
 
     assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
     closeout_payload = json.loads(capsys.readouterr().out)
@@ -3772,7 +3750,8 @@ def test_report_router_uses_resolved_cli_invoke_for_copyable_commands(tmp_path: 
     scenarios = {item["id"]: item for item in ordinary_path["off_happy_path_recovery"]["scenarios"]}
     assert scenarios["opened-report-before-start"]["recover_by"] == "uv run agentic-workspace start --target ./repo --format json"
     assert payload["section_hints"][0]["command"].startswith("uv run agentic-workspace report ")
-    assert payload["maintenance_pressure"]["subcategories"][0]["section_command"].startswith("uv run agentic-workspace report ")
+    if "maintenance_pressure" in payload:
+        assert payload["maintenance_pressure"]["subcategories"][0]["section_command"].startswith("uv run agentic-workspace report ")
 
 
 def test_defaults_repair_recovery_section_reports_fault_taxonomy(capsys) -> None:

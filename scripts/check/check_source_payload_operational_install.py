@@ -90,7 +90,8 @@ def _planning_expected_payload_files(repo_root: Path) -> list[str]:
     sys.path.insert(0, str(package_src))
     try:
         installer = importlib.import_module("repo_planning_bootstrap.installer")
-        return sorted(path.as_posix() for path in installer.REQUIRED_PAYLOAD_FILES)
+        package_payload = getattr(installer, "PACKAGE_PAYLOAD_FILES", installer.REQUIRED_PAYLOAD_FILES)
+        return sorted(path.as_posix() for path in package_payload)
     finally:
         try:
             sys.path.remove(str(package_src))
@@ -272,6 +273,9 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
         repo_root / "packages" / "memory" / ".agentic-workspace": (
             "Package-local installed memory surfaces detected under packages/memory; remove accidental installs and refresh the root operational install instead."
         ),
+        repo_root / "packages" / "memory" / "memory": (
+            "Legacy package-local memory tree detected under packages/memory/memory; bootstrap payload must live under packages/memory/bootstrap and must not duplicate installed repo memory."
+        ),
         repo_root / "packages" / "planning" / ".agentic-workspace": (
             "Package-local installed planning surfaces detected under packages/planning; remove accidental installs and refresh the root operational install instead."
         ),
@@ -415,23 +419,29 @@ def _classified_source_only_payload_files(*, package_name: str, expected: list[s
         ):
             classification = "intentional-source-extra"
             rule = "Planning maintainer helpers are source/bootstrap aids and are intentionally excluded from the packaged wheel payload."
-        elif package_name == "memory" and (
-            relative == "AGENTS.template.md"
-            or relative == "README.md"
-            or relative.startswith("optional/")
-            or relative.startswith("scripts/")
-            or relative.startswith(".agentic-workspace/memory/repo/skills/")
-            or relative.startswith(".agentic-workspace/memory/repo/templates/")
-            or relative.startswith(".agentic-workspace/memory/repo/domains/")
-            or relative.startswith(".agentic-workspace/memory/repo/runbooks/")
-            or relative.startswith(".agentic-workspace/memory/repo/decisions/")
-            or relative == ".agentic-workspace/memory/VERSION.md"
-            or relative == ".agentic-workspace/memory/repo/current/routing-feedback.md"
-        ):
+        elif package_name == "memory" and _is_allowed_memory_bootstrap_extra(relative):
             classification = "intentional-source-extra"
-            rule = "Memory package computes managed entries and optional fragments from bootstrap source; these extras are intentional when list-files/verify-payload stay current."
+            rule = "Memory bootstrap extras must stay structural or templated: directory README/AGENTS, *.template.md, schemas, optional fragments, scripts, and package-managed metadata."
         classified.append({"path": relative, "classification": classification, "rule": rule})
     return classified
+
+
+def _is_allowed_memory_bootstrap_extra(relative: str) -> bool:
+    path = Path(relative)
+    if relative in {
+        "AGENTS.template.md",
+        "README.md",
+        ".agentic-workspace/memory/VERSION.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
+    }:
+        return True
+    if relative.startswith("optional/") or relative.startswith("scripts/"):
+        return True
+    if path.name in {"README.md", "AGENTS.md", "AGENTS.template.md"}:
+        return True
+    if path.name.endswith(".template.md") or path.name.endswith(".schema.json"):
+        return True
+    return False
 
 
 def _classification_counts(items: list[dict[str, str]]) -> dict[str, int]:
