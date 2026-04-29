@@ -5511,6 +5511,7 @@ def _external_work_reconciliation_payload(
     )
     intent_validation = planning_report.get("intent_validation", {}) if isinstance(planning_report, dict) else {}
     planning_reconciliation = intent_validation.get("external_work_reconciliation", {}) if isinstance(intent_validation, dict) else {}
+    payload: dict[str, Any]
     if isinstance(planning_reconciliation, dict) and planning_reconciliation:
         payload = copy.deepcopy(planning_reconciliation)
     else:
@@ -5709,6 +5710,8 @@ def _infer_external_issue_reopens(body: str) -> list[str]:
 
 def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -> dict[str, Any] | None:
     number = issue.get("number")
+    if number is None:
+        return None
     try:
         issue_number = int(number)
     except (TypeError, ValueError):
@@ -5761,8 +5764,9 @@ def _workspace_root_for_evidence_path(path: Path) -> Path:
 def _external_intent_evidence_schema_findings(*, target_root: Path, payload: object) -> list[str]:
     if not isinstance(payload, dict):
         return ["external intent evidence must be a JSON object"]
+    evidence_payload = cast(dict[str, Any], payload)
     schema_path = target_root / ".agentic-workspace" / "planning" / "schemas" / "planning-external-intent-evidence.schema.json"
-    findings = _external_intent_evidence_consistency_findings(payload)
+    findings = _external_intent_evidence_consistency_findings(evidence_payload)
     if not schema_path.exists():
         return findings
     try:

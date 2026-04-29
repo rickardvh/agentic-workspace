@@ -1922,7 +1922,7 @@ def planning_reconcile(*, target: str | Path | None = None) -> dict[str, Any]:
         if isinstance(item, dict) and str(item.get("id", "")).strip()
     }
     state = _read_state_from_toml(target_root) or {}
-    roadmap = state.get("roadmap", {}) if isinstance(state, dict) else {}
+    roadmap = state.get("roadmap", {})
     lanes = roadmap.get("lanes", []) if isinstance(roadmap, dict) else []
     closed_lanes: list[dict[str, Any]] = []
     if isinstance(lanes, list):
@@ -4507,6 +4507,8 @@ def _finished_work_continuation_routed_by_roadmap(*, target_root: Path, candidat
         return []
 
     state = _read_state_from_toml(target_root)
+    if not isinstance(state, dict):
+        return []
     roadmap = state.get("roadmap", {}) if isinstance(state, dict) else {}
     if not isinstance(roadmap, dict):
         return []
