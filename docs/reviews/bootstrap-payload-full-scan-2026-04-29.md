@@ -22,6 +22,8 @@ Commands used:
 - raw filesystem classification of bootstrap and skill source trees
 - built artifact classification of `_payload`, `bootstrap`, `_skills`, and `skills` entries
 
+Skills are in scope because they are intentionally shipped declarative agent guidance. Their presence is not a finding. The hard boundary is executable code or runtime-specific assumptions in checked-in payload files.
+
 ## Hard Boundary Result
 
 No hard payload violations were found.
@@ -62,7 +64,7 @@ The memory bootstrap source contains 34 files:
 
 The package also ships `packages/memory/skills/` into `_skills`, adding bootstrap lifecycle skills outside the checked-in target payload.
 
-The unclear boundary is not executable code. It is procedural agent guidance shipped as target-repo checked-in files, especially temporary bootstrap workspace skills that the CLI could potentially provide or materialise only during lifecycle operations.
+This is acceptable product shape as long as those skills remain declarative and language-agnostic. A shipped skill may tell an agent what workflow to follow or which package CLI command to use; it must not assume that the host repository can execute Python, shell, Node, PowerShell, or any other language-specific helper from the checked-in payload.
 
 ### Planning
 
@@ -93,14 +95,14 @@ Today the implementation mixes both:
 
 - planning has a smaller default install, but still ships optional/deep surfaces in the artifact;
 - memory installs all managed memory skills and the temporary bootstrap workspace by default;
-- skill prompts are treated as checked-in payload, even though they behave like procedural execution affordances rather than durable repo knowledge.
+- skills are treated as checked-in declarative workflow affordances, which is valid when they stay language-agnostic and route execution back through package CLIs or host-provided commands.
 
-If the intended product shape is "smallest checked-in target repo by default, with CLI-owned behavior and optional affordances generated/materialised on demand", then memory should be compressed further and planning optional surfaces should be revisited.
+If the intended product shape is "smallest checked-in target repo by default, with CLI-owned executable behavior and declarative skills as optional or managed affordances", then memory default payload size and planning optional surfaces should be revisited without treating skills themselves as residue.
 
 ## Recommended Follow-Up
 
 1. Add a memory payload classification record matching `packages/planning/payload-surface-classification.json`.
-2. Split memory default payload into a smallest durable install plus optional lifecycle/skill materialisation.
-3. Decide whether bundled skills are package resources, generated local integration, or checked-in target-repo payload. Avoid treating them as ordinary durable repo surfaces by default.
+2. Split memory default payload into the smallest durable install plus clearly managed declarative skills where they provide leverage.
+3. Add checks or review guidance that shipped skills stay runtime-agnostic: they may route to package CLIs or host-declared commands, but must not ship or require language-specific helper code in target repos.
 4. Decide whether planning optional/deep docs should remain shipped in the artifact, move into package source query output, or become a separate optional resource bundle.
 5. Extend the source/payload checker with a non-failing payload-shape section that reports structural, machine, template, schema, prose, skill, optional, and temporary-lifecycle counts. This would make future scans cheap without making current architecture fail before the policy is settled.
