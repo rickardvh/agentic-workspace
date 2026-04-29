@@ -2848,9 +2848,12 @@ execplans = [
     assert 'maturity = "closed"' in state_text
     assert 'durable_residue = "planning"' in state_text
     assert 'residue_owner = ".agentic-workspace/planning/state.toml"' in state_text
+    assert 'title = "Plan Alpha"' not in state_text
+    assert 'closure = "archive-and-close"' not in state_text
     assert summary["work_maturity"]["closed_items"][0]["id"] == "plan-alpha"
     assert summary["work_maturity"]["closed_items"][0]["durable_residue"] == "planning"
     assert summary["work_maturity"]["counts"]["residue_routing_needed"] == 0
+    assert not any(warning["warning_class"] == "closed_work_history_residue" for warning in summary["planning_surface_health"]["warnings"])
     assert summary["todo"]["queued_count"] == 0
     assert any("closed work_items" in action.detail for action in result.actions)
 
@@ -3910,6 +3913,32 @@ def test_planning_summary_exposes_compact_planning_surface_health_when_not_clean
     assert summary["planning_surface_health"]["warning_count"] >= 1
     assert summary["planning_surface_health"]["warnings"][0]["warning_class"] == "execplan_structure_drift"
     assert "Restore the current template sections" in summary["planning_surface_health"]["recommended_next_action"]
+
+
+def test_planning_summary_warns_on_reconstructable_closed_work_history(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+work_items = [
+  { id = "done-history", title = "Done history", maturity = "closed", status = "done", path = ".agentic-workspace/planning/execplans/archive/done-history.plan.json", durable_residue = "evidence_only", residue_owner = "archive", residue_promotion_trigger = "none" },
+]
+
+[todo]
+active_items = []
+queued_items = []
+""",
+    )
+
+    summary = planning_summary(target=tmp_path)
+    warnings = summary["planning_surface_health"]["warnings"]
+
+    assert summary["planning_surface_health"]["status"] == "not-clean"
+    assert any(warning["warning_class"] == "closed_work_history_residue" for warning in warnings)
+    assert "Remove reconstructable closed work rows" in summary["planning_surface_health"]["recommended_next_action"]
 
 
 def test_planning_summary_exposes_intent_validation_contract(tmp_path: Path) -> None:

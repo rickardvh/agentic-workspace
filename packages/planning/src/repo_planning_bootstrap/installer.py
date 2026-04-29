@@ -3094,6 +3094,17 @@ def _planning_state_v1_warnings(*, target_root: Path, state: dict[str, Any] | No
                 )
             )
         warnings.extend(_planning_state_v1_item_warnings(bucket_path=bucket_path, item_id=item_id, item=item, maturity=maturity))
+        if _is_reconstructable_closed_state_history(bucket_path=bucket_path, item=item, maturity=maturity, status=status):
+            warnings.append(
+                {
+                    "warning_class": "closed_work_history_residue",
+                    "path": f"{PLANNING_STATE_PATH.as_posix()}#{bucket_path}.{item_id}",
+                    "message": (
+                        f"closed item {item_id} is reconstructable history; remove it from first-line state.toml "
+                        "unless it carries non-reconstructable future routing."
+                    ),
+                }
+            )
     return warnings
 
 
@@ -3237,6 +3248,39 @@ def _state_roadmap_candidates(state: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _non_empty_string(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
+
+
+def _closed_state_path_is_archive(path: str) -> bool:
+    normalized = path.replace("\\", "/")
+    return "/execplans/archive/" in normalized or normalized.startswith(".agentic-workspace/planning/execplans/archive/")
+
+
+def _closed_state_residue_owner(item: dict[str, Any]) -> str:
+    return str(
+        item.get("residue_owner") or item.get("residue owner") or item.get("residue_routing") or item.get("residue routing") or ""
+    ).strip()
+
+
+def _closed_state_has_future_relevant_routing(item: dict[str, Any]) -> bool:
+    owner = _closed_state_residue_owner(item)
+    if not owner or owner == "archive" or _closed_state_path_is_archive(owner):
+        return False
+    return bool(str(item.get("residue_promotion_trigger") or item.get("promotion_signal") or "").strip())
+
+
+def _is_reconstructable_closed_state_history(*, bucket_path: str, item: dict[str, Any], maturity: str, status: str) -> bool:
+    if bucket_path != "work_items" or maturity != "closed" or status not in {"done", "dismissed"}:
+        return False
+    if _closed_state_has_future_relevant_routing(item):
+        return False
+    path = str(item.get("path") or item.get("surface") or item.get("execplan") or "").strip()
+    if _closed_state_path_is_archive(path):
+        return True
+    residue = _planning_state_residue_value(item).strip().lower()
+    owner = _closed_state_residue_owner(item)
+    if residue in EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES or owner == "archive" or _closed_state_path_is_archive(owner):
+        return True
+    return True
 
 
 def _planning_state_v1_item_warnings(*, bucket_path: str, item_id: str, item: dict[str, Any], maturity: str) -> list[dict[str, str]]:
@@ -7623,6 +7667,10 @@ def _warning_remediation(warning_class: str) -> str | None:
             "Archive completed live execplans with `agentic-planning-bootstrap archive-plan <plan> --target .`, "
             "or return the plan to active status if it still owns future execution."
         ),
+        "closed_work_history_residue": (
+            "Remove reconstructable closed work rows from .agentic-workspace/planning/state.toml; keep closed rows only "
+            "when they carry non-reconstructable future routing."
+        ),
         "planning_memory_boundary_blur": "Move durable technical facts into memory or canonical docs, then leave planning surfaces lean.",
         "startup_policy_drift": "Restore the minimal startup order in AGENTS, quickstart, and manifest.",
     }.get(warning_class)
@@ -8585,9 +8633,13 @@ def _close_state_active_execplan_for_archive(
 
 def _archive_should_leave_closed_work_item(*, durable_residue: dict[str, str], closure_decision: str) -> bool:
     residue_status = durable_residue.get("status", "").strip().lower()
-    if closure_decision == "archive-but-keep-lane-open":
+    residue_owner = durable_residue.get("canonical owner now", "").strip()
+    promotion_trigger = durable_residue.get("promotion trigger", "").strip()
+    if closure_decision == "archive-but-keep-lane-open" and residue_status == "planning":
         return True
-    return residue_status not in EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES
+    if residue_status == "planning" and residue_owner == ".agentic-workspace/planning/state.toml" and promotion_trigger:
+        return True
+    return False
 
 
 def _closed_work_item_from_active_execplan(
@@ -8602,25 +8654,12 @@ def _closed_work_item_from_active_execplan(
     if not residue_owner and residue_status in EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES:
         residue_owner = "archive"
     closed: dict[str, Any] = {}
-    for key in (
-        "id",
-        "title",
-        "source",
-        "refs",
-        "issues",
-        "why_now",
-        "reason",
-        *PLANNING_STATE_ROLE_FIELDS,
-        "handoff_ready",
-    ):
-        if key in raw:
-            closed[key] = raw[key]
+    if raw.get("id"):
+        closed["id"] = raw["id"]
     closed.setdefault("id", Path(archived_record_relative).name.removesuffix(".plan.json").removesuffix(".md"))
-    closed["type"] = "slice"
     closed["maturity"] = "closed"
     closed["status"] = "done"
     closed["path"] = archived_record_relative
-    closed["closure"] = closure_decision
     closed["durable_residue"] = residue_status
     if residue_owner:
         closed["residue_owner"] = residue_owner
