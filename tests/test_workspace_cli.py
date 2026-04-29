@@ -3791,8 +3791,38 @@ def test_report_section_agent_aids_discovers_checked_in_and_local_aids(tmp_path:
     assert candidate["promotion_summary"]["discovery_route"] == "repo-check"
     assert candidate["promotion_summary"]["retention_after_promotion"] == "delete"
     assert [entry["id"] for entry in answer["recommended_actions"]] == ["workspace-validation-wrapper"]
+    recommended = answer["recommended_actions"][0]
+    assert recommended["risk"] == "candidate or advisory aid; inspect safety and portability before use"
+    assert recommended["command"] == 'agentic-workspace skills --target ./repo --task "<task>" --format json'
+    assert recommended["run"] == recommended["command"]
+    assert recommended["required_inputs"] == ["current task", "aid safety summary", "proof role"]
+    assert "declared validation" in recommended["next_proof"]
+    assert answer["recommended_action_omitted_count"] == 0
+    primary_action = answer["primary_next_action"]
+    assert primary_action["action"] == "use-agent-aid"
+    assert primary_action["id"] == "workspace-validation-wrapper"
+    assert primary_action["command"] == recommended["command"]
+    assert primary_action["required_inputs"] == ["current task", "aid safety summary", "proof role"]
     assert answer["local_only"]["entries"][0]["id"] == "codex"
     assert answer["local_only"]["entries"][0]["authority"] == "none"
+
+
+def test_report_section_agent_aids_routes_empty_discovery_to_repeat_friction_review(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(target), "--section", "agent_aids", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    action = payload["answer"]["primary_next_action"]
+    assert action["action"] == "create-or-promote-aid-only-if-repeated-friction"
+    assert action["command"] == 'agentic-workspace skills --target ./repo --task "<task>" --format json'
+    assert action["run"] == action["command"]
+    assert action["required_inputs"] == ["current task", "friction evidence", "portability boundary"]
+    assert "ordinary compact routes" in action["summary"]
 
 
 def test_report_improvement_intake_keeps_dogfooding_source_checkout_only(tmp_path: Path, capsys) -> None:
@@ -4480,6 +4510,15 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert closure_scope["larger_intent_closure"]["status"] == "open"
     assert closure_scope["larger_intent_closure"]["closure_decision"] == "archive-but-keep-lane-open"
     assert closure_scope["non_substitution_rule"] == "Validation success alone is not closure evidence."
+    residue_action = payload["closeout_trust"]["durable_residue_action"]
+    assert residue_action["action"] == "route-durable-residue"
+    assert residue_action["command"] == "agentic-workspace report --target ./repo --section closeout_trust --format json"
+    assert residue_action["run"] == residue_action["command"]
+    assert residue_action["risk"] == "read-only routing; mutations happen only through the selected owner surface"
+    assert residue_action["required_inputs"] == ["validation result", "issue or lane scope", "future relevance of any learning"]
+    assert "Memory" in residue_action["destinations"]
+    assert "future work goes to planning" in residue_action["destination_rule"]
+    assert "rerun summary/reconcile" in residue_action["next_proof"]
 
 
 def test_report_surfaces_local_only_memory_status(tmp_path: Path, capsys) -> None:
@@ -5072,6 +5111,9 @@ def test_report_surfaces_compact_lower_trust_closeout_summary(tmp_path: Path, ca
     assert payload["closeout_trust"]["trust"] == "lower-trust"
     assert payload["closeout_trust"]["lower_trust_closeout_count"] == 1
     assert any("Closed external planning item #closed-without-residue" in item for item in payload["closeout_trust"]["sample_signals"])
+    action = payload["closeout_trust"]["durable_residue_action"]
+    assert action["action"] == "route-durable-residue"
+    assert "lower-trust closeout signals" in action["summary"]
 
 
 def test_report_text_surfaces_compact_lower_trust_closeout_summary(tmp_path: Path, capsys) -> None:
@@ -6449,6 +6491,13 @@ def test_lifecycle_plan_uses_resolved_cli_invoke_for_next_actions(monkeypatch, t
     payload = json.loads(capsys.readouterr().out)
     lifecycle_plan = payload["lifecycle_plan"]
     assert lifecycle_plan["next_safe_command"]["command"].startswith("uv run agentic-workspace upgrade ")
+    primary_action = lifecycle_plan["primary_next_action"]
+    assert primary_action["action"] == "apply-lifecycle-plan"
+    assert primary_action["command"].startswith("uv run agentic-workspace upgrade ")
+    assert primary_action["run"] == primary_action["command"]
+    assert primary_action["risk"] == "may mutate repo-managed workspace surfaces"
+    assert primary_action["required_inputs"] == ["target repo", "selected modules", "dry-run plan"]
+    assert primary_action["next_proof"] == "run doctor after apply and inspect surface classifications"
     front_door = lifecycle_plan["root_upgrade_front_door"]
     assert front_door["ordinary_sequence"][0]["command"].startswith("uv run agentic-workspace upgrade ")
     assert front_door["ordinary_sequence"][1]["command"].startswith("uv run agentic-workspace upgrade ")
@@ -6536,6 +6585,14 @@ def test_uninstall_dry_run_requires_review_for_ambiguous_workspace_payload(tmp_p
     lifecycle_plan = payload["lifecycle_plan"]
     assert lifecycle_plan["review_required"] is True
     assert lifecycle_plan["next_safe_command"]["status"] == "review-required"
+    primary_action = lifecycle_plan["primary_next_action"]
+    assert primary_action["action"] == "resolve-lifecycle-review"
+    assert primary_action["command"].startswith("agentic-workspace uninstall ")
+    assert "--dry-run" in primary_action["command"]
+    assert primary_action["run"] == primary_action["command"]
+    assert primary_action["risk"] == "blocked until review items are resolved"
+    assert primary_action["required_inputs"] == ["target repo", "selected modules", "review items"]
+    assert primary_action["next_proof"] == "rerun the lifecycle dry-run after resolving review items"
     safety = lifecycle_plan["mutation_safety"]
     assert safety["classification"] == "destructive-mutation"
     assert ".agentic-workspace/WORKFLOW.md" not in safety["destructive_risk"]["planned_removals"]

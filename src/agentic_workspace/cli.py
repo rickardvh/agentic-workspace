@@ -315,15 +315,56 @@ def _agent_aid_storage_payload(*, target_root: Path | None = None) -> dict[str, 
     }
 
 
-def _agent_aids_report_payload(*, target_root: Path) -> dict[str, Any]:
+def _agent_aids_report_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
     checked_in_aids, manifest_warnings = _checked_in_agent_aid_entries(target_root=target_root)
     local_only_entries = _local_only_agent_aid_entries(target_root=target_root)
     visible_checked_in = [entry for entry in checked_in_aids if entry["status"] != "retired"]
+    storage = _guidance_with_cli_invoke(value=_agent_aid_storage_payload(target_root=target_root), cli_invoke=cli_invoke)
+    aid_discovery_command = _command_with_cli_invoke(
+        command='agentic-workspace skills --target ./repo --task "<task>" --format json',
+        cli_invoke=cli_invoke,
+    )
+    recommended_actions = [
+        {
+            "action": "use-agent-aid",
+            "id": entry["id"],
+            "summary": "Use this aid only when its manifest matches the current task and its safety summary is acceptable.",
+            "type": entry["type"],
+            "status": entry["status"],
+            "entrypoint": entry["entrypoint"],
+            "use_when": entry["use_when"],
+            "proof_role": entry["proof_role"],
+            "canonical_proof_route": entry["canonical_proof_route"],
+            "command": aid_discovery_command,
+            "run": aid_discovery_command,
+            "risk": "candidate or advisory aid; inspect safety and portability before use",
+            "required_inputs": ["current task", "aid safety summary", "proof role"],
+            "next_proof": "run the aid's declared validation or route through proof selection before treating it as canonical",
+        }
+        for entry in visible_checked_in[:3]
+    ]
+    primary_action = (
+        recommended_actions[0]
+        if recommended_actions
+        else {
+            "action": "create-or-promote-aid-only-if-repeated-friction",
+            "summary": "No checked-in aid is currently recommended; continue through ordinary compact routes and create a candidate only for repeated friction.",
+            "command": aid_discovery_command,
+            "risk": "read-only discovery unless an aid is later created or promoted",
+            "required_inputs": ["current task", "friction evidence", "portability boundary"],
+            "next_proof": "if an aid is created, validate its manifest and keep it candidate until promoted",
+        }
+    )
+    if "command" in primary_action:
+        primary_action["run"] = primary_action["command"]
     return {
         "kind": "workspace-agent-aids-discovery/v1",
         "status": "available",
-        "command": "agentic-workspace report --target ./repo --section agent_aids --format json",
-        "storage": _agent_aid_storage_payload(target_root=target_root),
+        "command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section agent_aids --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "storage": storage,
         "summary": {
             "checked_in_count": len(checked_in_aids),
             "visible_checked_in_count": len(visible_checked_in),
@@ -337,18 +378,9 @@ def _agent_aids_report_payload(*, target_root: Path) -> dict[str, Any]:
             "advisory_only": True,
             "entries": local_only_entries,
         },
-        "recommended_actions": [
-            {
-                "id": entry["id"],
-                "type": entry["type"],
-                "status": entry["status"],
-                "entrypoint": entry["entrypoint"],
-                "use_when": entry["use_when"],
-                "proof_role": entry["proof_role"],
-                "canonical_proof_route": entry["canonical_proof_route"],
-            }
-            for entry in visible_checked_in
-        ],
+        "primary_next_action": primary_action,
+        "recommended_actions": recommended_actions,
+        "recommended_action_omitted_count": max(len(visible_checked_in) - len(recommended_actions), 0),
         "warnings": manifest_warnings,
         "rules": [
             "candidate and advisory aids are discoverable but not canonical proof routes",
@@ -3251,6 +3283,25 @@ def _lifecycle_plan_payload(
         local_only=local_only,
         cli_invoke=cli_invoke,
     )
+    review_command = _lifecycle_apply_command(
+        command_name=command_name,
+        target_root=target_root,
+        selected_modules=selected_modules,
+        local_only=local_only,
+        cli_invoke=cli_invoke,
+        dry_run=True,
+    )
+    primary_action_command = (
+        review_command
+        if review_required
+        else next_command
+        if dry_run
+        else _command_with_cli_invoke(
+            command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json", cli_invoke=cli_invoke
+        )
+    )
+    next_status = "review-required" if review_required else "ready"
+    next_reason = "Resolve review_items before applying changes." if review_required else "Dry-run plan has no review blockers."
     plan = {
         "kind": "workspace-lifecycle-plan/v1",
         "command": command_name,
@@ -3280,10 +3331,28 @@ def _lifecycle_plan_payload(
             review_required=review_required,
             planned_removals=planned_removals,
         ),
+        "primary_next_action": {
+            "action": "resolve-lifecycle-review" if review_required else ("apply-lifecycle-plan" if dry_run else "verify-lifecycle-state"),
+            "command": primary_action_command,
+            "run": primary_action_command,
+            "risk": (
+                "blocked until review items are resolved"
+                if review_required
+                else ("may mutate repo-managed workspace surfaces" if dry_run else "read-only verification recommended after mutation")
+            ),
+            "required_inputs": ["target repo", "selected modules", "review items"]
+            if review_required
+            else ["target repo", "selected modules", "dry-run plan"],
+            "next_proof": (
+                "rerun the lifecycle dry-run after resolving review items"
+                if review_required
+                else "run doctor after apply and inspect surface classifications"
+            ),
+        },
         "next_safe_command": {
-            "status": "review-required" if review_required else "ready",
-            "command": next_command,
-            "reason": "Resolve review_items before applying changes." if review_required else "Dry-run plan has no review blockers.",
+            "status": next_status,
+            "command": review_command if review_required else next_command,
+            "reason": next_reason,
         },
     }
     if command_name == "upgrade":
@@ -3753,12 +3822,15 @@ def _lifecycle_apply_command(
     selected_modules: list[str],
     local_only: bool,
     cli_invoke: str = DEFAULT_CLI_INVOKE,
+    dry_run: bool = False,
 ) -> str:
     parts = ["agentic-workspace", command_name, "--target", target_root.as_posix()]
     for module_name in selected_modules:
         parts.extend(["--module", module_name])
     if local_only:
         parts.append("--local-only")
+    if dry_run:
+        parts.append("--dry-run")
     parts.extend(["--format", "json"])
     return str(_command_with_cli_invoke(command=" ".join(parts), cli_invoke=cli_invoke))
 
@@ -3871,7 +3943,7 @@ def _run_report_command(
     execution_shape = _execution_shape_payload(config=config, module_reports=module_reports)
     branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
     local_memory = _local_memory_payload(config=config)
-    closeout_trust = _report_closeout_trust_payload(module_reports=module_reports, target_root=target_root)
+    closeout_trust = _report_closeout_trust_payload(module_reports=module_reports, target_root=target_root, cli_invoke=config.cli_invoke)
     surface_value_guardrail = _surface_value_guardrail_payload()
     external_work_delta = _external_work_delta_payload(target_root=target_root)
     external_work_reconciliation = _external_work_reconciliation_payload(
@@ -3901,7 +3973,7 @@ def _run_report_command(
         ),
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
-        "agent_aids": _agent_aids_report_payload(target_root=target_root),
+        "agent_aids": _agent_aids_report_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "execution_shape": execution_shape,
         "agent_configuration_system": _agent_configuration_report_payload(
             config=config,
@@ -4933,7 +5005,33 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return report_section_hints(payload)
 
 
-def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]], target_root: Path | None = None) -> dict[str, Any]:
+def _report_closeout_trust_payload(
+    *,
+    module_reports: list[dict[str, Any]],
+    target_root: Path | None = None,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    def durable_residue_action(*, trust: str) -> dict[str, Any]:
+        action = {
+            "action": "route-durable-residue",
+            "summary": (
+                "Review lower-trust closeout signals and route missing residue to planning, Memory, docs, checks, or issue follow-up."
+                if trust == "lower-trust"
+                else "If closeout produced reusable learning, route it to the narrowest durable owner; otherwise record no durable residue."
+            ),
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section closeout_trust --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "risk": "read-only routing; mutations happen only through the selected owner surface",
+            "required_inputs": ["validation result", "issue or lane scope", "future relevance of any learning"],
+            "destinations": ["none", "planning", "Memory", "docs", "contracts/checks", "issue follow-up", "review/archive evidence"],
+            "destination_rule": "future work goes to planning; reusable non-canonical knowledge goes to Memory; stable rules go to docs/contracts/checks; evidence-only stays in review/archive; otherwise choose none",
+            "next_proof": "rerun summary/reconcile after routing residue before closing the issue or lane",
+        }
+        action["run"] = action["command"]
+        return action
+
     planning_report = next(
         (report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"),
         None,
@@ -4949,6 +5047,7 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]], targ
                 intent_validation={},
                 target_root=target_root,
             ),
+            "durable_residue_action": durable_residue_action(trust="unavailable"),
         }
 
     intent_validation = planning_report.get("intent_validation", {})
@@ -4963,6 +5062,7 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]], targ
                 intent_validation={},
                 target_root=target_root,
             ),
+            "durable_residue_action": durable_residue_action(trust="unavailable"),
         }
 
     counts = intent_validation.get("counts", {})
@@ -5002,6 +5102,7 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]], targ
             intent_validation=intent_validation,
             target_root=target_root,
         ),
+        "durable_residue_action": durable_residue_action(trust=trust),
         "recommended_next_action": recommended_next_action,
     }
 
