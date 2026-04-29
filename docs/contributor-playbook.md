@@ -9,6 +9,7 @@ Use `docs/maintainer-commands.md` when you need the literal command to run; use 
 This playbook is primarily for maintainers operating as coding agents. Human contributors can use it too, but it is intentionally optimized for explicit routing, bounded reads, and narrow validation.
 
 Use `docs/design-principles.md` when a change affects product shape, ownership, lifecycle behavior, or the amount of ceremony the repo imposes on normal work.
+Use `docs/operational-affordance-design.md` when a change affects startup, recovery, proof, closeout, lifecycle, Memory, planning, agent-aid, or other operational surfaces that should carry agents to the next correct action.
 Use `docs/dogfooding-feedback.md` when the missing judgment is whether repo friction should become product work, how to classify it, or whether it has earned queue entry.
 Use `agentic-workspace defaults --section improvement_intake --format json` when the question is how to route setup findings, dogfooding friction, review findings, validation friction, or Memory improvement signals through one shared decision model.
 Use `.agentic-workspace/docs/compatibility-policy.md` when you need to judge whether a surface is stable, mutable, or generated before making the change.
@@ -167,3 +168,4 @@ Use `docs/installed-contract-design-checklist.md` when a package change adds or 
 - Preserve package boundaries and independent CLI entrypoints.
 - Prefer explicit adapters, manifests, and generated artifacts over private cross-package assumptions.
 - Capture meaningful follow-up work through the planning helpers or the narrowest current planning surface instead of leaving it in chat-only residue.
+- For any changed operational surface, run an operational-affordance review from `docs/operational-affordance-design.md`: name the one primary next action, demote irrelevant or deep actions, use resolved config/local invocation, keep raw files behind compact routing, and confirm weak agents can proceed without learning package internals while strong agents can still inspect or override safely.

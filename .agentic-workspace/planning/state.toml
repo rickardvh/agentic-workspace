@@ -7,5 +7,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = []
+active_items = [
+  { id = "operational-affordance-lane", title = "Operational affordance lane", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/operational-affordance-lane.plan.json", why_now = "Open issues #556-#559 and #562-#564 should make package workflows self-routing and lower cognitive/context burden.", handoff_ready = true }
+]
 queued_items = []

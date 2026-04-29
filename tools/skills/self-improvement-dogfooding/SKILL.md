@@ -36,7 +36,8 @@ Use one pass at a time:
 7. Assess total operating cost separately from issue completion and intent satisfaction.
 8. Route durable residue separately from validation, issue closure, intent satisfaction, and cost assessment.
 9. Route discovered friction into a narrow fix, review record, memory note, issue, or explicit dismissal.
-10. Close/archive only when evidence is compact and reconstructable.
+10. Review changed operational surfaces for affordance quality before closeout.
+11. Close/archive only when evidence is compact and reconstructable.
 
 ## Allowed Autonomous Actions
 
@@ -152,6 +153,22 @@ Route to a planning review instead of closing when:
 - the benefit is only package-internal neatness;
 - the change adds a new visible surface without reducing another repeated cost;
 - a reviewer cannot understand the value and boundary from checked-in evidence.
+
+## Required Operational-Affordance Review
+
+When a pass changes startup, recovery, proof, closeout, lifecycle, Memory, planning, agent-aid, or other operational surfaces, review it against `docs/operational-affordance-design.md` before closing.
+
+Record a compact answer in the execplan closeout, review artifact, or issue-close proof:
+
+- `primary_next_action`: the one obvious action the surface now presents, or why none is appropriate.
+- `irrelevant_actions_demoted`: which distracting, raw, historical, or deep actions were hidden, deferred, or placed behind selectors.
+- `resolved_invocation`: whether copyable commands use the resolved repo/local invocation or intentionally stay canonical.
+- `weak_agent_path`: whether an unfamiliar or generic agent can proceed without reading package internals first.
+- `strong_agent_escape_hatch`: how an expert can inspect, override, or bypass safely.
+- `context_burden_change`: whether the change reduces, preserves, or increases the amount of live context needed to act.
+- `validation_role`: whether validation confirms an already-guided path or still teaches the construction after failure.
+
+Treat a repeated need to reread raw planning, Memory, review, contract, or issue-thread detail as an affordance signal. Prefer reshaping existing compact routes, action objects, selectors, scaffolds, writer helpers, aliases, or lifecycle flows before adding a new surface.
 
 ## Closure Criteria
 

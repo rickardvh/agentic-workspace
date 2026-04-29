@@ -424,6 +424,31 @@ def test_self_improvement_skill_uses_constrained_prose_shape() -> None:
     assert "`Next owner`" in skill_text
 
 
+def test_self_improvement_skill_requires_operational_affordance_review() -> None:
+    skill_text = (WORKSPACE_ROOT / "tools" / "skills" / "self-improvement-dogfooding" / "SKILL.md").read_text(
+        encoding="utf-8",
+    )
+
+    assert "Required Operational-Affordance Review" in skill_text
+    assert "docs/operational-affordance-design.md" in skill_text
+    assert "`primary_next_action`" in skill_text
+    assert "`irrelevant_actions_demoted`" in skill_text
+    assert "`resolved_invocation`" in skill_text
+    assert "`weak_agent_path`" in skill_text
+    assert "`context_burden_change`" in skill_text
+    assert "raw planning, Memory, review, contract, or issue-thread detail" in skill_text
+
+
+def test_contributor_playbook_requires_operational_affordance_review() -> None:
+    text = (WORKSPACE_ROOT / "docs" / "contributor-playbook.md").read_text(encoding="utf-8")
+
+    assert "docs/operational-affordance-design.md" in text
+    assert "operational-affordance review" in text
+    assert "one primary next action" in text
+    assert "resolved config/local invocation" in text
+    assert "weak agents can proceed without learning package internals" in text
+
+
 def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "maintainer_surfaces_valid")
     _write_planning_surfaces(tmp_path)

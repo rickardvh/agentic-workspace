@@ -1,0 +1,251 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Operational affordance lane",
+  "goal": [
+    "Implement open affordance issues #556-#559 and #562-#564 so common package workflows expose obvious primary actions, structured next steps, and lower context burden."
+  ],
+  "non_goals": [
+    "Do not add new first-line surfaces when existing commands can be reshaped.",
+    "Do not make the shipped package depend on GitHub, Codex, this repository, or a specific language/tool host."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Make operational surfaces self-routing by affordance while preserving compact startup and progressive disclosure.",
+      "constraints": "Prefer shrinking, merging, or action-object shaping over new commands or prose handbooks.",
+      "latitude": "Implement child issues in the smallest slices that preserve tests and package neutrality.",
+      "escalation": "Stop if the next useful change changes product direction, requires a new top-level surface, or hardens repo-specific workflow into package contract."
+    },
+    "execution": {
+      "milestone": "review guidance, first-contact/action objects, lifecycle/residue/aid routing",
+      "status": "active",
+      "next_step": "Inspect current command outputs and implement the first affordance slice.",
+      "proof": "Use agentic-workspace proof for changed paths plus targeted pytest/ruff; run make check before final closeout."
+    },
+    "scope": {
+      "touched": [
+        "docs and repo-local review guidance",
+        "src/agentic_workspace command/report output shaping",
+        "tests for command output affordances"
+      ],
+      "invariants": [
+        "external trackers remain intake only",
+        "compact router views remain first-contact surfaces",
+        "raw planning, memory, contracts, and review artifacts remain behind selectors unless directly needed"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#556 and child issues #557, #558, #559, #562, #563, #564",
+    "parent lane": "#556"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "open child issues until each acceptance target is implemented and closed",
+    "activation trigger": "each completed child issue should update proof and closeout before moving to the next child"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A planned affordance lane with context-size and cognitive-burden review built into closeout.",
+    "intentionally deferred": "Generated CLI roadmap and unrelated backlog.",
+    "discovered implications": "",
+    "proof achieved now": "#557 focused and selected proof passed.",
+    "validation still needed": "proof selection, targeted tests, make check before final lane closeout",
+    "next likely slice": "#558/#559 first-contact and action objects"
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest and implement the new issues #556+ on the affordances lane.",
+    "inferred intended outcome": "Use the package to execute the open affordance lane and discover ways to reduce future context overhead.",
+    "chosen concrete what": "Promote #556 and children into one active execplan, implement children in order, close issues with proof, and route any context-overhead findings.",
+    "interpretation distance": "low",
+    "review guidance": "Check that changed outputs make the next correct action cheaper without adding repo-specific assumptions."
+  },
+  "execution_bounds": {
+    "allowed paths": "docs, tools/skills, .agentic-workspace planning artifacts, src/agentic_workspace, tests, package payload files as needed",
+    "max changed files": "keep each milestone small; pause before broad rewrites",
+    "required validation commands": "uv run agentic-workspace proof --target . --changed <paths> --format json; targeted pytest/ruff; make check before final closeout",
+    "ask-before-refactor threshold": "large CLI extraction or new command framework",
+    "stop before touching": "unrelated issue lanes or generated multi-language CLI roadmap"
+  },
+  "stop_conditions": {
+    "stop when": "all child issues are implemented, proved, closed, and the plan is archived or pruned from active state",
+    "escalate when boundary reached": "a child requires a new first-contact surface or product-direction decision",
+    "escalate on scope drift": "work starts adding capability instead of compressing/routing existing surfaces",
+    "escalate on proof failure": "validation cannot prove the affordance claim with local tests or command output"
+  },
+  "context_budget": {
+    "live working set": "issue list, this execplan, relevant command output, touched source/tests",
+    "recoverable later": "full issue bodies, docs/operational-affordance-design.md, archived plans, review history",
+    "externalize before shift": "active child, changed paths, proof run, context-size friction signals",
+    "pre-work config pull": "agentic-workspace start/report/summary already provide resolved invocation and router state",
+    "pre-work memory pull": "only use memory-router if a child needs durable prior knowledge not present in compact router output",
+    "tiny resumability note": "Resume from this plan, active child issue, git status, and proof selector output.",
+    "context-shift triggers": "large output shape change, validation failure, or issue closure boundary"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement affordance issues end-to-end.",
+    "hard constraints": "Preserve package neutrality and prefer existing surfaces.",
+    "agent may decide locally": "exact output field names, test placement, and documentation phrasing when acceptance criteria stay satisfied.",
+    "escalate when": "a change would alter authority boundaries or add a permanent first-line surface."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/556",
+      "label": "#556 operational affordance parent",
+      "role": "parent lane",
+      "locator": "#556"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/operational-affordance-design.md",
+      "label": "Operational affordance design",
+      "role": "design principle",
+      "locator": "docs/operational-affordance-design.md"
+    }
+  ],
+  "active_milestone": {
+    "id": "first-contact-action-affordances",
+    "status": "active",
+    "scope": "#558 and #559",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement #558 and #559 by reshaping compact first-contact/proof/closeout outputs around structured primary actions."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [],
+  "invariants": [
+    "Do not require agents to read raw planning, Memory, review, or contract files for ordinary entry.",
+    "Any new action object should use resolved invocation when it includes a command.",
+    "Affordance guidance must stay implementation-independent unless it is explicitly repo-local."
+  ],
+  "contract_decisions_to_freeze": [
+    "Operational surfaces should expose one primary safe next action where possible.",
+    "Context-size reduction is an affordance criterion: outputs should route to details instead of dumping them by default."
+  ],
+  "open_questions_to_close": [
+    "Which existing fields can carry action objects without adding new first-contact surfaces?",
+    "Can durable-residue and agent-aid workflows be made self-routing through existing report/defaults/skills outputs?"
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run pytest tests/test_workspace_cli.py tests/test_workspace_report.py -q",
+    "uv run ruff check src tests",
+    "make check"
+  ],
+  "required_tools": [
+    "uv",
+    "gh"
+  ],
+  "completion_criteria": [
+    "#557, #558, #559, #562, #563, and #564 are implemented or explicitly routed with proof.",
+    "Issues are closed only after validation and closeout evidence.",
+    "Context-size and cognitive-burden improvement opportunities are fixed, routed, or dismissed."
+  ],
+  "execution_run": {
+    "run status": "active",
+    "executor": "Codex",
+    "handoff source": "user request plus GitHub issue intake",
+    "what happened": "#557 added operational-affordance review to maintainer guidance and self-improvement closeout.",
+    "scope touched": "docs/contributor-playbook.md; tools/skills/self-improvement-dogfooding/SKILL.md; tests/test_maintainer_surfaces.py; planning state",
+    "changed surfaces": "existing maintainer docs, repo-local skill, focused tests, active execplan",
+    "validations run": "make maintainer-surfaces; uv run pytest tests/test_maintainer_surfaces.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "#557 ready to close after commit.",
+    "next step": "Inspect first-contact, proof, closeout, lifecycle, residue, and agent-aid output shapes."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "",
+    "proof status": "",
+    "intent served": "",
+    "config compliance": "",
+    "misinterpretation risk": "",
+    "follow-on decision": ""
+  },
+  "proof_report": {
+    "validation proof": "",
+    "proof achieved now": "#557 review guidance implemented.",
+    "evidence for \"proof achieved\" state": "make maintainer-surfaces; uv run pytest tests/test_maintainer_surfaces.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #556+ affordance lane while dogfooding and evaluating context-size burden.",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": "#556 child issues"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package cheaper to enter, recover, verify, and trust through compact router views and progressive disclosure.",
+    "slice shaping bias": "compress and route before adding capability.",
+    "broader-lane validation question": "Did this reduce context and cognitive burden for future agents without weakening leverage?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "active",
+    "larger-intent status": "open",
+    "closure decision": "do-not-archive-yet",
+    "why this decision is honest": "child issues remain open",
+    "evidence carried forward": "this execplan and external issue references",
+    "reopen trigger": "new affordance issue or validation failure"
+  },
+  "generated_closeout": {
+    "status": "not-generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; structured execplan fields remain authoritative",
+    "text": ""
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Context-size review should be part of affordance closeout, not a separate handbook.",
+    "motivation worth preserving": "Future agents should be able to use compact command outputs instead of loading issue threads and raw planning files.",
+    "canonical owner now": ".agentic-workspace/planning/execplans/operational-affordance-lane.plan.json",
+    "promotion trigger": "if repeated across lanes, route into docs/contracts/checks or issue follow-up",
+    "retention after promotion": "shrink"
+  },
+  "execution_summary": {
+    "outcome delivered": "pending",
+    "validation confirmed": "pending",
+    "follow-on routed to": "#556 child issues",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "pending",
+    "resume from": ".agentic-workspace/planning/execplans/operational-affordance-lane.plan.json"
+  },
+  "improvement_signal_review": {
+    "status": "found",
+    "signals found": [
+      "External work reconciliation identifies untracked issue pressure but does not provide a copyable promotion action for a selected issue range."
+    ],
+    "signals fixed": [
+      "#557 now requires operational-affordance review for changed operational surfaces."
+    ],
+    "signals routed": [
+      "Evaluate external-work promotion and proof-lane breadth during #558/#559 output action-object work before creating new issues."
+    ],
+    "signals dismissed": [],
+    "next owner": "#558 or new narrow issue if not solved by existing outputs"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "#557",
+        "#558",
+        "#559",
+        "#562",
+        "#563",
+        "#564"
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-29: Promoted open affordance issues #556-#559 and #562-#564 into one active lane with context-size review."
+  ]
+}
