@@ -41,14 +41,14 @@ Shipped repo-memory surfaces after cleanup:
 - `.agentic-workspace/memory/repo/runbooks/README.md`
 - `.agentic-workspace/memory/repo/decisions/README.md`
 - `.agentic-workspace/memory/repo/templates/*.template.md`
-- `optional/**`
-- `scripts/check/**`
+No root-level `optional/`, `scripts/`, or `tools/` directories are part of the memory bootstrap payload.
 
 Cleanup flags resolved in this slice:
 
 - Removed repo-specific package payload notes such as `.agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md`.
 - Removed repo-specific package payload domains, decisions, runbooks, mistakes, and repo-local skills.
 - Replaced `*-template.md` starter file names with `*.template.md`.
+- Removed root-level optional fragments and raw Python scripts from the memory bootstrap payload.
 - Removed the duplicate tracked `packages/memory/memory/` tree. That tree was legacy source residue, not the current wheel force-include source, but it duplicated the installed repo-memory layout and made the package boundary ambiguous.
 
 Residual accepted surfaces:
@@ -71,9 +71,11 @@ Current boundary check:
 
 - `scripts/check/check_source_payload_operational_install.py` compares expected payload files, bootstrap source files, and packaging force-includes.
 
-Cleanup flag:
+Cleanup flags resolved:
 
-- No repo-specific shipped planning state was changed in this slice.
+- Removed root-level generated `tools/` mirrors from the planning bootstrap source.
+- Removed raw Python helper script copies from both root-level `scripts/` and managed `.agentic-workspace/planning/scripts/` bootstrap paths.
+- Maintainer render/check scripts remain package/root source code, not shipped bootstrap payload.
 
 ### Workspace Package
 
@@ -95,5 +97,7 @@ The source/payload/root-install checker now treats memory bootstrap extras under
 - `*.template.md`
 - `*.schema.json`
 - explicitly managed package metadata
+
+The checker also fails package bootstrap helper directories that would reintroduce root-level `optional/`, `scripts/`, or `tools/` payloads.
 
 Repo-specific note, runbook, decision, domain, mistake, or repo-local skill payloads should now fail the boundary inventory instead of being silently classified as intentional.

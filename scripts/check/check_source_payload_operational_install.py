@@ -282,6 +282,21 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
         repo_root / "packages" / "planning" / "bootstrap" / ".agentic-workspace" / "planning" / "state.toml": (
             "Active surface `state.toml` found in bootstrap; avoid checked-in active state in the payload."
         ),
+        repo_root / "packages" / "memory" / "bootstrap" / "optional": (
+            "Root-level optional fragments found in memory bootstrap; bootstrap payload must stay to structural README/AGENTS, templates, schemas, and managed workspace payload."
+        ),
+        repo_root / "packages" / "memory" / "bootstrap" / "scripts": (
+            "Raw scripts found in memory bootstrap; package helper code belongs in package source or repo maintainer scripts, not bootstrap payload."
+        ),
+        repo_root / "packages" / "planning" / "bootstrap" / "scripts": (
+            "Root-level scripts found in planning bootstrap; package helper code belongs in package source or repo maintainer scripts, not bootstrap payload."
+        ),
+        repo_root / "packages" / "planning" / "bootstrap" / "tools": (
+            "Root-level generated tools found in planning bootstrap; generated adapters must not be shipped as bootstrap root directories."
+        ),
+        repo_root / "packages" / "planning" / "bootstrap" / ".agentic-workspace" / "planning" / "scripts": (
+            "Raw planning scripts found in managed planning bootstrap; ship queryable contracts and schemas, not copied Python helper scripts."
+        ),
         repo_root / "packages" / "planning" / "bootstrap" / "ROADMAP.md": (
             "Active surface `ROADMAP.md` found in bootstrap; rename to `ROADMAP.template.md` to maintain the boundary."
         ),
@@ -412,16 +427,13 @@ def _classified_source_only_payload_files(*, package_name: str, expected: list[s
         classification = "unexpected-source-extra"
         rule = "Unexpected bootstrap source extras require classification before they can be treated as intentional."
         if package_name == "planning" and (
-            relative.startswith("scripts/")
-            or relative.startswith("tools/")
-            or relative.startswith(".agentic-workspace/planning/scripts/")
-            or "__pycache__" in relative
+            "__pycache__" in relative
         ):
             classification = "intentional-source-extra"
-            rule = "Planning maintainer helpers are source/bootstrap aids and are intentionally excluded from the packaged wheel payload."
+            rule = "Transient planning bytecode/cache files are ignored as source-only extras."
         elif package_name == "memory" and _is_allowed_memory_bootstrap_extra(relative):
             classification = "intentional-source-extra"
-            rule = "Memory bootstrap extras must stay structural or templated: directory README/AGENTS, *.template.md, schemas, optional fragments, scripts, and package-managed metadata."
+            rule = "Memory bootstrap extras must stay structural or templated: directory README/AGENTS, *.template.md, schemas, and package-managed metadata."
         classified.append({"path": relative, "classification": classification, "rule": rule})
     return classified
 
@@ -434,8 +446,6 @@ def _is_allowed_memory_bootstrap_extra(relative: str) -> bool:
         ".agentic-workspace/memory/VERSION.md",
         ".agentic-workspace/memory/repo/current/routing-feedback.md",
     }:
-        return True
-    if relative.startswith("optional/") or relative.startswith("scripts/"):
         return True
     if path.name in {"README.md", "AGENTS.md", "AGENTS.template.md"}:
         return True

@@ -115,8 +115,6 @@ def test_sync_proof_classifies_layers_and_intentional_differences(monkeypatch, t
     mod = _load_module(_checker_script_path(), "source_payload_boundary_sync_proof")
     _write_root_surfaces(tmp_path)
     _write(tmp_path / "packages" / "planning" / "bootstrap" / ".agentic-workspace" / "planning" / "agent-manifest.json", "{}")
-    _write(tmp_path / "packages" / "planning" / "bootstrap" / "tools" / "AGENT_QUICKSTART.md", "# source helper")
-    _write(tmp_path / "packages" / "planning" / "bootstrap" / "tools" / "__pycache__" / "helper.pyc", "ignored")
     _write(tmp_path / "packages" / "memory" / "bootstrap" / "AGENTS.template.md", "# adapter")
     _write(tmp_path / "packages" / "memory" / "bootstrap" / ".agentic-workspace" / "memory" / "repo" / "index.md", "# index")
     _write(
@@ -142,8 +140,8 @@ def test_sync_proof_classifies_layers_and_intentional_differences(monkeypatch, t
     planning = proof["packages"][0]
     memory = proof["packages"][1]
     assert planning["source_to_payload_inventory"]["status"] == "current"
-    assert planning["source_to_payload_inventory"]["classified_source_only_or_generated"][0]["classification"] == "intentional-source-extra"
-    assert planning["source_to_payload_inventory"]["classification_counts"] == {"intentional-source-extra": 1}
+    assert planning["source_to_payload_inventory"]["classified_source_only_or_generated"] == []
+    assert planning["source_to_payload_inventory"]["classification_counts"] == {}
     assert planning["source_to_payload_inventory"]["unexpected"] == []
     assert "Bytecode and cache files" in planning["source_to_payload_inventory"]["ignored_transient_rule"]
     assert all("__pycache__" not in item["path"] for item in planning["source_to_payload_inventory"]["classified_source_only_or_generated"])
@@ -261,6 +259,28 @@ def test_boundary_checker_warns_on_legacy_memory_tree(tmp_path: Path) -> None:
         warning.warning_class == "package_local_install_drift" and str(warning.path).endswith("packages/memory/memory")
         for warning in warnings
     )
+
+
+def test_boundary_checker_warns_on_bootstrap_helper_directories(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_boundary_helper_dirs")
+    _write_root_surfaces(tmp_path)
+    _write(tmp_path / "packages" / "memory" / "bootstrap" / "scripts" / "check" / "helper.py", "print('bad')")
+    _write(tmp_path / "packages" / "memory" / "bootstrap" / "optional" / "Makefile.fragment.mk", "bad")
+    _write(tmp_path / "packages" / "planning" / "bootstrap" / "scripts" / "render_agent_docs.py", "print('bad')")
+    _write(tmp_path / "packages" / "planning" / "bootstrap" / "tools" / "AGENT_QUICKSTART.md", "# bad")
+    _write(
+        tmp_path / "packages" / "planning" / "bootstrap" / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py",
+        "print('bad')",
+    )
+
+    warnings = mod.gather_boundary_warnings(repo_root=tmp_path)
+    warning_paths = {warning.path.replace("\\", "/") for warning in warnings if warning.warning_class == "package_local_install_drift"}
+
+    assert any(path.endswith("packages/memory/bootstrap/scripts") for path in warning_paths)
+    assert any(path.endswith("packages/memory/bootstrap/optional") for path in warning_paths)
+    assert any(path.endswith("packages/planning/bootstrap/scripts") for path in warning_paths)
+    assert any(path.endswith("packages/planning/bootstrap/tools") for path in warning_paths)
+    assert any(path.endswith("packages/planning/bootstrap/.agentic-workspace/planning/scripts") for path in warning_paths)
 
 
 def test_planning_checker_has_single_full_source() -> None:

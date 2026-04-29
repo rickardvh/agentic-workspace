@@ -50,6 +50,7 @@ The bootstrap may diagnose, classify, prioritise, and suggest concrete repo-owne
 If a remediation suggestion starts depending on repo-shape-specific judgement, prefer a clearer handoff into repo-owned work over making the bootstrap itself more invasive.
 
 When maintaining this repository, treat `bootstrap/` as the source of truth for installed files. The packaged wheel payload is built from this directory.
+Keep it structural: directory `README.md`, `AGENTS.template.md`, `*.template.md`, schemas, and managed `.agentic-workspace/` payload only.
 
 ## Copy targets
 
@@ -58,22 +59,15 @@ Copy as-is:
 - `AGENTS.md`
 - `.agentic-workspace/memory/repo/`
 
-Merge or append:
-
-- `optional/pull_request_template.fragment.md`
-- `optional/CONTRIBUTING.fragment.md`
-- `optional/Makefile.fragment.mk`
-
-Do not install maintainer-only repo docs or implementation notes by default.
+Do not install root-level helper directories, maintainer-only repo docs, implementation notes, optional fragments, or raw scripts by default.
 
 ## Recommended installation order
 
 1. Copy `AGENTS.md`.
 2. Copy `.agentic-workspace/memory/repo/`, including optional routing calibration under `.agentic-workspace/memory/repo/current/`.
 3. Copy `.agentic-workspace/memory/`.
-4. Optionally merge the workflow fragments.
-5. Run `agentic-workspace doctor --target ./repo --format json`.
-6. Run `agentic-workspace report --target ./repo --format json` when repeated friction or memory drift should stay visible in normal workflow.
+4. Run `agentic-workspace doctor --target ./repo --format json`.
+5. Run `agentic-workspace report --target ./repo --format json` when repeated friction or memory drift should stay visible in normal workflow.
 
 ## Placeholder replacement
 

@@ -769,36 +769,6 @@
       "max_bytes": 20000
     },
     {
-      "pattern": "packages/planning/bootstrap/tools/agent-manifest.json",
-      "source_command": "make render-agent-docs",
-      "named_consumer": "planning source-checkout diagnostics and package maintainer tests",
-      "checked_in_justification": "Source-checkout mirror proves package-maintainer adapter rendering without requiring install into a temp repo.",
-      "freshness_check": "make maintainer-surfaces",
-      "ordinary_agent_route": "installed repo AGENTS.md -> agentic-workspace start --format json",
-      "removal_or_demotion_path": "remove when maintainer tests can reconstruct this mirror from the package payload source on demand",
-      "max_bytes": 20000
-    },
-    {
-      "pattern": "packages/planning/bootstrap/tools/AGENT_QUICKSTART.md",
-      "source_command": "make render-agent-docs",
-      "named_consumer": "planning source-checkout diagnostics and package maintainer tests",
-      "checked_in_justification": "Source-checkout generated Markdown mirror for package maintainer compatibility checks.",
-      "freshness_check": "make maintainer-surfaces",
-      "ordinary_agent_route": "installed repo AGENTS.md -> agentic-workspace start --format json",
-      "removal_or_demotion_path": "remove when package maintainer checks render the Markdown adapter only in temporary output",
-      "max_bytes": 5000
-    },
-    {
-      "pattern": "packages/planning/bootstrap/tools/AGENT_ROUTING.md",
-      "source_command": "make render-agent-docs",
-      "named_consumer": "planning source-checkout diagnostics and package maintainer tests",
-      "checked_in_justification": "Source-checkout generated Markdown mirror for package maintainer compatibility checks.",
-      "freshness_check": "make maintainer-surfaces",
-      "ordinary_agent_route": "installed repo AGENTS.md -> agentic-workspace start --format json",
-      "removal_or_demotion_path": "remove when package maintainer checks render the Markdown adapter only in temporary output",
-      "max_bytes": 6000
-    },
-    {
       "pattern": "generated/typescript/*/package.json",
       "source_command": "uv run python scripts/generate/generate_command_packages.py",
       "named_consumer": "generated TypeScript package tests and package publishing preparation",

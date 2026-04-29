@@ -85,6 +85,17 @@ def test_memory_bootstrap_repo_payload_excludes_repo_specific_content() -> None:
     assert not any(path.startswith("skills/") for path in repo_payload)
 
 
+def test_memory_artifacts_do_not_ship_root_level_bootstrap_helpers() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        wheel_path = _build_artifact("wheel", tmpdir_path)
+        sdist_path = _build_artifact("sdist", tmpdir_path)
+
+        for inventory in (_artifact_inventory(wheel_path), _artifact_inventory(sdist_path)):
+            assert not any(path.startswith("bootstrap/scripts/") for path in inventory)
+            assert not any(path.startswith("bootstrap/optional/") for path in inventory)
+
+
 def test_memory_wheel_excludes_generated_cli_package_metadata() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         wheel_path = _build_artifact("wheel", Path(tmpdir))

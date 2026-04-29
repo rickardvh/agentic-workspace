@@ -397,7 +397,7 @@ Common arguments:
 - `--policy-profile default|strict-doc-ownership` applies installer policy presets for install, adopt, and upgrade
 - `--project-name`, `--project-purpose`, `--key-repo-docs`, `--key-subsystems`, `--primary-build-command`, `--primary-test-command`, and `--other-key-commands` fill starter placeholders explicitly
 
-`install` and `adopt` are conservative by default: missing files are copied, existing `AGENTS.md` and `.agentic-workspace/memory/repo/` files are left alone, and optional fragments are appended only when the fragment is not already present.
+`install` and `adopt` are conservative by default: missing files are copied and existing `AGENTS.md` and `.agentic-workspace/memory/repo/` files are left alone.
 
 `doctor --strict-doc-ownership` forces the doc-ownership and shadow-doc audits even if the repository manifest has not opted in yet.
 

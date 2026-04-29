@@ -276,11 +276,7 @@ VALID_ELIMINATION_TARGET_VALUES = {"shrink", "promote", "automate", "refactor_aw
 # while still surfacing likely shadow-doc drift between memory and canonical docs.
 SHADOW_DOC_MIN_SHARED_TERMS = 6
 
-OPTIONAL_APPEND_TARGETS = {
-    Path("Makefile"): Path("optional/Makefile.fragment.mk"),
-    Path("CONTRIBUTING.md"): Path("optional/CONTRIBUTING.fragment.md"),
-    Path(".github/pull_request_template.md"): Path("optional/pull_request_template.fragment.md"),
-}
+OPTIONAL_APPEND_TARGETS: dict[Path, Path] = {}
 OPTIONAL_APPEND_DESCRIPTIONS = {
     Path("Makefile"): "optional convenience target for running workspace doctor and report for memory health locally or in CI",
     Path("CONTRIBUTING.md"): "optional contributor guidance fragment",

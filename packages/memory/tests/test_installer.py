@@ -562,9 +562,7 @@ def test_plan_optional_appends_skips_equivalent_makefile_target(tmp_path: Path) 
 
     assert (target_root / "Makefile").read_text(encoding="utf-8") == makefile
     makefile_actions = [action for action in result.actions if action.path == target_root / "Makefile"]
-    assert len(makefile_actions) == 1
-    assert makefile_actions[0].kind == "skipped"
-    assert makefile_actions[0].detail == "fragment already present"
+    assert makefile_actions == []
 
 
 def test_install_does_not_duplicate_existing_optional_fragment(tmp_path: Path) -> None:
@@ -580,9 +578,7 @@ def test_install_does_not_duplicate_existing_optional_fragment(tmp_path: Path) -
 
     makefile_actions = [action for action in result.actions if action.path == makefile]
 
-    assert len(makefile_actions) == 1
-    assert makefile_actions[0].kind == "skipped"
-    assert "already present" in makefile_actions[0].detail
+    assert makefile_actions == []
 
 
 def test_patch_agents_workflow_block_inserts_pointer_after_heading() -> None:
@@ -672,10 +668,7 @@ def test_memory_status_does_not_flag_absent_optional_append_targets_in_clean_rep
 
     result = installer.collect_status(target=target)
 
-    assert any(
-        action.path == target / "CONTRIBUTING.md" and action.kind == "current" and action.detail == "optional target absent"
-        for action in result.actions
-    )
+    assert not any(action.path == target / "CONTRIBUTING.md" for action in result.actions)
     assert not any(action.path == target / "CONTRIBUTING.md" and action.kind == "missing" for action in result.actions)
 
 
@@ -686,12 +679,7 @@ def test_memory_doctor_does_not_flag_absent_optional_append_targets_in_clean_rep
 
     result = installer.doctor_bootstrap(target=target)
 
-    assert any(
-        action.path == target / ".github" / "pull_request_template.md"
-        and action.kind == "current"
-        and action.detail == "optional target absent"
-        for action in result.actions
-    )
+    assert not any(action.path == target / ".github" / "pull_request_template.md" for action in result.actions)
     assert not any(action.path == target / ".github" / "pull_request_template.md" and action.kind == "missing" for action in result.actions)
 
 

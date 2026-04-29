@@ -22,9 +22,6 @@ GENERATED_MIRROR_REQUIRED_PATHS = frozenset(
         "tools/agent-manifest.json",
         "tools/AGENT_QUICKSTART.md",
         "tools/AGENT_ROUTING.md",
-        "packages/planning/bootstrap/tools/agent-manifest.json",
-        "packages/planning/bootstrap/tools/AGENT_QUICKSTART.md",
-        "packages/planning/bootstrap/tools/AGENT_ROUTING.md",
         ".agentic-workspace/planning/agent-manifest.json",
         "packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json",
     }

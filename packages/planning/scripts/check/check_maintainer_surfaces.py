@@ -4,7 +4,7 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 MODULE_SCRIPT = REPO_ROOT / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_maintainer_surfaces.py"
 
 

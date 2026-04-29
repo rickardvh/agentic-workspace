@@ -201,9 +201,20 @@ def test_payload_surface_classification_identifies_core_and_follow_up_sets() -> 
     assert all(classified[path] == "core daily-operation planning" for path in default_core)
     assert classified["packages/planning/bootstrap/.agentic-workspace/planning/reviews/README.md"] == "extraction candidate"
     assert classified["packages/planning/bootstrap/.agentic-workspace/planning/upstream-task-intake.md"] == "extraction candidate"
-    assert classified["packages/planning/bootstrap/tools/AGENT_QUICKSTART.md"] == "maintainer/development only"
+    assert "packages/planning/bootstrap/tools/AGENT_QUICKSTART.md" not in classified
     assert any(candidate["next_issue"].endswith("/463") for candidate in payload["compression_candidates"])
     assert any(candidate["next_issue"].endswith("/464") for candidate in payload["compression_candidates"])
+
+
+@pytest.mark.parametrize("kind", ("wheel", "sdist"))
+def test_planning_artifacts_do_not_ship_bootstrap_helper_directories(kind: str) -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        artifact = _build_artifact(kind, Path(tmpdir))
+        entries = _artifact_entries(artifact)
+
+    assert not any(entry.startswith("scripts/") for entry in entries)
+    assert not any(entry.startswith("tools/") for entry in entries)
+    assert not any(entry.startswith(".agentic-workspace/planning/scripts/") for entry in entries)
 
 
 def test_extraction_candidates_define_boundaries_without_startup_surface() -> None:

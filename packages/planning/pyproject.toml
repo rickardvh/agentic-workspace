@@ -60,9 +60,6 @@ include = [
 ]
 exclude = [
   "/src/repo_planning_bootstrap/generated_cli_package",
-  "/bootstrap/scripts/**",
-  "/bootstrap/tools/**",
-  "/bootstrap/.agentic-workspace/planning/scripts/**",
 ]
 
 [tool.pytest.ini_options]

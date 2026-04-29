@@ -1,25 +1,32 @@
 from __future__ import annotations
 
-import importlib.util
+import json
 from pathlib import Path
 
-MODULE_SCRIPT = Path(__file__).resolve().parents[1] / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py"
+from repo_planning_bootstrap._render import load_manifest as _load_manifest
+from repo_planning_bootstrap._render import render_quickstart, render_routing
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+MANIFEST_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "agent-manifest.json"
 
 
-def _load_module():
-    spec = importlib.util.spec_from_file_location("workspace_planning_render_agent_docs", MODULE_SCRIPT)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Unable to load planning render module from {MODULE_SCRIPT}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def load_manifest(path: Path = MANIFEST_PATH) -> dict:
+    return _load_manifest(path)
 
 
-_MODULE = _load_module()
-load_manifest = _MODULE.load_manifest
-render_quickstart = _MODULE.render_quickstart
-render_routing = _MODULE.render_routing
-main = _MODULE.main
+render_readme_entrypoints = render_quickstart
+
+
+def main() -> int:
+    manifest = load_manifest()
+    outputs = {
+        REPO_ROOT / "tools" / "agent-manifest.json": json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        REPO_ROOT / "tools" / "AGENT_QUICKSTART.md": render_quickstart(manifest),
+        REPO_ROOT / "tools" / "AGENT_ROUTING.md": render_routing(manifest),
+    }
+    for path, text in outputs.items():
+        path.write_text(text, encoding="utf-8", newline="\n")
+    return 0
 
 
 if __name__ == "__main__":
