@@ -37,6 +37,41 @@ ALLOWED_EXTRACTION_DECISIONS = {
     "optional extension for now",
     "keep internal / maintainer-development only",
 }
+EXECUTABLE_PAYLOAD_SUFFIXES = {
+    ".bat",
+    ".bash",
+    ".cmd",
+    ".cjs",
+    ".class",
+    ".cs",
+    ".dll",
+    ".dylib",
+    ".exe",
+    ".fs",
+    ".go",
+    ".jar",
+    ".java",
+    ".js",
+    ".jsx",
+    ".lua",
+    ".mjs",
+    ".php",
+    ".pl",
+    ".ps1",
+    ".psm1",
+    ".py",
+    ".pyc",
+    ".pyo",
+    ".pyw",
+    ".rb",
+    ".rs",
+    ".sh",
+    ".so",
+    ".ts",
+    ".tsx",
+    ".vb",
+    ".zsh",
+}
 
 
 def _build_artifact(kind: str, output_dir: Path) -> Path:
@@ -215,6 +250,16 @@ def test_planning_artifacts_do_not_ship_bootstrap_helper_directories(kind: str) 
     assert not any(entry.startswith("scripts/") for entry in entries)
     assert not any(entry.startswith("tools/") for entry in entries)
     assert not any(entry.startswith(".agentic-workspace/planning/scripts/") for entry in entries)
+
+
+@pytest.mark.parametrize("kind", ("wheel", "sdist"))
+def test_planning_artifacts_do_not_ship_executable_bootstrap_payload(kind: str) -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        artifact = _build_artifact(kind, Path(tmpdir))
+        entries = _artifact_entries(artifact)
+
+    executable_entries = sorted(entry for entry in entries if Path(entry).suffix.lower() in EXECUTABLE_PAYLOAD_SUFFIXES)
+    assert executable_entries == []
 
 
 def test_extraction_candidates_define_boundaries_without_startup_surface() -> None:

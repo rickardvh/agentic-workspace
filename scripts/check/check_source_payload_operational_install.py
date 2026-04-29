@@ -25,6 +25,43 @@ WARNING_DOC_INSTALLED_SURFACE_DRIFT = "doc_installed_surface_drift"
 WARNING_PAYLOAD_INVENTORY_DRIFT = "payload_inventory_drift"
 WARNING_PACKAGING_MANIFEST_DRIFT = "packaging_manifest_drift"
 WARNING_DUPLICATE_PLANNING_CHECKER_DRIFT = "duplicate_planning_checker_drift"
+WARNING_EXECUTABLE_PAYLOAD_DRIFT = "executable_payload_drift"
+
+EXECUTABLE_PAYLOAD_SUFFIXES = {
+    ".bat",
+    ".bash",
+    ".cmd",
+    ".cjs",
+    ".class",
+    ".cs",
+    ".dll",
+    ".dylib",
+    ".exe",
+    ".fs",
+    ".go",
+    ".jar",
+    ".java",
+    ".js",
+    ".jsx",
+    ".lua",
+    ".mjs",
+    ".php",
+    ".pl",
+    ".ps1",
+    ".psm1",
+    ".py",
+    ".pyc",
+    ".pyo",
+    ".pyw",
+    ".rb",
+    ".rs",
+    ".sh",
+    ".so",
+    ".ts",
+    ".tsx",
+    ".vb",
+    ".zsh",
+}
 
 
 class BoundaryWarning(NamedTuple):
@@ -123,6 +160,43 @@ def _package_payload_files(repo_root: Path, package_name: str) -> list[str]:
 
 def _should_count_bootstrap_file(path: Path) -> bool:
     return path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+
+
+def _looks_like_executable_payload(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    if path.suffix.lower() in EXECUTABLE_PAYLOAD_SUFFIXES:
+        return True
+    try:
+        with path.open("rb") as handle:
+            return handle.read(2) == b"#!"
+    except OSError:
+        return False
+
+
+def _executable_payload_files(repo_root: Path, package_name: str) -> list[str]:
+    payload_root = repo_root / "packages" / package_name / "bootstrap"
+    if not payload_root.exists():
+        return []
+    return sorted(path.relative_to(payload_root).as_posix() for path in payload_root.rglob("*") if _looks_like_executable_payload(path))
+
+
+def _executable_payload_warnings(*, repo_root: Path, package_name: str) -> list[BoundaryWarning]:
+    executable_files = _executable_payload_files(repo_root, package_name)
+    if not executable_files:
+        return []
+    return [
+        BoundaryWarning(
+            WARNING_EXECUTABLE_PAYLOAD_DRIFT,
+            f"packages/{package_name}/bootstrap",
+            (
+                f"{package_name} bootstrap payload contains executable code; CLI/package source owns executable behavior, "
+                "and checked-in bootstrap payload must stay declarative: "
+                + ", ".join(executable_files[:8])
+                + (" ..." if len(executable_files) > 8 else "")
+            ),
+        )
+    ]
 
 
 def _force_include_entries(repo_root: Path, package_name: str) -> dict[str, str]:
@@ -322,6 +396,8 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
     warnings.extend(_planning_checker_duplicate_warnings(repo_root=repo_root))
     planning_expected = _planning_expected_payload_files(repo_root)
     memory_expected = _memory_expected_payload_files(repo_root)
+    warnings.extend(_executable_payload_warnings(repo_root=repo_root, package_name="planning"))
+    warnings.extend(_executable_payload_warnings(repo_root=repo_root, package_name="memory"))
     warnings.extend(_payload_inventory_warnings(repo_root=repo_root, package_name="planning", expected=planning_expected))
     warnings.extend(_payload_inventory_warnings(repo_root=repo_root, package_name="memory", expected=memory_expected))
     warnings.extend(_packaging_manifest_warnings(repo_root=repo_root, package_name="planning", expected=planning_expected))
@@ -496,8 +572,9 @@ def _package_sync_proof(
         if warning.path.startswith(f"packages/{package_name}") or f"packages/{package_name}" in warning.message
     ]
     package_local_warning_classes = sorted({warning for warning in package_warnings if warning == WARNING_PACKAGE_LOCAL_INSTALL_DRIFT})
+    executable_payload_files = _executable_payload_files(repo_root, package_name)
     status = "current"
-    if missing or unexpected_extra or manifest_missing or root["status"] != "current" or package_local_warning_classes:
+    if missing or unexpected_extra or manifest_missing or root["status"] != "current" or package_local_warning_classes or executable_payload_files:
         status = "warning"
     return {
         "package": package_name,
@@ -537,6 +614,11 @@ def _package_sync_proof(
             "status": "current" if not package_local_warning_classes else "warning",
             "warning_classes": package_local_warning_classes,
             "rule": "Package-local .agentic-workspace installs are drift; root operational install is the dogfooding layer.",
+        },
+        "executable_payload_guard": {
+            "status": "current" if not executable_payload_files else "drift",
+            "executable_files": executable_payload_files,
+            "rule": "Bootstrap payload must not ship executable code; executable behavior belongs in CLI/package source outside checked-in payload files.",
         },
     }
 

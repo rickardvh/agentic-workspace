@@ -100,4 +100,6 @@ The source/payload/root-install checker now treats memory bootstrap extras under
 
 The checker also fails package bootstrap helper directories that would reintroduce root-level `optional/`, `scripts/`, or `tools/` payloads.
 
+Executable code is not allowed anywhere under package bootstrap payload roots. The CLI/package source owns executable behavior; checked-in payload files must remain declarative structural docs, templates, schemas, metadata, and compatibility guidance.
+
 Repo-specific note, runbook, decision, domain, mistake, or repo-local skill payloads should now fail the boundary inventory instead of being silently classified as intentional.

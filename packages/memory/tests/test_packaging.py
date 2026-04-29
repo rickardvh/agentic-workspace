@@ -29,6 +29,41 @@ EXPECTED_CORE_MANAGED_PATHS = {
     "skills/bootstrap-upgrade/SKILL.md",
     "skills/bootstrap-uninstall/SKILL.md",
 }
+EXECUTABLE_PAYLOAD_SUFFIXES = {
+    ".bat",
+    ".bash",
+    ".cmd",
+    ".cjs",
+    ".class",
+    ".cs",
+    ".dll",
+    ".dylib",
+    ".exe",
+    ".fs",
+    ".go",
+    ".jar",
+    ".java",
+    ".js",
+    ".jsx",
+    ".lua",
+    ".mjs",
+    ".php",
+    ".pl",
+    ".ps1",
+    ".psm1",
+    ".py",
+    ".pyc",
+    ".pyo",
+    ".pyw",
+    ".rb",
+    ".rs",
+    ".sh",
+    ".so",
+    ".ts",
+    ".tsx",
+    ".vb",
+    ".zsh",
+}
 
 
 def test_memory_wheel_contains_required_payload_files_and_skills() -> None:
@@ -94,6 +129,17 @@ def test_memory_artifacts_do_not_ship_root_level_bootstrap_helpers() -> None:
         for inventory in (_artifact_inventory(wheel_path), _artifact_inventory(sdist_path)):
             assert not any(path.startswith("bootstrap/scripts/") for path in inventory)
             assert not any(path.startswith("bootstrap/optional/") for path in inventory)
+
+
+def test_memory_artifacts_do_not_ship_executable_bootstrap_payload() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        wheel_path = _build_artifact("wheel", tmpdir_path)
+        sdist_path = _build_artifact("sdist", tmpdir_path)
+
+        for inventory in (_artifact_inventory(wheel_path), _artifact_inventory(sdist_path)):
+            executable_entries = sorted(path for path in inventory if Path(path).suffix.lower() in EXECUTABLE_PAYLOAD_SUFFIXES)
+            assert executable_entries == []
 
 
 def test_memory_wheel_excludes_generated_cli_package_metadata() -> None:

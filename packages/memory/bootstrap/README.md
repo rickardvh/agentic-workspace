@@ -59,7 +59,7 @@ Copy as-is:
 - `AGENTS.md`
 - `.agentic-workspace/memory/repo/`
 
-Do not install root-level helper directories, maintainer-only repo docs, implementation notes, optional fragments, or raw scripts by default.
+Do not install root-level helper directories, maintainer-only repo docs, implementation notes, optional fragments, raw scripts, or any other executable code by default. Executable behavior belongs in the CLI/package source, not in checked-in bootstrap payload files.
 
 ## Recommended installation order
 

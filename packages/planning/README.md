@@ -130,7 +130,7 @@ Treat these files as the current planning compatibility contract surfaces that s
 - `.agentic-workspace/docs/workspace-config-contract.md`
 - `.agentic-workspace/planning/agent-manifest.json`
 
-Treat optional package payload and generated mirrors as lower-stability support surfaces unless a stricter promise is stated later. That lower-stability set currently includes bundled skills, review/intake docs, and advanced reporting/orchestration/capability docs. Root-level generated adapter mirrors such as `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and `tools/AGENT_ROUTING.md` are target-repo generated surfaces, not planning bootstrap payload.
+Treat optional package payload and generated mirrors as lower-stability support surfaces unless a stricter promise is stated later. That lower-stability set currently includes bundled skills, review/intake docs, and advanced reporting/orchestration/capability docs. Root-level generated adapter mirrors such as `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and `tools/AGENT_ROUTING.md` are target-repo generated surfaces, not planning bootstrap payload. Executable behavior belongs in the CLI/package source, so bootstrap payload files must remain declarative and non-executable.
 
 Generated mirrors inherit stability from their canonical source relationships, not from their exact rendered text. If the manifest contract stays stable, the generated wording may still evolve when the renderer improves.
 

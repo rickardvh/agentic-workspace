@@ -283,6 +283,29 @@ def test_boundary_checker_warns_on_bootstrap_helper_directories(tmp_path: Path) 
     assert any(path.endswith("packages/planning/bootstrap/.agentic-workspace/planning/scripts") for path in warning_paths)
 
 
+def test_boundary_checker_warns_on_executable_bootstrap_payload(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_boundary_executable_payload")
+    _write_root_surfaces(tmp_path)
+    _write(
+        tmp_path / "packages" / "memory" / "bootstrap" / ".agentic-workspace" / "memory" / "repo" / "templates" / "helper.py",
+        "print('bad')",
+    )
+    _write(
+        tmp_path / "packages" / "planning" / "bootstrap" / ".agentic-workspace" / "planning" / "execplans" / "apply",
+        "#!/usr/bin/env bash\nexit 0\n",
+    )
+
+    warnings = mod.gather_boundary_warnings(repo_root=tmp_path)
+    executable_warnings = [warning for warning in warnings if warning.warning_class == "executable_payload_drift"]
+    proof = mod.gather_sync_proof(repo_root=tmp_path)
+
+    assert {warning.path for warning in executable_warnings} == {"packages/memory/bootstrap", "packages/planning/bootstrap"}
+    assert "helper.py" in executable_warnings[0].message or "helper.py" in executable_warnings[1].message
+    assert "execplans/apply" in executable_warnings[0].message or "execplans/apply" in executable_warnings[1].message
+    assert proof["packages"][0]["executable_payload_guard"]["executable_files"] == [".agentic-workspace/planning/execplans/apply"]
+    assert proof["packages"][1]["executable_payload_guard"]["executable_files"] == [".agentic-workspace/memory/repo/templates/helper.py"]
+
+
 def test_planning_checker_has_single_full_source() -> None:
     canonical = WORKSPACE_ROOT / "packages" / "planning" / "scripts" / "check" / "check_planning_surfaces.py"
     root_wrapper = WORKSPACE_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
