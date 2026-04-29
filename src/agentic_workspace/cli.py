@@ -9899,6 +9899,62 @@ def _normalize_changed_paths(paths: list[str]) -> list[str]:
     return normalized
 
 
+def _validation_plan_step(*, command: str, index: int, required: bool, lane_id: str | None = None) -> dict[str, Any]:
+    cwd = "."
+    runnable_command = command
+    prefix = "cd "
+    separator = " && "
+    if command.startswith(prefix) and separator in command:
+        cwd_part, command_part = command.split(separator, 1)
+        cwd = cwd_part.removeprefix(prefix).strip() or "."
+        runnable_command = command_part.strip()
+    step = {
+        "order": index,
+        "command": command,
+        "cwd": cwd,
+        "run": runnable_command,
+        "required": required,
+    }
+    if lane_id:
+        step["lane_id"] = lane_id
+    return step
+
+
+def _validation_plan_for_proof(
+    *,
+    selected_lanes: list[dict[str, Any]],
+    optional_commands: list[str],
+) -> dict[str, Any]:
+    steps: list[dict[str, Any]] = []
+    seen_required: set[str] = set()
+    for lane in selected_lanes:
+        for command in lane.get("enough_proof", []):
+            command_text = str(command)
+            if command_text in seen_required:
+                continue
+            seen_required.add(command_text)
+            steps.append(
+                _validation_plan_step(
+                    command=command_text,
+                    index=len(steps) + 1,
+                    required=True,
+                    lane_id=str(lane["id"]),
+                )
+            )
+    optional_steps = [
+        _validation_plan_step(command=str(command), index=index, required=False) for index, command in enumerate(optional_commands, start=1)
+    ]
+    return {
+        "kind": "validation-plan/v1",
+        "status": "inspect-before-run",
+        "rule": "Commands are selected proof, not hidden automation; inspect the plan before executing it.",
+        "required_count": len(steps),
+        "optional_count": len(optional_steps),
+        "required": steps,
+        "optional": optional_steps,
+    }
+
+
 def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root: Path | None = None) -> dict[str, Any]:
     defaults = _defaults_payload()
     validation_lanes = defaults["validation"]["lanes"]
@@ -9946,6 +10002,10 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
     if len(implementation_lanes) > 1:
         escalate_when.insert(0, str(_PROOF_SELECTION_RULES["cross_lane_escalation"]))
 
+    optional_commands = [
+        "agentic-workspace proof --target ./repo --current --format json",
+        "agentic-workspace summary --format json",
+    ]
     proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,
@@ -9959,10 +10019,11 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
             for lane in selected_lanes
         ],
         "required_commands": required_commands,
-        "optional_commands": [
-            "agentic-workspace proof --target ./repo --current --format json",
-            "agentic-workspace summary --format json",
-        ],
+        "optional_commands": optional_commands,
+        "validation_plan": _validation_plan_for_proof(
+            selected_lanes=selected_lanes,
+            optional_commands=optional_commands,
+        ),
         "broaden_when": broaden_when,
         "escalate_when": escalate_when,
     }

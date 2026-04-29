@@ -5995,6 +5995,16 @@ def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> No
     assert answer["kind"] == "proof-selection/v1"
     assert answer["selected_lanes"][0]["id"] == "planning_surfaces"
     assert answer["required_commands"] == ["agentic-workspace doctor --target ./repo --modules planning --format json"]
+    assert answer["validation_plan"]["kind"] == "validation-plan/v1"
+    assert answer["validation_plan"]["status"] == "inspect-before-run"
+    assert answer["validation_plan"]["required"][0] == {
+        "order": 1,
+        "command": "agentic-workspace doctor --target ./repo --modules planning --format json",
+        "cwd": ".",
+        "run": "agentic-workspace doctor --target ./repo --modules planning --format json",
+        "required": True,
+        "lane_id": "planning_surfaces",
+    }
 
 
 def test_proof_changed_selector_routes_generated_command_packages(capsys) -> None:
@@ -6023,6 +6033,15 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
         "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
         "agentic-workspace defaults --section root_cli_authority --format json",
     ]
+    assert [step["lane_id"] for step in answer["validation_plan"]["required"]] == [
+        "generated_command_packages",
+        "generated_command_packages",
+        "generated_command_packages",
+        "generated_command_packages",
+        "cli_authority",
+    ]
+    assert answer["validation_plan"]["required_count"] == len(answer["required_commands"])
+    assert answer["validation_plan"]["optional"][0]["required"] is False
     review = answer["cli_authority_review"]
     assert review["status"] == "blocked-direct-edit-route-to-source"
     assert review["blocked_direct_edit_paths"] == ["generated/typescript/workspace-cli/src/commandPackage.ts"]
@@ -6146,6 +6165,11 @@ def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None
     answer = payload["answer"]
     assert [lane["id"] for lane in answer["selected_lanes"]] == ["planning_package", "workspace_cli", "cli_authority"]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
+    package_step = answer["validation_plan"]["required"][0]
+    assert package_step["command"] == "cd packages/planning && uv run pytest tests/test_installer.py"
+    assert package_step["cwd"] == "packages/planning"
+    assert package_step["run"] == "uv run pytest tests/test_installer.py"
+    assert package_step["lane_id"] == "planning_package"
 
 
 def test_proof_changed_selector_accepts_existing_durable_surface_update(tmp_path: Path, capsys) -> None:
