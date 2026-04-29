@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import re
@@ -166,6 +167,16 @@ EXECPLAN_SECTION_ORDER: tuple[tuple[str, str, str], ...] = (
     ("Stop Conditions", "stop_conditions", "dict"),
     ("Context Budget", "context_budget", "dict"),
     ("Delegated Judgment", "delegated_judgment", "dict"),
+    ("Adaptive Assurance", "adaptive_assurance", "dict"),
+    ("Traceability Refs", "traceability_refs", "dict"),
+    ("Control Gates", "control_gates", "list"),
+    ("Implementation Blockers", "implementation_blockers", "list"),
+    ("Risk Registry Refs", "risk_registry_refs", "list"),
+    ("Invariant Refs", "invariant_refs", "list"),
+    ("Test Data Policy", "test_data_policy", "dict"),
+    ("Layer Scaffold", "layer_scaffold", "dict"),
+    ("Architecture Decision Promotion", "architecture_decision_promotion", "dict"),
+    ("Threat Failure Aids", "threat_failure_aids", "list"),
     ("References", "references", "references"),
     ("Active Milestone", "active_milestone", "dict"),
     ("Immediate Next Action", "immediate_next_action", "list"),
@@ -481,6 +492,12 @@ def _record_section_list(record: dict[str, Any] | None, key: str) -> list[str] |
     if not isinstance(raw, list):
         return None
     return [str(item).strip() for item in raw if str(item).strip()]
+
+
+def _record_section_value(record: dict[str, Any] | None, key: str) -> Any | None:
+    if not isinstance(record, dict) or key not in record:
+        return None
+    return copy.deepcopy(record[key])
 
 
 def _normalize_reference_record(raw: Any) -> dict[str, str] | None:
@@ -2066,6 +2083,16 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "stop_conditions",
                 "execution_run",
                 "finished_run_review",
+                "adaptive_assurance",
+                "traceability_refs",
+                "control_gates",
+                "implementation_blockers",
+                "risk_registry_refs",
+                "invariant_refs",
+                "test_data_policy",
+                "layer_scaffold",
+                "architecture_decision_promotion",
+                "threat_failure_aids",
                 "tool_verification",
                 "escalate_when",
                 "continuation_owner",
@@ -2613,6 +2640,16 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "review_residue",
                 "proof_expectations",
                 "system_intent_alignment",
+                "adaptive_assurance",
+                "traceability_refs",
+                "control_gates",
+                "implementation_blockers",
+                "risk_registry_refs",
+                "invariant_refs",
+                "test_data_policy",
+                "layer_scaffold",
+                "architecture_decision_promotion",
+                "threat_failure_aids",
                 "required_continuation",
                 "tool_verification",
                 "continuation_owner",
@@ -2680,6 +2717,16 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "owned_write_scope",
                 "proof_expectations",
                 "system_intent_alignment",
+                "adaptive_assurance",
+                "traceability_refs",
+                "control_gates",
+                "implementation_blockers",
+                "risk_registry_refs",
+                "invariant_refs",
+                "test_data_policy",
+                "layer_scaffold",
+                "architecture_decision_promotion",
+                "threat_failure_aids",
                 "execution_bounds",
                 "stop_conditions",
                 "tool_verification",
@@ -3350,6 +3397,21 @@ def _planning_state_item_summary(*, bucket_path: str, item: dict[str, Any]) -> d
         summary["refs"] = refs
     if issues:
         summary["issues"] = issues
+    for key in (
+        "adaptive_assurance",
+        "traceability_refs",
+        "control_gates",
+        "implementation_blockers",
+        "risk_registry_refs",
+        "invariant_refs",
+        "test_data_policy",
+        "layer_scaffold",
+        "architecture_decision_promotion",
+        "threat_failure_aids",
+    ):
+        value = item.get(key)
+        if isinstance(value, (dict, list)) and value:
+            summary[key] = value
     role_metadata = _planning_state_role_metadata(item)
     if role_metadata:
         summary["role_metadata"] = role_metadata
@@ -5321,6 +5383,16 @@ def _canonical_planning_record(
     stop_conditions: dict[str, str] = {}
     execution_run: dict[str, str] = {}
     finished_run_review: dict[str, str] = {}
+    adaptive_assurance: dict[str, Any] = {}
+    traceability_refs: dict[str, Any] = {}
+    control_gates: list[Any] = []
+    implementation_blockers: list[Any] = []
+    risk_registry_refs: list[Any] = []
+    invariant_refs: list[Any] = []
+    test_data_policy: dict[str, Any] = {}
+    layer_scaffold: dict[str, Any] = {}
+    architecture_decision_promotion: dict[str, Any] = {}
+    threat_failure_aids: list[Any] = []
     review_residue: list[dict[str, Any]] = []
     if plan_path is not None:
         proof_report = _execplan_proof_report(plan_path)
@@ -5333,6 +5405,16 @@ def _canonical_planning_record(
         stop_conditions = _execplan_stop_conditions(plan_path)
         execution_run = _execplan_execution_run(plan_path)
         finished_run_review = _execplan_finished_run_review(plan_path)
+        adaptive_assurance = _execplan_raw_dict(plan_path, "adaptive_assurance")
+        traceability_refs = _execplan_raw_dict(plan_path, "traceability_refs")
+        control_gates = _execplan_raw_list(plan_path, "control_gates")
+        implementation_blockers = _execplan_raw_list(plan_path, "implementation_blockers")
+        risk_registry_refs = _execplan_raw_list(plan_path, "risk_registry_refs")
+        invariant_refs = _execplan_raw_list(plan_path, "invariant_refs")
+        test_data_policy = _execplan_raw_dict(plan_path, "test_data_policy")
+        layer_scaffold = _execplan_raw_dict(plan_path, "layer_scaffold")
+        architecture_decision_promotion = _execplan_raw_dict(plan_path, "architecture_decision_promotion")
+        threat_failure_aids = _execplan_raw_list(plan_path, "threat_failure_aids")
         review_residue = _review_residue_from_references(
             target_root=target_root,
             references=list(active_contract.get("references", [])),
@@ -5367,6 +5449,16 @@ def _canonical_planning_record(
         "stop_conditions": stop_conditions,
         "execution_run": execution_run,
         "finished_run_review": finished_run_review,
+        "adaptive_assurance": adaptive_assurance,
+        "traceability_refs": traceability_refs,
+        "control_gates": control_gates,
+        "implementation_blockers": implementation_blockers,
+        "risk_registry_refs": risk_registry_refs,
+        "invariant_refs": invariant_refs,
+        "test_data_policy": test_data_policy,
+        "layer_scaffold": layer_scaffold,
+        "architecture_decision_promotion": architecture_decision_promotion,
+        "threat_failure_aids": threat_failure_aids,
         "tool_verification": dict(resumable_contract.get("tool_verification", {})),
         "escalate_when": str(resumable_contract.get("escalate_when", "")).strip(),
         "continuation_owner": continuation_owner,
@@ -6067,6 +6159,16 @@ def _active_handoff_contract(
         "proof_report": dict(planning_record.get("proof_report", {})),
         "intent_satisfaction": dict(planning_record.get("intent_satisfaction", {})),
         "system_intent_alignment": dict(planning_record.get("system_intent_alignment", {})),
+        "adaptive_assurance": dict(planning_record.get("adaptive_assurance", {})),
+        "traceability_refs": dict(planning_record.get("traceability_refs", {})),
+        "control_gates": list(planning_record.get("control_gates", [])),
+        "implementation_blockers": list(planning_record.get("implementation_blockers", [])),
+        "risk_registry_refs": list(planning_record.get("risk_registry_refs", [])),
+        "invariant_refs": list(planning_record.get("invariant_refs", [])),
+        "test_data_policy": dict(planning_record.get("test_data_policy", {})),
+        "layer_scaffold": dict(planning_record.get("layer_scaffold", {})),
+        "architecture_decision_promotion": dict(planning_record.get("architecture_decision_promotion", {})),
+        "threat_failure_aids": list(planning_record.get("threat_failure_aids", [])),
         "intent_interpretation": dict(intent_interpretation_contract if intent_interpretation_contract.get("status") == "present" else {}),
         "pre_work_config_pull": str(context_budget_contract.get("pre_work_config_pull", "")).strip(),
         "pre_work_memory_pull": str(context_budget_contract.get("pre_work_memory_pull", "")).strip(),
@@ -8629,6 +8731,16 @@ def _execplan_context_budget(path: Path) -> dict[str, str]:
         return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Context Budget"))
+
+
+def _execplan_raw_dict(path: Path, key: str) -> dict[str, Any]:
+    value = _record_section_value(_load_execplan_record(path), key)
+    return value if isinstance(value, dict) else {}
+
+
+def _execplan_raw_list(path: Path, key: str) -> list[Any]:
+    value = _record_section_value(_load_execplan_record(path), key)
+    return value if isinstance(value, list) else []
 
 
 def _execplan_references(path: Path) -> list[dict[str, str]]:

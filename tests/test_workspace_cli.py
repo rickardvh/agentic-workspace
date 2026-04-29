@@ -6284,6 +6284,99 @@ def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, 
     assert step["run"] == "uv run agentic-workspace doctor --target ./repo --modules planning --format json"
 
 
+def test_proof_changed_includes_active_assurance_concern_profiles(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance]
+default_level = "medium"
+strict_closeout = true
+
+[assurance.proof_profiles.access_control]
+required_commands = ["uv run pytest tests/test_access_control.py"]
+optional_commands = ["uv run pytest tests/test_auth_integration.py"]
+review_aids = [".agentic-workspace/agent-aids/access-control.md"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "in-progress", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json", why_now = "prove concern-based proof." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    record = planning_installer._build_execplan_record_from_todo_item(
+        title="Plan Alpha",
+        item_id="plan-alpha",
+        status="in-progress",
+        why_now="prove concern-based proof.",
+        next_action="run proof selection.",
+        done_when="concern proof appears.",
+    )
+    record["adaptive_assurance"] = {
+        "level": "high",
+        "reason": "touches access control",
+        "agent_may_escalate": True,
+        "agent_may_deescalate": False,
+        "strict_closeout": True,
+        "required_refs": ["security_refs"],
+        "proof_profiles": ["access_control"],
+        "required_gates": ["security-review"],
+    }
+    record["traceability_refs"] = {"security_refs": ["SEC-1"]}
+    record["control_gates"] = [
+        {
+            "id": "security-review",
+            "owner_role": "security",
+            "required_for": ["access-control"],
+            "status": "pending",
+            "evidence": [],
+            "blocking": True,
+            "next_action": "obtain security review",
+        }
+    ]
+    planning_installer._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".agentic-workspace/planning/state.toml",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert "uv run pytest tests/test_access_control.py" in answer["required_commands"]
+    assert "uv run pytest tests/test_auth_integration.py" in answer["optional_commands"]
+    assert answer["planning_assurance"]["adaptive_assurance"]["level"] == "high"
+    assert answer["planning_assurance"]["missing_required_refs"] == []
+    assert answer["planning_assurance"]["closeout_status"] == "blocked"
+    assert answer["planning_assurance"]["pending_blocking_gates"][0]["id"] == "security-review"
+    concern_step = [step for step in answer["validation_plan"]["required"] if step.get("lane_id") == "concern:access_control"][0]
+    assert concern_step["command"] == "uv run pytest tests/test_access_control.py"
+    assert answer["selected_lanes"][-1]["id"] == "concern:access_control"
+    assert answer["selected_lanes"][-1]["review_aids"] == [".agentic-workspace/agent-aids/access-control.md"]
+
+
 def test_proof_changed_selector_routes_generated_command_packages(capsys) -> None:
     assert (
         cli.main(

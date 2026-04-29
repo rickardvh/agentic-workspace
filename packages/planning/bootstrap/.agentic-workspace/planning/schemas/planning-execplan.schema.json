@@ -19,6 +19,84 @@
     "stop_conditions": { "$ref": "#/$defs/string_map" },
     "context_budget": { "$ref": "#/$defs/string_map" },
     "delegated_judgment": { "$ref": "#/$defs/string_map" },
+    "adaptive_assurance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "level": { "enum": ["low", "medium", "high", "critical"] },
+        "reason": { "type": "string" },
+        "agent_may_escalate": { "type": "boolean" },
+        "agent_may_deescalate": { "type": "boolean" },
+        "strict_closeout": { "type": "boolean" },
+        "required_refs": { "$ref": "#/$defs/string_array" },
+        "proof_profiles": { "$ref": "#/$defs/string_array" },
+        "required_gates": { "$ref": "#/$defs/string_array" }
+      }
+    },
+    "traceability_refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requirement_refs": { "$ref": "#/$defs/string_array" },
+        "regulation_refs": { "$ref": "#/$defs/string_array" },
+        "compliance_refs": { "$ref": "#/$defs/string_array" },
+        "domain_model_refs": { "$ref": "#/$defs/string_array" },
+        "risk_refs": { "$ref": "#/$defs/string_array" },
+        "security_refs": { "$ref": "#/$defs/string_array" },
+        "audit_refs": { "$ref": "#/$defs/string_array" },
+        "acceptance_refs": { "$ref": "#/$defs/string_array" },
+        "decision_refs": { "$ref": "#/$defs/string_array" }
+      }
+    },
+    "control_gates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/control_gate" }
+    },
+    "implementation_blockers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/implementation_blocker" }
+    },
+    "risk_registry_refs": { "$ref": "#/$defs/string_array" },
+    "invariant_refs": { "$ref": "#/$defs/string_array" },
+    "test_data_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "classification": { "type": "string" },
+        "forbidden": { "$ref": "#/$defs/string_array" },
+        "fixture_owner": { "type": "string" },
+        "proof_required": { "$ref": "#/$defs/string_array" },
+        "refs": { "$ref": "#/$defs/string_array" }
+      }
+    },
+    "layer_scaffold": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string" },
+        "required_refs": { "$ref": "#/$defs/string_array" },
+        "common_risks": { "$ref": "#/$defs/string_array" },
+        "suggested_proof_profiles": { "$ref": "#/$defs/string_array" },
+        "suggested_gates": { "$ref": "#/$defs/string_array" },
+        "non_goals": { "$ref": "#/$defs/string_array" },
+        "durable_residue_prompts": { "$ref": "#/$defs/string_array" }
+      }
+    },
+    "architecture_decision_promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": { "enum": ["none", "candidate", "needed", "promoted", "deferred"] },
+        "target": { "type": "string" },
+        "decision_refs": { "$ref": "#/$defs/string_array" },
+        "promotion_needed": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    },
+    "threat_failure_aids": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/threat_failure_aid" }
+    },
     "parent_lane": { "$ref": "#/$defs/string_map" },
     "capability_posture": { "$ref": "#/$defs/string_map" },
     "references": {
@@ -148,6 +226,42 @@
           }
         }
       ]
+    },
+    "control_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "owner_role": { "type": "string" },
+        "required_for": { "$ref": "#/$defs/string_array" },
+        "status": { "enum": ["pending", "satisfied", "waived", "blocked"] },
+        "evidence": { "$ref": "#/$defs/string_array" },
+        "blocking": { "type": "boolean" },
+        "next_action": { "type": "string" }
+      }
+    },
+    "implementation_blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "status": { "type": "string" },
+        "do_not_implement": { "type": "boolean" },
+        "blocked_by": { "$ref": "#/$defs/string_array" },
+        "allowed_work": { "$ref": "#/$defs/string_array" },
+        "evidence": { "$ref": "#/$defs/string_array" },
+        "next_action": { "type": "string" }
+      }
+    },
+    "threat_failure_aid": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "concern": { "type": "string" },
+        "source_ref": { "type": "string" },
+        "advisory": { "type": "string" }
+      }
     },
     "distillation_items": {
       "type": "array",

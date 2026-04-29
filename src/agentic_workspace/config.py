@@ -86,6 +86,8 @@ SUPPORTED_ADVANCED_FEATURES = (
     "external_adapters",
 )
 DEFAULT_CLI_INVOKE = "agentic-workspace"
+DEFAULT_ASSURANCE_LEVEL = "low"
+SUPPORTED_ASSURANCE_LEVELS = ("low", "medium", "high", "critical")
 SUPPORTED_WORKFLOW_OBLIGATION_STAGES = (
     "pre-work",
     "before-claiming-completion",
@@ -204,6 +206,28 @@ class SystemIntentDeclaration:
 
 
 @dataclass(frozen=True)
+class AssuranceProofProfile:
+    id: str
+    required_commands: tuple[str, ...]
+    optional_commands: tuple[str, ...]
+    review_aids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class AssuranceConfig:
+    default_level: str
+    default_level_source: str
+    agent_may_escalate: bool
+    agent_may_deescalate: bool
+    strict_closeout: bool
+    proof_profiles: tuple[AssuranceProofProfile, ...]
+    test_data_policy: dict[str, Any]
+    decision_record_target: str | None
+    invariant_registry: str | None
+    risk_registry: str | None
+
+
+@dataclass(frozen=True)
 class WorkspaceConfig:
     target_root: Path | None
     path: Path | None
@@ -226,6 +250,7 @@ class WorkspaceConfig:
     update_modules: dict[str, ModuleUpdatePolicy]
     workflow_obligations: tuple[WorkflowObligation, ...]
     system_intent: SystemIntentDeclaration
+    assurance: AssuranceConfig
     local_override: MixedAgentLocalOverride
     warnings: tuple[str, ...] = ()
 
@@ -357,6 +382,92 @@ def validate_optimization_bias(bias: str) -> str:
         supported = ", ".join(SUPPORTED_OPTIMIZATION_BIASES)
         raise WorkspaceUsageError(f"workspace.optimization_bias must be one of: {supported}.")
     return normalized
+
+
+def validate_assurance_level(level: str) -> str:
+    normalized = level.strip() or DEFAULT_ASSURANCE_LEVEL
+    if normalized not in SUPPORTED_ASSURANCE_LEVELS:
+        supported = ", ".join(SUPPORTED_ASSURANCE_LEVELS)
+        raise WorkspaceUsageError(f"assurance.default_level must be one of: {supported}.")
+    return normalized
+
+
+def _require_bool(*, payload: dict[str, Any], key: str, default: bool, config_path: Path) -> bool:
+    if key not in payload:
+        return default
+    value = payload[key]
+    if not isinstance(value, bool):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be true or false.")
+    return value
+
+
+def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[AssuranceConfig, list[str]]:
+    warnings: list[str] = []
+    if raw_assurance is None:
+        raw_assurance = {}
+    if not isinstance(raw_assurance, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance] section must be a table.")
+    supported_fields = {
+        "default_level",
+        "agent_may_escalate",
+        "agent_may_deescalate",
+        "strict_closeout",
+        "proof_profiles",
+        "test_data_policy",
+        "decision_record_target",
+        "invariant_registry",
+        "risk_registry",
+    }
+    unknown = sorted(set(raw_assurance) - supported_fields)
+    if unknown:
+        warnings.append(f"{config_path.as_posix()} [assurance] contains unsupported field(s): {', '.join(unknown)}.")
+    default_level_source = "repo-config" if "default_level" in raw_assurance else "product-default"
+    default_level = validate_assurance_level(str(raw_assurance.get("default_level", DEFAULT_ASSURANCE_LEVEL)))
+    raw_profiles = raw_assurance.get("proof_profiles", {})
+    if raw_profiles is None:
+        raw_profiles = {}
+    if not isinstance(raw_profiles, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.proof_profiles] section must be a table.")
+    profiles: list[AssuranceProofProfile] = []
+    for profile_id, profile_payload in sorted(raw_profiles.items()):
+        if not isinstance(profile_payload, dict):
+            raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.proof_profiles.{profile_id}] must be a table.")
+        unknown_profile = sorted(set(profile_payload) - {"required_commands", "optional_commands", "review_aids"})
+        if unknown_profile:
+            warnings.append(
+                f"{config_path.as_posix()} [assurance.proof_profiles.{profile_id}] contains unsupported field(s): {', '.join(unknown_profile)}."
+            )
+        profiles.append(
+            AssuranceProofProfile(
+                id=str(profile_id).strip(),
+                required_commands=require_optional_string_list(payload=profile_payload, key="required_commands", config_path=config_path),
+                optional_commands=require_optional_string_list(payload=profile_payload, key="optional_commands", config_path=config_path),
+                review_aids=require_optional_string_list(payload=profile_payload, key="review_aids", config_path=config_path),
+            )
+        )
+    raw_test_data_policy = raw_assurance.get("test_data_policy", {})
+    if raw_test_data_policy is None:
+        raw_test_data_policy = {}
+    if not isinstance(raw_test_data_policy, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.test_data_policy] section must be a table.")
+    decision_record_target = raw_assurance.get("decision_record_target")
+    invariant_registry = raw_assurance.get("invariant_registry")
+    risk_registry = raw_assurance.get("risk_registry")
+    return (
+        AssuranceConfig(
+            default_level=default_level,
+            default_level_source=default_level_source,
+            agent_may_escalate=_require_bool(payload=raw_assurance, key="agent_may_escalate", default=True, config_path=config_path),
+            agent_may_deescalate=_require_bool(payload=raw_assurance, key="agent_may_deescalate", default=False, config_path=config_path),
+            strict_closeout=_require_bool(payload=raw_assurance, key="strict_closeout", default=False, config_path=config_path),
+            proof_profiles=tuple(profile for profile in profiles if profile.id),
+            test_data_policy={str(key): value for key, value in raw_test_data_policy.items()},
+            decision_record_target=str(decision_record_target).strip() if decision_record_target is not None else None,
+            invariant_registry=str(invariant_registry).strip() if invariant_registry is not None else None,
+            risk_registry=str(risk_registry).strip() if risk_registry is not None else None,
+        ),
+        warnings,
+    )
 
 
 def load_workflow_obligations(
@@ -817,6 +928,8 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     advanced_features_source = "product-default"
     cli_invoke = DEFAULT_CLI_INVOKE
     cli_invoke_source = "product-default"
+    assurance, assurance_warnings = _load_assurance_config(raw_assurance={}, config_path=WORKSPACE_CONFIG_PATH)
+    warnings.extend(assurance_warnings)
     if local_override.cli_invoke is not None:
         cli_invoke = local_override.cli_invoke
         cli_invoke_source = "local-override"
@@ -864,6 +977,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
                     else "product-default"
                 ),
             ),
+            assurance=assurance,
             local_override=local_override,
             warnings=tuple(warnings),
         )
@@ -876,7 +990,9 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             f"{WORKSPACE_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current workspace config contract."
         )
 
-    unknown_top_level = sorted(set(payload) - {"schema_version", "workspace", "update", "workflow_obligations", "system_intent"})
+    unknown_top_level = sorted(
+        set(payload) - {"schema_version", "workspace", "update", "workflow_obligations", "system_intent", "assurance"}
+    )
     if unknown_top_level:
         unknown_text = ", ".join(unknown_top_level)
         warnings.append(f"{WORKSPACE_CONFIG_PATH.as_posix()} contains unsupported top-level field(s): {unknown_text}.")
@@ -1019,6 +1135,11 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         config_path=WORKSPACE_CONFIG_PATH,
     )
     warnings.extend(system_intent_warnings)
+    assurance, assurance_warnings = _load_assurance_config(
+        raw_assurance=payload.get("assurance", {}),
+        config_path=WORKSPACE_CONFIG_PATH,
+    )
+    warnings.extend(assurance_warnings)
 
     agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = resolve_effective_agent_instructions_file(
         target_root=effective_root,
@@ -1046,6 +1167,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         update_modules=update_modules,
         workflow_obligations=workflow_obligations,
         system_intent=system_intent,
+        assurance=assurance,
         local_override=local_override,
         warnings=tuple(warnings),
     )

@@ -79,6 +79,7 @@ Each active plan should stay compact and include:
 - execution bounds and stop conditions when the slice may benefit from bounded delegated execution
 - context budget
 - delegated judgment
+- adaptive assurance only when the slice needs refs, gates, blockers, proof profiles, or stricter closeout
 - active milestone
 - immediate next action
 - touched paths
@@ -93,6 +94,8 @@ Each active plan should stay compact and include:
 - execution summary
 - closure check
 - drift log
+
+Adaptive assurance is optional and generic. Use it when a slice needs host-owned authority refs, review gates, risk/invariant routing, proof concerns, test-data policy, do-not-implement-yet blockers, layer scaffolding, architecture-decision promotion, or threat/failure-mode aids. Keep the package out of domain truth: fields such as `traceability_refs`, `control_gates`, `proof_profiles`, `risk_registry_refs`, `invariant_refs`, `test_data_policy`, and `threat_failure_aids` should point at project-owned docs, schemas, registries, checks, or review owners instead of copying regulated or domain-specific content into the plan.
 
 Readiness fields belong under `## Active Milestone` for active plans:
 

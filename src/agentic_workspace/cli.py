@@ -35,6 +35,7 @@ from agentic_workspace.config import (
     MEMORY_WORKFLOW_MARKER_START,
     SUPPORTED_ADVANCED_FEATURES,
     SUPPORTED_AGENT_INSTRUCTIONS_FILES,
+    SUPPORTED_ASSURANCE_LEVELS,
     SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
     SUPPORTED_CAPABILITY_LOCATIONS,
     SUPPORTED_DELEGATION_OUTCOMES,
@@ -7412,6 +7413,12 @@ def _config_field_enforcement_entries() -> list[dict[str, Any]]:
             "used_by": ["report.workflow_obligations", "preflight.closeout_obligations"],
         },
         {
+            "field": "assurance.*",
+            "enforcement": "advisory-operational",
+            "scope": "repo-config",
+            "used_by": ["config.assurance", "summary.planning_record", "proof concern profiles", "closeout guidance"],
+        },
+        {
             "field": "update.modules.<module>.*",
             "enforcement": "operational",
             "scope": "repo-config",
@@ -11009,11 +11016,84 @@ def _validation_plan_for_proof(
     }
 
 
+def _active_planning_assurance_for_proof(*, target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {"status": "unavailable", "reason": "requires a target root"}
+    try:
+        from repo_planning_bootstrap.installer import planning_summary
+
+        summary = planning_summary(target=target_root, profile="compact")
+    except Exception as exc:  # pragma: no cover - defensive; proof must remain usable without planning.
+        return {"status": "unavailable", "reason": f"planning summary unavailable: {exc}"}
+    planning_record = summary.get("planning_record", {}) if isinstance(summary, dict) else {}
+    if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
+        return {"status": "unavailable", "reason": "no active planning record"}
+    adaptive_assurance = planning_record.get("adaptive_assurance", {})
+    test_data_policy = planning_record.get("test_data_policy", {})
+    layer_scaffold = planning_record.get("layer_scaffold", {})
+    proof_profiles = []
+    if isinstance(adaptive_assurance, dict):
+        proof_profiles.extend(str(item).strip() for item in adaptive_assurance.get("proof_profiles", []) if str(item).strip())
+    if isinstance(test_data_policy, dict):
+        proof_profiles.extend(str(item).strip() for item in test_data_policy.get("proof_required", []) if str(item).strip())
+    if isinstance(layer_scaffold, dict):
+        proof_profiles.extend(str(item).strip() for item in layer_scaffold.get("suggested_proof_profiles", []) if str(item).strip())
+    required_refs = []
+    if isinstance(adaptive_assurance, dict):
+        required_refs = [str(item).strip() for item in adaptive_assurance.get("required_refs", []) if str(item).strip()]
+    traceability_refs = planning_record.get("traceability_refs", {})
+    missing_required_refs: list[str] = []
+    if isinstance(traceability_refs, dict):
+        for ref_field in required_refs:
+            ref_values = traceability_refs.get(ref_field, [])
+            if not isinstance(ref_values, list) or not [item for item in ref_values if str(item).strip()]:
+                missing_required_refs.append(ref_field)
+    control_gates = planning_record.get("control_gates", [])
+    pending_blocking_gates = [
+        gate
+        for gate in control_gates
+        if isinstance(gate, dict)
+        and bool(gate.get("blocking", False))
+        and str(gate.get("status", "")).strip() not in {"satisfied", "waived"}
+    ]
+    implementation_blockers = planning_record.get("implementation_blockers", [])
+    do_not_implement_blockers = [
+        blocker for blocker in implementation_blockers if isinstance(blocker, dict) and bool(blocker.get("do_not_implement", False))
+    ]
+    strict_closeout = bool(adaptive_assurance.get("strict_closeout", False)) if isinstance(adaptive_assurance, dict) else False
+    closeout_status = (
+        "blocked" if strict_closeout and (missing_required_refs or pending_blocking_gates or do_not_implement_blockers) else "open"
+    )
+    return {
+        "status": "present",
+        "task": planning_record.get("task", {}),
+        "adaptive_assurance": adaptive_assurance if isinstance(adaptive_assurance, dict) else {},
+        "traceability_refs": traceability_refs if isinstance(traceability_refs, dict) else {},
+        "control_gates": control_gates,
+        "pending_blocking_gates": pending_blocking_gates,
+        "implementation_blockers": implementation_blockers,
+        "do_not_implement_blockers": do_not_implement_blockers,
+        "risk_registry_refs": planning_record.get("risk_registry_refs", []),
+        "invariant_refs": planning_record.get("invariant_refs", []),
+        "test_data_policy": test_data_policy if isinstance(test_data_policy, dict) else {},
+        "layer_scaffold": layer_scaffold if isinstance(layer_scaffold, dict) else {},
+        "architecture_decision_promotion": planning_record.get("architecture_decision_promotion", {}),
+        "threat_failure_aids": planning_record.get("threat_failure_aids", []),
+        "proof_profiles": _dedupe(proof_profiles),
+        "required_refs": required_refs,
+        "missing_required_refs": missing_required_refs,
+        "closeout_status": closeout_status,
+        "closeout_rule": "Strict closeout is blocked by missing required refs, pending blocking gates, or do-not-implement blockers.",
+    }
+
+
 def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root: Path | None = None) -> dict[str, Any]:
     defaults = _defaults_payload()
     cli_invoke = DEFAULT_CLI_INVOKE
+    config: WorkspaceConfig | None = None
     if target_root is not None:
-        cli_invoke = _load_workspace_config(target_root=target_root).cli_invoke
+        config = _load_workspace_config(target_root=target_root)
+        cli_invoke = config.cli_invoke
     validation_lanes = defaults["validation"]["lanes"]
     cli_authority_lane = _PROOF_SELECTION_RULES.get("cli_authority", {}).get("lane")
 
@@ -11041,6 +11121,28 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
             _select(str(cli_authority_lane))
 
     selected_lanes = [_lane(lane_id) for lane_id in selected_ids]
+    planning_assurance = _active_planning_assurance_for_proof(target_root=target_root)
+    configured_profiles = {profile.id: profile for profile in (config.assurance.proof_profiles if config is not None else ())}
+    concern_lanes: list[dict[str, Any]] = []
+    missing_concern_profiles: list[str] = []
+    if planning_assurance.get("status") == "present":
+        for profile_id in planning_assurance.get("proof_profiles", []):
+            profile = configured_profiles.get(str(profile_id))
+            if profile is None:
+                missing_concern_profiles.append(str(profile_id))
+                continue
+            concern_lanes.append(
+                {
+                    "id": f"concern:{profile.id}",
+                    "when": "active planning assurance declares this proof concern",
+                    "enough_proof": list(profile.required_commands),
+                    "recovery_signal": "missing or failing concern proof should block high-assurance closeout until resolved or explicitly waived",
+                    "proof_profile": profile.id,
+                    "optional_commands": list(profile.optional_commands),
+                    "review_aids": list(profile.review_aids),
+                }
+            )
+    selected_lanes.extend(concern_lanes)
     required_commands: list[str] = []
     broaden_when: list[str] = []
     escalate_when: list[str] = []
@@ -11063,6 +11165,10 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
         "agentic-workspace proof --target ./repo --current --format json",
         "agentic-workspace summary --format json",
     ]
+    for concern_lane in concern_lanes:
+        for command in concern_lane.get("optional_commands", []):
+            if command not in optional_commands:
+                optional_commands.append(str(command))
     proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,
@@ -11072,6 +11178,8 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
                 "when": lane["when"],
                 "required_commands": lane["enough_proof"],
                 "recovery_signal": lane.get("recovery_signal", ""),
+                **({"proof_profile": lane["proof_profile"]} if lane.get("proof_profile") else {}),
+                **({"review_aids": lane["review_aids"]} if lane.get("review_aids") else {}),
             }
             for lane in selected_lanes
         ],
@@ -11085,6 +11193,14 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
         "broaden_when": broaden_when,
         "escalate_when": escalate_when,
     }
+    if planning_assurance.get("status") == "present":
+        proof_selection["planning_assurance"] = {
+            **planning_assurance,
+            "missing_configured_proof_profiles": missing_concern_profiles,
+            "rule": (
+                "Path lanes stay package-defined; concern profiles are host-configured and activated from active planning assurance fields."
+            ),
+        }
     surface_value_review = _surface_value_review_for_changed_paths(changed_paths=changed_paths, target_root=target_root)
     if surface_value_review["durable_surface_count"]:
         proof_selection["surface_value_review"] = surface_value_review
@@ -12423,6 +12539,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
 
 
 def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    assurance = config.assurance
     return {
         "target": config.target_root.as_posix() if config.target_root is not None else None,
         "config_path": config.path.as_posix() if config.path is not None else WORKSPACE_CONFIG_PATH.as_posix(),
@@ -12468,6 +12585,28 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "update": {
             "wrapper_rule": "normal update execution stays behind agentic-workspace",
             "modules": _module_update_policy_payload(config=config, target_root=config.target_root),
+        },
+        "assurance": {
+            "default_level": assurance.default_level,
+            "default_level_source": assurance.default_level_source,
+            "agent_may_escalate": assurance.agent_may_escalate,
+            "agent_may_deescalate": assurance.agent_may_deescalate,
+            "strict_closeout": assurance.strict_closeout,
+            "supported_levels": list(SUPPORTED_ASSURANCE_LEVELS),
+            "proof_profiles": [
+                {
+                    "id": profile.id,
+                    "required_commands": list(profile.required_commands),
+                    "optional_commands": list(profile.optional_commands),
+                    "review_aids": list(profile.review_aids),
+                }
+                for profile in assurance.proof_profiles
+            ],
+            "test_data_policy": dict(assurance.test_data_policy),
+            "decision_record_target": assurance.decision_record_target,
+            "invariant_registry": assurance.invariant_registry,
+            "risk_registry": assurance.risk_registry,
+            "rule": "Assurance config is generic host-owned routing for refs, proof profiles, gates, blockers, closeout, and review aids; it is not domain law.",
         },
         "mixed_agent": _mixed_agent_payload(config=config),
     }

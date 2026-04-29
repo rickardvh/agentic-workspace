@@ -79,6 +79,55 @@
     "agent may decide locally": "",
     "escalate when": ""
   },
+  "adaptive_assurance": {
+    "level": "low",
+    "reason": "",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": false,
+    "required_refs": [],
+    "proof_profiles": [],
+    "required_gates": []
+  },
+  "traceability_refs": {
+    "requirement_refs": [],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [],
+    "risk_refs": [],
+    "security_refs": [],
+    "audit_refs": [],
+    "acceptance_refs": [],
+    "decision_refs": []
+  },
+  "control_gates": [],
+  "implementation_blockers": [],
+  "risk_registry_refs": [],
+  "invariant_refs": [],
+  "test_data_policy": {
+    "classification": "",
+    "forbidden": [],
+    "fixture_owner": "",
+    "proof_required": [],
+    "refs": []
+  },
+  "layer_scaffold": {
+    "type": "",
+    "required_refs": [],
+    "common_risks": [],
+    "suggested_proof_profiles": [],
+    "suggested_gates": [],
+    "non_goals": [],
+    "durable_residue_prompts": []
+  },
+  "architecture_decision_promotion": {
+    "status": "none",
+    "target": "",
+    "decision_refs": [],
+    "promotion_needed": false,
+    "notes": ""
+  },
+  "threat_failure_aids": [],
   "references": [
     {
       "kind": "",

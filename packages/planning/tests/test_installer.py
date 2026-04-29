@@ -1748,7 +1748,7 @@ active_items = [
   { id = "active-plan", title = "Active plan", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json", why_now = "active maturity owns execution.", handoff_ready = true },
 ]
 queued_items = [
-  { id = "ready-slice", title = "Ready slice", maturity = "ready", status = "next", refs = ["#499"], owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "implement ready slice.", done_when = "ready slice done.", proof = ["uv run pytest tests/test_installer.py"] },
+  { id = "ready-slice", title = "Ready slice", maturity = "ready", status = "next", refs = ["#499"], owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "implement ready slice.", done_when = "ready slice done.", proof = ["uv run pytest tests/test_installer.py"], adaptive_assurance = { level = "high", proof_profiles = ["access_control"], required_refs = ["security_refs"] }, traceability_refs = { security_refs = ["SEC-1"] }, control_gates = [{ id = "security-review", status = "pending", blocking = true }] },
   { id = "shape-candidate", title = "Shape candidate", maturity = "candidate", status = "next", next_action = "shape the candidate." },
   { id = "blocked-ready", title = "Blocked ready", maturity = "ready", status = "blocked", owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "unblock.", done_when = "unblocked.", proof = ["manual proof"] },
 ]
@@ -1777,6 +1777,9 @@ candidates = [
     assert work_maturity["active_execplans"][0]["id"] == "active-plan"
     assert work_maturity["active_execplans"][0]["source_bucket"] == "todo.active_items"
     assert work_maturity["ready_slices"][0]["id"] == "ready-slice"
+    assert work_maturity["ready_slices"][0]["adaptive_assurance"]["level"] == "high"
+    assert work_maturity["ready_slices"][0]["traceability_refs"]["security_refs"] == ["SEC-1"]
+    assert work_maturity["ready_slices"][0]["control_gates"][0]["id"] == "security-review"
     assert work_maturity["needs_shaping"][0]["id"] == "shape-candidate"
     assert work_maturity["deferred_lanes"][0]["id"] == "deferred-lane"
     assert work_maturity["blocked_items"][0]["id"] == "blocked-ready"
@@ -3658,6 +3661,113 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     if summary["warning_count"] != 0:
         print(f"DEBUG: warnings found: {summary['warnings']}")
     assert summary["warning_count"] == 0
+
+
+def test_planning_summary_exposes_adaptive_assurance_fields(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "in-progress", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json", why_now = "high assurance work needs compact refs." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    record = installer_mod._build_execplan_record_from_todo_item(
+        title="Plan Alpha",
+        item_id="plan-alpha",
+        status="in-progress",
+        why_now="high assurance work needs compact refs.",
+        next_action="implement the bounded slice.",
+        done_when="the slice is implemented and validated.",
+    )
+    record["adaptive_assurance"] = {
+        "level": "high",
+        "reason": "touches access control and auditability",
+        "agent_may_escalate": True,
+        "agent_may_deescalate": False,
+        "strict_closeout": True,
+        "required_refs": ["requirement_refs", "security_refs"],
+        "proof_profiles": ["access_control", "auditability"],
+        "required_gates": ["security-review"],
+    }
+    record["traceability_refs"] = {
+        "requirement_refs": ["REQ-7"],
+        "security_refs": ["SEC-2"],
+        "audit_refs": ["AUD-1"],
+    }
+    record["control_gates"] = [
+        {
+            "id": "security-review",
+            "owner_role": "security",
+            "required_for": ["access-control"],
+            "status": "pending",
+            "evidence": [],
+            "blocking": True,
+            "next_action": "obtain security review",
+        }
+    ]
+    record["implementation_blockers"] = [
+        {
+            "id": "auth-policy",
+            "status": "blocked",
+            "do_not_implement": True,
+            "blocked_by": ["security-review"],
+            "allowed_work": ["write interface placeholder"],
+            "evidence": [],
+            "next_action": "wait for policy owner",
+        }
+    ]
+    record["test_data_policy"] = {
+        "classification": "synthetic-only",
+        "forbidden": ["real_personal_identity"],
+        "fixture_owner": "test-data",
+        "proof_required": ["sensitive_data"],
+        "refs": ["TESTDATA.md"],
+    }
+    record["layer_scaffold"] = {
+        "type": "access_control",
+        "required_refs": ["security_refs"],
+        "common_risks": ["privilege escalation"],
+        "suggested_proof_profiles": ["access_control"],
+        "suggested_gates": ["security-review"],
+        "non_goals": ["authorization redesign"],
+        "durable_residue_prompts": ["promote stable policy to decision record"],
+    }
+    record["architecture_decision_promotion"] = {
+        "status": "needed",
+        "target": "docs/decisions/",
+        "decision_refs": [],
+        "promotion_needed": True,
+        "notes": "promote stable access-control boundary",
+    }
+    record["threat_failure_aids"] = [
+        {
+            "id": "access-control-checklist",
+            "concern": "access_control",
+            "source_ref": ".agentic-workspace/agent-aids/access-control.md",
+            "advisory": "review support only",
+        }
+    ]
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    planning_record = summary["planning_record"]
+    assert planning_record["adaptive_assurance"]["level"] == "high"
+    assert planning_record["traceability_refs"]["requirement_refs"] == ["REQ-7"]
+    assert planning_record["control_gates"][0]["blocking"] is True
+    assert planning_record["implementation_blockers"][0]["do_not_implement"] is True
+    assert planning_record["test_data_policy"]["classification"] == "synthetic-only"
+    assert planning_record["layer_scaffold"]["type"] == "access_control"
+    assert planning_record["architecture_decision_promotion"]["promotion_needed"] is True
+    assert planning_record["threat_failure_aids"][0]["id"] == "access-control-checklist"
 
 
 def test_planning_summary_compact_profile_trims_heavy_sections(tmp_path: Path) -> None:

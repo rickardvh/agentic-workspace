@@ -108,6 +108,81 @@
         }
       },
       "additionalProperties": true
+    },
+    "assurance": {
+      "type": "object",
+      "x-agentic-workspace-unknown-properties": "warn",
+      "properties": {
+        "default_level": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "agent_may_escalate": {
+          "type": "boolean"
+        },
+        "agent_may_deescalate": {
+          "type": "boolean"
+        },
+        "strict_closeout": {
+          "type": "boolean"
+        },
+        "decision_record_target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "invariant_registry": {
+          "type": "string",
+          "minLength": 1
+        },
+        "risk_registry": {
+          "type": "string",
+          "minLength": 1
+        },
+        "proof_profiles": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "x-agentic-workspace-unknown-properties": "warn",
+            "properties": {
+              "required_commands": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "optional_commands": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "review_aids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "test_data_policy": {
+          "type": "object",
+          "x-agentic-workspace-unknown-properties": "warn",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
     }
   },
   "x-agentic-workspace-unknown-properties": "warn",
