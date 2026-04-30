@@ -136,7 +136,7 @@
       "additionalProperties": false,
       "properties": {
         "status": {
-          "enum": ["none", "memory", "docs", "contract", "check", "planning", "evidence_only", "pending"]
+          "enum": ["none", "memory", "docs", "contract", "check", "planning", "evidence_only"]
         },
         "learned constraint": { "type": "string" },
         "motivation worth preserving": { "type": "string" },

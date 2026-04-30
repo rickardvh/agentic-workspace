@@ -1,0 +1,389 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning closeout affordance",
+  "goal": [
+    "Make planning closeout values and closed-state routing valid by construction for GitHub #614, #615, and #616."
+  ],
+  "non_goals": [
+    "Do not change unrelated planning workflow semantics."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agents can author closed planning rows and execplan closeout records without discovering terminal vocabulary only through failed archive validation.",
+      "constraints": "Keep package bootstrap payloads and installed repo payloads in sync.",
+      "latitude": "Use compact schema, template, README, and summary affordance changes that match existing planning surfaces.",
+      "escalation": "Stop if the lane requires external host-repo dogfooding."
+    },
+    "execution": {
+      "milestone": "closeout-affordance",
+      "status": "completed",
+      "next_step": "archive the plan and close GitHub #614, #615, and #616.",
+      "proof": "uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/",
+        "packages/planning/bootstrap/.agentic-workspace/planning/",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py"
+      ],
+      "invariants": [
+        "Closed state rows use maturity=closed with status done or dismissed plus explicit durable residue or closure routing.",
+        "Execplan durable_residue status vocabulary matches archive validation."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Planning closeout should be cheap, explicit, and recoverable without hidden terminal values.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "GitHub #614, #615, #616"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "none",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Valid-by-construction closeout values and closed planning-state guidance.",
+    "intentionally deferred": "none",
+    "discovered implications": "dogfooding evidence will be recorded during implementation.",
+    "proof achieved now": "installer tests, lint, planning surface check, and compact summary passed.",
+    "validation still needed": "none",
+    "next likely slice": "none"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement the new lane #614+.",
+    "inferred intended outcome": "Finish the whole issue cluster, close the lane, and feed dogfooding findings back into the planning system.",
+    "chosen concrete what": "Schema/template/docs/tests plus summary affordance for closed state authoring.",
+    "interpretation distance": "low",
+    "review guidance": "Check that the values exposed by templates and summaries are the same values accepted by archive validation."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/planning/**; packages/planning/**",
+    "max changed files": "bounded to planning package and planning surfaces",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q; uv run python scripts/check/check_planning_surfaces.py",
+    "ask-before-refactor threshold": "broad schema or state model rewrites",
+    "stop before touching": "unrelated packages"
+  },
+  "stop_conditions": {
+    "stop when": "Issues #614, #615, and #616 have landed, validated, archived, and been closed.",
+    "escalate when boundary reached": "external host-repo execution is required.",
+    "escalate on scope drift": "new unrelated planning semantics are needed.",
+    "escalate on proof failure": "focused tests or planning checks fail for reasons outside this lane."
+  },
+  "context_budget": {
+    "live working set": "state.toml, this execplan, installer.py, installer tests, execplan schema/template/README payloads",
+    "recoverable later": "GitHub issues #614, #615, and #616 plus archived plan evidence",
+    "externalize before shift": "update this plan with milestone status, validations, and dogfooding evidence",
+    "pre-work config pull": "Use agentic-workspace summary before opening raw planning files.",
+    "pre-work memory pull": "No Memory module is installed in this repo.",
+    "tiny resumability note": "finish closeout affordance lane #614/#615/#616.",
+    "context-shift triggers": "before broad validation or archive"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the complete #614+ lane on autopilot.",
+    "hard constraints": "Do not include dogfooding in another repo; keep package payloads synchronized.",
+    "agent may decide locally": "Exact summary field names, template defaults, and test placement.",
+    "escalate when": "The implementation would require changing external host repositories."
+  },
+  "adaptive_assurance": {
+    "level": "medium",
+    "reason": "This affects package-owned schema, templates, startup projections, and closeout validation.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "requirement_refs",
+      "acceptance_refs"
+    ],
+    "proof_profiles": [
+      "installer-tests",
+      "planning-surface-check"
+    ],
+    "required_gates": []
+  },
+  "traceability_refs": {
+    "requirement_refs": [
+      "GitHub #614",
+      "GitHub #615",
+      "GitHub #616"
+    ],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [],
+    "risk_refs": [],
+    "security_refs": [],
+    "audit_refs": [],
+    "acceptance_refs": [
+      "Archive validation vocabulary and schema vocabulary agree.",
+      "Closeout template surfaces accepted terminal values.",
+      "Closed planning-state warnings include a valid authoring scaffold."
+    ],
+    "decision_refs": []
+  },
+  "control_gates": [],
+  "implementation_blockers": [],
+  "risk_registry_refs": [],
+  "invariant_refs": [
+    "planning-state/v1",
+    "planning-execplan/v1"
+  ],
+  "test_data_policy": {
+    "classification": "local fixtures only",
+    "forbidden": [],
+    "fixture_owner": "packages/planning/tests/test_installer.py",
+    "proof_required": [
+      "schema/template validation",
+      "summary warning validation"
+    ],
+    "refs": []
+  },
+  "layer_scaffold": {
+    "type": "planning package closeout affordance",
+    "required_refs": [
+      "GitHub #614",
+      "GitHub #615",
+      "GitHub #616"
+    ],
+    "common_risks": [
+      "Schema and archive validation drift",
+      "Template values that look acceptable but fail archive validation",
+      "Closed planning rows that stay ambiguous in compact summaries"
+    ],
+    "suggested_proof_profiles": [
+      "installer-tests",
+      "planning-surface-check"
+    ],
+    "suggested_gates": [],
+    "non_goals": [
+      "Host-repo dogfooding"
+    ],
+    "durable_residue_prompts": [
+      "Did this lane reveal another cheap default or command hint that would reduce closeout friction?"
+    ]
+  },
+  "architecture_decision_promotion": {
+    "status": "none",
+    "target": "none",
+    "decision_refs": [],
+    "promotion_needed": false,
+    "notes": ""
+  },
+  "threat_failure_aids": [],
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#614",
+      "label": "Closed planning-state rows should be valid-by-construction",
+      "role": "requirement",
+      "locator": "GitHub issue #614"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#615",
+      "label": "Align durable_residue status schema with archive validation",
+      "role": "requirement",
+      "locator": "GitHub issue #615"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#616",
+      "label": "Execplan closeout template hides required terminal values",
+      "role": "requirement",
+      "locator": "GitHub issue #616"
+    }
+  ],
+  "active_milestone": {
+    "id": "closeout-affordance",
+    "status": "completed",
+    "scope": "Implement all issues in the #614+ lane.",
+    "ready": "issues ingested and lane promoted",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this plan and close GitHub #614, #615, and #616."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/planning-closeout-affordance.plan.json",
+    ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+    ".agentic-workspace/planning/execplans/README.md",
+    ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md",
+    "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "invariants": [
+    "No pending durable_residue status is accepted by schema or archive validation.",
+    "Closed planning-state rows show terminal status and residue routing requirements before archive.",
+    "Prepare-closeout remains the primary generated closeout path."
+  ],
+  "contract_decisions_to_freeze": [
+    "durable_residue.status uses archive validation vocabulary: none, memory, docs, contract, check, planning, evidence_only.",
+    "Closed planning-state rows require status done or dismissed."
+  ],
+  "open_questions_to_close": [
+    "none"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "uv",
+    "pytest",
+    "gh"
+  ],
+  "completion_criteria": [
+    "Issues #614, #615, and #616 are implemented and validated.",
+    "The active plan archives cleanly.",
+    "GitHub issues are closed with implementation evidence."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-workspace summary --format json",
+    "what happened": "Removed pending from durable_residue.status schema vocabulary, exposed closeout terminal values in templates and docs, and added closed planning-state authoring affordances to planning_surface_health.",
+    "scope touched": "planning package and planning surfaces",
+    "changed surfaces": ".agentic-workspace/planning payloads, packages/planning bootstrap payloads, installer.py, and installer tests",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json",
+    "result for continuation": "no implementation continuation required for this lane",
+    "next step": "archive the plan and close the tracked issues"
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "respected checked-in planning startup and active plan routing",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json",
+    "proof achieved now": "installer tests, lint, planning surface health, and compact summary passed.",
+    "evidence for \"proof achieved\" state": "172 installer tests passed; ruff reported all checks passed; planning surface checker reported no drift; compact summary exposed closed_work_item_scaffold."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement the new lane #614+ and keep dogfooding evidence flowing back into planning.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "GitHub #614, #615, and #616 are implemented by schema, template, docs, summary, and tests; unrelated roadmap compact-label quirk was recorded as routed dogfooding evidence.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger user or product outcome separately from the bounded slice so later archive, review, and continuation decisions stay honest.",
+    "slice shaping bias": "Make closeout authoring cheaper without weakening terminal validation.",
+    "broader-lane validation question": "Can a future agent see valid closeout and closed-state values before hitting archive refusal?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded slice and larger intent are both complete.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "None unless new evidence shows the bounded closure was incomplete."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement the new lane #614+ and keep dogfooding evidence flowing back into planning.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json\nChanged surfaces: .agentic-workspace/planning payloads, packages/planning bootstrap payloads, installer.py, and installer tests\nDurable residue: none (.agentic-workspace/planning/execplans/archive/planning-closeout-affordance.plan.json)\nFollow-up: none; unrelated compact roadmap candidate-label dogfooding observation remains outside this closeout lane."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "Keep schema, template, README, and archive-validation vocabularies synchronized when adding closeout fields.",
+    "motivation worth preserving": "The package is used while it is being changed, so hidden terminal values become expensive immediately.",
+    "canonical owner now": ".agentic-workspace/planning/execplans/archive/planning-closeout-affordance.plan.json",
+    "promotion trigger": "if another closeout value drift appears",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Implemented the #614+ closeout affordance lane.",
+    "validation confirmed": "uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json",
+    "follow-on routed to": "none; unrelated compact roadmap candidate-label dogfooding observation remains outside this closeout lane.",
+    "post-work posterity capture": "Keep closeout vocabulary synchronized across schema, archive validation, templates, docs, and summary affordances.",
+    "knowledge promoted (Memory/Docs/Config)": "planning package tests and templates",
+    "resume from": "archive this plan, commit, close GitHub #614/#615/#616"
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "signals found": [
+      "Dogfooding finding: durable_residue.status accepted pending in schema but archive rejected it.",
+      "Dogfooding finding: closeout terminal values were easier to discover from archive failures than from the template.",
+      "Dogfooding finding: closed planning-state rows need a copyable terminal scaffold in compact health output."
+    ],
+    "signals fixed": [
+      "Schema and archive validation now agree that durable_residue.status does not include pending.",
+      "Execplan templates and README now expose accepted closure terminal values before archive validation.",
+      "planning_surface_health now carries a closed_work_item_scaffold and closed-row warnings use it as the suggested fix."
+    ],
+    "signals routed": [
+      "Dogfooding observation outside this lane: compact summary reports roadmap lanes through the roadmap.candidates field when no explicit candidates exist."
+    ],
+    "signals dismissed": [],
+    "next owner": "none for this lane"
+  },
+  "drift_log": [
+    "2026-04-30: Lane promoted from roadmap candidate for GitHub #614, #615, and #616.",
+    "2026-04-30: Implemented schema/template/docs/summary affordance changes and validated installer tests, lint, planning surface checks, and compact summary."
+  ],
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "none; unrelated compact roadmap candidate-label dogfooding observation remains outside this closeout lane.",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "planning package tests and templates",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "planning package tests and templates",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "Closed planning-state rows should be valid-by-construction",
+          "owner": "github-issue",
+          "source": "#614"
+        },
+        {
+          "summary": "Align durable_residue status schema with archive validation",
+          "owner": "github-issue",
+          "source": "#615"
+        },
+        {
+          "summary": "Execplan closeout template hides required terminal values",
+          "owner": "github-issue",
+          "source": "#616"
+        }
+      ]
+    }
+  }
+}

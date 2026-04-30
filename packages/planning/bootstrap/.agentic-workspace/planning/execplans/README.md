@@ -202,6 +202,14 @@ Closure checks belong under `## Closure Check` for completed or nearly-complete 
 - `Evidence carried forward`
 - `Reopen trigger`
 
+Prefer `agentic-planning-bootstrap archive-plan <plan> --prepare-closeout` before hand-editing closeout fields; it writes a valid closeout patch from the current record.
+When hand-editing, use the same terminal values archive validation accepts:
+
+- `Slice status`: one of `complete`, `completed`, or `bounded slice complete`
+- `Larger-intent status`: use `closed`, `complete`, or `completed` when the larger intent is satisfied; use `open`, `partial`, or `unfinished` when continuation remains
+- `Closure decision`: one of `archive-and-close` or `archive-but-keep-lane-open`
+- `Was original intent fully satisfied?`: `yes` or `true` for `archive-and-close`; `no` or `false` when keeping the lane open
+
 Use this section to distinguish bounded slice success from larger-intent closure.
 `archive-and-close` is only honest when the larger intent is actually satisfied.
 `archive-but-keep-lane-open` is the honest path when the slice is complete but required continuation remains elsewhere.

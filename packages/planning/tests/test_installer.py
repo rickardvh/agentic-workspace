@@ -563,6 +563,16 @@ def test_planning_record_schemas_validate_templates() -> None:
     assert installer_mod.planning_record_schema_findings(payload / ".agentic-workspace/planning/reviews/TEMPLATE.review.json") == []
 
 
+def test_execplan_template_surfaces_archive_closeout_terminal_values() -> None:
+    payload = installer_mod.payload_root()
+    template = json.loads((payload / ".agentic-workspace/planning/execplans/TEMPLATE.plan.json").read_text(encoding="utf-8"))
+
+    assert template["closure_check"]["slice status"] == "bounded slice complete"
+    assert template["closure_check"]["larger-intent status"] == "closed"
+    assert template["closure_check"]["closure decision"] == "archive-and-close"
+    assert template["durable_residue"]["status"] == "none"
+
+
 def test_planning_record_schema_rejects_unknown_execplan_fields(tmp_path: Path) -> None:
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
     _write_execplan_record(record_path)
@@ -573,6 +583,18 @@ def test_planning_record_schema_rejects_unknown_execplan_fields(tmp_path: Path) 
     findings = installer_mod.planning_record_schema_findings(record_path)
 
     assert any("surprise_machine_field" in finding for finding in findings)
+
+
+def test_planning_record_schema_rejects_pending_durable_residue_status(tmp_path: Path) -> None:
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["durable_residue"]["status"] = "pending"
+    record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+
+    findings = installer_mod.planning_record_schema_findings(record_path)
+
+    assert any("durable_residue.status" in finding and "pending" in finding for finding in findings)
 
 
 def test_archive_execplan_rejects_schema_invalid_json_record(tmp_path: Path) -> None:
@@ -1675,6 +1697,12 @@ candidates = [
 
     summary = planning_summary(target=tmp_path)
     messages = [warning["message"] for warning in summary["planning_surface_health"]["warnings"]]
+    closed_warning = next(
+        warning
+        for warning in summary["planning_surface_health"]["warnings"]
+        if "closed item closed-without-residue requires durable_residue" in warning["message"]
+    )
+    closed_scaffold = summary["planning_surface_health"]["authoring_affordances"]["closed_work_item_scaffold"]
 
     assert summary["planning_surface_health"]["status"] == "not-clean"
     assert any("active item active-without-plan requires an execplan" in message for message in messages)
@@ -1686,6 +1714,23 @@ candidates = [
     assert any("ready-missing-proof handoff_ready must be true or false" in message for message in messages)
     assert any("bad-maturity must use one maturity" in message for message in messages)
     assert any("closed item closed-without-residue requires durable_residue" in message for message in messages)
+    assert 'maturity = "closed"' in closed_scaffold
+    assert 'status = "done"' in closed_scaffold
+    assert "durable_residue" in closed_scaffold
+    assert closed_warning["suggested_fix"].endswith(closed_scaffold)
+
+
+def test_planning_summary_exposes_closed_state_authoring_affordance_when_clean(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+
+    summary = planning_summary(target=tmp_path)
+    scaffold = summary["planning_surface_health"]["authoring_affordances"]["closed_work_item_scaffold"]
+
+    assert summary["planning_surface_health"]["status"] == "clean"
+    assert 'maturity = "closed"' in scaffold
+    assert 'status = "done"' in scaffold
+    assert "durable_residue" in scaffold
+    assert "status = done or dismissed" in summary["planning_surface_health"]["authoring_affordances"]["closed_work_item_rule"]
 
 
 def test_planning_summary_projects_handoff_role_metadata(tmp_path: Path) -> None:
@@ -2390,6 +2435,26 @@ def test_archive_execplan_requires_durable_residue_routing(tmp_path: Path) -> No
     assert any(warning["warning_class"] == "archive_missing_durable_residue" for warning in result.warnings)
     assert any(
         action.kind == "manual review" and action.path == plan_path and "durable_residue.status" in action.detail
+        for action in result.actions
+    )
+
+
+def test_archive_execplan_rejects_pending_durable_residue_status(tmp_path: Path) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
+    _write(plan_path, _minimal_execplan(status="completed").replace("- Status: evidence_only", "- Status: pending"))
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_missing_durable_residue" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review"
+        and action.path == plan_path
+        and "durable_residue.status" in action.detail
+        and "evidence_only" in action.detail
+        and "pending" not in action.detail
         for action in result.actions
     )
 

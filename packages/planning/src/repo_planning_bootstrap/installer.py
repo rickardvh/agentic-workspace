@@ -159,6 +159,11 @@ EXECPLAN_DURABLE_RESIDUE_STATUSES = frozenset(
 EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES = frozenset({"none", "evidence_only"})
 EXECPLAN_DURABLE_RESIDUE_OWNER_VALUES = frozenset({"none", "n/a", "archive", "archives", "evidence", "evidence-only"})
 EXECPLAN_DURABLE_RESIDUE_RETENTION_VALUES = frozenset({"retain", "shrink", "stub", "delete"})
+PLANNING_STATE_CLOSED_ITEM_SCAFFOLD = (
+    '{ id = "example-closed-item", maturity = "closed", status = "done", '
+    'path = ".agentic-workspace/planning/execplans/archive/example-closed-item.plan.json", '
+    'durable_residue = "evidence_only", residue_owner = "archive", residue_promotion_trigger = "none" }'
+)
 
 PACKAGE_MANAGED_FILES = tuple(
     relative for relative in REQUIRED_PAYLOAD_FILES if relative not in ROOT_SURFACE_FILES and relative not in GENERATED_PAYLOAD_FILES
@@ -2651,6 +2656,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "warning_count": planning_surface_health.get("warning_count", 0),
             "recommended_next_action": planning_surface_health.get("recommended_next_action", ""),
             "warnings": planning_surface_health.get("warnings", []),
+            "authoring_affordances": planning_surface_health.get("authoring_affordances", {}),
         },
         "projection_state": {
             "status": "idle" if idle_unavailable_reason else "active-or-needs-review",
@@ -3129,7 +3135,7 @@ def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
         warning_class = str(warning.get("warning_class", "")).strip()
         path = str(warning.get("path", "")).strip()
         message = str(warning.get("message", "")).strip()
-        suggested_fix = _warning_remediation(warning_class) or ""
+        suggested_fix = str(warning.get("suggested_fix", "")).strip() or _warning_remediation(warning_class) or ""
         health_warnings.append(
             {
                 "warning_class": warning_class,
@@ -3144,6 +3150,13 @@ def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
             "warning_count": 0,
             "recommended_next_action": "No planning-surface drift detected.",
             "warnings": [],
+            "authoring_affordances": {
+                "closed_work_item_scaffold": PLANNING_STATE_CLOSED_ITEM_SCAFFOLD,
+                "closed_work_item_rule": (
+                    "Closed planning-state rows require maturity = closed, status = done or dismissed, "
+                    "and explicit durable_residue, residue, or closure routing."
+                ),
+            },
         }
     first_fix = next((item["suggested_fix"] for item in health_warnings if item["suggested_fix"]), "")
     if not first_fix:
@@ -3158,6 +3171,13 @@ def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
         "warning_count": len(health_warnings),
         "recommended_next_action": first_fix,
         "warnings": health_warnings,
+        "authoring_affordances": {
+            "closed_work_item_scaffold": PLANNING_STATE_CLOSED_ITEM_SCAFFOLD,
+            "closed_work_item_rule": (
+                "Closed planning-state rows require maturity = closed, status = done or dismissed, "
+                "and explicit durable_residue, residue, or closure routing."
+            ),
+        },
     }
 
 
@@ -3426,10 +3446,20 @@ def _planning_state_v1_item_warnings(*, bucket_path: str, item_id: str, item: di
     if maturity == "closed":
         residue = str(item.get("durable_residue") or item.get("residue") or item.get("closure") or "").strip()
         if str(item.get("status", "")).strip() not in {"done", "dismissed"}:
-            warnings.append(_planning_state_v1_warning(bucket_path, f"closed item {item_id} requires status done or dismissed."))
+            warnings.append(
+                _planning_state_v1_warning(
+                    bucket_path,
+                    f"closed item {item_id} requires status done or dismissed.",
+                    suggested_fix=f"Use a closed item shape like: {PLANNING_STATE_CLOSED_ITEM_SCAFFOLD}",
+                )
+            )
         if not residue:
             warnings.append(
-                _planning_state_v1_warning(bucket_path, f"closed item {item_id} requires durable_residue, residue, or closure routing.")
+                _planning_state_v1_warning(
+                    bucket_path,
+                    f"closed item {item_id} requires durable_residue, residue, or closure routing.",
+                    suggested_fix=f"Use a closed item shape like: {PLANNING_STATE_CLOSED_ITEM_SCAFFOLD}",
+                )
             )
     return warnings
 
@@ -3605,12 +3635,15 @@ def _next_role_needed_from_metadata(role_metadata: dict[str, Any]) -> str:
     return ""
 
 
-def _planning_state_v1_warning(path: str, message: str) -> dict[str, str]:
-    return {
+def _planning_state_v1_warning(path: str, message: str, *, suggested_fix: str = "") -> dict[str, str]:
+    warning = {
         "warning_class": "planning_state_v1_schema",
         "path": f"{PLANNING_STATE_PATH.as_posix()}#{path}",
         "message": message,
     }
+    if suggested_fix:
+        warning["suggested_fix"] = suggested_fix
+    return warning
 
 
 def _planning_handoff_schema() -> dict[str, Any]:
