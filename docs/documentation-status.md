@@ -7,7 +7,7 @@ Refresh route: update this index when a public doc changes role, starts owning c
 
 | Doc | Audience | Authority class | Currentness status | Owns current capability or vision | Refresh route |
 | --- | --- | --- | --- | --- | --- |
-| [`README.md`](../README.md) | external adopters and evaluators | public entrypoint | current | current capability summary and install starting point | Review on public positioning, preset policy, or capability-status changes. |
+| [`README.md`](../README.md) | external adopters and evaluators | public entrypoint | current | stable product positioning and install starting point | Review on public positioning or preset policy changes; keep detailed status in secondary docs. |
 | [`docs/which-package.md`](which-package.md) | adopters choosing install shape | public selector explanation | current | current package and preset positioning | Keep aligned with `agentic-workspace defaults --section install_profiles --format json`. |
 | [`docs/architecture.md`](architecture.md) | technical reviewers | architecture explanation | current | current architecture summary | Review when module boundaries, lifecycle routing, or registry behavior changes. |
 | [`docs/design-principles.md`](design-principles.md) | maintainers and reviewers | doctrine | current | design rationale and product constraints | Review when doctrine changes; do not use as the first current-capability matrix. |
@@ -25,4 +25,3 @@ Status buckets used in this repo:
 - `current`: reviewed against the current public package shape.
 - `current but vision-oriented`: still relevant, but not a shipped-capability selector.
 - `historical/current as dated`: useful evidence whose date and purpose limit its authority.
-

@@ -5,7 +5,7 @@ Pick the preset that matches the repo problem.
 
 Agentic Workspace is primarily a quiet repo-native capability layer. If you want the smallest useful core, start by checking whether the `memory` profile is enough.
 
-For current shipped, optional, source-checkout-only, future, and unsupported capability status, start with the matrix in [`README.md`](../README.md#current-capability-status). For documentation freshness and role signals, use [`docs/documentation-status.md`](documentation-status.md).
+For capability status, documentation freshness, and role signals, use [`docs/documentation-status.md`](documentation-status.md). Keep the README as the stable public entrypoint rather than a status dashboard.
 
 ## Fast Chooser
 

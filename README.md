@@ -8,7 +8,7 @@ Agent work often loses context at the worst time: after a tool switch, a short s
 
 The package is intentionally quiet. It does not replace issue trackers, docs, local agent memory, or human review. It gives those things a shared routing layer: startup, durable repo knowledge, active planning, proof expectations, and handoff state.
 
-## What It Does Today
+## What It Does
 
 - Adds compact startup/config/report commands for agent first contact.
 - Installs optional checked-in Memory for durable repo knowledge.
@@ -16,27 +16,17 @@ The package is intentionally quiet. It does not replace issue trackers, docs, lo
 - Keeps generated handoff adapters such as `AGENTS.md`, `llms.txt`, and helper docs thin over structured state.
 - Exposes maintainer diagnostics for ownership, proof selection, external work reconciliation, and install/update health.
 
-## Current Modules
+## Modules
 
 - `workspace`: startup, lifecycle, routing, install/update, and combined workspace reporting.
 - `memory`: durable anti-rediscovery repo knowledge.
 - `planning`: active execution state, bounded plans, proof expectations, and continuation.
 
-## Current Capability Status
+## Boundaries
 
-| Capability | Status | What this means today |
-| --- | --- | --- |
-| Workspace lifecycle and compact routing | shipped/current | Public `agentic-workspace` CLI entrypoint for install, init, status, doctor, config, start, report, defaults, proof, and preflight. |
-| Memory module | shipped/current | First-party checked-in repo-memory contract, installable alone or with Planning. |
-| Planning module | shipped/current | First-party checked-in active-work contract, installable alone or with Memory. |
-| Workspace composition presets | shipped/current | `memory`, `planning`, and `full` select installed module shape; `routing-only` is the smallest checked-in footprint when only routing is needed. |
-| Review artifacts and external intake/reconciliation | optional/internal | Available diagnostics and evidence surfaces, generally behind explicit advanced features or maintainer workflows. |
-| Agent aids and local integration helpers | optional/internal | Advisory helper storage and local-only runtime integration areas; they do not become required workflow by existing locally. |
-| Generated command adapters | source-checkout-only | Maintainer proof and adapter-generation infrastructure; not a public adapter API. |
-| External modules, plugins, MCP-style adapters, and third-party extension | future candidate | The internal contracts are being sharpened, but external plugin/module APIs are not supported public contracts yet. |
-| Runtime orchestration, project management, ticketing, or database-backed planning | not supported | Keep those responsibilities in existing tools; Agentic Workspace only preserves bounded repo-native operating state. |
+Agentic Workspace is not a project manager, ticketing system, runtime orchestrator, database-backed planning service, or plugin platform. Keep those responsibilities in existing tools. Agentic Workspace preserves bounded repo-native operating state and points agents at the right owner surface.
 
-For freshness and role signals across public docs, see [`docs/documentation-status.md`](docs/documentation-status.md).
+Advanced diagnostics, source-checkout maintainer tools, local integration helpers, and adapter-generation infrastructure are not ordinary host-repo workflow. For public documentation roles, freshness, and capability-status detail, see [`docs/documentation-status.md`](docs/documentation-status.md) and [`docs/maturity-model.md`](docs/maturity-model.md).
 
 ## Choose A Preset
 
@@ -60,7 +50,7 @@ Use `--preset planning` when active work continuity is the main problem, and `--
 
 The selected preset writes a small `.agentic-workspace/` operating layer plus thin adapter files that point agents at the structured state. `full` selects Planning plus Memory. It does not activate source-checkout maintainer tooling, package extraction, codegen development, or self-improvement surfaces.
 
-Module manifests also declare adapter-ready components such as resources, tools, prompt-like skills, schemas, and owned roots. Those declarations keep future adapters thin, but they are internal readiness data today, not a supported external plugin or MCP API.
+Module manifests also declare adapter-ready components such as resources, tools, prompt-like skills, schemas, and owned roots. Those declarations keep adapters thin, but they are internal readiness data rather than a public extension API.
 
 ## Ordinary work
 
