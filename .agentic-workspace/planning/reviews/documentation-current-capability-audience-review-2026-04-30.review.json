@@ -1,0 +1,293 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Documentation Current-Capability Audience Review",
+  "classification": "doctrine-refresh/context-cost",
+  "date": "2026-04-30",
+  "goal": [
+    "Review whether the documentation makes Agentic Workspace easy to explain for different audiences, with special attention to stale information and long-term vision that may be mistaken for current capability.",
+    "Suggest audience-specific improvements without immediately changing docs or activating new planning work."
+  ],
+  "scope": [
+    "Public entrypoints: README.md, llms.txt, docs/which-package.md",
+    "Package entrypoints: packages/memory/README.md, packages/planning/README.md",
+    "Maintainer and architecture docs: docs/contributor-playbook.md, docs/architecture.md, docs/maintainer-commands.md",
+    "Doctrine and capability stance docs: docs/design-principles.md, docs/agent-os-capabilities.md, docs/ecosystem-roadmap.md, docs/maturity-model.md, docs/extension-boundary.md, docs/module-capability-contract.md",
+    "Installed compact-contract docs and defaults outputs used as explanatory routing references"
+  ],
+  "non_goals": [
+    "Rewrite the docs in this pass.",
+    "Audit every installed contract page line by line.",
+    "Create issues or promote findings unless explicitly requested later."
+  ],
+  "review_mode": {
+    "mode": "doctrine-refresh",
+    "secondary_mode": "context-cost",
+    "review question": "Can target readers quickly find why the package exists, what it currently does, and how it works, while distinguishing current capabilities from long-term direction?",
+    "default finding cap": "2 for doctrine-refresh; exceeded intentionally because the user requested a detailed audience-segmented documentation review.",
+    "inputs inspected first": "README.md, design principles, capability map, architecture, which-package, contributor playbook, package READMEs, maturity/roadmap/extension docs, llms.txt, compact defaults outputs"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace skills --target . --task \"detailed documentation review target audiences stale vision current capabilities\" --format json; uv run agentic-workspace defaults --section operating_questions --format json; uv run agentic-workspace defaults --section install_profiles --format json; rg over current/future/plugin/MCP/stability markers; targeted Get-Content reads of audience-facing docs",
+    "evidence sources": "README.md; packages/memory/README.md; packages/planning/README.md; docs/design-principles.md; docs/agent-os-capabilities.md; docs/ecosystem-roadmap.md; docs/maturity-model.md; docs/extension-boundary.md; docs/module-capability-contract.md; docs/contributor-playbook.md; docs/which-package.md; docs/architecture.md; llms.txt; .agentic-workspace/docs/minimum-operating-model.md; .agentic-workspace/docs/agent-installation.md"
+  },
+  "summary": {
+    "short_answer": "The information exists, but the audience path is uneven. Maintainers can find how the system works; external adopters and cold readers get install/profile guidance before a crisp why/what/how explanation; doctrine pages are honest about future boundaries but not visually or structurally separated enough from current-capability docs.",
+    "best_current_explanation": "Agentic Workspace exists to make repositories easier for agents and humans to enter, resume, and operate safely without relying on chat history. It does this by installing a quiet checked-in operating layer: Memory owns durable anti-rediscovery knowledge, Planning owns active execution state, and the Workspace layer composes lifecycle, startup, routing, reporting, and proof.",
+    "audience_recommendations": [
+      {
+        "audience": "external adopter or evaluator",
+        "need": "Why should I install this, what will appear in my repo, and what is current versus future?",
+        "recommended_improvement": "Add a first-screen README narrative ordered as Why -> What -> Choose a preset -> What gets installed -> What is not supported. Move adapter-ready/MCP-forward statements behind a clearly marked maintainer/future section."
+      },
+      {
+        "audience": "agent entering an installed repo",
+        "need": "What should I read or run now?",
+        "recommended_improvement": "Keep AGENTS.md/start/summary as the primary path. Ensure external handoff docs use the same smallest-preset stance as defaults and do not suggest `full` as the ordinary preferred install unless that is truly current policy."
+      },
+      {
+        "audience": "human maintainer in the source checkout",
+        "need": "Where do I change behavior, payload, generated surfaces, and docs?",
+        "recommended_improvement": "Keep contributor-playbook as the source-checkout map, but add a compact doc freshness/currentness table that names which docs are public current capability, source-checkout maintainer reference, installed contract, doctrine/vision, or historical evidence."
+      },
+      {
+        "audience": "product/architecture reviewer",
+        "need": "What is shipped, what is internal, and what is future/extraction candidate?",
+        "recommended_improvement": "Create or strengthen one current-capabilities matrix that summarizes Memory, Planning, Workspace, extension boundary, generated adapters, reviews, intake, and agent aids by status: shipped, internal, optional, source-checkout-only, future candidate, not supported."
+      },
+      {
+        "audience": "package-specific adopter",
+        "need": "How does Memory or Planning work without reading the whole monorepo?",
+        "recommended_improvement": "Bring Planning README closer to Memory README's shape: explicit Why, How it works, What it installs, Good fits, Bad fits, and Current limitations. Keep deep execution-contract material behind those headings."
+      }
+    ]
+  },
+  "summary_counts": {
+    "findings": 5,
+    "audience_segments": 5,
+    "primary_docs_reviewed": 15,
+    "promotion_now": 0
+  },
+  "references": [
+    {
+      "kind": "doc",
+      "target": "README.md",
+      "label": "Root public entrypoint",
+      "role": "public why/what/install route",
+      "locator": "opening sections, Default path, Ordinary work"
+    },
+    {
+      "kind": "doc",
+      "target": "packages/memory/README.md",
+      "label": "Memory README",
+      "role": "strong package-level why/how example",
+      "locator": "At A Glance, Why, How it works, What It Does"
+    },
+    {
+      "kind": "doc",
+      "target": "packages/planning/README.md",
+      "label": "Planning README",
+      "role": "package-level execution contract reference",
+      "locator": "At A Glance, Direct Execution Or Execplan, What the Package Installs"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/design-principles.md",
+      "label": "Design principles",
+      "role": "best why/source-of-values",
+      "locator": "Purpose and Must-Internalize Doctrine"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/agent-os-capabilities.md",
+      "label": "Capability map",
+      "role": "long-horizon capability taxonomy",
+      "locator": "Purpose, How To Read This, Current Shipped Modules, Capability Descriptions"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/ecosystem-roadmap.md",
+      "label": "Ecosystem roadmap",
+      "role": "current ecosystem stance",
+      "locator": "Current Stable External Products, Current Portability Read"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/extension-boundary.md",
+      "label": "Extension boundary",
+      "role": "current not-supported plugin/extension boundary",
+      "locator": "Current Boundary and Current Readiness Assessment"
+    },
+    {
+      "kind": "doc",
+      "target": ".agentic-workspace/docs/agent-installation.md",
+      "label": "External install/adopt handoff",
+      "role": "agent-facing external lifecycle route",
+      "locator": "Preferred install or adopt intent"
+    },
+    {
+      "kind": "command-output",
+      "target": "agentic-workspace defaults --section install_profiles --format json",
+      "label": "Compact install profile answer",
+      "role": "current policy reference",
+      "locator": "default_answer and recommendation_order"
+    }
+  ],
+  "findings": [
+    {
+      "title": "The public README does not lead with the strongest why",
+      "summary": "The root README starts with a concise product sentence, then quickly moves into preset selection, routing-only nuance, and adapter-ready internals. The clearest reason the package exists lives in design doctrine and package READMEs rather than first-contact public copy.",
+      "audience": "external adopter or evaluator",
+      "evidence": "README.md opens with a useful but abstract sentence and immediately enters `Default path`; docs/design-principles.md provides the clearer motivation: make repositories easier to enter, resume, and operate while staying quiet; packages/memory/README.md has an explicit `Why` section that explains the anti-rediscovery problem.",
+      "risk if unchanged": "A cold reader may understand install options before understanding why the package deserves repo footprint at all, and may mistake the project for workflow tooling rather than a quiet continuity layer.",
+      "suggested action": "Reshape the first README screen around Why -> What -> Current modules -> Choose a preset. Move detailed module-profile caveats and adapter-ready statements below a `Current capabilities and future-facing internals` section.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap candidate or documentation refresh issue",
+      "promotion trigger": "Promote when public docs are next touched, or when external adoption feedback indicates unclear positioning.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "Current capability and long-term vision are separated in doctrine but not summarized for ordinary readers",
+      "summary": "The doctrine pages carefully label shipped modules, internal capabilities, extraction candidates, future candidates, and closed extension boundaries, but there is no single first-line current-capabilities matrix that prevents readers from treating long-horizon architecture as shipped behavior.",
+      "audience": "product reviewer, maintainer, external technical evaluator",
+      "evidence": "docs/agent-os-capabilities.md is explicitly long-horizon and includes shipped, internal, extraction, future, and unlikely-to-stand-alone categories. docs/ecosystem-roadmap.md states current stable products are Memory and Planning. docs/extension-boundary.md says third-party modules and plugin loading are not yet supported. README.md nevertheless mentions adapter-ready components and future MCP-style adapters near the top without a nearby status matrix.",
+      "risk if unchanged": "Readers may overestimate support for plugins, generated adapters, MCP-style integrations, or optional extraction candidates, while maintainers must synthesize several doctrine pages to answer what is real today.",
+      "suggested action": "Add a compact `Current capability status` table in README.md or docs/which-package.md: shipped, optional/internal, source-checkout-only, future candidate, and explicitly not supported. Link the long-horizon doctrine pages from that table instead of relying on them as the first explanation.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap candidate or docs/current-capabilities issue",
+      "promotion trigger": "Promote when any doc mentions adapter-ready, plugin, MCP, generated adapter, review/intake extraction, or future module support in first-contact material.",
+      "post-remediation note shape": "retain"
+    },
+    {
+      "title": "External install/adopt guidance conflicts with the compact smallest-profile policy",
+      "summary": "The compact install-profile answer recommends starting with `memory`, then `planning`, then `full`, but the external install/adopt handoff lists `agentic-workspace install --preset full` as the preferred install intent.",
+      "audience": "agent performing bootstrap or adoption in another repo",
+      "evidence": "`agentic-workspace defaults --section install_profiles --format json` says the default answer is to start with `memory` when durable repo knowledge is the main problem and choose `full` only when both memory and planning are justified. `.agentic-workspace/docs/agent-installation.md` lists `agentic-workspace install --target ./repo --preset full` and `--preset full --local-only` under Preferred install or adopt intent.",
+      "risk if unchanged": "External bootstrap agents may over-install the full profile because a handoff doc sounds more prescriptive than the compact policy surface, weakening selective adoption and making first installs feel heavier than the current product stance.",
+      "suggested action": "Align the handoff doc with the compact install-profile answer: prefer `agentic-workspace defaults --section install_profiles --format json` or state that `full` is only the preferred example when both modules are explicitly desired.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap candidate or direct docs fix",
+      "promotion trigger": "Promote before the next lifecycle/handoff doc refresh or if external install/adopt behavior is being tested.",
+      "post-remediation note shape": "delete"
+    },
+    {
+      "title": "Planning package documentation is a strong reference but a weaker explanation than Memory",
+      "summary": "The Memory README has clear `Why`, `How it works`, and `What It Does` sections. The Planning README has useful material, but its first explanatory path drops into execution-contract detail and leaves `Good Fits / Bad Fits` as an empty heading before later scenario sections.",
+      "audience": "package-specific adopter or contributor",
+      "evidence": "packages/memory/README.md explicitly explains why checked-in repo memory exists and how route-indexed memory works. packages/planning/README.md has `At A Glance`, then detailed lifecycle and execution-contract material; it also has a `Good Fits / Bad Fits` heading before the actual good/bad fit bullets appear much later under Direct-Task Recovery Cases.",
+      "risk if unchanged": "Readers can learn Planning's mechanics, but have to work harder to explain its outer shape: why active execution state needs a checked-in contract, what it installs, and how direct tasks differ from execplans.",
+      "suggested action": "Refactor Planning README toward the Memory README pattern: Why, What it does, How it works, Current limitations, Good fits, Bad fits, then deep contract details. Keep direct execution and closeout semantics, but move them after the package-level mental model.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap candidate or planning package docs issue",
+      "promotion trigger": "Promote when Planning docs are next refreshed or when external planning-only adoption is being improved.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "Documentation freshness and role signals are present but too distributed",
+      "summary": "Several doctrine pages include last-review markers and role boundaries, but freshness is uneven and some visible encoding artifacts make the docs look less trustworthy. There is no small index that tells readers which docs are current capability, long-term doctrine, source-checkout maintainer reference, installed contract, or historical evidence.",
+      "audience": "maintainer, reviewer, and cold technical reader",
+      "evidence": "docs/agent-os-capabilities.md has a 2026-04-27 doctrinal review marker; docs/ecosystem-roadmap.md and docs/maturity-model.md have older 2026-04-13 and 2026-04-10 review markers; docs/extension-boundary.md has a readiness review marker. Some docs show mojibake such as `â€œ` or `â€¢`, including maturity/review wording and architecture diagram text. docs/contributor-playbook.md has a useful documentation role map, but it is maintainer-facing and not a public currentness index.",
+      "risk if unchanged": "A reader may not know whether an explanatory page is current policy, long-horizon strategy, installed contract detail, or historical evidence; small encoding artifacts also create doubt about whether the page has been recently reviewed.",
+      "suggested action": "Add a compact documentation status index or front-matter convention: audience, authority class, currentness status, last reviewed, owns current capability or vision, and replacement/refresh route. Start with public docs and doctrine pages, not every installed contract.",
+      "confidence": "medium",
+      "source": "static-analysis",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap candidate or documentation hygiene issue",
+      "promotion trigger": "Promote when doing a docs refresh, public-readiness pass, or doctrine-refresh pass.",
+      "post-remediation note shape": "shrink"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "class": "public-positioning",
+      "priority": "P1",
+      "findings": [
+        "The public README does not lead with the strongest why",
+        "Current capability and long-term vision are separated in doctrine but not summarized for ordinary readers"
+      ],
+      "suggested_owner": "root README / docs/which-package.md"
+    },
+    {
+      "class": "handoff-policy-drift",
+      "priority": "P0",
+      "findings": [
+        "External install/adopt guidance conflicts with the compact smallest-profile policy"
+      ],
+      "suggested_owner": ".agentic-workspace/docs/agent-installation.md and generated adapter refresh"
+    },
+    {
+      "class": "package-explanation-shape",
+      "priority": "P2",
+      "findings": [
+        "Planning package documentation is a strong reference but a weaker explanation than Memory"
+      ],
+      "suggested_owner": "packages/planning/README.md"
+    },
+    {
+      "class": "documentation-currentness",
+      "priority": "P2",
+      "findings": [
+        "Documentation freshness and role signals are present but too distributed"
+      ],
+      "suggested_owner": "docs/contributor-playbook.md plus a public docs status index"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote the external install/adopt mismatch first if immediate action is desired, because it can steer agents toward the wrong profile. Promote the current-capability matrix next because it reduces confusion across multiple audiences.",
+    "defer": "Defer a full Planning README rewrite and documentation status index until a broader documentation refresh lane is selected.",
+    "dismiss": "Do not treat long-horizon doctrine as stale merely because it is visionary; the problem is audience labeling and first-contact summarization, not the existence of doctrine."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "After the docs have a current-capability matrix or the findings are promoted into issues/planning state.",
+    "proof surface": "README.md, docs/which-package.md, package README structure, and compact defaults outputs align on audience, current capability, and future/internal status.",
+    "source retention rule": "Keep audience, finding, evidence, and promotion trigger; omit long copied doc excerpts.",
+    "distillation path": "If promoted, keep this artifact as evidence and let the updated docs become the durable explanatory source.",
+    "reconstructable refs": [
+      "README.md",
+      "docs/which-package.md",
+      "docs/design-principles.md",
+      "docs/agent-os-capabilities.md",
+      "docs/ecosystem-roadmap.md",
+      "docs/extension-boundary.md",
+      "packages/memory/README.md",
+      "packages/planning/README.md",
+      ".agentic-workspace/docs/agent-installation.md"
+    ],
+    "fields intentionally omitted": [
+      "long command output",
+      "full doc excerpts",
+      "historical issue lists"
+    ]
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    }
+  },
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py --format json",
+    "uv run agentic-workspace report --target . --format json"
+  ],
+  "drift_log": [
+    "2026-04-30: Created audience-segmented documentation review for why/what/how explainability and current-capability versus vision separation."
+  ]
+}
