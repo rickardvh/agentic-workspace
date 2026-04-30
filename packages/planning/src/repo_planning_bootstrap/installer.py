@@ -7275,6 +7275,15 @@ def archive_execplan(
             "execplan record must validate against planning-execplan.schema.json before archiving",
         )
         return result
+    assurance_closeout_warning = _adaptive_assurance_closeout_warning(plan_path=plan_path, target_root=target_root)
+    if assurance_closeout_warning is not None:
+        result.warnings.append(assurance_closeout_warning)
+        result.add(
+            "manual review",
+            plan_path,
+            "strict adaptive-assurance closeout requires all required refs, blocking gates, and do-not-implement blockers to be satisfied or waived",
+        )
+        return result
     intent_continuity = _execplan_intent_continuity(plan_path)
     completes_larger_outcome = intent_continuity.get("this slice completes the larger intended outcome", "").strip().lower()
     continuation_surface = intent_continuity.get("continuation surface", "").strip()
@@ -7752,6 +7761,50 @@ def archive_execplan(
         legacy_roadmap_path.write_text(cleanup_legacy_roadmap["text"], encoding="utf-8")
     result.add("archived", destination_record, f"canonical record for {plan_path.relative_to(target_root).as_posix()}")
     return result
+
+
+def _adaptive_assurance_closeout_warning(*, plan_path: Path, target_root: Path) -> dict[str, str] | None:
+    adaptive_assurance = _execplan_raw_dict(plan_path, "adaptive_assurance")
+    if not bool(adaptive_assurance.get("strict_closeout", False)):
+        return None
+    traceability_refs = _execplan_raw_dict(plan_path, "traceability_refs")
+    required_refs = [str(item).strip() for item in adaptive_assurance.get("required_refs", []) if str(item).strip()]
+    missing_required_refs = [
+        ref_field
+        for ref_field in required_refs
+        if not isinstance(traceability_refs.get(ref_field), list) or not traceability_refs.get(ref_field)
+    ]
+    required_gate_ids = {str(item).strip() for item in adaptive_assurance.get("required_gates", []) if str(item).strip()}
+    pending_blocking_gates: list[str] = []
+    for gate in _execplan_raw_list(plan_path, "control_gates"):
+        if not isinstance(gate, dict):
+            continue
+        gate_id = str(gate.get("id", "")).strip()
+        status = str(gate.get("status", "")).strip().lower()
+        blocking = bool(gate.get("blocking", False)) or gate_id in required_gate_ids
+        if blocking and status not in {"satisfied", "waived"}:
+            pending_blocking_gates.append(gate_id or "<unnamed-gate>")
+    unresolved_blockers: list[str] = []
+    for blocker in _execplan_raw_list(plan_path, "implementation_blockers"):
+        if not isinstance(blocker, dict):
+            continue
+        status = str(blocker.get("status", "")).strip().lower()
+        if bool(blocker.get("do_not_implement", False)) and status not in {"resolved", "satisfied", "waived"}:
+            unresolved_blockers.append(str(blocker.get("id", "")).strip() or "<unnamed-blocker>")
+    if not (missing_required_refs or pending_blocking_gates or unresolved_blockers):
+        return None
+    details = []
+    if missing_required_refs:
+        details.append(f"missing required refs: {', '.join(missing_required_refs)}")
+    if pending_blocking_gates:
+        details.append(f"pending blocking gates: {', '.join(pending_blocking_gates)}")
+    if unresolved_blockers:
+        details.append(f"unresolved blockers: {', '.join(unresolved_blockers)}")
+    return {
+        "warning_class": "archive_adaptive_assurance_blocked",
+        "path": plan_path.relative_to(target_root).as_posix(),
+        "message": "Strict adaptive-assurance closeout is blocked; " + "; ".join(details) + ".",
+    }
 
 
 def format_actions(actions: list[Action], target_root: Path) -> list[str]:

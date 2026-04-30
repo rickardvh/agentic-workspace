@@ -5504,6 +5504,35 @@ def test_report_text_mentions_agent_efficiency_bias(tmp_path: Path, capsys) -> N
     assert "Rendering: keep this view terse" in text
 
 
+def test_default_command_outputs_stay_router_sized(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    budgets = {
+        "start": (["start", "--target", str(target), "--format", "json"], 9000),
+        "summary": (["summary", "--target", str(target), "--format", "json"], 13000),
+        "report": (["report", "--target", str(target), "--format", "json"], 18000),
+        "proof": (
+            ["proof", "--target", str(target), "--changed", ".agentic-workspace/config.toml", "--format", "json"],
+            9000,
+        ),
+        "status": (["status", "--target", str(target), "--format", "json"], 25000),
+    }
+    for command_name, (args, budget) in budgets.items():
+        assert cli.main(args) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert len(json.dumps(payload, sort_keys=True)) <= budget, command_name
+
+    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+    status_payload = json.loads(capsys.readouterr().out)
+    assert "mixed_agent" not in status_payload["config"]
+    assert status_payload["config"]["detail_command"] == "agentic-workspace config --target ./repo --format json"
+    assert status_payload["deeper_detail"]["report_command"] == "agentic-workspace report --target ./repo --profile full --format json"
+
+
 def test_report_surfaces_large_file_hotspots_as_repo_friction_evidence(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -6376,6 +6405,161 @@ candidates = []
     assert concern_step["command"] == "uv run pytest tests/test_access_control.py"
     assert answer["selected_lanes"][-1]["id"] == "concern:access_control"
     assert answer["selected_lanes"][-1]["review_aids"] == [".agentic-workspace/agent-aids/access-control.md"]
+
+
+def test_adaptive_assurance_end_to_end_closeout_flow(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance]
+default_level = "medium"
+strict_closeout = true
+
+[assurance.proof_profiles.access_control]
+required_commands = ["uv run pytest tests/test_access_control.py"]
+optional_commands = ["uv run pytest tests/test_auth_integration.py"]
+review_aids = [".agentic-workspace/agent-aids/access-control.md"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+[todo]
+active_items = [
+  { id = "high-assurance", status = "in-progress", surface = ".agentic-workspace/planning/execplans/high-assurance.plan.json", why_now = "dogfood assurance closeout.", next_action = "run proof selection.", done_when = "closeout gates are proved." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    def completed_record(item_id: str, title: str, status: str = "completed") -> dict[str, object]:
+        record = planning_installer._build_execplan_record_from_todo_item(
+            title=title,
+            item_id=item_id,
+            status=status,
+            why_now="dogfood assurance flow.",
+            next_action="archive the plan.",
+            done_when="archive gate is satisfied.",
+        )
+        record["delegated_judgment"] = {
+            "requested outcome": "prove the assurance workflow",
+            "hard constraints": "keep this synthetic and generic",
+            "agent may decide locally": "fixture details",
+            "escalate when": "closeout gates are unclear",
+        }
+        record["execution_summary"] = {
+            "outcome delivered": "Synthetic assurance flow proved.",
+            "validation confirmed": "uv run pytest tests/test_workspace_cli.py",
+            "follow-on routed to": "none; issue closeout can proceed",
+            "post-work posterity capture": "the test preserves the workflow contract",
+            "resume from": "no further action",
+        }
+        record["proof_report"] = {
+            "validation proof": "uv run pytest tests/test_workspace_cli.py",
+            "proof achieved now": "proof and archive gates passed",
+            'evidence for "proof achieved" state': "synthetic fixture exercised the flow",
+        }
+        record["intent_satisfaction"] = {
+            "original intent": "prove adaptive assurance end to end",
+            "was original intent fully satisfied?": "yes",
+            "evidence of intent satisfaction": "summary, proof, and archive gate were exercised",
+            "unsolved intent passed to": "none",
+        }
+        record["closure_check"] = {
+            "slice status": "bounded slice complete",
+            "larger-intent status": "closed",
+            "closure decision": "archive-and-close",
+            "why this decision is honest": "all synthetic acceptance signals passed",
+            "evidence carried forward": "this regression test",
+            "reopen trigger": "assurance output stops blocking missing gates",
+        }
+        return record
+
+    high_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "high-assurance.plan.json"
+    high = completed_record("high-assurance", "High Assurance", status="in-progress")
+    high["adaptive_assurance"] = {
+        "level": "high",
+        "reason": "synthetic access-control slice",
+        "agent_may_escalate": True,
+        "agent_may_deescalate": False,
+        "strict_closeout": True,
+        "required_refs": ["security_refs"],
+        "proof_profiles": ["access_control"],
+        "required_gates": ["security-review"],
+    }
+    high["traceability_refs"] = {"security_refs": []}
+    high["control_gates"] = [{"id": "security-review", "status": "pending", "blocking": True, "evidence": []}]
+    high["implementation_blockers"] = [{"id": "policy", "status": "blocked", "do_not_implement": True}]
+    planning_installer._write_execplan_record(record_path=high_path, record=high)
+
+    low_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "low-assurance.plan.json"
+    low = completed_record("low-assurance", "Low Assurance")
+    planning_installer._write_execplan_record(record_path=low_path, record=low)
+
+    summary = planning_installer.planning_summary(target=tmp_path, profile="compact")
+    assert summary["planning_record"]["adaptive_assurance"]["level"] == "high"
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".agentic-workspace/planning/state.toml",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    proof_answer = json.loads(capsys.readouterr().out)["answer"]
+    assert "uv run pytest tests/test_access_control.py" in proof_answer["required_commands"]
+    assert proof_answer["planning_assurance"]["closeout_status"] == "blocked"
+    assert proof_answer["planning_assurance"]["missing_required_refs"] == ["security_refs"]
+    assert proof_answer["planning_assurance"]["pending_blocking_gates"][0]["id"] == "security-review"
+
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+[todo]
+active_items = [
+  { id = "high-assurance", status = "completed", surface = ".agentic-workspace/planning/execplans/high-assurance.plan.json", why_now = "dogfood assurance closeout.", next_action = "archive after gate.", done_when = "closeout gates are proved." },
+  { id = "low-assurance", status = "completed", surface = ".agentic-workspace/planning/execplans/low-assurance.plan.json", why_now = "prove low ceremony.", next_action = "archive directly.", done_when = "low ceremony remains cheap." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    high["active_milestone"]["status"] = "completed"
+    planning_installer._write_execplan_record(record_path=high_path, record=high)
+
+    blocked = planning_installer.archive_execplan("high-assurance", target=tmp_path, dry_run=True)
+    assert any(warning["warning_class"] == "archive_adaptive_assurance_blocked" for warning in blocked.warnings)
+
+    high["traceability_refs"] = {"security_refs": ["SEC-1"]}
+    high["control_gates"] = [{"id": "security-review", "status": "waived", "blocking": True, "evidence": ["waiver:SEC-1"]}]
+    high["implementation_blockers"] = [{"id": "policy", "status": "waived", "do_not_implement": True}]
+    planning_installer._write_execplan_record(record_path=high_path, record=high)
+
+    satisfied = planning_installer.archive_execplan("high-assurance", target=tmp_path, dry_run=True)
+    assert not [warning for warning in satisfied.warnings if warning["warning_class"] == "archive_adaptive_assurance_blocked"]
+    assert any(action.kind == "would move" for action in satisfied.actions)
+
+    low_result = planning_installer.archive_execplan("low-assurance", target=tmp_path, dry_run=True)
+    assert not [warning for warning in low_result.warnings if warning["warning_class"] == "archive_adaptive_assurance_blocked"]
+    assert any(action.kind == "would move" for action in low_result.actions)
 
 
 def test_proof_changed_selector_routes_generated_command_packages(capsys) -> None:

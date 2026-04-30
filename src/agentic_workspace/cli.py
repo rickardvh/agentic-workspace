@@ -3752,6 +3752,7 @@ def _run_lifecycle_command(
     dry_run: bool,
     non_interactive: bool,
     config: WorkspaceConfig,
+    compact_status: bool = True,
 ) -> dict[str, Any]:
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     reports = [
@@ -3872,6 +3873,80 @@ def _run_lifecycle_command(
             repair_actions=repair_actions,
             manual_review_actions=manual_review_actions,
         )
+        if compact_status and command_name == "status":
+            payload = _compact_status_payload(payload, cli_invoke=config.cli_invoke)
+    return payload
+
+
+def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict[str, Any]:
+    reports = payload.get("reports", [])
+    compact_reports = []
+    if isinstance(reports, list):
+        for report in reports:
+            if not isinstance(report, dict):
+                continue
+            actions = report.get("actions", [])
+            warnings = report.get("warnings", [])
+            compact_reports.append(
+                {
+                    "module": report.get("module", ""),
+                    "message": report.get("message", ""),
+                    "actions": actions if isinstance(actions, list) else [],
+                    "warning_count": len(warnings) if isinstance(warnings, list) else 0,
+                    "warnings": warnings[:5] if isinstance(warnings, list) else [],
+                    "detail_section": "reports",
+                }
+            )
+    config_payload = payload.get("config", {})
+    compact_config = {}
+    if isinstance(config_payload, dict):
+        workspace = config_payload.get("workspace", {})
+        compact_workspace = {}
+        if isinstance(workspace, dict):
+            compact_workspace = {
+                key: workspace.get(key)
+                for key in (
+                    "default_preset",
+                    "agent_instructions_file",
+                    "workflow_artifact_profile",
+                    "improvement_latitude",
+                    "optimization_bias",
+                    "cli_invoke",
+                )
+            }
+        compact_config = {
+            "config_path": config_payload.get("config_path"),
+            "exists": config_payload.get("exists"),
+            "warnings": config_payload.get("warnings", []),
+            "workspace": compact_workspace,
+            "detail_command": _command_with_cli_invoke(
+                command="agentic-workspace config --target ./repo --format json", cli_invoke=cli_invoke
+            ),
+        }
+    registry = payload.get("registry", [])
+    compact_registry = []
+    if isinstance(registry, list):
+        compact_registry = [
+            {"name": entry.get("name", ""), "installed": entry.get("installed", False)} for entry in registry if isinstance(entry, dict)
+        ]
+    payload = dict(payload)
+    payload["reports"] = compact_reports
+    payload["config"] = compact_config
+    payload["registry"] = compact_registry
+    payload["lifecycle_plan"] = {
+        "status": (
+            payload.get("lifecycle_plan", {}).get("status", "available") if isinstance(payload.get("lifecycle_plan"), dict) else "available"
+        ),
+        "detail_command": _command_with_cli_invoke(
+            command=f"agentic-workspace {payload.get('command', 'status')} --target ./repo --format json", cli_invoke=cli_invoke
+        ),
+    }
+    payload["deeper_detail"] = {
+        "config_command": _command_with_cli_invoke(command="agentic-workspace config --target ./repo --format json", cli_invoke=cli_invoke),
+        "report_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --profile full --format json", cli_invoke=cli_invoke
+        ),
+    }
     return payload
 
 
@@ -4504,6 +4579,7 @@ def _run_report_command(
         dry_run=False,
         non_interactive=False,
         config=config,
+        compact_status=False,
     )
     warnings = list(status_payload.get("warnings", []))
     aggregated_findings: list[dict[str, Any]] = []
