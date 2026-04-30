@@ -183,6 +183,54 @@
         }
       },
       "additionalProperties": true
+    },
+    "cli_compatibility": {
+      "type": "object",
+      "x-agentic-workspace-unknown-properties": "warn",
+      "properties": {
+        "enforcement": {
+          "enum": [
+            "off",
+            "advisory",
+            "blocking"
+          ]
+        },
+        "minimum_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exact_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_classes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "source-checkout",
+              "installed-package",
+              "unknown"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "target_relations": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "inside-target",
+              "outside-target",
+              "no-target"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
     }
   },
   "x-agentic-workspace-unknown-properties": "warn",

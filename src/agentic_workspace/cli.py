@@ -246,6 +246,103 @@ def _invoked_cli_identity_payload(*, target_root: Path | None = None, compact: b
     return payload
 
 
+def _version_key(version: str) -> tuple[int, ...]:
+    main = re.split(r"[-+]", version, maxsplit=1)[0]
+    return tuple(int(part) for part in main.split(".") if part.isdigit())
+
+
+def _version_at_least(current: str, minimum: str) -> bool:
+    current_parts = _version_key(current)
+    minimum_parts = _version_key(minimum)
+    width = max(len(current_parts), len(minimum_parts), 1)
+    return current_parts + (0,) * (width - len(current_parts)) >= minimum_parts + (0,) * (width - len(minimum_parts))
+
+
+def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False) -> dict[str, Any]:
+    expectation = config.cli_compatibility
+    identity = _invoked_cli_identity_payload(target_root=config.target_root)
+    checks: list[dict[str, Any]] = []
+
+    def add_check(name: str, expected: Any, actual: Any, satisfied: bool, *, configured: bool) -> None:
+        checks.append(
+            {
+                "name": name,
+                "configured": configured,
+                "expected": expected,
+                "actual": actual,
+                "satisfied": satisfied,
+            }
+        )
+
+    add_check(
+        "exact_version",
+        expectation.exact_version,
+        identity["version"],
+        expectation.exact_version is None or identity["version"] == expectation.exact_version,
+        configured=expectation.exact_version is not None,
+    )
+    add_check(
+        "minimum_version",
+        expectation.minimum_version,
+        identity["version"],
+        expectation.minimum_version is None or _version_at_least(str(identity["version"]), expectation.minimum_version),
+        configured=expectation.minimum_version is not None,
+    )
+    add_check(
+        "source_class",
+        list(expectation.source_classes),
+        identity["source_class"],
+        not expectation.source_classes or identity["source_class"] in expectation.source_classes,
+        configured=bool(expectation.source_classes),
+    )
+    add_check(
+        "target_relation",
+        list(expectation.target_relations),
+        identity["target_relation"],
+        not expectation.target_relations or identity["target_relation"] in expectation.target_relations,
+        configured=bool(expectation.target_relations),
+    )
+
+    configured_checks = [check for check in checks if check["configured"]]
+    failed_checks = [check for check in configured_checks if not check["satisfied"]]
+    configured = expectation.enforcement != "off" or bool(configured_checks) or expectation.command is not None
+    if not configured:
+        status = "no-expectation"
+    elif failed_checks and expectation.enforcement == "blocking":
+        status = "blocking-drift"
+    elif failed_checks:
+        status = "advisory-drift"
+    else:
+        status = "satisfied"
+
+    payload: dict[str, Any] = {
+        "kind": "agentic-workspace/cli-compatibility/v1",
+        "status": status,
+        "configured": configured,
+        "enforcement": expectation.enforcement,
+        "enforcement_source": expectation.enforcement_source,
+        "expectation_source": expectation.source,
+        "expected_command": expectation.command,
+        "checks": checks if not compact else configured_checks,
+        "failed_checks": [check["name"] for check in failed_checks],
+        "rule": (
+            "Repo-owned compatibility expectations compare against invoked_cli_identity; workspace.cli_invoke remains command guidance."
+        ),
+    }
+    if compact:
+        compact_payload = {
+            "kind": payload["kind"],
+            "status": payload["status"],
+            "configured": payload["configured"],
+            "enforcement": payload["enforcement"],
+            "failed_checks": payload["failed_checks"],
+        }
+        if configured_checks:
+            compact_payload["checks"] = payload["checks"]
+        return compact_payload
+    return payload
+
+
 SETUP_FINDINGS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["setup_findings_path"])
 _SETUP_FINDINGS_POLICY = setup_findings_policy_manifest()
 SETUP_FINDINGS_KIND = str(_SETUP_FINDINGS_POLICY["accepted_kind"])
@@ -3889,6 +3986,7 @@ def _run_lifecycle_command(
         "command": command_name,
         "target": target_root.as_posix(),
         "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root, compact=True),
+        "cli_compatibility": _cli_compatibility_payload(config=config, compact=True),
         "modules": selected_modules,
         "preset": resolved_preset,
         "dry_run": dry_run,
@@ -4760,6 +4858,7 @@ def _run_report_command(
         "command": "report",
         "target": target_root.as_posix(),
         "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root),
+        "cli_compatibility": _cli_compatibility_payload(config=config),
         "selected_modules": selected_modules,
         "installed_modules": installed_modules,
         "feature_tier": _feature_tier_payload(
@@ -7256,6 +7355,9 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
             cli_invoke=config.cli_invoke,
         ),
     }
+    cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+    if cli_compatibility["configured"]:
+        payload["cli_compatibility"] = cli_compatibility
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths:
         payload["proof"] = _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root)
@@ -7637,6 +7739,12 @@ def _config_field_enforcement_entries() -> list[dict[str, Any]]:
             "used_by": ["config.assurance", "summary.planning_record", "proof concern profiles", "closeout guidance"],
         },
         {
+            "field": "cli_compatibility.*",
+            "enforcement": "advisory-operational",
+            "scope": "repo-config",
+            "used_by": ["config.cli_compatibility", "status/start/report CLI compatibility comparison"],
+        },
+        {
             "field": "update.modules.<module>.*",
             "enforcement": "operational",
             "scope": "repo-config",
@@ -7707,6 +7815,14 @@ def _config_enforcement_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                     command="agentic-workspace report --target ./repo --section workflow_obligations --format json",
                     cli_invoke=config.cli_invoke,
                 ),
+            },
+            {
+                "field": "cli_compatibility.*",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace config --target ./repo --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "field_path": "cli_compatibility",
             },
             {
                 "field": "local runtime/delegation posture",
@@ -9365,6 +9481,9 @@ def _emit_startup_report(
         "escalation_boundaries": active_record.get("escalate_when") or [],
         "relevant_handoff_context": plan_report.get("active", {}).get("handoff_contract") or {},
     }
+    cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+    if cli_compatibility["configured"]:
+        payload["cli_compatibility"] = cli_compatibility
 
     _emit_payload(payload=payload, format_name=format_name)
 
@@ -12770,6 +12889,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     return {
         "target": config.target_root.as_posix() if config.target_root is not None else None,
         "invoked_cli_identity": _invoked_cli_identity_payload(target_root=config.target_root),
+        "cli_compatibility": _cli_compatibility_payload(config=config),
         "config_path": config.path.as_posix() if config.path is not None else WORKSPACE_CONFIG_PATH.as_posix(),
         "exists": config.exists,
         "schema_version": config.schema_version,

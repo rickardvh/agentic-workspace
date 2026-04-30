@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -143,6 +144,21 @@ SUPPORTED_REVIEW_BURDENS = (
     "normal",
     "high",
 )
+SUPPORTED_CLI_COMPATIBILITY_ENFORCEMENT = (
+    "off",
+    "advisory",
+    "blocking",
+)
+SUPPORTED_CLI_SOURCE_CLASSES = (
+    "source-checkout",
+    "installed-package",
+    "unknown",
+)
+SUPPORTED_CLI_TARGET_RELATIONS = (
+    "inside-target",
+    "outside-target",
+    "no-target",
+)
 
 
 class WorkspaceUsageError(ValueError):
@@ -228,6 +244,18 @@ class AssuranceConfig:
 
 
 @dataclass(frozen=True)
+class CLICompatibilityExpectation:
+    enforcement: str
+    enforcement_source: str
+    minimum_version: str | None
+    exact_version: str | None
+    source_classes: tuple[str, ...]
+    target_relations: tuple[str, ...]
+    command: str | None
+    source: str
+
+
+@dataclass(frozen=True)
 class WorkspaceConfig:
     target_root: Path | None
     path: Path | None
@@ -251,6 +279,7 @@ class WorkspaceConfig:
     workflow_obligations: tuple[WorkflowObligation, ...]
     system_intent: SystemIntentDeclaration
     assurance: AssuranceConfig
+    cli_compatibility: CLICompatibilityExpectation
     local_override: MixedAgentLocalOverride
     warnings: tuple[str, ...] = ()
 
@@ -390,6 +419,81 @@ def validate_assurance_level(level: str) -> str:
         supported = ", ".join(SUPPORTED_ASSURANCE_LEVELS)
         raise WorkspaceUsageError(f"assurance.default_level must be one of: {supported}.")
     return normalized
+
+
+def validate_cli_compatibility_enforcement(enforcement: str) -> str:
+    normalized = enforcement.strip() or "off"
+    if normalized not in SUPPORTED_CLI_COMPATIBILITY_ENFORCEMENT:
+        supported = ", ".join(SUPPORTED_CLI_COMPATIBILITY_ENFORCEMENT)
+        raise WorkspaceUsageError(f"cli_compatibility.enforcement must be one of: {supported}.")
+    return normalized
+
+
+def _validate_version_string(*, value: Any, field: str, config_path: Path) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise WorkspaceUsageError(f"{config_path.as_posix()} cli_compatibility.{field} must be a non-empty string.")
+    normalized = value.strip()
+    if not re.match(r"^\d+(?:\.\d+){0,3}(?:[-+][A-Za-z0-9.-]+)?$", normalized):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} cli_compatibility.{field} must be a simple version string like 1.2.3.")
+    return normalized
+
+
+def _load_cli_compatibility_expectation(*, raw_cli_compatibility: Any, config_path: Path) -> tuple[CLICompatibilityExpectation, list[str]]:
+    warnings: list[str] = []
+    if raw_cli_compatibility is None:
+        raw_cli_compatibility = {}
+    if not isinstance(raw_cli_compatibility, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} [cli_compatibility] section must be a table.")
+    supported_fields = {
+        "enforcement",
+        "minimum_version",
+        "exact_version",
+        "source_classes",
+        "target_relations",
+        "command",
+    }
+    unknown = sorted(set(raw_cli_compatibility) - supported_fields)
+    if unknown:
+        warnings.append(f"{config_path.as_posix()} [cli_compatibility] contains unsupported field(s): {', '.join(unknown)}.")
+    enforcement = validate_cli_compatibility_enforcement(str(raw_cli_compatibility.get("enforcement", "off")))
+    source_classes = require_optional_string_list(
+        payload=raw_cli_compatibility,
+        key="source_classes",
+        config_path=config_path,
+        allowed=SUPPORTED_CLI_SOURCE_CLASSES,
+    )
+    target_relations = require_optional_string_list(
+        payload=raw_cli_compatibility,
+        key="target_relations",
+        config_path=config_path,
+        allowed=SUPPORTED_CLI_TARGET_RELATIONS,
+    )
+    command = raw_cli_compatibility.get("command")
+    if command is not None and (not isinstance(command, str) or not command.strip()):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} cli_compatibility.command must be a non-empty string when present.")
+    return (
+        CLICompatibilityExpectation(
+            enforcement=enforcement,
+            enforcement_source="repo-config" if "enforcement" in raw_cli_compatibility else "product-default",
+            minimum_version=_validate_version_string(
+                value=raw_cli_compatibility.get("minimum_version"),
+                field="minimum_version",
+                config_path=config_path,
+            ),
+            exact_version=_validate_version_string(
+                value=raw_cli_compatibility.get("exact_version"),
+                field="exact_version",
+                config_path=config_path,
+            ),
+            source_classes=source_classes,
+            target_relations=target_relations,
+            command=command.strip() if isinstance(command, str) else None,
+            source="repo-config" if raw_cli_compatibility else "product-default",
+        ),
+        warnings,
+    )
 
 
 def _require_bool(*, payload: dict[str, Any], key: str, default: bool, config_path: Path) -> bool:
@@ -930,6 +1034,11 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     cli_invoke_source = "product-default"
     assurance, assurance_warnings = _load_assurance_config(raw_assurance={}, config_path=WORKSPACE_CONFIG_PATH)
     warnings.extend(assurance_warnings)
+    cli_compatibility, cli_compatibility_warnings = _load_cli_compatibility_expectation(
+        raw_cli_compatibility={},
+        config_path=WORKSPACE_CONFIG_PATH,
+    )
+    warnings.extend(cli_compatibility_warnings)
     if local_override.cli_invoke is not None:
         cli_invoke = local_override.cli_invoke
         cli_invoke_source = "local-override"
@@ -978,6 +1087,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
                 ),
             ),
             assurance=assurance,
+            cli_compatibility=cli_compatibility,
             local_override=local_override,
             warnings=tuple(warnings),
         )
@@ -991,7 +1101,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         )
 
     unknown_top_level = sorted(
-        set(payload) - {"schema_version", "workspace", "update", "workflow_obligations", "system_intent", "assurance"}
+        set(payload) - {"schema_version", "workspace", "update", "workflow_obligations", "system_intent", "assurance", "cli_compatibility"}
     )
     if unknown_top_level:
         unknown_text = ", ".join(unknown_top_level)
@@ -1140,6 +1250,11 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         config_path=WORKSPACE_CONFIG_PATH,
     )
     warnings.extend(assurance_warnings)
+    cli_compatibility, cli_compatibility_warnings = _load_cli_compatibility_expectation(
+        raw_cli_compatibility=payload.get("cli_compatibility", {}),
+        config_path=WORKSPACE_CONFIG_PATH,
+    )
+    warnings.extend(cli_compatibility_warnings)
 
     agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = resolve_effective_agent_instructions_file(
         target_root=effective_root,
@@ -1168,6 +1283,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         workflow_obligations=workflow_obligations,
         system_intent=system_intent,
         assurance=assurance,
+        cli_compatibility=cli_compatibility,
         local_override=local_override,
         warnings=tuple(warnings),
     )

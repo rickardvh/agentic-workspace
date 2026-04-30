@@ -27,6 +27,9 @@
     "invoked_cli_identity": {
       "$ref": "#/$defs/invoked_cli_identity"
     },
+    "cli_compatibility": {
+      "type": "object"
+    },
     "startup_sequence": {
       "type": "array",
       "minItems": 1,

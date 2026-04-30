@@ -1,0 +1,355 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "CLI Compatibility Expectations",
+  "goal": [
+    "Implement #609 by adding repo-owned CLI compatibility expectations and a descriptive comparison payload against the invoked CLI identity."
+  ],
+  "non_goals": [
+    "Do not implement status/doctor warning classes, remediation guidance, or health changes from #610.",
+    "Do not mandate uv, npm, global installs, or any single package manager."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Host repos can declare expected Agentic Workspace CLI posture and see whether the invoked CLI satisfies it.",
+      "constraints": "Compatibility expectations are repo-owned; workspace.cli_invoke remains local command guidance and is not proof of invocation.",
+      "latitude": "Choose a conservative config shape that supports version, source class, target relation, and advisory/blocking enforcement.",
+      "escalation": "Escalate if implementation expands into lifecycle warnings, automatic upgrades, or host dependency mutation."
+    },
+    "execution": {
+      "milestone": "cli-compatibility-expectations",
+      "status": "completed",
+      "next_step": "Archive this slice and continue the larger lane with #610 when CLI drift reporting is next.",
+      "proof": "Focused tests and proof-selected commands passed for changed paths."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/",
+        "tests/",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/cli-compatibility-expectations.plan.json"
+      ],
+      "invariants": [
+        "repo-owned expectations are advisory/blocking data, not automatic mutation",
+        "payload drift remains separate from executable compatibility"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Host repos can detect CLI version/source drift after updates.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane cli-version-drift-handshake",
+    "parent lane": "cli-version-drift-handshake"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane cli-version-drift-handshake",
+    "activation trigger": "After repo-owned CLI expectations are visible in compact outputs."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Future slices can emit executable drift findings with remediation.",
+    "intentionally deferred": "#610 warning classes, lifecycle health effects, and remediation.",
+    "discovered implications": "",
+    "proof achieved now": "",
+    "validation still needed": "Run selected proof after implementation.",
+    "next likely slice": "#610: report executable drift separately from payload drift."
+  },
+  "intent_interpretation": {
+    "literal request": "Finish the lane you started, despite memory-operating-loop having higher priority.",
+    "inferred intended outcome": "Continue the CLI version drift handshake lane with #609.",
+    "chosen concrete what": "Add repo-owned compatibility expectations and comparison output.",
+    "interpretation distance": "low; user explicitly overrode priority to continue this lane.",
+    "review guidance": "Verify #610 drift warnings remain out of scope."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/**, tests/**, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/execplans/cli-compatibility-expectations.plan.json",
+    "max changed files": "10",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests -q; uv run ruff check src tests; proof-selected commands",
+    "ask-before-refactor threshold": "Broad config loader refactor or status health semantics.",
+    "stop before touching": "Host dependency files, package release metadata, auto-upgrade behavior, or #610 remediation."
+  },
+  "stop_conditions": {
+    "stop when": "config/status/start/report can show CLI compatibility expectation status and tests cover absent, satisfied, advisory drift, and blocking drift.",
+    "escalate when boundary reached": "Implementation needs executable drift warnings or remediation.",
+    "escalate on scope drift": "Changes expand into package-manager-specific enforcement.",
+    "escalate on proof failure": "Proof fails outside touched scope or indicates existing unrelated drift."
+  },
+  "context_budget": {
+    "live working set": "This execplan, #609, config loader/schema, invoked_cli_identity payload, and focused CLI tests.",
+    "recoverable later": "#607/#610 issue bodies and archived #608 plan.",
+    "externalize before shift": "Update execution_run and drift_log before interruption or closeout.",
+    "pre-work config pull": "Use compact summary/config/proof outputs before raw planning reads.",
+    "pre-work memory pull": "No memory consult needed; dogfooding signals stay in this execplan.",
+    "tiny resumability note": "Implement #609 expectations only; leave warning/remediation behavior to #610.",
+    "context-shift triggers": "Proof failure, scope expansion, or interruption before closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Add repo-owned CLI compatibility expectations.",
+    "hard constraints": "Do not implement #610 warning/remediation semantics.",
+    "agent may decide locally": "Exact field names and comparison payload shape.",
+    "escalate when": "Package-manager-specific enforcement seems required."
+  },
+  "adaptive_assurance": {
+    "level": "medium",
+    "reason": "This affects startup/status trust but is configuration/reporting behavior.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": false,
+    "required_refs": [
+      "#609"
+    ],
+    "proof_profiles": [],
+    "required_gates": []
+  },
+  "traceability_refs": {
+    "requirement_refs": [
+      "#609"
+    ],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [],
+    "risk_refs": [],
+    "security_refs": [],
+    "audit_refs": [],
+    "acceptance_refs": [
+      "#609 acceptance"
+    ],
+    "decision_refs": []
+  },
+  "control_gates": [],
+  "implementation_blockers": [],
+  "risk_registry_refs": [],
+  "invariant_refs": [],
+  "test_data_policy": {
+    "classification": "synthetic config and CLI identity tests only",
+    "forbidden": [],
+    "fixture_owner": "tests",
+    "proof_required": [
+      "pytest"
+    ],
+    "refs": []
+  },
+  "layer_scaffold": {
+    "type": "workspace-cli-compatibility-expectation",
+    "required_refs": [
+      "#609"
+    ],
+    "common_risks": [
+      "confusing workspace.cli_invoke with proof of current invocation",
+      "overreaching into package-manager-specific policy",
+      "mixing executable compatibility with payload drift"
+    ],
+    "suggested_proof_profiles": [],
+    "suggested_gates": [],
+    "non_goals": [
+      "#610"
+    ],
+    "durable_residue_prompts": []
+  },
+  "architecture_decision_promotion": {
+    "status": "none",
+    "target": "",
+    "decision_refs": [],
+    "promotion_needed": false,
+    "notes": ""
+  },
+  "threat_failure_aids": [],
+  "references": [
+    {
+      "kind": "github_issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/609",
+      "label": "#609 CLI compatibility expectations",
+      "role": "source_intent",
+      "locator": ""
+    },
+    {
+      "kind": "github_issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/607",
+      "label": "#607 CLI version drift parent",
+      "role": "parent_intent",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "cli-compatibility-expectations",
+    "status": "completed",
+    "scope": "Add repo-owned CLI compatibility expectations and comparison output.",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed #609 slice and leave #610 as the next CLI drift slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/",
+    "tests/",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/cli-compatibility-expectations.plan.json"
+  ],
+  "invariants": [
+    "Compatibility output is descriptive and does not mutate host repos.",
+    "Payload drift status remains a separate diagnostic."
+  ],
+  "contract_decisions_to_freeze": [
+    "Use a repo-owned [cli_compatibility] table with enforcement, version, source class, and target relation expectations."
+  ],
+  "open_questions_to_close": [
+    "Closed for this slice: #609 owns descriptive compatibility comparison; #610 owns warning classes, remediation, and health semantics."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run pytest tests -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed <changed paths> --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Repo config schema accepts CLI compatibility expectations.",
+    "Config JSON reports expectation and comparison state.",
+    "Status/start/report expose the comparison without changing payload health.",
+    "Tests cover absent, satisfied, advisory drift, and blocking drift.",
+    "Planning surfaces validate cleanly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "GitHub #609 and roadmap lane cli-version-drift-handshake",
+    "what happened": "Added repo-owned [cli_compatibility] parsing, schema coverage, and comparison payloads for config/report/status/doctor/start. Covered no expectation, satisfied expectation, advisory drift, and blocking drift while keeping #610 remediation and health behavior out of scope.",
+    "scope touched": "workspace config loader, CLI report/status/start payload assembly, JSON schemas, CLI tests, and planning state",
+    "changed surfaces": "src/agentic_workspace/config.py; src/agentic_workspace/cli.py; src/agentic_workspace/contracts/schemas/workspace_config.schema.json; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; src/agentic_workspace/contracts/schemas/startup_context.schema.json; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/cli-compatibility-expectations.plan.json",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"cli_compatibility or config_command_reports_effective_defaults_without_repo_file or status_real_init_reports_workspace_shared_layer_surfaces or report_real_init_summarizes_combined_workspace_state or start_command_returns_minimum_safe_startup_context\"; uv run agentic-workspace config --target . --format json; uv run agentic-workspace report --target . --section cli_compatibility --format json; uv run agentic-workspace proof --target . --changed <changed paths> --format json; uv run pytest tests -q; uv run ruff check src tests; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "continue larger CLI lane with #610",
+    "next step": "Archive plan and commit."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; implementation stayed within #609 and did not add #610 warning/remediation/health behavior",
+    "proof status": "passed",
+    "intent served": "yes for #609; larger #607 lane remains open for #610",
+    "config compliance": "added repo-owned config schema and parser fields; local workspace.cli_invoke remains command guidance, not proof of invocation",
+    "misinterpretation risk": "low: user explicitly chose CLI lane over higher-priority Memory lane",
+    "follow-on decision": "Archive this slice and set roadmap suggested_first_slice to #610."
+  },
+  "proof_report": {
+    "validation proof": "full proof-selected lane passed",
+    "proof achieved now": "config/report/status/start expose CLI compatibility comparison and tests cover absent/satisfied/advisory/blocking states",
+    "evidence for \"proof achieved\" state": "369 passed in 127.59s; ruff checks passed; contract tooling passed; structured inventory passed; root_cli_authority and planning doctor selectors returned healthy output"
+  },
+  "intent_satisfaction": {
+    "original intent": "Add repo-owned CLI compatibility expectations.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#609 is satisfied: repo-owned [cli_compatibility] expectations are parsed, schema-covered, and compared against invoked_cli_identity in config/report/status/start; validation passed.",
+    "unsolved intent passed to": "#610 reports executable drift separately from managed payload drift and adds warning/remediation semantics."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Agentic Workspace should keep repo-owned command routing trustworthy and cheap across host repos.",
+    "slice shaping bias": "Prefer provider-neutral expectation data over package-manager-specific enforcement.",
+    "broader-lane validation question": "Can a host repo declare what CLI posture it expects?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Archive the completed #609 slice while keeping the parent CLI drift lane open for #610.",
+    "evidence carried forward": "Full proof-selected validation passed and roadmap suggested_first_slice now points to #610.",
+    "reopen trigger": "Reopen if configured CLI compatibility expectations do not appear in compact outputs or if #610 needs a different expectation shape."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Add repo-owned CLI compatibility expectations.\nIntent satisfied: yes\nArchive decision: archive-but-keep-lane-open\nProof: full proof-selected lane passed\nChanged surfaces: src/agentic_workspace/config.py; src/agentic_workspace/cli.py; src/agentic_workspace/contracts/schemas/workspace_config.schema.json; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; src/agentic_workspace/contracts/schemas/startup_context.schema.json; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/cli-compatibility-expectations.plan.json\nDurable residue: planning (code and schemas changed in this slice)\nFollow-up: #610 reports executable drift separately from managed payload drift and adds warning/remediation semantics."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "No-expectation CLI compatibility must stay out of compact startup output to preserve startup budget; detailed no-expectation state belongs in config/report/status.",
+    "motivation worth preserving": "Compatibility expectations compare repo-owned desired posture to invoked_cli_identity; workspace.cli_invoke is only command guidance.",
+    "canonical owner now": "code and schemas changed in this slice",
+    "promotion trigger": "If #610 needs warning/remediation semantics, promote the distinction into report/status wording or docs.",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Repo-owned CLI compatibility expectations and comparison payloads.",
+    "validation confirmed": "Focused tests plus proof-selected full suite/check lanes passed.",
+    "follow-on routed to": "#610 remains in roadmap lane cli-version-drift-handshake",
+    "post-work posterity capture": "Plan closeout records compact-startup budget and stale external-cache dogfooding signals.",
+    "knowledge promoted (Memory/Docs/Config)": "Config schema and report/startup schemas updated; no Memory promotion in this slice.",
+    "resume from": "Start #610 when continuing the CLI drift lane."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "summary still promoted the archived #608 continuation even though the roadmap lane already names #609 as next",
+      "local external-intent cache still reported #608 open immediately after it was closed upstream",
+      "startup compact-size test caught that unconditional cli_compatibility output was too noisy for no-expectation repos",
+      "report --section cli_compatibility made the new surface cheap to inspect without reading the full report",
+      "finished-work continuation routing did not recognize the roadmap lane refs field and needed an explicit roadmap reason containing the parent issue"
+    ],
+    "signals fixed": [
+      "start/startup-report now omit cli_compatibility when no expectation is configured, while config/report/status retain the detailed no-expectation payload"
+    ],
+    "signals routed": [
+      "stale external-intent cache freshness and archived-continuation pressure should be considered in a later planning/router refinement",
+      "finished-work routing should read roadmap refs directly instead of requiring issue ids in title/reason/issues",
+      "#610 remains the next CLI lane slice for warning/remediation semantics"
+    ],
+    "signals dismissed": [],
+    "next owner": "roadmap lane cli-version-drift-handshake"
+  },
+  "drift_log": [
+    "2026-04-30: Promoted #609 as the next slice of the CLI version drift lane after user explicitly chose finishing this lane over the higher-priority Memory lane.",
+    "2026-04-30: Completed #609 and kept #610 out of scope for the next CLI drift slice."
+  ],
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Do not keep an active plan for #609 after commit; its result is code, schema, tests, and archived execution residue.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#610 remains in roadmap lane cli-version-drift-handshake",
+          "owner": ".agentic-workspace/planning/state.toml roadmap lane cli-version-drift-handshake",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Config schema and report/startup schemas updated; no Memory promotion in this slice.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "Config schema and report/startup schemas updated; no Memory promotion in this slice.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#609 CLI compatibility expectations",
+          "owner": "github_issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/609"
+        },
+        {
+          "summary": "#607 CLI version drift parent",
+          "owner": "github_issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/607"
+        }
+      ]
+    }
+  }
+}

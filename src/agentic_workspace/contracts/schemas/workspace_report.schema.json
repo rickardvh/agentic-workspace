@@ -9,6 +9,7 @@
     "command",
     "target",
     "invoked_cli_identity",
+    "cli_compatibility",
     "selected_modules",
     "installed_modules",
     "feature_tier",
@@ -87,6 +88,9 @@
     },
     "invoked_cli_identity": {
       "$ref": "#/$defs/invoked_cli_identity"
+    },
+    "cli_compatibility": {
+      "type": "object"
     },
     "selected_modules": {
       "type": "array",

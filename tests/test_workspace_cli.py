@@ -75,6 +75,16 @@ def _assert_invoked_cli_identity(payload: dict[str, object], *, target_relation:
     return identity
 
 
+def _assert_cli_compatibility(payload: dict[str, object], *, status: str) -> dict[str, object]:
+    compatibility = payload["cli_compatibility"]
+    assert isinstance(compatibility, dict)
+    assert compatibility["kind"] == "agentic-workspace/cli-compatibility/v1"
+    assert compatibility["status"] == status
+    assert compatibility["enforcement"] in {"off", "advisory", "blocking"}
+    assert "failed_checks" in compatibility
+    return compatibility
+
+
 def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) -> None:
     repo_root = Path("./repo")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(repo_root, []))
@@ -841,6 +851,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
 
     payload = json.loads(capsys.readouterr().out)
     _assert_invoked_cli_identity(payload, target_relation="outside-target")
+    _assert_cli_compatibility(payload, status="no-expectation")
     assert payload["exists"] is False
     assert payload["workspace"]["default_preset"] == "full"
     assert payload["workspace"]["agent_instructions_file"] == "AGENTS.md"
@@ -3469,6 +3480,7 @@ def test_status_real_init_reports_workspace_shared_layer_surfaces(tmp_path: Path
 
     payload = json.loads(capsys.readouterr().out)
     _assert_invoked_cli_identity(payload, target_relation="outside-target")
+    _assert_cli_compatibility(payload, status="no-expectation")
     workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
     assert any(action["path"] == ".agentic-workspace/WORKFLOW.md" and action["kind"] == "current" for action in workspace_report["actions"])
     assert any(
@@ -3487,6 +3499,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
 
     payload = json.loads(capsys.readouterr().out)
     _assert_invoked_cli_identity(payload, target_relation="outside-target")
+    _assert_cli_compatibility(payload, status="no-expectation")
     assert payload["kind"] == "workspace-report/v1"
     assert payload["command"] == "report"
     assert payload["schema"]["schema_version"] == "workspace-reporting-schema/v1"
@@ -6126,6 +6139,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
 
     payload = json.loads(capsys.readouterr().out)
     _assert_invoked_cli_identity(payload, target_relation="outside-target")
+    assert "cli_compatibility" not in payload
     assert payload["kind"] == "startup-context/v1"
     assert payload["startup_sequence"][0]["surface"] == "AGENTS.md"
     assert payload["startup_sequence"][1]["command"] == "uv run agentic-workspace preflight --format json"
@@ -6196,6 +6210,72 @@ def test_repo_config_cli_invoke_is_ignored_as_machine_local_policy(tmp_path: Pat
     assert payload["workspace"]["cli_invoke"] == "agentic-workspace"
     assert payload["workspace"]["cli_invoke_source"] == "product-default"
     assert payload["warnings"] == [".agentic-workspace/config.toml [workspace] contains unsupported field(s): cli_invoke."]
+
+
+def test_config_reports_satisfied_repo_owned_cli_compatibility_expectation(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n"
+        "[cli_compatibility]\n"
+        'enforcement = "blocking"\n'
+        'minimum_version = "0.0.0"\n'
+        'source_classes = ["source-checkout"]\n'
+        'target_relations = ["outside-target"]\n'
+        'command = "uv run agentic-workspace"\n',
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    compatibility = _assert_cli_compatibility(payload, status="satisfied")
+    assert compatibility["configured"] is True
+    assert compatibility["enforcement"] == "blocking"
+    assert compatibility["expected_command"] == "uv run agentic-workspace"
+    assert compatibility["failed_checks"] == []
+    checks = {check["name"]: check for check in compatibility["checks"]}
+    assert checks["minimum_version"]["satisfied"] is True
+    assert checks["source_class"]["satisfied"] is True
+    assert checks["target_relation"]["satisfied"] is True
+
+
+def test_status_reports_advisory_cli_compatibility_drift(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[cli_compatibility]\nenforcement = "advisory"\nexact_version = "999.0.0"\n',
+    )
+
+    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    compatibility = _assert_cli_compatibility(payload, status="advisory-drift")
+    assert compatibility["enforcement"] == "advisory"
+    assert compatibility["failed_checks"] == ["exact_version"]
+
+
+def test_start_reports_blocking_cli_compatibility_drift_without_health_remediation(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[cli_compatibility]\nenforcement = "blocking"\nexact_version = "999.0.0"\n',
+    )
+
+    assert cli.main(["start", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    compatibility = _assert_cli_compatibility(payload, status="blocking-drift")
+    assert compatibility["enforcement"] == "blocking"
+    assert compatibility["failed_checks"] == ["exact_version"]
+    assert "next_action" not in compatibility
 
 
 def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys) -> None:
