@@ -342,7 +342,7 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
         ),
     }
     if compact:
-        compact_payload = {
+        compact_payload: dict[str, Any] = {
             "kind": payload["kind"],
             "status": payload["status"],
             "configured": payload["configured"],
@@ -5634,9 +5634,12 @@ def _memory_consult_payload(
             "do_not_bulk_read": True,
         }
 
-    habitual_pull = report.get("habitual_pull", {}) if isinstance(report, dict) else {}
-    bundle = habitual_pull.get("ordinary_work_bundle", {}) if isinstance(habitual_pull, dict) else {}
-    always_load = _list_payload(bundle.get("always_load") if isinstance(bundle, dict) else [])
+    report_payload: dict[str, Any] = cast(dict[str, Any], report) if isinstance(report, dict) else {}
+    habitual_raw = report_payload.get("habitual_pull", {})
+    habitual_pull: dict[str, Any] = cast(dict[str, Any], habitual_raw) if isinstance(habitual_raw, dict) else {}
+    bundle_raw = habitual_pull.get("ordinary_work_bundle", {})
+    bundle: dict[str, Any] = cast(dict[str, Any], bundle_raw) if isinstance(bundle_raw, dict) else {}
+    always_load = _list_payload(bundle.get("always_load"))
     read_first = [str(path) for path in always_load]
     route_actions: list[dict[str, Any]] = []
     normalized_paths = _normalize_changed_paths(changed_paths or [])
@@ -5660,24 +5663,24 @@ def _memory_consult_payload(
         except Exception:
             route_actions = []
 
-    max_notes = int(bundle.get("working_set_target", 3) or 3) if isinstance(bundle, dict) else 3
+    max_notes = int(bundle.get("working_set_target", 3) or 3)
     if max_notes > 0:
         read_first = read_first[:max_notes]
-    evidence = habitual_pull.get("evidence", {}) if isinstance(habitual_pull, dict) else {}
-    status = str(habitual_pull.get("status", "unavailable")) if isinstance(habitual_pull, dict) else "unavailable"
+    evidence = habitual_pull.get("evidence", {})
+    status = str(habitual_pull.get("status", "unavailable"))
     consult_status = (
         "recommended" if read_first and status in {"ready-for-ordinary-work", "attention-needed", "needs-more-proof"} else "not-recommended"
     )
-    promotion_pressure = report.get("promotion_pressure", {}) if isinstance(report, dict) else {}
+    promotion_pressure = report_payload.get("promotion_pressure", {})
     payload = {
         "kind": "agentic-workspace/memory-consult/v1",
         "status": consult_status,
         "source": "memory.habitual_pull",
-        "why": habitual_pull.get("summary", "") if isinstance(habitual_pull, dict) else "",
+        "why": habitual_pull.get("summary", ""),
         "read_first": read_first,
         "max_notes": max_notes,
         "do_not_bulk_read": True,
-        "selection_rule": (bundle.get("route_rule", "") if isinstance(bundle, dict) else "load only route-matched durable Memory notes"),
+        "selection_rule": bundle.get("route_rule", ""),
         "changed_path_route_count": len(route_actions),
         "route_matches": route_actions[:max_notes],
         "evidence": evidence if isinstance(evidence, dict) else {},

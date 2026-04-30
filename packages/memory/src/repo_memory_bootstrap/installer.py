@@ -2919,6 +2919,10 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
         durable_facts=durable_facts,
     )
     state_model = _memory_state_model_view(manifest=manifest, trust_items=trust_items)
+    state_records = state_model.get("records", [])
+    state_record_items = (
+        [cast(dict[str, Any], record) for record in state_records if isinstance(record, dict)] if isinstance(state_records, list) else []
+    )
     promotion_pressure = {
         "status": "attention" if remediation_counts.get("candidate", 0) or elimination_candidates else "clear",
         "candidate_count": remediation_counts.get("candidate", 0),
@@ -2933,19 +2937,11 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
                 "preferred_remediation": item.get("preferred_remediation", ""),
                 "elimination_target": item.get("elimination_target", ""),
                 "promotion_target": next(
-                    (
-                        record.get("promotion_target", "")
-                        for record in state_model["records"]
-                        if isinstance(record, dict) and record.get("path") == item["path"]
-                    ),
+                    (record.get("promotion_target", "") for record in state_record_items if record.get("path") == item["path"]),
                     "",
                 ),
                 "retention_after_promotion": next(
-                    (
-                        record.get("retention_after_promotion", "")
-                        for record in state_model["records"]
-                        if isinstance(record, dict) and record.get("path") == item["path"]
-                    ),
+                    (record.get("retention_after_promotion", "") for record in state_record_items if record.get("path") == item["path"]),
                     "",
                 ),
             }

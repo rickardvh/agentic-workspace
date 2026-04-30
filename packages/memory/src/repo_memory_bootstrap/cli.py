@@ -537,7 +537,8 @@ def _handle_capture_note(args: argparse.Namespace) -> int:
     else:
         print(f"Recommended action: {payload.get('recommended_action', 'unknown')}")
         print(f"Reason: {payload.get('reason', '')}")
-        for command in payload.get("commands", []):
+        commands = payload.get("commands", [])
+        for command in commands if isinstance(commands, list) else []:
             print(f"Command: {command}")
     return 0
 
