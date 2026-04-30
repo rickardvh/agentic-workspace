@@ -1,0 +1,366 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "External Evidence Mutation Freshness",
+  "goal": [
+    "Implement #612 by making external intent evidence freshness safer after tracker mutations."
+  ],
+  "non_goals": [
+    "Do not auto-refresh GitHub from the provider-agnostic planning core.",
+    "Do not implement #611 typed cli_compatibility schema or #613 roadmap refs routing."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Compact planning and reconcile outputs make it clear that external evidence is a snapshot and should be refreshed after tracker writes.",
+      "constraints": "Keep checked-in planning primary and GitHub refresh optional.",
+      "latitude": "Add provider-agnostic freshness fields, commands, and tests rather than adding provider-specific state mutation.",
+      "escalation": "Escalate if implementation requires live GitHub calls from summary/reconcile."
+    },
+    "execution": {
+      "milestone": "external-evidence-mutation-freshness",
+      "status": "completed",
+      "next_step": "Archive this slice and continue dogfooding-closeout-friction with #613 or #611 when prioritized.",
+      "proof": "Focused tests and proof-selected commands passed."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "tests/test_workspace_summary_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/external-evidence-mutation-freshness.plan.json"
+      ],
+      "invariants": [
+        "provider-specific refresh remains optional",
+        "freshness output must not imply live tracker truth when it is only a cached snapshot"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Reduce dogfooding closeout friction from tracker cache, routing, and schema gaps.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap candidate dogfooding-closeout-friction",
+    "parent lane": "dogfooding-closeout-friction"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap candidate dogfooding-closeout-friction",
+    "activation trigger": "After #612 lands, continue with #613 or #611 when dogfooding friction remains the selected priority."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Closeout can distinguish cached external evidence from current tracker truth.",
+    "intentionally deferred": "#611 and #613",
+    "discovered implications": "",
+    "proof achieved now": "",
+    "validation still needed": "Run selected proof after implementation.",
+    "next likely slice": "#613 or #611 depending on next dogfooding priority."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement that new lane first. Keep dogfooding as before.",
+    "inferred intended outcome": "Promote dogfooding-closeout-friction ahead of older lanes and implement its first slice.",
+    "chosen concrete what": "Implement #612 freshness signaling.",
+    "interpretation distance": "low",
+    "review guidance": "Verify this stays provider-agnostic and does not auto-call GitHub from planning summary."
+  },
+  "execution_bounds": {
+    "allowed paths": "packages/planning/src/repo_planning_bootstrap/installer.py, packages/planning/tests/test_installer.py, tests/test_workspace_summary_cli.py, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/execplans/external-evidence-mutation-freshness.plan.json",
+    "max changed files": "6",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py tests/test_workspace_summary_cli.py -q -k external; proof-selected commands",
+    "ask-before-refactor threshold": "Broad external evidence model rewrite or provider adapter changes.",
+    "stop before touching": "GitHub-specific refresh implementation unless tests prove it is required."
+  },
+  "stop_conditions": {
+    "stop when": "summary/reconcile freshness fields expose snapshot scope and refresh-after-mutation guidance with tests.",
+    "escalate when boundary reached": "Implementation needs live provider calls from summary/reconcile.",
+    "escalate on scope drift": "Changes expand into #611 or #613.",
+    "escalate on proof failure": "Proof fails outside touched scope or indicates unrelated drift."
+  },
+  "context_budget": {
+    "live working set": "This execplan, #612, external evidence freshness code/tests.",
+    "recoverable later": "#611/#613 issue bodies and dogfooding candidate lane.",
+    "externalize before shift": "Update execution_run and improvement_signal_review before interruption.",
+    "pre-work config pull": "Use summary/proof before raw planning reads.",
+    "pre-work memory pull": "No Memory consult required for this package-local slice.",
+    "tiny resumability note": "Implement #612 only; freshness must be snapshot-aware.",
+    "context-shift triggers": "Provider-specific implementation pressure or proof failures."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make external evidence cache freshness safer after tracker mutations.",
+    "hard constraints": "Provider-agnostic core; no auto GitHub calls from summary/reconcile.",
+    "agent may decide locally": "Exact field names for compact freshness guidance.",
+    "escalate when": "A correct fix requires observing tracker mutations directly."
+  },
+  "adaptive_assurance": {
+    "level": "medium",
+    "reason": "This affects closeout trust state and planning reconciliation.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": false,
+    "required_refs": [
+      "#612"
+    ],
+    "proof_profiles": [],
+    "required_gates": []
+  },
+  "traceability_refs": {
+    "requirement_refs": [
+      "#612"
+    ],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [],
+    "risk_refs": [],
+    "security_refs": [],
+    "audit_refs": [],
+    "acceptance_refs": [
+      "#612 acceptance"
+    ],
+    "decision_refs": []
+  },
+  "control_gates": [],
+  "implementation_blockers": [],
+  "risk_registry_refs": [],
+  "invariant_refs": [],
+  "test_data_policy": {
+    "classification": "synthetic provider-agnostic evidence fixtures",
+    "forbidden": [],
+    "fixture_owner": "tests",
+    "proof_required": [
+      "pytest"
+    ],
+    "refs": []
+  },
+  "layer_scaffold": {
+    "type": "planning-external-evidence-freshness",
+    "required_refs": [
+      "#612"
+    ],
+    "common_risks": [
+      "treating cached external evidence as live tracker truth",
+      "adding provider-specific behavior to the planning core",
+      "making compact output too noisy"
+    ],
+    "suggested_proof_profiles": [],
+    "suggested_gates": [],
+    "non_goals": [
+      "#611",
+      "#613"
+    ],
+    "durable_residue_prompts": []
+  },
+  "architecture_decision_promotion": {
+    "status": "none",
+    "target": "",
+    "decision_refs": [],
+    "promotion_needed": false,
+    "notes": ""
+  },
+  "threat_failure_aids": [],
+  "references": [
+    {
+      "kind": "github_issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/612",
+      "label": "#612 external evidence freshness",
+      "role": "source_intent",
+      "locator": ""
+    },
+    {
+      "kind": "github_issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/611",
+      "label": "#611 typed cli_compatibility schema",
+      "role": "sibling_follow_up",
+      "locator": ""
+    },
+    {
+      "kind": "github_issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/613",
+      "label": "#613 roadmap refs routing",
+      "role": "sibling_follow_up",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "external-evidence-mutation-freshness",
+    "status": "completed",
+    "scope": "Add snapshot freshness and refresh-after-mutation guidance for external evidence.",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed #612 slice and leave #613 as the next dogfooding closeout-friction slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    "tests/test_workspace_summary_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/external-evidence-mutation-freshness.plan.json"
+  ],
+  "invariants": [
+    "External evidence cache is snapshot evidence, not live tracker truth.",
+    "GitHub refresh remains an optional adapter."
+  ],
+  "contract_decisions_to_freeze": [
+    "Expose refresh_after_mutation guidance in freshness payloads."
+  ],
+  "open_questions_to_close": [
+    "Closed for this slice: compact summary includes status, refreshed_at, trust_scope, refresh_after_mutation, refresh_command, and fresh_enough_to_trust; detailed report selector can show path and metadata."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py tests/test_workspace_summary_cli.py -q -k external",
+    "uv run agentic-workspace proof --target . --changed <changed paths> --format json",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Freshness payload includes snapshot scope and refresh-after-mutation guidance.",
+    "Compact summary/reconcile output no longer implies cached evidence is current tracker truth.",
+    "Tests cover the new freshness fields.",
+    "Planning surfaces validate cleanly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "User request plus GitHub #612",
+    "what happened": "Added provider-neutral snapshot freshness fields to external work reconciliation and current external work, including trust_scope, refresh_after_mutation, snapshot_rule, and refresh_command. Compact summary/report routing now preserves the high-signal freshness fields without exposing bulky metadata in compact summary.",
+    "scope touched": "planning package installer, planning package tests, root workspace report routing, root summary CLI tests, planning state, and execplan",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; src/agentic_workspace/reporting_support.py; tests/test_workspace_summary_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/external-evidence-mutation-freshness.plan.json",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py tests/test_workspace_summary_cli.py -q -k external; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py tests/test_workspace_summary_cli.py src/agentic_workspace/reporting_support.py; uv run agentic-workspace report --target . --section external_work_reconciliation --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace proof --target . --changed <changed paths> --format json; uv run pytest tests -q; uv run ruff check src tests; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "continue dogfooding-closeout-friction with #613 next",
+    "next step": "Archive plan, commit, and close #612."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; implementation stayed on #612 and did not implement #611 or #613",
+    "proof status": "passed",
+    "intent served": "yes for #612",
+    "config compliance": "provider-specific refresh remains optional and outside the planning core",
+    "misinterpretation risk": "low: the candidate lane names #612 as first slice",
+    "follow-on decision": "Archive this slice and keep dogfooding-closeout-friction open for #613/#611."
+  },
+  "proof_report": {
+    "validation proof": "full proof-selected lane passed",
+    "proof achieved now": "summary/reconcile freshness now exposes snapshot scope and refresh-after-mutation guidance",
+    "evidence for \"proof achieved\" state": "369 root tests passed; 167 planning package tests passed; root and planning ruff passed; planning doctor passed; focused external tests passed"
+  },
+  "intent_satisfaction": {
+    "original intent": "Flag or refresh external evidence after tracker mutations.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#612 is satisfied: freshness payloads expose snapshot scope, refresh_after_mutation, and refresh_command; validation passed.",
+    "unsolved intent passed to": "#613 roadmap refs routing and #611 typed cli_compatibility output schema remain in dogfooding-closeout-friction."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Agentic Workspace should reduce restart, closeout, and handoff cost without adding misleading authority.",
+    "slice shaping bias": "Prefer explicit snapshot trust boundaries over hidden provider calls.",
+    "broader-lane validation question": "Can a maintainer trust closeout evidence after tracker writes?",
+    "intent evidence source": "GitHub #612"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Archive completed #612 while keeping the dogfooding closeout-friction lane open for #613/#611.",
+    "evidence carried forward": "Full proof-selected validation passed and state.toml suggested_first_slice now points to #613.",
+    "reopen trigger": "Reopen if external evidence freshness again implies cached evidence is live tracker truth or omits refresh-after-mutation guidance."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Flag or refresh external evidence after tracker mutations.\nIntent satisfied: yes\nArchive decision: archive-but-keep-lane-open\nProof: full proof-selected lane passed\nChanged surfaces: packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; src/agentic_workspace/reporting_support.py; tests/test_workspace_summary_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/external-evidence-mutation-freshness.plan.json\nDurable residue: planning (planning package freshness payload and tests)\nFollow-up: #613 roadmap refs routing and #611 typed cli_compatibility output schema remain in dogfooding-closeout-friction."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Loaded external evidence is only trustworthy as a snapshot; after tracker mutations, agents need a visible refresh command before treating it as current.",
+    "motivation worth preserving": "Provider-agnostic planning should expose the trust boundary without importing provider-specific refresh into summary/reconcile.",
+    "canonical owner now": "planning package freshness payload and tests",
+    "promotion trigger": "If this wording needs host-facing documentation, promote the snapshot rule into external intent evidence docs.",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "External evidence freshness now carries snapshot scope and refresh-after-mutation guidance.",
+    "validation confirmed": "Focused tests and proof-selected full lanes passed.",
+    "follow-on routed to": "#613/#611 remain in dogfooding-closeout-friction",
+    "post-work posterity capture": "Dogfooding evidence recorded in improvement_signal_review.",
+    "knowledge promoted (Memory/Docs/Config)": "Planning payload/tests now own the snapshot freshness contract; no Memory promotion.",
+    "resume from": "Start #613 when continuing the dogfooding closeout-friction lane."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "summary correctly showed dogfooding-closeout-friction as deferred; user explicitly promoted it above older next lanes",
+      "fresh_enough_to_trust currently reads as loaded-cache trust, not post-mutation tracker trust",
+      "compact summary can carry the high-signal refresh command without bulky provider metadata",
+      "report --section external_work_reconciliation is useful as the detailed drill-down for path, metadata, and snapshot_rule",
+      "summary work_maturity active_execplans currently shows an empty title for the active TODO item even though the execplan has a title"
+    ],
+    "signals fixed": [
+      "freshness payload now includes trust_scope=snapshot, refresh_after_mutation, snapshot_rule, and refresh_command"
+    ],
+    "signals routed": [
+      "empty active TODO title is a compact-summary polish issue to consider in a future planning/router refinement",
+      "#613 and #611 remain tracked in the dogfooding closeout-friction candidate"
+    ],
+    "signals dismissed": [],
+    "next owner": "dogfooding-closeout-friction roadmap candidate"
+  },
+  "drift_log": [
+    "2026-04-30: Promoted #612 as the first slice of the new dogfooding closeout-friction lane per user override.",
+    "2026-04-30: Completed #612 by making external evidence freshness snapshot-aware."
+  ],
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Do not keep an active #612 plan after commit; its result is code, tests, and archived execution residue.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#613/#611 remain in dogfooding-closeout-friction",
+          "owner": ".agentic-workspace/planning/state.toml roadmap candidate dogfooding-closeout-friction",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Planning payload/tests now own the snapshot freshness contract; no Memory promotion.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "Planning payload/tests now own the snapshot freshness contract; no Memory promotion.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#612 external evidence freshness",
+          "owner": "github_issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/612"
+        },
+        {
+          "summary": "#611 typed cli_compatibility schema",
+          "owner": "github_issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/611"
+        },
+        {
+          "summary": "#613 roadmap refs routing",
+          "owner": "github_issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/613"
+        }
+      ]
+    }
+  }
+}

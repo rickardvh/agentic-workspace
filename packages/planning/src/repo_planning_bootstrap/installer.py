@@ -33,6 +33,14 @@ PLANNING_SCHEMA_ROOT = PLANNING_MANAGED_ROOT / "schemas"
 EXECPLAN_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-execplan.schema.json"
 REVIEW_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-review.schema.json"
 EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-external-intent-evidence.schema.json"
+
+EXTERNAL_INTENT_REFRESH_COMMAND = (
+    "agentic-workspace external-intent refresh-github --target ./repo --state all --storage cache --format json"
+)
+EXTERNAL_INTENT_SNAPSHOT_RULE = (
+    "External intent evidence is a provider-agnostic snapshot, not live tracker truth; refresh after creating, "
+    "closing, or editing external tracker items."
+)
 FINISHED_WORK_EVIDENCE_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-finished-work-evidence.schema.json"
 SOURCE_PLANNING_CHECKER_SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "check" / "check_planning_surfaces.py"
 PLANNING_STATE_KIND = "agentic-planning-state"
@@ -3021,7 +3029,18 @@ def _compact_external_work_reconciliation(reconciliation: Any) -> dict[str, Any]
         return {}
     freshness = reconciliation.get("freshness", {})
     if isinstance(freshness, dict):
-        freshness = {key: freshness[key] for key in ("status", "refreshed_at", "fresh_enough_to_trust") if key in freshness}
+        freshness = {
+            key: freshness[key]
+            for key in (
+                "status",
+                "refreshed_at",
+                "trust_scope",
+                "refresh_after_mutation",
+                "refresh_command",
+                "fresh_enough_to_trust",
+            )
+            if key in freshness
+        }
     else:
         freshness = {}
     return {
@@ -3715,6 +3734,10 @@ def _intent_validation_contract(
         "systems": external_evidence.get("systems", []),
         "refreshed_at": external_evidence.get("refreshed_at", ""),
         "refresh_metadata": external_evidence.get("refresh_metadata", {}),
+        "trust_scope": "snapshot",
+        "snapshot_rule": EXTERNAL_INTENT_SNAPSHOT_RULE,
+        "refresh_after_mutation": external_evidence.get("status") == "loaded",
+        "refresh_command": EXTERNAL_INTENT_REFRESH_COMMAND,
         "item_count": external_evidence.get("item_count", 0),
         "open_count": external_open,
         "closed_count": external_closed,
@@ -3802,6 +3825,10 @@ def _intent_validation_contract(
             "path": external_evidence.get("path", ""),
             "refreshed_at": external_evidence.get("refreshed_at", ""),
             "refresh_metadata": external_evidence.get("refresh_metadata", {}),
+            "trust_scope": "snapshot",
+            "snapshot_rule": EXTERNAL_INTENT_SNAPSHOT_RULE,
+            "refresh_after_mutation": external_evidence.get("status") == "loaded",
+            "refresh_command": EXTERNAL_INTENT_REFRESH_COMMAND,
             "fresh_enough_to_trust": external_evidence.get("status") == "loaded",
         },
         "external_work_state": {

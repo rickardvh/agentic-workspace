@@ -479,7 +479,18 @@ def _report_router_external_work_reconciliation(value: Any) -> dict[str, Any]:
         return {"status": "unavailable"}
     freshness = value.get("freshness", {})
     if isinstance(freshness, dict):
-        freshness = {key: freshness[key] for key in ("status", "refreshed_at", "fresh_enough_to_trust") if key in freshness}
+        freshness = {
+            key: freshness[key]
+            for key in (
+                "status",
+                "refreshed_at",
+                "trust_scope",
+                "refresh_after_mutation",
+                "refresh_command",
+                "fresh_enough_to_trust",
+            )
+            if key in freshness
+        }
     else:
         freshness = {}
     return {

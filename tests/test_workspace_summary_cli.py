@@ -252,6 +252,9 @@ candidates = []
     reconciliation = payload["intent_validation_contract"]["external_work_reconciliation"]
     assert reconciliation["kind"] == "planning-external-work-reconciliation/v1"
     assert reconciliation["freshness"]["fresh_enough_to_trust"] is True
+    assert reconciliation["freshness"]["trust_scope"] == "snapshot"
+    assert reconciliation["freshness"]["refresh_after_mutation"] is True
+    assert "external-intent refresh-github" in reconciliation["freshness"]["refresh_command"]
     assert "refresh_metadata" not in reconciliation["freshness"]
     assert "path" not in reconciliation["freshness"]
     assert "profile full" in reconciliation["detail"]

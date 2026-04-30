@@ -4205,6 +4205,9 @@ candidates = [
     assert reconciliation["status"] == "attention"
     assert reconciliation["provider_rule"].startswith("Core planning consumes provider-agnostic")
     assert reconciliation["freshness"]["fresh_enough_to_trust"] is True
+    assert reconciliation["freshness"]["trust_scope"] == "snapshot"
+    assert reconciliation["freshness"]["refresh_after_mutation"] is True
+    assert "external-intent refresh-github" in reconciliation["freshness"]["refresh_command"]
     assert reconciliation["external_work_state"]["untracked_open_count"] == 1
     promotion_action = reconciliation["promotion_action"]
     assert promotion_action["action"] == "promote-external-work-to-planning"
@@ -4273,9 +4276,15 @@ def test_planning_summary_surfaces_external_intent_refresh_metadata(tmp_path: Pa
     assert current_external_work["refreshed_at"] == "2026-04-27T12:00:00+00:00"
     assert current_external_work["refresh_metadata"]["adapter"] == "github-gh-cli"
     assert current_external_work["refresh_metadata"]["repository"] == "acme/project"
+    assert current_external_work["trust_scope"] == "snapshot"
+    assert current_external_work["refresh_after_mutation"] is True
+    assert "not live tracker truth" in current_external_work["snapshot_rule"]
     reconciliation = summary["intent_validation_contract"]["external_work_reconciliation"]
     assert reconciliation["freshness"]["refreshed_at"] == "2026-04-27T12:00:00+00:00"
     assert reconciliation["freshness"]["refresh_metadata"]["adapter"] == "github-gh-cli"
+    assert reconciliation["freshness"]["trust_scope"] == "snapshot"
+    assert reconciliation["freshness"]["refresh_after_mutation"] is True
+    assert "external-intent refresh-github" in reconciliation["freshness"]["refresh_command"]
     assert reconciliation["promotion_action"]["action"] == "promote-external-work-to-planning"
     assert reconciliation["promotion_action"]["provider_neutral"] is True
 
