@@ -1,0 +1,260 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Cli Version Drift Handshake",
+  "goal": [
+    "Host repos cannot trust startup/status output after package updates unless they can tell whether the executed CLI matches repo-owned expectations; this is package-local and directly actionable here."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Host repos cannot trust startup/status output after package updates unless they can tell whether the executed CLI matches repo-owned expectations; this is package-local and directly actionable here.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "cli-version-drift-handshake",
+      "status": "completed",
+      "next_step": "Archive this completed #610 slice after closeout.",
+      "proof": "Focused tests, full root tests, ruff, contract tooling checks, structured inventory check, root CLI authority default, and planning doctor passed."
+    },
+    "scope": {
+      "touched": [
+        "Fill in the concrete files before implementation starts."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Host repos cannot trust startup/status output after package updates unless they can tell whether the executed CLI matches repo-owned expectations; this is package-local and directly actionable here.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Cli Version Drift Handshake",
+    "inferred intended outcome": "Host repos cannot trust startup/status output after package updates unless they can tell whether the executed CLI matches repo-owned expectations; this is package-local and directly actionable here.",
+    "chosen concrete what": "#610: report executable drift separately from payload drift.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Fill in the concrete write scope before implementation starts.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "#610: report executable drift separately from payload drift.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Host repos cannot trust startup/status output after package updates unless they can tell whether the executed CLI matches repo-owned expectations; this is package-local and directly actionable here.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "cli-version-drift-handshake",
+    "status": "completed",
+    "scope": "Report executable drift separately from payload drift in status/doctor surfaces.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed #610 slice after closeout."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/cli-version-drift-handshake.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"cli_compatibility or executable_drift or dry_run_actions\"",
+    "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py",
+    "uv run pytest tests -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Expose invoked CLI identity, let host repos declare expected CLI posture, and report executable drift separately from managed payload drift."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Added executable compatibility drift findings and remediation to the CLI compatibility payload; status/doctor now mark executable drift as lifecycle warnings, and doctor emits a concrete manual-review action. Fixed a dogfooding bug where read-only doctor summaries counted dry-run module actions as top-level mutations.",
+    "scope touched": "workspace CLI runtime, CLI compatibility schemas, focused CLI tests, and planning closeout",
+    "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/contracts/schemas/startup_context.schema.json; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/cli-version-drift-handshake.plan.json",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"cli_compatibility or executable_drift or dry_run_actions\"; uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py; uv run pytest tests -q; uv run ruff check src tests; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "no #610 continuation remains; non-blocking large-file hotspot dogfooding signal routed to an external GitHub issue without ingesting it",
+    "next step": "Archive this completed plan and close #610 after final closeout checks."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed on executable drift reporting and the immediately discovered doctor mutation-summary bug",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes; repo-owned cli_compatibility remains advisory here and payload drift remains owned by module lifecycle checks",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close #610; keep the large-file hotspot follow-up external-only"
+  },
+  "proof_report": {
+    "validation proof": "full proof-selected lane passed",
+    "proof achieved now": "status/doctor expose executable drift separately from payload drift and doctor offers concrete remediation",
+    "evidence for \"proof achieved\" state": "375 root tests passed; ruff checks passed; contract tooling and structured inventory checks passed; planning doctor passed"
+  },
+  "intent_satisfaction": {
+    "original intent": "Host repos cannot trust startup/status output after package updates unless they can tell whether the executed CLI matches repo-owned expectations; this is package-local and directly actionable here.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#610 satisfied: status/doctor now expose executable compatibility drift separately from module payload drift, doctor emits concrete remediation, matching repo-local source checkout remains satisfied, and regression tests cover drift and read-only doctor summary behavior.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Executable CLI drift is now explicit in compatibility payloads, lifecycle warning state, and doctor remediation while module payload drift remains separate.",
+    "validation confirmed": "full proof-selected lane passed",
+    "follow-on routed to": "external GitHub issue owns non-blocking large-file hotspot dogfooding signals",
+    "post-work posterity capture": "improvement_signal_review records fixed and routed dogfooding findings",
+    "knowledge promoted (Memory/Docs/Config)": "schema/tests now own the compatibility payload contract; no Memory promotion",
+    "resume from": "no active #610 work remains after archive"
+  },
+  "durable_residue": {
+    "status": "check",
+    "learned constraint": "Executable compatibility drift and module payload drift must stay separate because a stale executable can still validate its own known payload.",
+    "motivation worth preserving": "Agents need doctor/status to say whether the invoked executable itself is trusted before relying on lifecycle output.",
+    "canonical owner now": "src/agentic_workspace/cli.py compatibility payload, schemas, and tests",
+    "promotion trigger": "Promote to docs only if host-facing CLI compatibility guidance needs a prose entry.",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded #610 slice is implemented and validated; no larger #607 continuation remains in this active lane.",
+    "evidence carried forward": "Focused tests, full root tests, ruff, contract tooling checks, structured inventory check, root CLI authority default, and planning doctor all passed.",
+    "reopen trigger": "Reopen if status/doctor again hide executable drift inside payload drift, omit concrete doctor remediation, or report dry-run module actions as applied mutations."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "GitHub issue state was stale until external-intent refresh; refreshed before promotion and again after creating the external dogfooding follow-up",
+      "doctor top-level created/updated summaries counted read-only module would-create/would-update actions as applied mutations",
+      "improvement_intake repeatedly reports large-file hotspot candidates without an open remediation owner"
+    ],
+    "signals fixed": [
+      "doctor/status now keep read-only dry-run module actions out of top-level created/updated mutation summaries",
+      "external intent evidence refreshed after tracker reads/writes"
+    ],
+    "signals routed": [
+      "external GitHub issue owns non-blocking large-file hotspot remediation routing"
+    ],
+    "signals dismissed": [],
+    "next owner": "external GitHub issue for large-file hotspot routing; no owner needed for fixed doctor summary bug"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "External GitHub issue owns non-blocking large-file hotspot dogfooding signals",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "schema/tests now own the compatibility payload contract; no Memory promotion",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "schema/tests now own the compatibility payload contract; no Memory promotion",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-30: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Host repos cannot trust startup/status output after package updates unless they can tell whether the executed CLI matches repo-owned expectations; this is package-local and directly actionable here.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: full proof-selected lane passed\nChanged surfaces: src/agentic_workspace/cli.py; src/agentic_workspace/contracts/schemas/startup_context.schema.json; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/cli-version-drift-handshake.plan.json\nDurable residue: check (src/agentic_workspace/cli.py compatibility payload, schemas, and tests)\nMemory learning: none\nFollow-up: external GitHub issue owns non-blocking large-file hotspot dogfooding signals"
+  }
+}

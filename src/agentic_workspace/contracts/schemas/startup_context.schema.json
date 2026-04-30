@@ -337,6 +337,22 @@
             "null"
           ]
         },
+        "invocation_confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "drift_findings": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "remediation": {
+          "type": "object"
+        },
         "checks": {
           "type": "array",
           "items": {

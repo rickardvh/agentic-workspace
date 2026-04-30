@@ -1,0 +1,225 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Agent Runtime Integration Shims",
+  "goal": [
+    "Complete the bounded work for TODO item `agent-runtime-integration-shims`."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Complete the bounded work for TODO item `agent-runtime-integration-shims`.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "agent-runtime-integration-shims",
+      "status": "completed",
+      "next_step": "Archive this completed plan and continue with the next state.toml lane.",
+      "proof": "uv run pytest tests/test_workspace_cli.py -q -k \"agent_aid_storage or mixed_agent\"; uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/docs/local-integration-area.md"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete the bounded work for TODO item `agent-runtime-integration-shims`.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Agent Runtime Integration Shims",
+    "inferred intended outcome": "Complete the bounded work for TODO item `agent-runtime-integration-shims`.",
+    "chosen concrete what": "#621: document and surface a local-only shim shape with compact output, inspectable artifacts, metadata, and promotion boundaries.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/cli.py, tests/test_workspace_cli.py, .agentic-workspace/docs/local-integration-area.md, this execplan, planning state/archive files",
+    "max changed files": "8",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q -k \"agent_aid_storage or mixed_agent\"; uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py; closeout proof selector commands",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "#621: document and surface a local-only shim shape with compact output, inspectable artifacts, metadata, and promotion boundaries.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the bounded work for TODO item `agent-runtime-integration-shims`.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "agent-runtime-integration-shims",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "#621: document and surface a local-only shim shape with compact output, inspectable artifacts, metadata, and promotion boundaries."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/docs/local-integration-area.md"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"agent_aid_storage or mixed_agent\"",
+    "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Define a local-only integration-shim pattern for bridging agent runtime artifacts such as internal plans, check bundles, and handoff state into Agentic Workspace surfaces without creating shared authority."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Added a local runtime artifact shim pattern to mixed-agent local integration guidance and agent-aid storage guidance, with compact output, evidence, required metadata, discovery, and promotion boundaries.",
+    "scope touched": "src/agentic_workspace/cli.py, tests/test_workspace_cli.py, .agentic-workspace/docs/local-integration-area.md",
+    "changed surfaces": "CLI defaults/config/report guidance and local integration documentation",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"agent_aid_storage or mixed_agent\"; uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py; uv run pytest tests -q; uv run ruff check src tests; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "agent-runtime-integration-shims is complete; continue with the next roadmap lane",
+    "next step": "Archive this plan and close #621."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none for this lane"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "375 passed in tests; ruff clean; root_cli_authority and planning doctor returned healthy proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Complete the bounded work for TODO item `agent-runtime-integration-shims`.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Local runtime artifact shims are surfaced in mixed-agent local integration and agent-aid storage guidance, documented in local-integration-area.md, and covered by CLI payload tests.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Local-only runtime artifact shim pattern with compact output, full evidence, metadata, discovery, and promotion boundaries.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none for this lane; continue with the next state.toml roadmap lane",
+    "post-work posterity capture": "execplan archive",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next state.toml lane"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The lane asked for a documented and surfaced local-only shim shape; implementation, docs, and tests now cover that exact shape without adding shared authority.",
+    "evidence carried forward": "CLI defaults/config/report payloads and local integration docs include the shim pattern; selected proof passed.",
+    "reopen trigger": "None unless new evidence shows the bounded closure was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "reviewed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-30: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Complete the bounded work for TODO item `agent-runtime-integration-shims`.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: passed\nChanged surfaces: CLI defaults/config/report guidance and local integration documentation\nDurable residue: none (none)\nMemory learning: none\nFollow-up: none for this lane; continue with the next state.toml roadmap lane"
+  }
+}

@@ -26,6 +26,7 @@ from agentic_workspace._schema import (
 )
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
+    DEFAULT_ASSURANCE_LEVEL,
     DEFAULT_CLI_INVOKE,
     DEFAULT_IMPROVEMENT_LATITUDE,
     DEFAULT_OPTIMIZATION_BIAS,
@@ -67,6 +68,7 @@ from agentic_workspace.config import (
     WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH,
     WORKSPACE_WORKFLOW_MARKER_END,
     WORKSPACE_WORKFLOW_MARKER_START,
+    AssuranceConfig,
     DelegationOutcomeRecord,
     DelegationTargetProfile,
     ModuleUpdatePolicy,
@@ -315,6 +317,13 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
     else:
         status = "satisfied"
 
+    drift_findings = _cli_compatibility_drift_findings(identity=identity, expectation=expectation, failed_checks=failed_checks)
+    remediation = _cli_compatibility_remediation(
+        status=status,
+        identity=identity,
+        expectation=expectation,
+        failed_checks=failed_checks,
+    )
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/cli-compatibility/v1",
         "status": status,
@@ -323,10 +332,13 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
         "enforcement_source": expectation.enforcement_source,
         "expectation_source": expectation.source,
         "expected_command": expectation.command,
+        "invocation_confidence": identity["confidence"],
+        "drift_findings": drift_findings,
+        "remediation": remediation,
         "checks": checks if not compact else configured_checks,
         "failed_checks": [check["name"] for check in failed_checks],
         "rule": (
-            "Repo-owned compatibility expectations compare against invoked_cli_identity; workspace.cli_invoke remains command guidance."
+            "Executable compatibility compares invoked_cli_identity against repo expectations; payload drift remains owned by module lifecycle checks."
         ),
     }
     if compact:
@@ -337,10 +349,97 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
             "enforcement": payload["enforcement"],
             "failed_checks": payload["failed_checks"],
         }
+        if drift_findings:
+            compact_payload["drift_findings"] = drift_findings
+            compact_payload["remediation"] = remediation
+        if identity["confidence"] != "high":
+            compact_payload["invocation_confidence"] = identity["confidence"]
         if configured_checks:
             compact_payload["checks"] = payload["checks"]
         return compact_payload
     return payload
+
+
+def _cli_compatibility_drift_findings(
+    *,
+    identity: dict[str, Any],
+    expectation: Any,
+    failed_checks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    for check in failed_checks:
+        name = str(check["name"])
+        if name in {"exact_version", "minimum_version"}:
+            drift_class = "executable-version-drift"
+            summary = "Invoked CLI version does not satisfy the repo-owned compatibility expectation."
+        elif name == "source_class":
+            drift_class = "executable-source-drift"
+            summary = "Invoked CLI source class does not satisfy the repo-owned compatibility expectation."
+        elif name == "target_relation":
+            drift_class = "executable-location-drift"
+            summary = "Invoked CLI location relative to the target does not satisfy the repo-owned compatibility expectation."
+        else:
+            drift_class = "executable-compatibility-drift"
+            summary = "Invoked CLI does not satisfy the repo-owned compatibility expectation."
+        findings.append(
+            {
+                "check": name,
+                "class": drift_class,
+                "expected": check.get("expected"),
+                "actual": check.get("actual"),
+                "invocation_confidence": identity.get("confidence", "low"),
+                "summary": summary,
+            }
+        )
+    if not failed_checks and identity.get("confidence") == "low":
+        findings.append(
+            {
+                "check": "invocation_confidence",
+                "class": "invocation-confidence-unknown",
+                "expected": "high or medium",
+                "actual": identity.get("confidence", "low"),
+                "invocation_confidence": identity.get("confidence", "low"),
+                "summary": "Invoked CLI identity could not be classified confidently enough for strong compatibility claims.",
+            }
+        )
+    return findings
+
+
+def _cli_compatibility_remediation(
+    *,
+    status: str,
+    identity: dict[str, Any],
+    expectation: Any,
+    failed_checks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if not failed_checks and identity.get("confidence") != "low":
+        return {
+            "status": "none",
+            "summary": "Invoked CLI satisfies the configured executable compatibility checks.",
+            "next_action": None,
+        }
+    expected_command = expectation.command or DEFAULT_CLI_INVOKE
+    failed_names = {str(check["name"]) for check in failed_checks}
+    if failed_names & {"source_class", "target_relation"}:
+        action = "use-repo-runner"
+        summary = "Run the repo-owned or configured CLI invocation so the executable matches the target repo expectation."
+        command = expected_command
+    elif failed_names & {"exact_version", "minimum_version"}:
+        action = "upgrade-or-select-cli"
+        summary = "Upgrade or select a CLI version that satisfies the repo-owned compatibility expectation."
+        command = expected_command
+    else:
+        action = "verify-invocation"
+        summary = "Verify which CLI executable is being invoked before trusting lifecycle output."
+        command = expected_command
+    return {
+        "status": "required" if status == "blocking-drift" else "recommended",
+        "action": action,
+        "summary": summary,
+        "command": command,
+        "payload_drift_separate": True,
+        "payload_drift_owner": "module lifecycle status/doctor checks",
+    }
 
 
 SETUP_FINDINGS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["setup_findings_path"])
@@ -386,8 +485,90 @@ def _local_integration_area_payload(*, target_root: Path | None = None) -> dict[
         "authoritative": False,
         "git_ignored": True,
         "canonical_doc": ".agentic-workspace/docs/local-integration-area.md",
+        "runtime_artifact_shim_pattern": _runtime_artifact_shim_pattern_payload(),
         "allowed_aid_kinds": list(WORKSPACE_LOCAL_INTEGRATION_ALLOWED_AID_KINDS),
         "boundary_rules": list(WORKSPACE_LOCAL_INTEGRATION_BOUNDARY_RULES),
+    }
+
+
+def _runtime_artifact_shim_pattern_payload() -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/local-runtime-artifact-shim/v1",
+        "root": WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH.as_posix(),
+        "status": "local-only-pattern",
+        "authoritative": False,
+        "git_ignored": True,
+        "use_for": [
+            "internal agent plans that need compact checked-in planning updates",
+            "runtime check bundles that need compact pass/fail plus inspectable logs",
+            "handoff or resume state that needs a bounded workspace continuation record",
+        ],
+        "artifact_classes": ["internal-plan", "check-bundle", "handoff-state", "runtime-export"],
+        "metadata_required": [
+            "kind",
+            "source_runtime",
+            "artifact_class",
+            "input_owner",
+            "output_target",
+            "authority",
+            "promotion_target",
+            "proof_command",
+            "created_at",
+        ],
+        "compact_output": "short agent-facing status, next action, and proof pointer",
+        "full_evidence": "inspectable local artifact, manifest, command log, or exported source file",
+        "promotion_boundary": [
+            "local shims never become shared authority by existing locally",
+            "promote only through checked-in planning, memory, agent-aid, docs, or repo-native review surfaces",
+            "record proof before treating shim output as repo-shared state",
+        ],
+        "discovery": [
+            "agentic-workspace defaults --section agent_aid_storage --format json",
+            "agentic-workspace config --target ./repo --format json",
+            "agentic-workspace report --target ./repo --section agent_aids --format json",
+        ],
+    }
+
+
+def _assurance_onboarding_payload(*, assurance: AssuranceConfig | None = None) -> dict[str, Any]:
+    configured_profiles = list(assurance.proof_profiles) if assurance is not None else []
+    host_refs = []
+    if assurance is not None:
+        host_refs = [ref for ref in [assurance.decision_record_target, assurance.invariant_registry, assurance.risk_registry] if ref]
+    has_test_policy = bool(assurance.test_data_policy) if assurance is not None else False
+    any_configured = bool(
+        configured_profiles
+        or host_refs
+        or has_test_policy
+        or (assurance is not None and assurance.default_level_source != "product-default")
+        or (assurance is not None and assurance.strict_closeout)
+    )
+    usable = bool(configured_profiles and (host_refs or has_test_policy))
+    status = "usable" if usable else ("partial" if any_configured else "absent")
+    return {
+        "status": status,
+        "command": "agentic-workspace defaults --section assurance_onboarding --format json",
+        "report_command": "agentic-workspace report --target ./repo --section closeout_trust --format json",
+        "proof_command": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+        "rule": "Host repos own assurance truth; Agentic Workspace only routes levels, gates, refs, proof profiles, and compact evidence state.",
+        "configured_profile_count": len(configured_profiles),
+        "host_ref_count": len(host_refs),
+        "has_test_data_policy": has_test_policy,
+        "smallest_useful_config": [
+            "[assurance]",
+            'default_level = "medium"',
+            'decision_record_target = "docs/decisions/"',
+            "",
+            "[assurance.proof_profiles.example]",
+            'required_commands = ["uv run pytest tests -q"]',
+            "optional_commands = []",
+            "review_aids = []",
+        ],
+        "states": {
+            "absent": "no host assurance profile is configured; low-risk installs stay cheap",
+            "partial": "some assurance fields exist, but add at least one proof profile plus a host-owned ref or test-data policy",
+            "usable": "at least one proof profile and one host-owned authority or test-data policy are configured",
+        },
     }
 
 
@@ -434,6 +615,7 @@ def _agent_created_aid_affordance_payload() -> dict[str, Any]:
                 "the aid is experimental scratch for one machine",
                 "the aid bridges private or machine-local state that must not become shared repo authority",
             ],
+            "runtime_artifact_shims": _runtime_artifact_shim_pattern_payload(),
         },
         "authority_boundary": [
             "aids help agents work; they do not silently become required workflow",
@@ -3006,13 +3188,17 @@ def _external_agent_handoff_text(
         "- Open raw planning or contract files only when compact commands point there.",
         "",
         "Preferred lifecycle commands:",
+        "- `agentic-workspace defaults --section install_profiles --format json`",
     ]
     if selected_modules == ["planning"]:
         lines.append("- `agentic-workspace install --target ./repo --preset planning`")
     elif selected_modules == ["memory"]:
         lines.append("- `agentic-workspace install --target ./repo --preset memory`")
     else:
+        lines.append("- `agentic-workspace install --target ./repo --preset memory`")
+        lines.append("- `agentic-workspace install --target ./repo --preset planning`")
         lines.append("- `agentic-workspace install --target ./repo --preset full`")
+        lines.append("- Use `full` only when both Memory and Planning are explicitly desired.")
     lines.extend(
         [
             "- `agentic-workspace config --target ./repo --format json`",
@@ -4110,19 +4296,27 @@ def _run_lifecycle_command(
                 local_only_repo_root=local_only_repo_root,
             )
         )
-    summary = _summarise_reports(target_root=target_root, reports=reports, descriptors=descriptors)
+    summary = _summarise_reports(
+        target_root=target_root,
+        reports=reports,
+        descriptors=descriptors,
+        command_name=command_name,
+    )
     warnings: list[str] = []
     placeholders: list[str] = []
     stale_generated_surfaces: list[str] = []
     warnings.extend(summary["warnings"])
     placeholders.extend(summary["placeholders"])
     stale_generated_surfaces.extend(summary["stale_generated_surfaces"])
+    cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+    cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
+    warnings.extend(cli_compatibility_warnings)
 
     payload: dict[str, Any] = {
         "command": command_name,
         "target": target_root.as_posix(),
         "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root, compact=True),
-        "cli_compatibility": _cli_compatibility_payload(config=config, compact=True),
+        "cli_compatibility": cli_compatibility,
         "modules": selected_modules,
         "preset": resolved_preset,
         "dry_run": dry_run,
@@ -4167,6 +4361,8 @@ def _run_lifecycle_command(
         "reports": reports,
         "config": _config_payload(config=config),
     }
+    if cli_compatibility_warnings:
+        payload["executable_drift_warnings"] = cli_compatibility_warnings
     payload["lifecycle_plan"] = _lifecycle_plan_payload(
         payload=payload,
         command_name=command_name,
@@ -4178,6 +4374,14 @@ def _run_lifecycle_command(
     )
     if command_name in {"status", "doctor"}:
         repair_actions, manual_review_actions = _aggregate_repair_actions_from_reports(reports)
+        if command_name == "doctor":
+            cli_review_action = _cli_compatibility_manual_review_action(
+                target_root=target_root,
+                cli_invoke=config.cli_invoke,
+                cli_compatibility=cli_compatibility,
+            )
+            if cli_review_action is not None:
+                manual_review_actions.insert(0, cli_review_action)
         payload["repair_actions"] = repair_actions
         payload["manual_review_actions"] = manual_review_actions
         payload["repair_plan"] = _repair_plan_payload(
@@ -4260,6 +4464,61 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
         ),
     }
     return payload
+
+
+def _cli_compatibility_warning_messages(cli_compatibility: dict[str, Any]) -> list[str]:
+    status = str(cli_compatibility.get("status", ""))
+    if status not in {"advisory-drift", "blocking-drift"}:
+        return []
+    failed = ", ".join(str(item) for item in cli_compatibility.get("failed_checks", [])) or "unknown"
+    remediation = cli_compatibility.get("remediation", {})
+    summary = remediation.get("summary") if isinstance(remediation, dict) else ""
+    if not summary:
+        summary = "Invoked CLI does not satisfy the repo-owned compatibility expectation."
+    return [f"executable compatibility {status}: failed checks: {failed}; {summary}"]
+
+
+def _cli_compatibility_manual_review_action(
+    *,
+    target_root: Path,
+    cli_invoke: str,
+    cli_compatibility: dict[str, Any],
+) -> dict[str, Any] | None:
+    status = str(cli_compatibility.get("status", ""))
+    if status not in {"advisory-drift", "blocking-drift"}:
+        return None
+    remediation = cli_compatibility.get("remediation", {})
+    remediation_summary = (
+        str(remediation.get("summary", "")) if isinstance(remediation, dict) else "Invoked CLI compatibility drift detected."
+    )
+    remediation_command = str(remediation.get("command", cli_invoke)) if isinstance(remediation, dict) else cli_invoke
+    severity = "error" if status == "blocking-drift" else "warning"
+    action = _workspace_manual_review_action(
+        id="resolve-cli-executable-drift",
+        invariant="workspace.cli_executable_compatible",
+        fault_class="package_affordance_fault",
+        owner="repo",
+        target_root=target_root,
+        cli_invoke=cli_invoke,
+        affected_surfaces=[".agentic-workspace/config.toml", "invoked_cli_identity"],
+        current_fault_summary=remediation_summary,
+        risk="lifecycle output may validate the payload known to the invoked executable while still using the wrong CLI for this repo",
+        do_not=[
+            "Do not treat module payload freshness as proof that the invoked executable matches repo expectations.",
+            "Do not ignore blocking executable drift before trusting lifecycle output.",
+        ],
+    )
+    action["severity"] = severity
+    action["action"] = str(remediation.get("action", "manual-review")) if isinstance(remediation, dict) else "manual-review"
+    action["command"] = remediation_command
+    action["run"] = remediation_command
+    action["cli_compatibility"] = {
+        "status": status,
+        "failed_checks": list(cli_compatibility.get("failed_checks", [])),
+        "drift_findings": list(cli_compatibility.get("drift_findings", [])),
+        "payload_drift_separate": True,
+    }
+    return action
 
 
 def _aggregate_repair_actions_from_reports(
@@ -9054,7 +9313,11 @@ def _run_prompt_command(
 
 
 def _summarise_reports(
-    *, target_root: Path, reports: list[dict[str, Any]], descriptors: dict[str, ModuleDescriptor]
+    *,
+    target_root: Path,
+    reports: list[dict[str, Any]],
+    descriptors: dict[str, ModuleDescriptor],
+    command_name: str,
 ) -> dict[str, list[str]]:
     created: list[str] = []
     updated_managed: list[str] = []
@@ -9083,9 +9346,11 @@ def _summarise_reports(
                 _append_unique(generated_artifacts, relative_path)
             if _is_placeholder_issue(detail=detail):
                 _append_unique(placeholders, relative_path)
-            if kind in {"created", "copied", "would create", "would copy"}:
+            if kind in {"created", "copied"} or (command_name not in {"status", "doctor"} and kind in {"would create", "would copy"}):
                 _append_unique(created, relative_path)
-            elif kind in {"updated", "overwritten", "would update", "would overwrite"}:
+            elif kind in {"updated", "overwritten"} or (
+                command_name not in {"status", "doctor"} and kind in {"would update", "would overwrite"}
+            ):
                 _append_unique(updated_managed, relative_path)
             elif kind == "skipped":
                 _append_unique(preserved_existing, relative_path)
@@ -10950,6 +11215,7 @@ def _defaults_payload() -> dict[str, Any]:
             ],
         },
         "root_cli_authority": python_runtime_boundary_manifest()["root_cli_authority_audit"],
+        "assurance_onboarding": _assurance_onboarding_payload(),
         "ownership_mapping": {
             "canonical_doc": ".agentic-workspace/docs/ownership-authority-contract.md",
             "command": "agentic-workspace ownership --target ./repo --format json",
@@ -11735,6 +12001,33 @@ def _active_planning_assurance_for_proof(*, target_root: Path | None) -> dict[st
     closeout_status = (
         "blocked" if strict_closeout and (missing_required_refs or pending_blocking_gates or do_not_implement_blockers) else "open"
     )
+    proof_execution_evidence = planning_record.get("proof_execution_evidence", planning_record.get("proof_execution", []))
+    if not proof_execution_evidence:
+        proof_report = planning_record.get("proof_report", {})
+        if isinstance(proof_report, dict):
+            raw_proof_execution = proof_report.get("proof execution evidence", proof_report.get("proof_execution_evidence", ""))
+            if isinstance(raw_proof_execution, str) and raw_proof_execution.strip():
+                try:
+                    proof_execution_evidence = json.loads(raw_proof_execution)
+                except json.JSONDecodeError:
+                    proof_execution_evidence = []
+    if not proof_execution_evidence:
+        task = planning_record.get("task", {})
+        surface = str(task.get("surface", "")).strip() if isinstance(task, dict) else ""
+        record_path = target_root / surface if surface else None
+        if record_path is not None and record_path.exists() and record_path.suffix == ".json":
+            try:
+                raw_record = json.loads(record_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                raw_record = {}
+            raw_proof_report = raw_record.get("proof_report", {}) if isinstance(raw_record, dict) else {}
+            if isinstance(raw_proof_report, dict):
+                raw_proof_execution = raw_proof_report.get("proof execution evidence", raw_proof_report.get("proof_execution_evidence", ""))
+                if isinstance(raw_proof_execution, str) and raw_proof_execution.strip():
+                    try:
+                        proof_execution_evidence = json.loads(raw_proof_execution)
+                    except json.JSONDecodeError:
+                        proof_execution_evidence = []
     return {
         "status": "present",
         "task": planning_record.get("task", {}),
@@ -11751,10 +12044,95 @@ def _active_planning_assurance_for_proof(*, target_root: Path | None) -> dict[st
         "architecture_decision_promotion": planning_record.get("architecture_decision_promotion", {}),
         "threat_failure_aids": planning_record.get("threat_failure_aids", []),
         "proof_profiles": _dedupe(proof_profiles),
+        "proof_execution_evidence": proof_execution_evidence if isinstance(proof_execution_evidence, list | dict) else [],
         "required_refs": required_refs,
         "missing_required_refs": missing_required_refs,
         "closeout_status": closeout_status,
         "closeout_rule": "Strict closeout is blocked by missing required refs, pending blocking gates, or do-not-implement blockers.",
+    }
+
+
+def _assurance_item_state(
+    *,
+    item_id: str,
+    declared_status: str,
+    blocking: bool = False,
+    evidence: list[Any] | None = None,
+    reason: str | None = None,
+) -> dict[str, Any]:
+    normalized_status = declared_status.strip() or "missing"
+    evidence_items = [str(item) for item in evidence or [] if str(item).strip()]
+    waived = normalized_status == "waived"
+    satisfied = normalized_status in {"satisfied", "passed", "present"} or (waived and bool(evidence_items or reason))
+    if blocking and not satisfied:
+        enforcement = "blocking"
+    elif blocking:
+        enforcement = "required"
+    else:
+        enforcement = "advisory"
+    return {
+        "id": item_id,
+        "declared_status": normalized_status,
+        "enforcement": enforcement,
+        "evidence_state": "present" if evidence_items else "missing",
+        "waiver_state": "waived-with-evidence"
+        if waived and (evidence_items or reason)
+        else ("waived-missing-reason" if waived else "not-waived"),
+        "trust": "satisfied" if satisfied else ("blocking" if blocking else "advisory"),
+        **({"reason": reason} if reason else {}),
+    }
+
+
+def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[str]) -> dict[str, Any]:
+    raw_entries: list[Any]
+    if isinstance(declared, dict):
+        raw_entries = list(declared.get("commands", [])) if isinstance(declared.get("commands", []), list) else []
+    elif isinstance(declared, list):
+        raw_entries = declared
+    else:
+        raw_entries = []
+    by_command: dict[str, dict[str, Any]] = {}
+    for entry in raw_entries:
+        if not isinstance(entry, dict):
+            continue
+        command = str(entry.get("command", "")).strip()
+        if command:
+            by_command[command] = entry
+    statuses = ["passed", "failed", "skipped", "unavailable", "waived", "missing"]
+    counts = {status: 0 for status in statuses}
+    command_states: list[dict[str, Any]] = []
+    for command in required_commands:
+        entry = by_command.get(command, {})
+        status = str(entry.get("status", "missing")).strip() if entry else "missing"
+        if status not in statuses:
+            status = "unavailable"
+        reason = str(entry.get("reason", "")).strip()
+        evidence_ref = str(entry.get("evidence_ref", entry.get("evidence", ""))).strip()
+        waiver_has_reason = status != "waived" or bool(reason or evidence_ref)
+        lowers_trust = status in {"failed", "skipped", "unavailable", "missing"} or not waiver_has_reason
+        counts[status] += 1
+        command_states.append(
+            {
+                "command": command,
+                "status": status,
+                "required": True,
+                "trust": "lower-trust" if lowers_trust else "satisfied",
+                "evidence_state": "present" if evidence_ref else "missing",
+                "waiver_state": "waived-with-reason"
+                if status == "waived" and waiver_has_reason
+                else ("waived-missing-reason" if status == "waived" else "not-waived"),
+                **({"reason": reason} if reason else {}),
+                **({"evidence_ref": evidence_ref} if evidence_ref else {}),
+            }
+        )
+    lower_trust_count = sum(1 for item in command_states if item["trust"] == "lower-trust")
+    return {
+        "status": "complete" if command_states and lower_trust_count == 0 else ("absent" if not command_states else "attention"),
+        "rule": "Selected proof is not executed proof; required commands need compact evidence or an explicit waiver reason.",
+        "required_command_count": len(command_states),
+        "lower_trust_required_count": lower_trust_count,
+        "counts": counts,
+        "commands": command_states,
     }
 
 
@@ -11865,9 +12243,66 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
         "escalate_when": escalate_when,
     }
     if planning_assurance.get("status") == "present":
+        gate_states = [
+            _assurance_item_state(
+                item_id=str(gate.get("id", "")),
+                declared_status=str(gate.get("status", "missing")),
+                blocking=bool(gate.get("blocking", False)),
+                evidence=gate.get("evidence", []) if isinstance(gate.get("evidence", []), list) else [],
+                reason=str(gate.get("reason", "")).strip() or None,
+            )
+            for gate in planning_assurance.get("control_gates", [])
+            if isinstance(gate, dict)
+        ]
+        ref_states = [
+            _assurance_item_state(
+                item_id=ref,
+                declared_status="present" if ref not in planning_assurance.get("missing_required_refs", []) else "missing",
+                blocking=True,
+                evidence=(
+                    planning_assurance.get("traceability_refs", {}).get(ref, [])
+                    if isinstance(planning_assurance.get("traceability_refs", {}), dict)
+                    else []
+                ),
+            )
+            for ref in planning_assurance.get("required_refs", [])
+        ]
+        profile_states = [
+            {
+                "id": str(profile_id),
+                "state": "selected" if str(profile_id) not in missing_concern_profiles else "unavailable",
+                "enforcement": "required",
+                "trust": "satisfied" if str(profile_id) not in missing_concern_profiles else "blocking",
+            }
+            for profile_id in planning_assurance.get("proof_profiles", [])
+        ]
+        proof_evidence = _proof_execution_evidence_summary(
+            declared=planning_assurance.get("proof_execution_evidence", []),
+            required_commands=required_commands,
+        )
         proof_selection["planning_assurance"] = {
             **planning_assurance,
             "missing_configured_proof_profiles": missing_concern_profiles,
+            "trust_state": {
+                "assurance_level": planning_assurance.get("adaptive_assurance", {}).get(
+                    "level", config.assurance.default_level if config is not None else DEFAULT_ASSURANCE_LEVEL
+                )
+                if isinstance(planning_assurance.get("adaptive_assurance", {}), dict)
+                else (config.assurance.default_level if config is not None else DEFAULT_ASSURANCE_LEVEL),
+                "assurance_level_source": "explicit-slice-field"
+                if isinstance(planning_assurance.get("adaptive_assurance", {}), dict)
+                and "level" in planning_assurance.get("adaptive_assurance", {})
+                else (config.assurance.default_level_source if config is not None else "product-default"),
+                "gate_states": gate_states,
+                "ref_states": ref_states,
+                "proof_profile_states": profile_states,
+                "proof_execution_evidence": proof_evidence,
+                "overall": "blocking"
+                if planning_assurance.get("closeout_status") == "blocked"
+                or missing_concern_profiles
+                or proof_evidence["lower_trust_required_count"]
+                else "open",
+            },
             "rule": (
                 "Path lanes stay package-defined; concern profiles are host-configured and activated from active planning assurance fields."
             ),
@@ -13279,6 +13714,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "decision_record_target": assurance.decision_record_target,
             "invariant_registry": assurance.invariant_registry,
             "risk_registry": assurance.risk_registry,
+            "onboarding": _assurance_onboarding_payload(assurance=assurance),
             "rule": "Assurance config is generic host-owned routing for refs, proof profiles, gates, blockers, closeout, and review aids; it is not domain law.",
         },
         "mixed_agent": _mixed_agent_payload(config=config),

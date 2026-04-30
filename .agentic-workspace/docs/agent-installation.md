@@ -18,8 +18,13 @@ Required steps:
 
 Preferred install or adopt intent:
 
+- agentic-workspace defaults --section install_profiles --format json
+- agentic-workspace install --target ./repo --preset memory
+- agentic-workspace install --target ./repo --preset planning
 - agentic-workspace install --target ./repo --preset full
-- agentic-workspace install --target ./repo --preset full --local-only
+- agentic-workspace install --target ./repo --preset memory --local-only
+
+Choose the smallest preset that matches the target repo. Use `memory` for durable repo knowledge, `planning` for active work continuity, and `full` only when both are explicitly desired. Treat `full` as an example for combined Memory plus Planning, not as the default for every external handoff.
 
 Preferred host-repo update path:
 

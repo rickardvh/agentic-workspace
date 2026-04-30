@@ -2,7 +2,13 @@
 
 Agentic Planning is a checked-in planning-for-execution contract, currently distributed as the `agentic-planning-bootstrap` package and CLI.
 
-## At A Glance
+## Why
+
+Active agent work often needs more than a TODO line but less than a project-management system. Planning gives the repo a small checked-in place for current intent, bounded execution scope, validation expectations, and honest closeout so another session can resume without reconstructing the task from chat.
+
+Use Planning when the current work itself is the fragile thing. Use Memory when the durable knowledge around the work is the fragile thing.
+
+## What It Does
 
 Choose this package when you want active work in a repository to stay bounded, resumable, and finishable across fragmented sessions.
 
@@ -23,6 +29,8 @@ If your main problem is shared repo memory rather than active work steering, sta
 
 Current maturity in this repo: beta.
 
+## How It Works
+
 Adoption shape:
 
 - Works well alone in repos that need checked-in execution steering without a separate memory layer.
@@ -35,6 +43,30 @@ Collaboration shape:
 - Works best when active work is split into feature-scoped execplans instead of broad shared status files.
 - Keeps branch-local execution state in `.agentic-workspace/planning/state.toml` plus the active execplan, while durable technical guidance stays elsewhere.
 - Expects completed plans to archive quickly so active surfaces stay small and merge-friendly.
+
+The ordinary model is direct first, planned when useful:
+
+- Keep small, obvious work as a direct task in `.agentic-workspace/planning/state.toml`.
+- Promote to an execplan when the work needs milestone sequencing, explicit blockers, non-obvious validation, rollback detail, or cross-session handoff.
+- Archive completed execplans promptly, with proof and any required continuation routed to a checked-in owner.
+
+## Current Limitations
+
+- Planning is not a durable knowledge base; route reusable subsystem knowledge to Memory or canonical docs.
+- Planning is not a ticketing, sprint, or PM platform.
+- External issue reconciliation is optional evidence, not the source of planning authority.
+- Optional review/intake surfaces and bundled skills are richer workflow affordances, not required installed payload.
+
+## Good Fits
+
+- a repo where active work drifts between sessions and needs a checked-in active queue
+- a repo that wants bounded execution contracts without introducing a full project-management system
+- a repo using agents heavily enough that chat-only task continuity is too fragile
+
+## Bad Fits
+
+- a repo looking for durable subsystem documentation or knowledge capture rather than execution steering
+- a repo expecting a full ticketing, sprint, or PM platform
 
 Bundled skills:
 
@@ -109,9 +141,9 @@ uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirector
 pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt uninstall --target ./repo
 ```
 
-## Good Fits / Bad Fits
+## Deep Contract Details
 
-## Stability Contract
+### Stability Contract
 
 The installed planning payload is not one flat compatibility promise.
 
@@ -134,7 +166,7 @@ Treat optional package payload and generated mirrors as lower-stability support 
 
 Generated mirrors inherit stability from their canonical source relationships, not from their exact rendered text. If the manifest contract stays stable, the generated wording may still evolve when the renderer improves.
 
-## Direct Execution Or Execplan
+### Direct Execution Or Execplan
 
 `.agentic-workspace/docs/execution-flow-contract.md` is the front-door companion for delegated judgment, active intent continuity, resumability, and execution summaries.
 `.agentic-workspace/docs/system-intent-contract.md` defines how a bounded slice preserves the larger intended outcome and how closure decisions stay honest when the slice completes before the broader lane or issue does.
@@ -209,7 +241,7 @@ Completed plans should also leave an explicit closure check before archive so la
 If the slice stopped intentionally rather than finishing the broader goal, keep `Iterative Follow-Through` current so the next bounded slice inherits the right residue without rereading the full plan.
 Optional nice-to-have follow-up can still stay out of the archive gate.
 
-## Direct-Task Recovery Cases
+### Direct-Task Recovery Cases
 
 Keep the task direct only while the TODO row stays self-sufficient.
 
@@ -224,17 +256,6 @@ Promote into an execplan when any of these cases appears:
 
 The practical test is simple: if safe continuation depends on more than `Why now`, `Next action`, and `Done when`, the work is no longer a direct task.
 Use `.agentic-workspace/docs/lifecycle-and-config-contract.md` to keep that recovery guidance compact and in existing planning fields instead of inventing ad hoc restart prose.
-
-Good fits:
-
-- a repo where active work drifts between sessions and needs a checked-in active queue
-- a repo that wants bounded execution contracts without introducing a full project-management system
-- a repo using agents heavily enough that chat-only task continuity is too fragile
-
-Bad fits:
-
-- a repo looking for durable subsystem documentation or knowledge capture rather than execution steering
-- a repo expecting a full ticketing, sprint, or PM platform
 
 ## Example Scenarios
 

@@ -1,0 +1,269 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Host Feedback And Operating Cost",
+  "goal": [
+    "Complete the bounded work for TODO item `host-feedback-and-operating-cost`."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Complete the bounded work for TODO item `host-feedback-and-operating-cost`.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "host-feedback-and-operating-cost",
+      "status": "completed",
+      "next_step": "Archive the lane and close #599/#600.",
+      "proof": "make maintainer-surfaces; uv run agentic-workspace doctor --target . --modules planning --format json"
+    },
+    "scope": {
+      "touched": [
+        "docs/host-repo-dogfooding-report-template.md",
+        "docs/reviews/assurance-operating-cost-review-2026-04-30.md",
+        "docs/dogfooding-feedback.md",
+        ".agentic-workspace/planning/execplans/host-feedback-and-operating-cost.plan.json",
+        ".agentic-workspace/planning/state.toml"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete the bounded work for TODO item `host-feedback-and-operating-cost`.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Host repositories now have a compact report template for package-directed dogfooding feedback, and the source checkout has a filled assurance operating-cost review.",
+    "intentionally deferred": "#595 remains external-host work because this source checkout cannot prove another host repo's adaptive-assurance behavior.",
+    "discovered implications": "A template is cheaper than a new command for the first report shape; assurance cost stays acceptable when detailed trust state remains selector-owned.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this lane",
+    "next likely slice": "none if validation passes and #599/#600 close"
+  },
+  "intent_interpretation": {
+    "literal request": "Host Feedback And Operating Cost",
+    "inferred intended outcome": "Complete the bounded work for TODO item `host-feedback-and-operating-cost`.",
+    "chosen concrete what": "#600 host-repo report template plus #599 source-checkout operating-cost review.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "docs/host-repo-dogfooding-report-template.md; docs/reviews/assurance-operating-cost-review-2026-04-30.md; docs/dogfooding-feedback.md; .agentic-workspace/planning/execplans/host-feedback-and-operating-cost.plan.json; .agentic-workspace/planning/state.toml",
+    "max changed files": "5 files for this lane, plus archive movement during closeout.",
+    "required validation commands": "make maintainer-surfaces; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "#600: add a host-repo dogfooding report template.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the bounded work for TODO item `host-feedback-and-operating-cost`.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "host-feedback-and-operating-cost",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive the lane and close #599/#600."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "docs/host-repo-dogfooding-report-template.md",
+    "docs/reviews/assurance-operating-cost-review-2026-04-30.md",
+    "docs/dogfooding-feedback.md",
+    ".agentic-workspace/planning/execplans/host-feedback-and-operating-cost.plan.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "make maintainer-surfaces",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Add a compact host-repo dogfooding report template and use resulting evidence to compare assurance safety gains against low-residue operating cost."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Added a reusable host-repo dogfooding report template, filled an assurance operating-cost review from this source-checkout dogfood run, and linked the template from the dogfooding feedback policy.",
+    "scope touched": "docs and active planning surfaces only",
+    "changed surfaces": "docs/host-repo-dogfooding-report-template.md; docs/reviews/assurance-operating-cost-review-2026-04-30.md; docs/dogfooding-feedback.md; this execplan; planning state",
+    "validations run": "uv run agentic-workspace proof --target . --changed ... --format json; make maintainer-surfaces; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "archive the lane and close #599/#600",
+    "next step": "Archive the lane and close #599/#600."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low; #595 remains explicitly out of scope",
+    "follow-on decision": "#595 remains external-host calibration; no new issue from this lane"
+  },
+  "proof_report": {
+    "validation proof": "uv run agentic-workspace proof --target . --changed ... --format json selected maintainer-surfaces and planning doctor; make maintainer-surfaces passed; uv run agentic-workspace doctor --target . --modules planning --format json passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Maintainer surfaces and planning doctor both exited 0 after the template, review, docs link, and execplan updates."
+  },
+  "intent_satisfaction": {
+    "original intent": "Complete the bounded work for TODO item `host-feedback-and-operating-cost`.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "docs/host-repo-dogfooding-report-template.md satisfies #600; docs/reviews/assurance-operating-cost-review-2026-04-30.md records concrete #599 decisions; #595 remains excluded as stated in planning state.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Reusable host-repo dogfooding report template plus filled assurance operating-cost review.",
+    "validation confirmed": "make maintainer-surfaces and planning doctor passed",
+    "follow-on routed to": "#595 remains external-host calibration work; #627 remains report-only large-file hotspot evidence.",
+    "post-work posterity capture": "docs template and review artifact",
+    "knowledge promoted (Memory/Docs/Config)": "docs/host-repo-dogfooding-report-template.md and docs/dogfooding-feedback.md",
+    "resume from": "selected validation and lane archive"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "Do not add a host-feedback command until real reports prove a template is insufficient.",
+    "motivation worth preserving": "Classify host dogfooding observations before creating package issues or planning work.",
+    "canonical owner now": "docs/host-repo-dogfooding-report-template.md",
+    "promotion trigger": "Repeated host reports with the same fields may justify a schema or command later.",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The lane's local acceptance was a host-feedback template plus source-checkout operating-cost review; the real-host calibration issue was explicitly excluded and remains open.",
+    "evidence carried forward": "docs/host-repo-dogfooding-report-template.md; docs/reviews/assurance-operating-cost-review-2026-04-30.md; docs/dogfooding-feedback.md",
+    "reopen trigger": "A real host report shows the template is too heavy, too sparse, or forces product-general findings into chat or host-private state."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Host feedback needed a compact reusable report shape.",
+      "Assurance cost must stay selector-owned for detailed high-risk evidence.",
+      "Large generated docs may be a collaboration hotspot."
+    ],
+    "signals fixed": [
+      "Added docs/host-repo-dogfooding-report-template.md and linked it from docs/dogfooding-feedback.md.",
+      "Recorded assurance operating-cost keep/demote decisions in docs/reviews/assurance-operating-cost-review-2026-04-30.md."
+    ],
+    "signals routed": [
+      "#595 remains external-host adaptive-assurance calibration.",
+      "#627 remains report-only large-file hotspot evidence and is not ingested into planning."
+    ],
+    "signals dismissed": [
+      "No new host-feedback command is justified by the first report shape."
+    ],
+    "next owner": "docs for the template; #595 for future external-host evidence"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#595 remains external-host calibration work; #627 remains report-only large-file hotspot evidence.",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "Host-repo dogfooding report template and dogfooding feedback routing link.",
+          "owner": "docs/host-repo-dogfooding-report-template.md",
+          "source": "#600"
+        },
+        {
+          "summary": "Source-checkout assurance operating-cost review with concrete keep/demote decisions.",
+          "owner": "docs/reviews/assurance-operating-cost-review-2026-04-30.md",
+          "source": "#599"
+        },
+        {
+          "summary": "docs/host-repo-dogfooding-report-template.md and docs/dogfooding-feedback.md",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#595 remains the external-host adaptive-assurance calibration lane.",
+          "owner": "GitHub #595",
+          "source": "docs/reviews/assurance-operating-cost-review-2026-04-30.md"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-30: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Complete the bounded work for TODO item `host-feedback-and-operating-cost`.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run agentic-workspace proof --target . --changed ... --format json selected maintainer-surfaces and planning doctor; make maintainer-surfaces passed; uv run agentic-workspace doctor --target . --modules planning --format json passed.\nChanged surfaces: docs/host-repo-dogfooding-report-template.md; docs/reviews/assurance-operating-cost-review-2026-04-30.md; docs/dogfooding-feedback.md; this execplan; planning state\nDurable residue: none (docs/host-repo-dogfooding-report-template.md)\nMemory learning: none\nFollow-up: #595 remains external-host calibration work; #627 remains report-only large-file hotspot evidence."
+  }
+}
