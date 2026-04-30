@@ -2,12 +2,27 @@ schema_version = 1
 
 [workspace]
 default_preset = "full"
+agent_instructions_file = "AGENTS.md"
+workflow_artifact_profile = "repo-owned"
 improvement_latitude = "proactive"
 optimization_bias = "agent-efficiency"
 advanced_features = [
   "review_artifacts",
   "external_adapters",
 ]
+
+[assurance]
+default_level = "low"
+agent_may_escalate = true
+agent_may_deescalate = false
+strict_closeout = false
+proof_profiles = {}
+test_data_policy = {}
+
+[cli_compatibility]
+enforcement = "off"
+source_classes = []
+target_relations = []
 
 [system_intent]
 sources = ["SYSTEM_INTENT.md", "README.md"]
