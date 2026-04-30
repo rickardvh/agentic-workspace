@@ -6114,6 +6114,35 @@ def _report_closeout_trust_payload(
     target_root: Path | None = None,
     cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
+    def terminal_action(*, trust: str, recommended_next_action: str) -> dict[str, Any]:
+        blocking = trust != "normal"
+        return {
+            "next_command": (
+                _command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --section closeout_trust --format json",
+                    cli_invoke=cli_invoke,
+                )
+                if blocking
+                else "none"
+            ),
+            "why": (
+                "Lower-trust closeout signals need routed residue before closure is reliable."
+                if trust == "lower-trust"
+                else "Closeout trust is unavailable; recover planning output before claiming closure."
+                if blocking
+                else "No closeout trust blocker is visible; use normal proof and issue-state checks."
+            ),
+            "blocking": blocking,
+            "recommended_next_action": recommended_next_action,
+            "changes_closure": (
+                "Route missing planning residue, rerun summary/reconcile, then close only when lower_trust_closeout_count is 0."
+                if trust == "lower-trust"
+                else "Recover planning closeout evidence; closure is blocked until closeout_trust is present."
+                if blocking
+                else "None for closeout trust; closure changes only if proof, intent satisfaction, issue state, or new residue changes."
+            ),
+        }
+
     def durable_residue_action(*, trust: str) -> dict[str, Any]:
         action = {
             "action": "route-durable-residue",
@@ -6151,6 +6180,10 @@ def _report_closeout_trust_payload(
                 target_root=target_root,
             ),
             "durable_residue_action": durable_residue_action(trust="unavailable"),
+            "terminal_action": terminal_action(
+                trust="unavailable",
+                recommended_next_action="Install or run planning report before trusting closeout state.",
+            ),
         }
 
     intent_validation = planning_report.get("intent_validation", {})
@@ -6166,6 +6199,10 @@ def _report_closeout_trust_payload(
                 target_root=target_root,
             ),
             "durable_residue_action": durable_residue_action(trust="unavailable"),
+            "terminal_action": terminal_action(
+                trust="unavailable",
+                recommended_next_action="Inspect planning report before trusting closeout state.",
+            ),
         }
 
     counts = intent_validation.get("counts", {})
@@ -6206,6 +6243,7 @@ def _report_closeout_trust_payload(
             target_root=target_root,
         ),
         "durable_residue_action": durable_residue_action(trust=trust),
+        "terminal_action": terminal_action(trust=trust, recommended_next_action=recommended_next_action),
         "recommended_next_action": recommended_next_action,
     }
 

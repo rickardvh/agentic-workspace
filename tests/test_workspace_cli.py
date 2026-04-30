@@ -3771,13 +3771,17 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
 
     assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
     closeout_payload = json.loads(capsys.readouterr().out)
-    historical_reviews = closeout_payload["answer"]["historical_review_artifacts"]
+    closeout_answer = closeout_payload["answer"]
+    assert "historical_review_artifacts" not in closeout_answer
+    assert closeout_answer["terminal_action"]["blocking"] is False
+    assert "what changes closure" not in json.dumps(closeout_answer).lower()
+    assert closeout_answer["checks"]["package_workflow_evidence"]["status"] == "not-applicable"
+    assert closeout_answer["checks"]["intent_satisfaction"]["reason"] == "no active planning record"
+    historical_reviews = closeout_answer["evidence_summary"]["historical_review_artifacts"]
     assert historical_reviews["status"] == "evidence-only"
     assert "not ordinary operating input" in historical_reviews["role"]
-    assert "Do not read historical review artifacts during startup" in historical_reviews["rule"]
-    assert "Shrink, stub, or delete stale review artifacts" in historical_reviews["retention_guidance"][1]
-    assert historical_reviews["retention_policy"]["kind"] == "workspace-review-retention-policy/v1"
-    assert historical_reviews["retention_policy"]["advisory_only"] is True
+    assert "retention_policy_status" in historical_reviews
+    assert historical_reviews["detail"].endswith("report --target ./repo --profile full --format json")
 
     assert cli.main(["report", "--target", str(target), "--section", "operating_posture", "--format", "json"]) == 0
     posture_payload = json.loads(capsys.readouterr().out)
@@ -4075,7 +4079,15 @@ def test_report_surfaces_review_retention_cleanup_pressure(tmp_path: Path, capsy
     assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
 
     closeout_payload = json.loads(capsys.readouterr().out)
-    retention = closeout_payload["answer"]["historical_review_artifacts"]["retention_policy"]
+    historical_summary = closeout_payload["answer"]["evidence_summary"]["historical_review_artifacts"]
+    assert historical_summary["retention_policy_status"] == "attention"
+    assert historical_summary["retention_candidate_count"] >= 2
+    assert "historical_review_artifacts" not in closeout_payload["answer"]
+
+    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+
+    full_payload = json.loads(capsys.readouterr().out)
+    retention = full_payload["closeout_trust"]["historical_review_artifacts"]["retention_policy"]
     assert retention["status"] == "attention"
     assert retention["artifact_count"] >= 3
     assert retention["missing_retention_metadata_count"] >= 2
@@ -4719,6 +4731,11 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert "Memory" in residue_action["destinations"]
     assert "future work goes to planning" in residue_action["destination_rule"]
     assert "rerun summary/reconcile" in residue_action["next_proof"]
+    terminal_action = payload["closeout_trust"]["terminal_action"]
+    assert terminal_action["blocking"] is False
+    assert terminal_action["next_command"] == "none"
+    assert "No closeout trust blocker" in terminal_action["why"]
+    assert "proof, intent satisfaction, issue state" in terminal_action["changes_closure"]
 
 
 def test_report_surfaces_local_only_memory_status(tmp_path: Path, capsys) -> None:

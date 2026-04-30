@@ -197,6 +197,7 @@ def select_report_payload(
         selector = {"section": section}
         if resolved_section != section:
             selector["resolved_section"] = resolved_section
+        answer = _compact_report_section_answer(resolved_section, answer, cli_invoke=cli_invoke)
         return compact_answer(
             surface="report",
             selector=selector,
@@ -227,6 +228,63 @@ def _resolve_report_section(payload: dict[str, Any], section: str) -> tuple[str,
     if alias and alias in payload:
         return alias, payload[alias]
     return section, None
+
+
+def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str) -> Any:
+    if section == "closeout_trust" and isinstance(answer, dict):
+
+        def compact_closeout_check(value: dict[str, Any]) -> dict[str, Any]:
+            status = str(value.get("status", ""))
+            reason = str(value.get("reason", ""))
+            if status == "unavailable" and "no active planning record" in reason:
+                return {"status": "not-applicable", "reason": "no active planning record"}
+            return {
+                key: value.get(key) for key in ("status", "trust", "required_for_broad_work", "recommended_next_action") if key in value
+            }
+
+        historical_reviews = answer.get("historical_review_artifacts", {})
+        historical_reviews = historical_reviews if isinstance(historical_reviews, dict) else {}
+        retention_policy = historical_reviews.get("retention_policy", {})
+        retention_policy = retention_policy if isinstance(retention_policy, dict) else {}
+        package_evidence = answer.get("package_workflow_evidence", {})
+        package_evidence = package_evidence if isinstance(package_evidence, dict) else {}
+        intent_check = answer.get("intent_satisfaction_check", {})
+        intent_check = intent_check if isinstance(intent_check, dict) else {}
+        terminal_action = answer.get("terminal_action", {})
+        terminal_action = terminal_action if isinstance(terminal_action, dict) else {}
+        durable_action = answer.get("durable_residue_action", {})
+        durable_action = durable_action if isinstance(durable_action, dict) else {}
+        detail_command = _command_with_cli_invoke(
+            "agentic-workspace report --target ./repo --profile full --format json",
+            cli_invoke=cli_invoke,
+        )
+        return {
+            "status": answer.get("status", ""),
+            "trust": answer.get("trust", ""),
+            "lower_trust_closeout_count": answer.get("lower_trust_closeout_count", 0),
+            "summary": answer.get("summary", ""),
+            "terminal_action": terminal_action,
+            "checks": {
+                "package_workflow_evidence": compact_closeout_check(package_evidence),
+                "intent_satisfaction": compact_closeout_check(intent_check),
+            },
+            "durable_residue_action": {
+                key: durable_action.get(key) for key in ("action", "summary", "command", "risk", "next_proof") if key in durable_action
+            },
+            "evidence_summary": {
+                "historical_review_artifacts": {
+                    "status": historical_reviews.get("status", "unavailable"),
+                    "role": historical_reviews.get("role", ""),
+                    "source_count": historical_reviews.get("source_count", 0),
+                    "item_count": historical_reviews.get("item_count", 0),
+                    "retention_policy_status": retention_policy.get("status", "unavailable"),
+                    "retention_candidate_count": retention_policy.get("candidate_count", 0),
+                    "detail": detail_command,
+                }
+            },
+            "detail": detail_command,
+        }
+    return answer
 
 
 def _unknown_report_section_message(section: str, payload: dict[str, Any]) -> str:
