@@ -488,6 +488,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["proof_selection"]["recommended_lanes"][0]["enough_proof"] == "agentic-workspace proof --target ./repo --format json"
     assert payload["proof_selection"]["recommended_lanes"][2]["id"] == "validation_lane"
     assert "Prefer the smallest queryable proof answer first." in payload["proof_selection"]["rule_of_thumb"]
+    assert payload["assurance_onboarding"]["status"] == "absent"
+    assert payload["assurance_onboarding"]["command"] == "agentic-workspace defaults --section assurance_onboarding --format json"
+    assert payload["assurance_onboarding"]["states"]["usable"].startswith("at least one proof profile")
     assert payload["ownership_mapping"]["canonical_doc"] == ".agentic-workspace/docs/ownership-authority-contract.md"
     assert payload["ownership_mapping"]["command"] == "agentic-workspace ownership --target ./repo --format json"
     assert payload["ownership_mapping"]["ledger"] == ".agentic-workspace/OWNERSHIP.toml"
@@ -572,6 +575,12 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["mixed_agent"]["local_integration_area"]["scratch"]["root"] == ".agentic-workspace/local/scratch"
     assert payload["mixed_agent"]["local_integration_area"]["scratch"]["safe_to_delete"] is True
     assert payload["mixed_agent"]["local_integration_area"]["canonical_doc"] == ".agentic-workspace/docs/local-integration-area.md"
+    shim_pattern = payload["mixed_agent"]["local_integration_area"]["runtime_artifact_shim_pattern"]
+    assert shim_pattern["kind"] == "agentic-workspace/local-runtime-artifact-shim/v1"
+    assert shim_pattern["artifact_classes"] == ["internal-plan", "check-bundle", "handoff-state", "runtime-export"]
+    assert shim_pattern["authoritative"] is False
+    assert "proof_command" in shim_pattern["metadata_required"]
+    assert "local shims never become shared authority by existing locally" in shim_pattern["promotion_boundary"]
     assert "not a plugin registry or shared compatibility framework" in payload["mixed_agent"]["local_integration_area"]["boundary_rules"]
     assert payload["mixed_agent"]["local_scratch"]["sign"].startswith("Go ahead and use this")
     agent_aids = payload["mixed_agent"]["agent_aid_storage"]
@@ -822,6 +831,8 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
     assert "agentic-workspace config --target ./repo --format json" in text
     assert "agentic-workspace summary --format json" in text
     assert "agentic-workspace proof --changed <paths> --format json" in text
+    assert "agentic-workspace defaults --section install_profiles --format json" in text
+    assert "Use `full` only when both Memory and Planning are explicitly desired." not in text
     assert "`AGENTS.md` remains the repo startup entrypoint" in text
     assert "Compact routing docs when present" not in text
     assert text.count("Read `AGENTS.md` first.") == 1
@@ -841,6 +852,18 @@ def test_external_agent_handoff_text_demotes_broad_routing_until_compact_startup
     assert start_index < summary_index
     assert "When needed:" in text
     assert "Open raw planning or contract files only when compact commands point there." in text
+
+
+def test_external_agent_handoff_text_does_not_default_combined_install_to_full() -> None:
+    text = cli._external_agent_handoff_text(selected_modules=["planning", "memory"])
+
+    selector_index = text.index("agentic-workspace defaults --section install_profiles --format json")
+    memory_index = text.index("agentic-workspace install --target ./repo --preset memory")
+    planning_index = text.index("agentic-workspace install --target ./repo --preset planning")
+    full_index = text.index("agentic-workspace install --target ./repo --preset full")
+
+    assert selector_index < memory_index < planning_index < full_index
+    assert "Use `full` only when both Memory and Planning are explicitly desired." in text
 
 
 def test_external_agent_handoff_text_uses_configured_agent_instructions_filename() -> None:
@@ -896,6 +919,10 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
     assert {item["freshness"]["status"] for item in payload["update"]["modules"]} == {"unknown"}
+    assert payload["assurance"]["default_level"] == "low"
+    assert payload["assurance"]["default_level_source"] == "product-default"
+    assert payload["assurance"]["onboarding"]["status"] == "absent"
+    assert payload["assurance"]["onboarding"]["configured_profile_count"] == 0
     assert payload["mixed_agent"]["status"] == "reporting-only"
     assert payload["mixed_agent"]["repo_policy"]["source"] == "product-defaults"
     assert payload["mixed_agent"]["repo_policy"]["path"] == ".agentic-workspace/config.toml"
@@ -922,6 +949,42 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
         "authoritative": False,
         "git_ignored": True,
         "canonical_doc": ".agentic-workspace/docs/local-integration-area.md",
+        "runtime_artifact_shim_pattern": {
+            "kind": "agentic-workspace/local-runtime-artifact-shim/v1",
+            "root": ".agentic-workspace/local/integrations",
+            "status": "local-only-pattern",
+            "authoritative": False,
+            "git_ignored": True,
+            "use_for": [
+                "internal agent plans that need compact checked-in planning updates",
+                "runtime check bundles that need compact pass/fail plus inspectable logs",
+                "handoff or resume state that needs a bounded workspace continuation record",
+            ],
+            "artifact_classes": ["internal-plan", "check-bundle", "handoff-state", "runtime-export"],
+            "metadata_required": [
+                "kind",
+                "source_runtime",
+                "artifact_class",
+                "input_owner",
+                "output_target",
+                "authority",
+                "promotion_target",
+                "proof_command",
+                "created_at",
+            ],
+            "compact_output": "short agent-facing status, next action, and proof pointer",
+            "full_evidence": "inspectable local artifact, manifest, command log, or exported source file",
+            "promotion_boundary": [
+                "local shims never become shared authority by existing locally",
+                "promote only through checked-in planning, memory, agent-aid, docs, or repo-native review surfaces",
+                "record proof before treating shim output as repo-shared state",
+            ],
+            "discovery": [
+                "agentic-workspace defaults --section agent_aid_storage --format json",
+                "agentic-workspace config --target ./repo --format json",
+                "agentic-workspace report --target ./repo --section agent_aids --format json",
+            ],
+        },
         "allowed_aid_kinds": [
             "prompt helpers",
             "export/import shims",
@@ -1009,6 +1072,48 @@ def test_config_command_accepts_agent_efficiency_optimization_bias(tmp_path: Pat
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["optimization_bias"] == "agent-efficiency"
     assert payload["workspace"]["optimization_bias_source"] == "repo-config"
+
+
+def test_config_command_reports_assurance_onboarding_states(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance]
+default_level = "medium"
+""",
+    )
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    partial = json.loads(capsys.readouterr().out)
+    assert partial["assurance"]["onboarding"]["status"] == "partial"
+    assert partial["assurance"]["onboarding"]["configured_profile_count"] == 0
+
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance]
+default_level = "medium"
+decision_record_target = "docs/decisions/"
+
+[assurance.proof_profiles.security]
+required_commands = ["uv run pytest tests/security -q"]
+optional_commands = []
+review_aids = []
+""",
+    )
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    usable = json.loads(capsys.readouterr().out)
+    assert usable["assurance"]["onboarding"]["status"] == "usable"
+    assert usable["assurance"]["onboarding"]["configured_profile_count"] == 1
+    assert usable["assurance"]["onboarding"]["host_ref_count"] == 1
 
 
 def test_config_command_reports_enabled_advanced_features(tmp_path: Path, capsys) -> None:
@@ -1222,6 +1327,7 @@ def test_defaults_section_selector_returns_agent_aid_storage_answer(capsys) -> N
     assert affordance["storage_decision"]["checked_in_candidate"] == ".agentic-workspace/agent-aids"
     assert "any agent working in this repo" in affordance["storage_decision"]["prefer_checked_in_when"][0]
     assert "credential" in affordance["storage_decision"]["prefer_local_only_when"][0]
+    assert affordance["storage_decision"]["runtime_artifact_shims"]["compact_output"].startswith("short agent-facing")
     assert "silently become required workflow" in affordance["authority_boundary"][0]
     assert affordance["evidence_shape"]["full_evidence"] == "inspectable command log, artifact, manifest, or source file"
     assert affordance["first_pattern"]["command"] == "uv run python scripts/check/run_compact_command.py"
@@ -3496,6 +3602,10 @@ def test_install_real_init_generates_llms_with_compact_startup_path_first(tmp_pa
     raw_index = llms_text.index("Open raw planning or contract files only when compact commands point there.")
 
     assert "Ordinary path:" in llms_text
+    assert "agentic-workspace defaults --section install_profiles --format json" in llms_text
+    assert "agentic-workspace install --target ./repo --preset memory" in llms_text
+    assert "agentic-workspace install --target ./repo --preset planning" in llms_text
+    assert "Use `full` only when both Memory and Planning are explicitly desired." in llms_text
     assert start_index < summary_index < proof_index
     assert proof_index < preflight_index
     assert config_index < raw_index
@@ -6418,6 +6528,35 @@ def test_status_reports_advisory_cli_compatibility_drift(tmp_path: Path, capsys)
     compatibility = _assert_cli_compatibility(payload, status="advisory-drift")
     assert compatibility["enforcement"] == "advisory"
     assert compatibility["failed_checks"] == ["exact_version"]
+    assert payload["health"] == "attention-needed"
+    assert payload["executable_drift_warnings"][0].startswith("executable compatibility advisory-drift")
+    assert compatibility["drift_findings"][0]["class"] == "executable-version-drift"
+    assert compatibility["remediation"]["payload_drift_separate"] is True
+
+
+def test_doctor_reports_cli_executable_drift_with_concrete_next_action(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[cli_compatibility]\nenforcement = "blocking"\nexact_version = "999.0.0"\n',
+    )
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    compatibility = _assert_cli_compatibility(payload, status="blocking-drift")
+    assert payload["health"] == "attention-needed"
+    assert compatibility["failed_checks"] == ["exact_version"]
+    assert compatibility["remediation"]["action"] == "upgrade-or-select-cli"
+    action = payload["manual_review_actions"][0]
+    assert action["id"] == "resolve-cli-executable-drift"
+    assert action["severity"] == "error"
+    assert action["cli_compatibility"]["payload_drift_separate"] is True
+    assert "wrong CLI" in action["current_fault_summary"] or action["run"] == "agentic-workspace"
 
 
 def test_start_reports_blocking_cli_compatibility_drift_without_health_remediation(tmp_path: Path, capsys) -> None:
@@ -6662,11 +6801,113 @@ candidates = []
     assert answer["planning_assurance"]["adaptive_assurance"]["level"] == "high"
     assert answer["planning_assurance"]["missing_required_refs"] == []
     assert answer["planning_assurance"]["closeout_status"] == "blocked"
+    assert answer["planning_assurance"]["trust_state"]["assurance_level"] == "high"
+    assert answer["planning_assurance"]["trust_state"]["assurance_level_source"] == "explicit-slice-field"
+    assert answer["planning_assurance"]["trust_state"]["gate_states"][0]["enforcement"] == "blocking"
+    assert answer["planning_assurance"]["trust_state"]["ref_states"][0]["trust"] == "satisfied"
+    assert answer["planning_assurance"]["trust_state"]["proof_profile_states"][0]["state"] == "selected"
+    assert answer["planning_assurance"]["trust_state"]["proof_execution_evidence"]["counts"]["missing"] >= 1
     assert answer["planning_assurance"]["pending_blocking_gates"][0]["id"] == "security-review"
     concern_step = [step for step in answer["validation_plan"]["required"] if step.get("lane_id") == "concern:access_control"][0]
     assert concern_step["command"] == "uv run pytest tests/test_access_control.py"
     assert answer["selected_lanes"][-1]["id"] == "concern:access_control"
     assert answer["selected_lanes"][-1]["review_aids"] == [".agentic-workspace/agent-aids/access-control.md"]
+
+
+def test_proof_changed_reports_compact_proof_execution_evidence_states(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance]
+strict_closeout = true
+
+[assurance.proof_profiles.assurance_matrix]
+required_commands = [
+  "pass-command",
+  "fail-command",
+  "skip-command",
+  "unavailable-command",
+  "waived-command",
+]
+optional_commands = []
+review_aids = []
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+[todo]
+active_items = [
+  { id = "proof-evidence", status = "in-progress", surface = ".agentic-workspace/planning/execplans/proof-evidence.plan.json", why_now = "prove evidence states." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "proof-evidence.plan.json"
+    record = planning_installer._build_execplan_record_from_todo_item(
+        title="Proof Evidence",
+        item_id="proof-evidence",
+        status="in-progress",
+        why_now="prove evidence states.",
+        next_action="run proof selection.",
+        done_when="proof evidence states appear.",
+    )
+    record["adaptive_assurance"] = {
+        "level": "critical",
+        "strict_closeout": True,
+        "proof_profiles": ["assurance_matrix"],
+    }
+    record["proof_report"] = {
+        "validation proof": "synthetic assurance commands",
+        "proof achieved now": "mixed",
+        "proof execution evidence": json.dumps(
+            [
+                {"command": "pass-command", "status": "passed", "evidence_ref": "local:pass"},
+                {"command": "fail-command", "status": "failed", "evidence_ref": "local:fail"},
+                {"command": "skip-command", "status": "skipped", "reason": "not applicable"},
+                {"command": "unavailable-command", "status": "unavailable", "reason": "tool missing"},
+                {"command": "waived-command", "status": "waived", "reason": "covered by manual review"},
+            ]
+        ),
+    }
+    planning_installer._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".agentic-workspace/planning/state.toml",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    evidence = json.loads(capsys.readouterr().out)["answer"]["planning_assurance"]["trust_state"]["proof_execution_evidence"]
+    assert evidence["counts"] == {
+        "passed": 1,
+        "failed": 1,
+        "skipped": 1,
+        "unavailable": 1,
+        "waived": 1,
+        "missing": 1,
+    }
+    assert evidence["lower_trust_required_count"] == 4
+    waived = next(item for item in evidence["commands"] if item["command"] == "waived-command")
+    assert waived["trust"] == "satisfied"
+    assert waived["waiver_state"] == "waived-with-reason"
 
 
 def test_adaptive_assurance_end_to_end_closeout_flow(tmp_path: Path, capsys) -> None:
@@ -7154,6 +7395,18 @@ def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, c
     assert safety["strict_preflight"]["available"] is True
     scenarios = {entry["scenario"]: entry for entry in safety["fixture_coverage"]}
     assert scenarios["upgrade dry-run on installed repo"]["status"] == "covered"
+
+
+def test_doctor_json_does_not_report_dry_run_actions_as_mutations(monkeypatch, tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
+
+    assert cli.main(["doctor", "--modules", "planning", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["created"] == []
+    assert payload["updated_managed"] == []
+    assert payload["reports"][0]["actions"][0]["kind"] == "would update"
 
 
 @pytest.mark.parametrize(

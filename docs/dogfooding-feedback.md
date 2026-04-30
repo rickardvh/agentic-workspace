@@ -34,6 +34,8 @@ Do not leave meaningful product feedback in chat-only residue.
 
 Use `agentic-workspace defaults --section improvement_intake --format json` as the compact router before treating setup findings, dogfooding feedback, review findings, validation friction, or Memory improvement-signal notes as separate mechanisms. The underlying artifacts stay useful evidence, but the first question is shared: admit, dismiss, or route the signal to a durable owner.
 
+For host-repo runs that need to report feedback back to this package, use `docs/host-repo-dogfooding-report-template.md`. Keep the report compact, classify friction before routing it, and create package issues only for product-general or likely product-general findings with concrete evidence.
+
 ## Classification
 
 Classify friction into one of these buckets before routing it:

@@ -1,0 +1,254 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Public Docs Readiness",
+  "goal": [
+    "Complete the bounded work for TODO item `public-docs-readiness`."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Complete the bounded work for TODO item `public-docs-readiness`.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "public-docs-readiness",
+      "status": "completed",
+      "next_step": "Archive this completed plan and continue with the next state.toml lane.",
+      "proof": "uv run pytest tests -q; uv run ruff check src tests; make maintainer-surfaces; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json"
+    },
+    "scope": {
+      "touched": [
+        "README.md",
+        "docs/which-package.md",
+        "docs/documentation-status.md",
+        "packages/planning/README.md",
+        ".agentic-workspace/docs/agent-installation.md",
+        ".agentic-workspace/docs/routing-contract.md",
+        "llms.txt",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete the bounded work for TODO item `public-docs-readiness`.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Public Docs Readiness",
+    "inferred intended outcome": "Complete the bounded work for TODO item `public-docs-readiness`.",
+    "chosen concrete what": "#622: add a current-capabilities status matrix, then fold in #623-#626 as adjacent docs readiness work.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "README.md, docs/which-package.md, docs/documentation-status.md, packages/planning/README.md, .agentic-workspace/docs/agent-installation.md, .agentic-workspace/docs/routing-contract.md, llms.txt, src/agentic_workspace/cli.py, tests/test_workspace_cli.py, this execplan, planning state/archive files",
+    "max changed files": "14",
+    "required validation commands": "uv run pytest tests -q; uv run ruff check src tests; make maintainer-surfaces; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "#622: add a current-capabilities status matrix, then fold in #623-#626 as adjacent docs readiness work.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the bounded work for TODO item `public-docs-readiness`.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "public-docs-readiness",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "#622: add a current-capabilities status matrix, then fold in #623-#626 as adjacent docs readiness work."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "README.md",
+    "docs/which-package.md",
+    "docs/documentation-status.md",
+    "packages/planning/README.md",
+    ".agentic-workspace/docs/agent-installation.md",
+    ".agentic-workspace/docs/routing-contract.md",
+    "llms.txt",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests -q",
+    "uv run ruff check src tests",
+    "make maintainer-surfaces",
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "cd packages/planning && uv run ruff check .",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Make the public and planning documentation easier to trust by adding capability status, freshness signals, clearer Planning README entry points, README-first package positioning, and smallest-profile external install handoff guidance."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Updated public docs readiness across #622-#626: added a README current-capabilities matrix and package why, added a documentation status index, clarified docs/which-package.md routing, reshaped the Planning README first path, and aligned external install handoff guidance with smallest-profile selection.",
+    "scope touched": "README.md, docs/which-package.md, docs/documentation-status.md, packages/planning/README.md, .agentic-workspace/docs/agent-installation.md, .agentic-workspace/docs/routing-contract.md, llms.txt, src/agentic_workspace/cli.py, tests/test_workspace_cli.py",
+    "changed surfaces": "public docs, Planning package README, external handoff adapter source and generated llms.txt, tests",
+    "validations run": "uv run pytest tests -q; uv run ruff check src tests; make maintainer-surfaces; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "public-docs-readiness is complete; continue with the next roadmap lane",
+    "next step": "Archive this plan and close #622, #623, #624, #625, and #626."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none for this lane"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "376 root tests passed; root ruff clean; maintainer surfaces clean; Planning installer tests passed; package ruff clean; root CLI authority and planning doctor passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Complete the bounded work for TODO item `public-docs-readiness`.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#622 current-capability matrix, #623 documentation status index, #624 Planning README explanation-first path, #625 public README why-first positioning, and #626 smallest-profile external handoff alignment all landed with proof.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Public docs readiness updates for capability status, freshness signals, Planning README entry shape, README-first package why, and smallest-profile external install handoff.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none for this lane; continue with the next state.toml roadmap lane",
+    "post-work posterity capture": "execplan archive",
+    "knowledge promoted (Memory/Docs/Config)": "docs/documentation-status.md and README current capability matrix",
+    "resume from": "next state.toml lane"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The lane's five issue-backed documentation readiness findings were each addressed in current public docs or generated handoff surfaces, and stale full-default handoff wording was fixed at the source.",
+    "evidence carried forward": "Updated docs, generated llms.txt, tests, and selected proof results.",
+    "reopen trigger": "New public docs review evidence shows capability status, doc freshness, Planning README entry, package why, or install handoff guidance is stale again."
+  },
+  "improvement_signal_review": {
+    "status": "reviewed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "none for this lane; continue with the next state.toml roadmap lane",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "docs/documentation-status.md and README current capability matrix",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-30: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Complete the bounded work for TODO item `public-docs-readiness`.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: passed\nChanged surfaces: public docs, Planning package README, external handoff adapter source and generated llms.txt, tests\nDurable residue: none (none)\nMemory learning: none\nFollow-up: none for this lane; continue with the next state.toml roadmap lane"
+  }
+}

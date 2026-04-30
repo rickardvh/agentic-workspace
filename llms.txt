@@ -22,7 +22,11 @@ When needed:
 - Open raw planning or contract files only when compact commands point there.
 
 Preferred lifecycle commands:
+- `agentic-workspace defaults --section install_profiles --format json`
+- `agentic-workspace install --target ./repo --preset memory`
+- `agentic-workspace install --target ./repo --preset planning`
 - `agentic-workspace install --target ./repo --preset full`
+- Use `full` only when both Memory and Planning are explicitly desired.
 - `agentic-workspace config --target ./repo --format json`
 - `agentic-workspace summary --format json`
 - `agentic-workspace report --target ./repo --format json`
