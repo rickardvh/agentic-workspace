@@ -12,17 +12,17 @@ advanced_features = [
 ]
 
 [assurance]
-default_level = "low"
+default_level = "medium"
 agent_may_escalate = true
 agent_may_deescalate = false
-strict_closeout = false
+strict_closeout = true
 proof_profiles = {}
 test_data_policy = {}
 
 [cli_compatibility]
-enforcement = "off"
-source_classes = []
-target_relations = []
+enforcement = "advisory"
+source_classes = ["source-checkout"]
+target_relations = ["inside-target"]
 
 [system_intent]
 sources = ["SYSTEM_INTENT.md", "README.md"]
