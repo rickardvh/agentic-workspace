@@ -164,13 +164,14 @@ def report_profile_payload(*, context_router: dict[str, Any], cli_invoke: str = 
             "section_hints",
             "effective_authority",
             "execution_shape",
+            "memory_consult",
             "improvement_intake",
             "external_work_reconciliation",
             "maintenance_pressure",
         ],
         "router_shape_guard": {
             "status": "active",
-            "max_top_level_fields": 20,
+            "max_top_level_fields": 21,
             "high_volume_sections_excluded": ["module_reports", "reports", "registry", "config"],
             "warning_sample_limit": 5,
             "rule": "Default router output should summarize health, current work, next action, warnings, and selectors before raw high-volume detail.",
@@ -319,6 +320,7 @@ def report_router_payload(
         "operating_posture": _report_router_operating_posture(payload.get("operating_posture", {})),
         "report_profile": profile_payload,
         "current_work": current_work,
+        "memory_consult": payload.get("memory_consult", {}),
         "next_action": payload.get("next_action", {}),
         "warning_summary": {
             "total_count": len(findings),

@@ -17,6 +17,7 @@
     "config_enforcement",
     "branch_workflow_posture",
     "local_memory",
+    "memory_consult",
     "agent_aids",
     "agent_configuration_system",
     "agent_configuration_queries",

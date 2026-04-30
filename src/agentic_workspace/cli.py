@@ -1621,6 +1621,13 @@ def main(argv: list[str] | None = None) -> int:
 
             summary_profile = args.profile if args.format == "json" else "full"
             summary = planning_summary(target=target_root.as_posix(), profile=summary_profile)
+            if isinstance(summary, dict):
+                config = _load_workspace_config(target_root=target_root)
+                summary["memory_consult"] = _memory_consult_payload(
+                    target_root=target_root,
+                    compact=summary_profile == "compact",
+                    cli_invoke=config.cli_invoke,
+                )
             if args.format == "json":
                 print(format_summary_json(summary))
             else:
@@ -4939,6 +4946,7 @@ def _run_report_command(
         "config_enforcement": _config_enforcement_payload(config=config),
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
+        "memory_consult": _memory_consult_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "agent_aids": _agent_aids_report_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "execution_shape": execution_shape,
         "agent_configuration_system": _agent_configuration_report_payload(
@@ -5232,6 +5240,135 @@ def _operational_compression_payload(
         "review_question": "Did this change remove, merge, compress, route, or background more repeated work than it added?",
         "section_command": "agentic-workspace report --target ./repo --section operational_compression --format json",
     }
+
+
+def _sibling_cli_command_with_invoke(*, command: str, workspace_cli_invoke: str, sibling_program: str) -> str:
+    if not command.startswith(sibling_program):
+        return command
+    if workspace_cli_invoke == DEFAULT_CLI_INVOKE:
+        return command
+    parts = workspace_cli_invoke.split()
+    if parts and parts[-1] == DEFAULT_CLI_INVOKE:
+        return " ".join([*parts[:-1], sibling_program]) + command.removeprefix(sibling_program)
+    return command
+
+
+def _memory_command_with_invoke(*, command: str, workspace_cli_invoke: str) -> str:
+    return _sibling_cli_command_with_invoke(
+        command=command,
+        workspace_cli_invoke=workspace_cli_invoke,
+        sibling_program="agentic-memory-bootstrap",
+    )
+
+
+def _memory_payload_commands_with_invoke(*, value: Any, workspace_cli_invoke: str) -> Any:
+    if isinstance(value, str):
+        return _memory_command_with_invoke(command=value, workspace_cli_invoke=workspace_cli_invoke)
+    if isinstance(value, list):
+        return [_memory_payload_commands_with_invoke(value=item, workspace_cli_invoke=workspace_cli_invoke) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: _memory_payload_commands_with_invoke(value=nested, workspace_cli_invoke=workspace_cli_invoke)
+            for key, nested in value.items()
+        }
+    return value
+
+
+def _memory_consult_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str] | None = None,
+    compact: bool = False,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    try:
+        from repo_memory_bootstrap.installer import memory_report, route_memory
+    except ImportError:
+        return {
+            "kind": "agentic-workspace/memory-consult/v1",
+            "status": "unavailable",
+            "reason": "memory module is not importable",
+            "read_first": [],
+            "max_notes": 0,
+            "do_not_bulk_read": True,
+        }
+
+    try:
+        report = memory_report(target=target_root)
+    except Exception as exc:  # pragma: no cover - defensive routing surface
+        return {
+            "kind": "agentic-workspace/memory-consult/v1",
+            "status": "unavailable",
+            "reason": f"memory report failed: {exc}",
+            "read_first": [],
+            "max_notes": 0,
+            "do_not_bulk_read": True,
+        }
+
+    habitual_pull = report.get("habitual_pull", {}) if isinstance(report, dict) else {}
+    bundle = habitual_pull.get("ordinary_work_bundle", {}) if isinstance(habitual_pull, dict) else {}
+    always_load = _list_payload(bundle.get("always_load") if isinstance(bundle, dict) else [])
+    read_first = [str(path) for path in always_load]
+    route_actions: list[dict[str, Any]] = []
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    if normalized_paths:
+        try:
+            route_result = route_memory(target=target_root, files=normalized_paths)
+            for action in route_result.actions:
+                if action.role != "memory-route" or action.kind not in {"required", "optional"}:
+                    continue
+                source = action.source or action.path.as_posix()
+                if source not in read_first:
+                    read_first.append(source)
+                route_actions.append(
+                    {
+                        "kind": action.kind,
+                        "path": source,
+                        "reason": action.detail,
+                        "match_source": action.match_source,
+                    }
+                )
+        except Exception:
+            route_actions = []
+
+    max_notes = int(bundle.get("working_set_target", 3) or 3) if isinstance(bundle, dict) else 3
+    if max_notes > 0:
+        read_first = read_first[:max_notes]
+    evidence = habitual_pull.get("evidence", {}) if isinstance(habitual_pull, dict) else {}
+    status = str(habitual_pull.get("status", "unavailable")) if isinstance(habitual_pull, dict) else "unavailable"
+    consult_status = (
+        "recommended" if read_first and status in {"ready-for-ordinary-work", "attention-needed", "needs-more-proof"} else "not-recommended"
+    )
+    promotion_pressure = report.get("promotion_pressure", {}) if isinstance(report, dict) else {}
+    payload = {
+        "kind": "agentic-workspace/memory-consult/v1",
+        "status": consult_status,
+        "source": "memory.habitual_pull",
+        "why": habitual_pull.get("summary", "") if isinstance(habitual_pull, dict) else "",
+        "read_first": read_first,
+        "max_notes": max_notes,
+        "do_not_bulk_read": True,
+        "selection_rule": (bundle.get("route_rule", "") if isinstance(bundle, dict) else "load only route-matched durable Memory notes"),
+        "changed_path_route_count": len(route_actions),
+        "route_matches": route_actions[:max_notes],
+        "evidence": evidence if isinstance(evidence, dict) else {},
+        "capture_helper": _memory_command_with_invoke(
+            command="agentic-memory-bootstrap capture-note <slug> --target ./repo --summary <text> --files <changed paths> --format json",
+            workspace_cli_invoke=cli_invoke,
+        ),
+        "promotion_pressure": _memory_payload_commands_with_invoke(value=promotion_pressure, workspace_cli_invoke=cli_invoke),
+    }
+    if compact:
+        if consult_status != "recommended":
+            return {
+                "kind": payload["kind"],
+                "status": consult_status,
+                "do_not_bulk_read": True,
+            }
+        keys = ("kind", "status", "read_first", "max_notes", "do_not_bulk_read")
+        keys = (*keys, "why", "selection_rule")
+        return {key: payload[key] for key in keys if key in payload}
+    return payload
 
 
 def _maintenance_pressure_payload(
@@ -7044,6 +7181,7 @@ def _run_preflight_command(
             "timestamp_hint": "Run this periodically to poll current active state without startup overhead.",
             "branch_workflow_posture": branch_workflow_posture,
             "local_memory": local_memory,
+            "memory_consult": _memory_consult_payload(target_root=target_root, compact=True, cli_invoke=config.cli_invoke),
             "workflow_obligations": workflow_obligations,
             "closeout_obligations": closeout_obligations,
             "operating_posture": _operating_posture_payload(config=config, surface="preflight", compact=True),
@@ -7116,6 +7254,7 @@ def _run_preflight_command(
         },
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
+        "memory_consult": _memory_consult_payload(target_root=target_root, compact=True, cli_invoke=config.cli_invoke),
         "workflow_obligations": workflow_obligations,
         "closeout_obligations": closeout_obligations,
         "operating_posture": _operating_posture_payload(config=config, surface="preflight"),
@@ -7409,6 +7548,12 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
         },
         "workflow_obligations": compact_workflow_obligations,
         "closeout_obligations": _compact_start_closeout_obligations(preflight.get("closeout_obligations", {})),
+        "memory_consult": _memory_consult_payload(
+            target_root=target_root,
+            changed_paths=changed_paths,
+            compact=True,
+            cli_invoke=config.cli_invoke,
+        ),
         "operating_posture": _operating_posture_payload(config=config, surface="start", compact=True),
         "skill_routing": _guidance_with_cli_invoke(
             value=_startup_skill_routing_payload(

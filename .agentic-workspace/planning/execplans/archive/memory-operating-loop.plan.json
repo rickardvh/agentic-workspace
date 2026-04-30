@@ -1,0 +1,304 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Memory Operating Loop",
+  "goal": [
+    "Implement GitHub #601-#606 as one bounded Memory operating-loop lane: compact Memory consult before work, explicit closeout learning capture, existing-note-first capture recommendations, promotion pressure, and review/dogfooding evidence."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "The issue cluster is coherent, repo-local, and directly supports the package's normal operating loop without needing external host-repo execution.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "memory-operating-loop",
+      "status": "completed",
+      "next_step": "Archive and commit.",
+      "proof": "Focused and package-level tests plus ruff, maintainer surface checks, and workspace dogfooding selectors."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/reporting_support.py",
+        "src/agentic_workspace/contracts/report_contract.json",
+        "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        "packages/memory/src/repo_memory_bootstrap/cli.py",
+        "packages/memory/src/repo_memory_bootstrap/installer.py",
+        "packages/memory/tests/test_installer.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+        ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "The issue cluster is coherent, repo-local, and directly supports the package's normal operating loop without needing external host-repo execution.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Memory consult and learning-capture guidance now appears in normal compact workflow surfaces instead of being prose-only.",
+    "intentionally deferred": "No heavy mandatory Memory read gate was added; consult remains bounded and route-driven.",
+    "discovered implications": "Dogfooding found capture-note overmatched broad tokens; the helper now filters generic tokens and gives package-specific notes a specificity boost. Compact summary injects memory_consult after planning summary formatting, so schema.shared_fields does not yet advertise it.",
+    "proof achieved now": "full selected proof passed after the router budget fix and plan update.",
+    "validation still needed": "none before archive; final git status/summary before commit remains.",
+    "next likely slice": "archive this lane and commit"
+  },
+  "intent_interpretation": {
+    "literal request": "Memory Operating Loop",
+    "inferred intended outcome": "The issue cluster is coherent, repo-local, and directly supports the package's normal operating loop without needing external host-repo execution.",
+    "chosen concrete what": "Implement #602-#606 together because their acceptance criteria share the same compact Memory operating-loop surfaces.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Root workspace compact query/report code and schemas; Memory package CLI/report helper code and tests; Planning package closeout/template/schema code and tests; active planning record.",
+    "max changed files": "About 20 files including generated/installed planning template mirrors.",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q; uv run pytest packages/memory/tests/test_installer.py -q; uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; dogfooding closeout selectors.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Consulted agentic-memory-bootstrap report plus Memory index/manifest; startup now recommends index plus route-matched memory/planning package notes for this changed-path set.",
+    "tiny resumability note": "Implementation is in place; rerun full proof, close out, archive, and commit.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "The issue cluster is coherent, repo-local, and directly supports the package's normal operating loop without needing external host-repo execution.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "external-work",
+      "target": "#601",
+      "label": "Memory operating loop parent",
+      "role": "parent"
+    },
+    {
+      "kind": "external-work",
+      "target": "#602",
+      "label": "Pre-work Memory consult recommendations",
+      "role": "acceptance"
+    },
+    {
+      "kind": "external-work",
+      "target": "#603",
+      "label": "Closeout durable learning capture",
+      "role": "acceptance"
+    },
+    {
+      "kind": "external-work",
+      "target": "#604",
+      "label": "Existing-note-first capture helpers",
+      "role": "acceptance"
+    },
+    {
+      "kind": "external-work",
+      "target": "#605",
+      "label": "Memory promotion pressure",
+      "role": "acceptance"
+    },
+    {
+      "kind": "external-work",
+      "target": "#606",
+      "label": "Lightweight dogfooding/review evidence",
+      "role": "acceptance"
+    }
+  ],
+  "active_milestone": {
+    "id": "memory-operating-loop",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive execplan and commit."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/reporting_support.py",
+    "src/agentic_workspace/contracts/report_contract.json",
+    "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "packages/memory/src/repo_memory_bootstrap/cli.py",
+    "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "packages/memory/tests/test_installer.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+    ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run pytest packages/memory/tests/test_installer.py -q",
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace report --target . --section memory_consult --format json",
+    "uv run agentic-memory-bootstrap capture-note memory-operating-loop --target . --summary \"Memory operating loop now surfaces consult and closeout capture.\" --files src/agentic_workspace/cli.py packages/memory/src/repo_memory_bootstrap/installer.py packages/planning/src/repo_planning_bootstrap/installer.py --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Expose compact Memory consult guidance before work, explicit durable-learning routing at closeout, existing-note-first capture, promotion pressure, and lightweight review evidence."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Added workspace memory_consult payloads to start/summary/preflight/report; added Memory capture-note helper and report promotion_pressure; added Planning memory_learning_capture closeout field/template/schema and generated closeout line; added focused tests.",
+    "scope touched": "workspace compact routing/report contracts, Memory package helpers/report, Planning closeout/template/schema, focused tests, active execplan.",
+    "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/reporting_support.py; workspace report/startup schemas; Memory CLI/installer/tests; Planning installer/templates/schema/tests; active planning state.",
+    "validations run": "uv run agentic-workspace preflight --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace report --target . --section memory_consult --format json; uv run agentic-workspace proof --changed src/agentic_workspace/cli.py src/agentic_workspace/reporting_support.py packages/memory/src/repo_memory_bootstrap/installer.py packages/planning/src/repo_planning_bootstrap/installer.py --format json; uv run pytest tests/test_workspace_cli.py -q passed (238); uv run pytest packages/memory/tests/test_installer.py -q passed (203); uv run pytest packages/planning/tests/test_installer.py -q passed (175); uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests passed; make maintainer-surfaces passed; uv run python scripts/check/check_planning_surfaces.py passed; capture-note/closeout_trust/reconcile/skills dogfooding selectors passed.",
+    "result for continuation": "No required continuation; archive and commit.",
+    "next step": "Archive execplan and commit."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; work stayed inside compact routing, Memory, Planning, schemas, and tests for #601-#606.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "followed compact startup/config/summary, adapter refresh, dogfooding, and no bulk planning read rules.",
+    "misinterpretation risk": "low; #602-#606 were implemented as one coherent operating-loop surface set without making Memory a mandatory task tracker.",
+    "follow-on decision": "archive-and-close; report summary schema.shared_fields gap as a non-blocking incidental finding."
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_cli.py -q; uv run pytest packages/memory/tests/test_installer.py -q; uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; dogfooding selectors for memory_consult/capture-note/closeout_trust/reconcile/skills.",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "Workspace CLI suite passed 238 tests; Memory package suite passed 203 tests; Planning package suite passed 175 tests; ruff passed; maintainer-surfaces passed; planning surface check reported no drift; reconcile status clean."
+  },
+  "intent_satisfaction": {
+    "original intent": "The issue cluster is coherent, repo-local, and directly supports the package's normal operating loop without needing external host-repo execution.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Implementation covers #602 start/summary/preflight/report memory_consult, #603 memory_learning_capture closeout, #604 capture-note existing-note-first helper, #605 promotion_pressure, and #606 dogfooding evidence/fix.",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "Implemented compact Memory operating-loop surfaces across workspace, Memory, and Planning.",
+    "validation confirmed": "Workspace CLI, Memory package, Planning package, ruff, maintainer surfaces, planning surface check, and dogfooding selectors passed.",
+    "follow-on routed to": "no required follow-on; summary schema.shared_fields memory_consult visibility gap recorded in improvement_signal_review as non-blocking contract polish",
+    "post-work posterity capture": "Dogfooding finding fixed inline: capture-note initially overmatched broad tokens and now filters generic tokens plus applies package-specific ranking.",
+    "knowledge promoted (Memory/Docs/Config)": "Planning templates/schema now own memory_learning_capture; Memory report owns capture helper and promotion_pressure; workspace report/startup schemas own memory_consult.",
+    "resume from": "archive and commit"
+  },
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "yes; start recommended index plus memory/planning package notes for changed package paths",
+    "memory notes read": ".agentic-workspace/memory/repo/index.md; .agentic-workspace/memory/repo/manifest.toml; agentic-memory-bootstrap report payload",
+    "future agents should not rediscover": "yes",
+    "decision": "promote_to_docs_contracts_checks_code",
+    "target": "workspace Memory consult payloads, Memory capture-note helper/report, Planning memory_learning_capture schema/template",
+    "reason": "The durable learning is now product behavior and schema/template contract rather than a standalone Memory note."
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "Memory consultation and durable-learning capture should be visible in compact workflow surfaces and closeout records, but must stay bounded and route-driven rather than mandatory bulk Memory reading.",
+    "motivation worth preserving": "This prevents future agents from rediscovering when and how to consult Memory or capture learning at closeout.",
+    "canonical owner now": "workspace memory_consult payloads plus Planning memory_learning_capture schema/template",
+    "promotion trigger": "change to startup/report/summary/preflight memory_consult, Memory capture helpers, or Planning closeout templates",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "All #601-#606 acceptance surfaces are implemented and the selected proof passed; no required continuation remains.",
+    "evidence carried forward": "Proof report, memory_learning_capture, improvement_signal_review, and closeout_distillation.",
+    "reopen trigger": "Memory consult, capture-note, promotion_pressure, or memory_learning_capture disappears from compact workflow surfaces or closeout records."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "capture-note helper initially overmatched broad tokens and ranked a vague note above package-specific notes",
+      "default report router exceeded its explicit top-level field budget after memory_consult was added",
+      "workspace summary injects memory_consult after planning summary formatting, so planning summary schema.shared_fields does not advertise it",
+      "memory_consult helper commands initially emitted bare agentic-memory-bootstrap commands instead of respecting the local uv run invocation posture"
+    ],
+    "signals fixed": [
+      "capture-note now filters generic tokens and adds package-specific ranking",
+      "report router budget raised to 21 for the deliberate memory_consult decision-grade field",
+      "memory_consult now derives uv run agentic-memory-bootstrap helper commands from uv run agentic-workspace and covers that with a regression test"
+    ],
+    "signals routed": [
+      "summary schema.shared_fields clarity gap reported in closeout as non-blocking contract polish"
+    ],
+    "signals dismissed": [],
+    "next owner": "report-only"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in this archived proof record.",
+          "owner": "discard",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "Memory operating-loop contracts were promoted to workspace schemas, Memory helper/report payloads, and Planning schema/template surfaces.",
+          "owner": "workspace/memory/planning contract surfaces",
+          "source": "memory_learning_capture"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-30: Promoted from TODO direct-task shape into an execplan.",
+    "2026-04-30: Dogfooding found and fixed capture-note overmatching and report router field-budget drift."
+  ]
+}

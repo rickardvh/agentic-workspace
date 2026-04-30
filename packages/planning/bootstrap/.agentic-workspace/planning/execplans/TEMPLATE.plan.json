@@ -223,6 +223,15 @@
     "authority": "derived adapter; structured execplan fields remain authoritative",
     "text": ""
   },
+  "memory_learning_capture": {
+    "status": "pending",
+    "memory consult recommended?": "pending",
+    "memory notes read": "",
+    "future agents should not rediscover": "pending",
+    "decision": "pending",
+    "target": "",
+    "reason": "Choose one: none, update_existing_memory_note, create_memory_note, promote_to_docs_contracts_checks_code, route_to_planning, evidence_only."
+  },
   "durable_residue": {
     "status": "none",
     "learned constraint": "",

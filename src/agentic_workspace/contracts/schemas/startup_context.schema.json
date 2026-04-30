@@ -161,6 +161,9 @@
     "closeout_obligations": {
       "type": "object"
     },
+    "memory_consult": {
+      "type": "object"
+    },
     "operating_posture": {
       "type": "object"
     },

@@ -6251,6 +6251,8 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert "configured" not in payload["workflow_obligations"]
     assert payload["closeout_obligations"]["required_before_lane_closeout_count"] == 0
     assert "required_before_lane_closeout" not in payload["closeout_obligations"]
+    assert payload["memory_consult"]["kind"] == "agentic-workspace/memory-consult/v1"
+    assert payload["memory_consult"]["do_not_bulk_read"] is True
     posture = payload["operating_posture"]
     assert posture["surface"] == "start"
     assert posture["improvement_latitude"]["mode"] == "conservative"
@@ -6258,7 +6260,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert posture["detail_sections"]["improvement"] == (
         "uv run agentic-workspace report --target ./repo --section repo_friction --format json"
     )
-    assert len(json.dumps(payload, sort_keys=True)) < 15000
+    assert len(json.dumps(payload, sort_keys=True)) < 15200
     assert payload["proof"]["required_commands"] == [
         "uv run pytest tests -q",
         "uv run ruff check src tests",
@@ -6273,6 +6275,39 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
             "requires_attention": False,
         }
     ]
+
+
+def test_summary_command_includes_memory_consult(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["summary", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["memory_consult"]["kind"] == "agentic-workspace/memory-consult/v1"
+    assert payload["memory_consult"]["do_not_bulk_read"] is True
+
+
+def test_memory_consult_uses_local_cli_invoke_for_memory_helpers(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "memory_consult", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    memory_consult = payload["answer"]
+    assert memory_consult["capture_helper"].startswith("uv run agentic-memory-bootstrap capture-note")
+    assert memory_consult["promotion_pressure"]["command"].startswith("uv run agentic-memory-bootstrap promotion-report")
 
 
 def test_repo_config_cli_invoke_is_ignored_as_machine_local_policy(tmp_path: Path, capsys) -> None:

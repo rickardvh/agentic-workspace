@@ -2772,6 +2772,15 @@ candidates = []
     assert archived["generated_closeout"]["status"] == "generated"
     assert archived["generated_closeout"]["source"] == "archive-plan --prepare-closeout"
     assert "structured execplan fields are authoritative" in archived["generated_closeout"]["text"]
+    assert archived["memory_learning_capture"]["decision"] in {
+        "none",
+        "evidence_only",
+        "update_existing_memory_note",
+        "create_memory_note",
+        "promote_to_docs_contracts_checks_code",
+        "route_to_planning",
+    }
+    assert "Memory learning:" in archived["generated_closeout"]["text"]
     assert "Proof: uv run pytest tests/test_check_planning_surfaces.py" in archived["generated_closeout"]["text"]
     assert archived["closeout_distillation"]["buckets"]["discard"][0]["owner"] == "discard"
     assert not record_path.exists()

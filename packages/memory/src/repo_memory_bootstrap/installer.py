@@ -425,6 +425,179 @@ def create_memory_note(
     return result
 
 
+def _tokenize_capture_text(*values: str) -> set[str]:
+    stopwords = {
+        "agentic",
+        "agentic-workspace",
+        "workspace",
+        "packages",
+        "package",
+        "src",
+        "tests",
+        "test",
+        "and",
+        "the",
+        "for",
+        "now",
+        "with",
+        "from",
+        "this",
+        "that",
+        "memory",
+        "planning",
+    }
+    tokens: set[str] = set()
+    for value in values:
+        for token in re.findall(r"[a-z0-9][a-z0-9_-]{2,}", value.lower()):
+            normalized = token.replace("_", "-")
+            if normalized not in stopwords:
+                tokens.add(normalized)
+    return tokens
+
+
+def _capture_specificity_bonus(*, note: MemoryNoteRecord, files: tuple[str, ...]) -> tuple[int, list[str]]:
+    note_path = note.path.as_posix()
+    bonus = 0
+    reasons: list[str] = []
+    file_text = " ".join(files)
+    if "packages/memory/" in file_text and "memory-package" in note_path:
+        bonus += 14
+        reasons.append("package-specific Memory note matches changed files")
+    if "packages/planning/" in file_text and "planning-package" in note_path:
+        bonus += 14
+        reasons.append("package-specific Planning note matches changed files")
+    note_route_name = note_path.replace(".agentic-workspace/", "")
+    if "src/agentic_workspace/" in file_text and "workspace-" in note_route_name:
+        bonus += 8
+        reasons.append("workspace-specific note matches changed files")
+    return bonus, reasons
+
+
+def _capture_candidate_view(note: MemoryNoteRecord, *, score: int, reasons: list[str]) -> dict[str, object]:
+    candidate: dict[str, object] = {
+        "path": note.path.as_posix(),
+        "score": score,
+        "summary": note.summary,
+        "note_type": note.note_type,
+        "memory_role": note.memory_role or "unclassified",
+        "reasons": reasons[:4],
+    }
+    if note.promotion_target:
+        candidate["promotion_target"] = note.promotion_target
+    if note.promotion_trigger:
+        candidate["promotion_trigger"] = note.promotion_trigger
+    if note.retention_after_promotion:
+        candidate["retention_after_promotion"] = note.retention_after_promotion
+    return candidate
+
+
+def suggest_memory_note_capture(
+    *,
+    slug: str = "",
+    target: str | Path | None = None,
+    summary: str = "",
+    files: Iterable[str] | None = None,
+    surfaces: Iterable[str] | None = None,
+    existing_note: str = "",
+    force_new_reason: str = "",
+) -> dict[str, object]:
+    """Recommend the smallest Memory capture action, preferring existing notes."""
+
+    target_root = resolve_target_root(target)
+    manifest_path = target_root / MANIFEST_PATH
+    manifest = _load_memory_manifest(manifest_path)
+    normalized_files = _normalise_string_tuple(files)
+    normalized_surfaces = _normalise_string_tuple(surfaces)
+    safe_slug = _safe_note_slug(slug or _title_from_slug(summary or "memory-note").lower())
+    tokens = _tokenize_capture_text(summary, *normalized_files, *normalized_surfaces, safe_slug)
+    routed_paths: set[str] = set()
+    if normalized_files or normalized_surfaces:
+        routed = route_memory(target=target_root, files=list(normalized_files), surfaces=list(normalized_surfaces))
+        routed_paths = {
+            action.source
+            for action in routed.actions
+            if action.role == "memory-route"
+            and action.kind in {"required", "optional"}
+            and action.source != ".agentic-workspace/memory/repo/index.md"
+        }
+
+    if manifest is None:
+        return {
+            "kind": "agentic-memory/capture-recommendation/v1",
+            "status": "unavailable",
+            "reason": "memory manifest is missing or invalid",
+            "owner_surface": MANIFEST_PATH.as_posix(),
+            "recommended_action": "repair-memory-first",
+            "commands": ["agentic-memory-bootstrap doctor --target ./repo --format json"],
+        }
+
+    candidates: list[dict[str, object]] = []
+    explicit_existing = existing_note.strip()
+    for note in manifest.notes:
+        haystack = " ".join(
+            [
+                note.path.as_posix(),
+                note.summary,
+                " ".join(note.applies_to),
+                " ".join(note.use_when),
+                " ".join(note.routes_from),
+                " ".join(note.evidence),
+                note.promotion_target,
+                note.promotion_trigger,
+            ]
+        ).lower()
+        reasons: list[str] = []
+        score = 0
+        if explicit_existing and note.path.as_posix() == explicit_existing:
+            score += 100
+            reasons.append("--existing-note selected this note")
+        if note.path.as_posix() in routed_paths:
+            score += 20
+            reasons.append("changed files or surfaces route here")
+        specificity_bonus, specificity_reasons = _capture_specificity_bonus(note=note, files=normalized_files)
+        if specificity_bonus:
+            score += specificity_bonus
+            reasons.extend(specificity_reasons)
+        matched_tokens = sorted(token for token in tokens if token in haystack)
+        if matched_tokens:
+            score += min(15, len(matched_tokens) * 3)
+            reasons.append("summary/files share tokens: " + ", ".join(matched_tokens[:5]))
+        if note.improvement_candidate or note.memory_role == "improvement_signal":
+            score += 2
+            reasons.append("note already carries improvement-signal metadata")
+        if score:
+            candidates.append(_capture_candidate_view(note, score=score, reasons=reasons))
+
+    candidates.sort(key=lambda item: (-int(item["score"]), str(item["path"])))
+    best = candidates[0] if candidates else None
+    force_reason = force_new_reason.strip()
+    if best and not force_reason:
+        recommended_action = "update-existing-note"
+        next_command = f"open {best['path']} and update the existing note; keep manifest metadata aligned"
+        reason = "an existing Memory note appears to own this durable learning"
+    elif best and force_reason:
+        recommended_action = "create-new-note-with-explicit-justification"
+        next_command = f"agentic-memory-bootstrap create-note {safe_slug} --target ./repo --summary <text> --format json"
+        reason = "an existing candidate exists, but --force-new-reason records why a separate note is justified"
+    else:
+        recommended_action = "create-new-note"
+        next_command = f"agentic-memory-bootstrap create-note {safe_slug} --target ./repo --summary <text> --format json"
+        reason = "no existing Memory note matched the capture request"
+
+    return {
+        "kind": "agentic-memory/capture-recommendation/v1",
+        "status": "ready",
+        "owner_surface": MANIFEST_PATH.as_posix(),
+        "rule": "Update or shrink an existing Memory note before creating a new one; create new notes only when ownership is absent or explicitly justified.",
+        "recommended_action": recommended_action,
+        "reason": reason,
+        "force_new_reason": force_reason,
+        "candidate_count": len(candidates),
+        "candidates": candidates[:5],
+        "commands": [next_command, "agentic-memory-bootstrap doctor --target ./repo --format json"],
+    }
+
+
 def install_bootstrap(
     *,
     target: str | Path | None = None,
@@ -2746,6 +2919,40 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
         durable_facts=durable_facts,
     )
     state_model = _memory_state_model_view(manifest=manifest, trust_items=trust_items)
+    promotion_pressure = {
+        "status": "attention" if remediation_counts.get("candidate", 0) or elimination_candidates else "clear",
+        "candidate_count": remediation_counts.get("candidate", 0),
+        "elimination_candidate_count": len(elimination_candidates),
+        "rule": (
+            "Memory notes with promotion or elimination metadata should move upstream to docs, tests, checks, skills, scripts, "
+            "runbooks, or code when that would reduce future rediscovery cost."
+        ),
+        "sample": [
+            {
+                "path": item["path"],
+                "preferred_remediation": item.get("preferred_remediation", ""),
+                "elimination_target": item.get("elimination_target", ""),
+                "promotion_target": next(
+                    (
+                        record.get("promotion_target", "")
+                        for record in state_model["records"]
+                        if isinstance(record, dict) and record.get("path") == item["path"]
+                    ),
+                    "",
+                ),
+                "retention_after_promotion": next(
+                    (
+                        record.get("retention_after_promotion", "")
+                        for record in state_model["records"]
+                        if isinstance(record, dict) and record.get("path") == item["path"]
+                    ),
+                    "",
+                ),
+            }
+            for item in elimination_candidates[:5]
+        ],
+        "command": "agentic-memory-bootstrap promotion-report --target ./repo --mode remediation --format json",
+    }
     manual_review_total = sum(1 for action in significant_actions if action.kind in {"manual review", "missing"})
     warning_total = sum(1 for action in significant_actions if action.kind == "warning")
     advisory_total = 0
@@ -2816,6 +3023,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
                 "writer_helpers",
                 "durable_facts",
                 "habitual_pull",
+                "promotion_pressure",
                 "trust",
                 "recurring_friction",
                 "usefulness_audit",
@@ -2841,8 +3049,18 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
         "state_model": state_model,
         "writer_helpers": {
             "status": "available",
-            "rule": "Use writer helpers for schema-backed Memory artifacts before hand-authoring manifest entries.",
+            "rule": "Use writer helpers for schema-backed Memory artifacts before hand-authoring manifest entries; prefer updating an existing note before creating a new one.",
             "helpers": [
+                {
+                    "artifact": "memory_capture_recommendation",
+                    "command": (
+                        "agentic-memory-bootstrap capture-note <slug> --target ./repo --summary <text> "
+                        "--files <changed paths> --format json"
+                    ),
+                    "writes": [],
+                    "proof": "agentic-memory-bootstrap doctor --target ./repo --format json",
+                    "rule": "Run before create-note when durable learning might belong in an existing note.",
+                },
                 {
                     "artifact": "memory_note",
                     "command": "agentic-memory-bootstrap create-note <slug> --target ./repo --summary <text> --format json",
@@ -2851,11 +3069,12 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
                         MANIFEST_PATH.as_posix(),
                     ],
                     "proof": "agentic-memory-bootstrap doctor --target ./repo --format json",
-                }
+                },
             ],
         },
         "durable_facts": durable_facts,
         "habitual_pull": habitual_pull,
+        "promotion_pressure": promotion_pressure,
         "trust": {
             "warning_count": warning_total,
             "manual_review_count": manual_review_total,

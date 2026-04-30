@@ -2337,8 +2337,11 @@ def test_memory_report_derives_compact_module_state(tmp_path: Path) -> None:
     assert "usefulness_audit" in report
     assert report["usefulness_audit"]["status"] in {"measured", "needs-more-proof", "attention-needed", "actionable"}
     assert ".agentic-workspace/memory/repo/manifest.toml" in report["state_model"]["common_queries"]["structured_state_owner"]
-    assert report["writer_helpers"]["helpers"][0]["artifact"] == "memory_note"
-    assert "create-note" in report["writer_helpers"]["helpers"][0]["command"]
+    helpers = {helper["artifact"]: helper for helper in report["writer_helpers"]["helpers"]}
+    assert helpers["memory_capture_recommendation"]["writes"] == []
+    assert "capture-note" in helpers["memory_capture_recommendation"]["command"]
+    assert "create-note" in helpers["memory_note"]["command"]
+    assert report["promotion_pressure"]["status"] in {"clear", "attention"}
 
 
 def test_create_memory_note_writes_note_and_manifest_entry(tmp_path: Path) -> None:
@@ -2405,6 +2408,49 @@ def test_memory_create_note_cli_writes_json_result(tmp_path: Path, capsys: pytes
     assert exit_code == 0
     assert payload["actions"][0]["kind"] == "created"
     assert (target / ".agentic-workspace/memory/repo/domains/cli-routing.md").exists()
+
+
+def test_memory_capture_note_prefers_existing_note(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+    installer.create_memory_note(
+        target=target,
+        slug="api-routing",
+        summary="API routing conventions.",
+        applies_to=["src/api/**"],
+        routes_from=["src/api/**"],
+    )
+
+    payload = installer.suggest_memory_note_capture(
+        target=target,
+        slug="api-routing-followup",
+        summary="API routing durable learning.",
+        files=["src/api/routes.py"],
+    )
+
+    assert payload["recommended_action"] == "update-existing-note"
+    assert payload["candidates"][0]["path"] == ".agentic-workspace/memory/repo/domains/api-routing.md"
+
+    assert (
+        cli.main(
+            [
+                "capture-note",
+                "api-routing-followup",
+                "--target",
+                str(target),
+                "--summary",
+                "API routing durable learning.",
+                "--files",
+                "src/api/routes.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    cli_payload = json.loads(capsys.readouterr().out)
+    assert cli_payload["recommended_action"] == "update-existing-note"
 
 
 def test_memory_report_exposes_habitual_pull_boundary_and_evidence(tmp_path: Path) -> None:
@@ -2671,6 +2717,10 @@ def test_cli_version_flag_prints_package_version(capsys) -> None:
         (["current", "check", "--target", ".", "--format", "json"], True),
         (["route", "--target", ".", "--files", "src/app.py", "--format", "json"], True),
         (["sync-memory", "--target", ".", "--files", "src/app.py", "--format", "json"], True),
+        (
+            ["capture-note", "app-learning", "--target", ".", "--summary", "App learning.", "--files", "src/app.py", "--format", "json"],
+            True,
+        ),
         (
             [
                 "promotion-report",

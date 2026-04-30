@@ -6839,6 +6839,7 @@ def _generated_closeout_adapter(
     closure_check = _record_section_dict(patch, "closure_check") or {}
     proof_report = _record_section_dict(patch, "proof_report") or _record_section_dict(record, "proof_report") or {}
     durable_residue = _record_section_dict(patch, "durable_residue") or {}
+    memory_learning = _record_section_dict(patch, "memory_learning_capture") or {}
     execution_run = _record_section_dict(record, "execution_run") or {}
     execution_summary = _record_section_dict(record, "execution_summary") or {}
 
@@ -6860,6 +6861,7 @@ def _generated_closeout_adapter(
         f"Proof: {validation}",
         f"Changed surfaces: {changed_surfaces}",
         f"Durable residue: {durable_status} ({durable_owner})",
+        f"Memory learning: {memory_learning.get('decision', 'not recorded').strip() or 'not recorded'}",
         f"Follow-up: {follow_up}",
     ]
     return {
@@ -6889,6 +6891,43 @@ def _prepared_durable_residue(record: dict[str, Any]) -> dict[str, str]:
     prepared.setdefault("promotion trigger", "none")
     prepared.setdefault("retention after promotion", "retain")
     return prepared
+
+
+def _prepared_memory_learning_capture(record: dict[str, Any]) -> dict[str, str]:
+    existing = _record_section_dict(record, "memory_learning_capture") or {}
+    durable_residue = _prepared_durable_residue(record)
+    residue_status = durable_residue.get("status", "none").strip() or "none"
+    if residue_status == "memory":
+        decision = "update_existing_memory_note"
+        target = durable_residue.get("canonical owner now", "Memory")
+        future_learning = "yes"
+    elif residue_status in {"docs", "contract", "check"}:
+        decision = "promote_to_docs_contracts_checks_code"
+        target = durable_residue.get("canonical owner now", residue_status)
+        future_learning = "yes"
+    elif residue_status == "planning":
+        decision = "route_to_planning"
+        target = durable_residue.get("canonical owner now", "planning")
+        future_learning = "yes"
+    elif residue_status == "evidence_only":
+        decision = "evidence_only"
+        target = durable_residue.get("canonical owner now", "archive")
+        future_learning = "no"
+    else:
+        decision = "none"
+        target = "none"
+        future_learning = "no"
+    return {
+        "status": existing.get("status", "reviewed") or "reviewed",
+        "memory consult recommended?": existing.get("memory consult recommended?", "review startup/report memory_consult")
+        or "review startup/report memory_consult",
+        "memory notes read": existing.get("memory notes read", "") or "not recorded",
+        "future agents should not rediscover": existing.get("future agents should not rediscover", future_learning) or future_learning,
+        "decision": existing.get("decision", decision) or decision,
+        "target": existing.get("target", target) or target,
+        "reason": existing.get("reason", "Derived from durable_residue during closeout preparation.")
+        or "Derived from durable_residue during closeout preparation.",
+    }
 
 
 def _execplan_durable_residue(path: Path) -> dict[str, str]:
@@ -7038,6 +7077,7 @@ def _prepare_execplan_closeout(
             "reopen trigger": reopen,
         },
         "durable_residue": _prepared_durable_residue(record),
+        "memory_learning_capture": _prepared_memory_learning_capture(record),
     }
 
     prepared_proof_report = _prepared_closeout_proof_report(
