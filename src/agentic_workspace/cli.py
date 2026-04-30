@@ -4824,6 +4824,7 @@ def _run_report_command(
         policy_payload=_improvement_latitude_payload(config.improvement_latitude),
         boundary_test_payload=_improvement_boundary_test_payload(),
         external_setup_findings_payload=_repo_friction_external_setup_findings_payload(target_root=target_root),
+        incidental_finding_policy=copy.deepcopy(_IMPROVEMENT_LATITUDE_POLICY["incidental_finding_policy"]),
         validation_friction_policy=_validation_friction_payload(),
         cli_invoke=config.cli_invoke,
     )
@@ -10317,6 +10318,7 @@ def _defaults_payload() -> dict[str, Any]:
             "friction_response_order": _friction_response_order_payload(),
             "mode_interpretation": copy.deepcopy(_IMPROVEMENT_LATITUDE_POLICY["mode_interpretation"]),
             "examples": copy.deepcopy(_IMPROVEMENT_LATITUDE_POLICY["examples"]),
+            "incidental_finding_policy": copy.deepcopy(_IMPROVEMENT_LATITUDE_POLICY["incidental_finding_policy"]),
             "guardrail_test": _workspace_self_adaptation_guardrail_payload(),
             "repo_directed_improvement_threshold": _repo_directed_improvement_evidence_threshold_payload(),
             "default_mode": str(_IMPROVEMENT_LATITUDE_POLICY["default_mode"]),

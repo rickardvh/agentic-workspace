@@ -9,6 +9,7 @@
     "policy_target",
     "mode_interpretation",
     "examples",
+    "incidental_finding_policy",
     "evidence_source",
     "evidence_classes",
     "modes"
@@ -48,6 +49,46 @@
           }
         },
         "repo_directed_improvement_next": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "incidental_finding_policy": {
+      "type": "object",
+      "required": [
+        "status",
+        "rule",
+        "report_when",
+        "report_how",
+        "do_not_report"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "rule": {
+          "type": "string"
+        },
+        "report_when": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "report_how": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "do_not_report": {
           "type": "array",
           "minItems": 1,
           "items": {

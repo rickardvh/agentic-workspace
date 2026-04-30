@@ -17,6 +17,25 @@
       "when validation keeps bouncing across unclear seams or proof expectations, keep that visible as validation-friction evidence instead of treating it as just another one-off failure"
     ]
   },
+  "incidental_finding_policy": {
+    "status": "required-reporting",
+    "rule": "Agents should report incidental improvement findings they encounter, even when the current mode does not justify acting on them immediately.",
+    "report_when": [
+      "the finding affects future agent efficiency, safety, restart cost, handoff cost, proof clarity, or routing clarity",
+      "the finding is outside the current bounded action scope but has enough concrete evidence to be useful later",
+      "the finding explains why the agent did not widen the current task"
+    ],
+    "report_how": [
+      "keep it compact and evidence-backed",
+      "separate acted-on improvements from reported-only findings",
+      "route repeated or high-confidence findings to planning, review evidence, Memory, docs, config, or agent aids"
+    ],
+    "do_not_report": [
+      "one-off taste without operational evidence",
+      "speculation that cannot name a concrete friction source",
+      "noise already covered by an existing active plan or current report section"
+    ]
+  },
   "evidence_source": "agentic-workspace report --target ./repo --format json",
   "evidence_classes": [
     "large_file_hotspots",

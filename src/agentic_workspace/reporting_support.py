@@ -1324,6 +1324,7 @@ def repo_friction_payload(
     policy_payload: dict[str, Any],
     boundary_test_payload: dict[str, Any],
     external_setup_findings_payload: dict[str, Any] | None,
+    incidental_finding_policy: dict[str, Any] | None = None,
     validation_friction_policy: dict[str, Any] | None = None,
     cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
@@ -1411,6 +1412,12 @@ def repo_friction_payload(
         "initiative_posture": policy_payload["initiative_posture"],
         "rule": policy_payload["reporting_rule"],
         "reporting_destinations": policy_payload["reporting_destinations"],
+        "incidental_finding_policy": copy.deepcopy(incidental_finding_policy)
+        if isinstance(incidental_finding_policy, dict)
+        else {
+            "status": "required-reporting",
+            "rule": "Agents should report incidental improvement findings they encounter, even when they do not act on them immediately.",
+        },
         "decision_test": boundary_test_payload,
         "evidence_classes": evidence_classes,
         "large_file_hotspots": {

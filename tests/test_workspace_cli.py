@@ -672,6 +672,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert threshold["not_enough"][0] == "one-off agent discomfort"
     assert "shared repeated evidence" in threshold["collaboration_bias"]
     assert "workspace self-adaptation remains allowed" in payload["improvement_latitude"]["mode_interpretation"]["none"]
+    assert payload["improvement_latitude"]["incidental_finding_policy"]["status"] == "required-reporting"
+    assert "future agent efficiency" in payload["improvement_latitude"]["incidental_finding_policy"]["report_when"][0]
     assert "repo seams" in payload["improvement_latitude"]["examples"]["repo_directed_improvement_next"][0]
     assert payload["improvement_latitude"]["default_mode"] == "conservative"
     assert payload["improvement_latitude"]["supported_modes"][0]["mode"] == "none"
@@ -5780,6 +5782,8 @@ def test_report_surfaces_reporting_only_repo_friction_posture(tmp_path: Path, ca
     assert payload["repo_friction"]["policy_target"] == "repo-directed-improvement"
     assert payload["repo_friction"]["friction_response_order"][2]["action"] == "avoid-externalizing-honestly-absorbable-friction"
     assert payload["repo_friction"]["initiative_posture"] == "reporting-only"
+    assert payload["repo_friction"]["incidental_finding_policy"]["status"] == "required-reporting"
+    assert "separate acted-on improvements" in payload["repo_friction"]["incidental_finding_policy"]["report_how"][1]
     assert payload["repo_friction"]["rule"] == (
         "Surface notable friction through bounded reporting or residue; do not act on it without explicit direction."
     )
