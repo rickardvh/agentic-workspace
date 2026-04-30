@@ -550,16 +550,28 @@ def _record_section_references(record: dict[str, Any] | None, key: str) -> list[
 
 def _roadmap_lane_references(lane: dict[str, Any]) -> list[dict[str, str]]:
     explicit = _record_section_references({"references": lane.get("references", [])}, "references") or []
+    raw_issues = lane.get("issues", [])
+    issue_values = raw_issues if isinstance(raw_issues, list) else [raw_issues]
     issue_refs = [
         {
             "kind": "issue",
             "target": issue,
             "role": "related-work",
         }
-        for issue in lane.get("issues", [])
+        for issue in issue_values
         if str(issue).strip()
     ]
-    return _merge_references(explicit, issue_refs)
+    explicit_issue_tokens = {str(issue).strip() for issue in issue_values}
+    refs_field_refs = [
+        {
+            "kind": "issue",
+            "target": ref,
+            "role": "related-work",
+        }
+        for ref in _planning_item_issue_refs(lane, text_fields=())
+        if ref not in explicit_issue_tokens
+    ]
+    return _merge_references(explicit, issue_refs, refs_field_refs)
 
 
 def _normalize_roadmap_lane_record(raw: dict[str, Any]) -> dict[str, Any]:
@@ -4667,9 +4679,7 @@ def _finished_work_continuation_routed_by_roadmap(*, target_root: Path, candidat
         for raw_item in work_items:
             if not isinstance(raw_item, dict):
                 continue
-            item_refs = {_reference_issue_token(str(issue)) for issue in raw_item.get("issues", []) if _reference_issue_token(str(issue))}
-            for value in (raw_item.get("id", ""), raw_item.get("title", ""), raw_item.get("reason", "")):
-                item_refs.update(_issue_refs_from_text(str(value)))
+            item_refs = _planning_item_issue_refs(raw_item)
             if not (item_refs & non_closure_refs):
                 continue
             item_type = str(raw_item.get("type", "")).strip() or "item"
@@ -4683,14 +4693,39 @@ def _finished_work_continuation_routed_by_roadmap(*, target_root: Path, candidat
         for raw_item in collection:
             if not isinstance(raw_item, dict):
                 continue
-            item_refs = {_reference_issue_token(str(issue)) for issue in raw_item.get("issues", []) if _reference_issue_token(str(issue))}
-            for value in (raw_item.get("id", ""), raw_item.get("title", ""), raw_item.get("reason", "")):
-                item_refs.update(_issue_refs_from_text(str(value)))
+            item_refs = _planning_item_issue_refs(raw_item)
             if not (item_refs & non_closure_refs):
                 continue
             item_id = str(raw_item.get("id", "")).strip() or str(raw_item.get("title", "")).strip() or "unnamed"
             routed_by.append(f".agentic-workspace/planning/state.toml roadmap {collection_name[:-1]} {item_id}")
     return sorted(set(routed_by))
+
+
+def _planning_item_issue_refs(
+    item: dict[str, Any],
+    *,
+    text_fields: tuple[str, ...] = ("id", "title", "reason", "why_now", "outcome", "promotion_signal", "suggested_first_slice"),
+) -> set[str]:
+    refs: set[str] = set()
+    for field_name in ("issues", "refs"):
+        raw_value = item.get(field_name, [])
+        raw_items = raw_value if isinstance(raw_value, list) else [raw_value]
+        for raw_ref in raw_items:
+            token = _reference_issue_token(str(raw_ref))
+            if token:
+                refs.add(token)
+            refs.update(_issue_refs_from_text(str(raw_ref)))
+    raw_references = item.get("references", [])
+    if isinstance(raw_references, list):
+        for raw_reference in raw_references:
+            if not isinstance(raw_reference, dict):
+                continue
+            token = _reference_issue_token(str(raw_reference.get("target", "")))
+            if token:
+                refs.add(token)
+    for field_name in text_fields:
+        refs.update(_issue_refs_from_text(str(item.get(field_name, ""))))
+    return refs
 
 
 def _live_execplan_paths(execplan_dir: Path) -> list[Path]:

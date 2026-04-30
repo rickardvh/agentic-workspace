@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from agentic_workspace import cli
 from agentic_workspace.contract_tooling import authority_markers_manifest, cli_commands_manifest
@@ -83,6 +84,17 @@ def _assert_cli_compatibility(payload: dict[str, object], *, status: str) -> dic
     assert compatibility["enforcement"] in {"off", "advisory", "blocking"}
     assert "failed_checks" in compatibility
     return compatibility
+
+
+def _assert_cli_compatibility_schema(payload: dict[str, object], *, schema_name: str) -> None:
+    schema_path = Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "contracts" / "schemas" / schema_name
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    validator = Draft202012Validator(schema)
+    errors = sorted(
+        validator.evolve(schema=schema["$defs"]["cli_compatibility"]).iter_errors(payload["cli_compatibility"]),
+        key=lambda error: list(error.path),
+    )
+    assert [error.message for error in errors] == []
 
 
 def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) -> None:
@@ -3500,6 +3512,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     payload = json.loads(capsys.readouterr().out)
     _assert_invoked_cli_identity(payload, target_relation="outside-target")
     _assert_cli_compatibility(payload, status="no-expectation")
+    _assert_cli_compatibility_schema(payload, schema_name="workspace_report.schema.json")
     assert payload["kind"] == "workspace-report/v1"
     assert payload["command"] == "report"
     assert payload["schema"]["schema_version"] == "workspace-reporting-schema/v1"
@@ -6273,6 +6286,7 @@ def test_start_reports_blocking_cli_compatibility_drift_without_health_remediati
 
     payload = json.loads(capsys.readouterr().out)
     compatibility = _assert_cli_compatibility(payload, status="blocking-drift")
+    _assert_cli_compatibility_schema(payload, schema_name="startup_context.schema.json")
     assert compatibility["enforcement"] == "blocking"
     assert compatibility["failed_checks"] == ["exact_version"]
     assert "next_action" not in compatibility

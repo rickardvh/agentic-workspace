@@ -28,7 +28,7 @@
       "$ref": "#/$defs/invoked_cli_identity"
     },
     "cli_compatibility": {
-      "type": "object"
+      "$ref": "#/$defs/cli_compatibility"
     },
     "startup_sequence": {
       "type": "array",
@@ -242,6 +242,112 @@
           "const": "not-evaluated"
         },
         "expectation_source": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "cli_compatibility_check": {
+      "type": "object",
+      "required": [
+        "name",
+        "configured",
+        "expected",
+        "actual",
+        "satisfied"
+      ],
+      "properties": {
+        "name": {
+          "enum": [
+            "exact_version",
+            "minimum_version",
+            "source_class",
+            "target_relation"
+          ]
+        },
+        "configured": {
+          "type": "boolean"
+        },
+        "expected": {
+          "type": [
+            "array",
+            "string",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "actual": {
+          "type": "string"
+        },
+        "satisfied": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "cli_compatibility": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "configured",
+        "enforcement",
+        "failed_checks"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/cli-compatibility/v1"
+        },
+        "status": {
+          "enum": [
+            "no-expectation",
+            "satisfied",
+            "advisory-drift",
+            "blocking-drift"
+          ]
+        },
+        "configured": {
+          "type": "boolean"
+        },
+        "enforcement": {
+          "enum": [
+            "off",
+            "advisory",
+            "blocking"
+          ]
+        },
+        "enforcement_source": {
+          "type": "string"
+        },
+        "expectation_source": {
+          "type": "string"
+        },
+        "expected_command": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cli_compatibility_check"
+          }
+        },
+        "failed_checks": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "exact_version",
+              "minimum_version",
+              "source_class",
+              "target_relation"
+            ]
+          }
+        },
+        "rule": {
           "type": "string"
         }
       },

@@ -1,0 +1,290 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Dogfooding Closeout Friction",
+  "goal": [
+    "Finish the package-local dogfooding closeout friction lane by implementing #613 and #611, carrying new dogfooding findings into the lane, and closing all tracker residue."
+  ],
+  "non_goals": [
+    "Do not implement host-repo dogfooding that requires another repository.",
+    "Do not change unrelated Memory operating-loop or CLI drift lane behavior."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Close the dogfooding-closeout-friction lane with typed cli_compatibility schema coverage and roadmap refs used as first-class continuation routing evidence.",
+      "constraints": "Stay package-local; refresh external tracker evidence after issue mutations; keep compact outputs small.",
+      "latitude": "Implement narrow helper/schema/test changes needed to close #613 and #611.",
+      "escalation": "Escalate only if the remaining issues require broad schema architecture or non-local host repo evidence."
+    },
+    "execution": {
+      "milestone": "remaining lane",
+      "status": "completed",
+      "next_step": "Archive this completed lane, close #611 and #613, then refresh external evidence.",
+      "proof": "Focused tests, schema validation, full affected suites, root tests, planning doctor, and reconcile passed."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "src/agentic_workspace/contracts/schemas/*.schema.json",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml"
+      ],
+      "invariants": [
+        "Roadmap refs should route archived continuations without prose duplication.",
+        "cli_compatibility remains omitted from compact startup when no expectation is configured.",
+        "External tracker evidence is treated as a snapshot and refreshed after mutations."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make closeout evidence freshness, archived continuation routing, and output schema contracts safer and cheaper for future agents.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none after successful closeout",
+    "parent lane": ".agentic-workspace/planning/state.toml work_items lane dogfooding-closeout-friction"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "none expected after #611, #612, and #613 close",
+    "owner surface": "none",
+    "activation trigger": "new dogfooding evidence found during implementation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Autopilot can close the lane without relying on chat-only memory.",
+    "intentionally deferred": "Memory operating-loop remains higher priority after this lane closes.",
+    "discovered implications": "",
+    "proof achieved now": "#613 and #611 are implemented with regression coverage; active planning shape was corrected after summary dogfooding surfaced a promotion warning.",
+    "validation still needed": "Refresh external evidence after issue closeout and confirm summary/reconcile stay clean.",
+    "next likely slice": "Return to memory-operating-loop unless final closeout surfaces a blocking local safety issue."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement the whole lane on autopilot and feed additional dogfooding findings back into the lane until it can close.",
+    "inferred intended outcome": "Complete remaining dogfooding closeout friction issues locally and leave planning/tracker evidence consistent.",
+    "chosen concrete what": "#613 first, #611 second, then tracker closeout and lane archive.",
+    "interpretation distance": "low",
+    "review guidance": "Check that new behavior eliminates the previous workaround rather than only adding tests."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning router, workspace contract schemas, focused tests, active planning state",
+    "max changed files": "about 8 unless schema duplication requires more",
+    "required validation commands": "focused pytest/ruff, full relevant tests, planning checks, summary/reconcile",
+    "ask-before-refactor threshold": "broad schema registry or cross-package redesign",
+    "stop before touching": "Memory package behavior or unrelated roadmap lanes"
+  },
+  "stop_conditions": {
+    "stop when": "The lane is closed and evidence refreshed, or validation exposes a blocker.",
+    "escalate when boundary reached": "A required change needs another repository.",
+    "escalate on scope drift": "The implementation starts redesigning planning maturity or CLI config semantics.",
+    "escalate on proof failure": "Focused tests cannot prove the behavior without broad unrelated repairs."
+  },
+  "context_budget": {
+    "live working set": "remaining issues #613/#611, current planning router and schema files",
+    "recoverable later": "archived prior #612 plan and commit history",
+    "externalize before shift": "Update this execplan and state if interrupted.",
+    "pre-work config pull": "agentic-workspace start/summary already read",
+    "pre-work memory pull": "not required for this package-local lane",
+    "tiny resumability note": "Continue with #613 then #611.",
+    "context-shift triggers": "long validation or issue creation loops"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Close the whole lane.",
+    "hard constraints": "Do not dogfood in another repo; do refresh tracker evidence after mutations.",
+    "agent may decide locally": "Exact helper shape, schema definitions, and test locations.",
+    "escalate when": "New finding is larger than this lane or conflicts with higher-priority work."
+  },
+  "adaptive_assurance": {
+    "level": "medium",
+    "reason": "Planner/router and schema contracts affect future agent decisions but are package-local and well tested.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [],
+    "proof_profiles": [],
+    "required_gates": []
+  },
+  "traceability_refs": {
+    "requirement_refs": [],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [],
+    "risk_refs": [],
+    "security_refs": [],
+    "audit_refs": [],
+    "acceptance_refs": [
+      "GitHub #611",
+      "GitHub #613"
+    ],
+    "decision_refs": []
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#611",
+      "label": "typed cli_compatibility schema",
+      "role": "acceptance",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#613",
+      "label": "roadmap refs routing",
+      "role": "acceptance",
+      "locator": "GitHub"
+    }
+  ],
+  "active_milestone": {
+    "id": "finish-lane",
+    "status": "completed",
+    "scope": "#613 then #611, plus any small dogfooding finding capture",
+    "ready": "issues are open and local code is available",
+    "blocked": "none",
+    "optional_deps": "GitHub issue closeout"
+  },
+  "immediate_next_action": [
+    "Archive the completed plan, close #611/#613, and refresh external evidence."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [],
+  "invariants": [
+    "No dependency on another repository.",
+    "No hidden reliance on stale external tracker cache after issue mutations."
+  ],
+  "contract_decisions_to_freeze": [
+    "Roadmap refs are first-class routing evidence.",
+    "cli_compatibility output has a reusable schema definition."
+  ],
+  "open_questions_to_close": [
+    "Do new dogfooding findings fit this lane or need separate routing?"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q -k roadmap",
+    "uv run pytest tests/test_workspace_cli.py -q -k cli_compatibility",
+    "uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py src/agentic_workspace/contracts/schemas tests/test_workspace_cli.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "gh for issue closeout"
+  ],
+  "completion_criteria": [
+    "#613 acceptance is implemented and tested.",
+    "#611 acceptance is implemented and tested.",
+    "Issues #611/#612/#613 are closed.",
+    "External evidence is refreshed and reconcile/summary show no lane residue."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "user autopilot request",
+    "what happened": "Implemented roadmap refs as first-class continuation routing evidence and added typed cli_compatibility schema definitions for startup/report payloads.",
+    "scope touched": "planning router, planning tests, workspace contract schemas, workspace CLI schema tests, planning state",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; src/agentic_workspace/contracts/schemas/startup_context.schema.json; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q; uv run pytest packages/planning/tests/test_installer.py -q; uv run pytest tests -q; uv run ruff check affected paths; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace reconcile --format json",
+    "result for continuation": "No implementation continuation remains for this lane.",
+    "next step": "Archive this plan, close issues #611 and #613, refresh external evidence, and verify summary/reconcile."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed package-local and did not require host-repo dogfooding.",
+    "proof status": "passed",
+    "intent served": "yes; the remaining lane issues are implemented and ready for tracker closeout.",
+    "config compliance": "planning state summary is clean after correcting active state shape.",
+    "misinterpretation risk": "low",
+    "follow-on decision": "route duplicate active projection ergonomics as dogfooding evidence only if it recurs; it did not block closeout."
+  },
+  "proof_report": {
+    "validation proof": "Focused roadmap refs and cli_compatibility schema tests passed; full workspace CLI, planning installer, and root test suites passed; ruff, planning doctor, and reconcile passed.",
+    "proof achieved now": "#613 and #611 acceptance criteria are met.",
+    "evidence for \"proof achieved\" state": "Roadmap refs-only regression routes archived continuations without derived follow-up pressure; actual cli_compatibility payloads validate against startup/report schema definitions."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement the whole lane on autopilot and feed additional dogfooding findings back into the lane until it can close.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Implemented #613 roadmap refs routing and #611 typed cli_compatibility schema coverage; focused and broad validation passed.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve larger user/product outcomes separately from bounded slices.",
+    "slice shaping bias": "Keep durable closeout evidence queryable and reduce repeated agent friction.",
+    "broader-lane validation question": "Can future agents close similar lanes without prose workarounds or schema ambiguity?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The remaining package-local lane issues are implemented locally; no host-repo dogfooding was required.",
+    "evidence carried forward": "Focused tests for roadmap refs and cli_compatibility schema, full workspace CLI tests, full planning installer tests, root tests, ruff, planning doctor, and reconcile passed.",
+    "reopen trigger": "A future closeout requires refs prose duplication again or cli_compatibility output changes without schema coverage."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement the whole lane on autopilot and feed additional dogfooding findings back into the lane until it can close.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Focused roadmap refs and cli_compatibility schema tests passed; full workspace CLI, planning installer, and root test suites passed; ruff, planning doctor, and reconcile passed.\nChanged surfaces: packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; src/agentic_workspace/contracts/schemas/startup_context.schema.json; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml\nDurable residue: planning (.agentic-workspace/planning/execplans/archive/dogfooding-closeout-friction.plan.json)\nFollow-up: none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Active planning promotion is cheaper when agents use one canonical active owner shape; mixing active.execplans and todo.active_items for the same lane creates duplicate projection pressure.",
+    "motivation worth preserving": "Future lane promotion should prefer the checked-in schema/examples or the promote command instead of guessing state.toml shape.",
+    "canonical owner now": ".agentic-workspace/planning/execplans/archive/dogfooding-closeout-friction.plan.json",
+    "promotion trigger": "If duplicate active projections recur, create a small planning ergonomics issue for a safer promotion affordance.",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Roadmap refs now route archived continuations directly, and cli_compatibility output has typed startup/report schema coverage.",
+    "validation confirmed": "Focused tests, affected suites, root tests, ruff, planning doctor, and reconcile passed.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "Dogfooding found active state promotion-shape sensitivity; corrected locally and left no blocking residue.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "After issue closeout and evidence refresh, return to memory-operating-loop."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "Active planning state with both active.execplans and todo.active_items created duplicate active items and blocked planning_record.",
+      "active.execplans status must use planning-state status vocabulary, while execplan record status remains in-progress/completed.",
+      "A work_items active lane needs a surface/execplan reference to satisfy planning-state health.",
+      "archive-plan cleanup removed active.execplans/TODO residue but did not remove the equivalent active work_items lane, so summary still treated the completed lane as active until manually removed."
+    ],
+    "signals fixed": [
+      "Corrected this lane's active planning shape to one active execplan, valid status vocabulary, and explicit surface.",
+      "Removed the closed work_items lane after archive cleanup left it active."
+    ],
+    "signals routed": [
+      "If active work_items promotion is used again, add archive cleanup coverage for work_items active lanes."
+    ],
+    "signals dismissed": [],
+    "next owner": "this lane"
+  },
+  "drift_log": [
+    "2026-04-30: Promoted by explicit user request to finish the whole dogfooding closeout friction lane on autopilot."
+  ],
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "typed cli_compatibility schema",
+          "owner": "github-issue",
+          "source": "#611"
+        },
+        {
+          "summary": "roadmap refs routing",
+          "owner": "github-issue",
+          "source": "#613"
+        }
+      ]
+    }
+  }
+}
