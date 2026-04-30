@@ -316,6 +316,7 @@ def report_router_payload(
         "installed_modules": payload.get("installed_modules", []),
         "health": payload.get("health", "unknown"),
         "output_contract": _report_router_output_contract(payload.get("output_contract", {})),
+        "operating_posture": _report_router_operating_posture(payload.get("operating_posture", {})),
         "report_profile": profile_payload,
         "current_work": current_work,
         "next_action": payload.get("next_action", {}),
@@ -394,16 +395,17 @@ def _compact_report_section_hints(hints: list[dict[str, Any]]) -> list[dict[str,
         "effective_authority": 0,
         "execution_shape": 1,
         "improvement_intake": 2,
-        "external_work_reconciliation": 3,
-        "module_reports": 4,
-        "findings": 5,
+        "operating_posture": 3,
+        "external_work_reconciliation": 4,
+        "module_reports": 5,
+        "findings": 6,
     }
     ordered = sorted(
         hints,
         key=lambda item: (priority.get(str(item.get("section", "")), 99), str(item.get("section", ""))),
     )
     compact: list[dict[str, Any]] = []
-    for item in ordered[:6]:
+    for item in ordered[:7]:
         compact.append(
             {key: item[key] for key in ("section", "why_now", "command", "volume", "advanced_feature") if key in item}
             | ({"purpose_summary": str(item.get("purpose", ""))[:96]} if item.get("purpose") else {})
@@ -427,6 +429,24 @@ def _report_router_output_contract(value: Any) -> dict[str, Any]:
         "default_detail": budget.get("default_detail", "") if isinstance(budget, dict) else "",
         "deep_detail": budget.get("deep_detail", "") if isinstance(budget, dict) else "",
         "detail_section": "output_contract",
+    }
+
+
+def _report_router_operating_posture(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    improvement = value.get("improvement_latitude", {})
+    bias = value.get("optimization_bias", {})
+    closeout_nudge = value.get("closeout_nudge", {})
+    return {
+        "kind": value.get("kind", ""),
+        "status": value.get("status", ""),
+        "surface": value.get("surface", ""),
+        "improvement_latitude": improvement if isinstance(improvement, dict) else {},
+        "optimization_bias": bias if isinstance(bias, dict) else {},
+        "closeout_nudge": closeout_nudge if isinstance(closeout_nudge, dict) else {},
+        "required_behavior_summary": "bounded evidence-backed action; compactly report useful incidental findings",
+        "detail_section": "operating_posture",
     }
 
 
@@ -682,6 +702,7 @@ def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_C
         "standing_intent": "effective standing intent and stronger-home guidance",
         "improvement_intake": "unified routing for setup findings, review findings, validation friction, and memory improvement signals",
         "repo_friction": "repo-friction and improvement pressure evidence",
+        "operating_posture": "effective improvement and output posture for bounded action, incidental findings, and compact residue",
         "config": "resolved workspace config and local posture",
         "config_enforcement": "config fields classified by actual enforcement strength and operational routes",
         "registry": "module registry and lifecycle metadata",
@@ -707,6 +728,7 @@ def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_C
         "standing_intent": "inspect when product direction or stronger-home placement is the question",
         "improvement_intake": "inspect when a product or workflow improvement signal needs routing, dismissal, or durable ownership",
         "repo_friction": "inspect when choosing or routing improvement targets",
+        "operating_posture": "inspect at startup, recovery, or closeout when improvement posture should affect behavior without adding obligations",
         "config": "deep detail; inspect only when resolved config, posture, or obligations matter",
         "config_enforcement": "inspect when deciding whether a config field is hard, operational, advisory, or local-only",
         "registry": "deep detail; inspect only when module metadata or lifecycle registration matters",

@@ -241,6 +241,8 @@
   },
   "improvement_signal_review": {
     "status": "none",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
     "signals found": [],
     "signals fixed": [],
     "signals routed": [],

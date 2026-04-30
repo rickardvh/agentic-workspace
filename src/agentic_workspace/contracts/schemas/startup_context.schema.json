@@ -15,7 +15,8 @@
     "authority_markers",
     "immediate_next_allowed_action",
     "workflow_obligations",
-    "closeout_obligations"
+    "closeout_obligations",
+    "operating_posture"
   ],
   "properties": {
     "kind": {
@@ -158,6 +159,9 @@
       "type": "object"
     },
     "closeout_obligations": {
+      "type": "object"
+    },
+    "operating_posture": {
       "type": "object"
     },
     "skill_routing": {

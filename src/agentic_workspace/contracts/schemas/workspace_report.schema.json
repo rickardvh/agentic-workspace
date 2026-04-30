@@ -16,6 +16,7 @@
     "health",
     "report_profile",
     "output_contract",
+    "operating_posture",
     "config_enforcement",
     "branch_workflow_posture",
     "local_memory",
@@ -114,6 +115,9 @@
       "type": "object"
     },
     "output_contract": {
+      "type": "object"
+    },
+    "operating_posture": {
       "type": "object"
     },
     "config_enforcement": {

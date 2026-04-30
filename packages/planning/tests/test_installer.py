@@ -571,6 +571,8 @@ def test_execplan_template_surfaces_archive_closeout_terminal_values() -> None:
     assert template["closure_check"]["larger-intent status"] == "closed"
     assert template["closure_check"]["closure decision"] == "archive-and-close"
     assert template["durable_residue"]["status"] == "none"
+    assert template["improvement_signal_review"]["source"] == "operating_posture"
+    assert "reported-only/routed" in template["improvement_signal_review"]["guidance"]
 
 
 def test_planning_record_schema_rejects_unknown_execplan_fields(tmp_path: Path) -> None:
@@ -1491,6 +1493,8 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
     assert record["context_budget"]["tiny resumability note"] == "sketch the first implementation step."
     assert record["execution_run"]["run status"] == "not-run-yet"
     assert record["finished_run_review"]["review status"] == "pending"
+    assert record["improvement_signal_review"]["source"] == "operating_posture"
+    assert "reported-only/routed" in record["improvement_signal_review"]["guidance"]
     assert record["delegated_judgment"]["requested outcome"] == "this thread needs a bounded execution contract."
     assert installer_mod.planning_record_schema_findings(record_path) == []
     assert "Surface: .agentic-workspace/planning/execplans/direct-item.md" in todo_text
@@ -2674,6 +2678,46 @@ def test_archive_plan_prepare_closeout_dry_run_returns_valid_patch(tmp_path: Pat
     assert "next command" in text
     assert record_path.exists()
     assert "intent_satisfaction" not in json.loads(record_path.read_text(encoding="utf-8"))
+
+
+def test_archive_plan_prepare_closeout_preserves_specific_closure_evidence(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["closure_check"] = {
+        "slice status": "bounded slice complete",
+        "larger-intent status": "closed",
+        "closure decision": "archive-and-close",
+        "why this decision is honest": "The issue was closed after the runtime selector and tests passed.",
+        "evidence carried forward": "operating_posture selector output",
+        "reopen trigger": "Agents need disconnected posture reads again.",
+    }
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--apply-cleanup",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    archived = json.loads(archived_record_path.read_text(encoding="utf-8"))
+
+    assert archived["closure_check"]["slice status"] == "bounded slice complete"
+    assert archived["closure_check"]["why this decision is honest"] == "The issue was closed after the runtime selector and tests passed."
+    assert archived["closure_check"]["evidence carried forward"] == "operating_posture selector output"
+    assert archived["closure_check"]["reopen trigger"] == "Agents need disconnected posture reads again."
 
 
 def test_archive_plan_prepare_closeout_archives_without_manual_json_repair(tmp_path: Path, capsys) -> None:

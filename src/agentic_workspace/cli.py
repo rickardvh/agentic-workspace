@@ -1031,6 +1031,65 @@ def _optimization_bias_payload(mode: str) -> dict[str, Any]:
     return copy.deepcopy(_OPTIMIZATION_BIAS_PAYLOADS[mode])
 
 
+def _operating_posture_payload(*, config: WorkspaceConfig, surface: str, compact: bool = False) -> dict[str, Any]:
+    improvement = _improvement_latitude_payload(config.improvement_latitude)
+    bias = _optimization_bias_payload(config.optimization_bias)
+    incidental = copy.deepcopy(_IMPROVEMENT_LATITUDE_POLICY["incidental_finding_policy"])
+    payload: dict[str, Any] = {
+        "kind": "agentic-workspace/operating-posture/v1",
+        "status": "present",
+        "surface": surface,
+        "improvement_latitude": {
+            "mode": config.improvement_latitude,
+            "source": config.improvement_latitude_source,
+            "initiative_posture": improvement["initiative_posture"],
+        },
+        "optimization_bias": {
+            "mode": config.optimization_bias,
+            "source": config.optimization_bias_source,
+            "report_density": bias["report_density"],
+            "residue_density": bias["residue_density"],
+            "rendered_view_style": bias["rendered_view_style"],
+        },
+        "required_behaviors": [
+            "act only on bounded evidence-backed improvements",
+            "report useful incidental findings compactly even when not acting",
+            "separate acted-on, reported-only, dismissed, and routed findings",
+            "keep residue terse when canonical state already carries the contract",
+        ],
+        "closeout_nudge": {
+            "field": "improvement_signal_review",
+            "rule": "Record incidental findings in the existing review shape; do not add a separate workflow obligation.",
+            "categories": ["signals fixed", "signals routed", "signals dismissed"],
+        },
+        "detail_sections": {
+            "improvement": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section repo_friction --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "output": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section output_contract --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+        },
+    }
+    if compact:
+        payload["required_behavior_summary"] = "bounded evidence-backed action; compactly report useful incidental findings"
+        payload.pop("required_behaviors", None)
+    if not compact:
+        payload["incidental_finding_policy"] = incidental
+        payload["boundaries"] = {
+            "not_scheduler": True,
+            "not_blanket_refactor_permission": True,
+            "proof_and_ownership_stay_invariant": True,
+        }
+        payload["routing"] = {
+            "repeated_or_high_confidence_findings": "planning, review evidence, Memory, docs, config, or agent aids",
+            "reported_only_findings": "final answer or improvement_signal_review when the lane already owns closeout evidence",
+        }
+    return payload
+
+
 def _setup_finding_class_payload(finding_class: str) -> dict[str, Any]:
     return copy.deepcopy(_SETUP_FINDING_CLASS_PAYLOADS[finding_class])
 
@@ -4876,6 +4935,7 @@ def _run_report_command(
             bias_payload=_optimization_bias_payload(config.optimization_bias),
             surface="report",
         ),
+        "operating_posture": _operating_posture_payload(config=config, surface="report"),
         "config_enforcement": _config_enforcement_payload(config=config),
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
@@ -6986,6 +7046,7 @@ def _run_preflight_command(
             "local_memory": local_memory,
             "workflow_obligations": workflow_obligations,
             "closeout_obligations": closeout_obligations,
+            "operating_posture": _operating_posture_payload(config=config, surface="preflight", compact=True),
             "active_planning_state": active_state,
             "planning_record": planning_record if isinstance(planning_record, dict) else {"status": "unavailable"},
         }
@@ -7057,6 +7118,7 @@ def _run_preflight_command(
         "local_memory": local_memory,
         "workflow_obligations": workflow_obligations,
         "closeout_obligations": closeout_obligations,
+        "operating_posture": _operating_posture_payload(config=config, surface="preflight"),
         "active_planning_state": active_state,
     }
 
@@ -7347,6 +7409,7 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
         },
         "workflow_obligations": compact_workflow_obligations,
         "closeout_obligations": _compact_start_closeout_obligations(preflight.get("closeout_obligations", {})),
+        "operating_posture": _operating_posture_payload(config=config, surface="start", compact=True),
         "skill_routing": _guidance_with_cli_invoke(
             value=_startup_skill_routing_payload(
                 cli_invoke=config.cli_invoke,

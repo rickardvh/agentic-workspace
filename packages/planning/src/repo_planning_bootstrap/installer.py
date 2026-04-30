@@ -6955,6 +6955,7 @@ def _prepare_execplan_closeout(
     finished_run_review = _record_section_dict(record, "finished_run_review") or {}
     iterative_follow_through = _record_section_dict(record, "iterative_follow_through") or {}
     proof_report = _record_section_dict(record, "proof_report") or {}
+    existing_closure_check = _record_section_dict(record, "closure_check") or {}
     completes_larger_outcome = intent_continuity.get("this slice completes the larger intended outcome", "").strip().lower()
     continuation_owner = (
         unsolved_intent
@@ -6980,7 +6981,10 @@ def _prepare_execplan_closeout(
         result.add("manual review", record_path, "--intent-satisfied must be one of yes, no, true, or false")
         return False
 
-    larger_status = "open" if normalized_closure == "archive-but-keep-lane-open" else "closed"
+    existing_slice_status = str(existing_closure_check.get("slice status", "")).strip().lower()
+    existing_larger_status = str(existing_closure_check.get("larger-intent status", "")).strip().lower()
+    slice_status = existing_slice_status or "completed"
+    larger_status = existing_larger_status or ("open" if normalized_closure == "archive-but-keep-lane-open" else "closed")
     routed_unsolved_intent = continuation_owner if normalized_closure == "archive-but-keep-lane-open" else "none"
     original_intent = (
         existing_intent_satisfaction.get("original intent")
@@ -6994,18 +6998,28 @@ def _prepare_execplan_closeout(
         or existing_intent_satisfaction.get("evidence of intent satisfaction")
         or "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields."
     )
-    honest_reason = closure_reason or (
-        "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner."
-        if normalized_closure == "archive-but-keep-lane-open"
-        else "The bounded slice and larger intent are both complete."
+    honest_reason = (
+        closure_reason
+        or existing_closure_check.get("why this decision is honest")
+        or (
+            "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner."
+            if normalized_closure == "archive-but-keep-lane-open"
+            else "The bounded slice and larger intent are both complete."
+        )
     )
-    carried_evidence = closure_evidence or (
-        "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets."
+    carried_evidence = (
+        closure_evidence
+        or existing_closure_check.get("evidence carried forward")
+        or ("Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.")
     )
-    reopen = reopen_trigger or (
-        f"Reopen when {routed_unsolved_intent} activates a fresh bounded slice."
-        if normalized_closure == "archive-but-keep-lane-open"
-        else "None unless new evidence shows the bounded closure was incomplete."
+    reopen = (
+        reopen_trigger
+        or existing_closure_check.get("reopen trigger")
+        or (
+            f"Reopen when {routed_unsolved_intent} activates a fresh bounded slice."
+            if normalized_closure == "archive-but-keep-lane-open"
+            else "None unless new evidence shows the bounded closure was incomplete."
+        )
     )
 
     patch = {
@@ -7016,7 +7030,7 @@ def _prepare_execplan_closeout(
             "unsolved intent passed to": routed_unsolved_intent,
         },
         "closure_check": {
-            "slice status": "completed",
+            "slice status": slice_status,
             "larger-intent status": larger_status,
             "closure decision": normalized_closure,
             "why this decision is honest": honest_reason,
@@ -8817,6 +8831,11 @@ def _build_execplan_record_from_todo_item(
         },
         "improvement_signal_review": {
             "status": "pending",
+            "guidance": (
+                "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; "
+                "keep this compact and evidence-backed."
+            ),
+            "source": "operating_posture",
             "signals found": [],
             "signals fixed": [],
             "signals routed": [],

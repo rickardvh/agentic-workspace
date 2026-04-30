@@ -3523,6 +3523,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "standing_intent" in payload["schema"]["shared_fields"]
     assert "repo_friction" in payload["schema"]["shared_fields"]
     assert "output_contract" in payload["schema"]["shared_fields"]
+    assert "operating_posture" in payload["schema"]["shared_fields"]
     assert "config_enforcement" in payload["schema"]["shared_fields"]
     assert "agent_configuration_queries" in payload["schema"]["shared_fields"]
     assert "system_intent_mirror" in payload["schema"]["shared_fields"]
@@ -3546,6 +3547,12 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["output_contract"]["verbosity_budget"]["default_detail"] == "router-with-brief-context"
     assert payload["output_contract"]["surface_boundary"]["honors_bias"][1] == "rendered human-facing views"
     assert "ownership semantics" in payload["output_contract"]["surface_boundary"]["stays_invariant"]
+    operating_posture = payload["operating_posture"]
+    assert operating_posture["kind"] == "agentic-workspace/operating-posture/v1"
+    assert operating_posture["improvement_latitude"]["mode"] == "conservative"
+    assert operating_posture["optimization_bias"]["mode"] == "balanced"
+    assert "report useful incidental findings compactly even when not acting" in operating_posture["required_behaviors"]
+    assert operating_posture["closeout_nudge"]["field"] == "improvement_signal_review"
     assert payload["config_enforcement"]["status"] == "present"
     assert any(route["field"] == "workspace.optimization_bias" for route in payload["config_enforcement"]["weak_field_routes"])
     assert payload["agent_configuration_system"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
@@ -3719,6 +3726,8 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "operational_compression" not in payload
     assert "closeout_trust" not in payload
     assert "external_work_delta" not in payload
+    assert payload["operating_posture"]["surface"] == "report"
+    assert payload["operating_posture"]["closeout_nudge"]["field"] == "improvement_signal_review"
     assert payload["execution_shape"]["task_shape_recommender"]["status"] == "available"
     assert payload["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
     intake = payload["improvement_intake"]
@@ -3751,6 +3760,8 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "external-work" in section_hints["external_work_reconciliation"]["purpose_summary"]
     assert "operational_compression" not in section_hints
     assert "external_work_delta" not in section_hints
+    assert section_hints["operating_posture"]["volume"] == "normal"
+    assert "improvement posture" in section_hints["operating_posture"]["why_now"]
     assert "idle context" in section_hints["effective_authority"]["purpose_summary"]
     assert "idle state" in section_hints["effective_authority"]["why_now"]
     assert section_hints["effective_authority"]["command"] == (
@@ -3767,6 +3778,13 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "Shrink, stub, or delete stale review artifacts" in historical_reviews["retention_guidance"][1]
     assert historical_reviews["retention_policy"]["kind"] == "workspace-review-retention-policy/v1"
     assert historical_reviews["retention_policy"]["advisory_only"] is True
+
+    assert cli.main(["report", "--target", str(target), "--section", "operating_posture", "--format", "json"]) == 0
+    posture_payload = json.loads(capsys.readouterr().out)
+    posture = posture_payload["answer"]
+    assert posture["kind"] == "agentic-workspace/operating-posture/v1"
+    assert posture["closeout_nudge"]["field"] == "improvement_signal_review"
+    assert posture["boundaries"]["not_blanket_refactor_permission"] is True
 
 
 def test_report_router_uses_resolved_cli_invoke_for_copyable_commands(tmp_path: Path, capsys) -> None:
@@ -5534,6 +5552,8 @@ def test_report_surfaces_agent_efficiency_output_contract_from_repo_config(tmp_p
     assert payload["output_contract"]["optimization_bias_source"] == "repo-config"
     assert payload["output_contract"]["report_density"] == "compact"
     assert "execution method" in payload["output_contract"]["must_not_change"]
+    assert payload["operating_posture"]["optimization_bias"]["mode"] == "agent-efficiency"
+    assert payload["operating_posture"]["optimization_bias"]["residue_density"] == "compact-carry-forward"
 
 
 def test_report_text_mentions_agent_efficiency_bias(tmp_path: Path, capsys) -> None:
@@ -6080,6 +6100,9 @@ def test_preflight_surfaces_closeout_workflow_obligations_as_standing_requiremen
     _write(
         target / ".agentic-workspace" / "config.toml",
         "schema_version = 1\n\n"
+        "[workspace]\n"
+        'improvement_latitude = "proactive"\n'
+        'optimization_bias = "agent-efficiency"\n\n'
         "[workflow_obligations.dogfooding_lane_closeout]\n"
         'summary = "Run dogfooding closeout review without explicit prompting."\n'
         'stage = "closeout"\n'
@@ -6096,6 +6119,12 @@ def test_preflight_surfaces_closeout_workflow_obligations_as_standing_requiremen
     assert payload["closeout_obligations"]["status"] == "present"
     assert payload["closeout_obligations"]["primary_next_action"]["id"] == "dogfooding_lane_closeout"
     assert obligations[0]["review_hint"] == "Surface actionable findings clearly."
+    posture = payload["operating_posture"]
+    assert posture["improvement_latitude"]["mode"] == "proactive"
+    assert posture["improvement_latitude"]["initiative_posture"] == "bounded-standalone-action-allowed"
+    assert posture["optimization_bias"]["mode"] == "agent-efficiency"
+    assert posture["closeout_nudge"]["field"] == "improvement_signal_review"
+    assert posture["incidental_finding_policy"]["status"] == "required-reporting"
 
 
 def test_preflight_active_only_includes_active_todo_without_execplan(tmp_path: Path, capsys) -> None:
@@ -6117,6 +6146,8 @@ def test_preflight_active_only_includes_active_todo_without_execplan(tmp_path: P
     assert cli.main(["preflight", "--target", str(target), "--active-only", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["operating_posture"]["surface"] == "preflight"
+    assert "incidental_finding_policy" not in payload["operating_posture"]
     assert payload["planning_record"]["status"] == "unavailable"
     active_state = payload["active_planning_state"]
     assert active_state["todo"]["active_count"] == 1
@@ -6220,7 +6251,14 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert "configured" not in payload["workflow_obligations"]
     assert payload["closeout_obligations"]["required_before_lane_closeout_count"] == 0
     assert "required_before_lane_closeout" not in payload["closeout_obligations"]
-    assert len(json.dumps(payload, sort_keys=True)) < 14000
+    posture = payload["operating_posture"]
+    assert posture["surface"] == "start"
+    assert posture["improvement_latitude"]["mode"] == "conservative"
+    assert posture["closeout_nudge"]["field"] == "improvement_signal_review"
+    assert posture["detail_sections"]["improvement"] == (
+        "uv run agentic-workspace report --target ./repo --section repo_friction --format json"
+    )
+    assert len(json.dumps(payload, sort_keys=True)) < 15000
     assert payload["proof"]["required_commands"] == [
         "uv run pytest tests -q",
         "uv run ruff check src tests",
