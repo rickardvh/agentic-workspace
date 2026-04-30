@@ -6,6 +6,7 @@
   "required": [
     "kind",
     "target",
+    "invoked_cli_identity",
     "startup_sequence",
     "context_router",
     "feature_tier",
@@ -22,6 +23,9 @@
     },
     "target": {
       "type": "string"
+    },
+    "invoked_cli_identity": {
+      "$ref": "#/$defs/invoked_cli_identity"
     },
     "startup_sequence": {
       "type": "array",
@@ -168,6 +172,78 @@
   },
   "additionalProperties": false,
   "$defs": {
+    "invoked_cli_identity": {
+      "type": "object",
+      "required": [
+        "kind",
+        "package",
+        "version",
+        "source_class",
+        "module_path",
+        "target_relation",
+        "compatibility"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/invoked-cli-identity/v1"
+        },
+        "package": {
+          "const": "agentic-workspace"
+        },
+        "version": {
+          "type": "string"
+        },
+        "source_class": {
+          "enum": [
+            "source-checkout",
+            "installed-package",
+            "unknown"
+          ]
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "module_path": {
+          "type": "string"
+        },
+        "package_root": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "python_executable": {
+          "type": "string"
+        },
+        "argv0": {
+          "type": "string"
+        },
+        "argv0_path": {
+          "type": "string"
+        },
+        "path_executable": {
+          "type": "string"
+        },
+        "target_relation": {
+          "enum": [
+            "inside-target",
+            "outside-target",
+            "no-target"
+          ]
+        },
+        "compatibility": {
+          "const": "not-evaluated"
+        },
+        "expectation_source": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
     "authority_marker": {
       "type": "object",
       "required": [

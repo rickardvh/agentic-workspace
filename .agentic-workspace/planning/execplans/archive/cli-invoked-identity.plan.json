@@ -1,0 +1,339 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "CLI Invoked Identity",
+  "goal": [
+    "Implement #608 by exposing a compact invoked-CLI identity payload in normal JSON outputs so host repos can distinguish executable provenance from managed payload health."
+  ],
+  "non_goals": [
+    "Do not implement repo-owned compatibility expectations or drift enforcement from #609/#610 in this slice.",
+    "Do not require a specific package manager or make unknown/global invocation a hard failure."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "config/status/doctor and startup/report surfaces can include the identity of the currently invoked CLI.",
+      "constraints": "Keep identity provider-neutral and separate from payload drift; avoid shell-specific process forensics.",
+      "latitude": "Choose conservative fields available from Python runtime/package metadata.",
+      "escalation": "Escalate if implementation requires broad config semantics or compatibility enforcement."
+    },
+    "execution": {
+      "milestone": "cli-invoked-identity",
+      "status": "active",
+      "next_step": "Find existing config/status/report payload assembly and add a reusable CLI identity payload.",
+      "proof": "Targeted tests plus proof-selected commands for changed paths."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/",
+        "tests/",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/cli-invoked-identity.plan.json"
+      ],
+      "invariants": [
+        "workspace.cli_invoke remains command guidance, not proof of current invocation.",
+        "managed payload health remains separate from invoked executable identity."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Host repos can detect CLI version/source drift after updates.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane cli-version-drift-handshake",
+    "parent lane": "cli-version-drift-handshake"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane cli-version-drift-handshake",
+    "activation trigger": "After invoked CLI identity is visible in compact outputs."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Future slices can compare invoked identity against repo expectations and report executable drift.",
+    "intentionally deferred": "Compatibility config and drift warning enforcement.",
+    "discovered implications": "",
+    "proof achieved now": "",
+    "validation still needed": "Run selected proof after implementation.",
+    "next likely slice": "#609: add repo-owned CLI compatibility expectations."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement the first lane and commit when appropriate.",
+    "inferred intended outcome": "Start the CLI version drift lane with #608, the suggested first slice.",
+    "chosen concrete what": "Expose invoked CLI identity in compact outputs.",
+    "interpretation distance": "medium because another P0 lane exists, but this follows the immediately created concern-specific lane.",
+    "review guidance": "Confirm output is useful for host repo drift reasoning without overclaiming compatibility enforcement."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/**, tests/**, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/execplans/cli-invoked-identity.plan.json",
+    "max changed files": "8",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/check/check_planning_surfaces.py; proof-selected commands",
+    "ask-before-refactor threshold": "Refactoring command assembly broadly or changing package manager behavior.",
+    "stop before touching": "Release packaging metadata, generated adapters, or compatibility enforcement beyond identity exposure."
+  },
+  "stop_conditions": {
+    "stop when": "config/status/doctor/start/report can expose invoked CLI identity and tests cover the payload.",
+    "escalate when boundary reached": "The implementation needs #609/#610 semantics.",
+    "escalate on scope drift": "Changes expand into auto-upgrade, global install mutation, or host dependency editing.",
+    "escalate on proof failure": "Proof fails outside touched scope or indicates existing unrelated drift."
+  },
+  "context_budget": {
+    "live working set": "This execplan, #608, cli/config/status/report payload assembly, and focused CLI tests.",
+    "recoverable later": "#607/#609/#610 issue bodies and roadmap lane text.",
+    "externalize before shift": "Update execution_run and drift_log before interruption or closeout.",
+    "pre-work config pull": "Use compact start/summary/proof outputs before raw planning reads.",
+    "pre-work memory pull": "No memory consult surfaced by current startup; capture dogfooding signals in this execplan instead of broad memory reads.",
+    "tiny resumability note": "Implement #608 identity payload first; leave expectation comparison to #609/#610.",
+    "context-shift triggers": "Proof failure, scope expansion, or interruption before closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Add a conservative invoked-CLI identity payload.",
+    "hard constraints": "Do not make compatibility enforcement claims.",
+    "agent may decide locally": "Field names and exact placement in compact outputs.",
+    "escalate when": "A package-manager-specific dependency check seems required."
+  },
+  "adaptive_assurance": {
+    "level": "medium",
+    "reason": "This affects startup/status trust for host repos but is not high-risk domain code.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": false,
+    "required_refs": [
+      "#608"
+    ],
+    "proof_profiles": [],
+    "required_gates": []
+  },
+  "traceability_refs": {
+    "requirement_refs": [
+      "#608"
+    ],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [],
+    "risk_refs": [],
+    "security_refs": [],
+    "audit_refs": [],
+    "acceptance_refs": [
+      "#608 acceptance"
+    ],
+    "decision_refs": []
+  },
+  "control_gates": [],
+  "implementation_blockers": [],
+  "risk_registry_refs": [],
+  "invariant_refs": [],
+  "test_data_policy": {
+    "classification": "synthetic CLI identity tests only",
+    "forbidden": [],
+    "fixture_owner": "tests",
+    "proof_required": [
+      "pytest"
+    ],
+    "refs": []
+  },
+  "layer_scaffold": {
+    "type": "workspace-cli-runtime-identity",
+    "required_refs": [
+      "#608"
+    ],
+    "common_risks": [
+      "overclaiming invocation class confidence",
+      "coupling identity to one package manager",
+      "mixing executable identity with payload health"
+    ],
+    "suggested_proof_profiles": [],
+    "suggested_gates": [],
+    "non_goals": [
+      "#609",
+      "#610"
+    ],
+    "durable_residue_prompts": []
+  },
+  "architecture_decision_promotion": {
+    "status": "none",
+    "target": "",
+    "decision_refs": [],
+    "promotion_needed": false,
+    "notes": ""
+  },
+  "threat_failure_aids": [],
+  "references": [
+    {
+      "kind": "github_issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/608",
+      "label": "#608 invoked CLI identity",
+      "role": "source_intent",
+      "locator": ""
+    },
+    {
+      "kind": "github_issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/607",
+      "label": "#607 CLI version drift parent",
+      "role": "parent_intent",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "cli-invoked-identity",
+    "status": "completed",
+    "scope": "Expose invoked CLI identity in compact outputs.",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Locate config/status/report/start payload assembly and add a reusable CLI identity payload."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/",
+    "tests/",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/cli-invoked-identity.plan.json"
+  ],
+  "invariants": [
+    "Identity output is descriptive and does not enforce compatibility.",
+    "Payload drift status remains a separate diagnostic."
+  ],
+  "contract_decisions_to_freeze": [
+    "Use a reusable invoked_cli_identity payload with conservative confidence fields."
+  ],
+  "open_questions_to_close": [
+    "Which compact surfaces should carry the identity payload in this first slice?"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed <changed paths> --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Config JSON reports invoked CLI identity.",
+    "Status/doctor or common lifecycle output includes the same identity without conflating it with payload health.",
+    "Tests cover the payload shape.",
+    "Planning surfaces validate cleanly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "GitHub #608 and roadmap lane cli-version-drift-handshake",
+    "what happened": "Added invoked_cli_identity payload assembly to config, report, lifecycle status/doctor, start, and startup-report outputs. Kept lifecycle/startup identity compact and full diagnostic identity available through config and report.",
+    "scope touched": "workspace CLI payload assembly, CLI tests, report/startup schemas, planning state and execplan",
+    "changed surfaces": "src/agentic_workspace/cli.py; tests/test_workspace_cli.py; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; src/agentic_workspace/contracts/schemas/startup_context.schema.json; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/cli-invoked-identity.plan.json",
+    "validations run": "uv run pytest tests -q; uv run ruff check src tests; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py",
+    "result for continuation": "implementation complete for #608",
+    "next step": "Continue parent lane with #609 repo-owned CLI compatibility expectations."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no compatibility expectations or drift enforcement were implemented",
+    "proof status": "passed",
+    "intent served": "yes for #608; parent #607 remains open",
+    "config compliance": "identity is descriptive and separate from workspace.cli_invoke command guidance",
+    "misinterpretation risk": "medium: selected concern-specific lane despite P0 Memory lane",
+    "follow-on decision": "archive this slice and keep cli-version-drift-handshake lane open"
+  },
+  "proof_report": {
+    "validation proof": "Full tests, lint, contract checks, structured inventory, planning doctor, root CLI authority, and planning-surface checks passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "366 tests passed; ruff passed; contract tooling and structured inventory checks passed; planning doctor was healthy; planning surfaces reported no drift."
+  },
+  "intent_satisfaction": {
+    "original intent": "Expose invoked CLI identity in compact outputs.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "Config JSON, status/doctor lifecycle JSON, start JSON, and report JSON expose invoked_cli_identity without evaluating compatibility; tests and schemas cover the payload shape.",
+    "unsolved intent passed to": "#609 adds repo-owned CLI compatibility expectations and #610 reports executable drift against those expectations."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Agentic Workspace should keep repo-owned command routing trustworthy and cheap across host repos.",
+    "slice shaping bias": "Prefer compact descriptive identity over broader enforcement.",
+    "broader-lane validation question": "Can a host repo tell what CLI executable produced the answer?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#608 is complete, but the parent CLI version drift lane still needs expectation declaration and drift reporting.",
+    "evidence carried forward": "Implementation in src/agentic_workspace/cli.py; tests in tests/test_workspace_cli.py; schema coverage in workspace_report.schema.json and startup_context.schema.json; proof-selected commands passed.",
+    "reopen trigger": "Identity output disappears, is conflated with payload health, or later compatibility work needs fields missing from the identity payload."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Expose invoked CLI identity in compact outputs.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: Full tests, lint, contract checks, structured inventory, planning doctor, root CLI authority, and planning-surface checks passed.\nChanged surfaces: src/agentic_workspace/cli.py; tests/test_workspace_cli.py; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; src/agentic_workspace/contracts/schemas/startup_context.schema.json; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/cli-invoked-identity.plan.json\nDurable residue: planning (#609/#610 or a follow-on contract-schema cleanup)\nFollow-up: #609 adds repo-owned CLI compatibility expectations and #610 reports executable drift against those expectations."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Cross-output runtime identity should have one reusable schema owner instead of duplicated schema definitions.",
+    "motivation worth preserving": "Schema duplication increases drift risk when a payload appears in both startup and report contracts.",
+    "canonical owner now": "#609/#610 or a follow-on contract-schema cleanup",
+    "promotion trigger": "When compatibility expectation schemas are added or identity appears in another output schema.",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Invoked CLI identity is visible in compact lifecycle/startup outputs and full diagnostic config/report outputs.",
+    "validation confirmed": "Full tests, lint, contract tooling, structured inventory, planning doctor, root CLI authority, and planning-surface checks passed.",
+    "follow-on routed to": "#609 and #610 remain in roadmap lane cli-version-drift-handshake",
+    "post-work posterity capture": "Dogfooding signals recorded in improvement_signal_review.",
+    "knowledge promoted (Memory/Docs/Config)": "none; follow-on issue/lane is the right owner",
+    "resume from": "Continue with #609 in cli-version-drift-handshake."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "signals found": [
+      "summary did not give an exact promotion command for the selected roadmap lane",
+      "historical audit pressure competed with explicit user-selected lane routing",
+      "full identity in start breached the compact startup payload budget before lifecycle identity was compressed",
+      "stable invoked_cli_identity schema had to be duplicated into report and startup schemas"
+    ],
+    "signals fixed": [
+      "compressed lifecycle/startup identity while preserving full diagnostics in config/report"
+    ],
+    "signals routed": [
+      "consider a reusable invoked_cli_identity schema definition when #609/#610 add compatibility contracts",
+      "consider proof output separation for ambient repo warnings versus current-change warnings"
+    ],
+    "signals dismissed": [],
+    "next owner": "cli-version-drift-handshake follow-on work"
+  },
+  "drift_log": [
+    "2026-04-30: Promoted #608 as the first slice of the CLI version drift lane.",
+    "2026-04-30: Implemented descriptive invoked CLI identity; compacted startup/lifecycle identity to preserve startup payload budget; kept compatibility evaluation deferred."
+  ],
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Discard startup-routing friction already captured as dogfooding signal; no Memory promotion needed for this narrow implementation detail.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#609 and #610 remain in roadmap lane cli-version-drift-handshake",
+          "owner": ".agentic-workspace/planning/state.toml roadmap lane cli-version-drift-handshake",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#608 invoked CLI identity",
+          "owner": "github_issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/608"
+        },
+        {
+          "summary": "#607 CLI version drift parent",
+          "owner": "github_issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/607"
+        }
+      ]
+    }
+  }
+}

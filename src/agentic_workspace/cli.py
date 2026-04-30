@@ -9,6 +9,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
@@ -156,6 +157,14 @@ def _load_toml_payload(*args, **kwargs):
     return config_lib.load_toml_payload(*args, **kwargs)
 
 
+def _path_within(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
+
+
 def _is_agentic_workspace_source_checkout(target_root: Path | None) -> bool:
     if target_root is None:
         return False
@@ -167,6 +176,74 @@ def _is_agentic_workspace_source_checkout(target_root: Path | None) -> bool:
     except OSError:
         return False
     return 'name = "agentic-workspace"' in pyproject_text or "name = 'agentic-workspace'" in pyproject_text
+
+
+def _agentic_workspace_package_root() -> Path | None:
+    module_path = Path(__file__).resolve()
+    for candidate in module_path.parents:
+        pyproject_path = candidate / "pyproject.toml"
+        if not pyproject_path.exists():
+            continue
+        try:
+            pyproject_text = pyproject_path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if 'name = "agentic-workspace"' in pyproject_text or "name = 'agentic-workspace'" in pyproject_text:
+            return candidate
+    return None
+
+
+def _invoked_cli_identity_payload(*, target_root: Path | None = None, compact: bool = False) -> dict[str, Any]:
+    module_path = Path(__file__).resolve()
+    package_root = _agentic_workspace_package_root()
+    argv0 = sys.argv[0] if sys.argv else ""
+    argv0_path = Path(argv0).resolve() if argv0 else None
+    path_entry = shutil.which("agentic-workspace")
+    path_entry_path = Path(path_entry).resolve() if path_entry else None
+    target_relation = "no-target"
+    if target_root is not None:
+        target_relation = "inside-target" if _path_within(module_path, target_root) else "outside-target"
+
+    if package_root is not None:
+        source_class = "source-checkout"
+        confidence = "high"
+    elif module_path.exists():
+        source_class = "installed-package"
+        confidence = "medium"
+    else:
+        source_class = "unknown"
+        confidence = "low"
+
+    payload = {
+        "kind": "agentic-workspace/invoked-cli-identity/v1",
+        "package": "agentic-workspace",
+        "version": __version__,
+        "source_class": source_class,
+        "confidence": confidence,
+        "module_path": module_path.as_posix(),
+        "package_root": package_root.as_posix() if package_root is not None else None,
+        "python_executable": Path(sys.executable).resolve().as_posix() if sys.executable else "",
+        "argv0": argv0,
+        "argv0_path": argv0_path.as_posix() if argv0_path is not None else "",
+        "path_executable": path_entry_path.as_posix() if path_entry_path is not None else "",
+        "target_relation": target_relation,
+        "compatibility": "not-evaluated",
+        "expectation_source": "repo-owned CLI compatibility contract",
+    }
+    if compact:
+        return {
+            key: payload[key]
+            for key in (
+                "kind",
+                "package",
+                "version",
+                "source_class",
+                "module_path",
+                "target_relation",
+                "compatibility",
+            )
+        }
+    return payload
 
 
 SETUP_FINDINGS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["setup_findings_path"])
@@ -3811,6 +3888,7 @@ def _run_lifecycle_command(
     payload: dict[str, Any] = {
         "command": command_name,
         "target": target_root.as_posix(),
+        "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root, compact=True),
         "modules": selected_modules,
         "preset": resolved_preset,
         "dry_run": dry_run,
@@ -4681,6 +4759,7 @@ def _run_report_command(
         "schema": _reporting_schema_payload(),
         "command": "report",
         "target": target_root.as_posix(),
+        "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root),
         "selected_modules": selected_modules,
         "installed_modules": installed_modules,
         "feature_tier": _feature_tier_payload(
@@ -7134,6 +7213,7 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
     payload: dict[str, Any] = {
         "kind": "startup-context/v1",
         "target": target_root.as_posix(),
+        "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root, compact=True),
         "startup_sequence": startup_sequence,
         "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True),
         "feature_tier": _feature_tier_payload(
@@ -9276,6 +9356,7 @@ def _emit_startup_report(
 
     payload = {
         "kind": "startup-report/v1",
+        "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root, compact=True),
         "active_intent": active_record.get("requested_outcome") or "No active intent",
         "immediate_next_action": active_record.get("next_action") or "No next action",
         "tiny_safe_model": tiny_safe_model,
@@ -12688,6 +12769,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     assurance = config.assurance
     return {
         "target": config.target_root.as_posix() if config.target_root is not None else None,
+        "invoked_cli_identity": _invoked_cli_identity_payload(target_root=config.target_root),
         "config_path": config.path.as_posix() if config.path is not None else WORKSPACE_CONFIG_PATH.as_posix(),
         "exists": config.exists,
         "schema_version": config.schema_version,

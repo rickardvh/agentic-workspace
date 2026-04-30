@@ -58,6 +58,23 @@ class DictAction:
         }
 
 
+def _assert_invoked_cli_identity(payload: dict[str, object], *, target_relation: str) -> dict[str, object]:
+    identity = payload["invoked_cli_identity"]
+    assert isinstance(identity, dict)
+    assert identity["kind"] == "agentic-workspace/invoked-cli-identity/v1"
+    assert identity["package"] == "agentic-workspace"
+    assert identity["version"] == cli.__version__
+    assert identity["source_class"] in {"source-checkout", "installed-package", "unknown"}
+    if "confidence" in identity:
+        assert identity["confidence"] in {"high", "medium", "low"}
+    assert str(identity["module_path"]).endswith("src/agentic_workspace/cli.py")
+    if "python_executable" in identity:
+        assert identity["python_executable"]
+    assert identity["target_relation"] == target_relation
+    assert identity["compatibility"] == "not-evaluated"
+    return identity
+
+
 def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) -> None:
     repo_root = Path("./repo")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(repo_root, []))
@@ -823,6 +840,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    _assert_invoked_cli_identity(payload, target_relation="outside-target")
     assert payload["exists"] is False
     assert payload["workspace"]["default_preset"] == "full"
     assert payload["workspace"]["agent_instructions_file"] == "AGENTS.md"
@@ -3450,6 +3468,7 @@ def test_status_real_init_reports_workspace_shared_layer_surfaces(tmp_path: Path
     assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    _assert_invoked_cli_identity(payload, target_relation="outside-target")
     workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
     assert any(action["path"] == ".agentic-workspace/WORKFLOW.md" and action["kind"] == "current" for action in workspace_report["actions"])
     assert any(
@@ -3467,6 +3486,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    _assert_invoked_cli_identity(payload, target_relation="outside-target")
     assert payload["kind"] == "workspace-report/v1"
     assert payload["command"] == "report"
     assert payload["schema"]["schema_version"] == "workspace-reporting-schema/v1"
@@ -6105,6 +6125,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert cli.main(["start", "--target", str(target), "--changed", "src/agentic_workspace/cli.py", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    _assert_invoked_cli_identity(payload, target_relation="outside-target")
     assert payload["kind"] == "startup-context/v1"
     assert payload["startup_sequence"][0]["surface"] == "AGENTS.md"
     assert payload["startup_sequence"][1]["command"] == "uv run agentic-workspace preflight --format json"
