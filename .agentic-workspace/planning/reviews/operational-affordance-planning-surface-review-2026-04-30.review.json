@@ -1,0 +1,166 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Operational Affordance Planning Surface Review",
+  "goal": [
+    "Catch planning fields whose allowed values or routing obligations are not obvious before validation, using the closeout/status/durable-residue friction as the bounded review prompt."
+  ],
+  "scope": [
+    ".agentic-workspace/planning/state.toml closed-state shape",
+    ".agentic-workspace/planning/execplans/TEMPLATE.plan.json closeout and durable-residue fields",
+    "planning execplan schema and archive validation code that define the actual allowed values"
+  ],
+  "non_goals": [
+    "Implement fixes in this pass.",
+    "Promote findings into active planning automatically.",
+    "Review unrelated planning, memory, or external-work behavior."
+  ],
+  "review_mode": {
+    "mode": "planning-surface",
+    "review question": "Do the current planning authoring surfaces make closeout status and durable residue routing obvious enough that agents do not have to learn allowed values from validation failures?",
+    "default finding cap": "3",
+    "inputs inspected first": "AGENTS.md, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/reviews/README.md, docs/operational-affordance-design.md, execplan template/schema, planning checker, and archive-plan validation code"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --format json; uv run agentic-workspace skills --target . --task \"bounded review or finding capture for operational affordance ambiguous fields\" --format json; uv run agentic-workspace report --target . --format json; rg over status/residue/closure fields; targeted Get-Content reads of templates, schemas, checker, and installer validation code",
+    "evidence sources": "docs/operational-affordance-design.md; .agentic-workspace/planning/execplans/TEMPLATE.plan.json; .agentic-workspace/planning/schemas/planning-execplan.schema.json; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/scripts/check/check_planning_surfaces.py; tests/test_workspace_summary_cli.py"
+  },
+  "references": [
+    {
+      "kind": "doc",
+      "target": "docs/operational-affordance-design.md",
+      "label": "Operational affordance principle",
+      "role": "review criterion",
+      "locator": "Relationship to validation"
+    },
+    {
+      "kind": "code",
+      "target": "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "label": "planning-state and archive validation",
+      "role": "canonical runtime behavior",
+      "locator": "lines 48-49, 3414-3421, 6832-6854, 7335-7646"
+    },
+    {
+      "kind": "schema",
+      "target": ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+      "label": "execplan schema",
+      "role": "schema behavior",
+      "locator": "lines 132-145"
+    },
+    {
+      "kind": "template",
+      "target": ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+      "label": "execplan authoring template",
+      "role": "authoring surface",
+      "locator": "lines 200-232"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Closed planning state has a hidden value vocabulary",
+      "summary": "The state validator requires closed items to use `maturity = \"closed\"`, `status = \"done\"` or `\"dismissed\"`, and explicit durable-residue/closure routing, but the raw `state.toml` surface and compact process docs do not expose a copyable closed-item scaffold.",
+      "evidence": "The runtime constants define planning-state statuses as `deferred`, `next`, `active`, `blocked`, `done`, and `dismissed`, and closed-item validation then requires `status` to be `done` or `dismissed` plus residue routing. The current live state has roadmap rows but no checked-in closed-row template adjacent to the state file, so a hand edit can plausibly use natural wording like `closed` until validation rejects it.",
+      "risk if unchanged": "Agents will continue to discover closed-state wording by failing validation, which is exactly the operational-affordance failure described in docs/operational-affordance-design.md.",
+      "suggested action": "Add a compact writer/scaffold path for closed planning-state rows, or expose allowed values and a valid example in the summary/doctor/action output that points agents away from raw hand-authored closure rows.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap candidate, likely under the existing dogfooding-closeout-friction lane rather than a new active item",
+      "promotion trigger": "Promote when closeout/state validation friction recurs or when the existing closeout-friction lane is selected for implementation.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "Execplan closeout template hides required terminal values",
+      "summary": "The canonical execplan template leaves `closure_check` values blank even though archive validation later requires narrow values for slice status, larger-intent status, closure decision, intent satisfaction, and routed continuation.",
+      "evidence": "The template has blank `slice status`, `larger-intent status`, and `closure decision` fields, while archive validation requires `slice status` to be `complete`, `completed`, or `bounded slice complete`; `closure decision` to be `archive-and-close` or `archive-but-keep-lane-open`; and larger-intent status to match the selected closure path.",
+      "risk if unchanged": "Agents that correctly open the template can still author invalid or semantically weak closeout text because the allowed terminal states are only apparent in prose docs or after archive validation.",
+      "suggested action": "Make closeout valid-by-construction: either change the template to include allowed-value hints or examples, or make `archive-plan --prepare-closeout` the primary closeout action object surfaced by summary/preflight before agents edit closeout fields directly.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap candidate under dogfooding-closeout-friction or a narrow planning-surface affordance lane",
+      "promotion trigger": "Promote when the next closeout-affordance slice is selected or if another archive/summary validator failure cites closeout wording.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "Durable residue status disagrees between schema and archive validation",
+      "summary": "`planning-execplan.schema.json` permits `durable_residue.status = \"pending\"`, but archive validation rejects `pending` and reports the allowed values without it.",
+      "evidence": "The schema enum includes `pending` for `durable_residue.status`, while `EXECPLAN_DURABLE_RESIDUE_STATUSES` omits `pending` and `_invalid_durable_residue_message` rejects any status outside `none`, `memory`, `docs`, `contract`, `check`, `planning`, and `evidence_only` before archive.",
+      "risk if unchanged": "A record can look schema-valid during normal record validation but still fail the lifecycle operation that matters for closeout, teaching agents a contradictory contract.",
+      "suggested action": "Align schema, template, and archive validation on one durable-residue lifecycle vocabulary. If `pending` is only an active-plan placeholder, model that explicitly outside the terminal archive contract or have `--prepare-closeout` normalize it before validation.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap candidate under dogfooding-closeout-friction",
+      "promotion trigger": "Promote before the next schema or archive-plan closeout change, or immediately if this mismatch is causing current validation failures.",
+      "post-remediation note shape": "delete"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote the durable-residue schema mismatch first if a narrow fix is desired; it is the most deterministic defect.",
+    "defer": "Defer broader state/closeout affordance improvements to the existing dogfooding-closeout-friction lane unless validation friction recurs.",
+    "dismiss": "No finding should become an active TODO item from this review alone."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "After schema/template/writer-helper fixes land or the findings are promoted into roadmap state.",
+    "proof surface": "planning schema, archive-plan tests, and a valid-by-construction closeout/state helper or surfaced action object",
+    "source retention rule": "Store decision, confidence, source refs, and reopen/promote triggers; do not copy issue titles, current status snapshots, long command output, or source summaries unless the copied text is the judgment itself.",
+    "distillation path": "When decisions are promoted into issues, planning state, Memory, docs, contracts, or checks, keep this artifact as evidence/history and remove or summarize reconstructable source context at the next cleanup.",
+    "reconstructable refs": [
+      "docs/operational-affordance-design.md",
+      "packages/planning/src/repo_planning_bootstrap/installer.py",
+      ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+      ".agentic-workspace/planning/execplans/TEMPLATE.plan.json"
+    ],
+    "fields intentionally omitted": [
+      "issue titles",
+      "current status snapshots",
+      "long command output",
+      "source-history summaries"
+    ]
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py --format json",
+    "uv run agentic-workspace report --target . --format json"
+  ],
+  "drift_log": [
+    "2026-04-30: Review created from closeout/status/residue validation friction and operational-affordance criteria."
+  ]
+}
