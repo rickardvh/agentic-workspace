@@ -7908,17 +7908,24 @@ def _closeout_workflow_obligations_payload(workflow_obligations: dict[str, Any])
     relevant = workflow_obligations.get("relevant_to_current_work", [])
     if not isinstance(relevant, list):
         relevant = []
+    configured = workflow_obligations.get("configured", [])
+    if not isinstance(configured, list):
+        configured = []
     closeout_stages = {"before-claiming-completion", "closeout"}
     closeout_relevant = [
         obligation for obligation in relevant if isinstance(obligation, dict) and str(obligation.get("stage", "")) in closeout_stages
     ]
-    primary_obligation = closeout_relevant[0] if closeout_relevant else None
+    standing_closeout = [
+        obligation for obligation in configured if isinstance(obligation, dict) and str(obligation.get("stage", "")) in closeout_stages
+    ]
+    closeout_required = closeout_relevant or standing_closeout
+    primary_obligation = closeout_required[0] if closeout_required else None
     primary_commands = primary_obligation.get("commands", []) if isinstance(primary_obligation, dict) else []
     primary_command = str(primary_commands[0]) if isinstance(primary_commands, list) and primary_commands else ""
     return {
-        "status": "present" if closeout_relevant else "none-configured-for-current-work",
+        "status": "present" if closeout_required else "none-configured-for-current-work",
         "rule": (
-            "Before claiming a lane or milestone is complete, run relevant closeout obligations from repo config; "
+            "Before claiming a lane or milestone is complete, run closeout obligations from repo config; "
             "validation success alone is not a closeout."
         ),
         "primary_next_action": (
@@ -7935,11 +7942,11 @@ def _closeout_workflow_obligations_payload(workflow_obligations: dict[str, Any])
             if isinstance(primary_obligation, dict)
             else None
         ),
-        "required_before_lane_closeout": closeout_relevant,
+        "required_before_lane_closeout": closeout_required,
         "recommended_next_action": (
             "Run the listed closeout obligation commands and record any friction as planning, memory, review, or issue follow-up."
-            if closeout_relevant
-            else "No repo-custom closeout obligation matched the current active scope."
+            if closeout_required
+            else "No repo-custom closeout obligation is configured."
         ),
     }
 

@@ -1471,8 +1471,6 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
         queued_items = _state_queued_items(state)
         roadmap_lanes = _state_roadmap_lanes(state)
         roadmap_candidates = _state_roadmap_candidates(state)
-        if not roadmap_candidates and roadmap_lanes:
-            roadmap_candidates = [{"priority": lane.get("priority", ""), "summary": lane.get("title", "")} for lane in roadmap_lanes]
         todo_line_count = 0  # We don't have a direct line count for the TOML state
         todo_item_count = len(active_items) + len(queued_items)
     else:
@@ -1508,12 +1506,6 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
         todo_line_count = len(todo_lines)
         todo_item_count = len(todo_items)
 
-    ownership_review = _ownership_review(target_root)
-    # ... rest of the function ...
-    active_execplans: list[dict[str, str]] = []
-    # ... (skipping some logic) ...
-    # Wait, I need to make sure I don't break the existing logic.
-    # I'll replace the beginning of planning_summary.
     ownership_review = _ownership_review(target_root)
 
     active_execplans: list[dict[str, str]] = []
@@ -1884,7 +1876,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "helpers": [
                 {
                     "artifact": "execplan",
-                    "command": "agentic-planning-bootstrap promote-to-plan <todo-id> --target ./repo --format json",
+                    "command": "agentic-planning-bootstrap promote-to-plan <todo-or-roadmap-id> --target ./repo --format json",
                     "writes": [
                         ".agentic-workspace/planning/state.toml",
                         ".agentic-workspace/planning/execplans/<slug>.plan.json",
@@ -2376,7 +2368,10 @@ def _execution_readiness_payload(
             "recommendation": {
                 "id": "promote-active-item-before-broad-work",
                 "summary": "Promote or tighten the active TODO item before treating it as broad planned execution.",
-                "next_step": "Create or link an execplan when the active item needs milestone sequencing, proof scope, or handoff continuity.",
+                "next_step": (
+                    "Run `agentic-planning-bootstrap promote-to-plan <item-id> --target . --format json` "
+                    "when the active item needs milestone sequencing, proof scope, or handoff continuity."
+                ),
             },
             "rule": "A TODO row can own narrow direct work, but broad planned work needs an active execplan.",
         }
@@ -2412,7 +2407,10 @@ def _execution_readiness_payload(
             "recommendation": {
                 "id": "promote-before-broad-work",
                 "summary": "Promote a roadmap candidate into an active planning record before broad or autopilot implementation.",
-                "next_step": "Create one active TODO item plus an execplan for the selected lane, then continue from the compact planning contract.",
+                "next_step": (
+                    "Run `agentic-planning-bootstrap promote-to-plan <roadmap-id> --target . --format json` "
+                    "for the selected lane, then continue from the compact planning contract."
+                ),
             },
             "rule": "Roadmap candidates are not execution authority; broad planned work must be promoted before implementation.",
         }
@@ -6561,9 +6559,13 @@ def promote_todo_item_to_execplan(
         result.add("manual review", execplan_record_path, "target canonical execplan record already exists")
         return result
 
-    next_action = item.fields.get("next action", "").strip()
-    done_when = item.fields.get("done when", "").strip()
-    why_now = item.fields.get("why now", "").strip()
+    next_action = (
+        item.fields.get("next action", "").strip()
+        or item.fields.get("suggested first slice", "").strip()
+        or item.fields.get("promotion signal", "").strip()
+    )
+    done_when = item.fields.get("done when", "").strip() or item.fields.get("outcome", "").strip()
+    why_now = item.fields.get("why now", "").strip() or item.fields.get("reason", "").strip()
     status = _normalize_status(item.fields.get("status", "planned"))
     if status == "planned":
         status = "in-progress"
@@ -8434,19 +8436,27 @@ def _compact_todo_item_from_state(state: dict[str, Any] | None, item_id: str) ->
             if item is not None:
                 return item
     todo = state.get("todo")
-    if not isinstance(todo, dict):
-        return None
-
-    for bucket in ("active_items", "queued_items"):
-        raw_items = todo.get(bucket, [])
-        if not isinstance(raw_items, list):
-            continue
-        for raw in raw_items:
-            if not isinstance(raw, dict) or str(raw.get("id", "")) != item_id:
+    if isinstance(todo, dict):
+        for bucket in ("active_items", "queued_items"):
+            raw_items = todo.get(bucket, [])
+            if not isinstance(raw_items, list):
                 continue
-            item = _todo_item_from_compact_record(raw, item_id)
-            if item is not None:
-                return item
+            for raw in raw_items:
+                if not isinstance(raw, dict) or str(raw.get("id", "")) != item_id:
+                    continue
+                item = _todo_item_from_compact_record(raw, item_id)
+                if item is not None:
+                    return item
+    roadmap = state.get("roadmap")
+    if isinstance(roadmap, dict):
+        for bucket in ("lanes", "candidates"):
+            raw_items = roadmap.get(bucket, [])
+            if not isinstance(raw_items, list):
+                continue
+            for raw in raw_items:
+                item = _todo_item_from_compact_record(raw, item_id)
+                if item is not None:
+                    return item
     return None
 
 
@@ -8501,6 +8511,41 @@ def _update_compact_todo_item_in_state(
             active["execplans"] = execplans
             next_state["active"] = active
             next_state["work_items"] = next_items
+            return next_state
+
+    roadmap = state.get("roadmap")
+    if isinstance(roadmap, dict):
+        next_roadmap = dict(roadmap)
+        promoted_item = None
+        for bucket in ("lanes", "candidates"):
+            raw_items = next_roadmap.get(bucket, [])
+            if not isinstance(raw_items, list):
+                continue
+            kept_items: list[Any] = []
+            for raw in raw_items:
+                if not isinstance(raw, dict) or str(raw.get("id", "")) != item_id:
+                    kept_items.append(raw)
+                    continue
+                promoted_item = dict(raw)
+            if promoted_item is not None:
+                next_roadmap[bucket] = kept_items
+                break
+        if promoted_item is not None:
+            for key in ("next_action", "next action", "done_when", "done when", "promotion_signal", "promotion signal"):
+                promoted_item.pop(key, None)
+            promoted_item["maturity"] = "active"
+            promoted_item["status"] = "active"
+            promoted_item.pop("type", None)
+            promoted_item.pop("surface", None)
+            surface = updated_fields.get("surface", "").strip()
+            if surface:
+                promoted_item["path"] = surface
+            active = dict(next_state.get("active", {})) if isinstance(next_state.get("active"), dict) else {}
+            execplans = list(active.get("execplans", [])) if isinstance(active.get("execplans"), list) else []
+            execplans.append(promoted_item)
+            active["execplans"] = execplans
+            next_state["active"] = active
+            next_state["roadmap"] = next_roadmap
             return next_state
 
     active = state.get("active")
@@ -9271,6 +9316,11 @@ def _remove_todo_items(todo_path: Path, items_to_remove: list[TodoItem]) -> list
             if isinstance(active, dict) and isinstance(active.get("execplans"), list):
                 active["execplans"] = [
                     item for item in active["execplans"] if not (isinstance(item, dict) and str(item.get("id", "")) in item_ids)
+                ]
+            raw_work_items = state.get("work_items", [])
+            if isinstance(raw_work_items, list):
+                state["work_items"] = [
+                    item for item in raw_work_items if not (isinstance(item, dict) and str(item.get("id", "")) in item_ids)
                 ]
             if isinstance(state.get("todo"), dict):
                 todo_state = state.setdefault("todo", {})

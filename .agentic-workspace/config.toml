@@ -47,7 +47,7 @@ commands = ["uv run agentic-workspace summary --format json", "git status --shor
 review_hint = "Treat this as a closeout/readiness gate, not as a substitute for task-specific validation."
 
 [workflow_obligations.dogfooding_lane_closeout]
-summary = "At the end of each lane, run a dogfooding closeout review and route what could have been easier, better, or more efficient."
+summary = "At the end of each lane, and whenever actionable friction appears during implementation, run a dogfooding review and route what could have been safer, cheaper, or more efficient."
 stage = "closeout"
 scope_tags = ["workspace", "planning", "memory", "dogfooding", "self-improvement"]
 commands = [
@@ -56,7 +56,7 @@ commands = [
   "uv run agentic-workspace reconcile --format json",
   "uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json",
 ]
-review_hint = "Before claiming a lane complete, separate validation success, issue completion, intent satisfaction, and total operating-cost direction; consume improvement_signal_candidates, fix blockers immediately, create narrow issues for durable friction, and promote reusable knowledge to Memory only when it prevents rediscovery."
+review_hint = "Do this without waiting for explicit instruction. Before claiming a lane complete, separate validation success, issue completion, intent satisfaction, and total operating-cost direction; consume improvement_signal_candidates, fix blockers immediately, create narrow issues for durable friction, and promote reusable knowledge to Memory only when it prevents rediscovery. Surface actionable findings clearly in the final answer."
 
 [workflow_obligations.startup_first_contact_routing]
 summary = "Use compact startup, config, and summary queries before opening raw planning or routing docs."

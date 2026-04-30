@@ -1,0 +1,258 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Self Optimisation Workflow",
+  "goal": [
+    "User explicitly called out unaddressed dogfooding takeaways: active lane promotion should use a command, archive cleanup should handle active work_items, and dogfooding evaluation must be required without prompting."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "User explicitly called out unaddressed dogfooding takeaways: active lane promotion should use a command, archive cleanup should handle active work_items, and dogfooding evaluation must be required without prompting.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "self-optimisation-workflow",
+      "status": "completed",
+      "next_step": "Archive this plan with cleanup and commit the completed lane.",
+      "proof": "Focused and package-level planning tests, workspace CLI tests, ruff, planning surface check, summary/preflight/reconcile dogfooding."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/WORKFLOW.md",
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/self-optimisation-workflow.plan.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "User explicitly called out unaddressed dogfooding takeaways: active lane promotion should use a command, archive cleanup should handle active work_items, and dogfooding evaluation must be required without prompting.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Agents can promote roadmap lanes with a command, archive active work_item pointers during closeout cleanup, see dogfooding/self-optimisation as a standing workflow obligation, and read compact roadmap candidates without lane fallback noise.",
+    "intentionally deferred": "none",
+    "discovered implications": "Compact summary should keep roadmap lanes and explicit roadmap candidates distinct; this was fixed in the lane.",
+    "proof achieved now": "package/workspace tests, ruff, maintainer surface refresh, planning checks, and dogfooding closeout commands passed",
+    "validation still needed": "archive cleanup, then rerun summary/reconcile before commit",
+    "next likely slice": "none for this lane"
+  },
+  "intent_interpretation": {
+    "literal request": "Self Optimisation Workflow",
+    "inferred intended outcome": "User explicitly called out unaddressed dogfooding takeaways: active lane promotion should use a command, archive cleanup should handle active work_items, and dogfooding evaluation must be required without prompting.",
+    "chosen concrete what": "Implement the three dogfooding takeaways and archive the evidence.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/WORKFLOW.md; .agentic-workspace/config.toml; .agentic-workspace/planning/**; packages/planning/**; src/agentic_workspace/cli.py; tests/test_workspace_cli.py",
+    "max changed files": "Eight tracked files plus the execplan archive artifact.",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py src/agentic_workspace/cli.py tests/test_workspace_cli.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; uv run agentic-workspace preflight --format json; uv run agentic-workspace reconcile --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Implement the three dogfooding takeaways and archive the evidence.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "User explicitly called out unaddressed dogfooding takeaways: active lane promotion should use a command, archive cleanup should handle active work_items, and dogfooding evaluation must be required without prompting.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "self-optimisation-workflow",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this plan with cleanup and commit the completed lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/WORKFLOW.md",
+    ".agentic-workspace/config.toml",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/self-optimisation-workflow.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py src/agentic_workspace/cli.py tests/test_workspace_cli.py",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace preflight --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Agents can promote roadmap work with a command, archive cleanup removes matching active work_items, workflow surfaces dogfooding evaluation as a standing closeout requirement, and compact summary no longer reports roadmap lanes as explicit candidates."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Added roadmap-lane support to promote-to-plan, routed compact summary/readiness guidance to that command, made archive cleanup remove active work_items that point at archived execplans, surfaced dogfooding/self-optimisation as a standing workflow obligation, and removed compact roadmap candidate fallback noise.",
+    "scope touched": "planning bootstrap CLI internals and tests, workspace CLI obligation projection and tests, repo workflow/config obligations, and this execplan evidence.",
+    "changed surfaces": "planning package, workspace CLI, repo workflow docs/config, planning state and closeout artifact",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py src/agentic_workspace/cli.py tests/test_workspace_cli.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; uv run agentic-workspace preflight --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace report --target . --section workflow_obligations --format json; uv run agentic-workspace report --target . --section closeout_trust --format json; uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json; make maintainer-surfaces",
+    "result for continuation": "archive and commit this lane after full validation",
+    "next step": "Run full validation, archive with cleanup, and commit."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "no follow-on required for this lane"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest packages/planning/tests/test_installer.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py src/agentic_workspace/cli.py tests/test_workspace_cli.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; uv run agentic-workspace preflight --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace report --target . --section workflow_obligations --format json; uv run agentic-workspace report --target . --section closeout_trust --format json; uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json; make maintainer-surfaces.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Planning installer suite passed 174 tests; workspace CLI suite passed 237 tests; ruff passed; planning surface check passed; summary/preflight/reconcile and closeout obligation reports ran; maintainer surfaces refreshed without diffs."
+  },
+  "intent_satisfaction": {
+    "original intent": "User explicitly called out unaddressed dogfooding takeaways: active lane promotion should use a command, archive cleanup should handle active work_items, and dogfooding evaluation must be required without prompting.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The command/scaffold promotion path supports roadmap lanes, archive cleanup handles active work_items, closeout templates expose terminal values from the prior lane, workflow config requires self-optimisation without explicit prompting, and the additional roadmap.candidates routing noise was fixed.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "self-optimisation workflow is safer, cheaper, and clearer by default",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none",
+    "post-work posterity capture": ".agentic-workspace/WORKFLOW.md and .agentic-workspace/config.toml now carry the standing self-optimisation obligation.",
+    "knowledge promoted (Memory/Docs/Config)": ".agentic-workspace/WORKFLOW.md; .agentic-workspace/config.toml",
+    "resume from": "archive if interrupted after final validation"
+  },
+  "durable_residue": {
+    "status": "docs",
+    "learned constraint": "Dogfooding evaluation and actionable self-optimisation findings must be surfaced without waiting for explicit user instruction.",
+    "motivation worth preserving": "The package is its own operating surface; workflow friction found during lane execution should become either an in-scope fix or an explicit routed item.",
+    "canonical owner now": ".agentic-workspace/WORKFLOW.md and .agentic-workspace/config.toml",
+    "promotion trigger": "when agents complete a lane or encounter actionable safety, cost, or efficiency friction during implementation",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded slice and larger intent are both complete.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "None unless new evidence shows the bounded closure was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "signals found": [
+      "Safer: active lane promotion should use a command/scaffold instead of hand-authoring state.toml.",
+      "Cheaper: archive cleanup should remove active work_items references the same way it removes active execplan/TODO residue.",
+      "More efficient: closeout templates should expose terminal values up front.",
+      "Required workflow: dogfooding/self-optimisation should run without explicit instruction.",
+      "Efficiency: compact summary should not populate roadmap.candidates from roadmap lanes when no explicit candidates exist."
+    ],
+    "signals fixed": [
+      "promote-to-plan can promote roadmap IDs and compact recommendations point agents to the command.",
+      "archive cleanup removes active work_items references for archived execplans.",
+      "closeout templates expose terminal values from the prior lane.",
+      "workflow config and preflight surface self-optimisation as a standing closeout obligation.",
+      "compact planning summary keeps roadmap candidate_lanes separate from explicit candidates."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "workflow_obligations.dogfooding_lane_closeout now requires dogfooding/self-optimisation without explicit instruction.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": ".agentic-workspace/WORKFLOW.md; .agentic-workspace/config.toml",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": ".agentic-workspace/WORKFLOW.md now makes self-optimisation a standing implementation and closeout requirement.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-30: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: User explicitly called out unaddressed dogfooding takeaways: active lane promotion should use a command, archive cleanup should handle active work_items, and dogfooding evaluation must be required without prompting.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest packages/planning/tests/test_installer.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py src/agentic_workspace/cli.py tests/test_workspace_cli.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; uv run agentic-workspace preflight --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace report --target . --section workflow_obligations --format json; uv run agentic-workspace report --target . --section closeout_trust --format json; uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json; make maintainer-surfaces.\nChanged surfaces: planning package, workspace CLI, repo workflow docs/config, planning state and closeout artifact\nDurable residue: docs (.agentic-workspace/WORKFLOW.md and .agentic-workspace/config.toml)\nFollow-up: none"
+  }
+}

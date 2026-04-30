@@ -6069,6 +6069,31 @@ def test_preflight_surfaces_closeout_workflow_obligations_for_active_scope(tmp_p
     assert obligations[0]["stage"] == "closeout"
 
 
+def test_preflight_surfaces_closeout_workflow_obligations_as_standing_requirement(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n"
+        "[workflow_obligations.dogfooding_lane_closeout]\n"
+        'summary = "Run dogfooding closeout review without explicit prompting."\n'
+        'stage = "closeout"\n'
+        'scope_tags = ["planning", "dogfooding", "self-improvement"]\n'
+        'commands = ["agentic-workspace report --target . --section workflow_obligations --format json"]\n'
+        'review_hint = "Surface actionable findings clearly."\n',
+    )
+
+    assert cli.main(["preflight", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    obligations = payload["closeout_obligations"]["required_before_lane_closeout"]
+    assert payload["workflow_obligations"]["match_evidence"]["match_count"] == 0
+    assert payload["closeout_obligations"]["status"] == "present"
+    assert payload["closeout_obligations"]["primary_next_action"]["id"] == "dogfooding_lane_closeout"
+    assert obligations[0]["review_hint"] == "Surface actionable findings clearly."
+
+
 def test_preflight_active_only_includes_active_todo_without_execplan(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

@@ -41,3 +41,10 @@ When skill support is available, prefer task-specific package skills discovered 
 - Use `.agentic-workspace/memory/WORKFLOW.md` for memory-specific operating rules.
 - Read module-local workflow files only when the shared workspace contract routes you there or when the task directly changes that module's behavior or workflow.
 - Add module-local workflow files only when a module needs guidance that should not live in the shared workspace contract.
+
+## Self-Optimisation
+
+- Treat dogfooding evaluation as a standing workflow requirement, not an optional closeout flourish.
+- During implementation and before claiming completion, identify what could have been safer, cheaper, or more efficient.
+- Fix actionable findings immediately when they are in scope; otherwise route them into checked-in planning, issue follow-up, Memory, docs, or config with a clear owner.
+- Surface actionable self-optimisation findings in handoff or final output even when the user did not ask for them explicitly.

@@ -1634,6 +1634,42 @@ execplans = []
     assert any(action.kind == "created" and action.path == record_path for action in result.actions)
 
 
+def test_promote_todo_item_to_execplan_supports_roadmap_lane_state(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[active]
+execplans = []
+
+[roadmap]
+lanes = [
+  { type = "lane", id = "safer-promotion", maturity = "candidate", status = "next", priority = "P1", refs = "GitHub #700", title = "Safer promotion", outcome = "Promotion uses a command instead of hand-authored state.", reason = "Manual active state is easy to get subtly wrong.", promotion_signal = "Promote before broad work.", suggested_first_slice = "Add a command path." },
+]
+candidates = []
+""",
+    )
+
+    result = promote_todo_item_to_execplan("safer-promotion", target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "safer-promotion.plan.json"
+
+    assert record_path.exists()
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    summary = planning_summary(target=tmp_path)
+    assert record["context_budget"]["tiny resumability note"] == "Add a command path."
+    assert record["delegated_judgment"]["requested outcome"] == "Manual active state is easy to get subtly wrong."
+    assert state["roadmap"]["lanes"] == []
+    assert state["active"]["execplans"][0]["id"] == "safer-promotion"
+    assert state["active"]["execplans"][0]["path"] == ".agentic-workspace/planning/execplans/safer-promotion.plan.json"
+    assert state["active"]["execplans"][0]["maturity"] == "active"
+    assert state["active"]["execplans"][0]["status"] == "active"
+    assert summary["planning_record"]["status"] == "present"
+    assert any(action.kind == "created" and action.path == record_path for action in result.actions)
+
+
 def test_planning_summary_validates_planning_state_v1_maturity_contract(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
@@ -1875,6 +1911,9 @@ execplans = [
 
     assert summary["todo"]["active_items"][0]["id"] == "active-plan"
     assert summary["todo"]["queued_items"][0]["id"] == "ready-slice"
+    assert summary["roadmap"]["lane_count"] == 1
+    assert summary["roadmap"]["candidate_count"] == 0
+    assert summary["roadmap"]["candidates"] == []
     assert summary["roadmap"]["candidate_lanes"][0]["id"] == "maturity-lane"
     assert summary["work_maturity"]["active_execplans"][0]["source_bucket"] == "active.execplans"
     assert summary["work_maturity"]["ready_slices"][0]["id"] == "ready-slice"
@@ -3186,6 +3225,41 @@ execplans = [
     assert "intent-validation-and-dangling-debt-2026-04-22" not in state_text
     assert "execplans = []" in state_text
     assert any(action.kind == "updated" and "remove TODO item '#257'" in action.detail for action in result.actions)
+
+
+def test_archive_execplan_apply_cleanup_removes_active_execplan_and_work_item_pointer(tmp_path: Path) -> None:
+    plan_ref = ".agentic-workspace/planning/execplans/current-lane.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        f"""
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+work_items = [
+  {{ id = "current-lane", type = "lane", maturity = "active", status = "active", path = "{plan_ref}" }},
+]
+
+[active]
+execplans = [
+  {{ id = "current-lane", path = "{plan_ref}", maturity = "active", status = "active" }},
+]
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / plan_ref
+    _write_execplan_record(plan_path, item_id="current-lane", status="completed")
+
+    result = archive_execplan("current-lane", target=tmp_path, apply_cleanup=True)
+
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/current-lane.plan.json"
+
+    assert archived_path.exists()
+    assert not plan_path.exists()
+    assert "current-lane" not in state_text
+    assert "work_items = []" in state_text
+    assert "execplans = []" in state_text
+    assert any(action.kind == "updated" and "remove TODO item 'current-lane'" in action.detail for action in result.actions)
 
 
 def test_archive_execplan_apply_cleanup_removes_active_execplan_field_pointer(tmp_path: Path) -> None:
