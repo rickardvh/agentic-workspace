@@ -403,10 +403,74 @@ def _local_scratch_payload(*, exists: bool = False) -> dict[str, Any]:
     }
 
 
+def _agent_created_aid_affordance_payload() -> dict[str, Any]:
+    compact_runner = "uv run python scripts/check/run_compact_command.py"
+    return {
+        "kind": "agentic-workspace/agent-created-aid-affordance/v1",
+        "agent_may_create": True,
+        "summary": ("Create a bounded aid when it would reduce repeated work, parsing cost, handoff cost, or error risk."),
+        "creation_triggers": [
+            "the same command bundle or check sequence is run repeatedly",
+            "command output is noisy but the agent only needs pass/fail plus failure tail",
+            "handoff or closeout steps are reconstructed from memory across turns",
+            "a small template, prompt, runbook, wrapper, or shim would prevent rediscovery",
+        ],
+        "aid_types": ["script", "runbook", "template", "prompt", "check", "compact-command-runner", "shim"],
+        "storage_decision": {
+            "local_only": WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH.as_posix(),
+            "checked_in_candidate": WORKSPACE_AGENT_AID_ROOT_PATH.as_posix(),
+            "promoted_repo_native": "ordinary repo command, check, skill, runbook, prompt, template, or docs surface",
+            "rule": (
+                "Use local-only for machine/runtime-specific aids; use checked-in candidate storage for repo-shared aids "
+                "that are still proving value; promote only after repeated usefulness or clear repo-general value."
+            ),
+            "prefer_checked_in_when": [
+                "the aid benefits any agent working in this repo",
+                "the aid is portable enough to review and run across ordinary repo environments",
+                "the aid captures repo-specific workflow knowledge that should survive machines and sessions",
+            ],
+            "prefer_local_only_when": [
+                "the aid depends on a specific agent runtime, subscription, account, credential, path, or shell setup",
+                "the aid is experimental scratch for one machine",
+                "the aid bridges private or machine-local state that must not become shared repo authority",
+            ],
+        },
+        "authority_boundary": [
+            "aids help agents work; they do not silently become required workflow",
+            "candidate aids are advisory until promoted through ordinary repo review and proof surfaces",
+            "local-only aids are ignored by git, non-authoritative, and safe to delete",
+        ],
+        "evidence_shape": {
+            "compact_output": "short pass/fail/actionable summary for the agent",
+            "full_evidence": "inspectable command log, artifact, manifest, or source file",
+            "manifest_required_for_checked_in": True,
+            "validation": "checked-in executable aids declare validation.commands and pass check_agent_aids",
+        },
+        "first_pattern": {
+            "id": "compact-runner",
+            "command": compact_runner,
+            "makefile_variable": "COMPACT_RUN",
+            "timeout_option": "--timeout-seconds <seconds>",
+            "timeout_rule": "Set the runner timeout below the outer tool timeout so compact failure evidence and logs survive.",
+            "success_output": "[ok] <label> (<duration>)",
+            "failure_output": "failure or timeout header plus tailed command output",
+            "full_log_root": "scratch/command-logs",
+            "use_for": "wrapping noisy recurring commands without hiding full failure evidence",
+        },
+        "first_steps": [
+            "name the repeated friction and decide local-only vs checked-in candidate",
+            "reuse COMPACT_RUN or the same compact-output/full-log pattern for noisy commands",
+            "if checked in, add a nearby manifest.json and run python scripts/check/check_agent_aids.py",
+            "keep the aid advisory until a promoted repo-native surface owns discovery and proof",
+        ],
+    }
+
+
 def _agent_aid_storage_payload(*, target_root: Path | None = None) -> dict[str, Any]:
     exists = False
     if target_root is not None:
         exists = (target_root / WORKSPACE_AGENT_AID_ROOT_PATH).exists()
+    creation_affordance = _agent_created_aid_affordance_payload()
     return {
         "status": "available-checked-in-candidate-area",
         "command": "agentic-workspace defaults --section agent_aid_storage --format json",
@@ -422,6 +486,7 @@ def _agent_aid_storage_payload(*, target_root: Path | None = None) -> dict[str, 
         "manifest_schema": "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
         "manifest_check": "python scripts/check/check_agent_aids.py",
         "manifest_required": "for checked-in shared aids",
+        "creation_affordance": creation_affordance,
         "executable_safety": {
             "rule": "Checked-in executable aids must declare safety, portability, validation, and proof-role metadata.",
             "executable_types": ["script", "check"],
@@ -511,6 +576,7 @@ def _agent_aids_report_payload(*, target_root: Path, cli_invoke: str = DEFAULT_C
     local_only_entries = _local_only_agent_aid_entries(target_root=target_root)
     visible_checked_in = [entry for entry in checked_in_aids if entry["status"] != "retired"]
     storage = _guidance_with_cli_invoke(value=_agent_aid_storage_payload(target_root=target_root), cli_invoke=cli_invoke)
+    creation_affordance = storage.get("creation_affordance", {}) if isinstance(storage, dict) else {}
     aid_discovery_command = _command_with_cli_invoke(
         command='agentic-workspace skills --target ./repo --task "<task>" --format json',
         cli_invoke=cli_invoke,
@@ -538,12 +604,15 @@ def _agent_aids_report_payload(*, target_root: Path, cli_invoke: str = DEFAULT_C
         recommended_actions[0]
         if recommended_actions
         else {
-            "action": "create-or-promote-aid-only-if-repeated-friction",
-            "summary": "No checked-in aid is currently recommended; continue through ordinary compact routes and create a candidate only for repeated friction.",
+            "action": "create-bounded-aid-when-it-reduces-friction",
+            "summary": (
+                "No checked-in aid is currently recommended; continue through ordinary compact routes, but create a bounded aid "
+                "when it would reduce repeated work, parsing cost, handoff cost, or error risk."
+            ),
             "command": aid_discovery_command,
             "risk": "read-only discovery unless an aid is later created or promoted",
-            "required_inputs": ["current task", "friction evidence", "portability boundary"],
-            "next_proof": "if an aid is created, validate its manifest and keep it candidate until promoted",
+            "required_inputs": ["current task", "friction evidence", "authority boundary"],
+            "next_proof": ("if an aid is checked in, validate its manifest; if local-only, keep it ignored and non-authoritative"),
         }
     )
     if "command" in primary_action:
@@ -556,6 +625,7 @@ def _agent_aids_report_payload(*, target_root: Path, cli_invoke: str = DEFAULT_C
             cli_invoke=cli_invoke,
         ),
         "storage": storage,
+        "creation_affordance": creation_affordance,
         "summary": {
             "checked_in_count": len(checked_in_aids),
             "visible_checked_in_count": len(visible_checked_in),

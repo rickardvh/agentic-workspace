@@ -582,6 +582,11 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert agent_aids["manifest_name"] == "manifest.json"
     assert agent_aids["manifest_kind"] == "agentic-workspace/agent-aid/v1"
     assert agent_aids["manifest_schema"] == "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json"
+    assert agent_aids["creation_affordance"]["agent_may_create"] is True
+    assert "handoff cost" in agent_aids["creation_affordance"]["summary"]
+    assert agent_aids["creation_affordance"]["first_pattern"]["makefile_variable"] == "COMPACT_RUN"
+    assert agent_aids["creation_affordance"]["first_pattern"]["timeout_option"] == "--timeout-seconds <seconds>"
+    assert agent_aids["creation_affordance"]["first_pattern"]["full_log_root"] == "scratch/command-logs"
     assert agent_aids["executable_safety"]["hidden_required_workflow"] == "forbidden"
     assert agent_aids["executable_safety"]["canonical_proof_role_requires_status"] == "promoted"
     assert {entry["class"] for entry in agent_aids["storage_classes"]} == {
@@ -1209,6 +1214,19 @@ def test_defaults_section_selector_returns_agent_aid_storage_answer(capsys) -> N
     assert payload["answer"]["candidate_root"] == ".agentic-workspace/agent-aids"
     assert payload["answer"]["ordinary_startup"] is False
     assert payload["answer"]["manifest_check"] == "python scripts/check/check_agent_aids.py"
+    affordance = payload["answer"]["creation_affordance"]
+    assert affordance["kind"] == "agentic-workspace/agent-created-aid-affordance/v1"
+    assert affordance["agent_may_create"] is True
+    assert "parsing cost" in affordance["summary"]
+    assert "compact-command-runner" in affordance["aid_types"]
+    assert affordance["storage_decision"]["checked_in_candidate"] == ".agentic-workspace/agent-aids"
+    assert "any agent working in this repo" in affordance["storage_decision"]["prefer_checked_in_when"][0]
+    assert "credential" in affordance["storage_decision"]["prefer_local_only_when"][0]
+    assert "silently become required workflow" in affordance["authority_boundary"][0]
+    assert affordance["evidence_shape"]["full_evidence"] == "inspectable command log, artifact, manifest, or source file"
+    assert affordance["first_pattern"]["command"] == "uv run python scripts/check/run_compact_command.py"
+    assert "outer tool timeout" in affordance["first_pattern"]["timeout_rule"]
+    assert affordance["first_pattern"]["success_output"] == "[ok] <label> (<duration>)"
     assert payload["answer"]["executable_safety"]["executable_types"] == ["script", "check"]
     assert payload["answer"]["executable_safety"]["candidate_aid_check"] == "python scripts/check/check_agent_aids.py"
     assert payload["answer"]["executable_safety"]["candidate_aids_are_not"] == [
@@ -3969,10 +3987,16 @@ def test_report_section_agent_aids_discovers_checked_in_and_local_aids(tmp_path:
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
     assert answer["kind"] == "workspace-agent-aids-discovery/v1"
+    assert "storage" not in answer
+    assert answer["storage_summary"]["candidate_root"] == ".agentic-workspace/agent-aids"
+    assert answer["storage_summary"]["manifest_check"] == "python scripts/check/check_agent_aids.py"
     assert answer["summary"]["checked_in_count"] == 2
     assert answer["summary"]["visible_checked_in_count"] == 1
     assert answer["summary"]["retired_count"] == 1
     assert answer["summary"]["local_only_container_count"] == 1
+    assert answer["creation_affordance"]["agent_may_create"] is True
+    assert answer["creation_affordance"]["first_pattern"]["makefile_variable"] == "COMPACT_RUN"
+    assert answer["creation_affordance"]["first_pattern"]["timeout_option"] == "--timeout-seconds <seconds>"
     candidate = next(entry for entry in answer["checked_in_aids"] if entry["id"] == "workspace-validation-wrapper")
     assert candidate["type"] == "script"
     assert candidate["status"] == "candidate"
@@ -4011,12 +4035,16 @@ def test_report_section_agent_aids_routes_empty_discovery_to_repeat_friction_rev
     assert cli.main(["report", "--target", str(target), "--section", "agent_aids", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert "storage" not in payload["answer"]
+    assert payload["answer"]["storage_summary"]["canonical_doc"] == ".agentic-workspace/docs/agent-aids-storage.md"
     action = payload["answer"]["primary_next_action"]
-    assert action["action"] == "create-or-promote-aid-only-if-repeated-friction"
+    assert action["action"] == "create-bounded-aid-when-it-reduces-friction"
     assert action["command"] == 'agentic-workspace skills --target ./repo --task "<task>" --format json'
     assert action["run"] == action["command"]
-    assert action["required_inputs"] == ["current task", "friction evidence", "portability boundary"]
+    assert action["required_inputs"] == ["current task", "friction evidence", "authority boundary"]
     assert "ordinary compact routes" in action["summary"]
+    assert "handoff cost" in action["summary"]
+    assert "checked in" in action["next_proof"]
 
 
 def test_report_improvement_intake_keeps_dogfooding_source_checkout_only(tmp_path: Path, capsys) -> None:

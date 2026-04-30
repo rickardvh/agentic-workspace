@@ -1,0 +1,238 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Agent Created Aids",
+  "goal": [
+    "This is direct dogfooding evidence from recent lanes: the package has agent-aid storage, local integration areas, agent-efficiency latitude, and COMPACT_RUN, but agents still tolerate repeated friction instead of creating aids."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "This is direct dogfooding evidence from recent lanes: the package has agent-aid storage, local integration areas, agent-efficiency latitude, and COMPACT_RUN, but agents still tolerate repeated friction instead of creating aids.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "agent-created-aids",
+      "status": "completed",
+      "next_step": "Archive the plan, close #620, and commit.",
+      "proof": "Focused agent-aid storage/report tests, compact runner timeout test, full workspace test suite, ruff, agent-aid checks, maintainer surfaces, planning surface check, reconcile, proof selection, and root CLI authority."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/reporting_support.py",
+        "scripts/check/run_compact_command.py",
+        "tests/test_workspace_cli.py",
+        "tests/test_compact_command_runner.py",
+        ".agentic-workspace/docs/agent-aids-storage.md",
+        ".agentic-workspace/planning/execplans/agent-created-aids.plan.json",
+        ".agentic-workspace/planning/state.toml"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "This is direct dogfooding evidence from recent lanes: the package has agent-aid storage, local integration areas, agent-efficiency latitude, and COMPACT_RUN, but agents still tolerate repeated friction instead of creating aids.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Agents now get compact permission and routing guidance to create bounded aids, including local-only versus checked-in storage decisions and a concrete compact runner pattern.",
+    "intentionally deferred": "none",
+    "discovered implications": "Dogfooding showed the compact runner needed its own timeout so long commands are not killed by the outer tool before compact evidence and logs are written.",
+    "proof achieved now": "yes",
+    "validation still needed": "none",
+    "next likely slice": "none; the promoted item is complete"
+  },
+  "intent_interpretation": {
+    "literal request": "Agent Created Aids",
+    "inferred intended outcome": "This is direct dogfooding evidence from recent lanes: the package has agent-aid storage, local integration areas, agent-efficiency latitude, and COMPACT_RUN, but agents still tolerate repeated friction instead of creating aids.",
+    "chosen concrete what": "#620: expose the general agent-created-aid trigger and use COMPACT_RUN-style command helpers as the first concrete example.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace agent-aid defaults/report surfaces, report section compaction, compact command runner, agent-aid docs, focused workspace tests, and active planning state.",
+    "max changed files": "About 8 files.",
+    "required validation commands": "uv run pytest tests/test_compact_command_runner.py -q; uv run pytest tests/test_workspace_cli.py -q -k \"agent_aid_storage or agent_aids\"; uv run pytest tests -q; uv run ruff check src tests scripts/check/run_compact_command.py; make agent-aids; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace reconcile --format json; uv run agentic-workspace proof --changed src/agentic_workspace/cli.py src/agentic_workspace/reporting_support.py scripts/check/run_compact_command.py tests/test_workspace_cli.py tests/test_compact_command_runner.py .agentic-workspace/docs/agent-aids-storage.md --format json; uv run agentic-workspace defaults --section root_cli_authority --format json.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "#620: expose the general agent-created-aid trigger and use COMPACT_RUN-style command helpers as the first concrete example.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "This is direct dogfooding evidence from recent lanes: the package has agent-aid storage, local integration areas, agent-efficiency latitude, and COMPACT_RUN, but agents still tolerate repeated friction instead of creating aids.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "agent-created-aids",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive the completed plan, close #620, and commit."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/reporting_support.py",
+    "scripts/check/run_compact_command.py",
+    "tests/test_workspace_cli.py",
+    "tests/test_compact_command_runner.py",
+    ".agentic-workspace/docs/agent-aids-storage.md",
+    ".agentic-workspace/planning/execplans/agent-created-aids.plan.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_compact_command_runner.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q -k \"agent_aid_storage or agent_aids\"",
+    "uv run pytest tests -q",
+    "uv run ruff check src tests scripts/check/run_compact_command.py",
+    "make agent-aids",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace proof --changed src/agentic_workspace/cli.py src/agentic_workspace/reporting_support.py scripts/check/run_compact_command.py tests/test_workspace_cli.py tests/test_compact_command_runner.py .agentic-workspace/docs/agent-aids-storage.md --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Make it explicit that agents may create scripts, runbooks, templates, prompts, check wrappers, compact command runners, and other bounded helpers when they reduce repeated work, parsing cost, handoff cost, or error risk."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap promote-to-plan",
+    "what happened": "Exposed a machine-readable agent-created-aid affordance through defaults/report surfaces, compacted the agent_aids report section to avoid duplicating the full storage payload, documented local-only versus checked-in candidate guidance, and strengthened the compact command runner with an internal timeout.",
+    "scope touched": "agent-aid storage/report payloads, compact report shaping, compact command runner, docs, tests, active planning state",
+    "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/reporting_support.py; scripts/check/run_compact_command.py; tests/test_workspace_cli.py; tests/test_compact_command_runner.py; .agentic-workspace/docs/agent-aids-storage.md; .agentic-workspace/planning/execplans/agent-created-aids.plan.json; .agentic-workspace/planning/state.toml",
+    "validations run": "uv run pytest tests/test_compact_command_runner.py -q; uv run pytest tests/test_workspace_cli.py -q -k \"agent_aid_storage or agent_aids\"; uv run pytest tests -q; uv run ruff check src tests scripts/check/run_compact_command.py; make agent-aids; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace reconcile --format json; uv run agentic-workspace proof --changed src/agentic_workspace/cli.py src/agentic_workspace/reporting_support.py scripts/check/run_compact_command.py tests/test_workspace_cli.py tests/test_compact_command_runner.py .agentic-workspace/docs/agent-aids-storage.md --format json; uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "result for continuation": "no continuation required",
+    "next step": "archive the plan, close #620, and commit"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; only the planned agent-aid surfaces plus the directly discovered compact-runner dogfooding fix were changed",
+    "proof status": "passed",
+    "intent served": "yes; agents are explicitly encouraged to create bounded aids and get concrete storage and timeout guidance",
+    "config compliance": "yes; self-optimization evidence was evaluated and an actionable finding was folded into the lane",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none required"
+  },
+  "proof_report": {
+    "validation proof": "Focused tests, full tests, ruff, agent-aid check, maintainer surfaces, planning surfaces, reconcile, proof selection, and root CLI authority passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "All validation_commands passed; proof selected workspace_cli and cli_authority lanes, and their required commands were satisfied."
+  },
+  "intent_satisfaction": {
+    "original intent": "This is direct dogfooding evidence from recent lanes: the package has agent-aid storage, local integration areas, agent-efficiency latitude, and COMPACT_RUN, but agents still tolerate repeated friction instead of creating aids.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "defaults/report now expose creation triggers, aid types, storage decisions, authority boundaries, evidence shape, and the COMPACT_RUN pattern; docs mirror the behavior; tests cover the emitted contract.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Agent-created aids are now an explicit workflow affordance with local-only versus checked-in routing and compact command-runner guidance.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "docs and compact defaults/report outputs updated",
+    "knowledge promoted (Memory/Docs/Config)": ".agentic-workspace/docs/agent-aids-storage.md and compact agent-aid defaults/report surfaces",
+    "resume from": "archive"
+  },
+  "durable_residue": {
+    "status": "docs",
+    "learned constraint": "Reusable aids should be created when they reduce repeated work, parsing cost, handoff cost, or error risk, but local-only and checked-in candidates need different authority boundaries.",
+    "motivation worth preserving": "Agents repeatedly tolerated command repetition and noisy output despite existing storage surfaces; the package must surface permission and concrete first patterns.",
+    "canonical owner now": ".agentic-workspace/docs/agent-aids-storage.md plus defaults/report compact outputs",
+    "promotion trigger": "already promoted to docs and compact defaults/report outputs in this lane",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "complete",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The promoted item asked for encouragement and routing for agent-created aids; the compact surfaces, docs, and tests now provide that, and the directly discovered compact-runner timeout friction was fixed in the same lane.",
+    "evidence carried forward": "validation_commands and durable_residue fields",
+    "reopen trigger": "Agents still fail to create aids for repeated friction because the compact surfaces are not discoverable enough."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Compact command runner lacked an internal timeout, so an outer tool timeout could kill the runner before it emitted compact failure evidence or wrote a log.",
+      "Agent-created aid guidance needed to distinguish repo-portable aids from local/runtime-specific aids."
+    ],
+    "signals fixed": [
+      "Added --timeout-seconds to scripts/check/run_compact_command.py with timeout output, logging, and command-tree termination.",
+      "Added checked-in versus local-only guidance to the creation affordance and docs."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "One-off command outputs and scratch timeout logs are execution evidence only.",
+          "owner": "archive"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "Agent-created aid creation and local-vs-checked-in routing guidance is now documented.",
+          "owner": ".agentic-workspace/docs/agent-aids-storage.md"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-30: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

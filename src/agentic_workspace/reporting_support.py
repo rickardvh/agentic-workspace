@@ -284,6 +284,36 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             },
             "detail": detail_command,
         }
+    if section == "agent_aids" and isinstance(answer, dict):
+        storage = answer.get("storage", {})
+        storage = storage if isinstance(storage, dict) else {}
+        creation_affordance = answer.get("creation_affordance", {})
+        creation_affordance = creation_affordance if isinstance(creation_affordance, dict) else {}
+        storage_summary = {
+            "candidate_root": storage.get("candidate_root", ".agentic-workspace/agent-aids"),
+            "local_only_root": ".agentic-workspace/local/integrations",
+            "manifest_name": storage.get("manifest_name", "manifest.json"),
+            "manifest_check": storage.get("manifest_check", "python scripts/check/check_agent_aids.py"),
+            "canonical_doc": storage.get("canonical_doc", ".agentic-workspace/docs/agent-aids-storage.md"),
+        }
+        return {
+            "kind": answer.get("kind", "workspace-agent-aids-discovery/v1"),
+            "status": answer.get("status", ""),
+            "summary": answer.get("summary", {}),
+            "primary_next_action": answer.get("primary_next_action", {}),
+            "creation_affordance": creation_affordance,
+            "storage_summary": storage_summary,
+            "checked_in_aids": answer.get("checked_in_aids", []),
+            "local_only": answer.get("local_only", {}),
+            "recommended_actions": answer.get("recommended_actions", []),
+            "recommended_action_omitted_count": answer.get("recommended_action_omitted_count", 0),
+            "warnings": answer.get("warnings", []),
+            "rules": answer.get("rules", []),
+            "detail": _command_with_cli_invoke(
+                "agentic-workspace defaults --section agent_aid_storage --format json",
+                cli_invoke=cli_invoke,
+            ),
+        }
     return answer
 
 

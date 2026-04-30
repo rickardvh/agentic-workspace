@@ -4,6 +4,28 @@ Agent-created aids are reusable helpers that reduce recurring operating cost: sc
 
 This storage model is repo-, agent-, tool-, and language-agnostic. It defines ownership boundaries only; manifest, safety, discovery, and promotion rules are separate contracts.
 
+## Creation Affordance
+
+Agents may create bounded aids for themselves when doing so reduces repeated work, parsing cost, handoff cost, or error risk. This is an expected use of the package, not an exception. Common triggers are repeated command bundles, noisy command output where only pass/fail plus a failure tail is needed, handoff or closeout steps reconstructed across turns, or a small template, prompt, runbook, wrapper, or shim that would prevent rediscovery.
+
+Create the smallest aid that removes the friction:
+
+- Use local-only storage for machine-specific or runtime-specific aids.
+- Use checked-in candidate storage for repo-shared aids that are still proving value.
+- Prefer checked-in candidate aids when the solution benefits any agent working in the repo, is portable enough to review and run in ordinary repo environments, or captures repo-specific workflow knowledge that should survive machines and sessions.
+- Prefer local-only aids when the solution depends on a specific agent runtime, subscription, account, credential, path, shell setup, or private machine-local state.
+- Promote only after repeated usefulness or clear repo-general value.
+- Keep candidate and local aids advisory; they must not silently become required workflow.
+- Preserve evidence with compact agent-facing output plus inspectable logs, artifacts, manifests, or source files.
+
+The existing root `Makefile` demonstrates the preferred command-wrapper pattern:
+
+```make
+COMPACT_RUN = uv run python scripts/check/run_compact_command.py
+```
+
+`scripts/check/run_compact_command.py` prints compact success output such as `[ok] <label> (<duration>)`, prints a tailed failure or timeout on error, and stores full logs under `scratch/command-logs`. Reuse this runner, or the same compact-output/full-log pattern, when a recurring command is too noisy for ordinary agent loops. For long checks, pass `--timeout-seconds <seconds>` with a value below the outer tool timeout so the runner can emit compact timeout evidence, write a log, and stop the command tree before the shell is killed externally.
+
 ## Storage Classes
 
 ### Local-Only
