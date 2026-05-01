@@ -331,7 +331,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "preflight",
     ]
     assert payload["startup"]["default_canonical_agent_instructions_file"] == "AGENTS.md"
-    assert payload["startup"]["supported_agent_instructions_files"] == ["AGENTS.md", "GEMINI.md"]
+    assert payload["startup"]["supported_agent_instructions_files"] == ["AGENTS.md", "CLAUDE.md", "GEMINI.md", ".cursorrules"]
     assert payload["startup"]["tiny_safe_model"]["entrypoint"] == "AGENTS.md"
     assert payload["startup"]["tiny_safe_model"]["entry_query"] == "agentic-workspace preflight --format json"
     assert payload["startup"]["tiny_safe_model"]["first_compact_queries"][0] == "agentic-workspace defaults --section startup --format json"
@@ -1208,6 +1208,45 @@ def test_config_command_autodetects_existing_supported_agent_instructions_file(t
     assert payload["workspace"]["agent_instructions_file"] == "GEMINI.md"
     assert payload["workspace"]["agent_instructions_file_source"] == "autodetected-existing"
     assert payload["workspace"]["detected_agent_instructions_files"] == ["GEMINI.md"]
+
+
+def test_config_command_autodetects_claude_agent_instructions_file(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "CLAUDE.md").write_text("# Claude\n", encoding="utf-8")
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["agent_instructions_file"] == "CLAUDE.md"
+    assert payload["workspace"]["agent_instructions_file_source"] == "autodetected-existing"
+    assert payload["workspace"]["detected_agent_instructions_files"] == ["CLAUDE.md"]
+
+
+def test_config_command_autodetects_legacy_cursor_rules_file(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".cursorrules").write_text("Use repo conventions.\n", encoding="utf-8")
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["agent_instructions_file"] == ".cursorrules"
+    assert payload["workspace"]["agent_instructions_file_source"] == "autodetected-existing"
+    assert payload["workspace"]["detected_agent_instructions_files"] == [".cursorrules"]
+
+
+def test_config_command_accepts_custom_agent_instructions_file(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        'schema_version = 1\n\n[workspace]\nagent_instructions_file = "docs/agent-instructions.md"\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["agent_instructions_file"] == "docs/agent-instructions.md"
+    assert payload["workspace"]["agent_instructions_file_source"] == "repo-config"
 
 
 def test_config_command_discovers_workspace_root_from_subdirectory(tmp_path: Path, monkeypatch, capsys) -> None:

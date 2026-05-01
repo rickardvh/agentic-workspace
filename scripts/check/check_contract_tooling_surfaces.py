@@ -1549,10 +1549,9 @@ def main(argv: list[str] | None = None) -> int:
         checks.append(("cli command manifest parity", ["command suggestions no longer derive the expected known commands"]))
     workspace_config_schema = contract_schema("workspace_config.schema.json")
     local_override_schema = contract_schema("workspace_local_override.schema.json")
-    if workspace_config_schema["properties"]["workspace"]["properties"]["agent_instructions_file"]["enum"] != list(
-        cli.SUPPORTED_AGENT_INSTRUCTIONS_FILES
-    ):
-        checks.append(("workspace config schema parity", ["agent_instructions_file enum drifted from cli supported files"]))
+    agent_instructions_schema = workspace_config_schema["properties"]["workspace"]["properties"]["agent_instructions_file"]
+    if agent_instructions_schema.get("type") != "string" or agent_instructions_schema.get("minLength") != 1:
+        checks.append(("workspace config schema parity", ["agent_instructions_file must accept any non-empty string path"]))
     if workspace_config_schema["properties"]["workspace"]["properties"]["workflow_artifact_profile"]["enum"] != list(
         cli.SUPPORTED_WORKFLOW_ARTIFACT_PROFILES
     ):

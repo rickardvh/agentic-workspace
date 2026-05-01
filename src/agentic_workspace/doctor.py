@@ -106,10 +106,9 @@ def check_contract_integrity() -> list[str]:
         errors.append("reporting schema payload drifted from report_contract.json")
 
     workspace_config_schema = contract_schema("workspace_config.schema.json")
-    if workspace_config_schema["properties"]["workspace"]["properties"]["agent_instructions_file"]["enum"] != list(
-        config.SUPPORTED_AGENT_INSTRUCTIONS_FILES
-    ):
-        errors.append("workspace_config schema agent_instructions_file enum drifted from config constants")
+    agent_instructions_schema = workspace_config_schema["properties"]["workspace"]["properties"]["agent_instructions_file"]
+    if agent_instructions_schema.get("type") != "string" or agent_instructions_schema.get("minLength") != 1:
+        errors.append("workspace_config schema agent_instructions_file must accept any non-empty string path")
     if workspace_config_schema["properties"]["workspace"]["properties"]["workflow_artifact_profile"]["enum"] != list(
         config.SUPPORTED_WORKFLOW_ARTIFACT_PROFILES
     ):

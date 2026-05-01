@@ -2,54 +2,77 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/workspace-config.schema.json",
   "title": "Agentic Workspace Repo Config",
+  "description": "Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.toml.",
   "type": "object",
   "required": [
     "schema_version"
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "description": "Config contract version. Workspace config files must set this to 1.",
+      "const": 1,
+      "default": 1
     },
     "workspace": {
+      "description": "Repo-owned workspace policy for install presets, startup adapter shape, output posture, and advanced feature opt-ins.",
       "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "public",
       "x-agentic-workspace-unknown-properties": "warn",
       "properties": {
         "default_preset": {
+          "description": "Default module preset used by lifecycle commands when no preset is supplied.",
           "enum": [
             "memory",
             "planning",
             "full"
-          ]
+          ],
+          "default": "full"
         },
         "agent_instructions_file": {
-          "enum": [
+          "description": "Repo startup adapter text file agents should read first.",
+          "type": "string",
+          "minLength": 1,
+          "default": "AGENTS.md",
+          "examples": [
             "AGENTS.md",
-            "GEMINI.md"
-          ]
+            "CLAUDE.md",
+            ".cursorrules",
+            ".cursor/rules/project.mdc",
+            "docs/agent-instructions.md"
+          ],
+          "x-agentic-workspace-effective-default-source": "product-default-or-autodetected-existing"
         },
         "workflow_artifact_profile": {
+          "description": "Shape of generated workflow and handoff artifacts.",
           "enum": [
             "repo-owned",
             "gemini"
-          ]
+          ],
+          "default": "repo-owned"
         },
         "improvement_latitude": {
+          "description": "How much repo-directed improvement initiative Agentic Workspace may surface by default.",
           "enum": [
             "none",
             "reporting",
             "conservative",
             "balanced",
             "proactive"
-          ]
+          ],
+          "default": "conservative"
         },
         "optimization_bias": {
+          "description": "Preferred rendering bias for durable outputs; this does not change canonical truth or execution method.",
           "enum": [
             "agent-efficiency",
             "balanced",
             "human-legibility"
-          ]
+          ],
+          "default": "balanced"
         },
         "advanced_features": {
+          "description": "Explicit opt-ins for reusable diagnostics that are not ordinary startup requirements.",
           "type": "array",
           "items": {
             "enum": [
@@ -57,22 +80,36 @@
               "external_adapters"
             ]
           },
-          "uniqueItems": true
+          "uniqueItems": true,
+          "default": [],
+          "examples": [
+            [
+              "review_artifacts"
+            ]
+          ],
+          "x-agentic-workspace-doc-role": "advanced"
         }
       },
       "additionalProperties": true
     },
     "update": {
+      "description": "Module update-source policy for installed Agentic Workspace modules.",
       "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "maintainer",
       "x-agentic-workspace-unknown-properties": "warn",
       "properties": {
         "modules": {
+          "description": "Per-module update-source overrides. Omitted modules use product defaults.",
           "type": "object",
+          "default": {},
           "properties": {
             "planning": {
+              "description": "Update-source policy for the planning module.",
               "$ref": "#/$defs/module_update_policy"
             },
             "memory": {
+              "description": "Update-source policy for the memory module.",
               "$ref": "#/$defs/module_update_policy"
             }
           },
@@ -82,7 +119,10 @@
       "additionalProperties": true
     },
     "workflow_obligations": {
+      "description": "Repo-local workflow obligations that reports can surface for matching work scopes.",
       "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "maintainer",
       "patternProperties": {
         "^.+$": {
           "$ref": "#/$defs/workflow_obligation"
@@ -91,93 +131,143 @@
       "additionalProperties": false
     },
     "system_intent": {
+      "description": "Repo-owned sources for durable product or project intent.",
       "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "public",
       "x-agentic-workspace-unknown-properties": "warn",
       "properties": {
         "sources": {
+          "description": "Ordered candidate files that describe durable repo intent.",
           "type": "array",
           "items": {
             "type": "string",
             "minLength": 1
           },
-          "uniqueItems": true
+          "uniqueItems": true,
+          "examples": [
+            [
+              "README.md",
+              "docs/product.md"
+            ]
+          ],
+          "x-agentic-workspace-effective-default-source": "autodetected-existing-or-product-default"
         },
         "preferred_source": {
+          "description": "Preferred intent source, usually one of system_intent.sources.",
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "examples": [
+            "README.md"
+          ],
+          "x-agentic-workspace-effective-default-source": "autodetected-existing-or-product-default"
         }
       },
       "additionalProperties": true
     },
     "assurance": {
+      "description": "Default trust and proof posture for work when active planning does not override it.",
       "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "advanced",
       "x-agentic-workspace-unknown-properties": "warn",
       "properties": {
         "default_level": {
+          "description": "Baseline assurance level for proof and trust guidance.",
           "enum": [
             "low",
             "medium",
             "high",
             "critical"
-          ]
+          ],
+          "default": "low"
         },
         "agent_may_escalate": {
-          "type": "boolean"
+          "description": "Whether agents may raise assurance level when risk or scope warrants it.",
+          "type": "boolean",
+          "default": true
         },
         "agent_may_deescalate": {
-          "type": "boolean"
+          "description": "Whether agents may lower assurance level below the configured default.",
+          "type": "boolean",
+          "default": false
         },
         "strict_closeout": {
-          "type": "boolean"
+          "description": "Whether closeout should block when required proof references or gates are missing.",
+          "type": "boolean",
+          "default": false
         },
         "decision_record_target": {
+          "description": "Path for durable decision records when work requires one.",
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "examples": [
+            "docs/decisions/"
+          ]
         },
         "invariant_registry": {
+          "description": "Path to the repo invariant registry used during higher-assurance work.",
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "examples": [
+            "docs/invariants.md"
+          ]
         },
         "risk_registry": {
+          "description": "Path to the repo risk registry used during higher-assurance work.",
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "examples": [
+            "docs/risks.md"
+          ]
         },
         "proof_profiles": {
+          "description": "Named proof profiles available to active planning assurance fields.",
           "type": "object",
+          "default": {},
           "additionalProperties": {
             "type": "object",
+            "description": "Reusable command and review-aid set for a named proof profile.",
             "x-agentic-workspace-unknown-properties": "warn",
             "properties": {
               "required_commands": {
+                "description": "Commands that must pass for this proof profile.",
                 "type": "array",
                 "items": {
                   "type": "string",
                   "minLength": 1
                 },
-                "uniqueItems": true
+                "uniqueItems": true,
+                "default": []
               },
               "optional_commands": {
+                "description": "Commands that are useful but not required for this proof profile.",
                 "type": "array",
                 "items": {
                   "type": "string",
                   "minLength": 1
                 },
-                "uniqueItems": true
+                "uniqueItems": true,
+                "default": []
               },
               "review_aids": {
+                "description": "Manual review aids or checklists associated with this proof profile.",
                 "type": "array",
                 "items": {
                   "type": "string",
                   "minLength": 1
                 },
-                "uniqueItems": true
+                "uniqueItems": true,
+                "default": []
               }
             },
             "additionalProperties": true
           }
         },
         "test_data_policy": {
+          "description": "Repo-specific policy for test data, privacy, fixtures, or generated samples.",
           "type": "object",
+          "default": {},
           "x-agentic-workspace-unknown-properties": "warn",
           "additionalProperties": true
         }
@@ -185,25 +275,39 @@
       "additionalProperties": true
     },
     "cli_compatibility": {
+      "description": "Expected CLI identity and posture for commands executed in this repo.",
       "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "maintainer",
       "x-agentic-workspace-unknown-properties": "warn",
       "properties": {
         "enforcement": {
+          "description": "How strictly CLI compatibility expectations should be enforced.",
           "enum": [
             "off",
             "advisory",
             "blocking"
-          ]
+          ],
+          "default": "off"
         },
         "minimum_version": {
+          "description": "Minimum accepted Agentic Workspace CLI version.",
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "examples": [
+            "0.4.0"
+          ]
         },
         "exact_version": {
+          "description": "Exact accepted Agentic Workspace CLI version when a repo must pin execution.",
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "examples": [
+            "0.4.0"
+          ]
         },
         "source_classes": {
+          "description": "Allowed source classes for the invoked CLI executable.",
           "type": "array",
           "items": {
             "enum": [
@@ -212,9 +316,11 @@
               "unknown"
             ]
           },
-          "uniqueItems": true
+          "uniqueItems": true,
+          "default": []
         },
         "target_relations": {
+          "description": "Allowed relation between the invoked CLI executable and the target repo.",
           "type": "array",
           "items": {
             "enum": [
@@ -223,37 +329,54 @@
               "no-target"
             ]
           },
-          "uniqueItems": true
+          "uniqueItems": true,
+          "default": []
         },
         "command": {
+          "description": "Expected CLI command string when the repo wants compatibility checks to match a specific invocation.",
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "examples": [
+            "agentic-workspace"
+          ]
         }
       },
       "additionalProperties": true
     }
   },
+  "x-agentic-workspace-doc-role": "public-reference",
+  "x-agentic-workspace-see-also": [
+    ".agentic-workspace/docs/workspace-config-contract.md",
+    "docs/reference",
+    "docs/generated"
+  ],
   "x-agentic-workspace-unknown-properties": "warn",
   "additionalProperties": true,
   "$defs": {
     "module_update_policy": {
+      "description": "Update source metadata for a managed module.",
       "type": "object",
+      "x-agentic-workspace-doc-role": "maintainer",
       "properties": {
         "source_type": {
+          "description": "Where upgrade or install should resolve the module payload from.",
           "enum": [
             "git",
             "local"
           ]
         },
         "source_ref": {
+          "description": "Git URL/ref or local path, depending on source_type.",
           "type": "string",
           "minLength": 1
         },
         "source_label": {
+          "description": "Human-readable label for status and report output.",
           "type": "string",
           "minLength": 1
         },
         "recommended_upgrade_after_days": {
+          "description": "Age threshold after which status or doctor may suggest checking for updates.",
           "type": "integer"
         }
       },
@@ -261,6 +384,7 @@
       "additionalProperties": true
     },
     "workflow_obligation": {
+      "description": "Repo-local workflow obligation that can be surfaced when stage and scope match current work.",
       "type": "object",
       "required": [
         "summary",
@@ -268,12 +392,15 @@
         "scope_tags",
         "commands"
       ],
+      "x-agentic-workspace-doc-role": "maintainer",
       "properties": {
         "summary": {
+          "description": "Short explanation of the obligation.",
           "type": "string",
           "minLength": 1
         },
         "stage": {
+          "description": "Workflow stage where this obligation matters.",
           "enum": [
             "pre-work",
             "before-claiming-completion",
@@ -283,22 +410,36 @@
           ]
         },
         "scope_tags": {
+          "description": "Tags used to match the obligation to touched work scopes.",
           "type": "array",
           "items": {
             "type": "string",
             "minLength": 1
           },
-          "minItems": 1
+          "minItems": 1,
+          "examples": [
+            [
+              "contracts",
+              "docs"
+            ]
+          ]
         },
         "commands": {
+          "description": "Commands to run or consider at the matching workflow stage.",
           "type": "array",
           "items": {
             "type": "string",
             "minLength": 1
           },
-          "minItems": 1
+          "minItems": 1,
+          "examples": [
+            [
+              "make maintainer-surfaces"
+            ]
+          ]
         },
         "review_hint": {
+          "description": "Short reminder to surface during review or closeout.",
           "type": "string",
           "minLength": 1
         }

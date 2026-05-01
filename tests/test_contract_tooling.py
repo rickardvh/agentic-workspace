@@ -104,6 +104,19 @@ def test_workspace_config_schema_accepts_supported_system_intent_declaration() -
     assert errors == []
 
 
+def test_workspace_config_schema_accepts_custom_agent_instructions_file() -> None:
+    schema = contract_tooling.contract_schema("workspace_config.schema.json")
+    sample = {
+        "schema_version": 1,
+        "workspace": {
+            "agent_instructions_file": "docs/agent-instructions.md",
+        },
+    }
+
+    errors = list(Draft202012Validator(schema).iter_errors(sample))
+    assert errors == []
+
+
 def test_command_adapter_generation_contract_identifies_defaults_candidate() -> None:
     manifest = contract_tooling.command_adapter_generation_manifest()
     adapters = {adapter["id"]: adapter for adapter in manifest["adapters"]}

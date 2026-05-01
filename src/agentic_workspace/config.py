@@ -61,7 +61,9 @@ WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH = Path(".agentic-workspace/bootstrap-han
 DEFAULT_AGENT_INSTRUCTIONS_FILE = "AGENTS.md"
 SUPPORTED_AGENT_INSTRUCTIONS_FILES = (
     "AGENTS.md",
+    "CLAUDE.md",
     "GEMINI.md",
+    ".cursorrules",
 )
 DEFAULT_WORKFLOW_ARTIFACT_PROFILE = "repo-owned"
 SUPPORTED_WORKFLOW_ARTIFACT_PROFILES = (
@@ -383,9 +385,11 @@ def require_optional_string_list(
 
 def validate_agent_instructions_filename(filename: str) -> str:
     normalized = filename.strip()
-    if normalized not in SUPPORTED_AGENT_INSTRUCTIONS_FILES:
-        supported = ", ".join(SUPPORTED_AGENT_INSTRUCTIONS_FILES)
-        raise WorkspaceUsageError(f"agent instructions filename must be one of: {supported}.")
+    if not normalized:
+        raise WorkspaceUsageError("agent instructions filename must be a non-empty relative path.")
+    path = Path(normalized)
+    if path.is_absolute() or ".." in path.parts:
+        raise WorkspaceUsageError("agent instructions filename must be a non-empty relative path inside the target repo.")
     return normalized
 
 
