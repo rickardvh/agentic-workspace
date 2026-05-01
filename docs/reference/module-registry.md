@@ -13,41 +13,41 @@ Registry of workspace modules, feature tiers, component classes, and generated c
 | (root) | object | yes |  | Registry of workspace modules, feature tiers, component classes, and generated command metadata. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `schema_version` | const `"agentic-workspace/module-registry/v1"` | yes |  | Registry contract version. |  |  |
 | `module_command_args` | object | yes |  | Accepted command-line module arguments and aliases. |  |  |
-| `module_command_args.<name>` | array of string | no |  | Additional named array entry for module command args in Module Registry. |  |  |
+| `module_command_args.<name>` | array of string | no |  | Named entry in the module command args mapping. |  |  |
 | `package_footprint` | object | yes |  | Policy explaining what the package installs and what it deliberately avoids. |  |  |
-| `package_footprint.decision` | string | yes |  | The decision string field in Module Registry. |  |  |
-| `package_footprint.status` | string | yes |  | The status string field in Module Registry. |  |  |
-| `package_footprint.python_package_dependency_model` | string | yes |  | The python package dependency model string field in Module Registry. |  |  |
-| `package_footprint.repo_footprint_rule` | string | yes |  | The repo footprint rule string field in Module Registry. |  |  |
-| `package_footprint.why` | string | yes |  | The why string field in Module Registry. |  |  |
-| `package_footprint.bounded_by` | array of string | yes |  | The bounded by array field in Module Registry. |  |  |
-| `package_footprint.future_options` | array of string | yes |  | The future options array field in Module Registry. |  |  |
-| `package_footprint.must_preserve` | array of string | yes |  | The must preserve array field in Module Registry. |  |  |
+| `package_footprint.decision` | string | yes |  | Decision text value used by this contract. |  |  |
+| `package_footprint.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
+| `package_footprint.python_package_dependency_model` | string | yes |  | Python package dependency model text value used by this contract. |  |  |
+| `package_footprint.repo_footprint_rule` | string | yes |  | Repo footprint rule text value used by this contract. |  |  |
+| `package_footprint.why` | string | yes |  | Why text value used by this contract. |  |  |
+| `package_footprint.bounded_by` | array of string | yes |  | Ordered bounded by entries used by this contract. |  |  |
+| `package_footprint.future_options` | array of string | yes |  | Ordered future options entries used by this contract. |  |  |
+| `package_footprint.must_preserve` | array of string | yes |  | Ordered must preserve entries used by this contract. |  |  |
 | `component_model` | object | yes |  | Declarative component model used to describe module-owned resources without requiring an MCP runtime. |  |  |
-| `component_model.schema_version` | const `"agentic-workspace/module-components/v1"` | yes |  | The schema version constant field in Module Registry. |  |  |
-| `component_model.alignment` | string | yes |  | The alignment string field in Module Registry. |  |  |
-| `component_model.runtime_dependency` | const `"none"` | yes |  | The runtime dependency constant field in Module Registry. |  |  |
-| `component_model.source_of_truth` | string | yes |  | The source of truth string field in Module Registry. |  |  |
-| `component_model.rule` | string | yes |  | The rule string field in Module Registry. |  |  |
-| `component_model.component_classes` | array of object | yes |  | The component classes array field in Module Registry. |  |  |
-| `component_model.adapter_boundary` | object | yes |  | The adapter boundary object field in Module Registry. |  |  |
-| `component_model.adapter_boundary.future_adapter` | string | yes |  | The future adapter string field in Module Registry. |  |  |
-| `component_model.adapter_boundary.adapter_consumes` | array of string | yes |  | The adapter consumes array field in Module Registry. |  |  |
-| `component_model.adapter_boundary.adapter_must_not` | array of string | yes |  | The adapter must not array field in Module Registry. |  |  |
-| `component_model.adapter_boundary.blocking_prerequisites` | array of string | yes |  | The blocking prerequisites array field in Module Registry. |  |  |
+| `component_model.schema_version` | const `"agentic-workspace/module-components/v1"` | yes |  | Contract version for this document. |  |  |
+| `component_model.alignment` | string | yes |  | Alignment text value used by this contract. |  |  |
+| `component_model.runtime_dependency` | const `"none"` | yes |  | Fixed runtime dependency value required by this contract. |  |  |
+| `component_model.source_of_truth` | string | yes |  | Source of truth text value used by this contract. |  |  |
+| `component_model.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
+| `component_model.component_classes` | array of object | yes |  | Ordered component classes entries used by this contract. |  |  |
+| `component_model.adapter_boundary` | object | yes |  | Adapter boundary details used by this contract. |  |  |
+| `component_model.adapter_boundary.future_adapter` | string | yes |  | Future adapter text value used by this contract. |  |  |
+| `component_model.adapter_boundary.adapter_consumes` | array of string | yes |  | Ordered adapter consumes entries used by this contract. |  |  |
+| `component_model.adapter_boundary.adapter_must_not` | array of string | yes |  | Ordered adapter must not entries used by this contract. |  |  |
+| `component_model.adapter_boundary.blocking_prerequisites` | array of string | yes |  | Ordered blocking prerequisites entries used by this contract. |  |  |
 | `module_profiles` | array of object | yes |  | Module profile summaries used for selection, reporting, and docs. |  |  |
 | `workspace_components` | object | yes |  | Root workspace components that are not owned by a single module. |  |  |
-| `workspace_components.scope` | object | yes |  | The scope object field in Module Registry. |  |  |
-| `workspace_components.scope.audience` | const `"shipped-host-repo"` | yes |  | The audience constant field in Module Registry. |  |  |
-| `workspace_components.scope.role` | string | yes |  | The role string field in Module Registry. |  |  |
-| `workspace_components.scope.excludes` | array of string | yes |  | The excludes array field in Module Registry. |  |  |
-| `workspace_components.scope.rule` | string | yes |  | The rule string field in Module Registry. |  |  |
-| `workspace_components.components` | ref `#/$defs/module_components` | yes |  | The components reference field in Module Registry. |  |  |
-| `workspace_components.components.resources` | array of ref `#/$defs/resource_component` | yes |  | The resources array field in Module Registry. |  |  |
-| `workspace_components.components.tools` | array of ref `#/$defs/tool_component` | yes |  | The tools array field in Module Registry. |  |  |
-| `workspace_components.components.prompts` | array of ref `#/$defs/prompt_component` | yes |  | The prompts array field in Module Registry. |  |  |
-| `workspace_components.components.schemas` | array of ref `#/$defs/schema_component` | yes |  | The schemas array field in Module Registry. |  |  |
-| `workspace_components.components.roots` | array of ref `#/$defs/root_component` | yes |  | The roots array field in Module Registry. |  |  |
+| `workspace_components.scope` | object | yes |  | Scope details used by this contract. |  |  |
+| `workspace_components.scope.audience` | const `"shipped-host-repo"` | yes |  | Fixed audience value required by this contract. |  |  |
+| `workspace_components.scope.role` | string | yes |  | Role text value used by this contract. |  |  |
+| `workspace_components.scope.excludes` | array of string | yes |  | Ordered excludes entries used by this contract. |  |  |
+| `workspace_components.scope.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
+| `workspace_components.components` | ref `#/$defs/module_components` | yes |  | Components declared by this registry or package surface. |  |  |
+| `workspace_components.components.resources` | array of ref `#/$defs/resource_component` | yes |  | Ordered resources entries used by this contract. |  |  |
+| `workspace_components.components.tools` | array of ref `#/$defs/tool_component` | yes |  | Ordered tools entries used by this contract. |  |  |
+| `workspace_components.components.prompts` | array of ref `#/$defs/prompt_component` | yes |  | Ordered prompts entries used by this contract. |  |  |
+| `workspace_components.components.schemas` | array of ref `#/$defs/schema_component` | yes |  | Ordered schemas entries used by this contract. |  |  |
+| `workspace_components.components.roots` | array of ref `#/$defs/root_component` | yes |  | Ordered roots entries used by this contract. |  |  |
 | `feature_tiers` | array of object | yes |  | Named install/feature tiers and their ordinary operating cost. |  |  |
 | `advanced_features` | array of object | yes |  | Optional advanced feature gates that are not ordinary startup requirements. |  |  |
 | `modules` | array of object | yes |  | Registered modules and their descriptors. |  |  |

@@ -23,19 +23,19 @@
   "properties": {
     "kind": {
       "const": "agent-feedback-review/v1",
-      "description": "The kind constant field in Agent Feedback Artifact."
+      "description": "Discriminator identifying the payload or record shape."
     },
     "schema_version": {
       "const": "agentic-workspace/agent-feedback/v1",
-      "description": "The schema version constant field in Agent Feedback Artifact."
+      "description": "Contract version for this document."
     },
     "evaluated_at": {
       "type": "string",
-      "description": "The evaluated at string field in Agent Feedback Artifact."
+      "description": "Timestamp or date when this artifact was evaluated."
     },
     "prompt_ref": {
       "type": "string",
-      "description": "The prompt ref string field in Agent Feedback Artifact."
+      "description": "Prompt, task, or request reference that produced the feedback."
     },
     "context": {
       "type": "object",
@@ -47,27 +47,27 @@
       "properties": {
         "target": {
           "type": "string",
-          "description": "The target string field in Agent Feedback Artifact."
+          "description": "Destination file, surface, package, or record referenced by this entry."
         },
         "work_window": {
           "type": "string",
-          "description": "The work window string field in Agent Feedback Artifact."
+          "description": "Timebox or work interval covered by this record."
         },
         "package_surfaces_used": {
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Item string accepted by package surfaces used in Agent Feedback Artifact."
+            "description": "One entry in the package surfaces used list."
           },
-          "description": "The package surfaces used array field in Agent Feedback Artifact."
+          "description": "Package-owned surfaces used during the work window."
         },
         "notes": {
           "type": "string",
-          "description": "The notes string field in Agent Feedback Artifact."
+          "description": "Additional notes that qualify this record."
         }
       },
       "additionalProperties": false,
-      "description": "The context object field in Agent Feedback Artifact."
+      "description": "Execution context in which the feedback or record was captured."
     },
     "impact": {
       "type": "object",
@@ -80,23 +80,23 @@
       "properties": {
         "outcome": {
           "type": "string",
-          "description": "The outcome string field in Agent Feedback Artifact."
+          "description": "Observed or intended outcome for this entry."
         },
         "quality": {
           "type": "string",
-          "description": "The quality string field in Agent Feedback Artifact."
+          "description": "Quality signal captured for this feedback item."
         },
         "efficiency": {
           "type": "string",
-          "description": "The efficiency string field in Agent Feedback Artifact."
+          "description": "Efficiency or effort signal captured for this feedback item."
         },
         "cognitive_load": {
           "type": "string",
-          "description": "The cognitive load string field in Agent Feedback Artifact."
+          "description": "Cognitive-load signal captured for this feedback item."
         }
       },
       "additionalProperties": false,
-      "description": "The impact object field in Agent Feedback Artifact."
+      "description": "Observed impact of the work or feedback."
     },
     "findings": {
       "type": "array",
@@ -112,11 +112,11 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "The id string field in Agent Feedback Artifact."
+            "description": "Stable identifier used to reference this record."
           },
           "summary": {
             "type": "string",
-            "description": "The summary string field in Agent Feedback Artifact."
+            "description": "Short human-readable summary for this entry."
           },
           "classification": {
             "enum": [
@@ -124,15 +124,15 @@
               "repo-local",
               "mixed-unclear"
             ],
-            "description": "The classification enumerated value field in Agent Feedback Artifact."
+            "description": "Classification used for routing, filtering, or policy selection."
           },
           "evidence": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by evidence in Agent Feedback Artifact."
+              "description": "One entry in the evidence list."
             },
-            "description": "The evidence array field in Agent Feedback Artifact."
+            "description": "Evidence supporting this finding, policy, or assertion."
           },
           "severity": {
             "enum": [
@@ -140,13 +140,13 @@
               "medium",
               "high"
             ],
-            "description": "The severity enumerated value field in Agent Feedback Artifact."
+            "description": "Severity level used to prioritize response."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by findings in Agent Feedback Artifact."
+        "description": "One entry in the findings list."
       },
-      "description": "The findings array field in Agent Feedback Artifact."
+      "description": "Findings captured by this artifact."
     },
     "suggestions": {
       "type": "array",
@@ -160,21 +160,21 @@
         "properties": {
           "finding_id": {
             "type": "string",
-            "description": "The finding id string field in Agent Feedback Artifact."
+            "description": "Finding id text value used by this contract."
           },
           "summary": {
             "type": "string",
-            "description": "The summary string field in Agent Feedback Artifact."
+            "description": "Short human-readable summary for this entry."
           },
           "expected_effect": {
             "type": "string",
-            "description": "The expected effect string field in Agent Feedback Artifact."
+            "description": "Expected effect text value used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by suggestions in Agent Feedback Artifact."
+        "description": "One entry in the suggestions list."
       },
-      "description": "The suggestions array field in Agent Feedback Artifact."
+      "description": "Ordered suggestions entries used by this contract."
     },
     "follow_up_routing": {
       "type": "object",
@@ -187,21 +187,21 @@
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Item string accepted by issues in Agent Feedback Artifact."
+            "description": "One entry in the issues list."
           },
-          "description": "The issues array field in Agent Feedback Artifact."
+          "description": "Ordered issues entries used by this contract."
         },
         "deferred": {
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Item string accepted by deferred in Agent Feedback Artifact."
+            "description": "One entry in the deferred list."
           },
-          "description": "The deferred array field in Agent Feedback Artifact."
+          "description": "Ordered deferred entries used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The follow up routing object field in Agent Feedback Artifact."
+      "description": "Follow up routing details used by this contract."
     }
   },
   "additionalProperties": false,

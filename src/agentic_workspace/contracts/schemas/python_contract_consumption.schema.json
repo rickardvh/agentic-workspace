@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/python-contract-consumption.schema.json",
   "title": "Python Contract Consumption Policy",
-  "description": "Schema for Python Contract Consumption Policy.",
+  "description": "Policy describing how Python runtime code consumes contract files.",
   "type": "object",
   "required": [
     "schema_version",
@@ -14,7 +14,7 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/python-contract-consumption/v1",
-      "description": "The schema version constant field in Python Contract Consumption Policy."
+      "description": "Contract version for this document."
     },
     "loader_boundary": {
       "type": "object",
@@ -27,23 +27,23 @@
       "properties": {
         "module": {
           "type": "string",
-          "description": "The module string field in Python Contract Consumption Policy."
+          "description": "Module that owns or consumes this entry."
         },
         "generic_loader": {
           "type": "string",
-          "description": "The generic loader string field in Python Contract Consumption Policy."
+          "description": "Generic loader text value used by this contract."
         },
         "validated_loader": {
           "type": "string",
-          "description": "The validated loader string field in Python Contract Consumption Policy."
+          "description": "Validated loader text value used by this contract."
         },
         "error_type": {
           "type": "string",
-          "description": "The error type string field in Python Contract Consumption Policy."
+          "description": "Error type text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The loader boundary object field in Python Contract Consumption Policy."
+      "description": "Loader boundary details used by this contract."
     },
     "validated_at_consumption": {
       "type": "array",
@@ -58,26 +58,26 @@
         "properties": {
           "contract": {
             "type": "string",
-            "description": "The contract string field in Python Contract Consumption Policy."
+            "description": "Contract text value used by this contract."
           },
           "schema": {
             "type": "string",
-            "description": "The schema string field in Python Contract Consumption Policy."
+            "description": "Schema reference or schema metadata for this payload."
           },
           "loader": {
             "type": "string",
             "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
-            "description": "The loader string field in Python Contract Consumption Policy."
+            "description": "Loader text value used by this contract."
           },
           "consumer": {
             "type": "string",
-            "description": "The consumer string field in Python Contract Consumption Policy."
+            "description": "Consumer text value used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by validated at consumption in Python Contract Consumption Policy."
+        "description": "One entry in the validated at consumption list."
       },
-      "description": "The validated at consumption array field in Python Contract Consumption Policy."
+      "description": "Ordered validated at consumption entries used by this contract."
     },
     "dynamic_validated_loader_boundary": {
       "type": "array",
@@ -92,21 +92,21 @@
           "loader": {
             "type": "string",
             "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
-            "description": "The loader string field in Python Contract Consumption Policy."
+            "description": "Loader text value used by this contract."
           },
           "schema": {
             "type": "string",
-            "description": "The schema string field in Python Contract Consumption Policy."
+            "description": "Schema reference or schema metadata for this payload."
           },
           "reason": {
             "type": "string",
-            "description": "The reason string field in Python Contract Consumption Policy."
+            "description": "Reason text value used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by dynamic validated loader boundary in Python Contract Consumption Policy."
+        "description": "One entry in the dynamic validated loader boundary list."
       },
-      "description": "The dynamic validated loader boundary array field in Python Contract Consumption Policy."
+      "description": "Ordered dynamic validated loader boundary entries used by this contract."
     },
     "model_derivation_policy": {
       "type": "object",
@@ -118,19 +118,19 @@
       "properties": {
         "authority_rule": {
           "type": "string",
-          "description": "The authority rule string field in Python Contract Consumption Policy."
+          "description": "Authority rule text value used by this contract."
         },
         "first_schema_derived_target": {
           "type": "string",
-          "description": "The first schema derived target string field in Python Contract Consumption Policy."
+          "description": "First schema derived target text value used by this contract."
         },
         "handwritten_model_boundary": {
           "type": "string",
-          "description": "The handwritten model boundary string field in Python Contract Consumption Policy."
+          "description": "Handwritten model boundary text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The model derivation policy object field in Python Contract Consumption Policy."
+      "description": "Model derivation policy details used by this contract."
     }
   },
   "additionalProperties": false,

@@ -36,22 +36,22 @@
         "program": {
           "type": "string",
           "minLength": 1,
-          "description": "The program string field in Agentic Workspace Operation Contract."
+          "description": "Program text value used by this contract."
         },
         "command": {
           "type": "string",
           "minLength": 1,
-          "description": "The command string field in Agentic Workspace Operation Contract."
+          "description": "Command string or command name used by this contract."
         },
         "subcommand": {
           "type": "string",
           "minLength": 1,
-          "description": "The subcommand string field in Agentic Workspace Operation Contract."
+          "description": "Subcommand text value used by this contract."
         },
         "format_option": {
           "type": "string",
           "minLength": 1,
-          "description": "The format option string field in Agentic Workspace Operation Contract."
+          "description": "Format option text value used by this contract."
         }
       },
       "additionalProperties": false,
@@ -88,7 +88,7 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "The name string field in Agentic Workspace Operation Contract."
+            "description": "Human-readable or lookup name for this entry."
           },
           "source": {
             "type": "string",
@@ -97,23 +97,23 @@
               "default",
               "derived"
             ],
-            "description": "The source enumerated value field in Agentic Workspace Operation Contract."
+            "description": "Origin or authority source for this value."
           },
           "required": {
             "type": "boolean",
-            "description": "The required boolean field in Agentic Workspace Operation Contract."
+            "description": "Required true/false policy flag used by this contract."
           },
           "schema_ref": {
             "type": "string",
-            "description": "The schema ref string field in Agentic Workspace Operation Contract."
+            "description": "Schema reference used to validate the output payload."
           },
           "description": {
             "type": "string",
-            "description": "The description string field in Agentic Workspace Operation Contract."
+            "description": "Longer explanation or display text for this entry."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by inputs in Agentic Workspace Operation Contract."
+        "description": "One entry in the inputs list."
       },
       "description": "Inputs the operation accepts and where they come from."
     },
@@ -131,15 +131,15 @@
             "text",
             "module-result"
           ],
-          "description": "The kind enumerated value field in Agentic Workspace Operation Contract."
+          "description": "Discriminator identifying the payload or record shape."
         },
         "schema_ref": {
           "type": "string",
-          "description": "The schema ref string field in Agentic Workspace Operation Contract."
+          "description": "Schema reference used to validate the output payload."
         },
         "description": {
           "type": "string",
-          "description": "The description string field in Agentic Workspace Operation Contract."
+          "description": "Longer explanation or display text for this entry."
         }
       },
       "additionalProperties": false,
@@ -156,23 +156,23 @@
       "properties": {
         "read_only": {
           "type": "boolean",
-          "description": "The read only boolean field in Agentic Workspace Operation Contract."
+          "description": "Whether this operation or aid avoids writes."
         },
         "destructive": {
           "type": "boolean",
-          "description": "The destructive boolean field in Agentic Workspace Operation Contract."
+          "description": "Whether this action can delete, overwrite, or otherwise destroy state."
         },
         "idempotent": {
           "type": "boolean",
-          "description": "The idempotent boolean field in Agentic Workspace Operation Contract."
+          "description": "Idempotent true/false policy flag used by this contract."
         },
         "writes_repo_state": {
           "type": "boolean",
-          "description": "The writes repo state boolean field in Agentic Workspace Operation Contract."
+          "description": "Writes repo state true/false policy flag used by this contract."
         },
         "requires_preflight_gate": {
           "type": "boolean",
-          "description": "The requires preflight gate boolean field in Agentic Workspace Operation Contract."
+          "description": "Requires preflight gate true/false policy flag used by this contract."
         }
       },
       "additionalProperties": false,
@@ -187,7 +187,7 @@
       "properties": {
         "requires_repo": {
           "type": "boolean",
-          "description": "The requires repo boolean field in Agentic Workspace Operation Contract."
+          "description": "Requires repo true/false policy flag used by this contract."
         },
         "network": {
           "type": "string",
@@ -196,7 +196,7 @@
             "not-required",
             "allowed"
           ],
-          "description": "The network enumerated value field in Agentic Workspace Operation Contract."
+          "description": "Network access requirement or allowance."
         },
         "outside_repo_writes": {
           "type": "string",
@@ -204,7 +204,7 @@
             "forbidden",
             "allowed"
           ],
-          "description": "The outside repo writes enumerated value field in Agentic Workspace Operation Contract."
+          "description": "Allowed outside repo writes value for routing or validation."
         }
       },
       "additionalProperties": false,
@@ -214,7 +214,7 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/surface_access",
-        "description": "Item reference accepted by reads in Agentic Workspace Operation Contract."
+        "description": "One entry in the reads list."
       },
       "description": "Surfaces or state the operation reads."
     },
@@ -224,20 +224,20 @@
         "allOf": [
           {
             "$ref": "#/$defs/surface_access",
-            "description": "Allowed reference variant for writes[] in Agentic Workspace Operation Contract."
+            "description": "Allof[0] referenced contract shape used by this contract."
           },
           {
             "type": "object",
             "properties": {
               "when": {
                 "type": "string",
-                "description": "The when string field in Agentic Workspace Operation Contract."
+                "description": "When text value used by this contract."
               }
             },
-            "description": "Allowed object variant for writes[] in Agentic Workspace Operation Contract."
+            "description": "Allof[1] details used by this contract."
           }
         ],
-        "description": "Item composed value accepted by writes in Agentic Workspace Operation Contract."
+        "description": "One entry in the writes list."
       },
       "description": "Surfaces or state the operation writes."
     },
@@ -255,41 +255,41 @@
           "id": {
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9_-]*$",
-            "description": "The id string field in Agentic Workspace Operation Contract."
+            "description": "Stable identifier used to reference this record."
           },
           "uses": {
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9_.-]*$",
-            "description": "The uses string field in Agentic Workspace Operation Contract."
+            "description": "Uses text value used by this contract."
           },
           "description": {
             "type": "string",
             "minLength": 1,
-            "description": "The description string field in Agentic Workspace Operation Contract."
+            "description": "Longer explanation or display text for this entry."
           },
           "when": {
             "type": "string",
-            "description": "The when string field in Agentic Workspace Operation Contract."
+            "description": "When text value used by this contract."
           },
           "inputs": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by inputs in Agentic Workspace Operation Contract."
+              "description": "One entry in the inputs list."
             },
-            "description": "The inputs array field in Agentic Workspace Operation Contract."
+            "description": "Inputs accepted by the operation or command."
           },
           "outputs": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by outputs in Agentic Workspace Operation Contract."
+              "description": "One entry in the outputs list."
             },
-            "description": "The outputs array field in Agentic Workspace Operation Contract."
+            "description": "Ordered outputs entries used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by steps in Agentic Workspace Operation Contract."
+        "description": "One entry in the steps list."
       },
       "description": "Primitive implementation steps that define operation behavior."
     },
@@ -298,7 +298,7 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "description": "Item string accepted by guards in Agentic Workspace Operation Contract."
+        "description": "One entry in the guards list."
       },
       "description": "Safety or escalation guards for using the operation."
     },
@@ -307,7 +307,7 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "description": "Item string accepted by proof in Agentic Workspace Operation Contract."
+        "description": "One entry in the proof list."
       },
       "description": "Validation expectations for the operation contract."
     },
@@ -319,34 +319,34 @@
           "properties": {
             "command_ref": {
               "type": "string",
-              "description": "The command ref string field in Agentic Workspace Operation Contract."
+              "description": "Command ref text value used by this contract."
             }
           },
           "additionalProperties": false,
-          "description": "The cli object field in Agentic Workspace Operation Contract."
+          "description": "Cli details used by this contract."
         },
         "mcp": {
           "type": "object",
           "properties": {
             "tool_name": {
               "type": "string",
-              "description": "The tool name string field in Agentic Workspace Operation Contract."
+              "description": "Tool name text value used by this contract."
             },
             "read_only_hint": {
               "type": "boolean",
-              "description": "The read only hint boolean field in Agentic Workspace Operation Contract."
+              "description": "Read only hint true/false policy flag used by this contract."
             },
             "destructive_hint": {
               "type": "boolean",
-              "description": "The destructive hint boolean field in Agentic Workspace Operation Contract."
+              "description": "Destructive hint true/false policy flag used by this contract."
             },
             "idempotent_hint": {
               "type": "boolean",
-              "description": "The idempotent hint boolean field in Agentic Workspace Operation Contract."
+              "description": "Idempotent hint true/false policy flag used by this contract."
             }
           },
           "additionalProperties": false,
-          "description": "The mcp object field in Agentic Workspace Operation Contract."
+          "description": "Mcp details used by this contract."
         },
         "skill": {
           "type": "object",
@@ -355,17 +355,17 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "description": "Item string accepted by activation in Agentic Workspace Operation Contract."
+                "description": "One entry in the activation list."
               },
-              "description": "The activation array field in Agentic Workspace Operation Contract."
+              "description": "Ordered activation entries used by this contract."
             },
             "instruction_summary": {
               "type": "string",
-              "description": "The instruction summary string field in Agentic Workspace Operation Contract."
+              "description": "Instruction summary text value used by this contract."
             }
           },
           "additionalProperties": false,
-          "description": "The skill object field in Agentic Workspace Operation Contract."
+          "description": "Skill details used by this contract."
         }
       },
       "additionalProperties": false,
@@ -392,23 +392,23 @@
         "surface": {
           "type": "string",
           "minLength": 1,
-          "description": "The surface string field in Agentic Workspace Operation Contract."
+          "description": "Surface text value used by this contract."
         },
         "required": {
           "type": "boolean",
-          "description": "The required boolean field in Agentic Workspace Operation Contract."
+          "description": "Required true/false policy flag used by this contract."
         },
         "description": {
           "type": "string",
-          "description": "The description string field in Agentic Workspace Operation Contract."
+          "description": "Longer explanation or display text for this entry."
         },
         "when": {
           "type": "string",
-          "description": "The when string field in Agentic Workspace Operation Contract."
+          "description": "When text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable surface access object definition for Agentic Workspace Operation Contract."
+      "description": "Surface access details used by this contract."
     }
   },
   "x-agentic-workspace-doc-role": "contract-reference"

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/workflow-artifact-profiles.schema.json",
   "title": "Workflow Artifact Profiles",
-  "description": "Schema for Workflow Artifact Profiles.",
+  "description": "Profiles describing native workflow artifacts and their sync rules.",
   "type": "object",
   "required": [
     "schema_version",
@@ -12,11 +12,11 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/workflow-artifact-profiles/v1",
-      "description": "The schema version constant field in Workflow Artifact Profiles."
+      "description": "Contract version for this document."
     },
     "default_profile": {
       "type": "string",
-      "description": "The default profile string field in Workflow Artifact Profiles."
+      "description": "Default profile text value used by this contract."
     },
     "profiles": {
       "type": "array",
@@ -34,42 +34,42 @@
         "properties": {
           "profile": {
             "type": "string",
-            "description": "The profile string field in Workflow Artifact Profiles."
+            "description": "Profile text value used by this contract."
           },
           "summary": {
             "type": "string",
-            "description": "The summary string field in Workflow Artifact Profiles."
+            "description": "Short human-readable summary for this entry."
           },
           "native_artifacts": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by native artifacts in Workflow Artifact Profiles."
+              "description": "One entry in the native artifacts list."
             },
-            "description": "The native artifacts array field in Workflow Artifact Profiles."
+            "description": "Ordered native artifacts entries used by this contract."
           },
           "canonical_surfaces": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "string",
-              "description": "Item string accepted by canonical surfaces in Workflow Artifact Profiles."
+              "description": "One entry in the canonical surfaces list."
             },
-            "description": "The canonical surfaces array field in Workflow Artifact Profiles."
+            "description": "Ordered canonical surfaces entries used by this contract."
           },
           "sync_rule": {
             "type": "string",
-            "description": "The sync rule string field in Workflow Artifact Profiles."
+            "description": "Sync rule text value used by this contract."
           },
           "handoff_rule": {
             "type": "string",
-            "description": "The handoff rule string field in Workflow Artifact Profiles."
+            "description": "Handoff rule text value used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by profiles in Workflow Artifact Profiles."
+        "description": "One entry in the profiles list."
       },
-      "description": "The profiles array field in Workflow Artifact Profiles."
+      "description": "Ordered profiles entries used by this contract."
     }
   },
   "additionalProperties": false,

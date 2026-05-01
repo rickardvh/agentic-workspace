@@ -25,21 +25,21 @@ Manifest for a checked-in agent aid such as a script, runbook, prompt, template,
 | `use_when` | array of string | yes |  | Situations where agents should consider using this aid. |  |  |
 | `entrypoint` | string | yes |  | Command, file, or instruction that starts use of the aid. |  |  |
 | `safety` | object | yes |  | Safety properties that determine whether the aid can run automatically. |  |  |
-| `safety.read_only` | boolean | yes |  | The read only boolean field in Agent Aid Manifest. |  |  |
-| `safety.writes_repo` | boolean | yes |  | The writes repo boolean field in Agent Aid Manifest. |  |  |
-| `safety.destructive` | boolean | yes |  | The destructive boolean field in Agent Aid Manifest. |  |  |
-| `safety.network` | boolean | yes |  | The network boolean field in Agent Aid Manifest. |  |  |
-| `safety.hidden_required_workflow` | const `false` | yes |  | The hidden required workflow constant field in Agent Aid Manifest. |  |  |
-| `safety.requires_review` | boolean | yes |  | The requires review boolean field in Agent Aid Manifest. |  |  |
+| `safety.read_only` | boolean | yes |  | Whether this operation or aid avoids writes. |  |  |
+| `safety.writes_repo` | boolean | yes |  | Whether this aid may modify repository files. |  |  |
+| `safety.destructive` | boolean | yes |  | Whether this action can delete, overwrite, or otherwise destroy state. |  |  |
+| `safety.network` | boolean | yes |  | Network access requirement or allowance. |  |  |
+| `safety.hidden_required_workflow` | const `false` | yes |  | Whether the aid secretly imposes workflow requirements; this must stay false for checked-in aids. |  |  |
+| `safety.requires_review` | boolean | yes |  | Whether a human or stronger review pass is required before relying on the result. |  |  |
 | `validation` | object | yes |  | How this aid is validated, or why validation is absent. |  |  |
-| `validation.commands` | array of string | no |  | The commands array field in Agent Aid Manifest. |  |  |
-| `validation.absent_reason` | string | no |  | The absent reason string field in Agent Aid Manifest. |  |  |
+| `validation.commands` | array of string | no |  | Commands associated with this check, proof, or workflow step. |  |  |
+| `validation.absent_reason` | string | no |  | Reason validation commands are intentionally absent. |  |  |
 | `promotion` | object | yes |  | Promotion path if the aid should become more canonical or package-owned. |  |  |
-| `promotion.target_kind` | enum `"command"`, `"check"`, `"skill"`, `"runbook"`, `"prompt"`, `"template"`, `"module-component"`, `"docs-contract"` | yes |  | The target kind enumerated value field in Agent Aid Manifest. |  |  |
-| `promotion.target` | string | yes |  | The target string field in Agent Aid Manifest. |  |  |
-| `promotion.discovery_route` | enum `"repo-command"`, `"repo-check"`, `"skills"`, `"runbook"`, `"prompt-template"`, `"module-manifest"`, `"docs-contract"` | yes |  | The discovery route enumerated value field in Agent Aid Manifest. |  |  |
-| `promotion.trigger` | string | yes |  | The trigger string field in Agent Aid Manifest. |  |  |
-| `promotion.retention_after_promotion` | enum `"delete"`, `"archive"`, `"shrink"`, `"keep"` | yes |  | The retention after promotion enumerated value field in Agent Aid Manifest. |  |  |
+| `promotion.target_kind` | enum `"command"`, `"check"`, `"skill"`, `"runbook"`, `"prompt"`, `"template"`, `"module-component"`, `"docs-contract"` | yes |  | Kind of destination this entry may promote or point to. |  |  |
+| `promotion.target` | string | yes |  | Destination file, surface, package, or record referenced by this entry. |  |  |
+| `promotion.discovery_route` | enum `"repo-command"`, `"repo-check"`, `"skills"`, `"runbook"`, `"prompt-template"`, `"module-manifest"`, `"docs-contract"` | yes |  | How agents or tooling should discover the promoted artifact. |  |  |
+| `promotion.trigger` | string | yes |  | Condition that activates this rule, promotion, or retirement path. |  |  |
+| `promotion.retention_after_promotion` | enum `"delete"`, `"archive"`, `"shrink"`, `"keep"` | yes |  | What happens to the original aid after promotion. |  |  |
 | `retirement` | object | yes |  | Conditions and retention behavior when the aid is no longer useful. |  |  |
-| `retirement.trigger` | string | yes |  | The trigger string field in Agent Aid Manifest. |  |  |
-| `retirement.retention_after_retirement` | enum `"delete"`, `"archive"`, `"keep"` | yes |  | The retention after retirement enumerated value field in Agent Aid Manifest. |  |  |
+| `retirement.trigger` | string | yes |  | Condition that activates this rule, promotion, or retirement path. |  |  |
+| `retirement.retention_after_retirement` | enum `"delete"`, `"archive"`, `"keep"` | yes |  | What happens to the aid record after retirement. |  |  |

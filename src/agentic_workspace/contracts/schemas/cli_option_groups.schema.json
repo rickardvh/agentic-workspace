@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/cli-option-groups.schema.json",
   "title": "Cli Option Groups",
-  "description": "Schema for Cli Option Groups.",
+  "description": "Reusable CLI option-group manifest used by generated command metadata.",
   "type": "object",
   "required": [
     "schema_version",
@@ -11,7 +11,7 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/cli-option-groups/v1",
-      "description": "The schema version constant field in Cli Option Groups."
+      "description": "Contract version for this document."
     },
     "option_groups": {
       "type": "object",
@@ -23,23 +23,23 @@
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by uses in Cli Option Groups."
+              "description": "One entry in the uses list."
             },
-            "description": "The uses array field in Cli Option Groups."
+            "description": "Ordered uses entries used by this contract."
           },
           "options": {
             "type": "array",
             "items": {
               "$ref": "#/$defs/option",
-              "description": "Item reference accepted by options in Cli Option Groups."
+              "description": "One entry in the options list."
             },
-            "description": "The options array field in Cli Option Groups."
+            "description": "Ordered options entries used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Additional named object entry for option groups in Cli Option Groups."
+        "description": "Named entry in the option groups mapping."
       },
-      "description": "The option groups object field in Cli Option Groups."
+      "description": "Option groups details used by this contract."
     }
   },
   "$defs": {
@@ -52,20 +52,20 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "The name string field in Cli Option Groups."
+          "description": "Human-readable or lookup name for this entry."
         },
         "flags": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by flags in Cli Option Groups."
+            "description": "One entry in the flags list."
           },
-          "description": "The flags array field in Cli Option Groups."
+          "description": "Ordered flags entries used by this contract."
         },
         "action": {
           "type": "string",
-          "description": "The action string field in Cli Option Groups."
+          "description": "Action text value used by this contract."
         },
         "choices": {
           "type": "array",
@@ -76,38 +76,38 @@
               "number",
               "boolean"
             ],
-            "description": "Item string or integer or number or boolean accepted by choices in Cli Option Groups."
+            "description": "One entry in the choices list."
           },
-          "description": "The choices array field in Cli Option Groups."
+          "description": "Ordered choices entries used by this contract."
         },
         "choices_ref": {
           "type": "string",
-          "description": "The choices ref string field in Cli Option Groups."
+          "description": "Choices ref text value used by this contract."
         },
         "default": {},
         "default_ref": {
           "type": "string",
-          "description": "The default ref string field in Cli Option Groups."
+          "description": "Default ref text value used by this contract."
         },
         "type": {
           "type": "string",
-          "description": "The type string field in Cli Option Groups."
+          "description": "Category used to choose validation, rendering, or routing behavior."
         },
         "required": {
           "type": "boolean",
-          "description": "The required boolean field in Cli Option Groups."
+          "description": "Required true/false policy flag used by this contract."
         },
         "help": {
           "type": "string",
-          "description": "The help string field in Cli Option Groups."
+          "description": "Help text value used by this contract."
         },
         "help_template": {
           "type": "string",
-          "description": "The help template string field in Cli Option Groups."
+          "description": "Help template text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable option object definition for Cli Option Groups."
+      "description": "Option details used by this contract."
     }
   },
   "additionalProperties": false,

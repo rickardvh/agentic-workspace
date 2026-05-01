@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/conformance.schema.json",
   "title": "Conformance",
-  "description": "Schema for Conformance.",
+  "description": "Conformance fixture contract for proving an operation adapter behaves as expected.",
   "type": "object",
   "required": [
     "schema_version",
@@ -15,17 +15,17 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/conformance/v1",
-      "description": "The schema version constant field in Conformance."
+      "description": "Conformance contract version."
     },
     "id": {
       "type": "string",
       "minLength": 1,
-      "description": "The id string field in Conformance."
+      "description": "Stable conformance fixture identifier."
     },
     "operation_id": {
       "type": "string",
       "minLength": 1,
-      "description": "The operation id string field in Conformance."
+      "description": "Operation contract exercised by this fixture."
     },
     "adapter": {
       "type": "object",
@@ -37,7 +37,7 @@
       "properties": {
         "kind": {
           "const": "process",
-          "description": "The kind constant field in Conformance."
+          "description": "Adapter family used to run the fixture command."
         },
         "command_template": {
           "type": "array",
@@ -45,20 +45,20 @@
           "items": {
             "type": "string",
             "minLength": 1,
-            "description": "Item string accepted by command template in Conformance."
+            "description": "One argv token in the command template."
           },
-          "description": "The command template array field in Conformance."
+          "description": "Command argv template executed for each fixture."
         },
         "cwd": {
           "enum": [
             "fixture_root",
             "repo_root"
           ],
-          "description": "The cwd enumerated value field in Conformance."
+          "description": "Working directory used when executing the adapter."
         }
       },
       "additionalProperties": false,
-      "description": "The adapter object field in Conformance."
+      "description": "Process adapter used to invoke the operation under test."
     },
     "fixtures": {
       "type": "array",
@@ -73,21 +73,21 @@
           "id": {
             "type": "string",
             "minLength": 1,
-            "description": "The id string field in Conformance."
+            "description": "Stable fixture case identifier."
           },
           "files": {
             "type": "object",
             "additionalProperties": {
               "type": "string",
-              "description": "Additional named string entry for files in Conformance."
+              "description": "File content keyed by fixture-relative path."
             },
-            "description": "The files object field in Conformance."
+            "description": "Files to materialize before running this fixture."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by fixtures in Conformance."
+        "description": "One entry in the fixtures list."
       },
-      "description": "The fixtures array field in Conformance."
+      "description": "Fixture roots and files used as conformance inputs."
     },
     "expectations": {
       "type": "object",
@@ -108,11 +108,11 @@
           "properties": {
             "code": {
               "type": "integer",
-              "description": "The code integer field in Conformance."
+              "description": "Expected process exit code."
             }
           },
           "additionalProperties": false,
-          "description": "The exit object field in Conformance."
+          "description": "Expected process exit behavior."
         },
         "stdout": {
           "type": "object",
@@ -126,24 +126,24 @@
                 "json",
                 "text"
               ],
-              "description": "The format enumerated value field in Conformance."
+              "description": "Expected stdout format."
             },
             "schema": {
               "type": "string",
               "minLength": 1,
-              "description": "The schema string field in Conformance."
+              "description": "Schema that should validate stdout when the output is JSON."
             },
             "field_assertions": {
               "type": "array",
               "items": {
                 "$ref": "#/$defs/field_assertion",
-                "description": "Item reference accepted by field assertions in Conformance."
+                "description": "One entry in the field assertions list."
               },
-              "description": "The field assertions array field in Conformance."
+              "description": "Field-level stdout assertions evaluated after parsing."
             }
           },
           "additionalProperties": false,
-          "description": "The stdout object field in Conformance."
+          "description": "Expected standard-output format and field assertions."
         },
         "stderr": {
           "type": "object",
@@ -153,11 +153,11 @@
           "properties": {
             "allow_non_empty": {
               "type": "boolean",
-              "description": "The allow non empty boolean field in Conformance."
+              "description": "Whether non-empty stderr is acceptable for this fixture."
             }
           },
           "additionalProperties": false,
-          "description": "The stderr object field in Conformance."
+          "description": "Policy for stderr emitted by the adapter command."
         },
         "filesystem": {
           "type": "object",
@@ -169,19 +169,19 @@
           "properties": {
             "allowed_write_paths": {
               "$ref": "#/$defs/path_list",
-              "description": "The allowed write paths reference field in Conformance."
+              "description": "Fixture or repo paths the command may write."
             },
             "required_paths": {
               "$ref": "#/$defs/path_list",
-              "description": "The required paths reference field in Conformance."
+              "description": "Paths that must exist after command execution."
             },
             "forbidden_paths": {
               "$ref": "#/$defs/path_list",
-              "description": "The forbidden paths reference field in Conformance."
+              "description": "Paths that must not be created or modified."
             }
           },
           "additionalProperties": false,
-          "description": "The filesystem object field in Conformance."
+          "description": "Filesystem expectations after the adapter command runs."
         },
         "idempotency": {
           "type": "object",
@@ -191,11 +191,11 @@
           "properties": {
             "run_twice": {
               "type": "boolean",
-              "description": "The run twice boolean field in Conformance."
+              "description": "Whether to run the command twice against the fixture."
             }
           },
           "additionalProperties": false,
-          "description": "The idempotency object field in Conformance."
+          "description": "Repeated-run behavior expected from the adapter."
         },
         "safety": {
           "type": "object",
@@ -205,15 +205,15 @@
           "properties": {
             "no_writes_outside_repo_root": {
               "type": "boolean",
-              "description": "The no writes outside repo root boolean field in Conformance."
+              "description": "Whether writes outside the repository root are forbidden."
             }
           },
           "additionalProperties": false,
-          "description": "The safety object field in Conformance."
+          "description": "Safety invariants checked during conformance."
         }
       },
       "additionalProperties": false,
-      "description": "The expectations object field in Conformance."
+      "description": "Expected process, stream, filesystem, idempotency, and safety results."
     }
   },
   "additionalProperties": false,
@@ -231,22 +231,22 @@
           "items": {
             "type": "string",
             "minLength": 1,
-            "description": "Item string accepted by path in Conformance."
+            "description": "One path segment in the parsed output field selector."
           },
-          "description": "The path array field in Conformance."
+          "description": "Path to the parsed output field under test."
         },
         "equals": {}
       },
       "additionalProperties": false,
-      "description": "Reusable field assertion object definition for Conformance."
+      "description": "Reusable assertion against a parsed output field."
     },
     "path_list": {
       "type": "array",
       "items": {
         "type": "string",
-        "description": "Item string accepted by path list in Conformance."
+        "description": "One path in a filesystem expectation list."
       },
-      "description": "Reusable path list array definition for Conformance."
+      "description": "Reusable list of fixture or repository paths."
     }
   },
   "x-agentic-workspace-doc-role": "contract-reference"

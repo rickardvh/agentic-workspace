@@ -11,22 +11,22 @@ Optional review artifact shape for comparing agent-feedback evaluations; not a r
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Optional review artifact shape for comparing agent-feedback evaluations; not a required operating surface unless a later command emits it valid-by-construction. |  | x-agentic-workspace-doc-role: "contract-reference" |
-| `kind` | const `"agent-feedback-review/v1"` | yes |  | The kind constant field in Agent Feedback Artifact. |  |  |
-| `schema_version` | const `"agentic-workspace/agent-feedback/v1"` | yes |  | The schema version constant field in Agent Feedback Artifact. |  |  |
-| `evaluated_at` | string | yes |  | The evaluated at string field in Agent Feedback Artifact. |  |  |
-| `prompt_ref` | string | yes |  | The prompt ref string field in Agent Feedback Artifact. |  |  |
-| `context` | object | yes |  | The context object field in Agent Feedback Artifact. |  |  |
-| `context.target` | string | yes |  | The target string field in Agent Feedback Artifact. |  |  |
-| `context.work_window` | string | yes |  | The work window string field in Agent Feedback Artifact. |  |  |
-| `context.package_surfaces_used` | array of string | yes |  | The package surfaces used array field in Agent Feedback Artifact. |  |  |
-| `context.notes` | string | no |  | The notes string field in Agent Feedback Artifact. |  |  |
-| `impact` | object | yes |  | The impact object field in Agent Feedback Artifact. |  |  |
-| `impact.outcome` | string | yes |  | The outcome string field in Agent Feedback Artifact. |  |  |
-| `impact.quality` | string | yes |  | The quality string field in Agent Feedback Artifact. |  |  |
-| `impact.efficiency` | string | yes |  | The efficiency string field in Agent Feedback Artifact. |  |  |
-| `impact.cognitive_load` | string | yes |  | The cognitive load string field in Agent Feedback Artifact. |  |  |
-| `findings` | array of object | yes |  | The findings array field in Agent Feedback Artifact. |  |  |
-| `suggestions` | array of object | yes |  | The suggestions array field in Agent Feedback Artifact. |  |  |
-| `follow_up_routing` | object | yes |  | The follow up routing object field in Agent Feedback Artifact. |  |  |
-| `follow_up_routing.issues` | array of string | yes |  | The issues array field in Agent Feedback Artifact. |  |  |
-| `follow_up_routing.deferred` | array of string | yes |  | The deferred array field in Agent Feedback Artifact. |  |  |
+| `kind` | const `"agent-feedback-review/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
+| `schema_version` | const `"agentic-workspace/agent-feedback/v1"` | yes |  | Contract version for this document. |  |  |
+| `evaluated_at` | string | yes |  | Timestamp or date when this artifact was evaluated. |  |  |
+| `prompt_ref` | string | yes |  | Prompt, task, or request reference that produced the feedback. |  |  |
+| `context` | object | yes |  | Execution context in which the feedback or record was captured. |  |  |
+| `context.target` | string | yes |  | Destination file, surface, package, or record referenced by this entry. |  |  |
+| `context.work_window` | string | yes |  | Timebox or work interval covered by this record. |  |  |
+| `context.package_surfaces_used` | array of string | yes |  | Package-owned surfaces used during the work window. |  |  |
+| `context.notes` | string | no |  | Additional notes that qualify this record. |  |  |
+| `impact` | object | yes |  | Observed impact of the work or feedback. |  |  |
+| `impact.outcome` | string | yes |  | Observed or intended outcome for this entry. |  |  |
+| `impact.quality` | string | yes |  | Quality signal captured for this feedback item. |  |  |
+| `impact.efficiency` | string | yes |  | Efficiency or effort signal captured for this feedback item. |  |  |
+| `impact.cognitive_load` | string | yes |  | Cognitive-load signal captured for this feedback item. |  |  |
+| `findings` | array of object | yes |  | Findings captured by this artifact. |  |  |
+| `suggestions` | array of object | yes |  | Ordered suggestions entries used by this contract. |  |  |
+| `follow_up_routing` | object | yes |  | Follow up routing details used by this contract. |  |  |
+| `follow_up_routing.issues` | array of string | yes |  | Ordered issues entries used by this contract. |  |  |
+| `follow_up_routing.deferred` | array of string | yes |  | Ordered deferred entries used by this contract. |  |  |

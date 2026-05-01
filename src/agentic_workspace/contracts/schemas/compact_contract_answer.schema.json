@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/compact-contract-answer.schema.json",
   "title": "Compact Contract Answer",
-  "description": "Schema for Compact Contract Answer.",
+  "description": "Envelope for compact contract answers returned by workspace query commands.",
   "type": "object",
   "required": [
     "profile",
@@ -15,19 +15,19 @@
   "properties": {
     "profile": {
       "type": "string",
-      "description": "The profile string field in Compact Contract Answer."
+      "description": "Profile text value used by this contract."
     },
     "surface": {
       "type": "string",
-      "description": "The surface string field in Compact Contract Answer."
+      "description": "Surface text value used by this contract."
     },
     "selector": {
       "type": "object",
-      "description": "The selector object field in Compact Contract Answer."
+      "description": "Selector details used by this contract."
     },
     "matched": {
       "type": "boolean",
-      "description": "The matched boolean field in Compact Contract Answer."
+      "description": "Matched true/false policy flag used by this contract."
     },
     "answer": {
       "description": "The compact answer payload for the selected surface; shape is owned by the surface-specific contract."
@@ -36,13 +36,13 @@
       "type": "array",
       "items": {
         "type": "string",
-        "description": "Item string accepted by refs in Compact Contract Answer."
+        "description": "One entry in the refs list."
       },
-      "description": "The refs array field in Compact Contract Answer."
+      "description": "References that help interpret or verify this record."
     },
     "target": {
       "type": "string",
-      "description": "The target string field in Compact Contract Answer."
+      "description": "Destination file, surface, package, or record referenced by this entry."
     }
   },
   "additionalProperties": false,

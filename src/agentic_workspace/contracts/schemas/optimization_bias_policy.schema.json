@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/optimization-bias-policy.schema.json",
   "title": "Optimization Bias Policy",
-  "description": "Schema for Optimization Bias Policy.",
+  "description": "Policy describing output tradeoffs for agent efficiency, balance, and human legibility.",
   "type": "object",
   "required": [
     "schema_version",
@@ -15,28 +15,28 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/optimization-bias-policy/v1",
-      "description": "The schema version constant field in Optimization Bias Policy."
+      "description": "Contract version for this document."
     },
     "default_mode": {
       "type": "string",
-      "description": "The default mode string field in Optimization Bias Policy."
+      "description": "Default mode text value used by this contract."
     },
     "owner_surface": {
       "type": "string",
-      "description": "The owner surface string field in Optimization Bias Policy."
+      "description": "Owner surface text value used by this contract."
     },
     "must_not_change": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "string",
-        "description": "Item string accepted by must not change in Optimization Bias Policy."
+        "description": "One entry in the must not change list."
       },
-      "description": "The must not change array field in Optimization Bias Policy."
+      "description": "Ordered must not change entries used by this contract."
     },
     "surface_boundary": {
       "$ref": "#/$defs/surfaceBoundary",
-      "description": "The surface boundary reference field in Optimization Bias Policy."
+      "description": "Surface boundary referenced contract shape used by this contract."
     },
     "modes": {
       "type": "array",
@@ -56,51 +56,51 @@
         "properties": {
           "mode": {
             "type": "string",
-            "description": "The mode string field in Optimization Bias Policy."
+            "description": "Mode text value used by this contract."
           },
           "summary": {
             "type": "string",
-            "description": "The summary string field in Optimization Bias Policy."
+            "description": "Short human-readable summary for this entry."
           },
           "report_density": {
             "type": "string",
-            "description": "The report density string field in Optimization Bias Policy."
+            "description": "Report density text value used by this contract."
           },
           "residue_density": {
             "type": "string",
-            "description": "The residue density string field in Optimization Bias Policy."
+            "description": "Residue density text value used by this contract."
           },
           "rendered_view_style": {
             "type": "string",
-            "description": "The rendered view style string field in Optimization Bias Policy."
+            "description": "Rendered view style text value used by this contract."
           },
           "allows": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "string",
-              "description": "Item string accepted by allows in Optimization Bias Policy."
+              "description": "One entry in the allows list."
             },
-            "description": "The allows array field in Optimization Bias Policy."
+            "description": "Ordered allows entries used by this contract."
           },
           "does_not_affect": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "string",
-              "description": "Item string accepted by does not affect in Optimization Bias Policy."
+              "description": "One entry in the does not affect list."
             },
-            "description": "The does not affect array field in Optimization Bias Policy."
+            "description": "Ordered does not affect entries used by this contract."
           },
           "surface_boundary": {
             "$ref": "#/$defs/surfaceBoundary",
-            "description": "The surface boundary reference field in Optimization Bias Policy."
+            "description": "Surface boundary referenced contract shape used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by modes in Optimization Bias Policy."
+        "description": "One entry in the modes list."
       },
-      "description": "The modes array field in Optimization Bias Policy."
+      "description": "Ordered modes entries used by this contract."
     }
   },
   "$defs": {
@@ -116,22 +116,22 @@
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by honors bias in Optimization Bias Policy."
+            "description": "One entry in the honors bias list."
           },
-          "description": "The honors bias array field in Optimization Bias Policy."
+          "description": "Ordered honors bias entries used by this contract."
         },
         "stays_invariant": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by stays invariant in Optimization Bias Policy."
+            "description": "One entry in the stays invariant list."
           },
-          "description": "The stays invariant array field in Optimization Bias Policy."
+          "description": "Ordered stays invariant entries used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable surfaceBoundary object definition for Optimization Bias Policy."
+      "description": "Surfaceboundary details used by this contract."
     }
   },
   "additionalProperties": false,

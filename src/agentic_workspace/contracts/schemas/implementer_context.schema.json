@@ -31,7 +31,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "description": "Item string accepted by changed paths in Implementer Context Payload."
+        "description": "One entry in the changed paths list."
       },
       "description": "Changed paths used to select proof, ownership, and inspect scope."
     },
@@ -39,7 +39,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "description": "Item string accepted by inspect files in Implementer Context Payload."
+        "description": "One entry in the inspect files list."
       },
       "minItems": 1,
       "description": "Files the implementer should inspect before editing."
@@ -48,7 +48,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "description": "Item string accepted by files to avoid in Implementer Context Payload."
+        "description": "One entry in the files to avoid list."
       },
       "minItems": 1,
       "description": "Files that should stay untouched for this bounded task."
@@ -61,7 +61,7 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/path_boundary",
-        "description": "Item reference accepted by path boundaries in Implementer Context Payload."
+        "description": "One entry in the path boundaries list."
       },
       "description": "Path-specific ownership and locality constraints for the changed paths."
     },
@@ -69,7 +69,7 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/authority_marker",
-        "description": "Item reference accepted by authority markers in Implementer Context Payload."
+        "description": "One entry in the authority markers list."
       },
       "description": "Authority markers relevant to the implementation scope."
     },
@@ -81,7 +81,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "description": "Item string accepted by required validation commands in Implementer Context Payload."
+        "description": "One entry in the required validation commands list."
       },
       "description": "Commands that must pass before claiming implementation complete."
     },
@@ -96,19 +96,19 @@
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Item string accepted by before handoff in Implementer Context Payload."
+            "description": "One entry in the before handoff list."
           },
           "minItems": 1,
-          "description": "The before handoff array field in Implementer Context Payload."
+          "description": "Ordered before handoff entries used by this contract."
         },
         "stop_when": {
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Item string accepted by stop when in Implementer Context Payload."
+            "description": "One entry in the stop when list."
           },
           "minItems": 1,
-          "description": "The stop when array field in Implementer Context Payload."
+          "description": "Ordered stop when entries used by this contract."
         }
       },
       "additionalProperties": false,
@@ -137,30 +137,30 @@
       "properties": {
         "path": {
           "type": "string",
-          "description": "The path string field in Implementer Context Payload."
+          "description": "Path segments or repository path used by this contract."
         },
         "authority": {
           "type": "string",
-          "description": "The authority string field in Implementer Context Payload."
+          "description": "Authority level or owner for this surface."
         },
         "canonical_source": {
           "type": "string",
-          "description": "The canonical source string field in Implementer Context Payload."
+          "description": "Source of truth for this generated, derived, or adapter surface."
         },
         "safe_to_edit": {
           "type": "boolean",
-          "description": "The safe to edit boolean field in Implementer Context Payload."
+          "description": "Whether agents may edit this surface under the declared authority rules."
         },
         "refresh_command": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The refresh command string or null field in Implementer Context Payload."
+          "description": "Command used to refresh this generated or managed surface."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable authority marker object definition for Implementer Context Payload."
+      "description": "Authority marker details used by this contract."
     },
     "package_boundary": {
       "type": "object",
@@ -172,26 +172,26 @@
       "properties": {
         "status": {
           "type": "string",
-          "description": "The status string field in Implementer Context Payload."
+          "description": "Current lifecycle, readiness, or health state."
         },
         "cwd": {
           "type": "string",
-          "description": "The cwd string field in Implementer Context Payload."
+          "description": "Working directory context used when running the command."
         },
         "warning": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The warning string or null field in Implementer Context Payload."
+          "description": "Warning contract value used by this contract."
         },
         "package_root": {
           "type": "string",
-          "description": "The package root string field in Implementer Context Payload."
+          "description": "Package root text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable package boundary object definition for Implementer Context Payload."
+      "description": "Package boundary details used by this contract."
     },
     "path_boundary": {
       "type": "object",
@@ -204,26 +204,26 @@
       "properties": {
         "path": {
           "type": "string",
-          "description": "The path string field in Implementer Context Payload."
+          "description": "Path segments or repository path used by this contract."
         },
         "authority": {
           "type": "string",
-          "description": "The authority string field in Implementer Context Payload."
+          "description": "Authority level or owner for this surface."
         },
         "warning": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The warning string or null field in Implementer Context Payload."
+          "description": "Warning contract value used by this contract."
         },
         "requires_attention": {
           "type": "boolean",
-          "description": "The requires attention boolean field in Implementer Context Payload."
+          "description": "Requires attention true/false policy flag used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable path boundary object definition for Implementer Context Payload."
+      "description": "Path boundary details used by this contract."
     }
   },
   "x-agentic-workspace-doc-role": "contract-reference"

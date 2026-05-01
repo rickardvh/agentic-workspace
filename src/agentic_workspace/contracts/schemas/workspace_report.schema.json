@@ -48,7 +48,7 @@
   "properties": {
     "kind": {
       "const": "workspace-report/v1",
-      "description": "The kind constant field in Workspace Report."
+      "description": "Discriminator identifying the payload or record shape."
     },
     "schema": {
       "type": "object",
@@ -62,31 +62,31 @@
       "properties": {
         "schema_version": {
           "const": "workspace-reporting-schema/v1",
-          "description": "The schema version constant field in Workspace Report."
+          "description": "Contract version for this document."
         },
         "canonical_doc": {
           "type": "string",
-          "description": "The canonical doc string field in Workspace Report."
+          "description": "Canonical doc text value used by this contract."
         },
         "command": {
           "type": "string",
-          "description": "The command string field in Workspace Report."
+          "description": "Command string or command name used by this contract."
         },
         "shared_fields": {
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Item string accepted by shared fields in Workspace Report."
+            "description": "One entry in the shared fields list."
           },
-          "description": "The shared fields array field in Workspace Report."
+          "description": "Fields shared across related report profiles."
         },
         "report_principles": {
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Item string accepted by report principles in Workspace Report."
+            "description": "One entry in the report principles list."
           },
-          "description": "The report principles array field in Workspace Report."
+          "description": "Ordered report principles entries used by this contract."
         }
       },
       "additionalProperties": false,
@@ -102,17 +102,17 @@
     },
     "invoked_cli_identity": {
       "$ref": "#/$defs/invoked_cli_identity",
-      "description": "The invoked cli identity reference field in Workspace Report."
+      "description": "Invoked cli identity referenced contract shape used by this contract."
     },
     "cli_compatibility": {
       "$ref": "#/$defs/cli_compatibility",
-      "description": "The cli compatibility reference field in Workspace Report."
+      "description": "Cli compatibility referenced contract shape used by this contract."
     },
     "selected_modules": {
       "type": "array",
       "items": {
         "type": "string",
-        "description": "Item string accepted by selected modules in Workspace Report."
+        "description": "One entry in the selected modules list."
       },
       "description": "Modules selected for this report invocation."
     },
@@ -120,7 +120,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "description": "Item string accepted by installed modules in Workspace Report."
+        "description": "One entry in the installed modules list."
       },
       "description": "Installed Agentic Workspace modules detected in the target repository."
     },
@@ -138,7 +138,7 @@
     },
     "output_contract": {
       "type": "object",
-      "description": "The output contract object field in Workspace Report."
+      "description": "Output contract details used by this contract."
     },
     "operating_posture": {
       "type": "object",
@@ -226,27 +226,27 @@
     },
     "standing_intent": {
       "type": "object",
-      "description": "The standing intent object field in Workspace Report."
+      "description": "Standing intent details used by this contract."
     },
     "improvement_intake": {
       "type": "object",
-      "description": "The improvement intake object field in Workspace Report."
+      "description": "Improvement intake details used by this contract."
     },
     "repo_friction": {
       "type": "object",
-      "description": "The repo friction object field in Workspace Report."
+      "description": "Repo friction details used by this contract."
     },
     "registry": {
       "type": "array",
-      "description": "The registry array field in Workspace Report."
+      "description": "Ordered registry entries used by this contract."
     },
     "config": {
       "type": "object",
-      "description": "The config object field in Workspace Report."
+      "description": "Config details used by this contract."
     },
     "reports": {
       "type": "array",
-      "description": "The reports array field in Workspace Report."
+      "description": "Ordered reports entries used by this contract."
     },
     "module_reports": {
       "type": "array",
@@ -273,15 +273,15 @@
       "properties": {
         "kind": {
           "const": "agentic-workspace/invoked-cli-identity/v1",
-          "description": "The kind constant field in Workspace Report."
+          "description": "Discriminator identifying the payload or record shape."
         },
         "package": {
           "const": "agentic-workspace",
-          "description": "The package constant field in Workspace Report."
+          "description": "Fixed package value required by this contract."
         },
         "version": {
           "type": "string",
-          "description": "The version string field in Workspace Report."
+          "description": "Version text value used by this contract."
         },
         "source_class": {
           "enum": [
@@ -289,7 +289,7 @@
             "installed-package",
             "unknown"
           ],
-          "description": "The source class enumerated value field in Workspace Report."
+          "description": "Allowed source class value for routing or validation."
         },
         "confidence": {
           "enum": [
@@ -297,34 +297,34 @@
             "medium",
             "low"
           ],
-          "description": "The confidence enumerated value field in Workspace Report."
+          "description": "Allowed confidence value for routing or validation."
         },
         "module_path": {
           "type": "string",
-          "description": "The module path string field in Workspace Report."
+          "description": "Module path text value used by this contract."
         },
         "package_root": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The package root string or null field in Workspace Report."
+          "description": "Package root contract value used by this contract."
         },
         "python_executable": {
           "type": "string",
-          "description": "The python executable string field in Workspace Report."
+          "description": "Python executable text value used by this contract."
         },
         "argv0": {
           "type": "string",
-          "description": "The argv0 string field in Workspace Report."
+          "description": "Argv0 text value used by this contract."
         },
         "argv0_path": {
           "type": "string",
-          "description": "The argv0 path string field in Workspace Report."
+          "description": "Argv0 path text value used by this contract."
         },
         "path_executable": {
           "type": "string",
-          "description": "The path executable string field in Workspace Report."
+          "description": "Path executable text value used by this contract."
         },
         "target_relation": {
           "enum": [
@@ -332,19 +332,19 @@
             "outside-target",
             "no-target"
           ],
-          "description": "The target relation enumerated value field in Workspace Report."
+          "description": "Allowed target relation value for routing or validation."
         },
         "compatibility": {
           "const": "not-evaluated",
-          "description": "The compatibility constant field in Workspace Report."
+          "description": "Fixed compatibility value required by this contract."
         },
         "expectation_source": {
           "type": "string",
-          "description": "The expectation source string field in Workspace Report."
+          "description": "Expectation source text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable invoked cli identity object definition for Workspace Report."
+      "description": "Invoked cli identity details used by this contract."
     },
     "cli_compatibility_check": {
       "type": "object",
@@ -363,11 +363,11 @@
             "source_class",
             "target_relation"
           ],
-          "description": "The name enumerated value field in Workspace Report."
+          "description": "Human-readable or lookup name for this entry."
         },
         "configured": {
           "type": "boolean",
-          "description": "The configured boolean field in Workspace Report."
+          "description": "Configured true/false policy flag used by this contract."
         },
         "expected": {
           "type": [
@@ -377,21 +377,21 @@
           ],
           "items": {
             "type": "string",
-            "description": "Item string accepted by expected in Workspace Report."
+            "description": "One entry in the expected list."
           },
-          "description": "The expected array or string or null field in Workspace Report."
+          "description": "Expected contract value used by this contract."
         },
         "actual": {
           "type": "string",
-          "description": "The actual string field in Workspace Report."
+          "description": "Actual text value used by this contract."
         },
         "satisfied": {
           "type": "boolean",
-          "description": "The satisfied boolean field in Workspace Report."
+          "description": "Satisfied true/false policy flag used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable cli compatibility check object definition for Workspace Report."
+      "description": "Cli compatibility check details used by this contract."
     },
     "cli_compatibility": {
       "type": "object",
@@ -405,7 +405,7 @@
       "properties": {
         "kind": {
           "const": "agentic-workspace/cli-compatibility/v1",
-          "description": "The kind constant field in Workspace Report."
+          "description": "Discriminator identifying the payload or record shape."
         },
         "status": {
           "enum": [
@@ -414,11 +414,11 @@
             "advisory-drift",
             "blocking-drift"
           ],
-          "description": "The status enumerated value field in Workspace Report."
+          "description": "Current lifecycle, readiness, or health state."
         },
         "configured": {
           "type": "boolean",
-          "description": "The configured boolean field in Workspace Report."
+          "description": "Configured true/false policy flag used by this contract."
         },
         "enforcement": {
           "enum": [
@@ -426,22 +426,22 @@
             "advisory",
             "blocking"
           ],
-          "description": "The enforcement enumerated value field in Workspace Report."
+          "description": "Allowed enforcement value for routing or validation."
         },
         "enforcement_source": {
           "type": "string",
-          "description": "The enforcement source string field in Workspace Report."
+          "description": "Enforcement source text value used by this contract."
         },
         "expectation_source": {
           "type": "string",
-          "description": "The expectation source string field in Workspace Report."
+          "description": "Expectation source text value used by this contract."
         },
         "expected_command": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The expected command string or null field in Workspace Report."
+          "description": "Expected command contract value used by this contract."
         },
         "invocation_confidence": {
           "enum": [
@@ -449,27 +449,27 @@
             "medium",
             "low"
           ],
-          "description": "The invocation confidence enumerated value field in Workspace Report."
+          "description": "Allowed invocation confidence value for routing or validation."
         },
         "drift_findings": {
           "type": "array",
           "items": {
             "type": "object",
-            "description": "Item object accepted by drift findings in Workspace Report."
+            "description": "One entry in the drift findings list."
           },
-          "description": "The drift findings array field in Workspace Report."
+          "description": "Ordered drift findings entries used by this contract."
         },
         "remediation": {
           "type": "object",
-          "description": "The remediation object field in Workspace Report."
+          "description": "Remediation details used by this contract."
         },
         "checks": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/cli_compatibility_check",
-            "description": "Item reference accepted by checks in Workspace Report."
+            "description": "One entry in the checks list."
           },
-          "description": "The checks array field in Workspace Report."
+          "description": "Ordered checks entries used by this contract."
         },
         "failed_checks": {
           "type": "array",
@@ -480,17 +480,17 @@
               "source_class",
               "target_relation"
             ],
-            "description": "Item enumerated value accepted by failed checks in Workspace Report."
+            "description": "One entry in the failed checks list."
           },
-          "description": "The failed checks array field in Workspace Report."
+          "description": "Ordered failed checks entries used by this contract."
         },
         "rule": {
           "type": "string",
-          "description": "The rule string field in Workspace Report."
+          "description": "Policy rule that explains this contract behavior."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable cli compatibility object definition for Workspace Report."
+      "description": "Cli compatibility details used by this contract."
     }
   },
   "x-agentic-workspace-doc-role": "contract-reference"

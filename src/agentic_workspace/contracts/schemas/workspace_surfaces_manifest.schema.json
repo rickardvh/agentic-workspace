@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/workspace-surfaces-manifest.schema.json",
   "title": "Workspace Surfaces Manifest",
-  "description": "Schema for Workspace Surfaces Manifest.",
+  "description": "Manifest of workspace-owned surfaces, generated artifacts, and ownership roles.",
   "type": "object",
   "required": [
     "schema_version",
@@ -17,33 +17,33 @@
   "properties": {
     "schema_version": {
       "const": "workspace-surfaces-manifest/v1",
-      "description": "The schema version constant field in Workspace Surfaces Manifest."
+      "description": "Contract version for this document."
     },
     "payload_files": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "string",
-        "description": "Item string accepted by payload files in Workspace Surfaces Manifest."
+        "description": "One entry in the payload files list."
       },
-      "description": "The payload files array field in Workspace Surfaces Manifest."
+      "description": "Ordered payload files entries used by this contract."
     },
     "system_intent_mirror_kind": {
       "type": "string",
-      "description": "The system intent mirror kind string field in Workspace Surfaces Manifest."
+      "description": "System intent mirror kind text value used by this contract."
     },
     "default_agents_path": {
       "type": "string",
-      "description": "The default agents path string field in Workspace Surfaces Manifest."
+      "description": "Default agents path text value used by this contract."
     },
     "handoff_surfaces": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "string",
-        "description": "Item string accepted by handoff surfaces in Workspace Surfaces Manifest."
+        "description": "One entry in the handoff surfaces list."
       },
-      "description": "The handoff surfaces array field in Workspace Surfaces Manifest."
+      "description": "Ordered handoff surfaces entries used by this contract."
     },
     "module_upgrade_source_paths": {
       "type": "object",
@@ -54,31 +54,31 @@
       "properties": {
         "planning": {
           "type": "string",
-          "description": "The planning string field in Workspace Surfaces Manifest."
+          "description": "Planning text value used by this contract."
         },
         "memory": {
           "type": "string",
-          "description": "The memory string field in Workspace Surfaces Manifest."
+          "description": "Memory text value used by this contract."
         }
       },
       "additionalProperties": {
         "type": "string",
-        "description": "Additional named string entry for module upgrade source paths in Workspace Surfaces Manifest."
+        "description": "Named entry in the module upgrade source paths mapping."
       },
-      "description": "The module upgrade source paths object field in Workspace Surfaces Manifest."
+      "description": "Module upgrade source paths details used by this contract."
     },
     "setup_findings_path": {
       "type": "string",
-      "description": "The setup findings path string field in Workspace Surfaces Manifest."
+      "description": "Setup findings path text value used by this contract."
     },
     "mixed_agent_local_override_fields": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "string",
-        "description": "Item string accepted by mixed agent local override fields in Workspace Surfaces Manifest."
+        "description": "One entry in the mixed agent local override fields list."
       },
-      "description": "The mixed agent local override fields array field in Workspace Surfaces Manifest."
+      "description": "Ordered mixed agent local override fields entries used by this contract."
     }
   },
   "additionalProperties": false,

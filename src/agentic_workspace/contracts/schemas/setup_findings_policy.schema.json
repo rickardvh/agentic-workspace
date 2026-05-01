@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/setup-findings-policy.schema.json",
   "title": "Setup Findings Promotion Policy",
-  "description": "Schema for Setup Findings Promotion Policy.",
+  "description": "Policy for promoting setup findings into docs, planning, config, checks, or issues.",
   "type": "object",
   "required": [
     "schema_version",
@@ -15,21 +15,21 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/setup-findings-policy/v1",
-      "description": "The schema version constant field in Setup Findings Promotion Policy."
+      "description": "Contract version for this document."
     },
     "artifact_path": {
       "type": "string",
-      "description": "The artifact path string field in Setup Findings Promotion Policy."
+      "description": "Artifact path text value used by this contract."
     },
     "accepted_kind": {
       "type": "string",
-      "description": "The accepted kind string field in Setup Findings Promotion Policy."
+      "description": "Accepted kind text value used by this contract."
     },
     "promotion_confidence_threshold": {
       "type": "number",
       "minimum": 0.0,
       "maximum": 1.0,
-      "description": "The promotion confidence threshold number field in Setup Findings Promotion Policy."
+      "description": "Promotion confidence threshold contract value used by this contract."
     },
     "accepted_classes": {
       "type": "array",
@@ -47,31 +47,31 @@
         "properties": {
           "class": {
             "type": "string",
-            "description": "The class string field in Setup Findings Promotion Policy."
+            "description": "Classification used for routing, filtering, or policy selection."
           },
           "summary": {
             "type": "string",
-            "description": "The summary string field in Setup Findings Promotion Policy."
+            "description": "Short human-readable summary for this entry."
           },
           "promote_to": {
             "type": "string",
-            "description": "The promote to string field in Setup Findings Promotion Policy."
+            "description": "Promote to text value used by this contract."
           },
           "preserve_when": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by preserve when in Setup Findings Promotion Policy."
+              "description": "One entry in the preserve when list."
             },
-            "description": "The preserve when array field in Setup Findings Promotion Policy."
+            "description": "Ordered preserve when entries used by this contract."
           },
           "transient_when": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by transient when in Setup Findings Promotion Policy."
+              "description": "One entry in the transient when list."
             },
-            "description": "The transient when array field in Setup Findings Promotion Policy."
+            "description": "Ordered transient when entries used by this contract."
           },
           "required_for_promotion": {
             "type": "array",
@@ -81,23 +81,23 @@
                 "path_or_refs",
                 "next_action"
               ],
-              "description": "Item enumerated value accepted by required for promotion in Setup Findings Promotion Policy."
+              "description": "One entry in the required for promotion list."
             },
-            "description": "The required for promotion array field in Setup Findings Promotion Policy."
+            "description": "Ordered required for promotion entries used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by accepted classes in Setup Findings Promotion Policy."
+        "description": "One entry in the accepted classes list."
       },
-      "description": "The accepted classes array field in Setup Findings Promotion Policy."
+      "description": "Ordered accepted classes entries used by this contract."
     },
     "secondary": {
       "type": "array",
       "items": {
         "type": "string",
-        "description": "Item string accepted by secondary in Setup Findings Promotion Policy."
+        "description": "One entry in the secondary list."
       },
-      "description": "The secondary array field in Setup Findings Promotion Policy."
+      "description": "Ordered secondary entries used by this contract."
     }
   },
   "additionalProperties": false,

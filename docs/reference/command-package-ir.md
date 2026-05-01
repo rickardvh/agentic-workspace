@@ -16,22 +16,22 @@ Intermediate representation for generating command package metadata and language
 | `schema` | const `"schemas/command_package_ir.schema.json"` | yes |  | Schema reference carried by the IR document. |  |  |
 | `source_contracts` | array of string | yes |  | Contract files that feed or constrain command package generation. |  |  |
 | `generation_policy` | object | yes |  | Policy for what generation owns, what runtime code owns, and how adapters stay safe. |  |  |
-| `generation_policy.authority_rule` | string | yes |  | The authority rule string field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.runtime_boundary` | string | yes |  | The runtime boundary string field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.ordinary_development_environment` | string | yes |  | The ordinary development environment string field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.test_environment` | string | yes |  | The test environment string field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.custom_codegen_boundary` | string | yes |  | The custom codegen boundary string field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.shell_adapter_policy` | string | yes |  | The shell adapter policy string field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.direct_cli_edit_policy` | string | yes |  | The direct cli edit policy string field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.generated_package_maturity` | object | yes |  | The generated package maturity object field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.generated_package_maturity.routing_rule` | string | yes |  | The routing rule string field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.generated_package_maturity.levels` | array of ref `#/$defs/maturity_level` | yes |  | The levels array field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.non_python_runtime_binding` | object | yes |  | The non python runtime binding object field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.non_python_runtime_binding.selected_model` | string | yes |  | The selected model string field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.non_python_runtime_binding.default_runtime_command` | string | yes |  | The default runtime command string field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.non_python_runtime_binding.scope` | string | yes |  | The scope string field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.non_python_runtime_binding.universal_contract_owns` | ref `#/$defs/non_empty_strings` | yes |  | The universal contract owns reference field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.non_python_runtime_binding.target_projection_owns` | ref `#/$defs/non_empty_strings` | yes |  | The target projection owns reference field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.non_python_runtime_binding.runtime_owns` | ref `#/$defs/non_empty_strings` | yes |  | The runtime owns reference field in Agentic Workspace Command Package IR. |  |  |
-| `generation_policy.non_python_runtime_binding.error_mapping` | ref `#/$defs/non_empty_strings` | yes |  | The error mapping reference field in Agentic Workspace Command Package IR. |  |  |
+| `generation_policy.authority_rule` | string | yes |  | Authority rule text value used by this contract. |  |  |
+| `generation_policy.runtime_boundary` | string | yes |  | Runtime boundary text value used by this contract. |  |  |
+| `generation_policy.ordinary_development_environment` | string | yes |  | Ordinary development environment text value used by this contract. |  |  |
+| `generation_policy.test_environment` | string | yes |  | Test environment text value used by this contract. |  |  |
+| `generation_policy.custom_codegen_boundary` | string | yes |  | Custom codegen boundary text value used by this contract. |  |  |
+| `generation_policy.shell_adapter_policy` | string | yes |  | Shell adapter policy text value used by this contract. |  |  |
+| `generation_policy.direct_cli_edit_policy` | string | yes |  | Direct cli edit policy text value used by this contract. |  |  |
+| `generation_policy.generated_package_maturity` | object | yes |  | Generated package maturity details used by this contract. |  |  |
+| `generation_policy.generated_package_maturity.routing_rule` | string | yes |  | Routing rule text value used by this contract. |  |  |
+| `generation_policy.generated_package_maturity.levels` | array of ref `#/$defs/maturity_level` | yes |  | Ordered levels entries used by this contract. |  |  |
+| `generation_policy.non_python_runtime_binding` | object | yes |  | Non python runtime binding details used by this contract. |  |  |
+| `generation_policy.non_python_runtime_binding.selected_model` | string | yes |  | Selected model text value used by this contract. |  |  |
+| `generation_policy.non_python_runtime_binding.default_runtime_command` | string | yes |  | Default runtime command text value used by this contract. |  |  |
+| `generation_policy.non_python_runtime_binding.scope` | string | yes |  | Scope text value used by this contract. |  |  |
+| `generation_policy.non_python_runtime_binding.universal_contract_owns` | ref `#/$defs/non_empty_strings` | yes |  | Universal contract owns referenced contract shape used by this contract. |  |  |
+| `generation_policy.non_python_runtime_binding.target_projection_owns` | ref `#/$defs/non_empty_strings` | yes |  | Target projection owns referenced contract shape used by this contract. |  |  |
+| `generation_policy.non_python_runtime_binding.runtime_owns` | ref `#/$defs/non_empty_strings` | yes |  | Runtime owns referenced contract shape used by this contract. |  |  |
+| `generation_policy.non_python_runtime_binding.error_mapping` | ref `#/$defs/non_empty_strings` | yes |  | Error mapping referenced contract shape used by this contract. |  |  |
 | `packages` | array of ref `#/$defs/package` | yes |  | Generated command packages and their command bindings. |  |  |

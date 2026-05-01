@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/proof-routes-manifest.schema.json",
   "title": "Proof Routes Manifest",
-  "description": "Schema for Proof Routes Manifest.",
+  "description": "Manifest of named proof routes and their validation commands.",
   "type": "object",
   "required": [
     "schema_version",
@@ -13,24 +13,24 @@
   "properties": {
     "schema_version": {
       "const": "proof-routes-manifest/v1",
-      "description": "The schema version constant field in Proof Routes Manifest."
+      "description": "Contract version for this document."
     },
     "canonical_doc": {
       "type": "string",
-      "description": "The canonical doc string field in Proof Routes Manifest."
+      "description": "Canonical doc text value used by this contract."
     },
     "command": {
       "type": "string",
-      "description": "The command string field in Proof Routes Manifest."
+      "description": "Command string or command name used by this contract."
     },
     "default_routes": {
       "type": "object",
       "minProperties": 1,
       "additionalProperties": {
         "type": "string",
-        "description": "Additional named string entry for default routes in Proof Routes Manifest."
+        "description": "Named entry in the default routes mapping."
       },
-      "description": "The default routes object field in Proof Routes Manifest."
+      "description": "Default routes details used by this contract."
     }
   },
   "additionalProperties": false,

@@ -11,50 +11,50 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Combined workspace report payload for installed modules, config posture, diagnostics, and next-action routing. |  | x-agentic-workspace-doc-role: "contract-reference" |
-| `kind` | const `"workspace-report/v1"` | yes |  | The kind constant field in Workspace Report. |  |  |
+| `kind` | const `"workspace-report/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
 | `schema` | object | yes |  | Report schema metadata and the shared fields exposed by this report profile. |  |  |
-| `schema.schema_version` | const `"workspace-reporting-schema/v1"` | yes |  | The schema version constant field in Workspace Report. |  |  |
-| `schema.canonical_doc` | string | yes |  | The canonical doc string field in Workspace Report. |  |  |
-| `schema.command` | string | yes |  | The command string field in Workspace Report. |  |  |
-| `schema.shared_fields` | array of string | yes |  | The shared fields array field in Workspace Report. |  |  |
-| `schema.report_principles` | array of string | yes |  | The report principles array field in Workspace Report. |  |  |
+| `schema.schema_version` | const `"workspace-reporting-schema/v1"` | yes |  | Contract version for this document. |  |  |
+| `schema.canonical_doc` | string | yes |  | Canonical doc text value used by this contract. |  |  |
+| `schema.command` | string | yes |  | Command string or command name used by this contract. |  |  |
+| `schema.shared_fields` | array of string | yes |  | Fields shared across related report profiles. |  |  |
+| `schema.report_principles` | array of string | yes |  | Ordered report principles entries used by this contract. |  |  |
 | `command` | string | yes |  | Command invocation represented by this report. |  |  |
 | `target` | string | yes |  | Resolved repository path the report describes. |  |  |
-| `invoked_cli_identity` | ref `#/$defs/invoked_cli_identity` | yes |  | The invoked cli identity reference field in Workspace Report. |  |  |
-| `invoked_cli_identity.kind` | const `"agentic-workspace/invoked-cli-identity/v1"` | yes |  | The kind constant field in Workspace Report. |  |  |
-| `invoked_cli_identity.package` | const `"agentic-workspace"` | yes |  | The package constant field in Workspace Report. |  |  |
-| `invoked_cli_identity.version` | string | yes |  | The version string field in Workspace Report. |  |  |
-| `invoked_cli_identity.source_class` | enum `"source-checkout"`, `"installed-package"`, `"unknown"` | yes |  | The source class enumerated value field in Workspace Report. |  |  |
-| `invoked_cli_identity.confidence` | enum `"high"`, `"medium"`, `"low"` | no |  | The confidence enumerated value field in Workspace Report. |  |  |
-| `invoked_cli_identity.module_path` | string | yes |  | The module path string field in Workspace Report. |  |  |
-| `invoked_cli_identity.package_root` | string \| null | no |  | The package root string or null field in Workspace Report. |  |  |
-| `invoked_cli_identity.python_executable` | string | no |  | The python executable string field in Workspace Report. |  |  |
-| `invoked_cli_identity.argv0` | string | no |  | The argv0 string field in Workspace Report. |  |  |
-| `invoked_cli_identity.argv0_path` | string | no |  | The argv0 path string field in Workspace Report. |  |  |
-| `invoked_cli_identity.path_executable` | string | no |  | The path executable string field in Workspace Report. |  |  |
-| `invoked_cli_identity.target_relation` | enum `"inside-target"`, `"outside-target"`, `"no-target"` | yes |  | The target relation enumerated value field in Workspace Report. |  |  |
-| `invoked_cli_identity.compatibility` | const `"not-evaluated"` | yes |  | The compatibility constant field in Workspace Report. |  |  |
-| `invoked_cli_identity.expectation_source` | string | no |  | The expectation source string field in Workspace Report. |  |  |
-| `cli_compatibility` | ref `#/$defs/cli_compatibility` | yes |  | The cli compatibility reference field in Workspace Report. |  |  |
-| `cli_compatibility.kind` | const `"agentic-workspace/cli-compatibility/v1"` | yes |  | The kind constant field in Workspace Report. |  |  |
-| `cli_compatibility.status` | enum `"no-expectation"`, `"satisfied"`, `"advisory-drift"`, `"blocking-drift"` | yes |  | The status enumerated value field in Workspace Report. |  |  |
-| `cli_compatibility.configured` | boolean | yes |  | The configured boolean field in Workspace Report. |  |  |
-| `cli_compatibility.enforcement` | enum `"off"`, `"advisory"`, `"blocking"` | yes |  | The enforcement enumerated value field in Workspace Report. |  |  |
-| `cli_compatibility.enforcement_source` | string | no |  | The enforcement source string field in Workspace Report. |  |  |
-| `cli_compatibility.expectation_source` | string | no |  | The expectation source string field in Workspace Report. |  |  |
-| `cli_compatibility.expected_command` | string \| null | no |  | The expected command string or null field in Workspace Report. |  |  |
-| `cli_compatibility.invocation_confidence` | enum `"high"`, `"medium"`, `"low"` | no |  | The invocation confidence enumerated value field in Workspace Report. |  |  |
-| `cli_compatibility.drift_findings` | array of object | no |  | The drift findings array field in Workspace Report. |  |  |
-| `cli_compatibility.remediation` | object | no |  | The remediation object field in Workspace Report. |  |  |
-| `cli_compatibility.checks` | array of ref `#/$defs/cli_compatibility_check` | no |  | The checks array field in Workspace Report. |  |  |
-| `cli_compatibility.failed_checks` | array of enum `"exact_version"`, `"minimum_version"`, `"source_class"`, `"target_relation"` | yes |  | The failed checks array field in Workspace Report. |  |  |
-| `cli_compatibility.rule` | string | no |  | The rule string field in Workspace Report. |  |  |
+| `invoked_cli_identity` | ref `#/$defs/invoked_cli_identity` | yes |  | Invoked cli identity referenced contract shape used by this contract. |  |  |
+| `invoked_cli_identity.kind` | const `"agentic-workspace/invoked-cli-identity/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
+| `invoked_cli_identity.package` | const `"agentic-workspace"` | yes |  | Fixed package value required by this contract. |  |  |
+| `invoked_cli_identity.version` | string | yes |  | Version text value used by this contract. |  |  |
+| `invoked_cli_identity.source_class` | enum `"source-checkout"`, `"installed-package"`, `"unknown"` | yes |  | Allowed source class value for routing or validation. |  |  |
+| `invoked_cli_identity.confidence` | enum `"high"`, `"medium"`, `"low"` | no |  | Allowed confidence value for routing or validation. |  |  |
+| `invoked_cli_identity.module_path` | string | yes |  | Module path text value used by this contract. |  |  |
+| `invoked_cli_identity.package_root` | string \| null | no |  | Package root contract value used by this contract. |  |  |
+| `invoked_cli_identity.python_executable` | string | no |  | Python executable text value used by this contract. |  |  |
+| `invoked_cli_identity.argv0` | string | no |  | Argv0 text value used by this contract. |  |  |
+| `invoked_cli_identity.argv0_path` | string | no |  | Argv0 path text value used by this contract. |  |  |
+| `invoked_cli_identity.path_executable` | string | no |  | Path executable text value used by this contract. |  |  |
+| `invoked_cli_identity.target_relation` | enum `"inside-target"`, `"outside-target"`, `"no-target"` | yes |  | Allowed target relation value for routing or validation. |  |  |
+| `invoked_cli_identity.compatibility` | const `"not-evaluated"` | yes |  | Fixed compatibility value required by this contract. |  |  |
+| `invoked_cli_identity.expectation_source` | string | no |  | Expectation source text value used by this contract. |  |  |
+| `cli_compatibility` | ref `#/$defs/cli_compatibility` | yes |  | Cli compatibility referenced contract shape used by this contract. |  |  |
+| `cli_compatibility.kind` | const `"agentic-workspace/cli-compatibility/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
+| `cli_compatibility.status` | enum `"no-expectation"`, `"satisfied"`, `"advisory-drift"`, `"blocking-drift"` | yes |  | Current lifecycle, readiness, or health state. |  |  |
+| `cli_compatibility.configured` | boolean | yes |  | Configured true/false policy flag used by this contract. |  |  |
+| `cli_compatibility.enforcement` | enum `"off"`, `"advisory"`, `"blocking"` | yes |  | Allowed enforcement value for routing or validation. |  |  |
+| `cli_compatibility.enforcement_source` | string | no |  | Enforcement source text value used by this contract. |  |  |
+| `cli_compatibility.expectation_source` | string | no |  | Expectation source text value used by this contract. |  |  |
+| `cli_compatibility.expected_command` | string \| null | no |  | Expected command contract value used by this contract. |  |  |
+| `cli_compatibility.invocation_confidence` | enum `"high"`, `"medium"`, `"low"` | no |  | Allowed invocation confidence value for routing or validation. |  |  |
+| `cli_compatibility.drift_findings` | array of object | no |  | Ordered drift findings entries used by this contract. |  |  |
+| `cli_compatibility.remediation` | object | no |  | Remediation details used by this contract. |  |  |
+| `cli_compatibility.checks` | array of ref `#/$defs/cli_compatibility_check` | no |  | Ordered checks entries used by this contract. |  |  |
+| `cli_compatibility.failed_checks` | array of enum `"exact_version"`, `"minimum_version"`, `"source_class"`, `"target_relation"` | yes |  | Ordered failed checks entries used by this contract. |  |  |
+| `cli_compatibility.rule` | string | no |  | Policy rule that explains this contract behavior. |  |  |
 | `selected_modules` | array of string | yes |  | Modules selected for this report invocation. |  |  |
 | `installed_modules` | array of string | yes |  | Installed Agentic Workspace modules detected in the target repository. |  |  |
 | `feature_tier` | object | yes |  | Resolved feature tier, package footprint, and ordinary operating scope. |  |  |
 | `health` | string | yes |  | Overall workspace health signal for quick routing. |  |  |
 | `report_profile` | object | yes |  | Report profile metadata, including which sections are decision-grade. |  |  |
-| `output_contract` | object | yes |  | The output contract object field in Workspace Report. |  |  |
+| `output_contract` | object | yes |  | Output contract details used by this contract. |  |  |
 | `operating_posture` | object | yes |  | Current operating posture for agent work in this repository. |  |  |
 | `config_enforcement` | object | yes |  | How repo config expectations are applied and reported. |  |  |
 | `branch_workflow_posture` | object | yes |  | Branch and worktree posture relevant to safe continuation. |  |  |
@@ -76,11 +76,11 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `findings` | array | yes |  | Diagnostic findings emitted by the report. |  |  |
 | `next_action` | object | yes |  | Recommended next action derived from report health and routing signals. |  |  |
 | `discovery` | object | yes |  | Discovery hints for relevant repo surfaces and compact commands. |  |  |
-| `standing_intent` | object | yes |  | The standing intent object field in Workspace Report. |  |  |
-| `improvement_intake` | object | yes |  | The improvement intake object field in Workspace Report. |  |  |
-| `repo_friction` | object | yes |  | The repo friction object field in Workspace Report. |  |  |
-| `registry` | array | yes |  | The registry array field in Workspace Report. |  |  |
-| `config` | object | yes |  | The config object field in Workspace Report. |  |  |
-| `reports` | array | yes |  | The reports array field in Workspace Report. |  |  |
+| `standing_intent` | object | yes |  | Standing intent details used by this contract. |  |  |
+| `improvement_intake` | object | yes |  | Improvement intake details used by this contract. |  |  |
+| `repo_friction` | object | yes |  | Repo friction details used by this contract. |  |  |
+| `registry` | array | yes |  | Ordered registry entries used by this contract. |  |  |
+| `config` | object | yes |  | Config details used by this contract. |  |  |
+| `reports` | array | yes |  | Ordered reports entries used by this contract. |  |  |
 | `module_reports` | array | yes |  | Module-owned report fragments included in the combined workspace report. |  |  |
 | `execution_shape` | object | no |  | How the current task or report context should be shaped for safe execution. |  |  |

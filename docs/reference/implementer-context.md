@@ -17,16 +17,16 @@ Cheap implementer context for a bounded changed-path scope.
 | `inspect_files` | array of string | yes |  | Files the implementer should inspect before editing. |  |  |
 | `files_to_avoid` | array of string | yes |  | Files that should stay untouched for this bounded task. |  |  |
 | `package_boundary` | ref `#/$defs/package_boundary` | yes |  | Package/root boundary warnings that affect implementation scope. |  |  |
-| `package_boundary.status` | string | yes |  | The status string field in Implementer Context Payload. |  |  |
-| `package_boundary.cwd` | string | yes |  | The cwd string field in Implementer Context Payload. |  |  |
-| `package_boundary.warning` | string \| null | yes |  | The warning string or null field in Implementer Context Payload. |  |  |
-| `package_boundary.package_root` | string | no |  | The package root string field in Implementer Context Payload. |  |  |
+| `package_boundary.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
+| `package_boundary.cwd` | string | yes |  | Working directory context used when running the command. |  |  |
+| `package_boundary.warning` | string \| null | yes |  | Warning contract value used by this contract. |  |  |
+| `package_boundary.package_root` | string | no |  | Package root text value used by this contract. |  |  |
 | `path_boundaries` | array of ref `#/$defs/path_boundary` | yes |  | Path-specific ownership and locality constraints for the changed paths. |  |  |
 | `authority_markers` | array of ref `#/$defs/authority_marker` | yes |  | Authority markers relevant to the implementation scope. |  |  |
 | `proof` | object | yes |  | Selected proof lane and validation commands for the changed paths. |  |  |
 | `required_validation_commands` | array of string | yes |  | Commands that must pass before claiming implementation complete. |  |  |
 | `handoff_requirements` | object | yes |  | Information that must be preserved before pausing or handing off work. |  |  |
-| `handoff_requirements.before_handoff` | array of string | yes |  | The before handoff array field in Implementer Context Payload. |  |  |
-| `handoff_requirements.stop_when` | array of string | yes |  | The stop when array field in Implementer Context Payload. |  |  |
+| `handoff_requirements.before_handoff` | array of string | yes |  | Ordered before handoff entries used by this contract. |  |  |
+| `handoff_requirements.stop_when` | array of string | yes |  | Ordered stop when entries used by this contract. |  |  |
 | `next_allowed_action` | string | yes |  | Smallest safe implementation action after reading this context. |  |  |
 | `task_routing` | object | no |  | Routing guidance when the task is too broad, misplaced, or needs planning first. |  |  |

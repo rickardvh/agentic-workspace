@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/authority-markers.schema.json",
   "title": "Authority Marker Policy",
-  "description": "Schema for Authority Marker Policy.",
+  "description": "Authority marker policy for identifying generated, adapter, repo-owned, and safe-to-edit surfaces.",
   "type": "object",
   "required": [
     "schema_version",
@@ -11,7 +11,7 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/authority-markers/v1",
-      "description": "The schema version constant field in Authority Marker Policy."
+      "description": "Contract version for this document."
     },
     "markers": {
       "type": "array",
@@ -29,7 +29,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "The id string field in Authority Marker Policy."
+            "description": "Stable identifier used to reference this record."
           },
           "authority": {
             "enum": [
@@ -41,7 +41,7 @@
               "managed",
               "repo-owned"
             ],
-            "description": "The authority enumerated value field in Authority Marker Policy."
+            "description": "Authority level or owner for this surface."
           },
           "canonical_source": {
             "type": "object",
@@ -55,11 +55,11 @@
                   "path",
                   "package-root-source"
                 ],
-                "description": "The kind enumerated value field in Authority Marker Policy."
+                "description": "Discriminator identifying the payload or record shape."
               },
               "value": {
                 "type": "string",
-                "description": "The value string field in Authority Marker Policy."
+                "description": "Value text value used by this contract."
               }
             },
             "allOf": [
@@ -104,33 +104,33 @@
               }
             ],
             "additionalProperties": false,
-            "description": "The canonical source object field in Authority Marker Policy."
+            "description": "Source of truth for this generated, derived, or adapter surface."
           },
           "safe_to_edit": {
             "type": "boolean",
-            "description": "The safe to edit boolean field in Authority Marker Policy."
+            "description": "Whether agents may edit this surface under the declared authority rules."
           },
           "refresh_command": {
             "type": [
               "string",
               "null"
             ],
-            "description": "The refresh command string or null field in Authority Marker Policy."
+            "description": "Command used to refresh this generated or managed surface."
           },
           "representative_paths": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "string",
-              "description": "Item string accepted by representative paths in Authority Marker Policy."
+              "description": "One entry in the representative paths list."
             },
-            "description": "The representative paths array field in Authority Marker Policy."
+            "description": "Ordered representative paths entries used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by markers in Authority Marker Policy."
+        "description": "One entry in the markers list."
       },
-      "description": "The markers array field in Authority Marker Policy."
+      "description": "Ordered markers entries used by this contract."
     }
   },
   "additionalProperties": false,

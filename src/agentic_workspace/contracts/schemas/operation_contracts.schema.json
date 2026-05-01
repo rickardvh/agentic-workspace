@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/operation-contracts.schema.json",
   "title": "Agentic Workspace Operation Contracts Registry",
-  "description": "Schema for Agentic Workspace Operation Contracts Registry.",
+  "description": "Registry of operation contracts exposed by workspace commands or adapters.",
   "type": "object",
   "required": [
     "schema_version",
@@ -14,20 +14,20 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/operation-contracts/v1",
-      "description": "The schema version constant field in Agentic Workspace Operation Contracts Registry."
+      "description": "Contract version for this document."
     },
     "summary": {
       "type": "string",
       "minLength": 1,
-      "description": "The summary string field in Agentic Workspace Operation Contracts Registry."
+      "description": "Short human-readable summary for this entry."
     },
     "primitive_registry": {
       "const": "operation_primitives.json",
-      "description": "The primitive registry constant field in Agentic Workspace Operation Contracts Registry."
+      "description": "Fixed primitive registry value required by this contract."
     },
     "schema": {
       "const": "schemas/operation.schema.json",
-      "description": "The schema constant field in Agentic Workspace Operation Contracts Registry."
+      "description": "Schema reference or schema metadata for this payload."
     },
     "operations": {
       "type": "array",
@@ -44,17 +44,17 @@
           "id": {
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9_.-]*$",
-            "description": "The id string field in Agentic Workspace Operation Contracts Registry."
+            "description": "Stable identifier used to reference this record."
           },
           "path": {
             "type": "string",
             "pattern": "^operations/[a-z0-9_.-]+\\.json$",
-            "description": "The path string field in Agentic Workspace Operation Contracts Registry."
+            "description": "Path segments or repository path used by this contract."
           },
           "command": {
             "type": "string",
             "minLength": 1,
-            "description": "The command string field in Agentic Workspace Operation Contracts Registry."
+            "description": "Command string or command name used by this contract."
           },
           "migration_status": {
             "type": "string",
@@ -63,13 +63,13 @@
               "validated-contract",
               "runtime-consumed"
             ],
-            "description": "The migration status enumerated value field in Agentic Workspace Operation Contracts Registry."
+            "description": "Maturity or migration state for this contract entry."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by operations in Agentic Workspace Operation Contracts Registry."
+        "description": "One entry in the operations list."
       },
-      "description": "The operations array field in Agentic Workspace Operation Contracts Registry."
+      "description": "Ordered operations entries used by this contract."
     }
   },
   "additionalProperties": false,

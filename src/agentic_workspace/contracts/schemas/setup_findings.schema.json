@@ -28,23 +28,23 @@
               "repo_friction_evidence",
               "planning_candidate"
             ],
-            "description": "The class enumerated value field in Agentic Workspace Setup Findings."
+            "description": "Classification used for routing, filtering, or policy selection."
           },
           "summary": {
             "type": "string",
             "minLength": 1,
-            "description": "The summary string field in Agentic Workspace Setup Findings."
+            "description": "Short human-readable summary for this entry."
           },
           "confidence": {
             "type": "number",
             "minimum": 0.0,
             "maximum": 1.0,
-            "description": "The confidence number field in Agentic Workspace Setup Findings."
+            "description": "Confidence contract value used by this contract."
           },
           "path": {
             "type": "string",
             "minLength": 1,
-            "description": "The path string field in Agentic Workspace Setup Findings."
+            "description": "Path segments or repository path used by this contract."
           },
           "refs": {
             "type": "array",
@@ -52,24 +52,24 @@
             "items": {
               "type": "string",
               "minLength": 1,
-              "description": "Item string accepted by refs in Agentic Workspace Setup Findings."
+              "description": "One entry in the refs list."
             },
-            "description": "The refs array field in Agentic Workspace Setup Findings."
+            "description": "References that help interpret or verify this record."
           },
           "next_action": {
             "type": "string",
             "minLength": 1,
-            "description": "The next action string field in Agentic Workspace Setup Findings."
+            "description": "Next action text value used by this contract."
           },
           "why": {
             "type": "string",
             "minLength": 1,
-            "description": "The why string field in Agentic Workspace Setup Findings."
+            "description": "Why text value used by this contract."
           },
           "observed_during": {
             "type": "string",
             "minLength": 1,
-            "description": "The observed during string field in Agentic Workspace Setup Findings."
+            "description": "Observed during text value used by this contract."
           },
           "signal_kind": {
             "type": "string",
@@ -85,17 +85,17 @@
               "shipped_footprint",
               "default_feature_creep"
             ],
-            "description": "The signal kind enumerated value field in Agentic Workspace Setup Findings."
+            "description": "Allowed signal kind value for routing or validation."
           },
           "cost": {
             "type": "string",
             "minLength": 1,
-            "description": "The cost string field in Agentic Workspace Setup Findings."
+            "description": "Cost text value used by this contract."
           },
           "suspected_owner": {
             "type": "string",
             "minLength": 1,
-            "description": "The suspected owner string field in Agentic Workspace Setup Findings."
+            "description": "Suspected owner text value used by this contract."
           },
           "likely_remediation": {
             "type": "string",
@@ -117,7 +117,7 @@
               "unship",
               "unknown"
             ],
-            "description": "The likely remediation enumerated value field in Agentic Workspace Setup Findings."
+            "description": "Allowed likely remediation value for routing or validation."
           },
           "recurrence": {
             "type": "string",
@@ -126,7 +126,7 @@
               "repeated",
               "human_confirmed"
             ],
-            "description": "The recurrence enumerated value field in Agentic Workspace Setup Findings."
+            "description": "Allowed recurrence value for routing or validation."
           },
           "validation_failure_class": {
             "type": "string",
@@ -136,11 +136,11 @@
               "interface_design_error",
               "unclear_proof_contract"
             ],
-            "description": "The validation failure class enumerated value field in Agentic Workspace Setup Findings."
+            "description": "Allowed validation failure class value for routing or validation."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by findings in Agentic Workspace Setup Findings."
+        "description": "One entry in the findings list."
       },
       "description": "Setup findings discovered during install, doctor, or setup review."
     }

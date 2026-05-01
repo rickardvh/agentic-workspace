@@ -49,26 +49,26 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "The id string field in Startup Context Payload."
+            "description": "Stable identifier used to reference this record."
           },
           "command": {
             "type": [
               "string",
               "null"
             ],
-            "description": "The command string or null field in Startup Context Payload."
+            "description": "Command string or command name used by this contract."
           },
           "surface": {
             "type": "string",
-            "description": "The surface string field in Startup Context Payload."
+            "description": "Surface text value used by this contract."
           },
           "why": {
             "type": "string",
-            "description": "The why string field in Startup Context Payload."
+            "description": "Why text value used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by startup sequence in Startup Context Payload."
+        "description": "One entry in the startup sequence list."
       },
       "description": "Ordered surfaces and commands an agent should use before opening broader repo context."
     },
@@ -90,18 +90,18 @@
       "properties": {
         "todo_active_count": {
           "type": "integer",
-          "description": "The todo active count integer field in Startup Context Payload."
+          "description": "Todo active count numeric value used by this contract."
         },
         "active_execplan": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The active execplan string or null field in Startup Context Payload."
+          "description": "Active execplan contract value used by this contract."
         },
         "planning_status": {
           "type": "string",
-          "description": "The planning status string field in Startup Context Payload."
+          "description": "Planning status text value used by this contract."
         }
       },
       "additionalProperties": false,
@@ -115,7 +115,7 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/authority_marker",
-        "description": "Item reference accepted by authority markers in Startup Context Payload."
+        "description": "One entry in the authority markers list."
       },
       "description": "Authority markers relevant to startup, ownership, and safe editing."
     },
@@ -135,53 +135,53 @@
       "properties": {
         "action": {
           "type": "string",
-          "description": "The action string field in Startup Context Payload."
+          "description": "Action text value used by this contract."
         },
         "summary": {
           "type": "string",
-          "description": "The summary string field in Startup Context Payload."
+          "description": "Short human-readable summary for this entry."
         },
         "command": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The command string or null field in Startup Context Payload."
+          "description": "Command string or command name used by this contract."
         },
         "run": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The run string or null field in Startup Context Payload."
+          "description": "Run contract value used by this contract."
         },
         "risk": {
           "type": "string",
-          "description": "The risk string field in Startup Context Payload."
+          "description": "Risk text value used by this contract."
         },
         "required_inputs": {
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Item string accepted by required inputs in Startup Context Payload."
+            "description": "One entry in the required inputs list."
           },
-          "description": "The required inputs array field in Startup Context Payload."
+          "description": "Ordered required inputs entries used by this contract."
         },
         "next_proof": {
           "type": "string",
-          "description": "The next proof string field in Startup Context Payload."
+          "description": "Next proof text value used by this contract."
         },
         "read_first": {
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Item string accepted by read first in Startup Context Payload."
+            "description": "One entry in the read first list."
           },
-          "description": "The read first array field in Startup Context Payload."
+          "description": "Ordered read first entries used by this contract."
         },
         "open_execplan_only_when": {
           "type": "string",
-          "description": "The open execplan only when string field in Startup Context Payload."
+          "description": "Open execplan only when text value used by this contract."
         }
       },
       "additionalProperties": false,
@@ -215,7 +215,7 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/path_boundary",
-        "description": "Item reference accepted by path boundaries in Startup Context Payload."
+        "description": "One entry in the path boundaries list."
       },
       "description": "Path-level ownership or package-boundary warnings that constrain the next action."
     }
@@ -236,15 +236,15 @@
       "properties": {
         "kind": {
           "const": "agentic-workspace/invoked-cli-identity/v1",
-          "description": "The kind constant field in Startup Context Payload."
+          "description": "Discriminator identifying the payload or record shape."
         },
         "package": {
           "const": "agentic-workspace",
-          "description": "The package constant field in Startup Context Payload."
+          "description": "Fixed package value required by this contract."
         },
         "version": {
           "type": "string",
-          "description": "The version string field in Startup Context Payload."
+          "description": "Version text value used by this contract."
         },
         "source_class": {
           "enum": [
@@ -252,7 +252,7 @@
             "installed-package",
             "unknown"
           ],
-          "description": "The source class enumerated value field in Startup Context Payload."
+          "description": "Allowed source class value for routing or validation."
         },
         "confidence": {
           "enum": [
@@ -260,34 +260,34 @@
             "medium",
             "low"
           ],
-          "description": "The confidence enumerated value field in Startup Context Payload."
+          "description": "Allowed confidence value for routing or validation."
         },
         "module_path": {
           "type": "string",
-          "description": "The module path string field in Startup Context Payload."
+          "description": "Module path text value used by this contract."
         },
         "package_root": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The package root string or null field in Startup Context Payload."
+          "description": "Package root contract value used by this contract."
         },
         "python_executable": {
           "type": "string",
-          "description": "The python executable string field in Startup Context Payload."
+          "description": "Python executable text value used by this contract."
         },
         "argv0": {
           "type": "string",
-          "description": "The argv0 string field in Startup Context Payload."
+          "description": "Argv0 text value used by this contract."
         },
         "argv0_path": {
           "type": "string",
-          "description": "The argv0 path string field in Startup Context Payload."
+          "description": "Argv0 path text value used by this contract."
         },
         "path_executable": {
           "type": "string",
-          "description": "The path executable string field in Startup Context Payload."
+          "description": "Path executable text value used by this contract."
         },
         "target_relation": {
           "enum": [
@@ -295,19 +295,19 @@
             "outside-target",
             "no-target"
           ],
-          "description": "The target relation enumerated value field in Startup Context Payload."
+          "description": "Allowed target relation value for routing or validation."
         },
         "compatibility": {
           "const": "not-evaluated",
-          "description": "The compatibility constant field in Startup Context Payload."
+          "description": "Fixed compatibility value required by this contract."
         },
         "expectation_source": {
           "type": "string",
-          "description": "The expectation source string field in Startup Context Payload."
+          "description": "Expectation source text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable invoked cli identity object definition for Startup Context Payload."
+      "description": "Invoked cli identity details used by this contract."
     },
     "cli_compatibility_check": {
       "type": "object",
@@ -326,11 +326,11 @@
             "source_class",
             "target_relation"
           ],
-          "description": "The name enumerated value field in Startup Context Payload."
+          "description": "Human-readable or lookup name for this entry."
         },
         "configured": {
           "type": "boolean",
-          "description": "The configured boolean field in Startup Context Payload."
+          "description": "Configured true/false policy flag used by this contract."
         },
         "expected": {
           "type": [
@@ -340,21 +340,21 @@
           ],
           "items": {
             "type": "string",
-            "description": "Item string accepted by expected in Startup Context Payload."
+            "description": "One entry in the expected list."
           },
-          "description": "The expected array or string or null field in Startup Context Payload."
+          "description": "Expected contract value used by this contract."
         },
         "actual": {
           "type": "string",
-          "description": "The actual string field in Startup Context Payload."
+          "description": "Actual text value used by this contract."
         },
         "satisfied": {
           "type": "boolean",
-          "description": "The satisfied boolean field in Startup Context Payload."
+          "description": "Satisfied true/false policy flag used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable cli compatibility check object definition for Startup Context Payload."
+      "description": "Cli compatibility check details used by this contract."
     },
     "cli_compatibility": {
       "type": "object",
@@ -368,7 +368,7 @@
       "properties": {
         "kind": {
           "const": "agentic-workspace/cli-compatibility/v1",
-          "description": "The kind constant field in Startup Context Payload."
+          "description": "Discriminator identifying the payload or record shape."
         },
         "status": {
           "enum": [
@@ -377,11 +377,11 @@
             "advisory-drift",
             "blocking-drift"
           ],
-          "description": "The status enumerated value field in Startup Context Payload."
+          "description": "Current lifecycle, readiness, or health state."
         },
         "configured": {
           "type": "boolean",
-          "description": "The configured boolean field in Startup Context Payload."
+          "description": "Configured true/false policy flag used by this contract."
         },
         "enforcement": {
           "enum": [
@@ -389,22 +389,22 @@
             "advisory",
             "blocking"
           ],
-          "description": "The enforcement enumerated value field in Startup Context Payload."
+          "description": "Allowed enforcement value for routing or validation."
         },
         "enforcement_source": {
           "type": "string",
-          "description": "The enforcement source string field in Startup Context Payload."
+          "description": "Enforcement source text value used by this contract."
         },
         "expectation_source": {
           "type": "string",
-          "description": "The expectation source string field in Startup Context Payload."
+          "description": "Expectation source text value used by this contract."
         },
         "expected_command": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The expected command string or null field in Startup Context Payload."
+          "description": "Expected command contract value used by this contract."
         },
         "invocation_confidence": {
           "enum": [
@@ -412,27 +412,27 @@
             "medium",
             "low"
           ],
-          "description": "The invocation confidence enumerated value field in Startup Context Payload."
+          "description": "Allowed invocation confidence value for routing or validation."
         },
         "drift_findings": {
           "type": "array",
           "items": {
             "type": "object",
-            "description": "Item object accepted by drift findings in Startup Context Payload."
+            "description": "One entry in the drift findings list."
           },
-          "description": "The drift findings array field in Startup Context Payload."
+          "description": "Ordered drift findings entries used by this contract."
         },
         "remediation": {
           "type": "object",
-          "description": "The remediation object field in Startup Context Payload."
+          "description": "Remediation details used by this contract."
         },
         "checks": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/cli_compatibility_check",
-            "description": "Item reference accepted by checks in Startup Context Payload."
+            "description": "One entry in the checks list."
           },
-          "description": "The checks array field in Startup Context Payload."
+          "description": "Ordered checks entries used by this contract."
         },
         "failed_checks": {
           "type": "array",
@@ -443,17 +443,17 @@
               "source_class",
               "target_relation"
             ],
-            "description": "Item enumerated value accepted by failed checks in Startup Context Payload."
+            "description": "One entry in the failed checks list."
           },
-          "description": "The failed checks array field in Startup Context Payload."
+          "description": "Ordered failed checks entries used by this contract."
         },
         "rule": {
           "type": "string",
-          "description": "The rule string field in Startup Context Payload."
+          "description": "Policy rule that explains this contract behavior."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable cli compatibility object definition for Startup Context Payload."
+      "description": "Cli compatibility details used by this contract."
     },
     "authority_marker": {
       "type": "object",
@@ -467,30 +467,30 @@
       "properties": {
         "path": {
           "type": "string",
-          "description": "The path string field in Startup Context Payload."
+          "description": "Path segments or repository path used by this contract."
         },
         "authority": {
           "type": "string",
-          "description": "The authority string field in Startup Context Payload."
+          "description": "Authority level or owner for this surface."
         },
         "canonical_source": {
           "type": "string",
-          "description": "The canonical source string field in Startup Context Payload."
+          "description": "Source of truth for this generated, derived, or adapter surface."
         },
         "safe_to_edit": {
           "type": "boolean",
-          "description": "The safe to edit boolean field in Startup Context Payload."
+          "description": "Whether agents may edit this surface under the declared authority rules."
         },
         "refresh_command": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The refresh command string or null field in Startup Context Payload."
+          "description": "Command used to refresh this generated or managed surface."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable authority marker object definition for Startup Context Payload."
+      "description": "Authority marker details used by this contract."
     },
     "package_boundary": {
       "type": "object",
@@ -502,26 +502,26 @@
       "properties": {
         "status": {
           "type": "string",
-          "description": "The status string field in Startup Context Payload."
+          "description": "Current lifecycle, readiness, or health state."
         },
         "cwd": {
           "type": "string",
-          "description": "The cwd string field in Startup Context Payload."
+          "description": "Working directory context used when running the command."
         },
         "warning": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The warning string or null field in Startup Context Payload."
+          "description": "Warning contract value used by this contract."
         },
         "package_root": {
           "type": "string",
-          "description": "The package root string field in Startup Context Payload."
+          "description": "Package root text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable package boundary object definition for Startup Context Payload."
+      "description": "Package boundary details used by this contract."
     },
     "path_boundary": {
       "type": "object",
@@ -534,26 +534,26 @@
       "properties": {
         "path": {
           "type": "string",
-          "description": "The path string field in Startup Context Payload."
+          "description": "Path segments or repository path used by this contract."
         },
         "authority": {
           "type": "string",
-          "description": "The authority string field in Startup Context Payload."
+          "description": "Authority level or owner for this surface."
         },
         "warning": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The warning string or null field in Startup Context Payload."
+          "description": "Warning contract value used by this contract."
         },
         "requires_attention": {
           "type": "boolean",
-          "description": "The requires attention boolean field in Startup Context Payload."
+          "description": "Requires attention true/false policy flag used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable path boundary object definition for Startup Context Payload."
+      "description": "Path boundary details used by this contract."
     },
     "skill_routing": {
       "type": "object",
@@ -566,48 +566,48 @@
       "properties": {
         "status": {
           "type": "string",
-          "description": "The status string field in Startup Context Payload."
+          "description": "Current lifecycle, readiness, or health state."
         },
         "rule": {
           "type": "string",
-          "description": "The rule string field in Startup Context Payload."
+          "description": "Policy rule that explains this contract behavior."
         },
         "query": {
           "type": "string",
-          "description": "The query string field in Startup Context Payload."
+          "description": "Query text value used by this contract."
         },
         "advanced_route_rule": {
           "type": "string",
-          "description": "The advanced route rule string field in Startup Context Payload."
+          "description": "Advanced route rule text value used by this contract."
         },
         "available_advanced_route_command": {
           "type": "string",
-          "description": "The available advanced route command string field in Startup Context Payload."
+          "description": "Available advanced route command text value used by this contract."
         },
         "enabled_advanced_routes": {
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Item string accepted by enabled advanced routes in Startup Context Payload."
+            "description": "One entry in the enabled advanced routes list."
           },
-          "description": "The enabled advanced routes array field in Startup Context Payload."
+          "description": "Ordered enabled advanced routes entries used by this contract."
         },
         "fallback_when_skills_unavailable": {
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Item string accepted by fallback when skills unavailable in Startup Context Payload."
+            "description": "One entry in the fallback when skills unavailable list."
           },
-          "description": "The fallback when skills unavailable array field in Startup Context Payload."
+          "description": "Ordered fallback when skills unavailable entries used by this contract."
         },
         "fallback_when_skills_unavailable_count": {
           "type": "integer",
           "minimum": 0,
-          "description": "The fallback when skills unavailable count integer field in Startup Context Payload."
+          "description": "Fallback when skills unavailable count numeric value used by this contract."
         },
         "fallback_detail": {
           "type": "string",
-          "description": "The fallback detail string field in Startup Context Payload."
+          "description": "Fallback detail text value used by this contract."
         },
         "preferred_routes": {
           "type": "array",
@@ -620,29 +620,29 @@
             "properties": {
               "task_shape": {
                 "type": "string",
-                "description": "The task shape string field in Startup Context Payload."
+                "description": "Task shape text value used by this contract."
               },
               "skill": {
                 "type": "string",
-                "description": "The skill string field in Startup Context Payload."
+                "description": "Skill text value used by this contract."
               },
               "fallback": {
                 "type": "string",
-                "description": "The fallback string field in Startup Context Payload."
+                "description": "Fallback text value used by this contract."
               },
               "feature": {
                 "type": "string",
-                "description": "The feature string field in Startup Context Payload."
+                "description": "Feature text value used by this contract."
               }
             },
             "additionalProperties": false,
-            "description": "Item object accepted by preferred routes in Startup Context Payload."
+            "description": "One entry in the preferred routes list."
           },
-          "description": "The preferred routes array field in Startup Context Payload."
+          "description": "Ordered preferred routes entries used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable skill routing object definition for Startup Context Payload."
+      "description": "Skill routing details used by this contract."
     }
   },
   "x-agentic-workspace-doc-role": "contract-reference"

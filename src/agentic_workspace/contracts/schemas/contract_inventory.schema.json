@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/contract-inventory.schema.json",
   "title": "Workspace Contract Inventory",
-  "description": "Schema for Workspace Contract Inventory.",
+  "description": "Inventory of contract surfaces, owners, validators, and freshness checks.",
   "type": "object",
   "required": [
     "schema_version",
@@ -13,11 +13,11 @@
   "properties": {
     "schema_version": {
       "const": "workspace-contract-inventory/v1",
-      "description": "The schema version constant field in Workspace Contract Inventory."
+      "description": "Contract version for this document."
     },
     "canonical_doc": {
       "type": "string",
-      "description": "The canonical doc string field in Workspace Contract Inventory."
+      "description": "Canonical doc text value used by this contract."
     },
     "owner_choice_model": {
       "type": "object",
@@ -30,7 +30,7 @@
         "purpose": {
           "type": "string",
           "minLength": 1,
-          "description": "The purpose string field in Workspace Contract Inventory."
+          "description": "Purpose text value used by this contract."
         },
         "review_questions": {
           "type": "array",
@@ -38,9 +38,9 @@
           "items": {
             "type": "string",
             "minLength": 1,
-            "description": "Item string accepted by review questions in Workspace Contract Inventory."
+            "description": "One entry in the review questions list."
           },
-          "description": "The review questions array field in Workspace Contract Inventory."
+          "description": "Ordered review questions entries used by this contract."
         },
         "concern_classes": {
           "type": "array",
@@ -58,37 +58,37 @@
               "id": {
                 "type": "string",
                 "minLength": 1,
-                "description": "The id string field in Workspace Contract Inventory."
+                "description": "Stable identifier used to reference this record."
               },
               "owner_surface": {
                 "type": "string",
                 "minLength": 1,
-                "description": "The owner surface string field in Workspace Contract Inventory."
+                "description": "Owner surface text value used by this contract."
               },
               "authority_class": {
                 "type": "string",
                 "minLength": 1,
-                "description": "The authority class string field in Workspace Contract Inventory."
+                "description": "Authority class text value used by this contract."
               },
               "route_when": {
                 "type": "string",
                 "minLength": 1,
-                "description": "The route when string field in Workspace Contract Inventory."
+                "description": "Route when text value used by this contract."
               },
               "avoid_when": {
                 "type": "string",
                 "minLength": 1,
-                "description": "The avoid when string field in Workspace Contract Inventory."
+                "description": "Avoid when text value used by this contract."
               }
             },
             "additionalProperties": false,
-            "description": "Item object accepted by concern classes in Workspace Contract Inventory."
+            "description": "One entry in the concern classes list."
           },
-          "description": "The concern classes array field in Workspace Contract Inventory."
+          "description": "Ordered concern classes entries used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The owner choice model object field in Workspace Contract Inventory."
+      "description": "Owner choice model details used by this contract."
     },
     "areas": {
       "type": "array",
@@ -104,7 +104,7 @@
         "properties": {
           "area": {
             "type": "string",
-            "description": "The area string field in Workspace Contract Inventory."
+            "description": "Area text value used by this contract."
           },
           "classification": {
             "enum": [
@@ -113,29 +113,29 @@
               "procedural-contract",
               "derived"
             ],
-            "description": "The classification enumerated value field in Workspace Contract Inventory."
+            "description": "Classification used for routing, filtering, or policy selection."
           },
           "owner_surface": {
             "type": "string",
-            "description": "The owner surface string field in Workspace Contract Inventory."
+            "description": "Owner surface text value used by this contract."
           },
           "consumers": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by consumers in Workspace Contract Inventory."
+              "description": "One entry in the consumers list."
             },
-            "description": "The consumers array field in Workspace Contract Inventory."
+            "description": "Ordered consumers entries used by this contract."
           },
           "notes": {
             "type": "string",
-            "description": "The notes string field in Workspace Contract Inventory."
+            "description": "Additional notes that qualify this record."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by areas in Workspace Contract Inventory."
+        "description": "One entry in the areas list."
       },
-      "description": "The areas array field in Workspace Contract Inventory."
+      "description": "Ordered areas entries used by this contract."
     }
   },
   "additionalProperties": false,

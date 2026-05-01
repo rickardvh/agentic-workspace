@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,6 +34,15 @@ def _default_targets() -> tuple[ReferenceTarget, ...]:
 
 
 DEFAULT_TARGETS = _default_targets()
+MECHANICAL_DESCRIPTION_PATTERNS = (
+    re.compile(r"^The .+ field in .+\.$"),
+    re.compile(r"^Item .+ accepted by .+ in .+\.$"),
+    re.compile(r"^Reusable .+ definition for .+\.$"),
+    re.compile(r"^Allowed .+ variant for .+\.$"),
+    re.compile(r"^Additional named .+ entry for .+ in .+\.$"),
+    re.compile(r"^Pattern-matched .+ entry for .+ in .+\.$"),
+    re.compile(r"^Schema for .+\.$"),
+)
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -41,6 +51,10 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 def _format_json(value: Any) -> str:
     return "`" + json.dumps(value, sort_keys=True) + "`"
+
+
+def _is_mechanical_description(value: str) -> bool:
+    return any(pattern.match(value) for pattern in MECHANICAL_DESCRIPTION_PATTERNS)
 
 
 def _format_examples(value: Any) -> str:
@@ -264,6 +278,8 @@ def _annotation_errors(schema_path: Path, *, repo_root: Path = REPO_ROOT) -> lis
     for row in rows:
         if not row["description"]:
             errors.append(f"{schema_path.as_posix()} field {row['path']} is missing description")
+        elif _is_mechanical_description(row["description"]):
+            errors.append(f"{schema_path.as_posix()} field {row['path']} has mechanical description: {row['description']}")
     if not schema.get("x-agentic-workspace-doc-role"):
         errors.append(f"{schema_path.as_posix()} root is missing x-agentic-workspace-doc-role")
     if schema_path == DEFAULT_SCHEMA:

@@ -28,9 +28,9 @@
         "minItems": 1,
         "items": {
           "type": "string",
-          "description": "Item string accepted by name in Module Registry."
+          "description": "One entry in the name list."
         },
-        "description": "Additional named array entry for module command args in Module Registry."
+        "description": "Named entry in the module command args mapping."
       },
       "description": "Accepted command-line module arguments and aliases."
     },
@@ -49,50 +49,50 @@
       "properties": {
         "decision": {
           "type": "string",
-          "description": "The decision string field in Module Registry."
+          "description": "Decision text value used by this contract."
         },
         "status": {
           "type": "string",
-          "description": "The status string field in Module Registry."
+          "description": "Current lifecycle, readiness, or health state."
         },
         "python_package_dependency_model": {
           "type": "string",
-          "description": "The python package dependency model string field in Module Registry."
+          "description": "Python package dependency model text value used by this contract."
         },
         "repo_footprint_rule": {
           "type": "string",
-          "description": "The repo footprint rule string field in Module Registry."
+          "description": "Repo footprint rule text value used by this contract."
         },
         "why": {
           "type": "string",
-          "description": "The why string field in Module Registry."
+          "description": "Why text value used by this contract."
         },
         "bounded_by": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by bounded by in Module Registry."
+            "description": "One entry in the bounded by list."
           },
-          "description": "The bounded by array field in Module Registry."
+          "description": "Ordered bounded by entries used by this contract."
         },
         "future_options": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by future options in Module Registry."
+            "description": "One entry in the future options list."
           },
-          "description": "The future options array field in Module Registry."
+          "description": "Ordered future options entries used by this contract."
         },
         "must_preserve": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by must preserve in Module Registry."
+            "description": "One entry in the must preserve list."
           },
-          "description": "The must preserve array field in Module Registry."
+          "description": "Ordered must preserve entries used by this contract."
         }
       },
       "additionalProperties": false,
@@ -112,23 +112,23 @@
       "properties": {
         "schema_version": {
           "const": "agentic-workspace/module-components/v1",
-          "description": "The schema version constant field in Module Registry."
+          "description": "Contract version for this document."
         },
         "alignment": {
           "type": "string",
-          "description": "The alignment string field in Module Registry."
+          "description": "Alignment text value used by this contract."
         },
         "runtime_dependency": {
           "const": "none",
-          "description": "The runtime dependency constant field in Module Registry."
+          "description": "Fixed runtime dependency value required by this contract."
         },
         "source_of_truth": {
           "type": "string",
-          "description": "The source of truth string field in Module Registry."
+          "description": "Source of truth text value used by this contract."
         },
         "rule": {
           "type": "string",
-          "description": "The rule string field in Module Registry."
+          "description": "Policy rule that explains this contract behavior."
         },
         "component_classes": {
           "type": "array",
@@ -150,30 +150,30 @@
                   "schema",
                   "root"
                 ],
-                "description": "The id enumerated value field in Module Registry."
+                "description": "Stable identifier used to reference this record."
               },
               "maps_to": {
                 "type": "string",
-                "description": "The maps to string field in Module Registry."
+                "description": "Maps to text value used by this contract."
               },
               "semantics": {
                 "type": "string",
-                "description": "The semantics string field in Module Registry."
+                "description": "Semantics text value used by this contract."
               },
               "required_fields": {
                 "type": "array",
                 "minItems": 1,
                 "items": {
                   "type": "string",
-                  "description": "Item string accepted by required fields in Module Registry."
+                  "description": "One entry in the required fields list."
                 },
-                "description": "The required fields array field in Module Registry."
+                "description": "Ordered required fields entries used by this contract."
               }
             },
             "additionalProperties": false,
-            "description": "Item object accepted by component classes in Module Registry."
+            "description": "One entry in the component classes list."
           },
-          "description": "The component classes array field in Module Registry."
+          "description": "Ordered component classes entries used by this contract."
         },
         "adapter_boundary": {
           "type": "object",
@@ -186,38 +186,38 @@
           "properties": {
             "future_adapter": {
               "type": "string",
-              "description": "The future adapter string field in Module Registry."
+              "description": "Future adapter text value used by this contract."
             },
             "adapter_consumes": {
               "type": "array",
               "minItems": 1,
               "items": {
                 "type": "string",
-                "description": "Item string accepted by adapter consumes in Module Registry."
+                "description": "One entry in the adapter consumes list."
               },
-              "description": "The adapter consumes array field in Module Registry."
+              "description": "Ordered adapter consumes entries used by this contract."
             },
             "adapter_must_not": {
               "type": "array",
               "minItems": 1,
               "items": {
                 "type": "string",
-                "description": "Item string accepted by adapter must not in Module Registry."
+                "description": "One entry in the adapter must not list."
               },
-              "description": "The adapter must not array field in Module Registry."
+              "description": "Ordered adapter must not entries used by this contract."
             },
             "blocking_prerequisites": {
               "type": "array",
               "minItems": 1,
               "items": {
                 "type": "string",
-                "description": "Item string accepted by blocking prerequisites in Module Registry."
+                "description": "One entry in the blocking prerequisites list."
               },
-              "description": "The blocking prerequisites array field in Module Registry."
+              "description": "Ordered blocking prerequisites entries used by this contract."
             }
           },
           "additionalProperties": false,
-          "description": "The adapter boundary object field in Module Registry."
+          "description": "Adapter boundary details used by this contract."
         }
       },
       "additionalProperties": false,
@@ -242,11 +242,11 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "The id string field in Module Registry."
+            "description": "Stable identifier used to reference this record."
           },
           "label": {
             "type": "string",
-            "description": "The label string field in Module Registry."
+            "description": "Label text value used by this contract."
           },
           "profile_kind": {
             "enum": [
@@ -254,42 +254,42 @@
               "installer-preset",
               "module-selection"
             ],
-            "description": "The profile kind enumerated value field in Module Registry."
+            "description": "Allowed profile kind value for routing or validation."
           },
           "selected_modules": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by selected modules in Module Registry."
+              "description": "One entry in the selected modules list."
             },
-            "description": "The selected modules array field in Module Registry."
+            "description": "Ordered selected modules entries used by this contract."
           },
           "preset": {
             "type": [
               "string",
               "null"
             ],
-            "description": "The preset string or null field in Module Registry."
+            "description": "Preset contract value used by this contract."
           },
           "default_active": {
             "type": "boolean",
-            "description": "The default active boolean field in Module Registry."
+            "description": "Default active true/false policy flag used by this contract."
           },
           "activation": {
             "type": "string",
-            "description": "The activation string field in Module Registry."
+            "description": "Activation text value used by this contract."
           },
           "cost_model": {
             "type": "string",
-            "description": "The cost model string field in Module Registry."
+            "description": "Cost model text value used by this contract."
           },
           "selection_rule": {
             "type": "string",
-            "description": "The selection rule string field in Module Registry."
+            "description": "Selection rule text value used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by module profiles in Module Registry."
+        "description": "One entry in the module profiles list."
       },
       "description": "Module profile summaries used for selection, reporting, and docs."
     },
@@ -311,32 +311,32 @@
           "properties": {
             "audience": {
               "const": "shipped-host-repo",
-              "description": "The audience constant field in Module Registry."
+              "description": "Fixed audience value required by this contract."
             },
             "role": {
               "type": "string",
-              "description": "The role string field in Module Registry."
+              "description": "Role text value used by this contract."
             },
             "excludes": {
               "type": "array",
               "minItems": 1,
               "items": {
                 "type": "string",
-                "description": "Item string accepted by excludes in Module Registry."
+                "description": "One entry in the excludes list."
               },
-              "description": "The excludes array field in Module Registry."
+              "description": "Ordered excludes entries used by this contract."
             },
             "rule": {
               "type": "string",
-              "description": "The rule string field in Module Registry."
+              "description": "Policy rule that explains this contract behavior."
             }
           },
           "additionalProperties": false,
-          "description": "The scope object field in Module Registry."
+          "description": "Scope details used by this contract."
         },
         "components": {
           "$ref": "#/$defs/module_components",
-          "description": "The components reference field in Module Registry."
+          "description": "Components declared by this registry or package surface."
         }
       },
       "additionalProperties": false,
@@ -359,42 +359,42 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "The id string field in Module Registry."
+            "description": "Stable identifier used to reference this record."
           },
           "label": {
             "type": "string",
-            "description": "The label string field in Module Registry."
+            "description": "Label text value used by this contract."
           },
           "modules": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by modules in Module Registry."
+              "description": "One entry in the modules list."
             },
-            "description": "The modules array field in Module Registry."
+            "description": "Modules covered by this contract section."
           },
           "preset": {
             "type": [
               "string",
               "null"
             ],
-            "description": "The preset string or null field in Module Registry."
+            "description": "Preset contract value used by this contract."
           },
           "default_active": {
             "type": "boolean",
-            "description": "The default active boolean field in Module Registry."
+            "description": "Default active true/false policy flag used by this contract."
           },
           "activation": {
             "type": "string",
-            "description": "The activation string field in Module Registry."
+            "description": "Activation text value used by this contract."
           },
           "cost_model": {
             "type": "string",
-            "description": "The cost model string field in Module Registry."
+            "description": "Cost model text value used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by feature tiers in Module Registry."
+        "description": "One entry in the feature tiers list."
       },
       "description": "Named install/feature tiers and their ordinary operating cost."
     },
@@ -414,35 +414,35 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "The id string field in Module Registry."
+            "description": "Stable identifier used to reference this record."
           },
           "label": {
             "type": "string",
-            "description": "The label string field in Module Registry."
+            "description": "Label text value used by this contract."
           },
           "tier": {
             "type": "string",
-            "description": "The tier string field in Module Registry."
+            "description": "Tier text value used by this contract."
           },
           "default_enabled": {
             "type": "boolean",
-            "description": "The default enabled boolean field in Module Registry."
+            "description": "Default enabled true/false policy flag used by this contract."
           },
           "activation": {
             "type": "string",
-            "description": "The activation string field in Module Registry."
+            "description": "Activation text value used by this contract."
           },
           "default_surface_policy": {
             "type": "string",
-            "description": "The default surface policy string field in Module Registry."
+            "description": "Default surface policy text value used by this contract."
           },
           "selector_hint": {
             "type": "string",
-            "description": "The selector hint string field in Module Registry."
+            "description": "Selector hint text value used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by advanced features in Module Registry."
+        "description": "One entry in the advanced features list."
       },
       "description": "Optional advanced feature gates that are not ordinary startup requirements."
     },
@@ -471,59 +471,59 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "The name string field in Module Registry."
+            "description": "Human-readable or lookup name for this entry."
           },
           "description": {
             "type": "string",
-            "description": "The description string field in Module Registry."
+            "description": "Longer explanation or display text for this entry."
           },
           "selection_rank": {
             "type": "integer",
-            "description": "The selection rank integer field in Module Registry."
+            "description": "Selection rank numeric value used by this contract."
           },
           "include_in_full_preset": {
             "type": "boolean",
-            "description": "The include in full preset boolean field in Module Registry."
+            "description": "Include in full preset true/false policy flag used by this contract."
           },
           "install_signals": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by install signals in Module Registry."
+              "description": "One entry in the install signals list."
             },
-            "description": "The install signals array field in Module Registry."
+            "description": "Ordered install signals entries used by this contract."
           },
           "workflow_surfaces": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by workflow surfaces in Module Registry."
+              "description": "One entry in the workflow surfaces list."
             },
-            "description": "The workflow surfaces array field in Module Registry."
+            "description": "Ordered workflow surfaces entries used by this contract."
           },
           "generated_artifacts": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by generated artifacts in Module Registry."
+              "description": "One entry in the generated artifacts list."
             },
-            "description": "The generated artifacts array field in Module Registry."
+            "description": "Ordered generated artifacts entries used by this contract."
           },
           "startup_steps": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by startup steps in Module Registry."
+              "description": "One entry in the startup steps list."
             },
-            "description": "The startup steps array field in Module Registry."
+            "description": "Ordered startup steps entries used by this contract."
           },
           "sources_of_truth": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by sources of truth in Module Registry."
+              "description": "One entry in the sources of truth list."
             },
-            "description": "The sources of truth array field in Module Registry."
+            "description": "Ordered sources of truth entries used by this contract."
           },
           "root_agents_cleanup_blocks": {
             "type": "array",
@@ -538,53 +538,53 @@
               "properties": {
                 "block": {
                   "type": "string",
-                  "description": "The block string field in Module Registry."
+                  "description": "Block text value used by this contract."
                 },
                 "start_marker": {
                   "type": "string",
-                  "description": "The start marker string field in Module Registry."
+                  "description": "Start marker text value used by this contract."
                 },
                 "end_marker": {
                   "type": "string",
-                  "description": "The end marker string field in Module Registry."
+                  "description": "End marker text value used by this contract."
                 },
                 "label": {
                   "type": "string",
-                  "description": "The label string field in Module Registry."
+                  "description": "Label text value used by this contract."
                 }
               },
               "additionalProperties": false,
-              "description": "Item object accepted by root agents cleanup blocks in Module Registry."
+              "description": "One entry in the root agents cleanup blocks list."
             },
-            "description": "The root agents cleanup blocks array field in Module Registry."
+            "description": "Ordered root agents cleanup blocks entries used by this contract."
           },
           "capabilities": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by capabilities in Module Registry."
+              "description": "One entry in the capabilities list."
             },
-            "description": "The capabilities array field in Module Registry."
+            "description": "Ordered capabilities entries used by this contract."
           },
           "dependencies": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by dependencies in Module Registry."
+              "description": "One entry in the dependencies list."
             },
-            "description": "The dependencies array field in Module Registry."
+            "description": "Ordered dependencies entries used by this contract."
           },
           "conflicts": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by conflicts in Module Registry."
+              "description": "One entry in the conflicts list."
             },
-            "description": "The conflicts array field in Module Registry."
+            "description": "Ordered conflicts entries used by this contract."
           },
           "components": {
             "$ref": "#/$defs/module_components",
-            "description": "The components reference field in Module Registry."
+            "description": "Components declared by this registry or package surface."
           },
           "result_contract": {
             "type": "object",
@@ -597,42 +597,42 @@
             "properties": {
               "schema_version": {
                 "type": "string",
-                "description": "The schema version string field in Module Registry."
+                "description": "Contract version for this document."
               },
               "guaranteed_fields": {
                 "type": "array",
                 "minItems": 1,
                 "items": {
                   "type": "string",
-                  "description": "Item string accepted by guaranteed fields in Module Registry."
+                  "description": "One entry in the guaranteed fields list."
                 },
-                "description": "The guaranteed fields array field in Module Registry."
+                "description": "Ordered guaranteed fields entries used by this contract."
               },
               "action_fields": {
                 "type": "array",
                 "minItems": 1,
                 "items": {
                   "type": "string",
-                  "description": "Item string accepted by action fields in Module Registry."
+                  "description": "One entry in the action fields list."
                 },
-                "description": "The action fields array field in Module Registry."
+                "description": "Ordered action fields entries used by this contract."
               },
               "warning_fields": {
                 "type": "array",
                 "minItems": 1,
                 "items": {
                   "type": "string",
-                  "description": "Item string accepted by warning fields in Module Registry."
+                  "description": "One entry in the warning fields list."
                 },
-                "description": "The warning fields array field in Module Registry."
+                "description": "Ordered warning fields entries used by this contract."
               }
             },
             "additionalProperties": false,
-            "description": "The result contract object field in Module Registry."
+            "description": "Result contract details used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by modules in Module Registry."
+        "description": "One entry in the modules list."
       },
       "description": "Registered modules and their descriptors."
     }
@@ -652,45 +652,45 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/resource_component",
-            "description": "Item reference accepted by resources in Module Registry."
+            "description": "One entry in the resources list."
           },
-          "description": "The resources array field in Module Registry."
+          "description": "Ordered resources entries used by this contract."
         },
         "tools": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/tool_component",
-            "description": "Item reference accepted by tools in Module Registry."
+            "description": "One entry in the tools list."
           },
-          "description": "The tools array field in Module Registry."
+          "description": "Ordered tools entries used by this contract."
         },
         "prompts": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/prompt_component",
-            "description": "Item reference accepted by prompts in Module Registry."
+            "description": "One entry in the prompts list."
           },
-          "description": "The prompts array field in Module Registry."
+          "description": "Ordered prompts entries used by this contract."
         },
         "schemas": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/schema_component",
-            "description": "Item reference accepted by schemas in Module Registry."
+            "description": "One entry in the schemas list."
           },
-          "description": "The schemas array field in Module Registry."
+          "description": "Ordered schemas entries used by this contract."
         },
         "roots": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/root_component",
-            "description": "Item reference accepted by roots in Module Registry."
+            "description": "One entry in the roots list."
           },
-          "description": "The roots array field in Module Registry."
+          "description": "Ordered roots entries used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable module components object definition for Module Registry."
+      "description": "Module components details used by this contract."
     },
     "resource_component": {
       "type": "object",
@@ -706,31 +706,31 @@
         "uri": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9+.-]*://",
-          "description": "The uri string field in Module Registry."
+          "description": "Uri text value used by this contract."
         },
         "description": {
           "type": "string",
-          "description": "The description string field in Module Registry."
+          "description": "Longer explanation or display text for this entry."
         },
         "read_only": {
           "const": true,
-          "description": "The read only constant field in Module Registry."
+          "description": "Whether this operation or aid avoids writes."
         },
         "source": {
           "type": "string",
-          "description": "The source string field in Module Registry."
+          "description": "Origin or authority source for this value."
         },
         "command": {
           "type": "string",
-          "description": "The command string field in Module Registry."
+          "description": "Command string or command name used by this contract."
         },
         "result_schema": {
           "type": "string",
-          "description": "The result schema string field in Module Registry."
+          "description": "Result schema text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable resource component object definition for Module Registry."
+      "description": "Resource component details used by this contract."
     },
     "tool_component": {
       "type": "object",
@@ -750,39 +750,39 @@
         "name": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$",
-          "description": "The name string field in Module Registry."
+          "description": "Human-readable or lookup name for this entry."
         },
         "description": {
           "type": "string",
-          "description": "The description string field in Module Registry."
+          "description": "Longer explanation or display text for this entry."
         },
         "command": {
           "type": "string",
-          "description": "The command string field in Module Registry."
+          "description": "Command string or command name used by this contract."
         },
         "read_only": {
           "type": "boolean",
-          "description": "The read only boolean field in Module Registry."
+          "description": "Whether this operation or aid avoids writes."
         },
         "destructive": {
           "type": "boolean",
-          "description": "The destructive boolean field in Module Registry."
+          "description": "Whether this action can delete, overwrite, or otherwise destroy state."
         },
         "idempotent": {
           "type": "boolean",
-          "description": "The idempotent boolean field in Module Registry."
+          "description": "Idempotent true/false policy flag used by this contract."
         },
         "requires_dry_run": {
           "type": "boolean",
-          "description": "The requires dry run boolean field in Module Registry."
+          "description": "Requires dry run true/false policy flag used by this contract."
         },
         "input_schema": {
           "type": "string",
-          "description": "The input schema string field in Module Registry."
+          "description": "Input schema text value used by this contract."
         },
         "result_schema": {
           "type": "string",
-          "description": "The result schema string field in Module Registry."
+          "description": "Result schema text value used by this contract."
         },
         "safety": {
           "type": "object",
@@ -796,29 +796,29 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "description": "Item string accepted by requires approval when in Module Registry."
+                "description": "One entry in the requires approval when list."
               },
-              "description": "The requires approval when array field in Module Registry."
+              "description": "Ordered requires approval when entries used by this contract."
             },
             "owned_paths": {
               "type": "array",
               "items": {
                 "type": "string",
-                "description": "Item string accepted by owned paths in Module Registry."
+                "description": "One entry in the owned paths list."
               },
-              "description": "The owned paths array field in Module Registry."
+              "description": "Ordered owned paths entries used by this contract."
             },
             "dry_run_command": {
               "type": "string",
-              "description": "The dry run command string field in Module Registry."
+              "description": "Dry run command text value used by this contract."
             }
           },
           "additionalProperties": false,
-          "description": "The safety object field in Module Registry."
+          "description": "Safety expectations that must hold during or after execution."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable tool component object definition for Module Registry."
+      "description": "Tool component details used by this contract."
     },
     "prompt_component": {
       "type": "object",
@@ -832,15 +832,15 @@
         "name": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$",
-          "description": "The name string field in Module Registry."
+          "description": "Human-readable or lookup name for this entry."
         },
         "description": {
           "type": "string",
-          "description": "The description string field in Module Registry."
+          "description": "Longer explanation or display text for this entry."
         },
         "template": {
           "type": "string",
-          "description": "The template string field in Module Registry."
+          "description": "Template text value used by this contract."
         },
         "prompt_kind": {
           "enum": [
@@ -848,11 +848,11 @@
             "handoff",
             "template"
           ],
-          "description": "The prompt kind enumerated value field in Module Registry."
+          "description": "Allowed prompt kind value for routing or validation."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable prompt component object definition for Module Registry."
+      "description": "Prompt component details used by this contract."
     },
     "schema_component": {
       "type": "object",
@@ -864,19 +864,19 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "The id string field in Module Registry."
+          "description": "Stable identifier used to reference this record."
         },
         "path": {
           "type": "string",
-          "description": "The path string field in Module Registry."
+          "description": "Path segments or repository path used by this contract."
         },
         "schema_kind": {
           "type": "string",
-          "description": "The schema kind string field in Module Registry."
+          "description": "Schema kind text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable schema component object definition for Module Registry."
+      "description": "Schema component details used by this contract."
     },
     "root_component": {
       "type": "object",
@@ -888,19 +888,19 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "The id string field in Module Registry."
+          "description": "Stable identifier used to reference this record."
         },
         "path": {
           "type": "string",
-          "description": "The path string field in Module Registry."
+          "description": "Path segments or repository path used by this contract."
         },
         "ownership": {
           "type": "string",
-          "description": "The ownership string field in Module Registry."
+          "description": "Ownership text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable root component object definition for Module Registry."
+      "description": "Root component details used by this contract."
     }
   },
   "additionalProperties": false,

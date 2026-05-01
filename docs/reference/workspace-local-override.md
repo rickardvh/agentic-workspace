@@ -13,24 +13,24 @@ Machine-local override schema for invocation preferences, delegation capabilitie
 | (root) | object | yes |  | Machine-local override schema for invocation preferences, delegation capabilities, safety posture, and local memory. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `schema_version` | const `1` | yes |  | Local override contract version. |  |  |
 | `workspace` | object | no |  | Local workspace preferences that should not be checked into shared repo config. |  |  |
-| `workspace.cli_invoke` | string | no |  | The cli invoke string field in Agentic Workspace Local Mixed-Agent Override. |  |  |
+| `workspace.cli_invoke` | string | no |  | Cli invoke text value used by this contract. |  |  |
 | `runtime` | object | no |  | Capabilities of the current agent/runtime on this machine. |  |  |
-| `runtime.supports_internal_delegation` | boolean | no |  | The supports internal delegation boolean field in Agentic Workspace Local Mixed-Agent Override. |  |  |
-| `runtime.strong_planner_available` | boolean | no |  | The strong planner available boolean field in Agentic Workspace Local Mixed-Agent Override. |  |  |
-| `runtime.cheap_bounded_executor_available` | boolean | no |  | The cheap bounded executor available boolean field in Agentic Workspace Local Mixed-Agent Override. |  |  |
+| `runtime.supports_internal_delegation` | boolean | no |  | Supports internal delegation true/false policy flag used by this contract. |  |  |
+| `runtime.strong_planner_available` | boolean | no |  | Strong planner available true/false policy flag used by this contract. |  |  |
+| `runtime.cheap_bounded_executor_available` | boolean | no |  | Cheap bounded executor available true/false policy flag used by this contract. |  |  |
 | `handoff` | object | no |  | Local preferences for internal or external delegation handoff. |  |  |
-| `handoff.prefer_internal_delegation_when_available` | boolean | no |  | The prefer internal delegation when available boolean field in Agentic Workspace Local Mixed-Agent Override. |  |  |
+| `handoff.prefer_internal_delegation_when_available` | boolean | no |  | Prefer internal delegation when available true/false policy flag used by this contract. |  |  |
 | `safety` | object | no |  | Local safety limits for command execution and verification. |  |  |
-| `safety.safe_to_auto_run_commands` | boolean | no |  | The safe to auto run commands boolean field in Agentic Workspace Local Mixed-Agent Override. |  |  |
-| `safety.requires_human_verification_on_pr` | boolean | no |  | The requires human verification on pr boolean field in Agentic Workspace Local Mixed-Agent Override. |  |  |
+| `safety.safe_to_auto_run_commands` | boolean | no |  | Safe to auto run commands true/false policy flag used by this contract. |  |  |
+| `safety.requires_human_verification_on_pr` | boolean | no |  | Requires human verification on pr true/false policy flag used by this contract. |  |  |
 | `local_memory` | object | no |  | Machine-local memory opt-in and path configuration. |  |  |
-| `local_memory.enabled` | boolean | no |  | The enabled boolean field in Agentic Workspace Local Mixed-Agent Override. |  |  |
-| `local_memory.path` | string | no |  | The path string field in Agentic Workspace Local Mixed-Agent Override. |  |  |
+| `local_memory.enabled` | boolean | no |  | Enabled true/false policy flag used by this contract. |  |  |
+| `local_memory.path` | string | no |  | Path segments or repository path used by this contract. |  |  |
 | `delegation_targets` | object | no |  | Named local delegation targets available to this runtime. |  |  |
-| `delegation_targets.<^.+$>` | object | no |  | Pattern-matched object entry for delegation targets.<^ in Agentic Workspace Local Mixed-Agent Override. |  |  |
-| `delegation_targets.<^.+$>.strength` | enum `"strong"`, `"medium"`, `"weak"` | yes |  | The strength enumerated value field in Agentic Workspace Local Mixed-Agent Override. |  |  |
-| `delegation_targets.<^.+$>.location` | enum `"local"`, `"external"`, `"either"` | no |  | The location enumerated value field in Agentic Workspace Local Mixed-Agent Override. |  |  |
-| `delegation_targets.<^.+$>.confidence` | number | no |  | The confidence number field in Agentic Workspace Local Mixed-Agent Override. |  |  |
-| `delegation_targets.<^.+$>.task_fit` | array of string | no |  | The task fit array field in Agentic Workspace Local Mixed-Agent Override. |  |  |
-| `delegation_targets.<^.+$>.capability_classes` | array of enum `"boundary-shaping"`, `"reasoning-heavy"`, `"mixed"`, `"mechanical-follow-through"` | no |  | The capability classes array field in Agentic Workspace Local Mixed-Agent Override. |  |  |
-| `delegation_targets.<^.+$>.execution_methods` | array of enum `"internal"`, `"cli"`, `"api"`, `"manual"` | yes |  | The execution methods array field in Agentic Workspace Local Mixed-Agent Override. |  |  |
+| `delegation_targets.<^.+$>` | object | no |  | +$ details used by this contract. |  |  |
+| `delegation_targets.<^.+$>.strength` | enum `"strong"`, `"medium"`, `"weak"` | yes |  | Allowed strength value for routing or validation. |  |  |
+| `delegation_targets.<^.+$>.location` | enum `"local"`, `"external"`, `"either"` | no |  | Allowed location value for routing or validation. |  |  |
+| `delegation_targets.<^.+$>.confidence` | number | no |  | Confidence contract value used by this contract. |  |  |
+| `delegation_targets.<^.+$>.task_fit` | array of string | no |  | Ordered task fit entries used by this contract. |  |  |
+| `delegation_targets.<^.+$>.capability_classes` | array of enum `"boundary-shaping"`, `"reasoning-heavy"`, `"mixed"`, `"mechanical-follow-through"` | no |  | Ordered capability classes entries used by this contract. |  |  |
+| `delegation_targets.<^.+$>.execution_methods` | array of enum `"internal"`, `"cli"`, `"api"`, `"manual"` | yes |  | Ordered execution methods entries used by this contract. |  |  |

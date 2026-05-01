@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/workflow-definition-format.schema.json",
   "title": "Workflow Definition Format",
-  "description": "Schema for Workflow Definition Format.",
+  "description": "Format contract for repo-custom workflow obligation declarations.",
   "type": "object",
   "required": [
     "schema_version",
@@ -16,17 +16,17 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/workflow-definition-format/v1",
-      "description": "The schema version constant field in Workflow Definition Format."
+      "description": "Contract version for this document."
     },
     "canonical_doc": {
       "type": "string",
       "minLength": 1,
-      "description": "The canonical doc string field in Workflow Definition Format."
+      "description": "Canonical doc text value used by this contract."
     },
     "rule": {
       "type": "string",
       "minLength": 1,
-      "description": "The rule string field in Workflow Definition Format."
+      "description": "Policy rule that explains this contract behavior."
     },
     "primary_component_family": {
       "type": "object",
@@ -40,12 +40,12 @@
         "id": {
           "type": "string",
           "minLength": 1,
-          "description": "The id string field in Workflow Definition Format."
+          "description": "Stable identifier used to reference this record."
         },
         "owner_surface": {
           "type": "string",
           "minLength": 1,
-          "description": "The owner surface string field in Workflow Definition Format."
+          "description": "Owner surface text value used by this contract."
         },
         "attachment_points": {
           "type": "array",
@@ -53,9 +53,9 @@
           "items": {
             "type": "string",
             "minLength": 1,
-            "description": "Item string accepted by attachment points in Workflow Definition Format."
+            "description": "One entry in the attachment points list."
           },
-          "description": "The attachment points array field in Workflow Definition Format."
+          "description": "Ordered attachment points entries used by this contract."
         },
         "fields": {
           "type": "array",
@@ -71,30 +71,30 @@
               "field": {
                 "type": "string",
                 "minLength": 1,
-                "description": "The field string field in Workflow Definition Format."
+                "description": "Field text value used by this contract."
               },
               "required": {
                 "type": "boolean",
-                "description": "The required boolean field in Workflow Definition Format."
+                "description": "Required true/false policy flag used by this contract."
               },
               "purpose": {
                 "type": "string",
                 "minLength": 1,
-                "description": "The purpose string field in Workflow Definition Format."
+                "description": "Purpose text value used by this contract."
               }
             },
             "additionalProperties": false,
-            "description": "Item object accepted by fields in Workflow Definition Format."
+            "description": "One entry in the fields list."
           },
-          "description": "The fields array field in Workflow Definition Format."
+          "description": "Ordered fields entries used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The primary component family object field in Workflow Definition Format."
+      "description": "Primary component family details used by this contract."
     },
     "composition": {
       "$ref": "#/$defs/string_map",
-      "description": "The composition reference field in Workflow Definition Format."
+      "description": "Composition referenced contract shape used by this contract."
     },
     "flexibility_boundary": {
       "type": "object",
@@ -106,23 +106,23 @@
       "properties": {
         "formalize": {
           "$ref": "#/$defs/non_empty_strings",
-          "description": "The formalize reference field in Workflow Definition Format."
+          "description": "Formalize referenced contract shape used by this contract."
         },
         "leave_flexible": {
           "$ref": "#/$defs/non_empty_strings",
-          "description": "The leave flexible reference field in Workflow Definition Format."
+          "description": "Leave flexible referenced contract shape used by this contract."
         },
         "must_not": {
           "$ref": "#/$defs/non_empty_strings",
-          "description": "The must not reference field in Workflow Definition Format."
+          "description": "Must not referenced contract shape used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The flexibility boundary object field in Workflow Definition Format."
+      "description": "Flexibility boundary details used by this contract."
     },
     "migration_posture": {
       "$ref": "#/$defs/string_map",
-      "description": "The migration posture reference field in Workflow Definition Format."
+      "description": "Migration posture referenced contract shape used by this contract."
     }
   },
   "additionalProperties": false,
@@ -133,9 +133,9 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "description": "Item string accepted by non empty strings in Workflow Definition Format."
+        "description": "One entry in the non empty strings list."
       },
-      "description": "Reusable non empty strings array definition for Workflow Definition Format."
+      "description": "Ordered non empty strings entries used by this contract."
     },
     "string_map": {
       "type": "object",
@@ -143,9 +143,9 @@
       "additionalProperties": {
         "type": "string",
         "minLength": 1,
-        "description": "Additional named string entry for string map in Workflow Definition Format."
+        "description": "Named entry in the string map mapping."
       },
-      "description": "Reusable string map object definition for Workflow Definition Format."
+      "description": "String map details used by this contract."
     }
   },
   "x-agentic-workspace-doc-role": "contract-reference"

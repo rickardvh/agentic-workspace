@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/operation-primitives.schema.json",
   "title": "Agentic Workspace Operation Primitives Registry",
-  "description": "Schema for Agentic Workspace Operation Primitives Registry.",
+  "description": "Registry of implementation primitives referenced by operation contracts.",
   "type": "object",
   "required": [
     "schema_version",
@@ -12,12 +12,12 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/operation-primitives/v1",
-      "description": "The schema version constant field in Agentic Workspace Operation Primitives Registry."
+      "description": "Contract version for this document."
     },
     "summary": {
       "type": "string",
       "minLength": 1,
-      "description": "The summary string field in Agentic Workspace Operation Primitives Registry."
+      "description": "Short human-readable summary for this entry."
     },
     "primitives": {
       "type": "array",
@@ -32,18 +32,18 @@
           "id": {
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9_.-]*$",
-            "description": "The id string field in Agentic Workspace Operation Primitives Registry."
+            "description": "Stable identifier used to reference this record."
           },
           "summary": {
             "type": "string",
             "minLength": 1,
-            "description": "The summary string field in Agentic Workspace Operation Primitives Registry."
+            "description": "Short human-readable summary for this entry."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by primitives in Agentic Workspace Operation Primitives Registry."
+        "description": "One entry in the primitives list."
       },
-      "description": "The primitives array field in Agentic Workspace Operation Primitives Registry."
+      "description": "Ordered primitives entries used by this contract."
     }
   },
   "additionalProperties": false,

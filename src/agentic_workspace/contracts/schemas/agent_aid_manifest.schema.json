@@ -107,7 +107,7 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "description": "Item string accepted by use when in Agent Aid Manifest."
+        "description": "One entry in the use when list."
       },
       "description": "Situations where agents should consider using this aid."
     },
@@ -129,27 +129,27 @@
       "properties": {
         "read_only": {
           "type": "boolean",
-          "description": "The read only boolean field in Agent Aid Manifest."
+          "description": "Whether this operation or aid avoids writes."
         },
         "writes_repo": {
           "type": "boolean",
-          "description": "The writes repo boolean field in Agent Aid Manifest."
+          "description": "Whether this aid may modify repository files."
         },
         "destructive": {
           "type": "boolean",
-          "description": "The destructive boolean field in Agent Aid Manifest."
+          "description": "Whether this action can delete, overwrite, or otherwise destroy state."
         },
         "network": {
           "type": "boolean",
-          "description": "The network boolean field in Agent Aid Manifest."
+          "description": "Network access requirement or allowance."
         },
         "hidden_required_workflow": {
           "const": false,
-          "description": "The hidden required workflow constant field in Agent Aid Manifest."
+          "description": "Whether the aid secretly imposes workflow requirements; this must stay false for checked-in aids."
         },
         "requires_review": {
           "type": "boolean",
-          "description": "The requires review boolean field in Agent Aid Manifest."
+          "description": "Whether a human or stronger review pass is required before relying on the result."
         }
       },
       "additionalProperties": false,
@@ -176,14 +176,14 @@
           "items": {
             "type": "string",
             "pattern": "\\S",
-            "description": "Item string accepted by commands in Agent Aid Manifest."
+            "description": "One entry in the commands list."
           },
-          "description": "The commands array field in Agent Aid Manifest."
+          "description": "Commands associated with this check, proof, or workflow step."
         },
         "absent_reason": {
           "type": "string",
           "minLength": 1,
-          "description": "The absent reason string field in Agent Aid Manifest."
+          "description": "Reason validation commands are intentionally absent."
         }
       },
       "additionalProperties": false,
@@ -211,12 +211,12 @@
             "module-component",
             "docs-contract"
           ],
-          "description": "The target kind enumerated value field in Agent Aid Manifest."
+          "description": "Kind of destination this entry may promote or point to."
         },
         "target": {
           "type": "string",
           "minLength": 1,
-          "description": "The target string field in Agent Aid Manifest."
+          "description": "Destination file, surface, package, or record referenced by this entry."
         },
         "discovery_route": {
           "type": "string",
@@ -229,12 +229,12 @@
             "module-manifest",
             "docs-contract"
           ],
-          "description": "The discovery route enumerated value field in Agent Aid Manifest."
+          "description": "How agents or tooling should discover the promoted artifact."
         },
         "trigger": {
           "type": "string",
           "minLength": 1,
-          "description": "The trigger string field in Agent Aid Manifest."
+          "description": "Condition that activates this rule, promotion, or retirement path."
         },
         "retention_after_promotion": {
           "type": "string",
@@ -244,7 +244,7 @@
             "shrink",
             "keep"
           ],
-          "description": "The retention after promotion enumerated value field in Agent Aid Manifest."
+          "description": "What happens to the original aid after promotion."
         }
       },
       "additionalProperties": false,
@@ -260,7 +260,7 @@
         "trigger": {
           "type": "string",
           "minLength": 1,
-          "description": "The trigger string field in Agent Aid Manifest."
+          "description": "Condition that activates this rule, promotion, or retirement path."
         },
         "retention_after_retirement": {
           "type": "string",
@@ -269,7 +269,7 @@
             "archive",
             "keep"
           ],
-          "description": "The retention after retirement enumerated value field in Agent Aid Manifest."
+          "description": "What happens to the aid record after retirement."
         }
       },
       "additionalProperties": false,

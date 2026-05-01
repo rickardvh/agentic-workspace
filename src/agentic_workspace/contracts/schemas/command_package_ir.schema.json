@@ -32,7 +32,7 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "description": "Item string accepted by source contracts in Agentic Workspace Command Package IR."
+        "description": "One entry in the source contracts list."
       },
       "description": "Contract files that feed or constrain command package generation."
     },
@@ -53,37 +53,37 @@
         "authority_rule": {
           "type": "string",
           "minLength": 1,
-          "description": "The authority rule string field in Agentic Workspace Command Package IR."
+          "description": "Authority rule text value used by this contract."
         },
         "runtime_boundary": {
           "type": "string",
           "minLength": 1,
-          "description": "The runtime boundary string field in Agentic Workspace Command Package IR."
+          "description": "Runtime boundary text value used by this contract."
         },
         "ordinary_development_environment": {
           "type": "string",
           "minLength": 1,
-          "description": "The ordinary development environment string field in Agentic Workspace Command Package IR."
+          "description": "Ordinary development environment text value used by this contract."
         },
         "test_environment": {
           "type": "string",
           "minLength": 1,
-          "description": "The test environment string field in Agentic Workspace Command Package IR."
+          "description": "Test environment text value used by this contract."
         },
         "custom_codegen_boundary": {
           "type": "string",
           "minLength": 1,
-          "description": "The custom codegen boundary string field in Agentic Workspace Command Package IR."
+          "description": "Custom codegen boundary text value used by this contract."
         },
         "shell_adapter_policy": {
           "type": "string",
           "minLength": 1,
-          "description": "The shell adapter policy string field in Agentic Workspace Command Package IR."
+          "description": "Shell adapter policy text value used by this contract."
         },
         "direct_cli_edit_policy": {
           "type": "string",
           "minLength": 1,
-          "description": "The direct cli edit policy string field in Agentic Workspace Command Package IR."
+          "description": "Direct cli edit policy text value used by this contract."
         },
         "generated_package_maturity": {
           "type": "object",
@@ -95,20 +95,20 @@
             "routing_rule": {
               "type": "string",
               "minLength": 1,
-              "description": "The routing rule string field in Agentic Workspace Command Package IR."
+              "description": "Routing rule text value used by this contract."
             },
             "levels": {
               "type": "array",
               "minItems": 1,
               "items": {
                 "$ref": "#/$defs/maturity_level",
-                "description": "Item reference accepted by levels in Agentic Workspace Command Package IR."
+                "description": "One entry in the levels list."
               },
-              "description": "The levels array field in Agentic Workspace Command Package IR."
+              "description": "Ordered levels entries used by this contract."
             }
           },
           "additionalProperties": false,
-          "description": "The generated package maturity object field in Agentic Workspace Command Package IR."
+          "description": "Generated package maturity details used by this contract."
         },
         "non_python_runtime_binding": {
           "type": "object",
@@ -125,37 +125,37 @@
             "selected_model": {
               "type": "string",
               "minLength": 1,
-              "description": "The selected model string field in Agentic Workspace Command Package IR."
+              "description": "Selected model text value used by this contract."
             },
             "default_runtime_command": {
               "type": "string",
               "minLength": 1,
-              "description": "The default runtime command string field in Agentic Workspace Command Package IR."
+              "description": "Default runtime command text value used by this contract."
             },
             "scope": {
               "type": "string",
               "minLength": 1,
-              "description": "The scope string field in Agentic Workspace Command Package IR."
+              "description": "Scope text value used by this contract."
             },
             "universal_contract_owns": {
               "$ref": "#/$defs/non_empty_strings",
-              "description": "The universal contract owns reference field in Agentic Workspace Command Package IR."
+              "description": "Universal contract owns referenced contract shape used by this contract."
             },
             "target_projection_owns": {
               "$ref": "#/$defs/non_empty_strings",
-              "description": "The target projection owns reference field in Agentic Workspace Command Package IR."
+              "description": "Target projection owns referenced contract shape used by this contract."
             },
             "runtime_owns": {
               "$ref": "#/$defs/non_empty_strings",
-              "description": "The runtime owns reference field in Agentic Workspace Command Package IR."
+              "description": "Runtime owns referenced contract shape used by this contract."
             },
             "error_mapping": {
               "$ref": "#/$defs/non_empty_strings",
-              "description": "The error mapping reference field in Agentic Workspace Command Package IR."
+              "description": "Error mapping referenced contract shape used by this contract."
             }
           },
           "additionalProperties": false,
-          "description": "The non python runtime binding object field in Agentic Workspace Command Package IR."
+          "description": "Non python runtime binding details used by this contract."
         }
       },
       "additionalProperties": false,
@@ -166,7 +166,7 @@
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/package",
-        "description": "Item reference accepted by packages in Agentic Workspace Command Package IR."
+        "description": "One entry in the packages list."
       },
       "description": "Generated command packages and their command bindings."
     }
@@ -186,12 +186,12 @@
         "id": {
           "type": "string",
           "pattern": "^[a-z0-9][a-z0-9_.-]*$",
-          "description": "The id string field in Agentic Workspace Command Package IR."
+          "description": "Stable identifier used to reference this record."
         },
         "program": {
           "type": "string",
           "minLength": 1,
-          "description": "The program string field in Agentic Workspace Command Package IR."
+          "description": "Program text value used by this contract."
         },
         "package_role": {
           "enum": [
@@ -199,29 +199,29 @@
             "planning-module-cli",
             "memory-module-cli"
           ],
-          "description": "The package role enumerated value field in Agentic Workspace Command Package IR."
+          "description": "Allowed package role value for routing or validation."
         },
         "targets": {
           "type": "array",
           "minItems": 1,
           "items": {
             "$ref": "#/$defs/target",
-            "description": "Item reference accepted by targets in Agentic Workspace Command Package IR."
+            "description": "One entry in the targets list."
           },
-          "description": "The targets array field in Agentic Workspace Command Package IR."
+          "description": "Ordered targets entries used by this contract."
         },
         "commands": {
           "type": "array",
           "minItems": 1,
           "items": {
             "$ref": "#/$defs/command",
-            "description": "Item reference accepted by commands in Agentic Workspace Command Package IR."
+            "description": "One entry in the commands list."
           },
-          "description": "The commands array field in Agentic Workspace Command Package IR."
+          "description": "Commands associated with this check, proof, or workflow step."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable package object definition for Agentic Workspace Command Package IR."
+      "description": "Package details used by this contract."
     },
     "target": {
       "type": "object",
@@ -241,17 +241,17 @@
             "bash",
             "powershell"
           ],
-          "description": "The kind enumerated value field in Agentic Workspace Command Package IR."
+          "description": "Discriminator identifying the payload or record shape."
         },
         "package_name": {
           "type": "string",
           "minLength": 1,
-          "description": "The package name string field in Agentic Workspace Command Package IR."
+          "description": "Package name text value used by this contract."
         },
         "generated_root": {
           "type": "string",
           "minLength": 1,
-          "description": "The generated root string field in Agentic Workspace Command Package IR."
+          "description": "Generated root text value used by this contract."
         },
         "entrypoints": {
           "type": "array",
@@ -259,21 +259,21 @@
           "items": {
             "type": "string",
             "minLength": 1,
-            "description": "Item string accepted by entrypoints in Agentic Workspace Command Package IR."
+            "description": "One entry in the entrypoints list."
           },
-          "description": "The entrypoints array field in Agentic Workspace Command Package IR."
+          "description": "Ordered entrypoints entries used by this contract."
         },
         "test_environment": {
           "enum": [
             "python-dev",
             "docker"
           ],
-          "description": "The test environment enumerated value field in Agentic Workspace Command Package IR."
+          "description": "Allowed test environment value for routing or validation."
         },
         "maturity_level_ref": {
           "type": "string",
           "minLength": 1,
-          "description": "The maturity level ref string field in Agentic Workspace Command Package IR."
+          "description": "Maturity level ref text value used by this contract."
         },
         "generation_status": {
           "enum": [
@@ -282,11 +282,11 @@
             "runnable-read-only-adapter",
             "deferred"
           ],
-          "description": "The generation status enumerated value field in Agentic Workspace Command Package IR."
+          "description": "Allowed generation status value for routing or validation."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable target object definition for Agentic Workspace Command Package IR."
+      "description": "Destination file, surface, package, or record referenced by this entry."
     },
     "maturity_level": {
       "type": "object",
@@ -302,20 +302,20 @@
         "id": {
           "type": "string",
           "pattern": "^[a-z0-9][a-z0-9-]*$",
-          "description": "The id string field in Agentic Workspace Command Package IR."
+          "description": "Stable identifier used to reference this record."
         },
         "summary": {
           "type": "string",
           "minLength": 1,
-          "description": "The summary string field in Agentic Workspace Command Package IR."
+          "description": "Short human-readable summary for this entry."
         },
         "runnable": {
           "type": "boolean",
-          "description": "The runnable boolean field in Agentic Workspace Command Package IR."
+          "description": "Runnable true/false policy flag used by this contract."
         },
         "runtime_backed": {
           "type": "boolean",
-          "description": "The runtime backed boolean field in Agentic Workspace Command Package IR."
+          "description": "Runtime backed true/false policy flag used by this contract."
         },
         "weak_agent_routing": {
           "enum": [
@@ -324,15 +324,15 @@
             "allowed-read-only",
             "allowed-mutation-with-review"
           ],
-          "description": "The weak agent routing enumerated value field in Agentic Workspace Command Package IR."
+          "description": "Allowed weak agent routing value for routing or validation."
         },
         "promotion_requires": {
           "$ref": "#/$defs/non_empty_strings",
-          "description": "The promotion requires reference field in Agentic Workspace Command Package IR."
+          "description": "Promotion requires referenced contract shape used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable maturity level object definition for Agentic Workspace Command Package IR."
+      "description": "Maturity level details used by this contract."
     },
     "command": {
       "type": "object",
@@ -351,7 +351,7 @@
         "adapter_id": {
           "type": "string",
           "pattern": "^[a-z0-9][a-z0-9_.-]*$",
-          "description": "The adapter id string field in Agentic Workspace Command Package IR."
+          "description": "Adapter id text value used by this contract."
         },
         "status": {
           "enum": [
@@ -359,7 +359,7 @@
             "proof-fixture",
             "deferred"
           ],
-          "description": "The status enumerated value field in Agentic Workspace Command Package IR."
+          "description": "Current lifecycle, readiness, or health state."
         },
         "command": {
           "type": "object",
@@ -370,21 +370,21 @@
             "name": {
               "type": "string",
               "minLength": 1,
-              "description": "The name string field in Agentic Workspace Command Package IR."
+              "description": "Human-readable or lookup name for this entry."
             },
             "subcommand": {
               "type": "string",
               "minLength": 1,
-              "description": "The subcommand string field in Agentic Workspace Command Package IR."
+              "description": "Subcommand text value used by this contract."
             },
             "manifest_ref": {
               "type": "string",
               "minLength": 1,
-              "description": "The manifest ref string field in Agentic Workspace Command Package IR."
+              "description": "Manifest ref text value used by this contract."
             }
           },
           "additionalProperties": false,
-          "description": "The command object field in Agentic Workspace Command Package IR."
+          "description": "Command string or command name used by this contract."
         },
         "operation_ref": {
           "type": "object",
@@ -396,16 +396,16 @@
             "id": {
               "type": "string",
               "minLength": 1,
-              "description": "The id string field in Agentic Workspace Command Package IR."
+              "description": "Stable identifier used to reference this record."
             },
             "path": {
               "type": "string",
               "pattern": "^operations/[A-Za-z0-9_.-]+\\.json$",
-              "description": "The path string field in Agentic Workspace Command Package IR."
+              "description": "Path segments or repository path used by this contract."
             }
           },
           "additionalProperties": false,
-          "description": "The operation ref object field in Agentic Workspace Command Package IR."
+          "description": "Operation ref details used by this contract."
         },
         "runtime_binding": {
           "type": "object",
@@ -416,7 +416,7 @@
           "properties": {
             "kind": {
               "const": "operation-primitive-sequence",
-              "description": "The kind constant field in Agentic Workspace Command Package IR."
+              "description": "Discriminator identifying the payload or record shape."
             },
             "primitive_refs": {
               "type": "array",
@@ -424,13 +424,13 @@
               "items": {
                 "type": "string",
                 "pattern": "^[a-z0-9][a-z0-9_.-]*$",
-                "description": "Item string accepted by primitive refs in Agentic Workspace Command Package IR."
+                "description": "One entry in the primitive refs list."
               },
-              "description": "The primitive refs array field in Agentic Workspace Command Package IR."
+              "description": "Ordered primitive refs entries used by this contract."
             }
           },
           "additionalProperties": false,
-          "description": "The runtime binding object field in Agentic Workspace Command Package IR."
+          "description": "Runtime binding details used by this contract."
         },
         "schemas": {
           "type": "object",
@@ -441,15 +441,15 @@
           "properties": {
             "input": {
               "$ref": "#/$defs/schema_refs",
-              "description": "The input reference field in Agentic Workspace Command Package IR."
+              "description": "Input referenced contract shape used by this contract."
             },
             "output": {
               "$ref": "#/$defs/schema_refs",
-              "description": "The output reference field in Agentic Workspace Command Package IR."
+              "description": "Output contract for the operation or command."
             }
           },
           "additionalProperties": false,
-          "description": "The schemas object field in Agentic Workspace Command Package IR."
+          "description": "Schemas details used by this contract."
         },
         "effect_hints": {
           "type": "object",
@@ -463,27 +463,27 @@
           "properties": {
             "read_only": {
               "type": "boolean",
-              "description": "The read only boolean field in Agentic Workspace Command Package IR."
+              "description": "Whether this operation or aid avoids writes."
             },
             "destructive": {
               "type": "boolean",
-              "description": "The destructive boolean field in Agentic Workspace Command Package IR."
+              "description": "Whether this action can delete, overwrite, or otherwise destroy state."
             },
             "idempotent": {
               "type": "boolean",
-              "description": "The idempotent boolean field in Agentic Workspace Command Package IR."
+              "description": "Idempotent true/false policy flag used by this contract."
             },
             "writes_repo_state": {
               "type": "boolean",
-              "description": "The writes repo state boolean field in Agentic Workspace Command Package IR."
+              "description": "Writes repo state true/false policy flag used by this contract."
             },
             "requires_preflight_gate": {
               "type": "boolean",
-              "description": "The requires preflight gate boolean field in Agentic Workspace Command Package IR."
+              "description": "Requires preflight gate true/false policy flag used by this contract."
             }
           },
           "additionalProperties": false,
-          "description": "The effect hints object field in Agentic Workspace Command Package IR."
+          "description": "Effect hints details used by this contract."
         },
         "conformance_refs": {
           "type": "array",
@@ -491,9 +491,9 @@
           "items": {
             "type": "string",
             "minLength": 1,
-            "description": "Item string accepted by conformance refs in Agentic Workspace Command Package IR."
+            "description": "One entry in the conformance refs list."
           },
-          "description": "The conformance refs array field in Agentic Workspace Command Package IR."
+          "description": "Ordered conformance refs entries used by this contract."
         },
         "projection_boundary": {
           "type": "object",
@@ -505,32 +505,32 @@
           "properties": {
             "universal": {
               "$ref": "#/$defs/non_empty_strings",
-              "description": "The universal reference field in Agentic Workspace Command Package IR."
+              "description": "Universal referenced contract shape used by this contract."
             },
             "target_specific": {
               "$ref": "#/$defs/non_empty_strings",
-              "description": "The target specific reference field in Agentic Workspace Command Package IR."
+              "description": "Target specific referenced contract shape used by this contract."
             },
             "runtime_owned": {
               "$ref": "#/$defs/non_empty_strings",
-              "description": "The runtime owned reference field in Agentic Workspace Command Package IR."
+              "description": "Runtime owned referenced contract shape used by this contract."
             }
           },
           "additionalProperties": false,
-          "description": "The projection boundary object field in Agentic Workspace Command Package IR."
+          "description": "Projection boundary details used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable command object definition for Agentic Workspace Command Package IR."
+      "description": "Command string or command name used by this contract."
     },
     "schema_refs": {
       "type": "array",
       "items": {
         "type": "string",
         "pattern": "^[A-Za-z0-9_.-]+\\.schema\\.json$",
-        "description": "Item string accepted by schema refs in Agentic Workspace Command Package IR."
+        "description": "One entry in the schema refs list."
       },
-      "description": "Reusable schema refs array definition for Agentic Workspace Command Package IR."
+      "description": "Ordered schema refs entries used by this contract."
     },
     "non_empty_strings": {
       "type": "array",
@@ -538,9 +538,9 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "description": "Item string accepted by non empty strings in Agentic Workspace Command Package IR."
+        "description": "One entry in the non empty strings list."
       },
-      "description": "Reusable non empty strings array definition for Agentic Workspace Command Package IR."
+      "description": "Ordered non empty strings entries used by this contract."
     }
   },
   "x-agentic-workspace-doc-role": "contract-reference"

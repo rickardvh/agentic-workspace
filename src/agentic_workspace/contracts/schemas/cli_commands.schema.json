@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/cli-commands.schema.json",
   "title": "Cli Commands",
-  "description": "Schema for Cli Commands.",
+  "description": "CLI command manifest used to validate command metadata and parser parity.",
   "type": "object",
   "required": [
     "schema_version",
@@ -13,24 +13,24 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/cli-commands/v1",
-      "description": "The schema version constant field in Cli Commands."
+      "description": "Contract version for this document."
     },
     "program": {
       "type": "string",
-      "description": "The program string field in Cli Commands."
+      "description": "Program text value used by this contract."
     },
     "description": {
       "type": "string",
-      "description": "The description string field in Cli Commands."
+      "description": "Longer explanation or display text for this entry."
     },
     "commands": {
       "type": "array",
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/command",
-        "description": "Item reference accepted by commands in Cli Commands."
+        "description": "One entry in the commands list."
       },
-      "description": "The commands array field in Cli Commands."
+      "description": "Commands associated with this check, proof, or workflow step."
     }
   },
   "$defs": {
@@ -45,11 +45,11 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "The name string field in Cli Commands."
+          "description": "Human-readable or lookup name for this entry."
         },
         "help": {
           "type": "string",
-          "description": "The help string field in Cli Commands."
+          "description": "Help text value used by this contract."
         },
         "role": {
           "enum": [
@@ -61,7 +61,7 @@
             "source_checkout_only_maintainer_development",
             "remove_or_hide"
           ],
-          "description": "The role enumerated value field in Cli Commands."
+          "description": "Allowed role value for routing or validation."
         },
         "audience": {
           "enum": [
@@ -70,43 +70,43 @@
             "local_only",
             "source_checkout_only"
           ],
-          "description": "The audience enumerated value field in Cli Commands."
+          "description": "Allowed audience value for routing or validation."
         },
         "classification_note": {
           "type": "string",
-          "description": "The classification note string field in Cli Commands."
+          "description": "Classification note text value used by this contract."
         },
         "uses_option_groups": {
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Item string accepted by uses option groups in Cli Commands."
+            "description": "One entry in the uses option groups list."
           },
-          "description": "The uses option groups array field in Cli Commands."
+          "description": "Ordered uses option groups entries used by this contract."
         },
         "options": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/option",
-            "description": "Item reference accepted by options in Cli Commands."
+            "description": "One entry in the options list."
           },
-          "description": "The options array field in Cli Commands."
+          "description": "Ordered options entries used by this contract."
         },
         "subcommand_dest": {
           "type": "string",
-          "description": "The subcommand dest string field in Cli Commands."
+          "description": "Subcommand dest text value used by this contract."
         },
         "subcommands": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/command",
-            "description": "Item reference accepted by subcommands in Cli Commands."
+            "description": "One entry in the subcommands list."
           },
-          "description": "The subcommands array field in Cli Commands."
+          "description": "Ordered subcommands entries used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable command object definition for Cli Commands."
+      "description": "Command string or command name used by this contract."
     },
     "option": {
       "type": "object",
@@ -117,27 +117,27 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "The name string field in Cli Commands."
+          "description": "Human-readable or lookup name for this entry."
         },
         "flags": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by flags in Cli Commands."
+            "description": "One entry in the flags list."
           },
-          "description": "The flags array field in Cli Commands."
+          "description": "Ordered flags entries used by this contract."
         },
         "action": {
           "type": "string",
-          "description": "The action string field in Cli Commands."
+          "description": "Action text value used by this contract."
         },
         "nargs": {
           "type": [
             "string",
             "integer"
           ],
-          "description": "The nargs string or integer field in Cli Commands."
+          "description": "Nargs contract value used by this contract."
         },
         "choices": {
           "type": "array",
@@ -148,38 +148,38 @@
               "number",
               "boolean"
             ],
-            "description": "Item string or integer or number or boolean accepted by choices in Cli Commands."
+            "description": "One entry in the choices list."
           },
-          "description": "The choices array field in Cli Commands."
+          "description": "Ordered choices entries used by this contract."
         },
         "choices_ref": {
           "type": "string",
-          "description": "The choices ref string field in Cli Commands."
+          "description": "Choices ref text value used by this contract."
         },
         "default": {},
         "default_ref": {
           "type": "string",
-          "description": "The default ref string field in Cli Commands."
+          "description": "Default ref text value used by this contract."
         },
         "type": {
           "type": "string",
-          "description": "The type string field in Cli Commands."
+          "description": "Category used to choose validation, rendering, or routing behavior."
         },
         "required": {
           "type": "boolean",
-          "description": "The required boolean field in Cli Commands."
+          "description": "Required true/false policy flag used by this contract."
         },
         "help": {
           "type": "string",
-          "description": "The help string field in Cli Commands."
+          "description": "Help text value used by this contract."
         },
         "help_template": {
           "type": "string",
-          "description": "The help template string field in Cli Commands."
+          "description": "Help template text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "Reusable option object definition for Cli Commands."
+      "description": "Option details used by this contract."
     }
   },
   "additionalProperties": false,

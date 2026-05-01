@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/proof-selection-rules.schema.json",
   "title": "Proof Selection Rules",
-  "description": "Schema for Proof Selection Rules.",
+  "description": "Rules for selecting validation lanes from changed paths and task scope.",
   "type": "object",
   "required": [
     "schema_version",
@@ -13,7 +13,7 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/proof-selection-rules/v1",
-      "description": "The schema version constant field in Proof Selection Rules."
+      "description": "Contract version for this document."
     },
     "rules": {
       "type": "array",
@@ -27,27 +27,27 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "The id string field in Proof Selection Rules."
+            "description": "Stable identifier used to reference this record."
           },
           "lane": {
             "type": "string",
-            "description": "The lane string field in Proof Selection Rules."
+            "description": "Lane text value used by this contract."
           },
           "prefixes": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by prefixes in Proof Selection Rules."
+              "description": "One entry in the prefixes list."
             },
-            "description": "The prefixes array field in Proof Selection Rules."
+            "description": "Ordered prefixes entries used by this contract."
           },
           "exact": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Item string accepted by exact in Proof Selection Rules."
+              "description": "One entry in the exact list."
             },
-            "description": "The exact array field in Proof Selection Rules."
+            "description": "Ordered exact entries used by this contract."
           }
         },
         "anyOf": [
@@ -63,17 +63,17 @@
           }
         ],
         "additionalProperties": false,
-        "description": "Item object accepted by rules in Proof Selection Rules."
+        "description": "One entry in the rules list."
       },
-      "description": "The rules array field in Proof Selection Rules."
+      "description": "Policy rules that explain this contract behavior."
     },
     "fallback_lane": {
       "type": "string",
-      "description": "The fallback lane string field in Proof Selection Rules."
+      "description": "Fallback lane text value used by this contract."
     },
     "cross_lane_escalation": {
       "type": "string",
-      "description": "The cross lane escalation string field in Proof Selection Rules."
+      "description": "Cross lane escalation text value used by this contract."
     },
     "cli_authority": {
       "type": "object",
@@ -84,7 +84,7 @@
       "properties": {
         "lane": {
           "type": "string",
-          "description": "The lane string field in Proof Selection Rules."
+          "description": "Lane text value used by this contract."
         },
         "classifications": {
           "type": "array",
@@ -101,7 +101,7 @@
             "properties": {
               "id": {
                 "type": "string",
-                "description": "The id string field in Proof Selection Rules."
+                "description": "Stable identifier used to reference this record."
               },
               "role": {
                 "enum": [
@@ -110,49 +110,49 @@
                   "projection",
                   "hand-owned-executable"
                 ],
-                "description": "The role enumerated value field in Proof Selection Rules."
+                "description": "Allowed role value for routing or validation."
               },
               "exact": {
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "description": "Item string accepted by exact in Proof Selection Rules."
+                  "description": "One entry in the exact list."
                 },
-                "description": "The exact array field in Proof Selection Rules."
+                "description": "Ordered exact entries used by this contract."
               },
               "prefixes": {
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "description": "Item string accepted by prefixes in Proof Selection Rules."
+                  "description": "One entry in the prefixes list."
                 },
-                "description": "The prefixes array field in Proof Selection Rules."
+                "description": "Ordered prefixes entries used by this contract."
               },
               "direct_edit_allowed": {
                 "type": "boolean",
-                "description": "The direct edit allowed boolean field in Proof Selection Rules."
+                "description": "Direct edit allowed true/false policy flag used by this contract."
               },
               "source_contract": {
                 "type": "string",
-                "description": "The source contract string field in Proof Selection Rules."
+                "description": "Source contract text value used by this contract."
               },
               "generator_contract": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "description": "The generator contract string or null field in Proof Selection Rules."
+                "description": "Generator contract contract value used by this contract."
               },
               "regeneration_path": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "description": "The regeneration path string or null field in Proof Selection Rules."
+                "description": "Regeneration path contract value used by this contract."
               },
               "edit_policy": {
                 "type": "string",
-                "description": "The edit policy string field in Proof Selection Rules."
+                "description": "Edit policy text value used by this contract."
               }
             },
             "anyOf": [
@@ -168,13 +168,13 @@
               }
             ],
             "additionalProperties": false,
-            "description": "Item object accepted by classifications in Proof Selection Rules."
+            "description": "One entry in the classifications list."
           },
-          "description": "The classifications array field in Proof Selection Rules."
+          "description": "Ordered classifications entries used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The cli authority object field in Proof Selection Rules."
+      "description": "Cli authority details used by this contract."
     }
   },
   "additionalProperties": false,

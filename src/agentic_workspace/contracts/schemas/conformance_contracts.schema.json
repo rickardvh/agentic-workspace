@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/conformance-contracts.schema.json",
   "title": "Agentic Workspace Conformance Contracts Registry",
-  "description": "Schema for Agentic Workspace Conformance Contracts Registry.",
+  "description": "Registry of conformance fixtures and the schemas they exercise.",
   "type": "object",
   "required": [
     "schema_version",
@@ -13,16 +13,16 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/conformance-contracts/v1",
-      "description": "The schema version constant field in Agentic Workspace Conformance Contracts Registry."
+      "description": "Contract version for this document."
     },
     "summary": {
       "type": "string",
       "minLength": 1,
-      "description": "The summary string field in Agentic Workspace Conformance Contracts Registry."
+      "description": "Short human-readable summary for this entry."
     },
     "schema": {
       "const": "schemas/conformance.schema.json",
-      "description": "The schema constant field in Agentic Workspace Conformance Contracts Registry."
+      "description": "Schema reference or schema metadata for this payload."
     },
     "contracts": {
       "type": "array",
@@ -39,30 +39,30 @@
           "id": {
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9_.-]*$",
-            "description": "The id string field in Agentic Workspace Conformance Contracts Registry."
+            "description": "Stable identifier used to reference this record."
           },
           "operation_id": {
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9_.-]*$",
-            "description": "The operation id string field in Agentic Workspace Conformance Contracts Registry."
+            "description": "Operation contract this record exercises or describes."
           },
           "path": {
             "type": "string",
             "pattern": "^conformance/[a-z0-9_.-]+\\.json$",
-            "description": "The path string field in Agentic Workspace Conformance Contracts Registry."
+            "description": "Path segments or repository path used by this contract."
           },
           "adapter_kind": {
             "type": "string",
             "enum": [
               "process"
             ],
-            "description": "The adapter kind enumerated value field in Agentic Workspace Conformance Contracts Registry."
+            "description": "Allowed adapter kind value for routing or validation."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by contracts in Agentic Workspace Conformance Contracts Registry."
+        "description": "One entry in the contracts list."
       },
-      "description": "The contracts array field in Agentic Workspace Conformance Contracts Registry."
+      "description": "Ordered contracts entries used by this contract."
     }
   },
   "additionalProperties": false,

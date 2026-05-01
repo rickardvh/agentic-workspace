@@ -14,71 +14,71 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `kind` | const `"startup-context/v1"` | yes |  | Discriminator for the startup context payload shape. |  |  |
 | `target` | string | yes |  | Resolved target repository for the startup decision. |  |  |
 | `invoked_cli_identity` | ref `#/$defs/invoked_cli_identity` | yes |  | Observed identity of the Agentic Workspace CLI that produced this payload. |  |  |
-| `invoked_cli_identity.kind` | const `"agentic-workspace/invoked-cli-identity/v1"` | yes |  | The kind constant field in Startup Context Payload. |  |  |
-| `invoked_cli_identity.package` | const `"agentic-workspace"` | yes |  | The package constant field in Startup Context Payload. |  |  |
-| `invoked_cli_identity.version` | string | yes |  | The version string field in Startup Context Payload. |  |  |
-| `invoked_cli_identity.source_class` | enum `"source-checkout"`, `"installed-package"`, `"unknown"` | yes |  | The source class enumerated value field in Startup Context Payload. |  |  |
-| `invoked_cli_identity.confidence` | enum `"high"`, `"medium"`, `"low"` | no |  | The confidence enumerated value field in Startup Context Payload. |  |  |
-| `invoked_cli_identity.module_path` | string | yes |  | The module path string field in Startup Context Payload. |  |  |
-| `invoked_cli_identity.package_root` | string \| null | no |  | The package root string or null field in Startup Context Payload. |  |  |
-| `invoked_cli_identity.python_executable` | string | no |  | The python executable string field in Startup Context Payload. |  |  |
-| `invoked_cli_identity.argv0` | string | no |  | The argv0 string field in Startup Context Payload. |  |  |
-| `invoked_cli_identity.argv0_path` | string | no |  | The argv0 path string field in Startup Context Payload. |  |  |
-| `invoked_cli_identity.path_executable` | string | no |  | The path executable string field in Startup Context Payload. |  |  |
-| `invoked_cli_identity.target_relation` | enum `"inside-target"`, `"outside-target"`, `"no-target"` | yes |  | The target relation enumerated value field in Startup Context Payload. |  |  |
-| `invoked_cli_identity.compatibility` | const `"not-evaluated"` | yes |  | The compatibility constant field in Startup Context Payload. |  |  |
-| `invoked_cli_identity.expectation_source` | string | no |  | The expectation source string field in Startup Context Payload. |  |  |
+| `invoked_cli_identity.kind` | const `"agentic-workspace/invoked-cli-identity/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
+| `invoked_cli_identity.package` | const `"agentic-workspace"` | yes |  | Fixed package value required by this contract. |  |  |
+| `invoked_cli_identity.version` | string | yes |  | Version text value used by this contract. |  |  |
+| `invoked_cli_identity.source_class` | enum `"source-checkout"`, `"installed-package"`, `"unknown"` | yes |  | Allowed source class value for routing or validation. |  |  |
+| `invoked_cli_identity.confidence` | enum `"high"`, `"medium"`, `"low"` | no |  | Allowed confidence value for routing or validation. |  |  |
+| `invoked_cli_identity.module_path` | string | yes |  | Module path text value used by this contract. |  |  |
+| `invoked_cli_identity.package_root` | string \| null | no |  | Package root contract value used by this contract. |  |  |
+| `invoked_cli_identity.python_executable` | string | no |  | Python executable text value used by this contract. |  |  |
+| `invoked_cli_identity.argv0` | string | no |  | Argv0 text value used by this contract. |  |  |
+| `invoked_cli_identity.argv0_path` | string | no |  | Argv0 path text value used by this contract. |  |  |
+| `invoked_cli_identity.path_executable` | string | no |  | Path executable text value used by this contract. |  |  |
+| `invoked_cli_identity.target_relation` | enum `"inside-target"`, `"outside-target"`, `"no-target"` | yes |  | Allowed target relation value for routing or validation. |  |  |
+| `invoked_cli_identity.compatibility` | const `"not-evaluated"` | yes |  | Fixed compatibility value required by this contract. |  |  |
+| `invoked_cli_identity.expectation_source` | string | no |  | Expectation source text value used by this contract. |  |  |
 | `cli_compatibility` | ref `#/$defs/cli_compatibility` | no |  | Compatibility assessment between the invoked CLI and any repo-configured CLI expectations. |  |  |
-| `cli_compatibility.kind` | const `"agentic-workspace/cli-compatibility/v1"` | yes |  | The kind constant field in Startup Context Payload. |  |  |
-| `cli_compatibility.status` | enum `"no-expectation"`, `"satisfied"`, `"advisory-drift"`, `"blocking-drift"` | yes |  | The status enumerated value field in Startup Context Payload. |  |  |
-| `cli_compatibility.configured` | boolean | yes |  | The configured boolean field in Startup Context Payload. |  |  |
-| `cli_compatibility.enforcement` | enum `"off"`, `"advisory"`, `"blocking"` | yes |  | The enforcement enumerated value field in Startup Context Payload. |  |  |
-| `cli_compatibility.enforcement_source` | string | no |  | The enforcement source string field in Startup Context Payload. |  |  |
-| `cli_compatibility.expectation_source` | string | no |  | The expectation source string field in Startup Context Payload. |  |  |
-| `cli_compatibility.expected_command` | string \| null | no |  | The expected command string or null field in Startup Context Payload. |  |  |
-| `cli_compatibility.invocation_confidence` | enum `"high"`, `"medium"`, `"low"` | no |  | The invocation confidence enumerated value field in Startup Context Payload. |  |  |
-| `cli_compatibility.drift_findings` | array of object | no |  | The drift findings array field in Startup Context Payload. |  |  |
-| `cli_compatibility.remediation` | object | no |  | The remediation object field in Startup Context Payload. |  |  |
-| `cli_compatibility.checks` | array of ref `#/$defs/cli_compatibility_check` | no |  | The checks array field in Startup Context Payload. |  |  |
-| `cli_compatibility.failed_checks` | array of enum `"exact_version"`, `"minimum_version"`, `"source_class"`, `"target_relation"` | yes |  | The failed checks array field in Startup Context Payload. |  |  |
-| `cli_compatibility.rule` | string | no |  | The rule string field in Startup Context Payload. |  |  |
+| `cli_compatibility.kind` | const `"agentic-workspace/cli-compatibility/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
+| `cli_compatibility.status` | enum `"no-expectation"`, `"satisfied"`, `"advisory-drift"`, `"blocking-drift"` | yes |  | Current lifecycle, readiness, or health state. |  |  |
+| `cli_compatibility.configured` | boolean | yes |  | Configured true/false policy flag used by this contract. |  |  |
+| `cli_compatibility.enforcement` | enum `"off"`, `"advisory"`, `"blocking"` | yes |  | Allowed enforcement value for routing or validation. |  |  |
+| `cli_compatibility.enforcement_source` | string | no |  | Enforcement source text value used by this contract. |  |  |
+| `cli_compatibility.expectation_source` | string | no |  | Expectation source text value used by this contract. |  |  |
+| `cli_compatibility.expected_command` | string \| null | no |  | Expected command contract value used by this contract. |  |  |
+| `cli_compatibility.invocation_confidence` | enum `"high"`, `"medium"`, `"low"` | no |  | Allowed invocation confidence value for routing or validation. |  |  |
+| `cli_compatibility.drift_findings` | array of object | no |  | Ordered drift findings entries used by this contract. |  |  |
+| `cli_compatibility.remediation` | object | no |  | Remediation details used by this contract. |  |  |
+| `cli_compatibility.checks` | array of ref `#/$defs/cli_compatibility_check` | no |  | Ordered checks entries used by this contract. |  |  |
+| `cli_compatibility.failed_checks` | array of enum `"exact_version"`, `"minimum_version"`, `"source_class"`, `"target_relation"` | yes |  | Ordered failed checks entries used by this contract. |  |  |
+| `cli_compatibility.rule` | string | no |  | Policy rule that explains this contract behavior. |  |  |
 | `startup_sequence` | array of object | yes |  | Ordered surfaces and commands an agent should use before opening broader repo context. |  |  |
 | `feature_tier` | object | yes |  | Resolved feature tier and package footprint for the target repository. |  |  |
 | `context_router` | object | yes |  | Available compact context-router views and when to use each one. |  |  |
 | `active_state_summary` | object | yes |  | Small active-work projection used to decide whether raw planning state needs to be opened. |  |  |
-| `active_state_summary.todo_active_count` | integer | yes |  | The todo active count integer field in Startup Context Payload. |  |  |
-| `active_state_summary.active_execplan` | string \| null | yes |  | The active execplan string or null field in Startup Context Payload. |  |  |
-| `active_state_summary.planning_status` | string | yes |  | The planning status string field in Startup Context Payload. |  |  |
+| `active_state_summary.todo_active_count` | integer | yes |  | Todo active count numeric value used by this contract. |  |  |
+| `active_state_summary.active_execplan` | string \| null | yes |  | Active execplan contract value used by this contract. |  |  |
+| `active_state_summary.planning_status` | string | yes |  | Planning status text value used by this contract. |  |  |
 | `package_boundary` | ref `#/$defs/package_boundary` | yes |  | Current package/root boundary information for the command invocation. |  |  |
-| `package_boundary.status` | string | yes |  | The status string field in Startup Context Payload. |  |  |
-| `package_boundary.cwd` | string | yes |  | The cwd string field in Startup Context Payload. |  |  |
-| `package_boundary.warning` | string \| null | yes |  | The warning string or null field in Startup Context Payload. |  |  |
-| `package_boundary.package_root` | string | no |  | The package root string field in Startup Context Payload. |  |  |
+| `package_boundary.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
+| `package_boundary.cwd` | string | yes |  | Working directory context used when running the command. |  |  |
+| `package_boundary.warning` | string \| null | yes |  | Warning contract value used by this contract. |  |  |
+| `package_boundary.package_root` | string | no |  | Package root text value used by this contract. |  |  |
 | `authority_markers` | array of ref `#/$defs/authority_marker` | yes |  | Authority markers relevant to startup, ownership, and safe editing. |  |  |
 | `immediate_next_allowed_action` | object | yes |  | Next bounded action the agent may take without reading broader surfaces. |  |  |
-| `immediate_next_allowed_action.action` | string | yes |  | The action string field in Startup Context Payload. |  |  |
-| `immediate_next_allowed_action.summary` | string | yes |  | The summary string field in Startup Context Payload. |  |  |
-| `immediate_next_allowed_action.command` | string \| null | yes |  | The command string or null field in Startup Context Payload. |  |  |
-| `immediate_next_allowed_action.run` | string \| null | yes |  | The run string or null field in Startup Context Payload. |  |  |
-| `immediate_next_allowed_action.risk` | string | yes |  | The risk string field in Startup Context Payload. |  |  |
-| `immediate_next_allowed_action.required_inputs` | array of string | yes |  | The required inputs array field in Startup Context Payload. |  |  |
-| `immediate_next_allowed_action.next_proof` | string | yes |  | The next proof string field in Startup Context Payload. |  |  |
-| `immediate_next_allowed_action.read_first` | array of string | yes |  | The read first array field in Startup Context Payload. |  |  |
-| `immediate_next_allowed_action.open_execplan_only_when` | string | yes |  | The open execplan only when string field in Startup Context Payload. |  |  |
+| `immediate_next_allowed_action.action` | string | yes |  | Action text value used by this contract. |  |  |
+| `immediate_next_allowed_action.summary` | string | yes |  | Short human-readable summary for this entry. |  |  |
+| `immediate_next_allowed_action.command` | string \| null | yes |  | Command string or command name used by this contract. |  |  |
+| `immediate_next_allowed_action.run` | string \| null | yes |  | Run contract value used by this contract. |  |  |
+| `immediate_next_allowed_action.risk` | string | yes |  | Risk text value used by this contract. |  |  |
+| `immediate_next_allowed_action.required_inputs` | array of string | yes |  | Ordered required inputs entries used by this contract. |  |  |
+| `immediate_next_allowed_action.next_proof` | string | yes |  | Next proof text value used by this contract. |  |  |
+| `immediate_next_allowed_action.read_first` | array of string | yes |  | Ordered read first entries used by this contract. |  |  |
+| `immediate_next_allowed_action.open_execplan_only_when` | string | yes |  | Open execplan only when text value used by this contract. |  |  |
 | `workflow_obligations` | object | yes |  | Repo-configured workflow obligations relevant to the startup context. |  |  |
 | `closeout_obligations` | object | yes |  | Closeout obligations that may apply before claiming work is complete. |  |  |
 | `memory_consult` | object | no |  | Memory lookup guidance for durable repo knowledge when startup context says it is relevant. |  |  |
 | `operating_posture` | object | yes |  | Compact statement of the current operating mode and risk posture. |  |  |
 | `skill_routing` | ref `#/$defs/skill_routing` | no |  | Skill-discovery route and fallback guidance for task-specific instructions. |  |  |
-| `skill_routing.status` | string | yes |  | The status string field in Startup Context Payload. |  |  |
-| `skill_routing.rule` | string | yes |  | The rule string field in Startup Context Payload. |  |  |
-| `skill_routing.query` | string | yes |  | The query string field in Startup Context Payload. |  |  |
-| `skill_routing.advanced_route_rule` | string | no |  | The advanced route rule string field in Startup Context Payload. |  |  |
-| `skill_routing.available_advanced_route_command` | string | no |  | The available advanced route command string field in Startup Context Payload. |  |  |
-| `skill_routing.enabled_advanced_routes` | array of string | no |  | The enabled advanced routes array field in Startup Context Payload. |  |  |
-| `skill_routing.fallback_when_skills_unavailable` | array of string | no |  | The fallback when skills unavailable array field in Startup Context Payload. |  |  |
-| `skill_routing.fallback_when_skills_unavailable_count` | integer | no |  | The fallback when skills unavailable count integer field in Startup Context Payload. |  |  |
-| `skill_routing.fallback_detail` | string | no |  | The fallback detail string field in Startup Context Payload. |  |  |
-| `skill_routing.preferred_routes` | array of object | yes |  | The preferred routes array field in Startup Context Payload. |  |  |
+| `skill_routing.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
+| `skill_routing.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
+| `skill_routing.query` | string | yes |  | Query text value used by this contract. |  |  |
+| `skill_routing.advanced_route_rule` | string | no |  | Advanced route rule text value used by this contract. |  |  |
+| `skill_routing.available_advanced_route_command` | string | no |  | Available advanced route command text value used by this contract. |  |  |
+| `skill_routing.enabled_advanced_routes` | array of string | no |  | Ordered enabled advanced routes entries used by this contract. |  |  |
+| `skill_routing.fallback_when_skills_unavailable` | array of string | no |  | Ordered fallback when skills unavailable entries used by this contract. |  |  |
+| `skill_routing.fallback_when_skills_unavailable_count` | integer | no |  | Fallback when skills unavailable count numeric value used by this contract. |  |  |
+| `skill_routing.fallback_detail` | string | no |  | Fallback detail text value used by this contract. |  |  |
+| `skill_routing.preferred_routes` | array of object | yes |  | Ordered preferred routes entries used by this contract. |  |  |
 | `proof` | object | no |  | Proof-selection summary for the current startup or changed-path context. |  |  |
 | `path_boundaries` | array of ref `#/$defs/path_boundary` | no |  | Path-level ownership or package-boundary warnings that constrain the next action. |  |  |

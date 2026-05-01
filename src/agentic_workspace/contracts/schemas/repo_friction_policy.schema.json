@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/repo-friction-policy.schema.json",
   "title": "Repo Friction Policy",
-  "description": "Schema for Repo Friction Policy.",
+  "description": "Policy for classifying repo friction and deciding whether to fix, route, or defer it.",
   "type": "object",
   "required": [
     "schema_version",
@@ -16,7 +16,7 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/repo-friction-policy/v1",
-      "description": "The schema version constant field in Repo Friction Policy."
+      "description": "Contract version for this document."
     },
     "workspace_self_adaptation": {
       "type": "object",
@@ -30,37 +30,37 @@
       "properties": {
         "status": {
           "type": "string",
-          "description": "The status string field in Repo Friction Policy."
+          "description": "Current lifecycle, readiness, or health state."
         },
         "summary": {
           "type": "string",
-          "description": "The summary string field in Repo Friction Policy."
+          "description": "Short human-readable summary for this entry."
         },
         "rule": {
           "type": "string",
-          "description": "The rule string field in Repo Friction Policy."
+          "description": "Policy rule that explains this contract behavior."
         },
         "applies_to": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by applies to in Repo Friction Policy."
+            "description": "One entry in the applies to list."
           },
-          "description": "The applies to array field in Repo Friction Policy."
+          "description": "Ordered applies to entries used by this contract."
         },
         "bounded_by": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by bounded by in Repo Friction Policy."
+            "description": "One entry in the bounded by list."
           },
-          "description": "The bounded by array field in Repo Friction Policy."
+          "description": "Ordered bounded by entries used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The workspace self adaptation object field in Repo Friction Policy."
+      "description": "Workspace self adaptation details used by this contract."
     },
     "friction_response_order": {
       "type": "array",
@@ -75,21 +75,21 @@
         "properties": {
           "step": {
             "type": "integer",
-            "description": "The step integer field in Repo Friction Policy."
+            "description": "Step numeric value used by this contract."
           },
           "action": {
             "type": "string",
-            "description": "The action string field in Repo Friction Policy."
+            "description": "Action text value used by this contract."
           },
           "rule": {
             "type": "string",
-            "description": "The rule string field in Repo Friction Policy."
+            "description": "Policy rule that explains this contract behavior."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by friction response order in Repo Friction Policy."
+        "description": "One entry in the friction response order list."
       },
-      "description": "The friction response order array field in Repo Friction Policy."
+      "description": "Ordered friction response order entries used by this contract."
     },
     "workspace_self_adaptation_guardrail": {
       "type": "object",
@@ -105,35 +105,35 @@
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by adapt when in Repo Friction Policy."
+            "description": "One entry in the adapt when list."
           },
-          "description": "The adapt when array field in Repo Friction Policy."
+          "description": "Ordered adapt when entries used by this contract."
         },
         "surface_repo_friction_when": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by surface repo friction when in Repo Friction Policy."
+            "description": "One entry in the surface repo friction when list."
           },
-          "description": "The surface repo friction when array field in Repo Friction Policy."
+          "description": "Ordered surface repo friction when entries used by this contract."
         },
         "keep_true": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by keep true in Repo Friction Policy."
+            "description": "One entry in the keep true list."
           },
-          "description": "The keep true array field in Repo Friction Policy."
+          "description": "Ordered keep true entries used by this contract."
         },
         "prefer": {
           "type": "string",
-          "description": "The prefer string field in Repo Friction Policy."
+          "description": "Prefer text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The workspace self adaptation guardrail object field in Repo Friction Policy."
+      "description": "Workspace self adaptation guardrail details used by this contract."
     },
     "repo_directed_improvement_threshold": {
       "type": "object",
@@ -148,46 +148,46 @@
       "properties": {
         "status": {
           "type": "string",
-          "description": "The status string field in Repo Friction Policy."
+          "description": "Current lifecycle, readiness, or health state."
         },
         "summary": {
           "type": "string",
-          "description": "The summary string field in Repo Friction Policy."
+          "description": "Short human-readable summary for this entry."
         },
         "minimum_threshold": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by minimum threshold in Repo Friction Policy."
+            "description": "One entry in the minimum threshold list."
           },
-          "description": "The minimum threshold array field in Repo Friction Policy."
+          "description": "Ordered minimum threshold entries used by this contract."
         },
         "not_enough": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by not enough in Repo Friction Policy."
+            "description": "One entry in the not enough list."
           },
-          "description": "The not enough array field in Repo Friction Policy."
+          "description": "Ordered not enough entries used by this contract."
         },
         "promote_when": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by promote when in Repo Friction Policy."
+            "description": "One entry in the promote when list."
           },
-          "description": "The promote when array field in Repo Friction Policy."
+          "description": "Ordered promote when entries used by this contract."
         },
         "collaboration_bias": {
           "type": "string",
-          "description": "The collaboration bias string field in Repo Friction Policy."
+          "description": "Collaboration bias text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The repo directed improvement threshold object field in Repo Friction Policy."
+      "description": "Repo directed improvement threshold details used by this contract."
     },
     "validation_friction": {
       "type": "object",
@@ -204,11 +204,11 @@
       "properties": {
         "status": {
           "type": "string",
-          "description": "The status string field in Repo Friction Policy."
+          "description": "Current lifecycle, readiness, or health state."
         },
         "rule": {
           "type": "string",
-          "description": "The rule string field in Repo Friction Policy."
+          "description": "Policy rule that explains this contract behavior."
         },
         "failure_classification": {
           "type": "array",
@@ -228,65 +228,65 @@
                   "interface_design_error",
                   "unclear_proof_contract"
                 ],
-                "description": "The class enumerated value field in Repo Friction Policy."
+                "description": "Classification used for routing, filtering, or policy selection."
               },
               "route": {
                 "type": "string",
-                "description": "The route string field in Repo Friction Policy."
+                "description": "Route text value used by this contract."
               },
               "interface_design_signal": {
                 "type": "boolean",
-                "description": "The interface design signal boolean field in Repo Friction Policy."
+                "description": "Interface design signal true/false policy flag used by this contract."
               }
             },
             "additionalProperties": false,
-            "description": "Item object accepted by failure classification in Repo Friction Policy."
+            "description": "One entry in the failure classification list."
           },
-          "description": "The failure classification array field in Repo Friction Policy."
+          "description": "Ordered failure classification entries used by this contract."
         },
         "correct_by_design_remedy_order": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by correct by design remedy order in Repo Friction Policy."
+            "description": "One entry in the correct by design remedy order list."
           },
-          "description": "The correct by design remedy order array field in Repo Friction Policy."
+          "description": "Ordered correct by design remedy order entries used by this contract."
         },
         "repeated_failure_signal": {
           "type": "string",
-          "description": "The repeated failure signal string field in Repo Friction Policy."
+          "description": "Repeated failure signal text value used by this contract."
         },
         "distinguish_from": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by distinguish from in Repo Friction Policy."
+            "description": "One entry in the distinguish from list."
           },
-          "description": "The distinguish from array field in Repo Friction Policy."
+          "description": "Ordered distinguish from entries used by this contract."
         },
         "subtypes": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by subtypes in Repo Friction Policy."
+            "description": "One entry in the subtypes list."
           },
-          "description": "The subtypes array field in Repo Friction Policy."
+          "description": "Ordered subtypes entries used by this contract."
         },
         "reporting_destinations": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by reporting destinations in Repo Friction Policy."
+            "description": "One entry in the reporting destinations list."
           },
-          "description": "The reporting destinations array field in Repo Friction Policy."
+          "description": "Ordered reporting destinations entries used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The validation friction object field in Repo Friction Policy."
+      "description": "Validation friction details used by this contract."
     },
     "improvement_boundary_test": {
       "type": "object",
@@ -302,40 +302,40 @@
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by stays local when in Repo Friction Policy."
+            "description": "One entry in the stays local when list."
           },
-          "description": "The stays local when array field in Repo Friction Policy."
+          "description": "Ordered stays local when entries used by this contract."
         },
         "changed_task_when": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by changed task when in Repo Friction Policy."
+            "description": "One entry in the changed task when list."
           },
-          "description": "The changed task when array field in Repo Friction Policy."
+          "description": "Ordered changed task when entries used by this contract."
         },
         "broaden_proof_when": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by broaden proof when in Repo Friction Policy."
+            "description": "One entry in the broaden proof when list."
           },
-          "description": "The broaden proof when array field in Repo Friction Policy."
+          "description": "Ordered broaden proof when entries used by this contract."
         },
         "escalate_when": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by escalate when in Repo Friction Policy."
+            "description": "One entry in the escalate when list."
           },
-          "description": "The escalate when array field in Repo Friction Policy."
+          "description": "Ordered escalate when entries used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The improvement boundary test object field in Repo Friction Policy."
+      "description": "Improvement boundary test details used by this contract."
     }
   },
   "additionalProperties": false,

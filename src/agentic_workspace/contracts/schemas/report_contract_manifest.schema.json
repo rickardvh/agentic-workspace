@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/report-contract-manifest.schema.json",
   "title": "Report Contract Manifest",
-  "description": "Schema for Report Contract Manifest.",
+  "description": "Manifest describing report sections, schemas, and selector behavior.",
   "type": "object",
   "required": [
     "schema_version",
@@ -14,33 +14,33 @@
   "properties": {
     "schema_version": {
       "const": "workspace-reporting-schema/v1",
-      "description": "The schema version constant field in Report Contract Manifest."
+      "description": "Contract version for this document."
     },
     "canonical_doc": {
       "type": "string",
-      "description": "The canonical doc string field in Report Contract Manifest."
+      "description": "Canonical doc text value used by this contract."
     },
     "command": {
       "type": "string",
-      "description": "The command string field in Report Contract Manifest."
+      "description": "Command string or command name used by this contract."
     },
     "shared_fields": {
       "type": "array",
       "items": {
         "type": "string",
-        "description": "Item string accepted by shared fields in Report Contract Manifest."
+        "description": "One entry in the shared fields list."
       },
       "minItems": 1,
-      "description": "The shared fields array field in Report Contract Manifest."
+      "description": "Fields shared across related report profiles."
     },
     "report_principles": {
       "type": "array",
       "items": {
         "type": "string",
-        "description": "Item string accepted by report principles in Report Contract Manifest."
+        "description": "One entry in the report principles list."
       },
       "minItems": 1,
-      "description": "The report principles array field in Report Contract Manifest."
+      "description": "Ordered report principles entries used by this contract."
     }
   },
   "additionalProperties": false,

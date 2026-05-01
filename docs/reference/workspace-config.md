@@ -38,7 +38,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `update.modules.memory.source_label` | string | no |  | Human-readable label for status and report output. |  |  |
 | `update.modules.memory.recommended_upgrade_after_days` | integer | no |  | Age threshold after which status or doctor may suggest checking for updates. |  |  |
 | `workflow_obligations` | object | no | `{}` | Repo-local workflow obligations that reports can surface for matching work scopes. |  | x-agentic-workspace-doc-role: "maintainer" |
-| `workflow_obligations.<^.+$>` | ref `#/$defs/workflow_obligation` | no |  | Pattern-matched reference entry for workflow obligations.<^ in Agentic Workspace Repo Config. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
+| `workflow_obligations.<^.+$>` | ref `#/$defs/workflow_obligation` | no |  | +$ referenced contract shape used by this contract. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
 | `workflow_obligations.<^.+$>.summary` | string | yes |  | Short explanation of the obligation. |  |  |
 | `workflow_obligations.<^.+$>.stage` | enum `"pre-work"`, `"before-claiming-completion"`, `"before-commit"`, `"review"`, `"closeout"` | yes |  | Workflow stage where this obligation matters. |  |  |
 | `workflow_obligations.<^.+$>.scope_tags` | array of string | yes |  | Tags used to match the obligation to touched work scopes. | `["contracts", "docs"]` |  |

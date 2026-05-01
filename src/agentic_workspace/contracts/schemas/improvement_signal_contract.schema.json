@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/improvement-signal-contract.schema.json",
   "title": "Agentic Workspace Improvement Signal Contract",
-  "description": "Schema for Agentic Workspace Improvement Signal Contract.",
+  "description": "Contract for classifying improvement signals and routing them to the right owner surface.",
   "type": "object",
   "required": [
     "schema_version",
@@ -27,24 +27,24 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/improvement-signal-contract/v1",
-      "description": "The schema version constant field in Agentic Workspace Improvement Signal Contract."
+      "description": "Contract version for this document."
     },
     "kind": {
       "const": "workspace-improvement-signal-contract/v1",
-      "description": "The kind constant field in Agentic Workspace Improvement Signal Contract."
+      "description": "Discriminator identifying the payload or record shape."
     },
     "role": {
       "const": "candidate-shape-not-backlog",
-      "description": "The role constant field in Agentic Workspace Improvement Signal Contract."
+      "description": "Fixed role value required by this contract."
     },
     "rule": {
       "type": "string",
       "minLength": 1,
-      "description": "The rule string field in Agentic Workspace Improvement Signal Contract."
+      "description": "Policy rule that explains this contract behavior."
     },
     "candidate_kind": {
       "const": "workspace-improvement-signal-candidate/v1",
-      "description": "The candidate kind constant field in Agentic Workspace Improvement Signal Contract."
+      "description": "Fixed candidate kind value required by this contract."
     },
     "required_fields": {
       "type": "array",
@@ -52,9 +52,9 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "description": "Item string accepted by required fields in Agentic Workspace Improvement Signal Contract."
+        "description": "One entry in the required fields list."
       },
-      "description": "The required fields array field in Agentic Workspace Improvement Signal Contract."
+      "description": "Ordered required fields entries used by this contract."
     },
     "kinds": {
       "type": "array",
@@ -62,9 +62,9 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "description": "Item string accepted by kinds in Agentic Workspace Improvement Signal Contract."
+        "description": "One entry in the kinds list."
       },
-      "description": "The kinds array field in Agentic Workspace Improvement Signal Contract."
+      "description": "Ordered kinds entries used by this contract."
     },
     "likely_remediations": {
       "type": "array",
@@ -72,9 +72,9 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "description": "Item string accepted by likely remediations in Agentic Workspace Improvement Signal Contract."
+        "description": "One entry in the likely remediations list."
       },
-      "description": "The likely remediations array field in Agentic Workspace Improvement Signal Contract."
+      "description": "Ordered likely remediations entries used by this contract."
     },
     "validation_failure_classes": {
       "type": "array",
@@ -95,17 +95,17 @@
               "interface_design_error",
               "unclear_proof_contract"
             ],
-            "description": "The class enumerated value field in Agentic Workspace Improvement Signal Contract."
+            "description": "Classification used for routing, filtering, or policy selection."
           },
           "signal_rule": {
             "type": "string",
             "minLength": 1,
-            "description": "The signal rule string field in Agentic Workspace Improvement Signal Contract."
+            "description": "Signal rule text value used by this contract."
           },
           "route": {
             "type": "string",
             "minLength": 1,
-            "description": "The route string field in Agentic Workspace Improvement Signal Contract."
+            "description": "Route text value used by this contract."
           },
           "preferred_remediations": {
             "type": "array",
@@ -113,15 +113,15 @@
             "items": {
               "type": "string",
               "minLength": 1,
-              "description": "Item string accepted by preferred remediations in Agentic Workspace Improvement Signal Contract."
+              "description": "One entry in the preferred remediations list."
             },
-            "description": "The preferred remediations array field in Agentic Workspace Improvement Signal Contract."
+            "description": "Ordered preferred remediations entries used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by validation failure classes in Agentic Workspace Improvement Signal Contract."
+        "description": "One entry in the validation failure classes list."
       },
-      "description": "The validation failure classes array field in Agentic Workspace Improvement Signal Contract."
+      "description": "Ordered validation failure classes entries used by this contract."
     },
     "validation_remedy_order": {
       "type": "array",
@@ -129,9 +129,9 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "description": "Item string accepted by validation remedy order in Agentic Workspace Improvement Signal Contract."
+        "description": "One entry in the validation remedy order list."
       },
-      "description": "The validation remedy order array field in Agentic Workspace Improvement Signal Contract."
+      "description": "Ordered validation remedy order entries used by this contract."
     },
     "correct_by_design_review": {
       "type": "object",
@@ -147,12 +147,12 @@
         "status": {
           "type": "string",
           "minLength": 1,
-          "description": "The status string field in Agentic Workspace Improvement Signal Contract."
+          "description": "Current lifecycle, readiness, or health state."
         },
         "rule": {
           "type": "string",
           "minLength": 1,
-          "description": "The rule string field in Agentic Workspace Improvement Signal Contract."
+          "description": "Policy rule that explains this contract behavior."
         },
         "ask_when": {
           "type": "array",
@@ -160,9 +160,9 @@
           "items": {
             "type": "string",
             "minLength": 1,
-            "description": "Item string accepted by ask when in Agentic Workspace Improvement Signal Contract."
+            "description": "One entry in the ask when list."
           },
-          "description": "The ask when array field in Agentic Workspace Improvement Signal Contract."
+          "description": "Ordered ask when entries used by this contract."
         },
         "questions": {
           "type": "array",
@@ -170,9 +170,9 @@
           "items": {
             "type": "string",
             "minLength": 1,
-            "description": "Item string accepted by questions in Agentic Workspace Improvement Signal Contract."
+            "description": "One entry in the questions list."
           },
-          "description": "The questions array field in Agentic Workspace Improvement Signal Contract."
+          "description": "Ordered questions entries used by this contract."
         },
         "preferred_remediation_order": {
           "type": "array",
@@ -180,18 +180,18 @@
           "items": {
             "type": "string",
             "minLength": 1,
-            "description": "Item string accepted by preferred remediation order in Agentic Workspace Improvement Signal Contract."
+            "description": "One entry in the preferred remediation order list."
           },
-          "description": "The preferred remediation order array field in Agentic Workspace Improvement Signal Contract."
+          "description": "Ordered preferred remediation order entries used by this contract."
         },
         "closeout_field": {
           "type": "string",
           "minLength": 1,
-          "description": "The closeout field string field in Agentic Workspace Improvement Signal Contract."
+          "description": "Closeout field text value used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The correct by design review object field in Agentic Workspace Improvement Signal Contract."
+      "description": "Correct by design review details used by this contract."
     },
     "confidence": {
       "type": "array",
@@ -202,9 +202,9 @@
           "medium",
           "high"
         ],
-        "description": "Item enumerated value accepted by confidence in Agentic Workspace Improvement Signal Contract."
+        "description": "One entry in the confidence list."
       },
-      "description": "The confidence array field in Agentic Workspace Improvement Signal Contract."
+      "description": "Ordered confidence entries used by this contract."
     },
     "recurrence": {
       "type": "array",
@@ -215,9 +215,9 @@
           "repeated",
           "human_confirmed"
         ],
-        "description": "Item enumerated value accepted by recurrence in Agentic Workspace Improvement Signal Contract."
+        "description": "One entry in the recurrence list."
       },
-      "description": "The recurrence array field in Agentic Workspace Improvement Signal Contract."
+      "description": "Ordered recurrence entries used by this contract."
     },
     "immediate_actions": {
       "type": "array",
@@ -230,9 +230,9 @@
           "remember",
           "dismiss"
         ],
-        "description": "Item enumerated value accepted by immediate actions in Agentic Workspace Improvement Signal Contract."
+        "description": "One entry in the immediate actions list."
       },
-      "description": "The immediate actions array field in Agentic Workspace Improvement Signal Contract."
+      "description": "Ordered immediate actions entries used by this contract."
     },
     "retention": {
       "type": "array",
@@ -243,9 +243,9 @@
           "delete_after_fix",
           "keep_with_justification"
         ],
-        "description": "Item enumerated value accepted by retention in Agentic Workspace Improvement Signal Contract."
+        "description": "One entry in the retention list."
       },
-      "description": "The retention array field in Agentic Workspace Improvement Signal Contract."
+      "description": "Ordered retention entries used by this contract."
     },
     "destinations": {
       "type": "array",
@@ -253,9 +253,9 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "description": "Item string accepted by destinations in Agentic Workspace Improvement Signal Contract."
+        "description": "One entry in the destinations list."
       },
-      "description": "The destinations array field in Agentic Workspace Improvement Signal Contract."
+      "description": "Ordered destinations entries used by this contract."
     },
     "closeout_statuses": {
       "type": "array",
@@ -268,9 +268,9 @@
           "dismissed",
           "none"
         ],
-        "description": "Item enumerated value accepted by closeout statuses in Agentic Workspace Improvement Signal Contract."
+        "description": "One entry in the closeout statuses list."
       },
-      "description": "The closeout statuses array field in Agentic Workspace Improvement Signal Contract."
+      "description": "Ordered closeout statuses entries used by this contract."
     },
     "guardrails": {
       "type": "array",
@@ -278,9 +278,9 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "description": "Item string accepted by guardrails in Agentic Workspace Improvement Signal Contract."
+        "description": "One entry in the guardrails list."
       },
-      "description": "The guardrails array field in Agentic Workspace Improvement Signal Contract."
+      "description": "Ordered guardrails entries used by this contract."
     }
   },
   "additionalProperties": false,

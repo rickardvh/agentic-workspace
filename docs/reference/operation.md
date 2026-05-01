@@ -14,42 +14,42 @@ Contract for one Agentic Workspace operation, including command shape, effects, 
 | `schema_version` | const `"agentic-workspace/operation/v1"` | yes |  | Operation contract version. |  |  |
 | `id` | string | yes |  | Stable operation identifier. |  |  |
 | `command_surface` | object | no |  | CLI command or subcommand shape that exposes the operation. |  |  |
-| `command_surface.program` | string | no |  | The program string field in Agentic Workspace Operation Contract. |  |  |
-| `command_surface.command` | string | yes |  | The command string field in Agentic Workspace Operation Contract. |  |  |
-| `command_surface.subcommand` | string | no |  | The subcommand string field in Agentic Workspace Operation Contract. |  |  |
-| `command_surface.format_option` | string | no |  | The format option string field in Agentic Workspace Operation Contract. |  |  |
+| `command_surface.program` | string | no |  | Program text value used by this contract. |  |  |
+| `command_surface.command` | string | yes |  | Command string or command name used by this contract. |  |  |
+| `command_surface.subcommand` | string | no |  | Subcommand text value used by this contract. |  |  |
+| `command_surface.format_option` | string | no |  | Format option text value used by this contract. |  |  |
 | `summary` | string | yes |  | Short human-readable operation summary. |  |  |
 | `intent` | string | no |  | User or system intent the operation is designed to satisfy. |  |  |
 | `classification` | enum `"read-only-report"`, `"metadata-refresh"`, `"lifecycle-mutation"`, `"local-record-append"`, `"derived-output"` | yes |  | Output and authority classification for the operation. |  |  |
 | `inputs` | array of object | yes |  | Inputs the operation accepts and where they come from. |  |  |
 | `output` | object | yes |  | Output kind and schema produced by the operation. |  |  |
-| `output.kind` | enum `"text-or-json"`, `"json"`, `"text"`, `"module-result"` | yes |  | The kind enumerated value field in Agentic Workspace Operation Contract. |  |  |
-| `output.schema_ref` | string | no |  | The schema ref string field in Agentic Workspace Operation Contract. |  |  |
-| `output.description` | string | no |  | The description string field in Agentic Workspace Operation Contract. |  |  |
+| `output.kind` | enum `"text-or-json"`, `"json"`, `"text"`, `"module-result"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
+| `output.schema_ref` | string | no |  | Schema reference used to validate the output payload. |  |  |
+| `output.description` | string | no |  | Longer explanation or display text for this entry. |  |  |
 | `effects` | object | yes |  | Side-effect model for safe execution and automation. |  |  |
-| `effects.read_only` | boolean | yes |  | The read only boolean field in Agentic Workspace Operation Contract. |  |  |
-| `effects.destructive` | boolean | yes |  | The destructive boolean field in Agentic Workspace Operation Contract. |  |  |
-| `effects.idempotent` | boolean | yes |  | The idempotent boolean field in Agentic Workspace Operation Contract. |  |  |
-| `effects.writes_repo_state` | boolean | yes |  | The writes repo state boolean field in Agentic Workspace Operation Contract. |  |  |
-| `effects.requires_preflight_gate` | boolean | no |  | The requires preflight gate boolean field in Agentic Workspace Operation Contract. |  |  |
+| `effects.read_only` | boolean | yes |  | Whether this operation or aid avoids writes. |  |  |
+| `effects.destructive` | boolean | yes |  | Whether this action can delete, overwrite, or otherwise destroy state. |  |  |
+| `effects.idempotent` | boolean | yes |  | Idempotent true/false policy flag used by this contract. |  |  |
+| `effects.writes_repo_state` | boolean | yes |  | Writes repo state true/false policy flag used by this contract. |  |  |
+| `effects.requires_preflight_gate` | boolean | no |  | Requires preflight gate true/false policy flag used by this contract. |  |  |
 | `locality` | object | yes |  | Repo, network, and outside-repo locality requirements. |  |  |
-| `locality.requires_repo` | boolean | yes |  | The requires repo boolean field in Agentic Workspace Operation Contract. |  |  |
-| `locality.network` | enum `"forbidden"`, `"not-required"`, `"allowed"` | yes |  | The network enumerated value field in Agentic Workspace Operation Contract. |  |  |
-| `locality.outside_repo_writes` | enum `"forbidden"`, `"allowed"` | no |  | The outside repo writes enumerated value field in Agentic Workspace Operation Contract. |  |  |
+| `locality.requires_repo` | boolean | yes |  | Requires repo true/false policy flag used by this contract. |  |  |
+| `locality.network` | enum `"forbidden"`, `"not-required"`, `"allowed"` | yes |  | Network access requirement or allowance. |  |  |
+| `locality.outside_repo_writes` | enum `"forbidden"`, `"allowed"` | no |  | Allowed outside repo writes value for routing or validation. |  |  |
 | `reads` | array of ref `#/$defs/surface_access` | no |  | Surfaces or state the operation reads. |  |  |
 | `writes` | array of  | no |  | Surfaces or state the operation writes. |  |  |
 | `steps` | array of object | yes |  | Primitive implementation steps that define operation behavior. |  |  |
 | `guards` | array of string | yes |  | Safety or escalation guards for using the operation. |  |  |
 | `proof` | array of string | yes |  | Validation expectations for the operation contract. |  |  |
 | `projections` | object | no |  | Adapter projections such as CLI, MCP, or skill bindings. |  |  |
-| `projections.cli` | object | no |  | The cli object field in Agentic Workspace Operation Contract. |  |  |
-| `projections.cli.command_ref` | string | no |  | The command ref string field in Agentic Workspace Operation Contract. |  |  |
-| `projections.mcp` | object | no |  | The mcp object field in Agentic Workspace Operation Contract. |  |  |
-| `projections.mcp.tool_name` | string | no |  | The tool name string field in Agentic Workspace Operation Contract. |  |  |
-| `projections.mcp.read_only_hint` | boolean | no |  | The read only hint boolean field in Agentic Workspace Operation Contract. |  |  |
-| `projections.mcp.destructive_hint` | boolean | no |  | The destructive hint boolean field in Agentic Workspace Operation Contract. |  |  |
-| `projections.mcp.idempotent_hint` | boolean | no |  | The idempotent hint boolean field in Agentic Workspace Operation Contract. |  |  |
-| `projections.skill` | object | no |  | The skill object field in Agentic Workspace Operation Contract. |  |  |
-| `projections.skill.activation` | array of string | no |  | The activation array field in Agentic Workspace Operation Contract. |  |  |
-| `projections.skill.instruction_summary` | string | no |  | The instruction summary string field in Agentic Workspace Operation Contract. |  |  |
+| `projections.cli` | object | no |  | Cli details used by this contract. |  |  |
+| `projections.cli.command_ref` | string | no |  | Command ref text value used by this contract. |  |  |
+| `projections.mcp` | object | no |  | Mcp details used by this contract. |  |  |
+| `projections.mcp.tool_name` | string | no |  | Tool name text value used by this contract. |  |  |
+| `projections.mcp.read_only_hint` | boolean | no |  | Read only hint true/false policy flag used by this contract. |  |  |
+| `projections.mcp.destructive_hint` | boolean | no |  | Destructive hint true/false policy flag used by this contract. |  |  |
+| `projections.mcp.idempotent_hint` | boolean | no |  | Idempotent hint true/false policy flag used by this contract. |  |  |
+| `projections.skill` | object | no |  | Skill details used by this contract. |  |  |
+| `projections.skill.activation` | array of string | no |  | Ordered activation entries used by this contract. |  |  |
+| `projections.skill.instruction_summary` | string | no |  | Instruction summary text value used by this contract. |  |  |
 | `migration_status` | enum `"draft-contract-only"`, `"validated-contract"`, `"runtime-consumed"` | no |  | Maturity of the operation contract relative to implementation. |  |  |

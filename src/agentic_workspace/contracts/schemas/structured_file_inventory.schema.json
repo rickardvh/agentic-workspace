@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/structured-file-inventory.schema.json",
   "title": "Structured File Inventory",
-  "description": "Schema for Structured File Inventory.",
+  "description": "Inventory of structured files, validators, ownership, and freshness checks.",
   "type": "object",
   "required": [
     "kind",
@@ -15,16 +15,16 @@
   "properties": {
     "kind": {
       "const": "agentic-workspace/structured-file-inventory/v1",
-      "description": "The kind constant field in Structured File Inventory."
+      "description": "Discriminator identifying the payload or record shape."
     },
     "schema_version": {
       "const": "structured-file-inventory/v1",
-      "description": "The schema version constant field in Structured File Inventory."
+      "description": "Contract version for this document."
     },
     "rule": {
       "type": "string",
       "minLength": 1,
-      "description": "The rule string field in Structured File Inventory."
+      "description": "Policy rule that explains this contract behavior."
     },
     "statuses": {
       "type": "array",
@@ -38,10 +38,10 @@
           "source-checkout-diagnostic",
           "freeform-prohibited-gap"
         ],
-        "description": "Item enumerated value accepted by statuses in Structured File Inventory."
+        "description": "One entry in the statuses list."
       },
       "uniqueItems": true,
-      "description": "The statuses array field in Structured File Inventory."
+      "description": "Ordered statuses entries used by this contract."
     },
     "storage_classes": {
       "type": "array",
@@ -59,10 +59,10 @@
           "diagnostic-fixture",
           "platform-tooling"
         ],
-        "description": "Item enumerated value accepted by storage classes in Structured File Inventory."
+        "description": "One entry in the storage classes list."
       },
       "uniqueItems": true,
-      "description": "The storage classes array field in Structured File Inventory."
+      "description": "Ordered storage classes entries used by this contract."
     },
     "entries": {
       "type": "array",
@@ -85,7 +85,7 @@
           "pattern": {
             "type": "string",
             "minLength": 1,
-            "description": "The pattern string field in Structured File Inventory."
+            "description": "Pattern text value used by this contract."
           },
           "format": {
             "type": "string",
@@ -95,12 +95,12 @@
               "yaml",
               "yml"
             ],
-            "description": "The format enumerated value field in Structured File Inventory."
+            "description": "Output format expected or emitted by this surface."
           },
           "owner": {
             "type": "string",
             "minLength": 1,
-            "description": "The owner string field in Structured File Inventory."
+            "description": "Owner text value used by this contract."
           },
           "status": {
             "type": "string",
@@ -111,12 +111,12 @@
               "source-checkout-diagnostic",
               "freeform-prohibited-gap"
             ],
-            "description": "The status enumerated value field in Structured File Inventory."
+            "description": "Current lifecycle, readiness, or health state."
           },
           "schema_or_validator": {
             "type": "string",
             "minLength": 1,
-            "description": "The schema or validator string field in Structured File Inventory."
+            "description": "Schema or validator text value used by this contract."
           },
           "storage_class": {
             "type": "string",
@@ -131,12 +131,12 @@
               "diagnostic-fixture",
               "platform-tooling"
             ],
-            "description": "The storage class enumerated value field in Structured File Inventory."
+            "description": "Allowed storage class value for routing or validation."
           },
           "checked_in_justification": {
             "type": "string",
             "minLength": 1,
-            "description": "The checked in justification string field in Structured File Inventory."
+            "description": "Checked in justification text value used by this contract."
           },
           "reconstructable_from": {
             "type": "array",
@@ -144,9 +144,9 @@
             "items": {
               "type": "string",
               "minLength": 1,
-              "description": "Item string accepted by reconstructable from in Structured File Inventory."
+              "description": "One entry in the reconstructable from list."
             },
-            "description": "The reconstructable from array field in Structured File Inventory."
+            "description": "Ordered reconstructable from entries used by this contract."
           },
           "guardrails": {
             "type": "object",
@@ -154,12 +154,12 @@
               "max_items": {
                 "type": "integer",
                 "minimum": 1,
-                "description": "The max items integer field in Structured File Inventory."
+                "description": "Max items numeric value used by this contract."
               },
               "max_bytes": {
                 "type": "integer",
                 "minimum": 1,
-                "description": "The max bytes integer field in Structured File Inventory."
+                "description": "Max bytes numeric value used by this contract."
               },
               "preferred_refs": {
                 "type": "array",
@@ -167,41 +167,41 @@
                 "items": {
                   "type": "string",
                   "minLength": 1,
-                  "description": "Item string accepted by preferred refs in Structured File Inventory."
+                  "description": "One entry in the preferred refs list."
                 },
-                "description": "The preferred refs array field in Structured File Inventory."
+                "description": "Ordered preferred refs entries used by this contract."
               },
               "routed_to": {
                 "type": "string",
                 "pattern": "^#[0-9]+$",
-                "description": "The routed to string field in Structured File Inventory."
+                "description": "Routed to text value used by this contract."
               }
             },
             "additionalProperties": false,
-            "description": "The guardrails object field in Structured File Inventory."
+            "description": "Guardrails details used by this contract."
           },
           "editable_by_agents": {
             "type": "boolean",
-            "description": "The editable by agents boolean field in Structured File Inventory."
+            "description": "Editable by agents true/false policy flag used by this contract."
           },
           "generated": {
             "type": "boolean",
-            "description": "The generated boolean field in Structured File Inventory."
+            "description": "Generated true/false policy flag used by this contract."
           },
           "routed_to": {
             "type": "string",
             "pattern": "^#[0-9]+$",
-            "description": "The routed to string field in Structured File Inventory."
+            "description": "Routed to text value used by this contract."
           },
           "storage_routed_to": {
             "type": "string",
             "pattern": "^#[0-9]+$",
-            "description": "The storage routed to string field in Structured File Inventory."
+            "description": "Storage routed to text value used by this contract."
           },
           "notes": {
             "type": "string",
             "minLength": 1,
-            "description": "The notes string field in Structured File Inventory."
+            "description": "Additional notes that qualify this record."
           }
         },
         "allOf": [
@@ -224,9 +224,9 @@
           }
         ],
         "additionalProperties": false,
-        "description": "Item object accepted by entries in Structured File Inventory."
+        "description": "One entry in the entries list."
       },
-      "description": "The entries array field in Structured File Inventory."
+      "description": "Ordered entries entries used by this contract."
     },
     "generated_mirrors": {
       "type": "array",
@@ -246,48 +246,48 @@
           "pattern": {
             "type": "string",
             "minLength": 1,
-            "description": "The pattern string field in Structured File Inventory."
+            "description": "Pattern text value used by this contract."
           },
           "source_command": {
             "type": "string",
             "minLength": 1,
-            "description": "The source command string field in Structured File Inventory."
+            "description": "Source command text value used by this contract."
           },
           "named_consumer": {
             "type": "string",
             "minLength": 1,
-            "description": "The named consumer string field in Structured File Inventory."
+            "description": "Named consumer text value used by this contract."
           },
           "checked_in_justification": {
             "type": "string",
             "minLength": 1,
-            "description": "The checked in justification string field in Structured File Inventory."
+            "description": "Checked in justification text value used by this contract."
           },
           "freshness_check": {
             "type": "string",
             "minLength": 1,
-            "description": "The freshness check string field in Structured File Inventory."
+            "description": "Freshness check text value used by this contract."
           },
           "ordinary_agent_route": {
             "type": "string",
             "minLength": 1,
-            "description": "The ordinary agent route string field in Structured File Inventory."
+            "description": "Ordinary agent route text value used by this contract."
           },
           "removal_or_demotion_path": {
             "type": "string",
             "minLength": 1,
-            "description": "The removal or demotion path string field in Structured File Inventory."
+            "description": "Removal or demotion path text value used by this contract."
           },
           "max_bytes": {
             "type": "integer",
             "minimum": 1,
-            "description": "The max bytes integer field in Structured File Inventory."
+            "description": "Max bytes numeric value used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by generated mirrors in Structured File Inventory."
+        "description": "One entry in the generated mirrors list."
       },
-      "description": "The generated mirrors array field in Structured File Inventory."
+      "description": "Ordered generated mirrors entries used by this contract."
     }
   },
   "additionalProperties": false,

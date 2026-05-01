@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/improvement-latitude-policy.schema.json",
   "title": "Improvement Latitude Policy",
-  "description": "Schema for Improvement Latitude Policy.",
+  "description": "Policy describing how much improvement initiative agents may take by latitude setting.",
   "type": "object",
   "required": [
     "schema_version",
@@ -19,28 +19,28 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/improvement-latitude-policy/v1",
-      "description": "The schema version constant field in Improvement Latitude Policy."
+      "description": "Contract version for this document."
     },
     "default_mode": {
       "type": "string",
-      "description": "The default mode string field in Improvement Latitude Policy."
+      "description": "Default mode text value used by this contract."
     },
     "owner_surface": {
       "type": "string",
-      "description": "The owner surface string field in Improvement Latitude Policy."
+      "description": "Owner surface text value used by this contract."
     },
     "policy_target": {
       "type": "string",
-      "description": "The policy target string field in Improvement Latitude Policy."
+      "description": "Policy target text value used by this contract."
     },
     "mode_interpretation": {
       "type": "object",
       "minProperties": 1,
       "additionalProperties": {
         "type": "string",
-        "description": "Additional named string entry for mode interpretation in Improvement Latitude Policy."
+        "description": "Named entry in the mode interpretation mapping."
       },
-      "description": "The mode interpretation object field in Improvement Latitude Policy."
+      "description": "Mode interpretation details used by this contract."
     },
     "examples": {
       "type": "object",
@@ -54,22 +54,22 @@
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by workspace adaptation first in Improvement Latitude Policy."
+            "description": "One entry in the workspace adaptation first list."
           },
-          "description": "The workspace adaptation first array field in Improvement Latitude Policy."
+          "description": "Ordered workspace adaptation first entries used by this contract."
         },
         "repo_directed_improvement_next": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by repo directed improvement next in Improvement Latitude Policy."
+            "description": "One entry in the repo directed improvement next list."
           },
-          "description": "The repo directed improvement next array field in Improvement Latitude Policy."
+          "description": "Ordered repo directed improvement next entries used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The examples object field in Improvement Latitude Policy."
+      "description": "Examples details used by this contract."
     },
     "incidental_finding_policy": {
       "type": "object",
@@ -83,55 +83,55 @@
       "properties": {
         "status": {
           "type": "string",
-          "description": "The status string field in Improvement Latitude Policy."
+          "description": "Current lifecycle, readiness, or health state."
         },
         "rule": {
           "type": "string",
-          "description": "The rule string field in Improvement Latitude Policy."
+          "description": "Policy rule that explains this contract behavior."
         },
         "report_when": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by report when in Improvement Latitude Policy."
+            "description": "One entry in the report when list."
           },
-          "description": "The report when array field in Improvement Latitude Policy."
+          "description": "Ordered report when entries used by this contract."
         },
         "report_how": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by report how in Improvement Latitude Policy."
+            "description": "One entry in the report how list."
           },
-          "description": "The report how array field in Improvement Latitude Policy."
+          "description": "Ordered report how entries used by this contract."
         },
         "do_not_report": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "Item string accepted by do not report in Improvement Latitude Policy."
+            "description": "One entry in the do not report list."
           },
-          "description": "The do not report array field in Improvement Latitude Policy."
+          "description": "Ordered do not report entries used by this contract."
         }
       },
       "additionalProperties": false,
-      "description": "The incidental finding policy object field in Improvement Latitude Policy."
+      "description": "Incidental finding policy details used by this contract."
     },
     "evidence_source": {
       "type": "string",
-      "description": "The evidence source string field in Improvement Latitude Policy."
+      "description": "Evidence source text value used by this contract."
     },
     "evidence_classes": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "string",
-        "description": "Item string accepted by evidence classes in Improvement Latitude Policy."
+        "description": "One entry in the evidence classes list."
       },
-      "description": "The evidence classes array field in Improvement Latitude Policy."
+      "description": "Ordered evidence classes entries used by this contract."
     },
     "modes": {
       "type": "array",
@@ -150,52 +150,52 @@
         "properties": {
           "mode": {
             "type": "string",
-            "description": "The mode string field in Improvement Latitude Policy."
+            "description": "Mode text value used by this contract."
           },
           "initiative_posture": {
             "type": "string",
-            "description": "The initiative posture string field in Improvement Latitude Policy."
+            "description": "Initiative posture text value used by this contract."
           },
           "summary": {
             "type": "string",
-            "description": "The summary string field in Improvement Latitude Policy."
+            "description": "Short human-readable summary for this entry."
           },
           "allows": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "string",
-              "description": "Item string accepted by allows in Improvement Latitude Policy."
+              "description": "One entry in the allows list."
             },
-            "description": "The allows array field in Improvement Latitude Policy."
+            "description": "Ordered allows entries used by this contract."
           },
           "forbids": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "string",
-              "description": "Item string accepted by forbids in Improvement Latitude Policy."
+              "description": "One entry in the forbids list."
             },
-            "description": "The forbids array field in Improvement Latitude Policy."
+            "description": "Ordered forbids entries used by this contract."
           },
           "reporting_destinations": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "string",
-              "description": "Item string accepted by reporting destinations in Improvement Latitude Policy."
+              "description": "One entry in the reporting destinations list."
             },
-            "description": "The reporting destinations array field in Improvement Latitude Policy."
+            "description": "Ordered reporting destinations entries used by this contract."
           },
           "reporting_rule": {
             "type": "string",
-            "description": "The reporting rule string field in Improvement Latitude Policy."
+            "description": "Reporting rule text value used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by modes in Improvement Latitude Policy."
+        "description": "One entry in the modes list."
       },
-      "description": "The modes array field in Improvement Latitude Policy."
+      "description": "Ordered modes entries used by this contract."
     }
   },
   "additionalProperties": false,

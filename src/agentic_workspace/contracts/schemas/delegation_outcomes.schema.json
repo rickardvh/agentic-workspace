@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/delegation-outcomes.schema.json",
   "title": "Agentic Workspace Local Delegation Outcomes",
-  "description": "Schema for Agentic Workspace Local Delegation Outcomes.",
+  "description": "Local delegation outcome log used to tune target-profile recommendations.",
   "type": "object",
   "required": [
     "kind",
@@ -11,7 +11,7 @@
   "properties": {
     "kind": {
       "const": "agentic-workspace/delegation-outcomes/v1",
-      "description": "The kind constant field in Agentic Workspace Local Delegation Outcomes."
+      "description": "Discriminator identifying the payload or record shape."
     },
     "records": {
       "type": "array",
@@ -30,17 +30,17 @@
           "recorded_at": {
             "type": "string",
             "minLength": 1,
-            "description": "The recorded at string field in Agentic Workspace Local Delegation Outcomes."
+            "description": "Recorded at text value used by this contract."
           },
           "delegation_target": {
             "type": "string",
             "minLength": 1,
-            "description": "The delegation target string field in Agentic Workspace Local Delegation Outcomes."
+            "description": "Delegation target text value used by this contract."
           },
           "task_class": {
             "type": "string",
             "minLength": 1,
-            "description": "The task class string field in Agentic Workspace Local Delegation Outcomes."
+            "description": "Task class text value used by this contract."
           },
           "outcome": {
             "type": "string",
@@ -49,7 +49,7 @@
               "mixed",
               "failed"
             ],
-            "description": "The outcome enumerated value field in Agentic Workspace Local Delegation Outcomes."
+            "description": "Observed or intended outcome for this entry."
           },
           "handoff_sufficiency": {
             "type": "string",
@@ -58,7 +58,7 @@
               "borderline",
               "insufficient"
             ],
-            "description": "The handoff sufficiency enumerated value field in Agentic Workspace Local Delegation Outcomes."
+            "description": "Allowed handoff sufficiency value for routing or validation."
           },
           "review_burden": {
             "type": "string",
@@ -67,17 +67,17 @@
               "normal",
               "high"
             ],
-            "description": "The review burden enumerated value field in Agentic Workspace Local Delegation Outcomes."
+            "description": "Allowed review burden value for routing or validation."
           },
           "escalation_required": {
             "type": "boolean",
-            "description": "The escalation required boolean field in Agentic Workspace Local Delegation Outcomes."
+            "description": "Escalation required true/false policy flag used by this contract."
           }
         },
         "additionalProperties": false,
-        "description": "Item object accepted by records in Agentic Workspace Local Delegation Outcomes."
+        "description": "One entry in the records list."
       },
-      "description": "The records array field in Agentic Workspace Local Delegation Outcomes."
+      "description": "Ordered records entries used by this contract."
     }
   },
   "additionalProperties": false,
