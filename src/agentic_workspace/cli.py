@@ -11846,10 +11846,22 @@ def _run_modules_report_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_start_context_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="start", target_root=target_root)
+    payload = _start_payload(
+        target_root=target_root,
+        changed_paths=list(getattr(args, "changed", []) or []),
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
 _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "config.report": _run_config_report_adapter,
     "defaults.report": _run_defaults_report_adapter,
     "modules.report": _run_modules_report_adapter,
+    "start.context": _run_start_context_adapter,
 }
 
 

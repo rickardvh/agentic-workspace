@@ -119,6 +119,42 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "output": []
     },
     "status": "generated"
+  },
+  "start": {
+    "command": {
+      "command_manifest": "cli_commands.json",
+      "name": "start",
+      "option_group_manifest": "cli_option_groups.json",
+      "program": "agentic-workspace"
+    },
+    "conformance_refs": [
+      "start.context.process"
+    ],
+    "effect_hints": {
+      "destructive": false,
+      "idempotent": true,
+      "read_only": true,
+      "requires_preflight_gate": false,
+      "writes_repo_state": false
+    },
+    "id": "start.context.cli",
+    "operation_id": "start.context",
+    "runtime_binding": {
+      "kind": "operation-primitive-sequence",
+      "primitive_refs": [
+        "workspace.root.resolve",
+        "preflight.context.assemble",
+        "startup.context.assemble",
+        "output.emit"
+      ]
+    },
+    "schemas": {
+      "input": [],
+      "output": [
+        "startup_context.schema.json"
+      ]
+    },
+    "status": "generated"
   }
 }
 """

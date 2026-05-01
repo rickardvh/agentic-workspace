@@ -81,6 +81,18 @@ def _selected_modules_fields(stdout: str) -> dict[str, object]:
     }
 
 
+def _selected_start_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    context_router = payload.get("context_router", {}) if isinstance(payload.get("context_router"), dict) else {}
+    proof = payload.get("proof", {}) if isinstance(payload.get("proof"), dict) else {}
+    return {
+        "kind": payload.get("kind"),
+        "first_view": context_router.get("first_view"),
+        "proof_kind": proof.get("kind"),
+        "changed_paths": proof.get("changed_paths"),
+    }
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -326,6 +338,76 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
             errors.append(
                 "adapter failure: modules invalid-option stderr presence drifted from canonical process; "
                 f"canonical={canonical_modules_invalid.stderr!r}, adapter={adapter_modules_invalid.stderr!r}"
+            )
+
+        start_args = ["start", "--target", ".", "--changed", "README.md", "--format", "json"]
+        canonical_start = _capture(
+            [python, str(shim), *start_args],
+            cwd=fixture_root,
+            env=_conformance_env(),
+        )
+        if canonical_start.returncode != 0:
+            return [f"runtime primitive failure: canonical start command exited {canonical_start.returncode}; stderr={canonical_start.stderr!r}"]
+        try:
+            canonical_start_fields = _selected_start_fields(canonical_start.stdout)
+        except json.JSONDecodeError as exc:
+            return [f"runtime primitive failure: canonical start stdout was not JSON: {exc}"]
+        expected_start_fields = {
+            "kind": "startup-context/v1",
+            "first_view": "start",
+            "proof_kind": "proof-selection/v1",
+            "changed_paths": ["README.md"],
+        }
+        if canonical_start_fields != expected_start_fields:
+            return [
+                "runtime primitive failure: canonical start output shape drifted; "
+                f"expected selected fields {expected_start_fields!r}, got {canonical_start_fields!r}"
+            ]
+
+        adapter_start = _capture(
+            [node, str(cli), *start_args],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=runtime),
+        )
+        if adapter_start.returncode != canonical_start.returncode:
+            errors.append(
+                "adapter failure: start exit code drifted from canonical process; "
+                f"expected {canonical_start.returncode}, got {adapter_start.returncode}; stderr={adapter_start.stderr!r}"
+            )
+        else:
+            try:
+                adapter_start_fields = _selected_start_fields(adapter_start.stdout)
+            except json.JSONDecodeError as exc:
+                errors.append(f"adapter failure: start stdout was not JSON: {exc}; stdout={adapter_start.stdout!r}")
+            else:
+                if adapter_start_fields != canonical_start_fields:
+                    errors.append(
+                        "adapter failure: start JSON selected fields drifted from canonical process; "
+                        f"expected {canonical_start_fields!r}, got {adapter_start_fields!r}"
+                    )
+        if adapter_start.stderr.strip():
+            errors.append(f"adapter failure: start emitted unexpected stderr: {adapter_start.stderr!r}")
+
+        start_invalid_args = ["start", "--target", ".", "--format", "json", "--definitely-invalid"]
+        canonical_start_invalid = _capture(
+            [python, str(shim), *start_invalid_args],
+            cwd=fixture_root,
+            env=_conformance_env(),
+        )
+        adapter_start_invalid = _capture(
+            [node, str(cli), *start_invalid_args],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=runtime),
+        )
+        if adapter_start_invalid.returncode != canonical_start_invalid.returncode:
+            errors.append(
+                "adapter failure: start invalid-option exit code drifted from canonical process; "
+                f"expected {canonical_start_invalid.returncode}, got {adapter_start_invalid.returncode}"
+            )
+        if bool(adapter_start_invalid.stderr.strip()) != bool(canonical_start_invalid.stderr.strip()):
+            errors.append(
+                "adapter failure: start invalid-option stderr presence drifted from canonical process; "
+                f"canonical={canonical_start_invalid.stderr!r}, adapter={adapter_start_invalid.stderr!r}"
             )
 
         unsupported = _capture(

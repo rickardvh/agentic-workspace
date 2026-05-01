@@ -438,6 +438,100 @@
               "output emission"
             ]
           }
+        },
+        {
+          "adapter_id": "start.context.cli",
+          "status": "generated",
+          "command": {
+            "name": "start",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "start",
+            "help": "Return the minimum safe startup context for beginning work in a target repository.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path for startup context (defaults to current workspace)."
+              },
+              {
+                "name": "changed",
+                "flags": [
+                  "--changed"
+                ],
+                "nargs": "*",
+                "default": [],
+                "help": "Optional repo-relative changed paths used to include a proof recommendation."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "start.context",
+            "path": "operations/start.context.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "preflight.context.assemble",
+              "startup.context.assemble",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "startup_context.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "start.context.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "startup context assembly",
+              "changed-path proof selection",
+              "output emission"
+            ]
+          }
         }
       ]
     },

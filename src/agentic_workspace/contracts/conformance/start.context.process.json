@@ -1,0 +1,78 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "start.context.process",
+  "operation_id": "start.context",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "start",
+      "--target",
+      ".",
+      "--changed",
+      "README.md",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "schema": "startup_context.schema.json",
+      "field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "startup-context/v1"
+        },
+        {
+          "path": [
+            "context_router",
+            "first_view"
+          ],
+          "equals": "start"
+        },
+        {
+          "path": [
+            "proof",
+            "kind"
+          ],
+          "equals": "proof-selection/v1"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": [
+        ".agentic-workspace"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

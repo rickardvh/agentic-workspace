@@ -253,6 +253,100 @@ export const generatedCommandPackage = {
         "output": []
       },
       "status": "generated"
+    },
+    {
+      "adapter_id": "start.context.cli",
+      "command": {
+        "manifest_ref": "cli_commands.json",
+        "name": "start"
+      },
+      "conformance_refs": [
+        "start.context.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Return the minimum safe startup context for beginning work in a target repository.",
+        "name": "start",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Optional repository path for startup context (defaults to current workspace).",
+            "name": "target"
+          },
+          {
+            "default": [],
+            "flags": [
+              "--changed"
+            ],
+            "help": "Optional repo-relative changed paths used to include a proof recommendation.",
+            "name": "changed",
+            "nargs": "*"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "start.context",
+        "path": "operations/start.context.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "target root resolution",
+          "startup context assembly",
+          "changed-path proof selection",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "schema refs",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "preflight.context.assemble",
+          "startup.context.assemble",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "startup_context.schema.json"
+        ]
+      },
+      "status": "generated"
     }
   ],
   "id": "root-workspace",

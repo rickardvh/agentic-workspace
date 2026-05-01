@@ -22,6 +22,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "start.context.process",
+      "operation_id": "start.context",
+      "path": "conformance/start.context.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.status.process",
       "operation_id": "planning.status.report",
       "path": "conformance/planning.status.process.json",

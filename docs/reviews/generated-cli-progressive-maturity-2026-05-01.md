@@ -12,7 +12,7 @@ Generated command surfaces move through these levels:
 | --- | --- | --- |
 | `metadata-proof-fixture` | Generated metadata proves the package can project the command-package IR, but is not a runnable interface. | TypeScript Planning and Memory packages remain here. |
 | `runnable-read-only-adapter` | Generated target can run a read-only command through a process handoff. | TypeScript root workspace `defaults`. |
-| `runtime-backed-read-only-adapter` | Generated parser/dispatch is the interface authority and delegates to hand-owned runtime primitives. | Python root `defaults`, `config`, and `modules`, Planning `status`, and Memory `status`. |
+| `runtime-backed-read-only-adapter` | Generated parser/dispatch is the interface authority and delegates to hand-owned runtime primitives. | Python root `defaults`, `config`, `modules`, and `start`, Planning `status`, and Memory `status`. |
 | `weak-agent-safe-adapter` | Generated read-only target is safe for weak-agent routing after broader off-happy-path proof. | Not enabled yet. |
 | `mutation-capable-adapter` | Generated target can invoke guarded mutation primitives. | Deferred until dry-run, preflight, and refusal conformance are explicit. |
 
@@ -23,7 +23,8 @@ Generated command surfaces move through these levels:
 | Root workspace Python CLI | `agentic-workspace defaults` | `metadata-proof-fixture` | `runtime-backed-read-only-adapter` | `workspace.defaults.load`, `workspace.defaults.select`, `output.emit` | generated freshness, Python parser/dispatch test, black-box process conformance |
 | Root workspace Python CLI | `agentic-workspace config` | handwritten root parser/dispatch | `runtime-backed-read-only-adapter` | `workspace.root.resolve`, `workspace.config.load`, `workspace.config.emit` | generated freshness, Python parser/dispatch test, black-box process conformance |
 | Root workspace Python CLI | `agentic-workspace modules` | handwritten root parser/dispatch | `runtime-backed-read-only-adapter` | `workspace.root.resolve`, `workspace.modules.inspect`, `output.emit` | generated freshness, Python parser/dispatch test, black-box process conformance |
-| Root workspace TypeScript package | `agentic-workspace defaults`, `agentic-workspace config`, `agentic-workspace modules` | `runnable-read-only-adapter` | unchanged | canonical Python process handoff | Node-backed conformance |
+| Root workspace Python CLI | `agentic-workspace start` | handwritten root parser/dispatch | `runtime-backed-read-only-adapter` | `workspace.root.resolve`, `preflight.context.assemble`, `startup.context.assemble`, `output.emit` | generated freshness, Python parser/dispatch test, black-box process conformance |
+| Root workspace TypeScript package | `agentic-workspace defaults`, `agentic-workspace config`, `agentic-workspace modules`, `agentic-workspace start` | `runnable-read-only-adapter` | unchanged | canonical Python process handoff | Node-backed conformance |
 | Planning Python CLI | `agentic-planning-bootstrap status` | `metadata-proof-fixture` | `runtime-backed-read-only-adapter` | `planning.bootstrap.status.load`, `output.emit` | generated parser/dispatch test and process smoke proof |
 | Memory Python CLI | `agentic-memory-bootstrap status` | `metadata-proof-fixture` | `runtime-backed-read-only-adapter` | `memory.bootstrap.status.load`, `output.emit` | generated parser/dispatch test and process smoke proof |
 
@@ -35,7 +36,7 @@ Tracked by #643. These commands already have interface declarations in `cli_comm
 | --- | --- | --- | --- |
 | `modules` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with minimal-repo black-box conformance. |
 | `config` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with minimal-repo black-box conformance. |
-| `start` | handwritten root parser/dispatch backed by CLI contract manifests | `runtime-backed-read-only-adapter` | Needs changed-path list parsing conformance. |
+| `start` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with changed-path black-box conformance. |
 | `implement` | handwritten root parser/dispatch backed by CLI contract manifests | `runtime-backed-read-only-adapter` | Needs task text and changed-path coverage. |
 | `preflight` | handwritten root parser/dispatch backed by CLI contract manifests | `runtime-backed-read-only-adapter` | Needs active-only conformance. |
 | `proof` | handwritten root parser/dispatch backed by CLI contract manifests | `runtime-backed-read-only-adapter` | Needs descriptor setup and changed-path conformance. |

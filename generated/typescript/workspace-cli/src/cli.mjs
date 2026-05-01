@@ -7,7 +7,7 @@
 
 import { spawnSync } from 'node:child_process';
 
-const supportedCommands = new Set(["config", "defaults", "modules"]);
+const supportedCommands = new Set(["config", "defaults", "modules", "start"]);
 const argv = process.argv.slice(2);
 const command = argv[0];
 
