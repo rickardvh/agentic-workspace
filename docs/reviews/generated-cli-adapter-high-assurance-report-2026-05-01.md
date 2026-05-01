@@ -55,6 +55,8 @@
 | Package-local command names are not first-class in the operation registry. | Memory package-only read-only commands could not be promoted without tripping root/global command-name parity. | product-general | yes | issue | `#651` |
 | Lifecycle maturity is too coarse at the operation level. | #642 dry-run/refusal proof landed while apply/mutation proof remains intentionally deferred, but `migration_status` is one field for the whole operation. | product-general | yes | issue | `#652` |
 | Process conformance fixtures cannot compose installed-state setup steps. | #642 upgrade/uninstall proof had to use static/minimal fixtures instead of first applying an install setup phase. | product-general | yes | issue | `#653` |
+| Strict archive closeout reports missing refs without naming the expected field shape. | `archive-plan --prepare-closeout` blocked until `adaptive_assurance.required_refs` matched traceability field names rather than literal refs. | product-general | yes | issue | `#654` |
+| Archive size guardrails are enforced after archive, not by archive-plan. | `make check` caught the archived execplan exceeding the structured-file inventory guardrail; the archive had to be compacted/distilled after the move. | product-general | yes | issue | `#655` |
 
 ## Operating-Cost Review
 
@@ -81,3 +83,5 @@
 - Created #651 for package-scoped command identity in operation contracts and generated-adapter parity.
 - Created #652 for lifecycle dry-run/apply maturity split in operation contracts.
 - Created #653 for setup phases in process conformance fixtures.
+- Created #654 for clearer strict archive closeout field-shape remediation.
+- Created #655 for archive-plan enforcement of archive-size guardrails.
