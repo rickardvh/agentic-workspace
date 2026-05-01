@@ -1,0 +1,127 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "upgrade.lifecycle.dry-run.process",
+  "operation_id": "upgrade.lifecycle",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "upgrade",
+      "--target",
+      ".",
+      "--module",
+      "planning",
+      "--dry-run",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-upgrade-dry-run-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "command"
+          ],
+          "equals": "upgrade"
+        },
+        {
+          "path": [
+            "dry_run"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "modules"
+          ],
+          "equals": [
+            "planning"
+          ]
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "kind"
+          ],
+          "equals": "workspace-lifecycle-plan/v1"
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "command"
+          ],
+          "equals": "upgrade"
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "mutation_safety",
+            "strict_preflight",
+            "available"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "mutation_safety",
+            "review_required_before_apply"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "root_upgrade_front_door",
+            "dry_run_first"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "root_upgrade_front_door",
+            "review_required_before_apply"
+          ],
+          "equals": true
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": [
+        ".agentic-workspace",
+        "AGENTS.md",
+        "llms.txt"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

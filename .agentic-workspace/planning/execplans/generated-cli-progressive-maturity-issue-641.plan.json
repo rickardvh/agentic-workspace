@@ -19,8 +19,8 @@
     "execution": {
       "milestone": "generated-cli-progressive-maturity-issue-641",
       "status": "active",
-      "next_step": "Re-evaluate #642 lifecycle mutation gates: add or verify dry-run/refusal conformance, but keep mutation-capable generated adapters deferred unless the maturity proof is explicit.",
-      "proof": "Focused generated-adapter proof, conformance registry tests, Node-backed root package conformance, generator freshness, and full make check passed for the package-local read-only breadth promoted under #644."
+      "next_step": "Run full closeout validation, close implemented child issues #642/#643/#644, refresh dogfooding evidence, then archive this active execplan after the branch is pushed.",
+      "proof": "Focused generated-adapter proof, conformance registry tests, Node-backed root package conformance, generator freshness, lifecycle dry-run/refusal conformance, and full make check passed through the #642/#643/#644 implementation slices."
     },
     "scope": {
       "touched": [
@@ -65,17 +65,17 @@
     "parent lane": "#641"
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "Implement remaining command families through #642, #643, and #644 after this progressive-maturity foundation lands.",
+    "required follow-on for the larger intended outcome": "Mutation-capable lifecycle adapters remain deferred until #652/#653-style maturity proof exists; memory-only package commands remain deferred to #651.",
     "owner surface": "GitHub issues and docs/reviews/generated-cli-progressive-maturity-2026-05-01.md",
     "activation trigger": "When another command family is selected for generated adapter promotion."
   },
   "iterative_follow_through": {
-    "what this slice enabled": "Runtime-backed generated Python parser/dispatch for all root read-only/context/diagnostic commands; Planning package status/doctor/summary/report/reconcile; Memory package status/doctor/report.",
-    "intentionally deferred": "Lifecycle mutation generated adapters and memory-only package command names requiring package-scoped operation identity (#651).",
+    "what this slice enabled": "Runtime-backed generated Python parser/dispatch for all root read-only/context/diagnostic commands; Planning package status/doctor/summary/report/reconcile; Memory package status/doctor/report; lifecycle dry-run/refusal conformance for #642.",
+    "intentionally deferred": "Lifecycle apply/mutation generated adapters and memory-only package command names requiring package-scoped operation identity (#651).",
     "discovered implications": "High-assurance generated-adapter work must activate checked-in planning before implementation, not only during closeout.",
     "proof achieved now": "yes",
     "validation still needed": "CI after PR creation.",
-    "next likely slice": "Re-evaluate #642 lifecycle mutation gates: add or verify dry-run/refusal conformance, but keep mutation-capable generated adapters deferred unless the maturity proof is explicit."
+    "next likely slice": "Closeout validation and issue closure for #642/#643/#644 after full proof passes."
   },
   "intent_interpretation": {
     "literal request": "Ingest and implement #641 in a new branch, create a PR, use high-assurance workflow, report using the dogfooding template, implement full intent, create child issues if necessary, and implement child issues using progressive maturity.",
@@ -336,7 +336,7 @@
     "optional_deps": "Node and Docker availability for expanded generated package conformance."
   },
   "immediate_next_action": [
-    "Re-evaluate #642 lifecycle mutation gates: add or verify dry-run/refusal conformance, but keep mutation-capable generated adapters deferred unless the maturity proof is explicit."
+    "Run full closeout validation, close implemented child issues #642/#643/#644, refresh dogfooding evidence, then archive this active execplan after the branch is pushed."
   ],
   "blockers": [
     "None."
@@ -409,7 +409,7 @@
     "changed surfaces": "command_adapter_generation, command_package_ir, operation and conformance registries, operation primitive contracts, root/planning/memory CLI entrypoints, generated outputs, focused tests, docs/reviews, and planning state.",
     "validations run": "uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py -q; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/generate/generate_command_packages.py --check; make check",
     "result for continuation": "Commit and push the package-local breadth batch, then evaluate #642 lifecycle mutation maturity gates.",
-    "next step": "Re-evaluate #642 lifecycle mutation gates: add or verify dry-run/refusal conformance, but keep mutation-capable generated adapters deferred unless the maturity proof is explicit."
+    "next step": "Run full closeout validation, close implemented child issues #642/#643/#644, refresh dogfooding evidence, then archive this active execplan after the branch is pushed."
   },
   "finished_run_review": {
     "review status": "complete-before-pr",
@@ -470,11 +470,11 @@
   },
   "execution_summary": {
     "outcome delivered": "Progressive generated CLI adapter foundation for #641 with runtime-backed Python adapters for root read-only/context/diagnostic commands and stable package-local read-only commands.",
-    "validation confirmed": "Focused proof and full make check passed for package-local read-only breadth.",
+    "validation confirmed": "Focused proof and full make check passed through lifecycle dry-run/refusal conformance.",
     "follow-on routed to": "#642, #645, #649, #650, #651",
     "post-work posterity capture": "Dogfooding report and progressive maturity review.",
     "knowledge promoted (Memory/Docs/Config)": "Docs/reviews plus #645, #649, #650, and #651.",
-    "resume from": "Re-evaluate #642 lifecycle mutation gates: add or verify dry-run/refusal conformance, but keep mutation-capable generated adapters deferred unless the maturity proof is explicit."
+    "resume from": "Run full closeout validation, close implemented child issues #642/#643/#644, refresh dogfooding evidence, then archive this active execplan after the branch is pushed."
   },
   "improvement_signal_review": {
     "status": "active",
@@ -484,7 +484,9 @@
       "High-assurance work began without checked-in planning.",
       "Active execplan next-action guidance is duplicated across fields and can become stale after incremental promotion.",
       "Generated package regeneration can produce line-ending-only working-tree noise.",
-      "Package-only command names need package-scoped operation identity before Memory route-report/list-files style commands can be promoted."
+      "Package-only command names need package-scoped operation identity before Memory route-report/list-files style commands can be promoted.",
+      "Lifecycle dry-run/refusal maturity needs to be modeled separately from apply/mutation maturity.",
+      "Process conformance fixtures need setup phases for realistic installed-state lifecycle proof."
     ],
     "signals fixed": [
       "Created this execplan and will update planning state before continuing."
@@ -493,7 +495,9 @@
       "#645",
       "#649",
       "#650",
-      "#651"
+      "#651",
+      "#652",
+      "#653"
     ],
     "signals dismissed": [],
     "next owner": "#645, #649, #650, #651"
@@ -510,6 +514,8 @@
     "2026-05-01: Full make check passed for root report/reconcile/setup/status/doctor generated adapter promotion.",
     "2026-05-01: Stable package-local read-only generated adapter breadth promoted for Planning and Memory.",
     "2026-05-01: Memory package-only command namespace friction routed to #651.",
-    "2026-05-01: Full make check passed for stable package-local read-only generated adapter breadth."
+    "2026-05-01: Full make check passed for stable package-local read-only generated adapter breadth.",
+    "2026-05-01: Added lifecycle dry-run/refusal conformance for #642 while keeping mutation-capable generated adapters deferred.",
+    "2026-05-01: Routed lifecycle maturity split and conformance setup-step dogfooding findings to #652 and #653."
   ]
 }

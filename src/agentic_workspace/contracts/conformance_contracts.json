@@ -82,6 +82,36 @@
       "adapter_kind": "process"
     },
     {
+      "id": "init.lifecycle.dry-run.process",
+      "operation_id": "init.lifecycle",
+      "path": "conformance/init.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "upgrade.lifecycle.dry-run.process",
+      "operation_id": "upgrade.lifecycle",
+      "path": "conformance/upgrade.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "upgrade.lifecycle.strict-preflight-refusal.process",
+      "operation_id": "upgrade.lifecycle",
+      "path": "conformance/upgrade.lifecycle.strict-preflight-refusal.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "uninstall.lifecycle.destructive-refusal.process",
+      "operation_id": "uninstall.lifecycle",
+      "path": "conformance/uninstall.lifecycle.destructive-refusal.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "uninstall.lifecycle.strict-preflight-refusal.process",
+      "operation_id": "uninstall.lifecycle",
+      "path": "conformance/uninstall.lifecycle.strict-preflight-refusal.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "report.combined.process",
       "path": "conformance/report.combined.process.json",
       "operation_id": "report.combined",

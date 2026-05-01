@@ -25,9 +25,11 @@ Conformance fixture contract for proving an operation adapter behaves as expecte
 | `expectations.stdout` | object | yes |  | Expected standard-output format and field assertions. |  |  |
 | `expectations.stdout.format` | enum `"json"`, `"text"` | yes |  | Expected stdout format. |  |  |
 | `expectations.stdout.schema` | string | no |  | Schema that should validate stdout when the output is JSON. |  |  |
+| `expectations.stdout.allow_empty` | boolean | no |  | Whether empty stdout is acceptable for text-mode refusal cases. |  |  |
 | `expectations.stdout.field_assertions` | array of ref `#/$defs/field_assertion` | yes |  | Field-level stdout assertions evaluated after parsing. |  |  |
 | `expectations.stderr` | object | yes |  | Policy for stderr emitted by the adapter command. |  |  |
 | `expectations.stderr.allow_non_empty` | boolean | yes |  | Whether non-empty stderr is acceptable for this fixture. |  |  |
+| `expectations.stderr.contains` | array of string | no |  | Required stderr substrings for refusal or usage-error fixtures. |  |  |
 | `expectations.filesystem` | object | yes |  | Filesystem expectations after the adapter command runs. |  |  |
 | `expectations.filesystem.allowed_write_paths` | ref `#/$defs/path_list` | yes |  | Fixture or repo paths the command may write. |  |  |
 | `expectations.filesystem.required_paths` | ref `#/$defs/path_list` | yes |  | Paths that must exist after command execution. |  |  |

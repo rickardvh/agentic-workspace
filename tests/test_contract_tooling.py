@@ -299,9 +299,13 @@ def test_lifecycle_generation_readiness_records_phase_risk_and_fixture_plan() ->
     assert commands[("root", "doctor")]["generation_eligibility"] == "eligible-read-only"
     assert commands[("root", "uninstall")]["generation_eligibility"] == "deferred-destructive"
     assert commands[("root", "uninstall")]["effects"]["destructive_potential"] is True
+    assert "uninstall.lifecycle.destructive-refusal.process" in commands[("root", "uninstall")]["conformance_refs"]
+    assert "upgrade.lifecycle.strict-preflight-refusal.process" in commands[("root", "upgrade")]["conformance_refs"]
+    assert commands[("root", "upgrade")]["mutation_promotion_blockers"]
     assert commands[("planning-package", "status")]["generation_eligibility"] == "eligible-read-only"
     assert commands[("memory-package", "status")]["generation_eligibility"] == "eligible-read-only"
     assert any("strict preflight" in fixture for fixture in manifest["conformance_fixture_plan"])
+    assert any("Dry-run lifecycle conformance" in decision for decision in manifest["dry_run_conformance_decision"])
 
 
 def test_contract_tooling_check_derives_validated_consumption_from_policy() -> None:

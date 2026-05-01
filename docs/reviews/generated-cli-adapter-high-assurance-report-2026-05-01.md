@@ -14,8 +14,8 @@
 ## Run Summary
 
 - Requested outcome: Finish the single-source generated executable adapter migration foundation, implement child issues through progressive maturity, commit, push, and create a PR.
-- What landed: Runtime-backed generated Python parser/dispatch for root read-only/context/diagnostic commands (`defaults`, `config`, `modules`, `start`, `summary`, `implement`, `preflight`, `proof`, `ownership`, `skills`, `report`, `reconcile`, `setup`, `status`, and `doctor`), Planning `status`, `doctor`, `summary`, `report`, and `reconcile`, and Memory `status`, `doctor`, and `report`; generated IR/schema support for parser `interface`; static checks that require generated Python routing before handwritten parsers; review documentation for the progressive maturity matrix.
-- What did not land: Mutation-capable lifecycle adapters and memory-only unique reporting commands whose names are not yet modeled by the global operation registry. Those remain intentionally below higher maturity because #642 and a package-command namespace follow-up require additional conformance before promotion.
+- What landed: Runtime-backed generated Python parser/dispatch for root read-only/context/diagnostic commands (`defaults`, `config`, `modules`, `start`, `summary`, `implement`, `preflight`, `proof`, `ownership`, `skills`, `report`, `reconcile`, `setup`, `status`, and `doctor`), Planning `status`, `doctor`, `summary`, `report`, and `reconcile`, and Memory `status`, `doctor`, and `report`; generated IR/schema support for parser `interface`; static checks that require generated Python routing before handwritten parsers; lifecycle dry-run/refusal conformance for #642; review documentation for the progressive maturity matrix.
+- What did not land: Mutation-capable lifecycle adapters and memory-only unique reporting commands whose names are not yet modeled by the global operation registry. Those remain intentionally below higher maturity because apply/mutation lifecycle proof and package-command namespace modeling require additional conformance before promotion.
 - Closure decision: `routed follow-up`
 - Residue destination: `planning, issue, docs`
 
@@ -53,6 +53,8 @@
 | Active execplan next-action guidance can become stale across repeated fields. | `summary` kept routing to the already-promoted `summary` command after later promotion batches were underway. | product-general | yes | issue | `#649` |
 | Generated package regeneration can leave line-ending-only working-tree noise. | Regeneration repeatedly reported CRLF/LF drift in generated Python and TypeScript package outputs. | product-general | yes | issue | `#650` |
 | Package-local command names are not first-class in the operation registry. | Memory package-only read-only commands could not be promoted without tripping root/global command-name parity. | product-general | yes | issue | `#651` |
+| Lifecycle maturity is too coarse at the operation level. | #642 dry-run/refusal proof landed while apply/mutation proof remains intentionally deferred, but `migration_status` is one field for the whole operation. | product-general | yes | issue | `#652` |
+| Process conformance fixtures cannot compose installed-state setup steps. | #642 upgrade/uninstall proof had to use static/minimal fixtures instead of first applying an install setup phase. | product-general | yes | issue | `#653` |
 
 ## Operating-Cost Review
 
@@ -70,10 +72,12 @@
 
 ## Conversion To Focused Issues
 
-- Created/used #642 for lifecycle dry-run and mutation generated-adapter migration.
-- Created/used #643 for remaining root read-only command generated-adapter migration.
-- Created/used #644 for Planning and Memory read-only command expansion.
+- Created/used #642 for lifecycle dry-run and mutation generated-adapter migration; implemented dry-run/refusal conformance while keeping mutation adapters deferred.
+- Created/used #643 for remaining root read-only command generated-adapter migration; implemented root read-only/context/diagnostic generated parser/dispatch.
+- Created/used #644 for Planning and Memory read-only command expansion; implemented stable package-local read-only generated parser/dispatch.
 - Created #645 for a guard or stronger route so broad high-assurance package work enters checked-in planning before implementation.
 - Created #649 for canonicalizing or checking active execplan next-action projections.
 - Created #650 for avoiding generated package line-ending-only drift.
 - Created #651 for package-scoped command identity in operation contracts and generated-adapter parity.
+- Created #652 for lifecycle dry-run/apply maturity split in operation contracts.
+- Created #653 for setup phases in process conformance fixtures.

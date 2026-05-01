@@ -142,6 +142,14 @@
             ],
             "description": "Allowed generation eligibility value for routing or validation."
           },
+          "conformance_refs": {
+            "$ref": "#/$defs/non_empty_strings",
+            "description": "Conformance contracts that currently prove this command's generated-adapter readiness boundary."
+          },
+          "mutation_promotion_blockers": {
+            "$ref": "#/$defs/non_empty_strings",
+            "description": "Remaining proof or design gaps that block mutation-capable generated adapter promotion."
+          },
           "notes": {
             "type": "string",
             "description": "Additional notes that qualify this record."
@@ -167,6 +175,10 @@
     "generation_decision": {
       "$ref": "#/$defs/non_empty_strings",
       "description": "Generation decision referenced contract shape used by this contract."
+    },
+    "dry_run_conformance_decision": {
+      "$ref": "#/$defs/non_empty_strings",
+      "description": "Decision rules for dry-run lifecycle conformance and mutation promotion gates."
     }
   },
   "additionalProperties": false,

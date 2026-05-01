@@ -1,0 +1,121 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "uninstall.lifecycle.destructive-refusal.process",
+  "operation_id": "uninstall.lifecycle",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "uninstall",
+      "--target",
+      ".",
+      "--module",
+      "planning",
+      "--dry-run",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "ambiguous-uninstall-refusal-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n",
+        ".agentic-workspace/WORKFLOW.md": "custom workflow text\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "command"
+          ],
+          "equals": "uninstall"
+        },
+        {
+          "path": [
+            "dry_run"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "command"
+          ],
+          "equals": "uninstall"
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "review_required"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "mutation_safety",
+            "classification"
+          ],
+          "equals": "destructive-mutation"
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "mutation_safety",
+            "destructive_risk",
+            "status"
+          ],
+          "equals": "present"
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "next_safe_command",
+            "status"
+          ],
+          "equals": "review-required"
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "surface_classifications",
+            "summary_by_class",
+            "ambiguous ownership manual-review"
+          ],
+          "equals": 1
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md",
+        ".agentic-workspace/WORKFLOW.md"
+      ],
+      "forbidden_paths": [
+        "AGENTS.md",
+        "llms.txt"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

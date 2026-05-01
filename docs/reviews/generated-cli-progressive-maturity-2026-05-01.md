@@ -41,24 +41,24 @@ Generated command surfaces move through these levels:
 | Planning Python CLI | `agentic-planning-bootstrap doctor`, `summary`, `report`, `reconcile` | handwritten package parser/dispatch | `runtime-backed-read-only-adapter` | package-local planning report primitives | generated parser/dispatch test and process conformance |
 | Memory Python CLI | `agentic-memory-bootstrap doctor`, `report` | handwritten package parser/dispatch | `runtime-backed-read-only-adapter` | package-local memory report primitives | generated parser/dispatch test and process conformance |
 
-## Remaining Root Read-Only Commands
+## Root Read-Only Commands
 
-Tracked by #643. These commands already have interface declarations in `cli_commands.json`, but they are not promoted to runtime-backed generated Python parser/dispatch in this PR.
+Tracked by #643. These commands now have runtime-backed generated Python parser/dispatch and black-box conformance where promoted in this lane.
 
-| Command | Current authority | Next maturity step | Notes |
+| Command | Current authority | Status | Notes |
 | --- | --- | --- | --- |
-| `modules` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with minimal-repo black-box conformance. |
-| `config` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with minimal-repo black-box conformance. |
-| `start` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with changed-path black-box conformance. |
-| `summary` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with no-active-execplan black-box conformance. |
-| `implement` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with task text and changed-path conformance. |
-| `preflight` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with active-only conformance. |
-| `proof` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with changed-path conformance. |
-| `ownership` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with concern selector conformance. |
-| `skills` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with task recommendation conformance. |
-| `reconcile` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with provider-agnostic reconciliation conformance. |
-| `report` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with router-profile conformance. |
-| `setup`, `status`, `doctor` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Promoted in the #643 continuation slice with explicit planning-module fixture conformance. |
+| `modules` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Minimal-repo black-box conformance. |
+| `config` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Minimal-repo black-box conformance. |
+| `start` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Changed-path black-box conformance. |
+| `summary` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | No-active-execplan black-box conformance. |
+| `implement` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Task text and changed-path conformance. |
+| `preflight` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Active-only conformance. |
+| `proof` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Changed-path conformance. |
+| `ownership` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Concern selector conformance. |
+| `skills` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Task recommendation conformance. |
+| `reconcile` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Provider-agnostic reconciliation conformance. |
+| `report` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Router-profile conformance. |
+| `setup`, `status`, `doctor` | generated parser/dispatch backed by command-package IR | `runtime-backed-read-only-adapter` | Explicit planning-module fixture conformance. |
 
 ## Package Read-Only Commands
 
@@ -66,7 +66,16 @@ Tracked by #644. This PR promotes the stable package-local read-only commands th
 
 ## Lifecycle Dry-Run And Mutation Commands
 
-Tracked by #642. Lifecycle commands stay below `mutation-capable-adapter` until generated adapters can prove:
+Tracked by #642. This lane added black-box conformance for lifecycle dry-run/refusal behavior without enabling mutation-capable generated adapters:
+
+- `install.lifecycle.dry-run.process` proves install dry-run plan shape and no writes.
+- `init.lifecycle.dry-run.process` proves init dry-run plan shape and no writes.
+- `upgrade.lifecycle.dry-run.process` proves upgrade dry-run planning, root-upgrade front-door routing, and review-before-apply flags.
+- `upgrade.lifecycle.strict-preflight-refusal.process` proves strict preflight refuses before mutation.
+- `uninstall.lifecycle.destructive-refusal.process` proves ambiguous destructive removal is review-required and write-free in dry-run.
+- `uninstall.lifecycle.strict-preflight-refusal.process` proves strict preflight refuses destructive lifecycle mutation before apply.
+
+Lifecycle commands stay below `mutation-capable-adapter` until generated adapters can prove:
 
 - dry-run behavior separately from apply behavior;
 - strict preflight gate handling before mutation;
@@ -74,7 +83,7 @@ Tracked by #642. Lifecycle commands stay below `mutation-capable-adapter` until 
 - human review requirements in generated help/error paths;
 - black-box failure coverage for unsafe or incomplete invocations.
 
-This PR deliberately does not promote `install`, `init`, `upgrade`, `uninstall`, `prompt`, or package mutation commands beyond deferred/readiness status.
+This PR deliberately does not promote `install`, `init`, `upgrade`, `uninstall`, `prompt`, or package mutation commands beyond deferred/readiness status. Follow-up #652 tracks the contract gap where dry-run/refusal maturity needs to be represented separately from apply/mutation maturity, and #653 tracks setup phases for stronger installed-state process conformance.
 
 ## Reference Docs
 
