@@ -1,0 +1,434 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generated CLI Follow-Ups #657-#660",
+  "goal": [
+    "Ingest and implement #657, #658, #659, and #660 as one generated-CLI dogfooding lane.",
+    "Keep the lane queue explicit and route any newly discovered dogfooding findings into the same queue until it is empty."
+  ],
+  "non_goals": [
+    "Do not move generated Python outputs under generated/python in this lane.",
+    "Do not generate mutation-capable apply adapters before safety maturity is explicit."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Generated CLI authority and maturity are current, enforceable, and honest after #641.",
+      "constraints": "Use checked-in planning before code edits, keep runtime primitives hand-owned, and avoid overclaiming mutation maturity.",
+      "latitude": "May decompose and implement bounded dogfooding follow-ups without asking when they are actual bugs or unintended behavior.",
+      "escalation": "Stop before changing generated CLI architecture beyond the issue scope or moving Python generated outputs."
+    },
+    "execution": {
+      "milestone": "generated-cli-followups-657-660",
+      "status": "active",
+      "next_step": "Inspect generated command package coverage and current checks for #657.",
+      "proof": "Focused generated-command and conformance checks, then make check before closeout."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/generated-cli-followups-657-660.plan.json",
+        "src/agentic_workspace/contracts/",
+        "src/agentic_workspace/generated_cli_package/",
+        "packages/memory/src/repo_memory_bootstrap/",
+        "packages/planning/src/repo_planning_bootstrap/",
+        "packages/command-generation/src/agentic_command_generation/",
+        "scripts/check/",
+        "scripts/generate/",
+        "tests/",
+        "docs/reviews/",
+        "docs/reference/"
+      ],
+      "invariants": [
+        "Contracts and IR own command/interface truth for generated surfaces.",
+        "Generated adapters delegate to hand-owned runtime primitives.",
+        "Lifecycle mutation/apply behavior remains deferred unless safety conformance proves promotion."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Finish the generated CLI migration honestly enough that future command-interface changes go through canonical contracts and all remaining exceptions are named.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none when #657-#660 and lane-discovered bug findings are implemented; otherwise this plan queue",
+    "parent lane": "#641 generated CLI migration follow-up"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "this execplan queue until empty",
+    "activation trigger": "active now"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Post-migration generated CLI authority, Memory package-local read-only promotion, lifecycle dry-run/refusal maturity, and mutation-gate clarity.",
+    "intentionally deferred": "#661 generated/python relocation remains deferred until generated CLIs are fully landed.",
+    "discovered implications": "pending",
+    "proof achieved now": "pending",
+    "validation still needed": "focused checks and make check",
+    "next likely slice": "none if queue drains"
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest and implement #657-#660; follow the same dogfooding protocol; feed new findings into the current queue and keep working until the queue is empty.",
+    "inferred intended outcome": "Use the package workflow to finish the current generated-CLI follow-up queue, not just patch one issue.",
+    "chosen concrete what": "One active checked-in plan with explicit issue queue, implementation batches, proof, and closeout.",
+    "interpretation distance": "low",
+    "review guidance": "Check that any deferrals are explicit and that newly discovered actual bugs were fixed rather than only recorded."
+  },
+  "execution_bounds": {
+    "allowed paths": "Generated CLI contracts, generators, generated outputs, package CLI routing, conformance tests, focused docs/reviews, and planning state for this lane.",
+    "max changed files": "Broad but bounded to generated CLI follow-up surfaces.",
+    "required validation commands": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/generate/generate_command_packages.py --check; uv run pytest tests/test_generated_tool_conformance.py tests/test_contract_tooling.py -q; make check",
+    "ask-before-refactor threshold": "Ask before moving generated Python output roots, replacing runtime primitive architecture, or promoting mutation apply behavior beyond explicit safety gates.",
+    "stop before touching": "Unrelated docs cleanup, unrelated historical archives, and #627 large-file remediation."
+  },
+  "stop_conditions": {
+    "stop when": "#657-#660 and lane-created dogfooding bug findings are implemented, validated, committed, pushed, and archived.",
+    "escalate when boundary reached": "The lane requires generated/python relocation, broad runtime file splitting, or mutation semantics changes.",
+    "escalate on scope drift": "A finding is an optimization or optional design improvement rather than an actual bug or unintended behavior.",
+    "escalate on proof failure": "A full check failure cannot be reduced to a bounded issue in this lane."
+  },
+  "context_budget": {
+    "live working set": "#657-#660 issue bodies, command_package_ir, operation/conformance contracts, generator, generated package checks, package CLI files.",
+    "recoverable later": "Historical #641 archive and generated CLI PR discussion.",
+    "externalize before shift": "Update this execplan queue, execution_run, proof_report, and improvement_signal_review.",
+    "pre-work config pull": "agentic-workspace summary --format json",
+    "pre-work memory pull": "Only route-specific memory if implementation touches an unfamiliar package boundary.",
+    "tiny resumability note": "Drain #657-#660 from state.toml work_items; add actual dogfooding bugs to that queue and implement before closeout.",
+    "context-shift triggers": "After each commit or before broad generated output regeneration."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the whole queue with dogfooding discipline.",
+    "hard constraints": "No premature generated/python move; no mutation apply overclaim; commit and push as work lands.",
+    "agent may decide locally": "Exact grouping of generated command promotions, audits, tests, and docs.",
+    "escalate when": "The intended maturity model conflicts with current package architecture."
+  },
+  "adaptive_assurance": {
+    "level": "high",
+    "reason": "Multi-issue generated CLI authority work touches command contracts, generated outputs, runtime routing, and conformance.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "requirement_refs",
+      "acceptance_refs",
+      "decision_refs"
+    ],
+    "proof_profiles": [
+      "generated-command-freshness",
+      "generated-tool-conformance",
+      "contract-tooling",
+      "full-check"
+    ],
+    "required_gates": [
+      "queue-empty",
+      "focused-proof",
+      "make-check",
+      "archive-ready"
+    ]
+  },
+  "traceability_refs": {
+    "requirement_refs": [
+      "#657",
+      "#658",
+      "#659",
+      "#660"
+    ],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/lifecycle_generation_readiness.json"
+    ],
+    "risk_refs": [
+      "mutation adapters must not be over-promoted",
+      "hand-authored interface authority must not silently return"
+    ],
+    "security_refs": [],
+    "audit_refs": [],
+    "acceptance_refs": [
+      "#657 acceptance",
+      "#658 acceptance",
+      "#659 acceptance",
+      "#660 acceptance"
+    ],
+    "decision_refs": [
+      "#661 remains deferred"
+    ]
+  },
+  "control_gates": [
+    {
+      "id": "queue-empty",
+      "status": "pending",
+      "owner_role": "agent",
+      "required_for": [
+        "archive"
+      ],
+      "blocking": true,
+      "evidence": [
+        "state.toml work_items for #657-#660 are empty, closed, or explicitly routed"
+      ],
+      "next_action": "Implement queued issue slices and remove completed queue items."
+    },
+    {
+      "id": "focused-proof",
+      "status": "pending",
+      "owner_role": "agent",
+      "required_for": [
+        "archive"
+      ],
+      "blocking": true,
+      "evidence": [
+        "generated command and conformance checks pass"
+      ],
+      "next_action": "Run focused generated CLI proof after implementation."
+    },
+    {
+      "id": "make-check",
+      "status": "pending",
+      "owner_role": "agent",
+      "required_for": [
+        "archive"
+      ],
+      "blocking": true,
+      "evidence": [
+        "make check passes"
+      ],
+      "next_action": "Run full check before closeout."
+    }
+  ],
+  "implementation_blockers": [],
+  "risk_registry_refs": [
+    "Generated adapters may make Python look privileged if layout is changed prematurely.",
+    "Lifecycle dry-run promotion may blur into mutation apply if maturity labels are not explicit."
+  ],
+  "invariant_refs": [
+    "command_package_ir generation_policy.authority_rule",
+    "command_package_ir generation_policy.runtime_boundary"
+  ],
+  "test_data_policy": {
+    "classification": "synthetic repo fixtures only",
+    "forbidden": [
+      "network-dependent conformance",
+      "destructive writes outside temp fixtures"
+    ],
+    "fixture_owner": "tests and conformance setup_steps",
+    "proof_required": [
+      "no writes outside target",
+      "dry-run/refusal behavior stays non-mutating"
+    ],
+    "refs": [
+      "tests/test_generated_tool_conformance.py"
+    ]
+  },
+  "layer_scaffold": {
+    "type": "generated-cli-progressive-maturity",
+    "required_refs": [
+      "command_package_ir.json",
+      "conformance_contracts.json",
+      "lifecycle_generation_readiness.json"
+    ],
+    "common_risks": [
+      "generated outputs stale",
+      "handwritten CLI parser drift",
+      "mutation maturity overclaim"
+    ],
+    "suggested_proof_profiles": [
+      "focused generated checks",
+      "full make check"
+    ],
+    "suggested_gates": [
+      "queue-empty",
+      "strict closeout"
+    ],
+    "non_goals": [
+      "runtime primitive rewrite",
+      "generated/python relocation"
+    ],
+    "durable_residue_prompts": [
+      "If a new actual bug is found, create or add a state.toml work_items queue entry and implement it before archive."
+    ]
+  },
+  "architecture_decision_promotion": {
+    "status": "none",
+    "target": "",
+    "decision_refs": [],
+    "promotion_needed": false,
+    "notes": "The generated/python relocation decision is already captured by #661 and deferred."
+  },
+  "threat_failure_aids": [],
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/657",
+      "label": "#657",
+      "role": "requirement",
+      "locator": "#657"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/658",
+      "label": "#658",
+      "role": "requirement",
+      "locator": "#658"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/659",
+      "label": "#659",
+      "role": "requirement",
+      "locator": "#659"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/660",
+      "label": "#660",
+      "role": "requirement",
+      "locator": "#660"
+    }
+  ],
+  "active_milestone": {
+    "id": "ingest-and-audit",
+    "status": "active",
+    "scope": "#657 first, then generated adapter promotion and lifecycle maturity queue",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect generated command package coverage and current checks for #657."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/generated-cli-followups-657-660.plan.json",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/conformance_contracts.json",
+    "src/agentic_workspace/contracts/lifecycle_generation_readiness.json",
+    "packages/memory/src/repo_memory_bootstrap/cli.py",
+    "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py",
+    "src/agentic_workspace/generated_cli_package/__init__.py",
+    "packages/command-generation/src/agentic_command_generation/generator.py",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_generated_tool_conformance.py",
+    "tests/test_contract_tooling.py"
+  ],
+  "invariants": [
+    "Generated command files are regenerated, not manually edited.",
+    "Runtime primitives remain hand-owned.",
+    "Lifecycle mutation remains review-required and gated."
+  ],
+  "contract_decisions_to_freeze": [
+    "Python is one generated CLI target, but generated/python relocation is deferred to #661.",
+    "Dry-run/refusal maturity is separate from mutation-capable maturity."
+  ],
+  "open_questions_to_close": [
+    "Which CLI surfaces remain hand-authored after #641?",
+    "Can Memory package-local read-only commands be promoted now?",
+    "What generated maturity label should lifecycle dry-run/refusal use?",
+    "What exact gate blocks mutation-capable lifecycle promotion?"
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run pytest tests/test_generated_tool_conformance.py tests/test_contract_tooling.py -q",
+    "make check"
+  ],
+  "required_tools": [
+    "gh",
+    "uv",
+    "make"
+  ],
+  "completion_criteria": [
+    "#657-#660 are implemented or explicitly honest deferrals are checked in.",
+    "Any actual dogfooding bugs discovered in this lane are added to state.toml work_items and implemented before archive.",
+    "Focused proof and make check pass.",
+    "Issues are closed or linked to closing commits/PR."
+  ],
+  "execution_run": {
+    "run status": "not-started",
+    "executor": "Codex",
+    "handoff source": "user request and GitHub issues #657-#660",
+    "what happened": "Plan created; implementation pending.",
+    "scope touched": "planning state only so far",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/generated-cli-followups-657-660.plan.json",
+    "validations run": "agentic-workspace summary; gh issue view #657-#660",
+    "result for continuation": "continue implementation",
+    "next step": "Inspect generated command coverage and checks for #657."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "used package workflow and checked-in planning",
+    "misinterpretation risk": "medium until queue is fully drained",
+    "follow-on decision": "pending"
+  },
+  "proof_report": {
+    "validation proof": "pending",
+    "proof achieved now": "pending",
+    "evidence for \"proof achieved\" state": "pending"
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest and implement #657-#660 and dogfood findings until queue is empty.",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "pending",
+    "unsolved intent passed to": "pending"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Use checked-in execution state for broad work and keep command authority explicit.",
+    "slice shaping bias": "Prefer contract-backed generated surfaces and honest deferral over hidden Python authority.",
+    "broader-lane validation question": "Can future agents change command interfaces without code archaeology?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "why this decision is honest": "pending",
+    "evidence carried forward": "pending",
+    "reopen trigger": "Generated CLI queue item remains open or proof fails."
+  },
+  "generated_closeout": {
+    "status": "not-generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; structured execplan fields remain authoritative",
+    "text": ""
+  },
+  "memory_learning_capture": {
+    "status": "pending",
+    "memory consult recommended?": "pending",
+    "memory notes read": "",
+    "future agents should not rediscover": "pending",
+    "decision": "pending",
+    "target": "",
+    "reason": "Choose one: none, update_existing_memory_note, create_memory_note, promote_to_docs_contracts_checks_code, route_to_planning, evidence_only."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "pending until closeout",
+    "motivation worth preserving": "pending until closeout",
+    "canonical owner now": "none",
+    "promotion trigger": "pending until closeout",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "pending",
+    "validation confirmed": "pending",
+    "follow-on routed to": "pending",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "pending",
+    "resume from": "this active execplan"
+  },
+  "improvement_signal_review": {
+    "status": "active",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "state.toml work_items until empty"
+  },
+  "drift_log": [
+    "2026-05-01: Created checked-in plan for #657-#660 before implementation."
+  ]
+}

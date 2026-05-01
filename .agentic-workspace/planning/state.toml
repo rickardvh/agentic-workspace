@@ -1,10 +1,17 @@
 kind = "agentic-planning-state"
 schema_version = "planning-state/v1"
 
-work_items = []
+work_items = [
+  { id = "#657", type = "slice", maturity = "ready", status = "next", why_now = "Post-migration generated CLI authority needs a current audit before more promotion work.", next_action = "Audit remaining hand-authored CLI interface authority.", done_when = "Current-state matrix and checks classify generated and remaining hand-authored authority.", proof = "Generated CLI authority audit plus generated command checks.", owner_role = "implementation", review_role = "validation", handoff_ready = true, path = ".agentic-workspace/planning/execplans/generated-cli-followups-657-660.plan.json" },
+  { id = "#658", type = "slice", maturity = "ready", status = "next", why_now = "Memory package-local read-only commands should not keep hidden interface authority if they are stable.", next_action = "Promote or classify remaining Memory package-local read-only commands.", done_when = "route-report, promotion-report, list-files, and list-skills are generated or explicitly classified.", proof = "Generated command package freshness and Memory command conformance.", owner_role = "implementation", review_role = "validation", handoff_ready = true, path = ".agentic-workspace/planning/execplans/generated-cli-followups-657-660.plan.json" },
+  { id = "#659", type = "slice", maturity = "ready", status = "next", why_now = "Lifecycle dry-run/refusal paths are safe generated-adapter candidates before mutation apply.", next_action = "Promote lifecycle dry-run/refusal interfaces or encode the maturity gap.", done_when = "Dry-run/refusal maturity is contract-backed and conformance-backed without apply promotion.", proof = "Lifecycle readiness contract and conformance checks distinguish dry-run/refusal from apply.", owner_role = "implementation", review_role = "validation", handoff_ready = true, path = ".agentic-workspace/planning/execplans/generated-cli-followups-657-660.plan.json" },
+  { id = "#660", type = "slice", maturity = "ready", status = "next", why_now = "Mutation-capable generated adapters need an explicit promotion gate.", next_action = "Define and enforce mutation adapter promotion criteria.", done_when = "Mutation-capable adapter promotion criteria are explicit, testable, and not overclaimed.", proof = "Lifecycle readiness checks prevent mutation-capable promotion without safety conformance.", owner_role = "implementation", review_role = "validation", handoff_ready = true, path = ".agentic-workspace/planning/execplans/generated-cli-followups-657-660.plan.json" },
+]
 
 [active]
-execplans = []
+execplans = [
+  { id = "generated-cli-followups-657-660", path = ".agentic-workspace/planning/execplans/generated-cli-followups-657-660.plan.json", status = "active", maturity = "active" },
+]
 
 [todo]
 active_items = []
