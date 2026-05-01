@@ -1,6 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/conformance.schema.json",
+  "title": "Conformance",
+  "description": "Schema for Conformance.",
   "type": "object",
   "required": [
     "schema_version",
@@ -12,15 +14,18 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "agentic-workspace/conformance/v1"
+      "const": "agentic-workspace/conformance/v1",
+      "description": "The schema version constant field in Conformance."
     },
     "id": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "The id string field in Conformance."
     },
     "operation_id": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "The operation id string field in Conformance."
     },
     "adapter": {
       "type": "object",
@@ -31,24 +36,29 @@
       ],
       "properties": {
         "kind": {
-          "const": "process"
+          "const": "process",
+          "description": "The kind constant field in Conformance."
         },
         "command_template": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "minLength": 1
-          }
+            "minLength": 1,
+            "description": "Item string accepted by command template in Conformance."
+          },
+          "description": "The command template array field in Conformance."
         },
         "cwd": {
           "enum": [
             "fixture_root",
             "repo_root"
-          ]
+          ],
+          "description": "The cwd enumerated value field in Conformance."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The adapter object field in Conformance."
     },
     "fixtures": {
       "type": "array",
@@ -62,17 +72,22 @@
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "The id string field in Conformance."
           },
           "files": {
             "type": "object",
             "additionalProperties": {
-              "type": "string"
-            }
+              "type": "string",
+              "description": "Additional named string entry for files in Conformance."
+            },
+            "description": "The files object field in Conformance."
           }
         },
-        "additionalProperties": false
-      }
+        "additionalProperties": false,
+        "description": "Item object accepted by fixtures in Conformance."
+      },
+      "description": "The fixtures array field in Conformance."
     },
     "expectations": {
       "type": "object",
@@ -92,10 +107,12 @@
           ],
           "properties": {
             "code": {
-              "type": "integer"
+              "type": "integer",
+              "description": "The code integer field in Conformance."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The exit object field in Conformance."
         },
         "stdout": {
           "type": "object",
@@ -108,20 +125,25 @@
               "enum": [
                 "json",
                 "text"
-              ]
+              ],
+              "description": "The format enumerated value field in Conformance."
             },
             "schema": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "The schema string field in Conformance."
             },
             "field_assertions": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/field_assertion"
-              }
+                "$ref": "#/$defs/field_assertion",
+                "description": "Item reference accepted by field assertions in Conformance."
+              },
+              "description": "The field assertions array field in Conformance."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The stdout object field in Conformance."
         },
         "stderr": {
           "type": "object",
@@ -130,10 +152,12 @@
           ],
           "properties": {
             "allow_non_empty": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "The allow non empty boolean field in Conformance."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The stderr object field in Conformance."
         },
         "filesystem": {
           "type": "object",
@@ -144,16 +168,20 @@
           ],
           "properties": {
             "allowed_write_paths": {
-              "$ref": "#/$defs/path_list"
+              "$ref": "#/$defs/path_list",
+              "description": "The allowed write paths reference field in Conformance."
             },
             "required_paths": {
-              "$ref": "#/$defs/path_list"
+              "$ref": "#/$defs/path_list",
+              "description": "The required paths reference field in Conformance."
             },
             "forbidden_paths": {
-              "$ref": "#/$defs/path_list"
+              "$ref": "#/$defs/path_list",
+              "description": "The forbidden paths reference field in Conformance."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The filesystem object field in Conformance."
         },
         "idempotency": {
           "type": "object",
@@ -162,10 +190,12 @@
           ],
           "properties": {
             "run_twice": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "The run twice boolean field in Conformance."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The idempotency object field in Conformance."
         },
         "safety": {
           "type": "object",
@@ -174,13 +204,16 @@
           ],
           "properties": {
             "no_writes_outside_repo_root": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "The no writes outside repo root boolean field in Conformance."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The safety object field in Conformance."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The expectations object field in Conformance."
     }
   },
   "additionalProperties": false,
@@ -197,18 +230,24 @@
           "minItems": 1,
           "items": {
             "type": "string",
-            "minLength": 1
-          }
+            "minLength": 1,
+            "description": "Item string accepted by path in Conformance."
+          },
+          "description": "The path array field in Conformance."
         },
         "equals": {}
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable field assertion object definition for Conformance."
     },
     "path_list": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "description": "Item string accepted by path list in Conformance."
+      },
+      "description": "Reusable path list array definition for Conformance."
     }
-  }
+  },
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/selector-contracts-manifest.schema.json",
   "title": "Selector Contracts Manifest",
+  "description": "Schema for Selector Contracts Manifest.",
   "type": "object",
   "required": [
     "schema_version",
@@ -12,20 +13,25 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "selector-contracts-manifest/v1"
+      "const": "selector-contracts-manifest/v1",
+      "description": "The schema version constant field in Selector Contracts Manifest."
     },
     "canonical_doc": {
-      "type": "string"
+      "type": "string",
+      "description": "The canonical doc string field in Selector Contracts Manifest."
     },
     "profile": {
-      "type": "string"
+      "type": "string",
+      "description": "The profile string field in Selector Contracts Manifest."
     },
     "answer_shape": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "description": "Item string accepted by answer shape in Selector Contracts Manifest."
       },
-      "minItems": 1
+      "minItems": 1,
+      "description": "The answer shape array field in Selector Contracts Manifest."
     },
     "selectors": {
       "type": "object",
@@ -39,18 +45,24 @@
         ],
         "properties": {
           "surface": {
-            "type": "string"
+            "type": "string",
+            "description": "The surface string field in Selector Contracts Manifest."
           },
           "selector_key": {
-            "type": "string"
+            "type": "string",
+            "description": "The selector key string field in Selector Contracts Manifest."
           },
           "command": {
-            "type": "string"
+            "type": "string",
+            "description": "The command string field in Selector Contracts Manifest."
           }
         },
-        "additionalProperties": false
-      }
+        "additionalProperties": false,
+        "description": "Additional named object entry for selectors in Selector Contracts Manifest."
+      },
+      "description": "The selectors object field in Selector Contracts Manifest."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

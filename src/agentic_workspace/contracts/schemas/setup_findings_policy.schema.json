@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/setup-findings-policy.schema.json",
   "title": "Setup Findings Promotion Policy",
+  "description": "Schema for Setup Findings Promotion Policy.",
   "type": "object",
   "required": [
     "schema_version",
@@ -13,18 +14,22 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "agentic-workspace/setup-findings-policy/v1"
+      "const": "agentic-workspace/setup-findings-policy/v1",
+      "description": "The schema version constant field in Setup Findings Promotion Policy."
     },
     "artifact_path": {
-      "type": "string"
+      "type": "string",
+      "description": "The artifact path string field in Setup Findings Promotion Policy."
     },
     "accepted_kind": {
-      "type": "string"
+      "type": "string",
+      "description": "The accepted kind string field in Setup Findings Promotion Policy."
     },
     "promotion_confidence_threshold": {
       "type": "number",
       "minimum": 0.0,
-      "maximum": 1.0
+      "maximum": 1.0,
+      "description": "The promotion confidence threshold number field in Setup Findings Promotion Policy."
     },
     "accepted_classes": {
       "type": "array",
@@ -41,25 +46,32 @@
         ],
         "properties": {
           "class": {
-            "type": "string"
+            "type": "string",
+            "description": "The class string field in Setup Findings Promotion Policy."
           },
           "summary": {
-            "type": "string"
+            "type": "string",
+            "description": "The summary string field in Setup Findings Promotion Policy."
           },
           "promote_to": {
-            "type": "string"
+            "type": "string",
+            "description": "The promote to string field in Setup Findings Promotion Policy."
           },
           "preserve_when": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "description": "Item string accepted by preserve when in Setup Findings Promotion Policy."
+            },
+            "description": "The preserve when array field in Setup Findings Promotion Policy."
           },
           "transient_when": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "description": "Item string accepted by transient when in Setup Findings Promotion Policy."
+            },
+            "description": "The transient when array field in Setup Findings Promotion Policy."
           },
           "required_for_promotion": {
             "type": "array",
@@ -68,19 +80,26 @@
               "enum": [
                 "path_or_refs",
                 "next_action"
-              ]
-            }
+              ],
+              "description": "Item enumerated value accepted by required for promotion in Setup Findings Promotion Policy."
+            },
+            "description": "The required for promotion array field in Setup Findings Promotion Policy."
           }
         },
-        "additionalProperties": false
-      }
+        "additionalProperties": false,
+        "description": "Item object accepted by accepted classes in Setup Findings Promotion Policy."
+      },
+      "description": "The accepted classes array field in Setup Findings Promotion Policy."
     },
     "secondary": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "description": "Item string accepted by secondary in Setup Findings Promotion Policy."
+      },
+      "description": "The secondary array field in Setup Findings Promotion Policy."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

@@ -10,6 +10,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SCHEMA = Path("src/agentic_workspace/contracts/schemas/workspace_config.schema.json")
 DEFAULT_OUTPUT = Path("docs/reference/workspace-config.md")
+SCHEMA_ROOT = Path("src/agentic_workspace/contracts/schemas")
 
 
 @dataclass(frozen=True)
@@ -18,12 +19,20 @@ class ReferenceTarget:
     output_path: Path
 
 
-DEFAULT_TARGETS = (
-    ReferenceTarget(
-        schema_path=DEFAULT_SCHEMA,
-        output_path=DEFAULT_OUTPUT,
-    ),
-)
+def _default_targets() -> tuple[ReferenceTarget, ...]:
+    targets: list[ReferenceTarget] = []
+    for schema_path in sorted((REPO_ROOT / SCHEMA_ROOT).glob("*.schema.json")):
+        relative_schema_path = schema_path.relative_to(REPO_ROOT)
+        output_name = schema_path.name.removesuffix(".schema.json").replace("_", "-")
+        if relative_schema_path == DEFAULT_SCHEMA:
+            output_path = DEFAULT_OUTPUT
+        else:
+            output_path = Path("docs/reference") / f"{output_name}.md"
+        targets.append(ReferenceTarget(relative_schema_path, output_path))
+    return tuple(targets)
+
+
+DEFAULT_TARGETS = _default_targets()
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -257,19 +266,20 @@ def _annotation_errors(schema_path: Path, *, repo_root: Path = REPO_ROOT) -> lis
             errors.append(f"{schema_path.as_posix()} field {row['path']} is missing description")
     if not schema.get("x-agentic-workspace-doc-role"):
         errors.append(f"{schema_path.as_posix()} root is missing x-agentic-workspace-doc-role")
-    for public_field in (
-        "workspace.default_preset",
-        "workspace.agent_instructions_file",
-        "workspace.workflow_artifact_profile",
-        "workspace.improvement_latitude",
-        "workspace.optimization_bias",
-        "workspace.advanced_features",
-    ):
-        matching = next((row for row in rows if row["path"] == public_field), None)
-        if matching is None:
-            errors.append(f"{schema_path.as_posix()} field {public_field} is missing from generated rows")
-        elif not matching["default"]:
-            errors.append(f"{schema_path.as_posix()} field {public_field} is missing default annotation")
+    if schema_path == DEFAULT_SCHEMA:
+        for public_field in (
+            "workspace.default_preset",
+            "workspace.agent_instructions_file",
+            "workspace.workflow_artifact_profile",
+            "workspace.improvement_latitude",
+            "workspace.optimization_bias",
+            "workspace.advanced_features",
+        ):
+            matching = next((row for row in rows if row["path"] == public_field), None)
+            if matching is None:
+                errors.append(f"{schema_path.as_posix()} field {public_field} is missing from generated rows")
+            elif not matching["default"]:
+                errors.append(f"{schema_path.as_posix()} field {public_field} is missing default annotation")
     return errors
 
 

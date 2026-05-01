@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/module-capability.schema.json",
   "title": "Agentic Workspace Module Capability Contract",
+  "description": "Schema for Agentic Workspace Module Capability Contract.",
   "type": "object",
   "required": [
     "name",
@@ -31,13 +32,19 @@
     },
     "capabilities": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string",
+        "description": "Item string accepted by capabilities in Agentic Workspace Module Capability Contract."
+      },
       "minItems": 1,
       "description": "Durable product capabilities the module owns."
     },
     "commands": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string",
+        "description": "Item string accepted by commands in Agentic Workspace Module Capability Contract."
+      },
       "description": "Lifecycle hooks the workspace layer may orchestrate."
     },
     "command_args": {
@@ -46,69 +53,117 @@
         "^.+$": {
           "type": "array",
           "items": {
-            "enum": ["target", "dry_run", "force"]
-          }
+            "enum": [
+              "target",
+              "dry_run",
+              "force"
+            ],
+            "description": "Item enumerated value accepted by +$ in Agentic Workspace Module Capability Contract."
+          },
+          "description": "Pattern-matched array entry for command args.<^ in Agentic Workspace Module Capability Contract."
         }
       },
       "description": "Arguments accepted by each lifecycle command."
     },
     "install_signals": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string",
+        "description": "Item string accepted by install signals in Agentic Workspace Module Capability Contract."
+      },
       "minItems": 1,
       "description": "Repo surfaces that indicate the module is materially installed."
     },
     "workflow_surfaces": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string",
+        "description": "Item string accepted by workflow surfaces in Agentic Workspace Module Capability Contract."
+      },
       "minItems": 1,
       "description": "Repo surfaces that belong to the module's working contract."
     },
     "generated_artifacts": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string",
+        "description": "Item string accepted by generated artifacts in Agentic Workspace Module Capability Contract."
+      },
       "description": "Generated outputs whose drift should be reported instead of hand-edited."
     },
     "dependencies": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string",
+        "description": "Item string accepted by dependencies in Agentic Workspace Module Capability Contract."
+      },
       "description": "Other modules that must also be selected when this module is selected."
     },
     "conflicts": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string",
+        "description": "Item string accepted by conflicts in Agentic Workspace Module Capability Contract."
+      },
       "description": "Other modules that may not be selected at the same time."
     },
     "startup_steps": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string",
+        "description": "Item string accepted by startup steps in Agentic Workspace Module Capability Contract."
+      },
       "description": "Ordered steps recommended for fresh agents during startup."
     },
     "sources_of_truth": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string",
+        "description": "Item string accepted by sources of truth in Agentic Workspace Module Capability Contract."
+      },
       "description": "Canonical sources of truth for the module's domain."
     },
     "result_contract": {
       "type": "object",
-      "required": ["schema_version", "guaranteed_fields", "action_fields", "warning_fields"],
+      "required": [
+        "schema_version",
+        "guaranteed_fields",
+        "action_fields",
+        "warning_fields"
+      ],
       "properties": {
-        "schema_version": { "type": "string" },
+        "schema_version": {
+          "type": "string",
+          "description": "The schema version string field in Agentic Workspace Module Capability Contract."
+        },
         "guaranteed_fields": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string",
+            "description": "Item string accepted by guaranteed fields in Agentic Workspace Module Capability Contract."
+          },
+          "description": "The guaranteed fields array field in Agentic Workspace Module Capability Contract."
         },
         "action_fields": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string",
+            "description": "Item string accepted by action fields in Agentic Workspace Module Capability Contract."
+          },
+          "description": "The action fields array field in Agentic Workspace Module Capability Contract."
         },
         "warning_fields": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string",
+            "description": "Item string accepted by warning fields in Agentic Workspace Module Capability Contract."
+          },
+          "description": "The warning fields array field in Agentic Workspace Module Capability Contract."
         }
       },
       "description": "The schema version and required fields the workspace adapter guarantees to preserve."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

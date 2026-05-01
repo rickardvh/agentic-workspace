@@ -78,7 +78,8 @@
             "enum": [
               "review_artifacts",
               "external_adapters"
-            ]
+            ],
+            "description": "Item enumerated value accepted by advanced features in Agentic Workspace Repo Config."
           },
           "uniqueItems": true,
           "default": [],
@@ -125,7 +126,8 @@
       "x-agentic-workspace-doc-role": "maintainer",
       "patternProperties": {
         "^.+$": {
-          "$ref": "#/$defs/workflow_obligation"
+          "$ref": "#/$defs/workflow_obligation",
+          "description": "Pattern-matched reference entry for workflow obligations.<^ in Agentic Workspace Repo Config."
         }
       },
       "additionalProperties": false
@@ -142,7 +144,8 @@
           "type": "array",
           "items": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Item string accepted by sources in Agentic Workspace Repo Config."
           },
           "uniqueItems": true,
           "examples": [
@@ -235,7 +238,8 @@
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 1,
+                  "description": "Item string accepted by required commands in Agentic Workspace Repo Config."
                 },
                 "uniqueItems": true,
                 "default": []
@@ -245,7 +249,8 @@
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 1,
+                  "description": "Item string accepted by optional commands in Agentic Workspace Repo Config."
                 },
                 "uniqueItems": true,
                 "default": []
@@ -255,7 +260,8 @@
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 1,
+                  "description": "Item string accepted by review aids in Agentic Workspace Repo Config."
                 },
                 "uniqueItems": true,
                 "default": []
@@ -314,7 +320,8 @@
               "source-checkout",
               "installed-package",
               "unknown"
-            ]
+            ],
+            "description": "Item enumerated value accepted by source classes in Agentic Workspace Repo Config."
           },
           "uniqueItems": true,
           "default": []
@@ -327,7 +334,8 @@
               "inside-target",
               "outside-target",
               "no-target"
-            ]
+            ],
+            "description": "Item enumerated value accepted by target relations in Agentic Workspace Repo Config."
           },
           "uniqueItems": true,
           "default": []
@@ -414,7 +422,8 @@
           "type": "array",
           "items": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Item string accepted by scope tags in Agentic Workspace Repo Config."
           },
           "minItems": 1,
           "examples": [
@@ -429,7 +438,8 @@
           "type": "array",
           "items": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Item string accepted by commands in Agentic Workspace Repo Config."
           },
           "minItems": 1,
           "examples": [

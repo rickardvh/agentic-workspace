@@ -35,3 +35,10 @@ def test_schema_reference_annotation_check_covers_workspace_config() -> None:
     module = _load_generator()
 
     assert module._annotation_errors(module.DEFAULT_SCHEMA) == []
+
+
+def test_schema_reference_default_targets_cover_all_contract_schemas() -> None:
+    module = _load_generator()
+    schemas = sorted(path.relative_to(module.REPO_ROOT) for path in (module.REPO_ROOT / module.SCHEMA_ROOT).glob("*.schema.json"))
+
+    assert sorted(target.schema_path for target in module.DEFAULT_TARGETS) == schemas

@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/implementer-context.schema.json",
   "title": "Implementer Context Payload",
+  "description": "Schema for Implementer Context Payload.",
   "type": "object",
   "required": [
     "kind",
@@ -19,54 +20,70 @@
   ],
   "properties": {
     "kind": {
-      "const": "implementer-context/v1"
+      "const": "implementer-context/v1",
+      "description": "The kind constant field in Implementer Context Payload."
     },
     "target": {
-      "type": "string"
+      "type": "string",
+      "description": "The target string field in Implementer Context Payload."
     },
     "changed_paths": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "description": "Item string accepted by changed paths in Implementer Context Payload."
+      },
+      "description": "The changed paths array field in Implementer Context Payload."
     },
     "inspect_files": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "description": "Item string accepted by inspect files in Implementer Context Payload."
       },
-      "minItems": 1
+      "minItems": 1,
+      "description": "The inspect files array field in Implementer Context Payload."
     },
     "files_to_avoid": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "description": "Item string accepted by files to avoid in Implementer Context Payload."
       },
-      "minItems": 1
+      "minItems": 1,
+      "description": "The files to avoid array field in Implementer Context Payload."
     },
     "package_boundary": {
-      "$ref": "#/$defs/package_boundary"
+      "$ref": "#/$defs/package_boundary",
+      "description": "The package boundary reference field in Implementer Context Payload."
     },
     "path_boundaries": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/path_boundary"
-      }
+        "$ref": "#/$defs/path_boundary",
+        "description": "Item reference accepted by path boundaries in Implementer Context Payload."
+      },
+      "description": "The path boundaries array field in Implementer Context Payload."
     },
     "authority_markers": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/authority_marker"
-      }
+        "$ref": "#/$defs/authority_marker",
+        "description": "Item reference accepted by authority markers in Implementer Context Payload."
+      },
+      "description": "The authority markers array field in Implementer Context Payload."
     },
     "proof": {
-      "type": "object"
+      "type": "object",
+      "description": "The proof object field in Implementer Context Payload."
     },
     "required_validation_commands": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "description": "Item string accepted by required validation commands in Implementer Context Payload."
+      },
+      "description": "The required validation commands array field in Implementer Context Payload."
     },
     "handoff_requirements": {
       "type": "object",
@@ -78,25 +95,32 @@
         "before_handoff": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "description": "Item string accepted by before handoff in Implementer Context Payload."
           },
-          "minItems": 1
+          "minItems": 1,
+          "description": "The before handoff array field in Implementer Context Payload."
         },
         "stop_when": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "description": "Item string accepted by stop when in Implementer Context Payload."
           },
-          "minItems": 1
+          "minItems": 1,
+          "description": "The stop when array field in Implementer Context Payload."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The handoff requirements object field in Implementer Context Payload."
     },
     "next_allowed_action": {
-      "type": "string"
+      "type": "string",
+      "description": "The next allowed action string field in Implementer Context Payload."
     },
     "task_routing": {
-      "type": "object"
+      "type": "object",
+      "description": "The task routing object field in Implementer Context Payload."
     }
   },
   "additionalProperties": false,
@@ -112,25 +136,31 @@
       ],
       "properties": {
         "path": {
-          "type": "string"
+          "type": "string",
+          "description": "The path string field in Implementer Context Payload."
         },
         "authority": {
-          "type": "string"
+          "type": "string",
+          "description": "The authority string field in Implementer Context Payload."
         },
         "canonical_source": {
-          "type": "string"
+          "type": "string",
+          "description": "The canonical source string field in Implementer Context Payload."
         },
         "safe_to_edit": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The safe to edit boolean field in Implementer Context Payload."
         },
         "refresh_command": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "description": "The refresh command string or null field in Implementer Context Payload."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable authority marker object definition for Implementer Context Payload."
     },
     "package_boundary": {
       "type": "object",
@@ -141,22 +171,27 @@
       ],
       "properties": {
         "status": {
-          "type": "string"
+          "type": "string",
+          "description": "The status string field in Implementer Context Payload."
         },
         "cwd": {
-          "type": "string"
+          "type": "string",
+          "description": "The cwd string field in Implementer Context Payload."
         },
         "warning": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "description": "The warning string or null field in Implementer Context Payload."
         },
         "package_root": {
-          "type": "string"
+          "type": "string",
+          "description": "The package root string field in Implementer Context Payload."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable package boundary object definition for Implementer Context Payload."
     },
     "path_boundary": {
       "type": "object",
@@ -168,22 +203,28 @@
       ],
       "properties": {
         "path": {
-          "type": "string"
+          "type": "string",
+          "description": "The path string field in Implementer Context Payload."
         },
         "authority": {
-          "type": "string"
+          "type": "string",
+          "description": "The authority string field in Implementer Context Payload."
         },
         "warning": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "description": "The warning string or null field in Implementer Context Payload."
         },
         "requires_attention": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The requires attention boolean field in Implementer Context Payload."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable path boundary object definition for Implementer Context Payload."
     }
-  }
+  },
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

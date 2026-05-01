@@ -22,16 +22,20 @@
   ],
   "properties": {
     "kind": {
-      "const": "agent-feedback-review/v1"
+      "const": "agent-feedback-review/v1",
+      "description": "The kind constant field in Agent Feedback Artifact."
     },
     "schema_version": {
-      "const": "agentic-workspace/agent-feedback/v1"
+      "const": "agentic-workspace/agent-feedback/v1",
+      "description": "The schema version constant field in Agent Feedback Artifact."
     },
     "evaluated_at": {
-      "type": "string"
+      "type": "string",
+      "description": "The evaluated at string field in Agent Feedback Artifact."
     },
     "prompt_ref": {
-      "type": "string"
+      "type": "string",
+      "description": "The prompt ref string field in Agent Feedback Artifact."
     },
     "context": {
       "type": "object",
@@ -42,22 +46,28 @@
       ],
       "properties": {
         "target": {
-          "type": "string"
+          "type": "string",
+          "description": "The target string field in Agent Feedback Artifact."
         },
         "work_window": {
-          "type": "string"
+          "type": "string",
+          "description": "The work window string field in Agent Feedback Artifact."
         },
         "package_surfaces_used": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "description": "Item string accepted by package surfaces used in Agent Feedback Artifact."
+          },
+          "description": "The package surfaces used array field in Agent Feedback Artifact."
         },
         "notes": {
-          "type": "string"
+          "type": "string",
+          "description": "The notes string field in Agent Feedback Artifact."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The context object field in Agent Feedback Artifact."
     },
     "impact": {
       "type": "object",
@@ -69,19 +79,24 @@
       ],
       "properties": {
         "outcome": {
-          "type": "string"
+          "type": "string",
+          "description": "The outcome string field in Agent Feedback Artifact."
         },
         "quality": {
-          "type": "string"
+          "type": "string",
+          "description": "The quality string field in Agent Feedback Artifact."
         },
         "efficiency": {
-          "type": "string"
+          "type": "string",
+          "description": "The efficiency string field in Agent Feedback Artifact."
         },
         "cognitive_load": {
-          "type": "string"
+          "type": "string",
+          "description": "The cognitive load string field in Agent Feedback Artifact."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The impact object field in Agent Feedback Artifact."
     },
     "findings": {
       "type": "array",
@@ -96,34 +111,42 @@
         ],
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "The id string field in Agent Feedback Artifact."
           },
           "summary": {
-            "type": "string"
+            "type": "string",
+            "description": "The summary string field in Agent Feedback Artifact."
           },
           "classification": {
             "enum": [
               "product-general",
               "repo-local",
               "mixed-unclear"
-            ]
+            ],
+            "description": "The classification enumerated value field in Agent Feedback Artifact."
           },
           "evidence": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "description": "Item string accepted by evidence in Agent Feedback Artifact."
+            },
+            "description": "The evidence array field in Agent Feedback Artifact."
           },
           "severity": {
             "enum": [
               "low",
               "medium",
               "high"
-            ]
+            ],
+            "description": "The severity enumerated value field in Agent Feedback Artifact."
           }
         },
-        "additionalProperties": false
-      }
+        "additionalProperties": false,
+        "description": "Item object accepted by findings in Agent Feedback Artifact."
+      },
+      "description": "The findings array field in Agent Feedback Artifact."
     },
     "suggestions": {
       "type": "array",
@@ -136,17 +159,22 @@
         ],
         "properties": {
           "finding_id": {
-            "type": "string"
+            "type": "string",
+            "description": "The finding id string field in Agent Feedback Artifact."
           },
           "summary": {
-            "type": "string"
+            "type": "string",
+            "description": "The summary string field in Agent Feedback Artifact."
           },
           "expected_effect": {
-            "type": "string"
+            "type": "string",
+            "description": "The expected effect string field in Agent Feedback Artifact."
           }
         },
-        "additionalProperties": false
-      }
+        "additionalProperties": false,
+        "description": "Item object accepted by suggestions in Agent Feedback Artifact."
+      },
+      "description": "The suggestions array field in Agent Feedback Artifact."
     },
     "follow_up_routing": {
       "type": "object",
@@ -158,18 +186,24 @@
         "issues": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "description": "Item string accepted by issues in Agent Feedback Artifact."
+          },
+          "description": "The issues array field in Agent Feedback Artifact."
         },
         "deferred": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "description": "Item string accepted by deferred in Agent Feedback Artifact."
+          },
+          "description": "The deferred array field in Agent Feedback Artifact."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The follow up routing object field in Agent Feedback Artifact."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

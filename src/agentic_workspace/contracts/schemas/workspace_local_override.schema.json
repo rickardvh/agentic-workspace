@@ -2,72 +2,88 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/workspace-local-override.schema.json",
   "title": "Agentic Workspace Local Mixed-Agent Override",
+  "description": "Schema for Agentic Workspace Local Mixed-Agent Override.",
   "type": "object",
   "required": [
     "schema_version"
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "const": 1,
+      "description": "The schema version constant field in Agentic Workspace Local Mixed-Agent Override."
     },
     "workspace": {
       "type": "object",
       "properties": {
         "cli_invoke": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The cli invoke string field in Agentic Workspace Local Mixed-Agent Override."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The workspace object field in Agentic Workspace Local Mixed-Agent Override."
     },
     "runtime": {
       "type": "object",
       "properties": {
         "supports_internal_delegation": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The supports internal delegation boolean field in Agentic Workspace Local Mixed-Agent Override."
         },
         "strong_planner_available": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The strong planner available boolean field in Agentic Workspace Local Mixed-Agent Override."
         },
         "cheap_bounded_executor_available": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The cheap bounded executor available boolean field in Agentic Workspace Local Mixed-Agent Override."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The runtime object field in Agentic Workspace Local Mixed-Agent Override."
     },
     "handoff": {
       "type": "object",
       "properties": {
         "prefer_internal_delegation_when_available": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The prefer internal delegation when available boolean field in Agentic Workspace Local Mixed-Agent Override."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The handoff object field in Agentic Workspace Local Mixed-Agent Override."
     },
     "safety": {
       "type": "object",
       "properties": {
         "safe_to_auto_run_commands": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The safe to auto run commands boolean field in Agentic Workspace Local Mixed-Agent Override."
         },
         "requires_human_verification_on_pr": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The requires human verification on pr boolean field in Agentic Workspace Local Mixed-Agent Override."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The safety object field in Agentic Workspace Local Mixed-Agent Override."
     },
     "local_memory": {
       "type": "object",
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The enabled boolean field in Agentic Workspace Local Mixed-Agent Override."
         },
         "path": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The path string field in Agentic Workspace Local Mixed-Agent Override."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The local memory object field in Agentic Workspace Local Mixed-Agent Override."
     },
     "delegation_targets": {
       "type": "object",
@@ -85,7 +101,8 @@
                 "strong",
                 "medium",
                 "weak"
-              ]
+              ],
+              "description": "The strength enumerated value field in Agentic Workspace Local Mixed-Agent Override."
             },
             "location": {
               "type": "string",
@@ -93,19 +110,23 @@
                 "local",
                 "external",
                 "either"
-              ]
+              ],
+              "description": "The location enumerated value field in Agentic Workspace Local Mixed-Agent Override."
             },
             "confidence": {
               "type": "number",
               "minimum": 0,
-              "maximum": 1
+              "maximum": 1,
+              "description": "The confidence number field in Agentic Workspace Local Mixed-Agent Override."
             },
             "task_fit": {
               "type": "array",
               "items": {
                 "type": "string",
-                "minLength": 1
-              }
+                "minLength": 1,
+                "description": "Item string accepted by task fit in Agentic Workspace Local Mixed-Agent Override."
+              },
+              "description": "The task fit array field in Agentic Workspace Local Mixed-Agent Override."
             },
             "capability_classes": {
               "type": "array",
@@ -116,8 +137,10 @@
                   "reasoning-heavy",
                   "mixed",
                   "mechanical-follow-through"
-                ]
-              }
+                ],
+                "description": "Item enumerated value accepted by capability classes in Agentic Workspace Local Mixed-Agent Override."
+              },
+              "description": "The capability classes array field in Agentic Workspace Local Mixed-Agent Override."
             },
             "execution_methods": {
               "type": "array",
@@ -129,15 +152,20 @@
                   "cli",
                   "api",
                   "manual"
-                ]
-              }
+                ],
+                "description": "Item enumerated value accepted by execution methods in Agentic Workspace Local Mixed-Agent Override."
+              },
+              "description": "The execution methods array field in Agentic Workspace Local Mixed-Agent Override."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Pattern-matched object entry for delegation targets.<^ in Agentic Workspace Local Mixed-Agent Override."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The delegation targets object field in Agentic Workspace Local Mixed-Agent Override."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

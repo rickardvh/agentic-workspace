@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/agent_aid_manifest.schema.json",
   "title": "Agent Aid Manifest",
+  "description": "Schema for Agent Aid Manifest.",
   "type": "object",
   "required": [
     "kind",
@@ -22,11 +23,13 @@
   ],
   "properties": {
     "kind": {
-      "const": "agentic-workspace/agent-aid/v1"
+      "const": "agentic-workspace/agent-aid/v1",
+      "description": "The kind constant field in Agent Aid Manifest."
     },
     "id": {
       "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "description": "The id string field in Agent Aid Manifest."
     },
     "type": {
       "type": "string",
@@ -38,7 +41,8 @@
         "check",
         "template",
         "module-component"
-      ]
+      ],
+      "description": "The type enumerated value field in Agent Aid Manifest."
     },
     "status": {
       "type": "string",
@@ -47,7 +51,8 @@
         "shared",
         "promoted",
         "retired"
-      ]
+      ],
+      "description": "The status enumerated value field in Agent Aid Manifest."
     },
     "scope": {
       "type": "string",
@@ -55,7 +60,8 @@
         "repo-shared",
         "module-owned",
         "source-checkout-only"
-      ]
+      ],
+      "description": "The scope enumerated value field in Agent Aid Manifest."
     },
     "portability": {
       "type": "string",
@@ -63,15 +69,18 @@
         "runtime-specific",
         "platform-specific",
         "cross-platform"
-      ]
+      ],
+      "description": "The portability enumerated value field in Agent Aid Manifest."
     },
     "portability_justification": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "The portability justification string field in Agent Aid Manifest."
     },
     "checked_in_scope_justification": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "The checked in scope justification string field in Agent Aid Manifest."
     },
     "proof_role": {
       "type": "string",
@@ -79,27 +88,33 @@
         "candidate-aid",
         "canonical-proof",
         "advisory-helper"
-      ]
+      ],
+      "description": "The proof role enumerated value field in Agent Aid Manifest."
     },
     "owner": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "The owner string field in Agent Aid Manifest."
     },
     "created_because": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "The created because string field in Agent Aid Manifest."
     },
     "use_when": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "string",
-        "minLength": 1
-      }
+        "minLength": 1,
+        "description": "Item string accepted by use when in Agent Aid Manifest."
+      },
+      "description": "The use when array field in Agent Aid Manifest."
     },
     "entrypoint": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "The entrypoint string field in Agent Aid Manifest."
     },
     "safety": {
       "type": "object",
@@ -113,25 +128,32 @@
       ],
       "properties": {
         "read_only": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The read only boolean field in Agent Aid Manifest."
         },
         "writes_repo": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The writes repo boolean field in Agent Aid Manifest."
         },
         "destructive": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The destructive boolean field in Agent Aid Manifest."
         },
         "network": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The network boolean field in Agent Aid Manifest."
         },
         "hidden_required_workflow": {
-          "const": false
+          "const": false,
+          "description": "The hidden required workflow constant field in Agent Aid Manifest."
         },
         "requires_review": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The requires review boolean field in Agent Aid Manifest."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The safety object field in Agent Aid Manifest."
     },
     "validation": {
       "type": "object",
@@ -153,15 +175,19 @@
           "minItems": 1,
           "items": {
             "type": "string",
-            "pattern": "\\S"
-          }
+            "pattern": "\\S",
+            "description": "Item string accepted by commands in Agent Aid Manifest."
+          },
+          "description": "The commands array field in Agent Aid Manifest."
         },
         "absent_reason": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The absent reason string field in Agent Aid Manifest."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The validation object field in Agent Aid Manifest."
     },
     "promotion": {
       "type": "object",
@@ -184,11 +210,13 @@
             "template",
             "module-component",
             "docs-contract"
-          ]
+          ],
+          "description": "The target kind enumerated value field in Agent Aid Manifest."
         },
         "target": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The target string field in Agent Aid Manifest."
         },
         "discovery_route": {
           "type": "string",
@@ -200,11 +228,13 @@
             "prompt-template",
             "module-manifest",
             "docs-contract"
-          ]
+          ],
+          "description": "The discovery route enumerated value field in Agent Aid Manifest."
         },
         "trigger": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The trigger string field in Agent Aid Manifest."
         },
         "retention_after_promotion": {
           "type": "string",
@@ -213,10 +243,12 @@
             "archive",
             "shrink",
             "keep"
-          ]
+          ],
+          "description": "The retention after promotion enumerated value field in Agent Aid Manifest."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The promotion object field in Agent Aid Manifest."
     },
     "retirement": {
       "type": "object",
@@ -227,7 +259,8 @@
       "properties": {
         "trigger": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The trigger string field in Agent Aid Manifest."
         },
         "retention_after_retirement": {
           "type": "string",
@@ -235,10 +268,12 @@
             "delete",
             "archive",
             "keep"
-          ]
+          ],
+          "description": "The retention after retirement enumerated value field in Agent Aid Manifest."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The retirement object field in Agent Aid Manifest."
     }
   },
   "allOf": [
@@ -287,5 +322,6 @@
       }
     }
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

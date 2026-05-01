@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/preflight-policy.schema.json",
   "title": "Preflight Policy",
+  "description": "Schema for Preflight Policy.",
   "type": "object",
   "required": [
     "schema_version",
@@ -13,11 +14,13 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "agentic-workspace/preflight-policy/v1"
+      "const": "agentic-workspace/preflight-policy/v1",
+      "description": "The schema version constant field in Preflight Policy."
     },
     "summary": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "The summary string field in Preflight Policy."
     },
     "high_risk_commands": {
       "type": "array",
@@ -25,8 +28,10 @@
       "uniqueItems": true,
       "items": {
         "type": "string",
-        "minLength": 1
-      }
+        "minLength": 1,
+        "description": "Item string accepted by high risk commands in Preflight Policy."
+      },
+      "description": "The high risk commands array field in Preflight Policy."
     },
     "token": {
       "type": "object",
@@ -37,20 +42,24 @@
       "properties": {
         "prefix": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The prefix string field in Preflight Policy."
         },
         "issued_at_epoch_encoding": {
           "type": "string",
           "enum": [
             "decimal_unix_epoch_seconds"
-          ]
+          ],
+          "description": "The issued at epoch encoding enumerated value field in Preflight Policy."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The token object field in Preflight Policy."
     },
     "default_max_age_seconds": {
       "type": "integer",
-      "minimum": 1
+      "minimum": 1,
+      "description": "The default max age seconds integer field in Preflight Policy."
     },
     "strict_gate": {
       "type": "object",
@@ -67,39 +76,49 @@
       "properties": {
         "enabled_by_option": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The enabled by option string field in Preflight Policy."
         },
         "token_option": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The token option string field in Preflight Policy."
         },
         "max_age_option": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The max age option string field in Preflight Policy."
         },
         "missing_token_error": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The missing token error string field in Preflight Policy."
         },
         "invalid_token_error": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The invalid token error string field in Preflight Policy."
         },
         "non_positive_max_age_error": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The non positive max age error string field in Preflight Policy."
         },
         "future_token_error": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The future token error string field in Preflight Policy."
         },
         "stale_token_error_template": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The stale token error template string field in Preflight Policy."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The strict gate object field in Preflight Policy."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

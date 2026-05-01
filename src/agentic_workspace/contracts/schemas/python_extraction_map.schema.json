@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/python-extraction-map.schema.json",
   "title": "Python-Owned Extraction Map",
+  "description": "Schema for Python-Owned Extraction Map.",
   "type": "object",
   "required": [
     "schema_version",
@@ -14,13 +15,16 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "agentic-workspace/python-extraction-map/v1"
+      "const": "agentic-workspace/python-extraction-map/v1",
+      "description": "The schema version constant field in Python-Owned Extraction Map."
     },
     "parent_issue": {
-      "type": "string"
+      "type": "string",
+      "description": "The parent issue string field in Python-Owned Extraction Map."
     },
     "purpose": {
-      "type": "string"
+      "type": "string",
+      "description": "The purpose string field in Python-Owned Extraction Map."
     },
     "authority_statuses": {
       "type": "array",
@@ -30,9 +34,11 @@
           "derived",
           "adapter",
           "procedural-owned"
-        ]
+        ],
+        "description": "Item enumerated value accepted by authority statuses in Python-Owned Extraction Map."
       },
-      "minItems": 4
+      "minItems": 4,
+      "description": "The authority statuses array field in Python-Owned Extraction Map."
     },
     "extraction_readiness": {
       "type": "array",
@@ -46,9 +52,11 @@
           "procedural-owned for now",
           "live-inspection-owned for now",
           "defer with reason"
-        ]
+        ],
+        "description": "Item enumerated value accepted by extraction readiness in Python-Owned Extraction Map."
       },
-      "minItems": 7
+      "minItems": 7,
+      "description": "The extraction readiness array field in Python-Owned Extraction Map."
     },
     "candidates": {
       "type": "array",
@@ -67,20 +75,25 @@
         ],
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "The id string field in Python-Owned Extraction Map."
           },
           "source": {
-            "type": "string"
+            "type": "string",
+            "description": "The source string field in Python-Owned Extraction Map."
           },
           "candidate_content": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "description": "Item string accepted by candidate content in Python-Owned Extraction Map."
             },
-            "minItems": 1
+            "minItems": 1,
+            "description": "The candidate content array field in Python-Owned Extraction Map."
           },
           "proposed_owner_surface": {
-            "type": "string"
+            "type": "string",
+            "description": "The proposed owner surface string field in Python-Owned Extraction Map."
           },
           "future_owner": {
             "enum": [
@@ -91,7 +104,8 @@
               "generated or schema-derived Python model",
               "procedural execution",
               "live repo inspection"
-            ]
+            ],
+            "description": "The future owner enumerated value field in Python-Owned Extraction Map."
           },
           "authority_status": {
             "enum": [
@@ -99,29 +113,35 @@
               "derived",
               "adapter",
               "procedural-owned"
-            ]
+            ],
+            "description": "The authority status enumerated value field in Python-Owned Extraction Map."
           },
           "extraction_readiness": {
-              "enum": [
-                "extracted",
-                "extract now",
-                "extract after schema exists",
+            "enum": [
+              "extracted",
+              "extract now",
+              "extract after schema exists",
               "operation-contract candidate",
               "template candidate",
               "procedural-owned for now",
               "live-inspection-owned for now",
               "defer with reason"
-            ]
+            ],
+            "description": "The extraction readiness enumerated value field in Python-Owned Extraction Map."
           },
           "rationale": {
-            "type": "string"
+            "type": "string",
+            "description": "The rationale string field in Python-Owned Extraction Map."
           },
           "issue_hint": {
-            "type": "string"
+            "type": "string",
+            "description": "The issue hint string field in Python-Owned Extraction Map."
           }
         },
-        "additionalProperties": false
-      }
+        "additionalProperties": false,
+        "description": "Item object accepted by candidates in Python-Owned Extraction Map."
+      },
+      "description": "The candidates array field in Python-Owned Extraction Map."
     },
     "next_slices": {
       "type": "array",
@@ -134,22 +154,29 @@
         ],
         "properties": {
           "issue": {
-            "type": "string"
+            "type": "string",
+            "description": "The issue string field in Python-Owned Extraction Map."
           },
           "summary": {
-            "type": "string"
+            "type": "string",
+            "description": "The summary string field in Python-Owned Extraction Map."
           },
           "candidate_ids": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "description": "Item string accepted by candidate ids in Python-Owned Extraction Map."
             },
-            "minItems": 1
+            "minItems": 1,
+            "description": "The candidate ids array field in Python-Owned Extraction Map."
           }
         },
-        "additionalProperties": false
-      }
+        "additionalProperties": false,
+        "description": "Item object accepted by next slices in Python-Owned Extraction Map."
+      },
+      "description": "The next slices array field in Python-Owned Extraction Map."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

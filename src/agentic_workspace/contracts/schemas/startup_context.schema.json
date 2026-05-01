@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/startup-context.schema.json",
   "title": "Startup Context Payload",
+  "description": "Schema for Startup Context Payload.",
   "type": "object",
   "required": [
     "kind",
@@ -20,16 +21,20 @@
   ],
   "properties": {
     "kind": {
-      "const": "startup-context/v1"
+      "const": "startup-context/v1",
+      "description": "The kind constant field in Startup Context Payload."
     },
     "target": {
-      "type": "string"
+      "type": "string",
+      "description": "The target string field in Startup Context Payload."
     },
     "invoked_cli_identity": {
-      "$ref": "#/$defs/invoked_cli_identity"
+      "$ref": "#/$defs/invoked_cli_identity",
+      "description": "The invoked cli identity reference field in Startup Context Payload."
     },
     "cli_compatibility": {
-      "$ref": "#/$defs/cli_compatibility"
+      "$ref": "#/$defs/cli_compatibility",
+      "description": "The cli compatibility reference field in Startup Context Payload."
     },
     "startup_sequence": {
       "type": "array",
@@ -43,29 +48,37 @@
         ],
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "The id string field in Startup Context Payload."
           },
           "command": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "The command string or null field in Startup Context Payload."
           },
           "surface": {
-            "type": "string"
+            "type": "string",
+            "description": "The surface string field in Startup Context Payload."
           },
           "why": {
-            "type": "string"
+            "type": "string",
+            "description": "The why string field in Startup Context Payload."
           }
         },
-        "additionalProperties": false
-      }
+        "additionalProperties": false,
+        "description": "Item object accepted by startup sequence in Startup Context Payload."
+      },
+      "description": "The startup sequence array field in Startup Context Payload."
     },
     "feature_tier": {
-      "type": "object"
+      "type": "object",
+      "description": "The feature tier object field in Startup Context Payload."
     },
     "context_router": {
-      "type": "object"
+      "type": "object",
+      "description": "The context router object field in Startup Context Payload."
     },
     "active_state_summary": {
       "type": "object",
@@ -76,28 +89,35 @@
       ],
       "properties": {
         "todo_active_count": {
-          "type": "integer"
+          "type": "integer",
+          "description": "The todo active count integer field in Startup Context Payload."
         },
         "active_execplan": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "description": "The active execplan string or null field in Startup Context Payload."
         },
         "planning_status": {
-          "type": "string"
+          "type": "string",
+          "description": "The planning status string field in Startup Context Payload."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The active state summary object field in Startup Context Payload."
     },
     "package_boundary": {
-      "$ref": "#/$defs/package_boundary"
+      "$ref": "#/$defs/package_boundary",
+      "description": "The package boundary reference field in Startup Context Payload."
     },
     "authority_markers": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/authority_marker"
-      }
+        "$ref": "#/$defs/authority_marker",
+        "description": "Item reference accepted by authority markers in Startup Context Payload."
+      },
+      "description": "The authority markers array field in Startup Context Payload."
     },
     "immediate_next_allowed_action": {
       "type": "object",
@@ -114,70 +134,90 @@
       ],
       "properties": {
         "action": {
-          "type": "string"
+          "type": "string",
+          "description": "The action string field in Startup Context Payload."
         },
         "summary": {
-          "type": "string"
+          "type": "string",
+          "description": "The summary string field in Startup Context Payload."
         },
         "command": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "description": "The command string or null field in Startup Context Payload."
         },
         "run": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "description": "The run string or null field in Startup Context Payload."
         },
         "risk": {
-          "type": "string"
+          "type": "string",
+          "description": "The risk string field in Startup Context Payload."
         },
         "required_inputs": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "description": "Item string accepted by required inputs in Startup Context Payload."
+          },
+          "description": "The required inputs array field in Startup Context Payload."
         },
         "next_proof": {
-          "type": "string"
+          "type": "string",
+          "description": "The next proof string field in Startup Context Payload."
         },
         "read_first": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "description": "Item string accepted by read first in Startup Context Payload."
+          },
+          "description": "The read first array field in Startup Context Payload."
         },
         "open_execplan_only_when": {
-          "type": "string"
+          "type": "string",
+          "description": "The open execplan only when string field in Startup Context Payload."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The immediate next allowed action object field in Startup Context Payload."
     },
     "workflow_obligations": {
-      "type": "object"
+      "type": "object",
+      "description": "The workflow obligations object field in Startup Context Payload."
     },
     "closeout_obligations": {
-      "type": "object"
+      "type": "object",
+      "description": "The closeout obligations object field in Startup Context Payload."
     },
     "memory_consult": {
-      "type": "object"
+      "type": "object",
+      "description": "The memory consult object field in Startup Context Payload."
     },
     "operating_posture": {
-      "type": "object"
+      "type": "object",
+      "description": "The operating posture object field in Startup Context Payload."
     },
     "skill_routing": {
-      "$ref": "#/$defs/skill_routing"
+      "$ref": "#/$defs/skill_routing",
+      "description": "The skill routing reference field in Startup Context Payload."
     },
     "proof": {
-      "type": "object"
+      "type": "object",
+      "description": "The proof object field in Startup Context Payload."
     },
     "path_boundaries": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/path_boundary"
-      }
+        "$ref": "#/$defs/path_boundary",
+        "description": "Item reference accepted by path boundaries in Startup Context Payload."
+      },
+      "description": "The path boundaries array field in Startup Context Payload."
     }
   },
   "additionalProperties": false,
@@ -195,64 +235,79 @@
       ],
       "properties": {
         "kind": {
-          "const": "agentic-workspace/invoked-cli-identity/v1"
+          "const": "agentic-workspace/invoked-cli-identity/v1",
+          "description": "The kind constant field in Startup Context Payload."
         },
         "package": {
-          "const": "agentic-workspace"
+          "const": "agentic-workspace",
+          "description": "The package constant field in Startup Context Payload."
         },
         "version": {
-          "type": "string"
+          "type": "string",
+          "description": "The version string field in Startup Context Payload."
         },
         "source_class": {
           "enum": [
             "source-checkout",
             "installed-package",
             "unknown"
-          ]
+          ],
+          "description": "The source class enumerated value field in Startup Context Payload."
         },
         "confidence": {
           "enum": [
             "high",
             "medium",
             "low"
-          ]
+          ],
+          "description": "The confidence enumerated value field in Startup Context Payload."
         },
         "module_path": {
-          "type": "string"
+          "type": "string",
+          "description": "The module path string field in Startup Context Payload."
         },
         "package_root": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "description": "The package root string or null field in Startup Context Payload."
         },
         "python_executable": {
-          "type": "string"
+          "type": "string",
+          "description": "The python executable string field in Startup Context Payload."
         },
         "argv0": {
-          "type": "string"
+          "type": "string",
+          "description": "The argv0 string field in Startup Context Payload."
         },
         "argv0_path": {
-          "type": "string"
+          "type": "string",
+          "description": "The argv0 path string field in Startup Context Payload."
         },
         "path_executable": {
-          "type": "string"
+          "type": "string",
+          "description": "The path executable string field in Startup Context Payload."
         },
         "target_relation": {
           "enum": [
             "inside-target",
             "outside-target",
             "no-target"
-          ]
+          ],
+          "description": "The target relation enumerated value field in Startup Context Payload."
         },
         "compatibility": {
-          "const": "not-evaluated"
+          "const": "not-evaluated",
+          "description": "The compatibility constant field in Startup Context Payload."
         },
         "expectation_source": {
-          "type": "string"
+          "type": "string",
+          "description": "The expectation source string field in Startup Context Payload."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable invoked cli identity object definition for Startup Context Payload."
     },
     "cli_compatibility_check": {
       "type": "object",
@@ -270,10 +325,12 @@
             "minimum_version",
             "source_class",
             "target_relation"
-          ]
+          ],
+          "description": "The name enumerated value field in Startup Context Payload."
         },
         "configured": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The configured boolean field in Startup Context Payload."
         },
         "expected": {
           "type": [
@@ -282,17 +339,22 @@
             "null"
           ],
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "description": "Item string accepted by expected in Startup Context Payload."
+          },
+          "description": "The expected array or string or null field in Startup Context Payload."
         },
         "actual": {
-          "type": "string"
+          "type": "string",
+          "description": "The actual string field in Startup Context Payload."
         },
         "satisfied": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The satisfied boolean field in Startup Context Payload."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable cli compatibility check object definition for Startup Context Payload."
     },
     "cli_compatibility": {
       "type": "object",
@@ -305,7 +367,8 @@
       ],
       "properties": {
         "kind": {
-          "const": "agentic-workspace/cli-compatibility/v1"
+          "const": "agentic-workspace/cli-compatibility/v1",
+          "description": "The kind constant field in Startup Context Payload."
         },
         "status": {
           "enum": [
@@ -313,51 +376,63 @@
             "satisfied",
             "advisory-drift",
             "blocking-drift"
-          ]
+          ],
+          "description": "The status enumerated value field in Startup Context Payload."
         },
         "configured": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The configured boolean field in Startup Context Payload."
         },
         "enforcement": {
           "enum": [
             "off",
             "advisory",
             "blocking"
-          ]
+          ],
+          "description": "The enforcement enumerated value field in Startup Context Payload."
         },
         "enforcement_source": {
-          "type": "string"
+          "type": "string",
+          "description": "The enforcement source string field in Startup Context Payload."
         },
         "expectation_source": {
-          "type": "string"
+          "type": "string",
+          "description": "The expectation source string field in Startup Context Payload."
         },
         "expected_command": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "description": "The expected command string or null field in Startup Context Payload."
         },
         "invocation_confidence": {
           "enum": [
             "high",
             "medium",
             "low"
-          ]
+          ],
+          "description": "The invocation confidence enumerated value field in Startup Context Payload."
         },
         "drift_findings": {
           "type": "array",
           "items": {
-            "type": "object"
-          }
+            "type": "object",
+            "description": "Item object accepted by drift findings in Startup Context Payload."
+          },
+          "description": "The drift findings array field in Startup Context Payload."
         },
         "remediation": {
-          "type": "object"
+          "type": "object",
+          "description": "The remediation object field in Startup Context Payload."
         },
         "checks": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/cli_compatibility_check"
-          }
+            "$ref": "#/$defs/cli_compatibility_check",
+            "description": "Item reference accepted by checks in Startup Context Payload."
+          },
+          "description": "The checks array field in Startup Context Payload."
         },
         "failed_checks": {
           "type": "array",
@@ -367,14 +442,18 @@
               "minimum_version",
               "source_class",
               "target_relation"
-            ]
-          }
+            ],
+            "description": "Item enumerated value accepted by failed checks in Startup Context Payload."
+          },
+          "description": "The failed checks array field in Startup Context Payload."
         },
         "rule": {
-          "type": "string"
+          "type": "string",
+          "description": "The rule string field in Startup Context Payload."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable cli compatibility object definition for Startup Context Payload."
     },
     "authority_marker": {
       "type": "object",
@@ -387,25 +466,31 @@
       ],
       "properties": {
         "path": {
-          "type": "string"
+          "type": "string",
+          "description": "The path string field in Startup Context Payload."
         },
         "authority": {
-          "type": "string"
+          "type": "string",
+          "description": "The authority string field in Startup Context Payload."
         },
         "canonical_source": {
-          "type": "string"
+          "type": "string",
+          "description": "The canonical source string field in Startup Context Payload."
         },
         "safe_to_edit": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The safe to edit boolean field in Startup Context Payload."
         },
         "refresh_command": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "description": "The refresh command string or null field in Startup Context Payload."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable authority marker object definition for Startup Context Payload."
     },
     "package_boundary": {
       "type": "object",
@@ -416,22 +501,27 @@
       ],
       "properties": {
         "status": {
-          "type": "string"
+          "type": "string",
+          "description": "The status string field in Startup Context Payload."
         },
         "cwd": {
-          "type": "string"
+          "type": "string",
+          "description": "The cwd string field in Startup Context Payload."
         },
         "warning": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "description": "The warning string or null field in Startup Context Payload."
         },
         "package_root": {
-          "type": "string"
+          "type": "string",
+          "description": "The package root string field in Startup Context Payload."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable package boundary object definition for Startup Context Payload."
     },
     "path_boundary": {
       "type": "object",
@@ -443,22 +533,27 @@
       ],
       "properties": {
         "path": {
-          "type": "string"
+          "type": "string",
+          "description": "The path string field in Startup Context Payload."
         },
         "authority": {
-          "type": "string"
+          "type": "string",
+          "description": "The authority string field in Startup Context Payload."
         },
         "warning": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "description": "The warning string or null field in Startup Context Payload."
         },
         "requires_attention": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The requires attention boolean field in Startup Context Payload."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable path boundary object definition for Startup Context Payload."
     },
     "skill_routing": {
       "type": "object",
@@ -470,38 +565,49 @@
       ],
       "properties": {
         "status": {
-          "type": "string"
+          "type": "string",
+          "description": "The status string field in Startup Context Payload."
         },
         "rule": {
-          "type": "string"
+          "type": "string",
+          "description": "The rule string field in Startup Context Payload."
         },
         "query": {
-          "type": "string"
+          "type": "string",
+          "description": "The query string field in Startup Context Payload."
         },
         "advanced_route_rule": {
-          "type": "string"
+          "type": "string",
+          "description": "The advanced route rule string field in Startup Context Payload."
         },
         "available_advanced_route_command": {
-          "type": "string"
+          "type": "string",
+          "description": "The available advanced route command string field in Startup Context Payload."
         },
         "enabled_advanced_routes": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "description": "Item string accepted by enabled advanced routes in Startup Context Payload."
+          },
+          "description": "The enabled advanced routes array field in Startup Context Payload."
         },
         "fallback_when_skills_unavailable": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "description": "Item string accepted by fallback when skills unavailable in Startup Context Payload."
+          },
+          "description": "The fallback when skills unavailable array field in Startup Context Payload."
         },
         "fallback_when_skills_unavailable_count": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "description": "The fallback when skills unavailable count integer field in Startup Context Payload."
         },
         "fallback_detail": {
-          "type": "string"
+          "type": "string",
+          "description": "The fallback detail string field in Startup Context Payload."
         },
         "preferred_routes": {
           "type": "array",
@@ -513,23 +619,31 @@
             ],
             "properties": {
               "task_shape": {
-                "type": "string"
+                "type": "string",
+                "description": "The task shape string field in Startup Context Payload."
               },
               "skill": {
-                "type": "string"
+                "type": "string",
+                "description": "The skill string field in Startup Context Payload."
               },
               "fallback": {
-                "type": "string"
+                "type": "string",
+                "description": "The fallback string field in Startup Context Payload."
               },
               "feature": {
-                "type": "string"
+                "type": "string",
+                "description": "The feature string field in Startup Context Payload."
               }
             },
-            "additionalProperties": false
-          }
+            "additionalProperties": false,
+            "description": "Item object accepted by preferred routes in Startup Context Payload."
+          },
+          "description": "The preferred routes array field in Startup Context Payload."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable skill routing object definition for Startup Context Payload."
     }
-  }
+  },
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

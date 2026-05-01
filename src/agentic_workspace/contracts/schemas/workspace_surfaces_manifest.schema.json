@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/workspace-surfaces-manifest.schema.json",
   "title": "Workspace Surfaces Manifest",
+  "description": "Schema for Workspace Surfaces Manifest.",
   "type": "object",
   "required": [
     "schema_version",
@@ -15,27 +16,34 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "workspace-surfaces-manifest/v1"
+      "const": "workspace-surfaces-manifest/v1",
+      "description": "The schema version constant field in Workspace Surfaces Manifest."
     },
     "payload_files": {
       "type": "array",
       "minItems": 1,
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "description": "Item string accepted by payload files in Workspace Surfaces Manifest."
+      },
+      "description": "The payload files array field in Workspace Surfaces Manifest."
     },
     "system_intent_mirror_kind": {
-      "type": "string"
+      "type": "string",
+      "description": "The system intent mirror kind string field in Workspace Surfaces Manifest."
     },
     "default_agents_path": {
-      "type": "string"
+      "type": "string",
+      "description": "The default agents path string field in Workspace Surfaces Manifest."
     },
     "handoff_surfaces": {
       "type": "array",
       "minItems": 1,
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "description": "Item string accepted by handoff surfaces in Workspace Surfaces Manifest."
+      },
+      "description": "The handoff surfaces array field in Workspace Surfaces Manifest."
     },
     "module_upgrade_source_paths": {
       "type": "object",
@@ -45,26 +53,34 @@
       ],
       "properties": {
         "planning": {
-          "type": "string"
+          "type": "string",
+          "description": "The planning string field in Workspace Surfaces Manifest."
         },
         "memory": {
-          "type": "string"
+          "type": "string",
+          "description": "The memory string field in Workspace Surfaces Manifest."
         }
       },
       "additionalProperties": {
-        "type": "string"
-      }
+        "type": "string",
+        "description": "Additional named string entry for module upgrade source paths in Workspace Surfaces Manifest."
+      },
+      "description": "The module upgrade source paths object field in Workspace Surfaces Manifest."
     },
     "setup_findings_path": {
-      "type": "string"
+      "type": "string",
+      "description": "The setup findings path string field in Workspace Surfaces Manifest."
     },
     "mixed_agent_local_override_fields": {
       "type": "array",
       "minItems": 1,
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "description": "Item string accepted by mixed agent local override fields in Workspace Surfaces Manifest."
+      },
+      "description": "The mixed agent local override fields array field in Workspace Surfaces Manifest."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

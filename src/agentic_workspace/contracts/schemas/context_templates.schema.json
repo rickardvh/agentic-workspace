@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/context-templates.schema.json",
   "title": "Context Templates",
+  "description": "Schema for Context Templates.",
   "type": "object",
   "required": [
     "schema_version",
@@ -10,7 +11,8 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "agentic-workspace/context-templates/v1"
+      "const": "agentic-workspace/context-templates/v1",
+      "description": "The schema version constant field in Context Templates."
     },
     "startup_context": {
       "type": "object",
@@ -33,32 +35,41 @@
             ],
             "properties": {
               "id": {
-                "type": "string"
+                "type": "string",
+                "description": "The id string field in Context Templates."
               },
               "command": {
                 "type": [
                   "string",
                   "null"
-                ]
+                ],
+                "description": "The command string or null field in Context Templates."
               },
               "surface": {
-                "type": "string"
+                "type": "string",
+                "description": "The surface string field in Context Templates."
               },
               "why": {
-                "type": "string"
+                "type": "string",
+                "description": "The why string field in Context Templates."
               }
             },
-            "additionalProperties": false
-          }
+            "additionalProperties": false,
+            "description": "Item object accepted by startup sequence in Context Templates."
+          },
+          "description": "The startup sequence array field in Context Templates."
         },
         "fallback_next_action": {
-          "type": "string"
+          "type": "string",
+          "description": "The fallback next action string field in Context Templates."
         },
         "open_execplan_only_when": {
-          "type": "string"
+          "type": "string",
+          "description": "The open execplan only when string field in Context Templates."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The startup context object field in Context Templates."
     },
     "implementer_context": {
       "type": "object",
@@ -83,57 +94,72 @@
           ],
           "properties": {
             "kind": {
-              "const": "proof-selection/v1"
+              "const": "proof-selection/v1",
+              "description": "The kind constant field in Context Templates."
             },
             "changed_paths": {
               "type": "array",
-              "maxItems": 0
+              "maxItems": 0,
+              "description": "The changed paths array field in Context Templates."
             },
             "selected_lanes": {
               "type": "array",
-              "maxItems": 0
+              "maxItems": 0,
+              "description": "The selected lanes array field in Context Templates."
             },
             "required_commands": {
               "type": "array",
-              "maxItems": 0
+              "maxItems": 0,
+              "description": "The required commands array field in Context Templates."
             },
             "optional_commands": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "description": "Item string accepted by optional commands in Context Templates."
               },
-              "minItems": 1
+              "minItems": 1,
+              "description": "The optional commands array field in Context Templates."
             },
             "broaden_when": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "description": "Item string accepted by broaden when in Context Templates."
               },
-              "minItems": 1
+              "minItems": 1,
+              "description": "The broaden when array field in Context Templates."
             },
             "escalate_when": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "description": "Item string accepted by escalate when in Context Templates."
               },
-              "minItems": 1
+              "minItems": 1,
+              "description": "The escalate when array field in Context Templates."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The unknown scope proof object field in Context Templates."
         },
         "default_inspect_files": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "description": "Item string accepted by default inspect files in Context Templates."
           },
-          "minItems": 1
+          "minItems": 1,
+          "description": "The default inspect files array field in Context Templates."
         },
         "files_to_avoid": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "description": "Item string accepted by files to avoid in Context Templates."
           },
-          "minItems": 1
+          "minItems": 1,
+          "description": "The files to avoid array field in Context Templates."
         },
         "handoff_requirements": {
           "type": "object",
@@ -145,19 +171,24 @@
             "before_handoff": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "description": "Item string accepted by before handoff in Context Templates."
               },
-              "minItems": 1
+              "minItems": 1,
+              "description": "The before handoff array field in Context Templates."
             },
             "stop_when": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "description": "Item string accepted by stop when in Context Templates."
               },
-              "minItems": 1
+              "minItems": 1,
+              "description": "The stop when array field in Context Templates."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The handoff requirements object field in Context Templates."
         },
         "next_allowed_action": {
           "type": "object",
@@ -167,17 +198,22 @@
           ],
           "properties": {
             "attention": {
-              "type": "string"
+              "type": "string",
+              "description": "The attention string field in Context Templates."
             },
             "default": {
-              "type": "string"
+              "type": "string",
+              "description": "The default string field in Context Templates."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The next allowed action object field in Context Templates."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The implementer context object field in Context Templates."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

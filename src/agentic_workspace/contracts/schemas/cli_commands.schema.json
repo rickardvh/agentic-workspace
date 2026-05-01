@@ -1,6 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/cli-commands.schema.json",
+  "title": "Cli Commands",
+  "description": "Schema for Cli Commands.",
   "type": "object",
   "required": [
     "schema_version",
@@ -10,20 +12,25 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "agentic-workspace/cli-commands/v1"
+      "const": "agentic-workspace/cli-commands/v1",
+      "description": "The schema version constant field in Cli Commands."
     },
     "program": {
-      "type": "string"
+      "type": "string",
+      "description": "The program string field in Cli Commands."
     },
     "description": {
-      "type": "string"
+      "type": "string",
+      "description": "The description string field in Cli Commands."
     },
     "commands": {
       "type": "array",
       "minItems": 1,
       "items": {
-        "$ref": "#/$defs/command"
-      }
+        "$ref": "#/$defs/command",
+        "description": "Item reference accepted by commands in Cli Commands."
+      },
+      "description": "The commands array field in Cli Commands."
     }
   },
   "$defs": {
@@ -37,10 +44,12 @@
       ],
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "The name string field in Cli Commands."
         },
         "help": {
-          "type": "string"
+          "type": "string",
+          "description": "The help string field in Cli Commands."
         },
         "role": {
           "enum": [
@@ -51,7 +60,8 @@
             "candidate_for_module_ownership",
             "source_checkout_only_maintainer_development",
             "remove_or_hide"
-          ]
+          ],
+          "description": "The role enumerated value field in Cli Commands."
         },
         "audience": {
           "enum": [
@@ -59,34 +69,44 @@
             "advanced_host_repo",
             "local_only",
             "source_checkout_only"
-          ]
+          ],
+          "description": "The audience enumerated value field in Cli Commands."
         },
         "classification_note": {
-          "type": "string"
+          "type": "string",
+          "description": "The classification note string field in Cli Commands."
         },
         "uses_option_groups": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "description": "Item string accepted by uses option groups in Cli Commands."
+          },
+          "description": "The uses option groups array field in Cli Commands."
         },
         "options": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/option"
-          }
+            "$ref": "#/$defs/option",
+            "description": "Item reference accepted by options in Cli Commands."
+          },
+          "description": "The options array field in Cli Commands."
         },
         "subcommand_dest": {
-          "type": "string"
+          "type": "string",
+          "description": "The subcommand dest string field in Cli Commands."
         },
         "subcommands": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/command"
-          }
+            "$ref": "#/$defs/command",
+            "description": "Item reference accepted by subcommands in Cli Commands."
+          },
+          "description": "The subcommands array field in Cli Commands."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable command object definition for Cli Commands."
     },
     "option": {
       "type": "object",
@@ -96,23 +116,28 @@
       ],
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "The name string field in Cli Commands."
         },
         "flags": {
           "type": "array",
           "minItems": 1,
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "description": "Item string accepted by flags in Cli Commands."
+          },
+          "description": "The flags array field in Cli Commands."
         },
         "action": {
-          "type": "string"
+          "type": "string",
+          "description": "The action string field in Cli Commands."
         },
         "nargs": {
           "type": [
             "string",
             "integer"
-          ]
+          ],
+          "description": "The nargs string or integer field in Cli Commands."
         },
         "choices": {
           "type": "array",
@@ -122,31 +147,41 @@
               "integer",
               "number",
               "boolean"
-            ]
-          }
+            ],
+            "description": "Item string or integer or number or boolean accepted by choices in Cli Commands."
+          },
+          "description": "The choices array field in Cli Commands."
         },
         "choices_ref": {
-          "type": "string"
+          "type": "string",
+          "description": "The choices ref string field in Cli Commands."
         },
         "default": {},
         "default_ref": {
-          "type": "string"
+          "type": "string",
+          "description": "The default ref string field in Cli Commands."
         },
         "type": {
-          "type": "string"
+          "type": "string",
+          "description": "The type string field in Cli Commands."
         },
         "required": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The required boolean field in Cli Commands."
         },
         "help": {
-          "type": "string"
+          "type": "string",
+          "description": "The help string field in Cli Commands."
         },
         "help_template": {
-          "type": "string"
+          "type": "string",
+          "description": "The help template string field in Cli Commands."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable option object definition for Cli Commands."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

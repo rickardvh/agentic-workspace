@@ -1,6 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/cli-option-groups.schema.json",
+  "title": "Cli Option Groups",
+  "description": "Schema for Cli Option Groups.",
   "type": "object",
   "required": [
     "schema_version",
@@ -8,7 +10,8 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "agentic-workspace/cli-option-groups/v1"
+      "const": "agentic-workspace/cli-option-groups/v1",
+      "description": "The schema version constant field in Cli Option Groups."
     },
     "option_groups": {
       "type": "object",
@@ -19,18 +22,24 @@
           "uses": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "description": "Item string accepted by uses in Cli Option Groups."
+            },
+            "description": "The uses array field in Cli Option Groups."
           },
           "options": {
             "type": "array",
             "items": {
-              "$ref": "#/$defs/option"
-            }
+              "$ref": "#/$defs/option",
+              "description": "Item reference accepted by options in Cli Option Groups."
+            },
+            "description": "The options array field in Cli Option Groups."
           }
         },
-        "additionalProperties": false
-      }
+        "additionalProperties": false,
+        "description": "Additional named object entry for option groups in Cli Option Groups."
+      },
+      "description": "The option groups object field in Cli Option Groups."
     }
   },
   "$defs": {
@@ -42,17 +51,21 @@
       ],
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "The name string field in Cli Option Groups."
         },
         "flags": {
           "type": "array",
           "minItems": 1,
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "description": "Item string accepted by flags in Cli Option Groups."
+          },
+          "description": "The flags array field in Cli Option Groups."
         },
         "action": {
-          "type": "string"
+          "type": "string",
+          "description": "The action string field in Cli Option Groups."
         },
         "choices": {
           "type": "array",
@@ -62,31 +75,41 @@
               "integer",
               "number",
               "boolean"
-            ]
-          }
+            ],
+            "description": "Item string or integer or number or boolean accepted by choices in Cli Option Groups."
+          },
+          "description": "The choices array field in Cli Option Groups."
         },
         "choices_ref": {
-          "type": "string"
+          "type": "string",
+          "description": "The choices ref string field in Cli Option Groups."
         },
         "default": {},
         "default_ref": {
-          "type": "string"
+          "type": "string",
+          "description": "The default ref string field in Cli Option Groups."
         },
         "type": {
-          "type": "string"
+          "type": "string",
+          "description": "The type string field in Cli Option Groups."
         },
         "required": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "The required boolean field in Cli Option Groups."
         },
         "help": {
-          "type": "string"
+          "type": "string",
+          "description": "The help string field in Cli Option Groups."
         },
         "help_template": {
-          "type": "string"
+          "type": "string",
+          "description": "The help template string field in Cli Option Groups."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable option object definition for Cli Option Groups."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

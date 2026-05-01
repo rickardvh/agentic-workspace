@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/command-adapter-generation.schema.json",
   "title": "Agentic Workspace Command Adapter Generation Contract",
+  "description": "Schema for Agentic Workspace Command Adapter Generation Contract.",
   "type": "object",
   "required": [
     "schema_version",
@@ -12,14 +13,17 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "agentic-workspace/command-adapter-generation/v1"
+      "const": "agentic-workspace/command-adapter-generation/v1",
+      "description": "The schema version constant field in Agentic Workspace Command Adapter Generation Contract."
     },
     "summary": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "The summary string field in Agentic Workspace Command Adapter Generation Contract."
     },
     "schema": {
-      "const": "schemas/command_adapter_generation.schema.json"
+      "const": "schemas/command_adapter_generation.schema.json",
+      "description": "The schema constant field in Agentic Workspace Command Adapter Generation Contract."
     },
     "generated_outputs": {
       "type": "array",
@@ -33,15 +37,19 @@
         "properties": {
           "program": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "The program string field in Agentic Workspace Command Adapter Generation Contract."
           },
           "path": {
             "type": "string",
-            "pattern": "^[A-Za-z0-9_./-]+\\.py$"
+            "pattern": "^[A-Za-z0-9_./-]+\\.py$",
+            "description": "The path string field in Agentic Workspace Command Adapter Generation Contract."
           }
         },
-        "additionalProperties": false
-      }
+        "additionalProperties": false,
+        "description": "Item object accepted by generated outputs in Agentic Workspace Command Adapter Generation Contract."
+      },
+      "description": "The generated outputs array field in Agentic Workspace Command Adapter Generation Contract."
     },
     "package_surface_migration": {
       "type": "object",
@@ -51,13 +59,16 @@
       ],
       "properties": {
         "planning": {
-          "$ref": "#/$defs/package_migration"
+          "$ref": "#/$defs/package_migration",
+          "description": "The planning reference field in Agentic Workspace Command Adapter Generation Contract."
         },
         "memory": {
-          "$ref": "#/$defs/package_migration"
+          "$ref": "#/$defs/package_migration",
+          "description": "The memory reference field in Agentic Workspace Command Adapter Generation Contract."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The package surface migration object field in Agentic Workspace Command Adapter Generation Contract."
     },
     "projection_requirements": {
       "type": "object",
@@ -71,33 +82,42 @@
       "properties": {
         "core_contract_rule": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The core contract rule string field in Agentic Workspace Command Adapter Generation Contract."
         },
         "universal_command_truth": {
-          "$ref": "#/$defs/non_empty_strings"
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "The universal command truth reference field in Agentic Workspace Command Adapter Generation Contract."
         },
         "adapter_specific_rendering": {
-          "$ref": "#/$defs/non_empty_strings"
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "The adapter specific rendering reference field in Agentic Workspace Command Adapter Generation Contract."
         },
         "future_target_kinds": {
           "type": "array",
           "minItems": 3,
           "items": {
-            "$ref": "#/$defs/future_target_kind"
-          }
+            "$ref": "#/$defs/future_target_kind",
+            "description": "Item reference accepted by future target kinds in Agentic Workspace Command Adapter Generation Contract."
+          },
+          "description": "The future target kinds array field in Agentic Workspace Command Adapter Generation Contract."
         },
         "pollution_guardrails": {
-          "$ref": "#/$defs/non_empty_strings"
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "The pollution guardrails reference field in Agentic Workspace Command Adapter Generation Contract."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The projection requirements object field in Agentic Workspace Command Adapter Generation Contract."
     },
     "adapters": {
       "type": "array",
       "minItems": 1,
       "items": {
-        "$ref": "#/$defs/adapter"
-      }
+        "$ref": "#/$defs/adapter",
+        "description": "Item reference accepted by adapters in Agentic Workspace Command Adapter Generation Contract."
+      },
+      "description": "The adapters array field in Agentic Workspace Command Adapter Generation Contract."
     }
   },
   "additionalProperties": false,
@@ -119,7 +139,8 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+          "description": "The id string field in Agentic Workspace Command Adapter Generation Contract."
         },
         "status": {
           "enum": [
@@ -127,7 +148,8 @@
             "ready-for-first-generation",
             "generated",
             "deferred"
-          ]
+          ],
+          "description": "The status enumerated value field in Agentic Workspace Command Adapter Generation Contract."
         },
         "command": {
           "type": "object",
@@ -140,32 +162,38 @@
           "properties": {
             "program": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "The program string field in Agentic Workspace Command Adapter Generation Contract."
             },
             "name": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "The name string field in Agentic Workspace Command Adapter Generation Contract."
             },
             "subcommand": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "The subcommand string field in Agentic Workspace Command Adapter Generation Contract."
             },
             "command_manifest": {
               "enum": [
                 "cli_commands.json",
                 "package:planning:cli",
                 "package:memory:cli"
-              ]
+              ],
+              "description": "The command manifest enumerated value field in Agentic Workspace Command Adapter Generation Contract."
             },
             "option_group_manifest": {
               "enum": [
                 "cli_option_groups.json",
                 "package:planning:cli",
                 "package:memory:cli"
-              ]
+              ],
+              "description": "The option group manifest enumerated value field in Agentic Workspace Command Adapter Generation Contract."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The command object field in Agentic Workspace Command Adapter Generation Contract."
         },
         "operation_ref": {
           "type": "object",
@@ -177,17 +205,21 @@
           "properties": {
             "id": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "The id string field in Agentic Workspace Command Adapter Generation Contract."
             },
             "registry": {
-              "const": "operation_contracts.json"
+              "const": "operation_contracts.json",
+              "description": "The registry constant field in Agentic Workspace Command Adapter Generation Contract."
             },
             "path": {
               "type": "string",
-              "pattern": "^operations/[A-Za-z0-9_.-]+\\.json$"
+              "pattern": "^operations/[A-Za-z0-9_.-]+\\.json$",
+              "description": "The path string field in Agentic Workspace Command Adapter Generation Contract."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The operation ref object field in Agentic Workspace Command Adapter Generation Contract."
         },
         "runtime_binding": {
           "type": "object",
@@ -197,18 +229,22 @@
           ],
           "properties": {
             "kind": {
-              "const": "operation-primitive-sequence"
+              "const": "operation-primitive-sequence",
+              "description": "The kind constant field in Agentic Workspace Command Adapter Generation Contract."
             },
             "primitive_refs": {
               "type": "array",
               "minItems": 1,
               "items": {
                 "type": "string",
-                "pattern": "^[a-z0-9][a-z0-9_.-]*$"
-              }
+                "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+                "description": "Item string accepted by primitive refs in Agentic Workspace Command Adapter Generation Contract."
+              },
+              "description": "The primitive refs array field in Agentic Workspace Command Adapter Generation Contract."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The runtime binding object field in Agentic Workspace Command Adapter Generation Contract."
         },
         "schemas": {
           "type": "object",
@@ -218,13 +254,16 @@
           ],
           "properties": {
             "input": {
-              "$ref": "#/$defs/schema_refs"
+              "$ref": "#/$defs/schema_refs",
+              "description": "The input reference field in Agentic Workspace Command Adapter Generation Contract."
             },
             "output": {
-              "$ref": "#/$defs/schema_refs"
+              "$ref": "#/$defs/schema_refs",
+              "description": "The output reference field in Agentic Workspace Command Adapter Generation Contract."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The schemas object field in Agentic Workspace Command Adapter Generation Contract."
         },
         "effect_hints": {
           "type": "object",
@@ -237,22 +276,28 @@
           ],
           "properties": {
             "read_only": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "The read only boolean field in Agentic Workspace Command Adapter Generation Contract."
             },
             "destructive": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "The destructive boolean field in Agentic Workspace Command Adapter Generation Contract."
             },
             "idempotent": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "The idempotent boolean field in Agentic Workspace Command Adapter Generation Contract."
             },
             "writes_repo_state": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "The writes repo state boolean field in Agentic Workspace Command Adapter Generation Contract."
             },
             "requires_preflight_gate": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "The requires preflight gate boolean field in Agentic Workspace Command Adapter Generation Contract."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The effect hints object field in Agentic Workspace Command Adapter Generation Contract."
         },
         "projection_hints": {
           "type": "object",
@@ -266,8 +311,10 @@
               "minItems": 1,
               "items": {
                 "type": "string",
-                "minLength": 1
-              }
+                "minLength": 1,
+                "description": "Item string accepted by universal fields in Agentic Workspace Command Adapter Generation Contract."
+              },
+              "description": "The universal fields array field in Agentic Workspace Command Adapter Generation Contract."
             },
             "adapter_specific_fields": {
               "type": "array",
@@ -280,22 +327,28 @@
                 "properties": {
                   "kind": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "The kind string field in Agentic Workspace Command Adapter Generation Contract."
                   },
                   "fields": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                       "type": "string",
-                      "minLength": 1
-                    }
+                      "minLength": 1,
+                      "description": "Item string accepted by fields in Agentic Workspace Command Adapter Generation Contract."
+                    },
+                    "description": "The fields array field in Agentic Workspace Command Adapter Generation Contract."
                   }
                 },
-                "additionalProperties": false
-              }
+                "additionalProperties": false,
+                "description": "Item object accepted by adapter specific fields in Agentic Workspace Command Adapter Generation Contract."
+              },
+              "description": "The adapter specific fields array field in Agentic Workspace Command Adapter Generation Contract."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The projection hints object field in Agentic Workspace Command Adapter Generation Contract."
         },
         "generation_boundary": {
           "type": "object",
@@ -306,42 +359,53 @@
           ],
           "properties": {
             "contract_owns": {
-              "$ref": "#/$defs/non_empty_strings"
+              "$ref": "#/$defs/non_empty_strings",
+              "description": "The contract owns reference field in Agentic Workspace Command Adapter Generation Contract."
             },
             "generated_adapter_owns": {
-              "$ref": "#/$defs/non_empty_strings"
+              "$ref": "#/$defs/non_empty_strings",
+              "description": "The generated adapter owns reference field in Agentic Workspace Command Adapter Generation Contract."
             },
             "runtime_owns": {
-              "$ref": "#/$defs/non_empty_strings"
+              "$ref": "#/$defs/non_empty_strings",
+              "description": "The runtime owns reference field in Agentic Workspace Command Adapter Generation Contract."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The generation boundary object field in Agentic Workspace Command Adapter Generation Contract."
         },
         "conformance_refs": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "minLength": 1
-          }
+            "minLength": 1,
+            "description": "Item string accepted by conformance refs in Agentic Workspace Command Adapter Generation Contract."
+          },
+          "description": "The conformance refs array field in Agentic Workspace Command Adapter Generation Contract."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable adapter object definition for Agentic Workspace Command Adapter Generation Contract."
     },
     "schema_refs": {
       "type": "array",
       "items": {
         "type": "string",
-        "pattern": "^[A-Za-z0-9_.-]+\\.schema\\.json$"
-      }
+        "pattern": "^[A-Za-z0-9_.-]+\\.schema\\.json$",
+        "description": "Item string accepted by schema refs in Agentic Workspace Command Adapter Generation Contract."
+      },
+      "description": "Reusable schema refs array definition for Agentic Workspace Command Adapter Generation Contract."
     },
     "non_empty_strings": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "string",
-        "minLength": 1
-      }
+        "minLength": 1,
+        "description": "Item string accepted by non empty strings in Agentic Workspace Command Adapter Generation Contract."
+      },
+      "description": "Reusable non empty strings array definition for Agentic Workspace Command Adapter Generation Contract."
     },
     "package_migration": {
       "type": "object",
@@ -354,22 +418,27 @@
       "properties": {
         "program": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The program string field in Agentic Workspace Command Adapter Generation Contract."
         },
         "first_read_only_candidate": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The first read only candidate string field in Agentic Workspace Command Adapter Generation Contract."
         },
         "status": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The status string field in Agentic Workspace Command Adapter Generation Contract."
         },
         "next_step": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The next step string field in Agentic Workspace Command Adapter Generation Contract."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable package migration object definition for Agentic Workspace Command Adapter Generation Contract."
     },
     "future_target_kind": {
       "type": "object",
@@ -388,19 +457,24 @@
             "binary",
             "local-mcp-tool",
             "generated-skill"
-          ]
+          ],
+          "description": "The kind enumerated value field in Agentic Workspace Command Adapter Generation Contract."
         },
         "status": {
           "enum": [
             "supported-now",
             "requirements-baseline"
-          ]
+          ],
+          "description": "The status enumerated value field in Agentic Workspace Command Adapter Generation Contract."
         },
         "requirements": {
-          "$ref": "#/$defs/non_empty_strings"
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "The requirements reference field in Agentic Workspace Command Adapter Generation Contract."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable future target kind object definition for Agentic Workspace Command Adapter Generation Contract."
     }
-  }
+  },
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

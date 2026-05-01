@@ -1,6 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/workflow-definition-format.schema.json",
+  "title": "Workflow Definition Format",
+  "description": "Schema for Workflow Definition Format.",
   "type": "object",
   "required": [
     "schema_version",
@@ -13,15 +15,18 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "agentic-workspace/workflow-definition-format/v1"
+      "const": "agentic-workspace/workflow-definition-format/v1",
+      "description": "The schema version constant field in Workflow Definition Format."
     },
     "canonical_doc": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "The canonical doc string field in Workflow Definition Format."
     },
     "rule": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "The rule string field in Workflow Definition Format."
     },
     "primary_component_family": {
       "type": "object",
@@ -34,19 +39,23 @@
       "properties": {
         "id": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The id string field in Workflow Definition Format."
         },
         "owner_surface": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The owner surface string field in Workflow Definition Format."
         },
         "attachment_points": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "minLength": 1
-          }
+            "minLength": 1,
+            "description": "Item string accepted by attachment points in Workflow Definition Format."
+          },
+          "description": "The attachment points array field in Workflow Definition Format."
         },
         "fields": {
           "type": "array",
@@ -61,24 +70,31 @@
             "properties": {
               "field": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "The field string field in Workflow Definition Format."
               },
               "required": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "The required boolean field in Workflow Definition Format."
               },
               "purpose": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "The purpose string field in Workflow Definition Format."
               }
             },
-            "additionalProperties": false
-          }
+            "additionalProperties": false,
+            "description": "Item object accepted by fields in Workflow Definition Format."
+          },
+          "description": "The fields array field in Workflow Definition Format."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The primary component family object field in Workflow Definition Format."
     },
     "composition": {
-      "$ref": "#/$defs/string_map"
+      "$ref": "#/$defs/string_map",
+      "description": "The composition reference field in Workflow Definition Format."
     },
     "flexibility_boundary": {
       "type": "object",
@@ -89,19 +105,24 @@
       ],
       "properties": {
         "formalize": {
-          "$ref": "#/$defs/non_empty_strings"
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "The formalize reference field in Workflow Definition Format."
         },
         "leave_flexible": {
-          "$ref": "#/$defs/non_empty_strings"
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "The leave flexible reference field in Workflow Definition Format."
         },
         "must_not": {
-          "$ref": "#/$defs/non_empty_strings"
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "The must not reference field in Workflow Definition Format."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The flexibility boundary object field in Workflow Definition Format."
     },
     "migration_posture": {
-      "$ref": "#/$defs/string_map"
+      "$ref": "#/$defs/string_map",
+      "description": "The migration posture reference field in Workflow Definition Format."
     }
   },
   "additionalProperties": false,
@@ -111,16 +132,21 @@
       "minItems": 1,
       "items": {
         "type": "string",
-        "minLength": 1
-      }
+        "minLength": 1,
+        "description": "Item string accepted by non empty strings in Workflow Definition Format."
+      },
+      "description": "Reusable non empty strings array definition for Workflow Definition Format."
     },
     "string_map": {
       "type": "object",
       "minProperties": 1,
       "additionalProperties": {
         "type": "string",
-        "minLength": 1
-      }
+        "minLength": 1,
+        "description": "Additional named string entry for string map in Workflow Definition Format."
+      },
+      "description": "Reusable string map object definition for Workflow Definition Format."
     }
-  }
+  },
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

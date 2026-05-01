@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/proof-selection-rules.schema.json",
   "title": "Proof Selection Rules",
+  "description": "Schema for Proof Selection Rules.",
   "type": "object",
   "required": [
     "schema_version",
@@ -11,7 +12,8 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "agentic-workspace/proof-selection-rules/v1"
+      "const": "agentic-workspace/proof-selection-rules/v1",
+      "description": "The schema version constant field in Proof Selection Rules."
     },
     "rules": {
       "type": "array",
@@ -24,22 +26,28 @@
         ],
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "The id string field in Proof Selection Rules."
           },
           "lane": {
-            "type": "string"
+            "type": "string",
+            "description": "The lane string field in Proof Selection Rules."
           },
           "prefixes": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "description": "Item string accepted by prefixes in Proof Selection Rules."
+            },
+            "description": "The prefixes array field in Proof Selection Rules."
           },
           "exact": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "description": "Item string accepted by exact in Proof Selection Rules."
+            },
+            "description": "The exact array field in Proof Selection Rules."
           }
         },
         "anyOf": [
@@ -54,14 +62,18 @@
             ]
           }
         ],
-        "additionalProperties": false
-      }
+        "additionalProperties": false,
+        "description": "Item object accepted by rules in Proof Selection Rules."
+      },
+      "description": "The rules array field in Proof Selection Rules."
     },
     "fallback_lane": {
-      "type": "string"
+      "type": "string",
+      "description": "The fallback lane string field in Proof Selection Rules."
     },
     "cross_lane_escalation": {
-      "type": "string"
+      "type": "string",
+      "description": "The cross lane escalation string field in Proof Selection Rules."
     },
     "cli_authority": {
       "type": "object",
@@ -71,7 +83,8 @@
       ],
       "properties": {
         "lane": {
-          "type": "string"
+          "type": "string",
+          "description": "The lane string field in Proof Selection Rules."
         },
         "classifications": {
           "type": "array",
@@ -87,7 +100,8 @@
             ],
             "properties": {
               "id": {
-                "type": "string"
+                "type": "string",
+                "description": "The id string field in Proof Selection Rules."
               },
               "role": {
                 "enum": [
@@ -95,40 +109,50 @@
                   "generator",
                   "projection",
                   "hand-owned-executable"
-                ]
+                ],
+                "description": "The role enumerated value field in Proof Selection Rules."
               },
               "exact": {
                 "type": "array",
                 "items": {
-                  "type": "string"
-                }
+                  "type": "string",
+                  "description": "Item string accepted by exact in Proof Selection Rules."
+                },
+                "description": "The exact array field in Proof Selection Rules."
               },
               "prefixes": {
                 "type": "array",
                 "items": {
-                  "type": "string"
-                }
+                  "type": "string",
+                  "description": "Item string accepted by prefixes in Proof Selection Rules."
+                },
+                "description": "The prefixes array field in Proof Selection Rules."
               },
               "direct_edit_allowed": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "The direct edit allowed boolean field in Proof Selection Rules."
               },
               "source_contract": {
-                "type": "string"
+                "type": "string",
+                "description": "The source contract string field in Proof Selection Rules."
               },
               "generator_contract": {
                 "type": [
                   "string",
                   "null"
-                ]
+                ],
+                "description": "The generator contract string or null field in Proof Selection Rules."
               },
               "regeneration_path": {
                 "type": [
                   "string",
                   "null"
-                ]
+                ],
+                "description": "The regeneration path string or null field in Proof Selection Rules."
               },
               "edit_policy": {
-                "type": "string"
+                "type": "string",
+                "description": "The edit policy string field in Proof Selection Rules."
               }
             },
             "anyOf": [
@@ -143,12 +167,16 @@
                 ]
               }
             ],
-            "additionalProperties": false
-          }
+            "additionalProperties": false,
+            "description": "Item object accepted by classifications in Proof Selection Rules."
+          },
+          "description": "The classifications array field in Proof Selection Rules."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The cli authority object field in Proof Selection Rules."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }

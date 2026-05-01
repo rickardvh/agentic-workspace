@@ -1,6 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/optimization-bias-policy.schema.json",
+  "title": "Optimization Bias Policy",
+  "description": "Schema for Optimization Bias Policy.",
   "type": "object",
   "required": [
     "schema_version",
@@ -12,23 +14,29 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "agentic-workspace/optimization-bias-policy/v1"
+      "const": "agentic-workspace/optimization-bias-policy/v1",
+      "description": "The schema version constant field in Optimization Bias Policy."
     },
     "default_mode": {
-      "type": "string"
+      "type": "string",
+      "description": "The default mode string field in Optimization Bias Policy."
     },
     "owner_surface": {
-      "type": "string"
+      "type": "string",
+      "description": "The owner surface string field in Optimization Bias Policy."
     },
     "must_not_change": {
       "type": "array",
       "minItems": 1,
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "description": "Item string accepted by must not change in Optimization Bias Policy."
+      },
+      "description": "The must not change array field in Optimization Bias Policy."
     },
     "surface_boundary": {
-      "$ref": "#/$defs/surfaceBoundary"
+      "$ref": "#/$defs/surfaceBoundary",
+      "description": "The surface boundary reference field in Optimization Bias Policy."
     },
     "modes": {
       "type": "array",
@@ -47,40 +55,52 @@
         ],
         "properties": {
           "mode": {
-            "type": "string"
+            "type": "string",
+            "description": "The mode string field in Optimization Bias Policy."
           },
           "summary": {
-            "type": "string"
+            "type": "string",
+            "description": "The summary string field in Optimization Bias Policy."
           },
           "report_density": {
-            "type": "string"
+            "type": "string",
+            "description": "The report density string field in Optimization Bias Policy."
           },
           "residue_density": {
-            "type": "string"
+            "type": "string",
+            "description": "The residue density string field in Optimization Bias Policy."
           },
           "rendered_view_style": {
-            "type": "string"
+            "type": "string",
+            "description": "The rendered view style string field in Optimization Bias Policy."
           },
           "allows": {
             "type": "array",
             "minItems": 1,
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "description": "Item string accepted by allows in Optimization Bias Policy."
+            },
+            "description": "The allows array field in Optimization Bias Policy."
           },
           "does_not_affect": {
             "type": "array",
             "minItems": 1,
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "description": "Item string accepted by does not affect in Optimization Bias Policy."
+            },
+            "description": "The does not affect array field in Optimization Bias Policy."
           },
           "surface_boundary": {
-            "$ref": "#/$defs/surfaceBoundary"
+            "$ref": "#/$defs/surfaceBoundary",
+            "description": "The surface boundary reference field in Optimization Bias Policy."
           }
         },
-        "additionalProperties": false
-      }
+        "additionalProperties": false,
+        "description": "Item object accepted by modes in Optimization Bias Policy."
+      },
+      "description": "The modes array field in Optimization Bias Policy."
     }
   },
   "$defs": {
@@ -95,19 +115,25 @@
           "type": "array",
           "minItems": 1,
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "description": "Item string accepted by honors bias in Optimization Bias Policy."
+          },
+          "description": "The honors bias array field in Optimization Bias Policy."
         },
         "stays_invariant": {
           "type": "array",
           "minItems": 1,
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "description": "Item string accepted by stays invariant in Optimization Bias Policy."
+          },
+          "description": "The stays invariant array field in Optimization Bias Policy."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Reusable surfaceBoundary object definition for Optimization Bias Policy."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }
