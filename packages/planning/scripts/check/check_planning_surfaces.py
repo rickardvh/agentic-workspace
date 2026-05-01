@@ -840,20 +840,17 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     contributor_text = "\n".join(_read_lines(contributor_path)).lower() if contributor_path.exists() else ""
 
     required_agents_fragments = (
-        "agentic-workspace start --format json",
-        "agentic-workspace preflight --format json",
-        "agentic-workspace summary --format json",
-        "agentic-workspace config --target . --format json",
-        "open module, planning, memory, or deeper routing files only when the compact answers point there",
-        "do not bulk-read all planning surfaces",
-        "agentic-workspace defaults --section startup --format json",
+        "<!-- agentic-workspace:workflow:start -->",
+        ".agentic-workspace/workflow.md",
+        "cli-first startup guidance before implementation",
+        "<!-- agentic-workspace:workflow:end -->",
     )
     if not all(fragment in agents_text for fragment in required_agents_fragments):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(agents_path),
-                "AGENTS startup policy is missing required minimal-read-order guidance.",
+                "AGENTS startup policy is missing the thin managed workflow fence.",
             )
         )
 

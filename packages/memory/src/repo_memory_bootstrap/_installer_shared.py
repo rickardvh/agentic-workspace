@@ -186,7 +186,9 @@ WORKFLOW_POINTER_BLOCK = (
 WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
 WORKSPACE_POINTER_BLOCK = (
-    f"{WORKSPACE_WORKFLOW_MARKER_START}\nRead `.agentic-workspace/WORKFLOW.md` for shared workflow rules.\n{WORKSPACE_WORKFLOW_MARKER_END}"
+    f"{WORKSPACE_WORKFLOW_MARKER_START}\n"
+    "Start with `.agentic-workspace/WORKFLOW.md`; it routes work through CLI-first startup guidance before implementation.\n"
+    f"{WORKSPACE_WORKFLOW_MARKER_END}"
 )
 EMBEDDED_WORKFLOW_HEADINGS = (
     "## Task system boundary",

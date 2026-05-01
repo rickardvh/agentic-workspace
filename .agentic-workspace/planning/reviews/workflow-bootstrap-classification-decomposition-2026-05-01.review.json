@@ -1,0 +1,77 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Workflow Bootstrap Classification Decomposition",
+  "date": "2026-05-01",
+  "scope": "#647",
+  "classification": "decomposition",
+  "summary": {
+    "intake_source": "GitHub issue #647, https://github.com/rickardvh/agentic-workspace/issues/647",
+    "work_intent_classification": "lane",
+    "classification_reason": "The work changes first-contact startup guidance, managed payloads, and tests, but can be completed as one bounded package lane without creating a separate epic hierarchy.",
+    "not_direct_reason": "It requires package workflow ingestion, managed payload alignment, tests, validation, and closeout dogfooding.",
+    "not_epic_reason": "The accepted intent is a focused workflow-bootstrap improvement, not a multi-release product program.",
+    "adaptive_assurance": "high because startup adapters and workflow bootstrap text shape future agent behavior and can cause broad misuse if vague or misleading.",
+    "execution_decision": "Promote to todo.active_items plus .agentic-workspace/planning/execplans/workflow-bootstrap-cli-first-classification-issue-647.plan.json."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#647",
+      "label": "Make managed workflow bootstrap CLI-first and classification-driven",
+      "role": "intake",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/647"
+    },
+    {
+      "kind": "execplan",
+      "target": ".agentic-workspace/planning/execplans/workflow-bootstrap-cli-first-classification-issue-647.plan.json",
+      "label": "active implementation plan",
+      "role": "execution",
+      "locator": ""
+    }
+  ],
+  "lane_impacts": [
+    {
+      "id": "slice-1-intake-and-plan",
+      "summary": "Ingest #647 into checked-in planning, classify the work, and record bounded decomposition before implementation.",
+      "status": "complete"
+    },
+    {
+      "id": "slice-2-managed-fence",
+      "summary": "Make the managed AGENTS.md workflow fence visibly route agents to the CLI-first bootstrap while staying machine-detectable and minimal.",
+      "status": "complete"
+    },
+    {
+      "id": "slice-3-workflow-router",
+      "summary": "Rewrite installed and packaged .agentic-workspace/WORKFLOW.md as a CLI-first bootstrap router with Markdown fallback for weak agents.",
+      "status": "complete"
+    },
+    {
+      "id": "slice-4-structured-startup-alignment",
+      "summary": "Align startup/config/defaults/report guidance and tests where needed so structured surfaces point agents through classification before broad work.",
+      "status": "complete"
+    },
+    {
+      "id": "slice-5-proof-closeout",
+      "summary": "Run focused tests, maintainer surface refresh, planning checks, dogfooding closeout, and archive the plan if complete.",
+      "status": "complete"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Stale pointer recognition fixed during dogfooding",
+      "summary": "The memory package still recognized only the old workspace pointer block and reported a fresh init as stale.",
+      "evidence": "Focused workspace report tests failed until packages/memory/src/repo_memory_bootstrap/_installer_shared.py used the same visible workspace pointer block as the root package.",
+      "risk if unchanged": "Fresh installs with the new thin visible fence would produce false maintenance pressure.",
+      "suggested action": "Fixed in this lane and covered by package memory installer tests.",
+      "promotion target": "none"
+    },
+    {
+      "title": "Stale AGENTS prose checker fixed during dogfooding",
+      "summary": "The planning surface checker still required old startup-order prose in AGENTS.md.",
+      "evidence": "check_planning_surfaces.py warned after AGENTS.md was intentionally reduced to the managed fence.",
+      "risk if unchanged": "The package would tell agents to keep duplicating startup prose in host repo instructions.",
+      "suggested action": "Fixed in this lane and covered by maintainer-surface and planning checker tests.",
+      "promotion target": "none"
+    }
+  ]
+}

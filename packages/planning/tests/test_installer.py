@@ -3375,7 +3375,9 @@ execplans = [
 ]
 
 [todo]
-active_items = []
+active_items = [
+  {{ id = "repair-drift-recovery-lane", surface = "{plan_ref}", status = "active" }},
+]
 queued_items = []
 """,
     )
@@ -3393,8 +3395,7 @@ queued_items = []
     assert "repair-drift-recovery-lane" not in state_text
     assert "work_items = []" in state_text
     assert "execplans = []" in state_text
-    assert any(action.kind == "updated" and "active execplan reference" in action.detail for action in result.actions)
-    assert any(action.kind == "updated" and "work_items item" in action.detail for action in result.actions)
+    assert any(action.kind == "updated" and "remove TODO item 'repair-drift-recovery-lane'" in action.detail for action in result.actions)
 
 
 def test_archive_execplan_apply_cleanup_merges_compact_state_todo_and_roadmap_cleanup(tmp_path: Path) -> None:
