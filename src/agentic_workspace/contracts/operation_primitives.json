@@ -137,6 +137,22 @@
     {
       "id": "usage.error",
       "summary": "Stop with a user-facing usage error when operation preconditions are violated."
+    },
+    {
+      "id": "planning.bootstrap.doctor.load",
+      "summary": "Load package-local planning doctor diagnostics for a target repository."
+    },
+    {
+      "id": "planning.report.load",
+      "summary": "Load package-local planning report state for a target repository."
+    },
+    {
+      "id": "memory.bootstrap.doctor.load",
+      "summary": "Load package-local memory doctor diagnostics for a target repository."
+    },
+    {
+      "id": "memory.report.load",
+      "summary": "Load package-local memory report state for a target repository."
     }
   ]
 }

@@ -280,6 +280,7 @@
             "supported-now",
             "proof-fixture",
             "runnable-read-only-adapter",
+            "runtime-backed-read-only-adapter",
             "deferred"
           ],
           "description": "Allowed generation status value for routing or validation."
@@ -385,6 +386,36 @@
           },
           "additionalProperties": false,
           "description": "Command string or command name used by this contract."
+        },
+        "interface": {
+          "type": "object",
+          "required": [
+            "name",
+            "help",
+            "options"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Visible command name parsed by generated adapters."
+            },
+            "help": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Command help text rendered by generated adapters."
+            },
+            "options": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/option",
+                "description": "One generated option accepted by this command."
+              },
+              "description": "Flattened option semantics for generated parser projection."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Generated parser-facing interface for migrated command surfaces."
         },
         "operation_ref": {
           "type": "object",
@@ -531,6 +562,68 @@
         "description": "One entry in the schema refs list."
       },
       "description": "Ordered schema refs entries used by this contract."
+    },
+    "option": {
+      "type": "object",
+      "required": [
+        "name",
+        "flags"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Normalized option destination name."
+        },
+        "flags": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One command-line spelling for this option."
+          },
+          "description": "Command-line flags accepted by generated adapters."
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Parser action such as store_true when the option is boolean."
+        },
+        "choices": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One accepted option value."
+          },
+          "description": "Allowed option values."
+        },
+        "default": {
+          "description": "Default value applied by the generated parser when the option is omitted."
+        },
+        "nargs": {
+          "description": "Argparse-style arity marker for list-like options."
+        },
+        "type": {
+          "enum": [
+            "integer"
+          ],
+          "description": "Primitive parser coercion used by generated adapters."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether the option must be provided."
+        },
+        "help": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Option help text rendered by generated adapters."
+        }
+      },
+      "additionalProperties": false,
+      "description": "One generated parser option."
     },
     "non_empty_strings": {
       "type": "array",

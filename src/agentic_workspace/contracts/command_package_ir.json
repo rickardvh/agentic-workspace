@@ -153,8 +153,8 @@
             "agentic-workspace"
           ],
           "test_environment": "python-dev",
-          "maturity_level_ref": "metadata-proof-fixture",
-          "generation_status": "supported-now"
+          "maturity_level_ref": "runtime-backed-read-only-adapter",
+          "generation_status": "runtime-backed-read-only-adapter"
         },
         {
           "kind": "typescript",
@@ -197,6 +197,31 @@
           "command": {
             "name": "defaults",
             "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "defaults",
+            "help": "Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "section",
+                "flags": [
+                  "--section"
+                ],
+                "help": "Return only one top-level defaults section in the compact contract profile."
+              }
+            ]
           },
           "operation_ref": {
             "id": "defaults.report",
@@ -248,6 +273,1376 @@
               "output emission"
             ]
           }
+        },
+        {
+          "adapter_id": "config.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "config",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "config",
+            "help": "Show the resolved repo-owned workspace config layered onto product defaults.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "config.report",
+            "path": "operations/config.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.config.load",
+              "workspace.config.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "workspace_config.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "config.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "config loading",
+              "payload assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "modules.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "modules",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "modules",
+            "help": "List workspace modules available to the orchestrator.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path used to report installed modules."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "modules.report",
+            "path": "operations/modules.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.modules.inspect",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "modules.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "module descriptor inspection",
+              "installed-signal detection",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "start.context.cli",
+          "status": "generated",
+          "command": {
+            "name": "start",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "start",
+            "help": "Return the minimum safe startup context for beginning work in a target repository.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path for startup context (defaults to current workspace)."
+              },
+              {
+                "name": "changed",
+                "flags": [
+                  "--changed"
+                ],
+                "nargs": "*",
+                "default": [],
+                "help": "Optional repo-relative changed paths used to include a proof recommendation."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "start.context",
+            "path": "operations/start.context.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "preflight.context.assemble",
+              "startup.context.assemble",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "startup_context.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "start.context.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "startup context assembly",
+              "changed-path proof selection",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "summary.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "summary",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "summary",
+            "help": "Show the active execution summary from the planning module.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path to read summary from."
+              },
+              {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "compact",
+                  "full"
+                ],
+                "default": "compact"
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "summary.report",
+            "path": "operations/summary.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "planning.summary.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "summary.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "planning summary loading",
+              "memory consult augmentation",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "implement.context.cli",
+          "status": "generated",
+          "command": {
+            "name": "implement",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "implement",
+            "help": "Return a cheap-implementer context for a bounded changed-path scope.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path for implementer context (defaults to current workspace)."
+              },
+              {
+                "name": "changed",
+                "flags": [
+                  "--changed"
+                ],
+                "nargs": "*",
+                "default": [],
+                "help": "Repo-relative changed paths used to select inspect scope, boundary warnings, and proof commands."
+              },
+              {
+                "name": "task",
+                "flags": [
+                  "--task"
+                ],
+                "help": "Optional task text used to route broad external-work requests before implementation."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "implement.context",
+            "path": "operations/implement.context.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "implementer.context.assemble",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "implement.context.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "implementer context assembly",
+              "changed-path proof selection",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "preflight.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "preflight",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "preflight",
+            "help": "Get compact takeover-safe context: startup defaults + resolved config + active planning state in one call.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path for preflight context (defaults to current workspace)."
+              },
+              {
+                "name": "active_only",
+                "flags": [
+                  "--active-only"
+                ],
+                "action": "store_true",
+                "help": "Return only active planning state without startup defaults and config."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "preflight.report",
+            "path": "operations/preflight.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.defaults.load",
+              "workspace.config.load",
+              "planning.summary.load",
+              "preflight.token.create",
+              "preflight.context.assemble",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "preflight.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "preflight token creation",
+              "takeover context assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "proof.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "proof",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "proof",
+            "help": "Show the canonical proof routes and current workspace proof summary.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path used to inspect installed modules and proof state."
+              },
+              {
+                "name": "route",
+                "flags": [
+                  "--route"
+                ],
+                "help": "Return one proof route by id instead of the full proof surface."
+              },
+              {
+                "name": "current",
+                "flags": [
+                  "--current"
+                ],
+                "action": "store_true",
+                "help": "Return only the current proof summary."
+              },
+              {
+                "name": "changed",
+                "flags": [
+                  "--changed"
+                ],
+                "nargs": "*",
+                "default": [],
+                "help": "Return required proof commands for the provided repo-relative changed paths."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "proof.report",
+            "path": "operations/proof.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "proof.routes.resolve",
+              "proof.routes.resolve",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "proof.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "proof route resolution",
+              "changed-path proof selection",
+              "surface-value review",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "ownership.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "ownership",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "ownership",
+            "help": "Show the canonical ownership and authority mapping for the target repository.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path used to inspect the ownership ledger."
+              },
+              {
+                "name": "concern",
+                "flags": [
+                  "--concern"
+                ],
+                "help": "Return one authority-surface answer by concern."
+              },
+              {
+                "name": "path",
+                "flags": [
+                  "--path"
+                ],
+                "help": "Return the ownership answer for one repo-relative path."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "ownership.report",
+            "path": "operations/ownership.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "ownership.answer.resolve",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "ownership.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "ownership ledger loading",
+              "authority answer selection",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "skills.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "skills",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "skills",
+            "help": "List registered workspace skills from installed package registries and repo-owned skill registries.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path used to inspect installed and repo-owned skills."
+              },
+              {
+                "name": "task",
+                "flags": [
+                  "--task"
+                ],
+                "help": "Optional task description used to recommend likely skills."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "skills.report",
+            "path": "operations/skills.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "skills.registry.inspect",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "skills.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "skill registry discovery",
+              "task recommendation scoring",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "report.combined.cli",
+          "status": "generated",
+          "command": {
+            "name": "report",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "report",
+            "help": "Show a compact combined workspace report for installed modules, mixed-agent posture, and next-action guidance.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "preset",
+                "flags": [
+                  "--preset"
+                ],
+                "help": "Named module bundle."
+              },
+              {
+                "name": "modules",
+                "flags": [
+                  "--modules"
+                ],
+                "help": "Comma-separated module selection."
+              },
+              {
+                "name": "non_interactive",
+                "flags": [
+                  "--non-interactive"
+                ],
+                "action": "store_true",
+                "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              },
+              {
+                "name": "startup",
+                "flags": [
+                  "--startup"
+                ],
+                "action": "store_true",
+                "help": "Return the high-signal orientation block for fresh agents."
+              },
+              {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "router",
+                  "full"
+                ],
+                "default": "router",
+                "help": "Select the compact router profile or the full combined report."
+              },
+              {
+                "name": "section",
+                "flags": [
+                  "--section"
+                ],
+                "help": "Return one top-level full-report section in the compact contract profile."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "report.combined",
+            "path": "operations/report.combined.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.config.load",
+              "workspace.selection.resolve",
+              "workspace.report.assemble",
+              "workspace.report.select",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "report.combined.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "config loading",
+              "module selection",
+              "combined report assembly",
+              "profile or section selection",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "reconcile.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "reconcile",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "reconcile",
+            "help": "Show stale planning state against provider-agnostic external work evidence.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path used to reconcile planning state."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "reconcile.report",
+            "path": "operations/reconcile.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "planning.reconcile.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "reconcile.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "external intent cache refresh when available",
+              "planning reconciliation loading",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "setup.guidance.cli",
+          "status": "generated",
+          "command": {
+            "name": "setup",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "setup",
+            "help": "Show the bounded post-bootstrap setup guidance for a mature repository.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "preset",
+                "flags": [
+                  "--preset"
+                ],
+                "help": "Named module bundle."
+              },
+              {
+                "name": "modules",
+                "flags": [
+                  "--modules"
+                ],
+                "help": "Comma-separated module selection."
+              },
+              {
+                "name": "non_interactive",
+                "flags": [
+                  "--non-interactive"
+                ],
+                "action": "store_true",
+                "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "setup.guidance",
+            "path": "operations/setup.guidance.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.selection.resolve",
+              "workspace.report.assemble",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "setup.guidance.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "module selection",
+              "setup guidance assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "status.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "status",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "status",
+            "help": "Report installed modules and workspace health summary.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "preset",
+                "flags": [
+                  "--preset"
+                ],
+                "help": "Named module bundle."
+              },
+              {
+                "name": "modules",
+                "flags": [
+                  "--modules"
+                ],
+                "help": "Comma-separated module selection."
+              },
+              {
+                "name": "non_interactive",
+                "flags": [
+                  "--non-interactive"
+                ],
+                "action": "store_true",
+                "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "status.report",
+            "path": "operations/status.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.selection.resolve",
+              "workspace.report.assemble",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "status.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "module selection",
+              "status report assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "doctor.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "doctor",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "doctor",
+            "help": "Report drift, missing surfaces, and recommended remediation.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "preset",
+                "flags": [
+                  "--preset"
+                ],
+                "help": "Named module bundle."
+              },
+              {
+                "name": "modules",
+                "flags": [
+                  "--modules"
+                ],
+                "help": "Comma-separated module selection."
+              },
+              {
+                "name": "non_interactive",
+                "flags": [
+                  "--non-interactive"
+                ],
+                "action": "store_true",
+                "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "doctor.report",
+            "path": "operations/doctor.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.selection.resolve",
+              "workspace.report.assemble",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "doctor.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "module selection",
+              "doctor report assembly",
+              "repair guidance assembly",
+              "output emission"
+            ]
+          }
         }
       ]
     },
@@ -264,8 +1659,8 @@
             "agentic-planning-bootstrap"
           ],
           "test_environment": "python-dev",
-          "maturity_level_ref": "metadata-proof-fixture",
-          "generation_status": "supported-now"
+          "maturity_level_ref": "runtime-backed-read-only-adapter",
+          "generation_status": "runtime-backed-read-only-adapter"
         },
         {
           "kind": "typescript",
@@ -286,6 +1681,31 @@
           "command": {
             "name": "status",
             "manifest_ref": "package:planning:cli"
+          },
+          "interface": {
+            "name": "status",
+            "help": "Report whether planning bootstrap files are present.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
           },
           "operation_ref": {
             "id": "planning.status.report",
@@ -332,6 +1752,330 @@
               "output emission"
             ]
           }
+        },
+        {
+          "adapter_id": "planning.doctor.cli",
+          "status": "generated",
+          "command": {
+            "name": "doctor",
+            "manifest_ref": "package:planning:cli"
+          },
+          "interface": {
+            "name": "doctor",
+            "help": "Read-only doctor report.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "planning.doctor.report",
+            "path": "operations/planning.doctor.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.bootstrap.doctor.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "planning.doctor.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "package-local primitive implementation",
+              "payload assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "planning.summary.cli",
+          "status": "generated",
+          "command": {
+            "name": "summary",
+            "manifest_ref": "package:planning:cli"
+          },
+          "interface": {
+            "name": "summary",
+            "help": "Read-only summary report.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "compact",
+                  "full"
+                ],
+                "default": "compact",
+                "help": "Summary profile."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "planning.summary.report",
+            "path": "operations/planning.summary.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.summary.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "planning.summary.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "package-local primitive implementation",
+              "payload assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "planning.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "report",
+            "manifest_ref": "package:planning:cli"
+          },
+          "interface": {
+            "name": "report",
+            "help": "Read-only report report.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "planning.report.report",
+            "path": "operations/planning.report.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.report.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "planning.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "package-local primitive implementation",
+              "payload assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "planning.reconcile.cli",
+          "status": "generated",
+          "command": {
+            "name": "reconcile",
+            "manifest_ref": "package:planning:cli"
+          },
+          "interface": {
+            "name": "reconcile",
+            "help": "Read-only reconcile report.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "planning.reconcile.report",
+            "path": "operations/planning.reconcile.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.reconcile.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "planning.reconcile.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "package-local primitive implementation",
+              "payload assembly",
+              "output emission"
+            ]
+          }
         }
       ]
     },
@@ -348,8 +2092,8 @@
             "agentic-memory-bootstrap"
           ],
           "test_environment": "python-dev",
-          "maturity_level_ref": "metadata-proof-fixture",
-          "generation_status": "supported-now"
+          "maturity_level_ref": "runtime-backed-read-only-adapter",
+          "generation_status": "runtime-backed-read-only-adapter"
         },
         {
           "kind": "typescript",
@@ -370,6 +2114,31 @@
           "command": {
             "name": "status",
             "manifest_ref": "package:memory:cli"
+          },
+          "interface": {
+            "name": "status",
+            "help": "Report whether memory bootstrap files are present.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
           },
           "operation_ref": {
             "id": "memory.status.report",
@@ -413,6 +2182,170 @@
             "runtime_owned": [
               "memory bootstrap inspection",
               "module result assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "memory.doctor.cli",
+          "status": "generated",
+          "command": {
+            "name": "doctor",
+            "manifest_ref": "package:memory:cli"
+          },
+          "interface": {
+            "name": "doctor",
+            "help": "Read-only doctor report.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "strict_doc_ownership",
+                "flags": [
+                  "--strict-doc-ownership"
+                ],
+                "action": "store_true",
+                "help": "Enforce doc-ownership audits even when the repo manifest has not enabled them."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "memory.doctor.report",
+            "path": "operations/memory.doctor.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "memory.bootstrap.doctor.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "memory.doctor.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "package-local primitive implementation",
+              "payload assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "memory.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "report",
+            "manifest_ref": "package:memory:cli"
+          },
+          "interface": {
+            "name": "report",
+            "help": "Read-only report report.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "memory.report.report",
+            "path": "operations/memory.report.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "memory.report.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "memory.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "package-local primitive implementation",
+              "payload assembly",
               "output emission"
             ]
           }

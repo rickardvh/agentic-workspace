@@ -1,0 +1,126 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "init.lifecycle.dry-run.process",
+  "operation_id": "init.lifecycle",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "init",
+      "--target",
+      ".",
+      "--module",
+      "planning",
+      "--dry-run",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-init-dry-run-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "command"
+          ],
+          "equals": "init"
+        },
+        {
+          "path": [
+            "dry_run"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "modules"
+          ],
+          "equals": [
+            "planning"
+          ]
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "kind"
+          ],
+          "equals": "workspace-lifecycle-plan/v1"
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "command"
+          ],
+          "equals": "init"
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "dry_run"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "mutation_safety",
+            "hand_owned_runtime"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "mutation_safety",
+            "dry_run_apply_separation",
+            "status"
+          ],
+          "equals": "dry-run-only"
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "next_safe_command",
+            "status"
+          ],
+          "equals": "review-required"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": [
+        ".agentic-workspace",
+        "AGENTS.md",
+        "llms.txt"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

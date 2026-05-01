@@ -97,6 +97,15 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
+from agentic_workspace.generated_cli_package import (
+    build_generated_parser as build_generated_cli_package_parser,
+)
+from agentic_workspace.generated_cli_package import (
+    run_generated_command as run_generated_cli_package_command,
+)
+from agentic_workspace.generated_cli_package import (
+    supports_generated_command as supports_generated_cli_package_command,
+)
 from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 from agentic_workspace.reporting_support import (
     output_contract_payload,
@@ -1838,8 +1847,13 @@ def _with_agent_instructions_file(config: WorkspaceConfig, *, filename: str, sou
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv_list = list(sys.argv[1:] if argv is None else argv)
+    generated_result = _run_generated_cli_package_if_supported(argv_list)
+    if generated_result is not None:
+        return generated_result
+
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(argv_list)
     try:
         descriptors = _module_operations()
         _validate_descriptor_contract(descriptors)
@@ -11791,13 +11805,249 @@ def _generated_adapter_for_command(command_name: str) -> dict[str, Any] | None:
     return GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
 
 
+def _run_generated_cli_package_if_supported(argv: list[str]) -> int | None:
+    if not supports_generated_cli_package_command(argv):
+        return None
+    try:
+        return run_generated_cli_package_command(argv, _run_generated_cli_operation)
+    except WorkspaceUsageError as exc:
+        build_generated_cli_package_parser().error(str(exc))
+
+
+def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) -> int:
+    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
+    if handler is None:
+        raise WorkspaceUsageError(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
+    return handler(args)
+
+
 def _run_defaults_report_adapter(args: argparse.Namespace) -> int:
     _emit_defaults(format_name=args.format, section=getattr(args, "section", None))
     return 0
 
 
+def _run_config_report_adapter(args: argparse.Namespace) -> int:
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="config", target_root=target_root)
+    _emit_config(
+        format_name=args.format,
+        config=config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors))),
+    )
+    return 0
+
+
+def _run_modules_report_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else None
+    if target_root is not None:
+        _validate_target_root(command_name="modules", target_root=target_root)
+    _emit_modules(format_name=args.format, target_root=target_root)
+    return 0
+
+
+def _run_start_context_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="start", target_root=target_root)
+    payload = _start_payload(
+        target_root=target_root,
+        changed_paths=list(getattr(args, "changed", []) or []),
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
+def _run_summary_report_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="summary", target_root=target_root)
+    from repo_planning_bootstrap.cli import _print_summary
+    from repo_planning_bootstrap.installer import format_summary_json, planning_summary
+
+    summary_profile = args.profile if args.format == "json" else "full"
+    summary = planning_summary(target=target_root.as_posix(), profile=summary_profile)
+    if isinstance(summary, dict):
+        config = _load_workspace_config(target_root=target_root)
+        summary["memory_consult"] = _memory_consult_payload(
+            target_root=target_root,
+            compact=summary_profile == "compact",
+            cli_invoke=config.cli_invoke,
+        )
+    if args.format == "json":
+        print(format_summary_json(summary))
+    else:
+        _print_summary(summary)
+    return 0
+
+
+def _run_implement_context_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="implement", target_root=target_root)
+    payload = _implement_payload(
+        target_root=target_root,
+        changed_paths=list(getattr(args, "changed", []) or []),
+        task_text=getattr(args, "task", None),
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
+def _run_preflight_report_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="preflight", target_root=target_root)
+    payload = _run_preflight_command(
+        target_root=target_root,
+        active_only=bool(getattr(args, "active_only", False)),
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
+def _run_proof_report_adapter(args: argparse.Namespace) -> int:
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="proof", target_root=target_root)
+    _emit_proof(
+        format_name=args.format,
+        target_root=target_root,
+        descriptors=descriptors,
+        route=getattr(args, "route", None),
+        current_only=bool(getattr(args, "current", False)),
+        changed_paths=list(getattr(args, "changed", []) or []),
+    )
+    return 0
+
+
+def _run_ownership_report_adapter(args: argparse.Namespace) -> int:
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="ownership", target_root=target_root)
+    _emit_ownership(
+        format_name=args.format,
+        target_root=target_root,
+        descriptors=descriptors,
+        concern=getattr(args, "concern", None),
+        repo_path=getattr(args, "path", None),
+    )
+    return 0
+
+
+def _run_skills_report_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else None
+    if target_root is not None:
+        _validate_target_root(command_name="skills", target_root=target_root)
+    _emit_skills(format_name=args.format, target_root=target_root, task_text=getattr(args, "task", None))
+    return 0
+
+
+def _selected_runtime_context(
+    *,
+    args: argparse.Namespace,
+    command_name: str,
+) -> tuple[Path, dict[str, ModuleDescriptor], WorkspaceConfig, list[str], str | None]:
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name=command_name, target_root=target_root)
+    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
+    selected_modules, resolved_preset = _selected_modules(
+        command_name=command_name,
+        preset_name=getattr(args, "preset", None),
+        module_arg=getattr(args, "modules", None),
+        target_root=target_root,
+        descriptors=descriptors,
+        config=config,
+    )
+    _validate_selected_module_contract(selected_modules=selected_modules, descriptors=descriptors)
+    return target_root, descriptors, config, selected_modules, resolved_preset
+
+
+def _run_report_combined_adapter(args: argparse.Namespace) -> int:
+    target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name="report")
+    if getattr(args, "startup", False):
+        _emit_startup_report(format_name=args.format, target_root=target_root, descriptors=descriptors, config=config)
+        return 0
+    if getattr(args, "section", None) in {"external_work_reconciliation", "external_work_delta"}:
+        _ensure_external_intent_cache_if_available(target_root=target_root)
+    payload = _run_report_command(
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        config=config,
+    )
+    payload = _select_report_payload(
+        payload,
+        profile=str(getattr(args, "profile", "router")),
+        section=getattr(args, "section", None),
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
+def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="reconcile", target_root=target_root)
+    from repo_planning_bootstrap.cli import _print_reconcile
+    from repo_planning_bootstrap.installer import planning_reconcile
+
+    _ensure_external_intent_cache_if_available(target_root=target_root)
+    payload = planning_reconcile(target=target_root)
+    if args.format == "json":
+        _emit_payload(payload=payload, format_name=args.format)
+    else:
+        _print_reconcile(payload)
+    return 0
+
+
+def _run_setup_guidance_adapter(args: argparse.Namespace) -> int:
+    target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name="setup")
+    _emit_setup(
+        format_name=args.format,
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        config=config,
+    )
+    return 0
+
+
+def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
+    command_name = str(args.command)
+    target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name=command_name)
+    payload = _run_lifecycle_command(
+        command_name=command_name,
+        target_root=target_root,
+        local_only_repo_root=None,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        dry_run=False,
+        non_interactive=bool(getattr(args, "non_interactive", False)),
+        config=config,
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
 _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
+    "config.report": _run_config_report_adapter,
     "defaults.report": _run_defaults_report_adapter,
+    "doctor.report": _run_lifecycle_report_adapter,
+    "implement.context": _run_implement_context_adapter,
+    "modules.report": _run_modules_report_adapter,
+    "ownership.report": _run_ownership_report_adapter,
+    "preflight.report": _run_preflight_report_adapter,
+    "proof.report": _run_proof_report_adapter,
+    "reconcile.report": _run_reconcile_report_adapter,
+    "report.combined": _run_report_combined_adapter,
+    "setup.guidance": _run_setup_guidance_adapter,
+    "skills.report": _run_skills_report_adapter,
+    "start.context": _run_start_context_adapter,
+    "status.report": _run_lifecycle_report_adapter,
+    "summary.report": _run_summary_report_adapter,
 }
 
 

@@ -133,6 +133,10 @@
               "minLength": 1,
               "description": "Schema that should validate stdout when the output is JSON."
             },
+            "allow_empty": {
+              "type": "boolean",
+              "description": "Whether empty stdout is acceptable for text-mode refusal cases."
+            },
             "field_assertions": {
               "type": "array",
               "items": {
@@ -154,6 +158,15 @@
             "allow_non_empty": {
               "type": "boolean",
               "description": "Whether non-empty stderr is acceptable for this fixture."
+            },
+            "contains": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Text that must appear in stderr."
+              },
+              "description": "Required stderr substrings for refusal or usage-error fixtures."
             }
           },
           "additionalProperties": false,

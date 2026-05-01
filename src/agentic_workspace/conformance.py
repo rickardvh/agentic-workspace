@@ -73,6 +73,9 @@ def _assert_process_result(*, result: subprocess.CompletedProcess[str], expectat
         raise AssertionError(f"expected exit {expected_exit}, got {result.returncode}; stderr={result.stderr!r}")
     if _mapping(expectations["stderr"]).get("allow_non_empty") is False and result.stderr.strip():
         raise AssertionError(f"expected empty stderr, got {result.stderr!r}")
+    for expected_text in _mapping(expectations["stderr"]).get("contains", []):
+        if str(expected_text) not in result.stderr:
+            raise AssertionError(f"expected stderr to contain {expected_text!r}, got {result.stderr!r}")
     stdout_expectations = _mapping(expectations["stdout"])
     if stdout_expectations.get("format") == "json":
         try:
@@ -88,7 +91,7 @@ def _assert_process_result(*, result: subprocess.CompletedProcess[str], expectat
                 raise AssertionError(f"stdout failed {schema_name} at {location}: {first.message}")
         for assertion in stdout_expectations.get("field_assertions", []):
             _assert_field(payload=payload, assertion=_mapping(assertion))
-    elif not result.stdout.strip():
+    elif not result.stdout.strip() and stdout_expectations.get("allow_empty") is not True:
         raise AssertionError("expected non-empty stdout")
 
 

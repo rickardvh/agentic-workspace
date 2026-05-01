@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import copy
 import importlib.util
 import json
@@ -203,6 +204,8 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
 
     assert root_package["program"] == "agentic-workspace"
     assert targets["python"]["test_environment"] == "python-dev"
+    assert targets["python"]["maturity_level_ref"] == "runtime-backed-read-only-adapter"
+    assert targets["python"]["generation_status"] == "runtime-backed-read-only-adapter"
     assert targets["typescript"]["test_environment"] == "docker"
     assert targets["typescript"]["maturity_level_ref"] == "runnable-read-only-adapter"
     assert targets["typescript"]["generation_status"] == "runnable-read-only-adapter"
@@ -217,7 +220,31 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
     adapters = {adapter["id"]: adapter for adapter in adapter_manifest["adapters"]}
     commands = {command["adapter_id"]: command for package in package_ir["packages"] for command in package["commands"]}
 
-    assert set(commands) == {"defaults.report.cli", "planning.status.cli", "memory.status.cli"}
+    assert set(commands) == {
+        "defaults.report.cli",
+        "config.report.cli",
+        "modules.report.cli",
+        "start.context.cli",
+        "summary.report.cli",
+        "implement.context.cli",
+        "preflight.report.cli",
+        "proof.report.cli",
+        "ownership.report.cli",
+        "skills.report.cli",
+        "report.combined.cli",
+        "reconcile.report.cli",
+        "setup.guidance.cli",
+        "status.report.cli",
+        "doctor.report.cli",
+        "planning.status.cli",
+        "planning.doctor.cli",
+        "planning.summary.cli",
+        "planning.report.cli",
+        "planning.reconcile.cli",
+        "memory.status.cli",
+        "memory.doctor.cli",
+        "memory.report.cli",
+    }
     defaults_command = commands["defaults.report.cli"]
     defaults_adapter = adapters["defaults.report.cli"]
 
@@ -272,9 +299,13 @@ def test_lifecycle_generation_readiness_records_phase_risk_and_fixture_plan() ->
     assert commands[("root", "doctor")]["generation_eligibility"] == "eligible-read-only"
     assert commands[("root", "uninstall")]["generation_eligibility"] == "deferred-destructive"
     assert commands[("root", "uninstall")]["effects"]["destructive_potential"] is True
+    assert "uninstall.lifecycle.destructive-refusal.process" in commands[("root", "uninstall")]["conformance_refs"]
+    assert "upgrade.lifecycle.strict-preflight-refusal.process" in commands[("root", "upgrade")]["conformance_refs"]
+    assert commands[("root", "upgrade")]["mutation_promotion_blockers"]
     assert commands[("planning-package", "status")]["generation_eligibility"] == "eligible-read-only"
     assert commands[("memory-package", "status")]["generation_eligibility"] == "eligible-read-only"
     assert any("strict preflight" in fixture for fixture in manifest["conformance_fixture_plan"])
+    assert any("Dry-run lifecycle conformance" in decision for decision in manifest["dry_run_conformance_decision"])
 
 
 def test_contract_tooling_check_derives_validated_consumption_from_policy() -> None:
@@ -440,12 +471,139 @@ def test_command_generation_readme_defines_lift_out_criteria() -> None:
 
 
 def test_generated_python_command_package_metadata_is_current() -> None:
-    from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE
+    from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE, generated_command_names, supports_generated_command
 
     assert GENERATED_COMMAND_PACKAGE["program"] == "agentic-workspace"
-    assert {command["adapter_id"] for command in GENERATED_COMMAND_PACKAGE["commands"]} == {"defaults.report.cli"}
+    assert {command["adapter_id"] for command in GENERATED_COMMAND_PACKAGE["commands"]} == {
+        "defaults.report.cli",
+        "config.report.cli",
+        "modules.report.cli",
+        "start.context.cli",
+        "summary.report.cli",
+        "implement.context.cli",
+        "preflight.report.cli",
+        "proof.report.cli",
+        "ownership.report.cli",
+        "skills.report.cli",
+        "report.combined.cli",
+        "reconcile.report.cli",
+        "setup.guidance.cli",
+        "status.report.cli",
+        "doctor.report.cli",
+    }
     target_kinds = {target["kind"] for target in GENERATED_COMMAND_PACKAGE["targets"]}
     assert {"python", "typescript", "bash", "powershell"} <= target_kinds
+    assert generated_command_names() == (
+        "config",
+        "defaults",
+        "doctor",
+        "implement",
+        "modules",
+        "ownership",
+        "preflight",
+        "proof",
+        "reconcile",
+        "report",
+        "setup",
+        "skills",
+        "start",
+        "status",
+        "summary",
+    )
+    assert supports_generated_command(["defaults", "--format", "json"]) is True
+    assert supports_generated_command(["config", "--format", "json"]) is True
+    assert supports_generated_command(["modules", "--format", "json"]) is True
+    assert supports_generated_command(["start", "--format", "json"]) is True
+    assert supports_generated_command(["summary", "--format", "json"]) is True
+    assert supports_generated_command(["implement", "--format", "json"]) is True
+    assert supports_generated_command(["preflight", "--format", "json"]) is True
+    assert supports_generated_command(["proof", "--format", "json"]) is True
+    assert supports_generated_command(["ownership", "--format", "json"]) is True
+    assert supports_generated_command(["skills", "--format", "json"]) is True
+    assert supports_generated_command(["report", "--format", "json"]) is True
+    assert supports_generated_command(["reconcile", "--format", "json"]) is True
+    assert supports_generated_command(["setup", "--format", "json"]) is True
+    assert supports_generated_command(["status", "--format", "json"]) is True
+    assert supports_generated_command(["doctor", "--format", "json"]) is True
+
+
+def test_generated_python_command_package_parses_and_dispatches_runtime_operations() -> None:
+    from agentic_workspace.generated_cli_package import run_generated_command
+
+    calls: list[tuple[str, str | None, str, str | None]] = []
+
+    def runtime_handler(operation_id: str, args: argparse.Namespace) -> int:
+        calls.append((operation_id, getattr(args, "target", None), args.format, getattr(args, "section", None)))
+        return 0
+
+    assert run_generated_command(["defaults", "--section", "startup", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["config", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["modules", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["start", "--target", ".", "--changed", "README.md", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["summary", "--target", ".", "--profile", "compact", "--format", "json"], runtime_handler) == 0
+    assert (
+        run_generated_command(
+            ["implement", "--target", ".", "--changed", "README.md", "--task", "generated-adapter-proof", "--format", "json"],
+            runtime_handler,
+        )
+        == 0
+    )
+    assert run_generated_command(["preflight", "--target", ".", "--active-only", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["proof", "--target", ".", "--changed", "README.md", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["ownership", "--target", ".", "--concern", "startup", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["skills", "--target", ".", "--task", "proof", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["report", "--target", ".", "--profile", "router", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["reconcile", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["setup", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["status", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["doctor", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
+    assert calls == [
+        ("defaults.report", None, "json", "startup"),
+        ("config.report", ".", "json", None),
+        ("modules.report", ".", "json", None),
+        ("start.context", ".", "json", None),
+        ("summary.report", ".", "json", None),
+        ("implement.context", ".", "json", None),
+        ("preflight.report", ".", "json", None),
+        ("proof.report", ".", "json", None),
+        ("ownership.report", ".", "json", None),
+        ("skills.report", ".", "json", None),
+        ("report.combined", ".", "json", None),
+        ("reconcile.report", ".", "json", None),
+        ("setup.guidance", ".", "json", None),
+        ("status.report", ".", "json", None),
+        ("doctor.report", ".", "json", None),
+    ]
+
+
+def test_package_generated_python_command_packages_parse_status_runtime_operations() -> None:
+    from repo_memory_bootstrap.generated_cli_package import run_generated_command as run_memory_generated_command
+    from repo_planning_bootstrap.generated_cli_package import run_generated_command as run_planning_generated_command
+
+    calls: list[tuple[str, str | None, str]] = []
+
+    def runtime_handler(operation_id: str, args: argparse.Namespace) -> int:
+        calls.append((operation_id, getattr(args, "target", None), args.format))
+        return 0
+
+    assert run_planning_generated_command(["status", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_planning_generated_command(["doctor", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_planning_generated_command(["summary", "--target", ".", "--profile", "compact", "--format", "json"], runtime_handler) == 0
+    assert run_planning_generated_command(["report", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_planning_generated_command(["reconcile", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_memory_generated_command(["status", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_memory_generated_command(["doctor", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_memory_generated_command(["report", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert calls == [
+        ("planning.status.report", ".", "json"),
+        ("planning.doctor.report", ".", "json"),
+        ("planning.summary.report", ".", "json"),
+        ("planning.report.report", ".", "json"),
+        ("planning.reconcile.report", ".", "json"),
+        ("memory.status.report", ".", "json"),
+        ("memory.doctor.report", ".", "json"),
+        ("memory.report.report", ".", "json"),
+    ]
 
 
 def test_generated_typescript_command_package_fixture_is_current() -> None:
@@ -469,6 +627,20 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     )
     assert package_json["agenticWorkspace"]["declaredEntrypoints"] == ["agentic-workspace"]
     assert "defaults.report.cli" in source_text
+    assert "config.report.cli" in source_text
+    assert "modules.report.cli" in source_text
+    assert "start.context.cli" in source_text
+    assert "summary.report.cli" in source_text
+    assert "implement.context.cli" in source_text
+    assert "preflight.report.cli" in source_text
+    assert "proof.report.cli" in source_text
+    assert "ownership.report.cli" in source_text
+    assert "skills.report.cli" in source_text
+    assert "report.combined.cli" in source_text
+    assert "reconcile.report.cli" in source_text
+    assert "setup.guidance.cli" in source_text
+    assert "status.report.cli" in source_text
+    assert "doctor.report.cli" in source_text
     assert "DO NOT EDIT DIRECTLY" in source_text
     assert "generated package metadata exposes expected commands" in test_text
     assert "generated runnable adapter delegates supported command to runtime process" in test_text
@@ -581,9 +753,25 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     )
     assert all(status["where_to_edit"]["runtime_behavior"] == "hand-written operation/primitive implementation code" for status in statuses)
     commands_by_program = {status["program"]: status["command_surfaces"] for status in statuses}
-    assert commands_by_program["agentic-workspace"] == ["defaults"]
-    assert commands_by_program["agentic-planning-bootstrap"] == ["status"]
-    assert commands_by_program["agentic-memory-bootstrap"] == ["status"]
+    assert commands_by_program["agentic-workspace"] == [
+        "defaults",
+        "config",
+        "modules",
+        "start",
+        "summary",
+        "implement",
+        "preflight",
+        "proof",
+        "ownership",
+        "skills",
+        "report",
+        "reconcile",
+        "setup",
+        "status",
+        "doctor",
+    ]
+    assert commands_by_program["agentic-planning-bootstrap"] == ["status", "doctor", "summary", "report", "reconcile"]
+    assert commands_by_program["agentic-memory-bootstrap"] == ["doctor", "report", "status"]
 
 
 def test_generated_adapter_contracts_match_live_cli_surfaces() -> None:

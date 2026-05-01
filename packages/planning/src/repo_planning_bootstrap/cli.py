@@ -3,9 +3,19 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import sys
 
 from repo_planning_bootstrap import __version__
 from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_source
+from repo_planning_bootstrap.generated_cli_package import (
+    build_generated_parser as build_generated_cli_package_parser,
+)
+from repo_planning_bootstrap.generated_cli_package import (
+    run_generated_command as run_generated_cli_package_command,
+)
+from repo_planning_bootstrap.generated_cli_package import (
+    supports_generated_command as supports_generated_cli_package_command,
+)
 from repo_planning_bootstrap.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 from repo_planning_bootstrap.installer import (
     adopt_bootstrap,
@@ -174,8 +184,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv_list = list(sys.argv[1:] if argv is None else argv)
+    generated_result = _run_generated_cli_package_if_supported(argv_list)
+    if generated_result is not None:
+        return generated_result
+
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(argv_list)
 
     generated_adapter = _generated_adapter_for_command(str(args.command))
     if generated_adapter is not None:
@@ -328,12 +343,61 @@ def _generated_adapter_for_command(command_name: str) -> dict[str, object] | Non
     return GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
 
 
+def _run_generated_cli_package_if_supported(argv: list[str]) -> int | None:
+    if not supports_generated_cli_package_command(argv):
+        return None
+    return run_generated_cli_package_command(argv, _run_generated_cli_operation)
+
+
+def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) -> int:
+    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
+    if handler is None:
+        build_generated_cli_package_parser().error(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
+    return handler(args)
+
+
 def _run_status_report_adapter(args: argparse.Namespace) -> int:
     return _emit(collect_status(target=args.target), args.format)
 
 
+def _run_doctor_report_adapter(args: argparse.Namespace) -> int:
+    return _emit(doctor_bootstrap(target=args.target), args.format)
+
+
+def _run_summary_report_adapter(args: argparse.Namespace) -> int:
+    summary_profile = args.profile if args.format == "json" else "full"
+    summary = planning_summary(target=args.target, profile=summary_profile)
+    if args.format == "json":
+        print(format_summary_json(summary))
+    else:
+        _print_summary(summary)
+    return 0
+
+
+def _run_report_adapter(args: argparse.Namespace) -> int:
+    report = planning_report(target=args.target)
+    if args.format == "json":
+        print(json.dumps(report, indent=2))
+    else:
+        _print_report(report)
+    return 0
+
+
+def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
+    reconcile = planning_reconcile(target=args.target)
+    if args.format == "json":
+        print(json.dumps(reconcile, indent=2))
+    else:
+        _print_reconcile(reconcile)
+    return 0
+
+
 _GENERATED_RUNTIME_HANDLERS = {
+    "planning.doctor.report": _run_doctor_report_adapter,
+    "planning.reconcile.report": _run_reconcile_report_adapter,
+    "planning.report.report": _run_report_adapter,
     "planning.status.report": _run_status_report_adapter,
+    "planning.summary.report": _run_summary_report_adapter,
 }
 
 

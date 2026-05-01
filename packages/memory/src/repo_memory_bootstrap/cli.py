@@ -3,10 +3,20 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import sys
 from pathlib import Path
 from typing import Any, cast
 
 from repo_memory_bootstrap import __version__
+from repo_memory_bootstrap.generated_cli_package import (
+    build_generated_parser as build_generated_cli_package_parser,
+)
+from repo_memory_bootstrap.generated_cli_package import (
+    run_generated_command as run_generated_cli_package_command,
+)
+from repo_memory_bootstrap.generated_cli_package import (
+    supports_generated_command as supports_generated_cli_package_command,
+)
 from repo_memory_bootstrap.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 from repo_memory_bootstrap.installer import (
     BOOTSTRAP_WORKSPACE_ROOT,
@@ -596,8 +606,13 @@ def _command_key(args: argparse.Namespace) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv_list = list(sys.argv[1:] if argv is None else argv)
+    generated_result = _run_generated_cli_package_if_supported(argv_list)
+    if generated_result is not None:
+        return generated_result
+
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(argv_list)
 
     try:
         generated_adapter = _generated_adapter_for_command(str(args.command))
@@ -617,11 +632,51 @@ def _generated_adapter_for_command(command_name: str) -> dict[str, object] | Non
     return GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
 
 
+def _run_generated_cli_package_if_supported(argv: list[str]) -> int | None:
+    if not supports_generated_cli_package_command(argv):
+        return None
+    return run_generated_cli_package_command(argv, _run_generated_cli_operation)
+
+
+def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) -> int:
+    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
+    if handler is not None:
+        result = handler(args)
+        return 0 if result is None else result
+    build_generated_cli_package_parser().error(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
+
+
 def _run_generated_command_adapter(args: argparse.Namespace, *, adapter: dict[str, object]) -> int:
     operation_id = str(adapter["operation_id"])
-    if operation_id == "memory.status.report":
-        return _handle_status(args)
+    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
+    if handler is not None:
+        result = handler(args)
+        return 0 if result is None else result
     raise ValueError(f"Unsupported generated command adapter operation: {operation_id}")
+
+
+def _handle_generated_doctor(args: argparse.Namespace) -> int | None:
+    for name in (
+        "project_name",
+        "project_purpose",
+        "key_repo_docs",
+        "key_subsystems",
+        "primary_build_command",
+        "primary_test_command",
+        "other_key_commands",
+    ):
+        if not hasattr(args, name):
+            setattr(args, name, None)
+    if not hasattr(args, "policy_profile"):
+        args.policy_profile = "default"
+    return _handle_doctor(args)
+
+
+_GENERATED_RUNTIME_HANDLERS = {
+    "memory.doctor.report": _handle_generated_doctor,
+    "memory.report.report": _handle_report,
+    "memory.status.report": _handle_status,
+}
 
 
 def _emit_result(result, *, output_format: str, include_install_summary: bool = False) -> None:

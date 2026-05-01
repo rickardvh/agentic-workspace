@@ -1,0 +1,64 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "uninstall.lifecycle.strict-preflight-refusal.process",
+  "operation_id": "uninstall.lifecycle",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "uninstall",
+      "--target",
+      ".",
+      "--module",
+      "planning",
+      "--strict-preflight",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-uninstall-preflight-refusal-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 2
+    },
+    "stdout": {
+      "format": "text",
+      "allow_empty": true,
+      "field_assertions": []
+    },
+    "stderr": {
+      "allow_non_empty": true,
+      "contains": [
+        "Strict preflight gate is enabled.",
+        "Provide --preflight-token"
+      ]
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": [
+        ".agentic-workspace",
+        "AGENTS.md",
+        "llms.txt"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}
