@@ -66,7 +66,7 @@
     "discovered implications": "High-assurance generated-adapter work must activate checked-in planning before implementation, not only during closeout.",
     "proof achieved now": "yes",
     "validation still needed": "CI after PR creation.",
-    "next likely slice": "#643 root read-only command expansion: promote `agentic-workspace start` after `config` and `modules` because its operation contract and primitive boundary are already explicit."
+    "next likely slice": "#643 root read-only command expansion: promote `agentic-workspace summary` next; it is read-only but needs planning-module availability conformance."
   },
   "intent_interpretation": {
     "literal request": "Ingest and implement #641 in a new branch, create a PR, use high-assurance workflow, report using the dogfooding template, implement full intent, create child issues if necessary, and implement child issues using progressive maturity.",
@@ -327,7 +327,7 @@
     "optional_deps": "Node and Docker availability for expanded generated package conformance."
   },
   "immediate_next_action": [
-    "Promote `agentic-workspace modules` through the generated root read-only adapter path for #643."
+    "Promote `agentic-workspace summary` through the generated root read-only adapter path for #643."
   ],
   "blockers": [
     "None."
