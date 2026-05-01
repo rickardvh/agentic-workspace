@@ -19,8 +19,8 @@
     },
     "execution": {
       "milestone": "dogfooding-robustness-followups",
-      "status": "active",
-      "next_step": "Commit and push the generated-output and conformance/modeling batch, then close the implemented dogfooding issues.",
+      "status": "completed",
+      "next_step": "Open the pull request and let linked issues close on merge.",
       "proof": "make check"
     },
     "scope": {
@@ -184,7 +184,7 @@
       "required_for": [
         "each issue batch"
       ],
-      "status": "pending",
+      "status": "satisfied",
       "evidence": [
         "2026-05-01: uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py -q",
         "2026-05-01: uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py -q",
@@ -351,14 +351,14 @@
   ],
   "active_milestone": {
     "id": "dogfooding-robustness-followups",
-    "status": "active",
+    "status": "completed",
     "scope": "Implement dogfooding workflow robustness issues.",
     "ready": "Issues and branch are available.",
     "blocked": "No current blocker.",
     "optional_deps": "Node for generated adapter conformance if #651 is implemented in this lane."
   },
   "immediate_next_action": [
-    "Commit and push the generated-output and conformance/modeling batch, then close the implemented dogfooding issues."
+    "Open the pull request and let linked issues close on merge."
   ],
   "blockers": [
     "None."
@@ -399,24 +399,24 @@
     "Branch is committed and pushed."
   ],
   "execution_run": {
-    "run status": "active",
+    "run status": "completed",
     "executor": "Codex",
     "handoff source": "User request after #641 PR merge.",
-    "what happened": "Created active execplan before implementation.",
+    "what happened": "Implemented the named dogfooding issues in two pushed batches.",
     "scope touched": "Planning summary/projection, archive-plan validation, focused tests, and active execplan.",
     "changed surfaces": "Planning state, execplan, planning bootstrap installer, and workspace CLI tests.",
     "validations run": "uv run agentic-workspace summary --format json; uv run pytest tests/test_workspace_cli.py -q -k \"next_step_and_warns or required_traceability_ref_paths or oversized_archive or broad_work_planning_guard or adaptive_assurance_end_to_end\"; uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py -q",
     "result for continuation": "#645, #649, #650, #651, #652, #653, #654, and #655 implemented locally with full proof.",
-    "next step": "Commit and push the generated-output and conformance/modeling batch, then close the implemented dogfooding issues."
+    "next step": "Open the pull request and let linked issues close on merge."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "make check passed",
+    "intent served": "yes",
     "config compliance": "active checked-in execplan created before implementation",
-    "misinterpretation risk": "medium until issue batching is complete",
-    "follow-on decision": "pending"
+    "misinterpretation risk": "low after focused and full proof",
+    "follow-on decision": "merge PR; linked issues close on merge"
   },
   "proof_report": {
     "validation proof": "make check",
@@ -425,9 +425,9 @@
   },
   "intent_satisfaction": {
     "original intent": "Fix the dogfooding issues next.",
-    "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "Pending implementation.",
-    "unsolved intent passed to": "none yet"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Implemented #645, #649, #650, #651, #652, #653, #654, and #655; make check passed; branch pushed.",
+    "unsolved intent passed to": "none"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve larger outcomes and checked-in planning for work whose proof or continuation would be expensive to reconstruct.",
@@ -436,12 +436,12 @@
     "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
   },
   "closure_check": {
-    "slice status": "active",
-    "larger-intent status": "active",
-    "closure decision": "not-ready",
-    "why this decision is honest": "Implementation has not started.",
-    "evidence carried forward": "Pending.",
-    "reopen trigger": "Focused proof or issue review finds unsatisfied acceptance."
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The named issues have implementation changes, focused proof, full make check, and pushed branch evidence.",
+    "evidence carried forward": "Commits 02c16c6 and 35dc692 on codex/dogfooding-robustness-followups; make check passed.",
+    "reopen trigger": "CI, PR review, or issue review finds unsatisfied acceptance."
   },
   "generated_closeout": {
     "status": "not-generated",
@@ -459,20 +459,20 @@
     "reason": "Route only if a reusable learning is not already captured by issues/checks."
   },
   "durable_residue": {
-    "status": "none",
-    "learned constraint": "",
-    "motivation worth preserving": "",
-    "canonical owner now": "none",
-    "promotion trigger": "none",
+    "status": "check",
+    "learned constraint": "Dogfooding closeout friction should become point-of-failure checks or compact projections rather than chat-only reminders.",
+    "motivation worth preserving": "The fixes added planning summary/archive checks, package-scoped command parity, lifecycle maturity matrix validation, conformance setup-step validation, and LF-normalized generated output checks.",
+    "canonical owner now": "contracts/checks",
+    "promotion trigger": "future dogfooding lane hits similar workflow, conformance, or generated-output friction",
     "retention after promotion": "retain"
   },
   "execution_summary": {
-    "outcome delivered": "Pending.",
-    "validation confirmed": "Pending.",
-    "follow-on routed to": "Pending.",
-    "post-work posterity capture": "Pending.",
-    "knowledge promoted (Memory/Docs/Config)": "Pending.",
-    "resume from": "Implement #645, #649, #654, and #655 first."
+    "outcome delivered": "Implemented #645, #649, #650, #651, #652, #653, #654, and #655.",
+    "validation confirmed": "make check",
+    "follow-on routed to": "PR merge and linked issue closure",
+    "post-work posterity capture": "Archived execplan plus checks/contracts added by this branch.",
+    "knowledge promoted (Memory/Docs/Config)": "Checks/contracts, not Memory.",
+    "resume from": "Open PR and merge after review."
   },
   "improvement_signal_review": {
     "status": "active",
