@@ -25,6 +25,112 @@ def _is_runnable_typescript_target(target: dict[str, Any]) -> bool:
     return target.get("maturity_level_ref") == "runnable-read-only-adapter"
 
 
+def _is_runtime_backed_python_target(target: dict[str, Any]) -> bool:
+    return target.get("kind") == "python" and target.get("maturity_level_ref") == "runtime-backed-read-only-adapter"
+
+
+def _python_adapter_commands(package: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        command for command in package["commands"] if command.get("status") == "generated" and isinstance(command.get("interface"), dict)
+    ]
+
+
+def _python_adapter_command_payload(package: dict[str, Any]) -> list[dict[str, Any]]:
+    payload: list[dict[str, Any]] = []
+    for command in _python_adapter_commands(package):
+        interface = dict(command["interface"])
+        payload.append(
+            {
+                "adapter_id": command["adapter_id"],
+                "operation_id": command["operation_ref"]["id"],
+                "interface": interface,
+            }
+        )
+    return payload
+
+
+def _python_runtime_adapter_module(package: dict[str, Any], *, source_path: str, regenerate_command: str) -> str:
+    rendered_package = _json_block(package)
+    rendered_commands = _json_block(_python_adapter_command_payload(package))
+    return (
+        '"""Generated runtime-backed Python command adapter.\n\n'
+        f"Source: {source_path}\n"
+        f"Program: {package['program']}\n"
+        f"Regenerate with: {regenerate_command}\n"
+        '"""\n\n'
+        "from __future__ import annotations\n\n"
+        "import argparse\n"
+        "import json\n"
+        "from collections.abc import Callable\n"
+        "from typing import Any\n\n"
+        "# DO NOT EDIT DIRECTLY.\n"
+        f"# Command/interface changes belong in {source_path}.\n"
+        "# Runtime behavior changes belong in hand-written operation/primitive implementation code.\n"
+        f"# Regenerate with: {regenerate_command}\n"
+        "GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(\n"
+        '    r"""\n'
+        f"{rendered_package}\n"
+        '"""\n'
+        ")\n\n"
+        "_GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(\n"
+        '    r"""\n'
+        f"{rendered_commands}\n"
+        '"""\n'
+        ")\n"
+        "_GENERATED_COMMANDS_BY_NAME: dict[str, dict[str, Any]] = {\n"
+        '    str(command["interface"]["name"]): command for command in _GENERATED_ADAPTER_COMMANDS\n'
+        "}\n\n"
+        "RuntimeHandler = Callable[[str, argparse.Namespace], int]\n\n\n"
+        "def generated_command_names() -> tuple[str, ...]:\n"
+        "    return tuple(sorted(_GENERATED_COMMANDS_BY_NAME))\n\n\n"
+        "def supports_generated_command(argv: list[str] | tuple[str, ...]) -> bool:\n"
+        "    return bool(argv) and str(argv[0]) in _GENERATED_COMMANDS_BY_NAME\n\n\n"
+        "def _option_type(option_spec: dict[str, Any]) -> Any:\n"
+        '    if option_spec.get("type") == "integer":\n'
+        "        return int\n"
+        "    return None\n\n\n"
+        "def _add_option(parser: argparse.ArgumentParser, option_spec: dict[str, Any]) -> None:\n"
+        "    kwargs: dict[str, Any] = {}\n"
+        '    action = option_spec.get("action")\n'
+        "    if isinstance(action, str):\n"
+        '        kwargs["action"] = action\n'
+        '    if "choices" in option_spec:\n'
+        '        kwargs["choices"] = tuple(option_spec["choices"])\n'
+        '    if "default" in option_spec:\n'
+        '        kwargs["default"] = option_spec["default"]\n'
+        '    if "nargs" in option_spec:\n'
+        '        kwargs["nargs"] = option_spec["nargs"]\n'
+        "    option_type = _option_type(option_spec)\n"
+        "    if option_type is not None:\n"
+        '        kwargs["type"] = option_type\n'
+        '    if option_spec.get("required") is True:\n'
+        '        kwargs["required"] = True\n'
+        '    help_text = option_spec.get("help")\n'
+        "    if isinstance(help_text, str):\n"
+        '        kwargs["help"] = help_text\n'
+        '    parser.add_argument(*option_spec["flags"], **kwargs)\n\n\n'
+        "def build_generated_parser() -> argparse.ArgumentParser:\n"
+        f"    parser = argparse.ArgumentParser(prog={json.dumps(package['program'])}, description={json.dumps(package.get('summary', ''))})\n"
+        '    subparsers = parser.add_subparsers(dest="command", required=True)\n'
+        "    for command in _GENERATED_ADAPTER_COMMANDS:\n"
+        '        interface = command["interface"]\n'
+        "        command_parser = subparsers.add_parser(\n"
+        '            str(interface["name"]),\n'
+        '            help=str(interface["help"]),\n'
+        '            description=str(interface["help"]),\n'
+        "        )\n"
+        '        command_parser.set_defaults(_generated_operation_id=command["operation_id"])\n'
+        '        for option in interface.get("options", []):\n'
+        "            _add_option(command_parser, option)\n"
+        "    return parser\n\n\n"
+        "def run_generated_command(argv: list[str] | tuple[str, ...], runtime_handler: RuntimeHandler) -> int:\n"
+        "    parser = build_generated_parser()\n"
+        "    args = parser.parse_args(list(argv))\n"
+        '    operation_id = str(getattr(args, "_generated_operation_id"))\n'
+        "    return runtime_handler(operation_id, args)\n"
+    )
+
+
 def _python_module(package: dict[str, Any], *, source_path: str, regenerate_command: str) -> str:
     rendered = _json_block(package)
     return (
@@ -220,6 +326,14 @@ def render_outputs(
         for target in package["targets"]:
             root = repo_root / str(target["generated_root"])
             if target["kind"] == "python":
+                if _is_runtime_backed_python_target(target):
+                    outputs.append(
+                        GeneratedOutput(
+                            root / "__init__.py",
+                            _python_runtime_adapter_module(package, source_path=source_path, regenerate_command=regenerate_command),
+                        )
+                    )
+                    continue
                 outputs.append(
                     GeneratedOutput(
                         root / "__init__.py", _python_module(package, source_path=source_path, regenerate_command=regenerate_command)

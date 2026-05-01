@@ -1,0 +1,480 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generated CLI Progressive Maturity For Issue 641",
+  "goal": [
+    "Implement #641 and its child issues (#642, #643, #644) using the package's progressive-maturity model and high-assurance workflow."
+  ],
+  "non_goals": [
+    "Do not promote mutation-capable generated adapters before dry-run, preflight, refusal, and review-gate conformance exist.",
+    "Do not make Node or Docker required for ordinary Python development.",
+    "Do not move runtime primitive behavior into generated adapter code."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Generated CLI adapters become the interface authority for the first proven root and package-local read-only commands, with remaining command families routed through explicit progressive-maturity follow-up.",
+      "constraints": "Use checked-in planning, preserve runtime primitive ownership, keep generated outputs derived from contracts/IR, and report dogfooding findings through the host-repo template.",
+      "latitude": "Promote commands only to the maturity level their proof supports; create or update child issues for expansion lanes that are not safe to promote yet.",
+      "escalation": "Stop and route follow-up if a command needs new runtime primitive boundaries, lifecycle mutation gates, or cross-package changes beyond the planned surfaces."
+    },
+    "execution": {
+      "milestone": "generated-cli-progressive-maturity-issue-641",
+      "status": "proof-complete",
+      "next_step": "Stage, commit, push, and create PR; then watch CI.",
+      "proof": "uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; make check; package closeout commands"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/schemas/command_package_ir.schema.json",
+        "packages/command-generation/schemas/command_package_ir.schema.json",
+        "packages/command-generation/src/agentic_command_generation/generator.py",
+        "src/agentic_workspace/generated_cli_package/__init__.py",
+        "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py",
+        "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py",
+        "src/agentic_workspace/cli.py",
+        "packages/planning/src/repo_planning_bootstrap/cli.py",
+        "packages/memory/src/repo_memory_bootstrap/cli.py",
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_contract_tooling.py",
+        "docs/reviews/generated-cli-progressive-maturity-2026-05-01.md",
+        "docs/reviews/generated-cli-adapter-high-assurance-report-2026-05-01.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/generated-cli-progressive-maturity-issue-641.plan.json"
+      ],
+      "invariants": [
+        "Generated parser/help/dispatch wiring is derived from command_package_ir.json.",
+        "Hand-written CLI code owns runtime primitive behavior only after generated parser/dispatch accepts a promoted command.",
+        "Progressive maturity is explicit per target and command family.",
+        "Mutation-capable generated adapters remain deferred until required conformance exists."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Finish the migration to single-source generated executable adapters without weakening safety boundaries.",
+    "this slice completes the larger intended outcome": "yes for the parent #641 enabling milestone; expansion remains tracked by #642, #643, and #644.",
+    "continuation surface": "GitHub issues #642, #643, and #644 plus this PR's review artifacts.",
+    "parent lane": "#641"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "Implement remaining command families through #642, #643, and #644 after this progressive-maturity foundation lands.",
+    "owner surface": "GitHub issues and docs/reviews/generated-cli-progressive-maturity-2026-05-01.md",
+    "activation trigger": "When another command family is selected for generated adapter promotion."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Runtime-backed generated Python parser/dispatch for root `defaults`, Planning `status`, and Memory `status`, plus static checks that enforce generated routing before handwritten parsers.",
+    "intentionally deferred": "Remaining root read-only commands, package-local read-only breadth beyond status, and lifecycle dry-run/mutation generated adapters.",
+    "discovered implications": "High-assurance generated-adapter work must activate checked-in planning before implementation, not only during closeout.",
+    "proof achieved now": "yes",
+    "validation still needed": "CI after PR creation.",
+    "next likely slice": "#643 root read-only command expansion."
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest and implement #641 in a new branch, create a PR, use high-assurance workflow, report using the dogfooding template, implement full intent, create child issues if necessary, and implement child issues using progressive maturity.",
+    "inferred intended outcome": "Use the package's own planning, maturity, proof, and dogfooding surfaces while completing the generated CLI adapter migration foundation.",
+    "chosen concrete what": "Promote the first root and package-local read-only commands to runtime-backed generated Python adapters, document the maturity matrix, and keep lifecycle mutation deferred behind explicit proof gates.",
+    "interpretation distance": "medium",
+    "review guidance": "Check that the PR closes the parent enabling milestone without falsely claiming mutation-capable generated adapters are ready."
+  },
+  "execution_bounds": {
+    "allowed paths": "Generated CLI contracts, command-generation package, root/planning/memory CLI entrypoints, generated outputs, generated package checks, focused tests, docs/reviews, and this planning state.",
+    "max changed files": "Broad but bounded to generated CLI adapter migration and planning/reporting artifacts.",
+    "required validation commands": "uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; make check; uv run agentic-workspace report --target . --section workflow_obligations --format json; uv run agentic-workspace report --target . --section closeout_trust --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json",
+    "ask-before-refactor threshold": "Ask before changing unrelated CLI command behavior, lifecycle mutation semantics, package versioning, or broad docs architecture.",
+    "stop before touching": "Unrelated schema annotation/docs cleanup, unrelated planning archive cleanup, or package-local command families not named in #642/#643/#644."
+  },
+  "stop_conditions": {
+    "stop when": "Generated adapters begin owning runtime behavior or mutation-capable routes without the required maturity proof.",
+    "escalate when boundary reached": "A command cannot be promoted without new primitive contracts or behavior changes outside the issue intent.",
+    "escalate on scope drift": "Validation or implementation requires unrelated package rewrites.",
+    "escalate on proof failure": "make check or generated conformance reveals a failing invariant that cannot be fixed within the planned surfaces."
+  },
+  "context_budget": {
+    "live working set": "Issue #641, child issues #642/#643/#644, this execplan, command_package_ir, generator, generated package checks, and root/planning/memory CLI entrypoints.",
+    "recoverable later": "Historical CLI audits and older generated-package reviews unless a failing check points there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, dogfooding report, and PR body before pausing.",
+    "pre-work config pull": "Already pulled AGENTS.md, workflow, summary, and issue metadata.",
+    "pre-work memory pull": "Use compact Memory routing only if validation or review uncovers durable repo knowledge not represented by docs/checks.",
+    "tiny resumability note": "Generated CLI progressive maturity: finish validation/report/PR from current branch.",
+    "context-shift triggers": "Any interruption before make check, PR creation, or closeout must update this execplan first."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the planned generated adapter migration foundation with high assurance.",
+    "hard constraints": "Use package planning, progressive maturity, generated contract authority, high-assurance validation, dogfooding report, commit/push/PR.",
+    "agent may decide locally": "Exact wording of review/report artifacts and whether a command is mature enough for the next level.",
+    "escalate when": "A child issue requires mutation promotion or broad CLI behavior changes beyond available proof."
+  },
+  "adaptive_assurance": {
+    "level": "high",
+    "reason": "The work changes shipped CLI entrypoints, generated contracts, adapter safety boundaries, package-local CLIs, and validation gates.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "#641",
+      "#642",
+      "#643",
+      "#644",
+      "docs/host-repo-dogfooding-report-template.md",
+      "docs/reference/command-package-ir.md"
+    ],
+    "proof_profiles": [
+      "focused contract tooling",
+      "generated package conformance",
+      "full make check",
+      "dogfooding closeout"
+    ],
+    "required_gates": [
+      "generated outputs fresh",
+      "generated Python parser/dispatch before handwritten parser",
+      "runtime primitive ownership preserved",
+      "child expansion lanes documented",
+      "dogfooding report completed"
+    ]
+  },
+  "traceability_refs": {
+    "requirement_refs": [
+      "#641",
+      "#642",
+      "#643",
+      "#644"
+    ],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/command_adapter_generation.json"
+    ],
+    "risk_refs": [
+      "docs/reviews/generated-cli-progressive-maturity-2026-05-01.md"
+    ],
+    "security_refs": [],
+    "audit_refs": [
+      "docs/reviews/generated-cli-adapter-high-assurance-report-2026-05-01.md"
+    ],
+    "acceptance_refs": [
+      "#641 acceptance criteria"
+    ],
+    "decision_refs": [
+      "Progressive maturity keeps lifecycle mutation deferred until conformance exists."
+    ]
+  },
+  "control_gates": [
+    {
+      "id": "generated-files-fresh",
+      "owner_role": "executor",
+      "required_for": [
+        "PR creation"
+      ],
+      "status": "satisfied",
+      "evidence": [
+        "uv run python scripts/generate/generate_command_packages.py --check",
+        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+        "make check"
+      ],
+      "blocking": true,
+      "next_action": "None."
+    },
+    {
+      "id": "generated-before-handwritten-parser",
+      "owner_role": "executor",
+      "required_for": [
+        "runtime-backed maturity claim"
+      ],
+      "status": "satisfied",
+      "evidence": [
+        "scripts/check/check_generated_command_packages.py static routing check",
+        "uv run pytest tests/test_contract_tooling.py -q"
+      ],
+      "blocking": true,
+      "next_action": "None."
+    },
+    {
+      "id": "black-box-conformance",
+      "owner_role": "executor",
+      "required_for": [
+        "runtime-backed maturity claim"
+      ],
+      "status": "satisfied",
+      "evidence": [
+        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+      ],
+      "blocking": true,
+      "next_action": "None."
+    },
+    {
+      "id": "full-check",
+      "owner_role": "executor",
+      "required_for": [
+        "PR creation"
+      ],
+      "status": "satisfied",
+      "evidence": [
+        "make check"
+      ],
+      "blocking": true,
+      "next_action": "None."
+    }
+  ],
+  "implementation_blockers": [],
+  "risk_registry_refs": [],
+  "invariant_refs": [
+    "Generated adapters do not own runtime primitive behavior.",
+    "Mutation-capable generated adapters remain deferred."
+  ],
+  "test_data_policy": {
+    "classification": "source-checkout synthetic fixtures only",
+    "forbidden": [
+      "host-private data",
+      "network-dependent runtime behavior beyond GitHub issue/PR metadata"
+    ],
+    "fixture_owner": "tests and scripts/check",
+    "proof_required": [
+      "process conformance",
+      "focused pytest",
+      "make check"
+    ],
+    "refs": []
+  },
+  "layer_scaffold": {
+    "type": "progressive-generated-cli-adapter-migration",
+    "required_refs": [
+      "command_package_ir.json",
+      "generated_cli_package/__init__.py",
+      "check_generated_command_packages.py"
+    ],
+    "common_risks": [
+      "Handwritten parser remains hidden interface authority.",
+      "Generated code accidentally owns runtime behavior.",
+      "Mutation commands promoted before safety gates."
+    ],
+    "suggested_proof_profiles": [
+      "freshness",
+      "runtime-backed parser dispatch",
+      "black-box process conformance",
+      "full package checks"
+    ],
+    "suggested_gates": [
+      "static generated routing check",
+      "process success/failure check",
+      "dogfooding report"
+    ],
+    "non_goals": [
+      "All commands mutation-capable in this PR."
+    ],
+    "durable_residue_prompts": [
+      "Record whether package planning should guard high-assurance work earlier."
+    ]
+  },
+  "architecture_decision_promotion": {
+    "status": "candidate",
+    "target": "docs/reviews/generated-cli-progressive-maturity-2026-05-01.md",
+    "decision_refs": [
+      "Use runtime-backed-read-only-adapter for first Python promotions; keep lifecycle mutation deferred."
+    ],
+    "promotion_needed": false,
+    "notes": "A full ADR is not needed unless later commands change runtime binding semantics."
+  },
+  "threat_failure_aids": [
+    {
+      "id": "generated-runtime-boundary",
+      "concern": "Generated adapters could accidentally own runtime primitive behavior.",
+      "source_ref": "command_package_ir.json",
+      "advisory": "Run generated package conformance before claiming runtime-backed maturity."
+    },
+    {
+      "id": "mutation-before-proof",
+      "concern": "Lifecycle mutation commands could be promoted before dry-run, preflight, and refusal proof exists.",
+      "source_ref": "#642",
+      "advisory": "Keep mutation-capable promotion behind explicit preflight/refusal conformance."
+    }
+  ],
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#641",
+      "label": "parent generated CLI adapter migration",
+      "role": "requirement",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "issue",
+      "target": "#642",
+      "label": "lifecycle dry-run and mutation generated-adapter migration",
+      "role": "follow-up",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "issue",
+      "target": "#643",
+      "label": "remaining root read-only commands",
+      "role": "follow-up",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "issue",
+      "target": "#644",
+      "label": "Planning and Memory read-only commands",
+      "role": "follow-up",
+      "locator": "GitHub"
+    }
+  ],
+  "active_milestone": {
+    "id": "generated-cli-progressive-maturity-issue-641",
+    "status": "proof-complete",
+    "scope": "Progressive generated CLI adapter maturity implementation and proof.",
+    "ready": "Issue scope, branch, child issues, and initial implementation are available.",
+    "blocked": "No active blocker after execplan creation.",
+    "optional_deps": "Node and Docker availability for expanded generated package conformance."
+  },
+  "immediate_next_action": [
+    "Stage, commit, push, and create PR."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "packages/command-generation/src/agentic_command_generation/generator.py",
+    "src/agentic_workspace/cli.py",
+    "packages/planning/src/repo_planning_bootstrap/cli.py",
+    "packages/memory/src/repo_memory_bootstrap/cli.py",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_contract_tooling.py",
+    "docs/reviews/generated-cli-progressive-maturity-2026-05-01.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/generated-cli-progressive-maturity-issue-641.plan.json"
+  ],
+  "invariants": [
+    "Generated interface truth stays in contracts/IR.",
+    "Runtime primitives stay hand-owned.",
+    "Progressive maturity is not skipped."
+  ],
+  "contract_decisions_to_freeze": [
+    "Python targets for root defaults, Planning status, and Memory status are `runtime-backed-read-only-adapter`.",
+    "TypeScript root defaults remains `runnable-read-only-adapter` by process handoff.",
+    "Lifecycle mutation remains deferred."
+  ],
+  "open_questions_to_close": [
+    "Whether Docker conformance is available locally for this proof run.",
+    "Whether make check surfaces additional generated docs drift after schema reference regeneration."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "make check",
+    "uv run agentic-workspace report --target . --section workflow_obligations --format json",
+    "uv run agentic-workspace report --target . --section closeout_trust --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json"
+  ],
+  "required_tools": [
+    "uv",
+    "make",
+    "gh",
+    "node if available for required generated adapter conformance"
+  ],
+  "completion_criteria": [
+    "Checked-in execplan active and updated through closeout.",
+    "Child issues #642, #643, and #644 implemented or bounded by maturity evidence.",
+    "Generated Python CLI package parser/dispatch owns promoted command interfaces.",
+    "Generated package checks and make check pass.",
+    "Dogfooding report uses the edited host-repo template.",
+    "Branch is committed, pushed, and opened as a PR."
+  ],
+  "execution_run": {
+    "run status": "proof-complete",
+    "executor": "Codex",
+    "handoff source": "GitHub issue #641 plus user correction to use package workflow",
+    "what happened": "Child issues were created; an active execplan was added after user correction; generated Python adapters were promoted for root defaults, Planning status, and Memory status; lifecycle mutation remains deferred through progressive maturity.",
+    "scope touched": "Generated CLI contracts, generator, root/planning/memory CLI entrypoints, checks, tests, and review docs.",
+    "changed surfaces": "command_package_ir, generated_cli_package outputs, command-generation generator/schema, root/planning/memory CLI entrypoints, generated package checks, focused tests, docs/reviews, planning state.",
+    "validations run": "uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/generate/generate_schema_reference.py --check; make check; dogfooding closeout selectors.",
+    "result for continuation": "Commit, push, and create PR; CI remains the next external proof.",
+    "next step": "Stage, commit, push, and open PR."
+  },
+  "finished_run_review": {
+    "review status": "complete-before-pr",
+    "scope respected": "yes",
+    "proof status": "local proof passed",
+    "intent served": "yes for the progressive-maturity foundation; remaining expansion routed to #642, #643, #644, and #645.",
+    "config compliance": "Initially missed checked-in planning; corrected by this execplan.",
+    "misinterpretation risk": "low after explicit maturity report and dogfooding issue creation.",
+    "follow-on decision": "Create PR and let CI/review verify."
+  },
+  "proof_report": {
+    "validation proof": "Focused contract tooling, generated package conformance with Node required, schema reference freshness, full make check, and dogfooding closeout selectors all passed locally.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/generate/generate_schema_reference.py --check; make check"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #641 and child issues using high-assurance workflow and progressive maturity, then create a PR.",
+    "was original intent fully satisfied?": "yes for #641's first runtime-backed generated-adapter milestone; progressive child expansion remains routed.",
+    "evidence of intent satisfaction": "Runtime-backed generated Python adapters for root defaults, Planning status, and Memory status; maturity matrix; child issue routing; dogfooding report; local proof passed.",
+    "unsolved intent passed to": "#642, #643, #644, #645"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve larger outcomes and checked-in planning for work whose proof or continuation would be expensive to reconstruct.",
+    "slice shaping bias": "Use progressive maturity and explicit continuation surfaces.",
+    "broader-lane validation question": "Does this PR establish the generated adapter maturity path without overclaiming mutation safety?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete pending PR",
+    "larger-intent status": "routed-follow-up",
+    "closure decision": "archive-after-pr",
+    "why this decision is honest": "This PR proves the progressive runtime-backed adapter foundation but does not overclaim weak-agent-safe or mutation-capable maturity.",
+    "evidence carried forward": "docs/reviews/generated-cli-progressive-maturity-2026-05-01.md and docs/reviews/generated-cli-adapter-high-assurance-report-2026-05-01.md",
+    "reopen trigger": "Generated adapter conformance, make check, CI, or PR review finds a violated maturity boundary."
+  },
+  "generated_closeout": {
+    "status": "not-generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; structured execplan fields remain authoritative",
+    "text": ""
+  },
+  "memory_learning_capture": {
+    "status": "routed",
+    "memory consult recommended?": "yes",
+    "memory notes read": "",
+    "future agents should not rediscover": "High-assurance package work requires checked-in planning before implementation.",
+    "decision": "route_to_planning",
+    "target": "#645",
+    "reason": "The learning is product workflow friction better handled by an issue/guard than by a Memory note."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Do not treat high-assurance as validation-only; activate package planning when scope spans contracts, generated outputs, package CLIs, and PR proof.",
+    "motivation worth preserving": "The package's own workflow is part of the proof model.",
+    "canonical owner now": "#645",
+    "promotion trigger": "If similar oversight recurs or a check can enforce it.",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Progressive generated CLI adapter foundation for #641 with runtime-backed Python adapters and documented expansion lanes.",
+    "validation confirmed": "Local high-assurance proof passed.",
+    "follow-on routed to": "#642, #643, #644, #645",
+    "post-work posterity capture": "Dogfooding report and progressive maturity review.",
+    "knowledge promoted (Memory/Docs/Config)": "Docs/reviews plus #645.",
+    "resume from": "Create PR and wait for CI/review."
+  },
+  "improvement_signal_review": {
+    "status": "active",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "High-assurance work began without checked-in planning."
+    ],
+    "signals fixed": [
+      "Created this execplan and will update planning state before continuing."
+    ],
+    "signals routed": [
+      "#645"
+    ],
+    "signals dismissed": [],
+    "next owner": "#645"
+  },
+  "drift_log": [
+    "2026-05-01: Execplan created after user caught missing high-assurance planning workflow.",
+    "2026-05-01: Local high-assurance validation passed; dogfooding friction routed to #645."
+  ]
+}

@@ -153,8 +153,8 @@
             "agentic-workspace"
           ],
           "test_environment": "python-dev",
-          "maturity_level_ref": "metadata-proof-fixture",
-          "generation_status": "supported-now"
+          "maturity_level_ref": "runtime-backed-read-only-adapter",
+          "generation_status": "runtime-backed-read-only-adapter"
         },
         {
           "kind": "typescript",
@@ -197,6 +197,31 @@
           "command": {
             "name": "defaults",
             "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "defaults",
+            "help": "Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "section",
+                "flags": [
+                  "--section"
+                ],
+                "help": "Return only one top-level defaults section in the compact contract profile."
+              }
+            ]
           },
           "operation_ref": {
             "id": "defaults.report",
@@ -264,8 +289,8 @@
             "agentic-planning-bootstrap"
           ],
           "test_environment": "python-dev",
-          "maturity_level_ref": "metadata-proof-fixture",
-          "generation_status": "supported-now"
+          "maturity_level_ref": "runtime-backed-read-only-adapter",
+          "generation_status": "runtime-backed-read-only-adapter"
         },
         {
           "kind": "typescript",
@@ -286,6 +311,31 @@
           "command": {
             "name": "status",
             "manifest_ref": "package:planning:cli"
+          },
+          "interface": {
+            "name": "status",
+            "help": "Report whether planning bootstrap files are present.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
           },
           "operation_ref": {
             "id": "planning.status.report",
@@ -348,8 +398,8 @@
             "agentic-memory-bootstrap"
           ],
           "test_environment": "python-dev",
-          "maturity_level_ref": "metadata-proof-fixture",
-          "generation_status": "supported-now"
+          "maturity_level_ref": "runtime-backed-read-only-adapter",
+          "generation_status": "runtime-backed-read-only-adapter"
         },
         {
           "kind": "typescript",
@@ -370,6 +420,31 @@
           "command": {
             "name": "status",
             "manifest_ref": "package:memory:cli"
+          },
+          "interface": {
+            "name": "status",
+            "help": "Report whether memory bootstrap files are present.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
           },
           "operation_ref": {
             "id": "memory.status.report",

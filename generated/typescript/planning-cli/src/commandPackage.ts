@@ -22,6 +22,31 @@ export const generatedCommandPackage = {
         "requires_preflight_gate": false,
         "writes_repo_state": false
       },
+      "interface": {
+        "help": "Report whether planning bootstrap files are present.",
+        "name": "status",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
       "operation_ref": {
         "id": "planning.status.report",
         "path": "operations/planning.status.report.json"
@@ -69,9 +94,9 @@ export const generatedCommandPackage = {
         "agentic-planning-bootstrap"
       ],
       "generated_root": "packages/planning/src/repo_planning_bootstrap/generated_cli_package",
-      "generation_status": "supported-now",
+      "generation_status": "runtime-backed-read-only-adapter",
       "kind": "python",
-      "maturity_level_ref": "metadata-proof-fixture",
+      "maturity_level_ref": "runtime-backed-read-only-adapter",
       "package_name": "agentic-planning-bootstrap",
       "test_environment": "python-dev"
     },

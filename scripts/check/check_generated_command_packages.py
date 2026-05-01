@@ -208,6 +208,48 @@ def _validate_static_surfaces() -> list[str]:
         routing_rule = str(maturity_policy.get("routing_rule", ""))
         if "Weak agents may use only generated targets" not in routing_rule:
             errors.append("command_package_ir.json maturity routing rule does not protect weak-agent routing")
+        packages = {package.get("id"): package for package in ir.get("packages", []) if isinstance(package, dict)}
+        expected_python_promotions = {
+            "root-workspace": "agentic-workspace",
+            "planning-bootstrap": "agentic-planning-bootstrap",
+            "memory-bootstrap": "agentic-memory-bootstrap",
+        }
+        for package_id, program in expected_python_promotions.items():
+            package = packages.get(package_id)
+            if not isinstance(package, dict):
+                errors.append(f"command_package_ir.json is missing package {package_id!r}")
+                continue
+            python_targets = [target for target in package.get("targets", []) if isinstance(target, dict) and target.get("kind") == "python"]
+            if not python_targets:
+                errors.append(f"command_package_ir.json package {package_id!r} is missing a Python generated target")
+                continue
+            python_target = python_targets[0]
+            if python_target.get("maturity_level_ref") != "runtime-backed-read-only-adapter":
+                errors.append(
+                    f"command_package_ir.json package {package_id!r} Python target is not runtime-backed; "
+                    f"got {python_target.get('maturity_level_ref')!r}"
+                )
+            if python_target.get("generation_status") != "runtime-backed-read-only-adapter":
+                errors.append(
+                    f"command_package_ir.json package {package_id!r} Python generation_status is not runtime-backed; "
+                    f"got {python_target.get('generation_status')!r}"
+                )
+            if package.get("program") != program:
+                errors.append(f"command_package_ir.json package {package_id!r} program drifted from {program!r}")
+        generated_entrypoints = {
+            "src/agentic_workspace/cli.py": "agentic_workspace.generated_cli_package",
+            "packages/planning/src/repo_planning_bootstrap/cli.py": "repo_planning_bootstrap.generated_cli_package",
+            "packages/memory/src/repo_memory_bootstrap/cli.py": "repo_memory_bootstrap.generated_cli_package",
+        }
+        for relative_path, import_name in generated_entrypoints.items():
+            text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+            main_index = text.find("def main(")
+            generated_index = text.find("_run_generated_cli_package_if_supported", main_index)
+            parser_index = text.find("build_parser()", main_index)
+            if import_name not in text:
+                errors.append(f"{relative_path} does not import the generated Python CLI package")
+            if main_index == -1 or generated_index == -1 or parser_index == -1 or generated_index > parser_index:
+                errors.append(f"{relative_path} does not route generated Python adapters before the handwritten parser")
     dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile"
     if not dockerfile.is_file():
         errors.append("generated/typescript/Dockerfile is missing")

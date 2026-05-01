@@ -22,6 +22,31 @@ export const generatedCommandPackage = {
         "requires_preflight_gate": false,
         "writes_repo_state": false
       },
+      "interface": {
+        "help": "Report whether memory bootstrap files are present.",
+        "name": "status",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
       "operation_ref": {
         "id": "memory.status.report",
         "path": "operations/memory.status.report.json"
@@ -69,9 +94,9 @@ export const generatedCommandPackage = {
         "agentic-memory-bootstrap"
       ],
       "generated_root": "packages/memory/src/repo_memory_bootstrap/generated_cli_package",
-      "generation_status": "supported-now",
+      "generation_status": "runtime-backed-read-only-adapter",
       "kind": "python",
-      "maturity_level_ref": "metadata-proof-fixture",
+      "maturity_level_ref": "runtime-backed-read-only-adapter",
       "package_name": "agentic-memory-bootstrap",
       "test_environment": "python-dev"
     },

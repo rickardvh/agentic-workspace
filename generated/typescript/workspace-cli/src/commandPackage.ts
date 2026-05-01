@@ -22,6 +22,31 @@ export const generatedCommandPackage = {
         "requires_preflight_gate": false,
         "writes_repo_state": false
       },
+      "interface": {
+        "help": "Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
+        "name": "defaults",
+        "options": [
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          },
+          {
+            "flags": [
+              "--section"
+            ],
+            "help": "Return only one top-level defaults section in the compact contract profile.",
+            "name": "section"
+          }
+        ]
+      },
       "operation_ref": {
         "id": "defaults.report",
         "path": "operations/defaults.report.json"
@@ -74,9 +99,9 @@ export const generatedCommandPackage = {
         "agentic-workspace"
       ],
       "generated_root": "src/agentic_workspace/generated_cli_package",
-      "generation_status": "supported-now",
+      "generation_status": "runtime-backed-read-only-adapter",
       "kind": "python",
-      "maturity_level_ref": "metadata-proof-fixture",
+      "maturity_level_ref": "runtime-backed-read-only-adapter",
       "package_name": "agentic-workspace",
       "test_environment": "python-dev"
     },

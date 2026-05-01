@@ -97,6 +97,15 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
+from agentic_workspace.generated_cli_package import (
+    build_generated_parser as build_generated_cli_package_parser,
+)
+from agentic_workspace.generated_cli_package import (
+    run_generated_command as run_generated_cli_package_command,
+)
+from agentic_workspace.generated_cli_package import (
+    supports_generated_command as supports_generated_cli_package_command,
+)
 from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 from agentic_workspace.reporting_support import (
     output_contract_payload,
@@ -1838,8 +1847,13 @@ def _with_agent_instructions_file(config: WorkspaceConfig, *, filename: str, sou
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv_list = list(sys.argv[1:] if argv is None else argv)
+    generated_result = _run_generated_cli_package_if_supported(argv_list)
+    if generated_result is not None:
+        return generated_result
+
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(argv_list)
     try:
         descriptors = _module_operations()
         _validate_descriptor_contract(descriptors)
@@ -11782,6 +11796,22 @@ def _emit_proof(
 
 def _generated_adapter_for_command(command_name: str) -> dict[str, Any] | None:
     return GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
+
+
+def _run_generated_cli_package_if_supported(argv: list[str]) -> int | None:
+    if not supports_generated_cli_package_command(argv):
+        return None
+    try:
+        return run_generated_cli_package_command(argv, _run_generated_cli_operation)
+    except WorkspaceUsageError as exc:
+        build_generated_cli_package_parser().error(str(exc))
+
+
+def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) -> int:
+    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
+    if handler is None:
+        raise WorkspaceUsageError(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
+    return handler(args)
 
 
 def _run_defaults_report_adapter(args: argparse.Namespace) -> int:

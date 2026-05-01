@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import copy
 import importlib.util
 import json
@@ -203,6 +204,8 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
 
     assert root_package["program"] == "agentic-workspace"
     assert targets["python"]["test_environment"] == "python-dev"
+    assert targets["python"]["maturity_level_ref"] == "runtime-backed-read-only-adapter"
+    assert targets["python"]["generation_status"] == "runtime-backed-read-only-adapter"
     assert targets["typescript"]["test_environment"] == "docker"
     assert targets["typescript"]["maturity_level_ref"] == "runnable-read-only-adapter"
     assert targets["typescript"]["generation_status"] == "runnable-read-only-adapter"
@@ -440,12 +443,46 @@ def test_command_generation_readme_defines_lift_out_criteria() -> None:
 
 
 def test_generated_python_command_package_metadata_is_current() -> None:
-    from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE
+    from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE, generated_command_names, supports_generated_command
 
     assert GENERATED_COMMAND_PACKAGE["program"] == "agentic-workspace"
     assert {command["adapter_id"] for command in GENERATED_COMMAND_PACKAGE["commands"]} == {"defaults.report.cli"}
     target_kinds = {target["kind"] for target in GENERATED_COMMAND_PACKAGE["targets"]}
     assert {"python", "typescript", "bash", "powershell"} <= target_kinds
+    assert generated_command_names() == ("defaults",)
+    assert supports_generated_command(["defaults", "--format", "json"]) is True
+    assert supports_generated_command(["config", "--format", "json"]) is False
+
+
+def test_generated_python_command_package_parses_and_dispatches_runtime_operation() -> None:
+    from agentic_workspace.generated_cli_package import run_generated_command
+
+    calls: list[tuple[str, str, str | None]] = []
+
+    def runtime_handler(operation_id: str, args: argparse.Namespace) -> int:
+        calls.append((operation_id, args.format, args.section))
+        return 0
+
+    assert run_generated_command(["defaults", "--section", "startup", "--format", "json"], runtime_handler) == 0
+    assert calls == [("defaults.report", "json", "startup")]
+
+
+def test_package_generated_python_command_packages_parse_status_runtime_operations() -> None:
+    from repo_memory_bootstrap.generated_cli_package import run_generated_command as run_memory_generated_command
+    from repo_planning_bootstrap.generated_cli_package import run_generated_command as run_planning_generated_command
+
+    calls: list[tuple[str, str | None, str]] = []
+
+    def runtime_handler(operation_id: str, args: argparse.Namespace) -> int:
+        calls.append((operation_id, args.target, args.format))
+        return 0
+
+    assert run_planning_generated_command(["status", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_memory_generated_command(["status", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert calls == [
+        ("planning.status.report", ".", "json"),
+        ("memory.status.report", ".", "json"),
+    ]
 
 
 def test_generated_typescript_command_package_fixture_is_current() -> None:
