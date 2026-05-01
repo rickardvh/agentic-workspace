@@ -192,7 +192,7 @@ def _readme_claims_maintainer_startup_guidance(text: str) -> bool:
             "maintainer startup",
             "`agents.md`",
             "`todo.md`",
-            "`docs/contributor-playbook.md`",
+            "`docs/maintainer/contributor-playbook.md`",
         )
     )
 
@@ -827,7 +827,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     manifest_path = repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json"
     quickstart_path = repo_root / "tools" / "AGENT_QUICKSTART.md"
     readme_path = repo_root / "README.md"
-    contributor_path = repo_root / "docs" / "contributor-playbook.md"
+    contributor_path = repo_root / "docs" / "maintainer" / "contributor-playbook.md"
 
     if not (agents_path.exists() and manifest_path.exists() and quickstart_path.exists()):
         return warnings
@@ -911,7 +911,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         "for agent maintainers, the primary operating path is",
         "`agents.md`",
         "active execplan",
-        "`docs/contributor-playbook.md`",
+        "`docs/maintainer/contributor-playbook.md`",
     )
     if (
         readme_text
@@ -1064,11 +1064,11 @@ def _check_docs_surface_roles(repo_root: Path) -> list[PlanningWarning]:
         if "## docs map" in text:
             required_fragments = (
                 "for maintainers:",
-                "`docs/contributor-playbook.md`",
-                "`docs/maintainer-commands.md`",
+                "`docs/maintainer/contributor-playbook.md`",
+                "`docs/maintainer/maintainer-commands.md`",
                 "`docs/collaboration-safety.md`",
-                "`docs/installed-contract-design-checklist.md`",
-                "`docs/dogfooding-feedback.md`",
+                "`docs/maintainer/installed-contract-design-checklist.md`",
+                "`docs/maintainer/dogfooding-feedback.md`",
                 "`docs/workflow-contract-changes.md`",
             )
             if not all(fragment in text for fragment in required_fragments):
@@ -1103,7 +1103,7 @@ def _check_docs_surface_roles(repo_root: Path) -> list[PlanningWarning]:
             "Default path contract must keep report/summary-first inspection, routine recovery questions, and the meaning boundary explicit.",
         ),
         (
-            repo_root / "docs" / "contributor-playbook.md",
+            repo_root / "docs" / "maintainer" / "contributor-playbook.md",
             (
                 "agentic-workspace summary --format json",
                 "agentic-workspace report --target ./repo --format json",

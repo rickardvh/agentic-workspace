@@ -195,7 +195,7 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
         "TODO.md",
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans",
-        "docs/contributor-playbook.md",
+        "docs/maintainer/contributor-playbook.md",
         ".agentic-workspace/planning",
     ]
     assert planning_module["generated_artifacts"] == [".agentic-workspace/planning/agent-manifest.json"]
@@ -3422,9 +3422,9 @@ def test_init_reports_docs_heavy_repo_as_high_ambiguity(monkeypatch, tmp_path: P
     _write((tmp_path / "TODO.md"), "# Existing TODO\n")
     (tmp_path / ".agentic-workspace" / "planning").mkdir(parents=True)
     _write((tmp_path / ".agentic-workspace" / "planning" / "state.toml"), "# Existing Roadmap\n")
-    (tmp_path / "docs" / "contributor-playbook.md").parent.mkdir(parents=True)
-    _write((tmp_path / "docs" / "contributor-playbook.md"), "# Contributor Playbook\n")
-    _write((tmp_path / "docs" / "maintainer-commands.md"), "# Maintainer Commands\n")
+    (tmp_path / "docs" / "maintainer" / "contributor-playbook.md").parent.mkdir(parents=True)
+    _write((tmp_path / "docs" / "maintainer" / "contributor-playbook.md"), "# Contributor Playbook\n")
+    _write((tmp_path / "docs" / "maintainer" / "maintainer-commands.md"), "# Maintainer Commands\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -3439,10 +3439,10 @@ def test_init_reports_docs_heavy_repo_as_high_ambiguity(monkeypatch, tmp_path: P
         ".agentic-workspace/planning/state.toml",
         "AGENTS.md",
         "TODO.md",
-        "docs/contributor-playbook.md",
+        "docs/maintainer/contributor-playbook.md",
     ]
     assert "AGENTS.md: reconcile existing workflow surface ownership" in payload["needs_review"]
-    assert "docs/contributor-playbook.md: reconcile existing workflow surface ownership" in payload["needs_review"]
+    assert "docs/maintainer/contributor-playbook.md: reconcile existing workflow surface ownership" in payload["needs_review"]
     assert calls == [
         ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
         ("memory", "adopt", {"target": str(tmp_path), "dry_run": False}),
@@ -8141,7 +8141,7 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
                     Path("TODO.md"),
                     Path(".agentic-workspace/planning/state.toml"),
                     Path(".agentic-workspace/planning/execplans"),
-                    Path("docs/contributor-playbook.md"),
+                    Path("docs/maintainer/contributor-playbook.md"),
                     Path(".agentic-workspace/planning"),
                 )
                 if module_name == "planning"

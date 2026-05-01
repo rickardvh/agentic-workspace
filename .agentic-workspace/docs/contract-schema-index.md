@@ -6,9 +6,9 @@ Use it when you need to know which checked-in file owns a machine-readable contr
 
 ## Ownership
 
-- Manifests live under [`src/agentic_workspace/contracts/`](../src/agentic_workspace/contracts/).
-- Schemas live under [`src/agentic_workspace/contracts/schemas/`](../src/agentic_workspace/contracts/schemas/).
-- Runtime consumers live in [`src/agentic_workspace/cli.py`](../src/agentic_workspace/cli.py).
+- Manifests live under [`src/agentic_workspace/contracts/`](../../src/agentic_workspace/contracts/).
+- Schemas live under [`src/agentic_workspace/contracts/schemas/`](../../src/agentic_workspace/contracts/schemas/).
+- Runtime consumers live in [`src/agentic_workspace/cli.py`](../../src/agentic_workspace/cli.py).
 - Development-time validation lives in `scripts/check/check_contract_tooling_surfaces.py`.
 
 ## First Manifest Set
@@ -44,5 +44,5 @@ Use it when you need to know which checked-in file owns a machine-readable contr
 
 ## Relationship To Other Docs
 
-- Use [`docs/declarative-contract-boundary.md`](declarative-contract-boundary.md) for the boundary between declarative, procedural, and derived behavior.
-- Use [`docs/contributor-playbook.md`](contributor-playbook.md) for the maintainer validation lane that should run the contract-tooling check after edits here.
+- Use [`docs/package/contracts.md`](../../docs/package/contracts.md) for the boundary between contract data, schemata, generated references, and runtime outputs.
+- Use [`docs/maintainer/contributor-playbook.md`](../../docs/maintainer/contributor-playbook.md) for the maintainer validation lane that should run the contract-tooling check after edits here.

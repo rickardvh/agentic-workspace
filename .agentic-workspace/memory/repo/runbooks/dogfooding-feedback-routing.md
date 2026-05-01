@@ -10,8 +10,8 @@ Local dogfooding evaluation procedure for classifying internal-use friction befo
 
 ## Applies to
 
-- `docs/contributor-playbook.md`
-- `docs/lazy-discovery-measurements.md`
+- `docs/maintainer/contributor-playbook.md`
+- `docs/maintainer/lazy-discovery-measurements.md`
 - `.agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md`
 - repo-local dogfooding notes captured during normal work
 

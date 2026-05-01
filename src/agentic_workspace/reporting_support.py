@@ -1250,7 +1250,7 @@ def _standing_intent_stronger_home_model(*, target_root: Path, config_policy: di
         (
             "source/payload/root-install boundary drift",
             "scripts/check/check_source_payload_operational_install.py",
-            ["scripts/check/check_source_payload_operational_install.py", "docs/source-payload-operational-install.md"],
+            ["scripts/check/check_source_payload_operational_install.py", "docs/maintainer/source-payload-operational-install.md"],
         ),
     ):
         if (target_root / path).exists():

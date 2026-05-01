@@ -44,7 +44,7 @@ Use `--preset planning` when active work continuity is the main problem, and `--
 | `planning` | The repo needs active work continuity, proof expectations, or handoff state, without shared Memory. |
 | `full` | The repo needs both durable knowledge and checked-in active planning. |
 
-For lower-footprint routing-only setup and detailed preset selection, see [`docs/which-package.md`](docs/which-package.md).
+For the full package map and lower-footprint routing-only setup, see [`docs/index.md`](docs/index.md) and [`docs/which-package.md`](docs/which-package.md).
 
 ## What Gets Installed
 
@@ -72,16 +72,21 @@ The generated startup files, including `AGENTS.md` and `llms.txt`, are thin adap
 
 Agentic Workspace preserves bounded repo-native operating state. It does not replace issue trackers, review, project management, local agent memory, runtime orchestration, or existing repo commands.
 
-Advanced diagnostics, source-checkout maintainer workflows, local integration helpers, and adapter-generation infrastructure are documented separately and are not ordinary host-repo workflow. For documentation roles, freshness, and maturity signals, see [`docs/documentation-status.md`](docs/documentation-status.md) and [`docs/maturity-model.md`](docs/maturity-model.md).
+Advanced diagnostics, source-checkout maintainer workflows, local integration helpers, and adapter-generation infrastructure are documented separately and are not ordinary host-repo workflow. For the current package hierarchy, start with [`docs/index.md`](docs/index.md). For documentation roles, freshness, and maturity signals, see [`docs/documentation-status.md`](docs/documentation-status.md) and [`docs/maturity-model.md`](docs/maturity-model.md).
 
-For agent maintainers, the primary operating path is `AGENTS.md`, the active execplan when one is surfaced by compact startup output, and `docs/contributor-playbook.md`.
+For agent maintainers, the primary operating path is `AGENTS.md`, the active execplan when one is surfaced by compact startup output, and `docs/maintainer/contributor-playbook.md`.
 
 ## Learn More
 
+- Documentation map: [`docs/index.md`](docs/index.md)
+- Package overview: [`docs/package/overview.md`](docs/package/overview.md)
+- Lifecycle and context commands: [`docs/package/lifecycle.md`](docs/package/lifecycle.md)
+- Command map: [`docs/package/commands.md`](docs/package/commands.md)
+- Installed surfaces: [`docs/package/installed-surfaces.md`](docs/package/installed-surfaces.md)
 - Choosing an install shape: [`docs/which-package.md`](docs/which-package.md)
 - Architecture and ownership boundaries: [`docs/architecture.md`](docs/architecture.md)
 - Documentation freshness and roles: [`docs/documentation-status.md`](docs/documentation-status.md)
 - Maturity model: [`docs/maturity-model.md`](docs/maturity-model.md)
 - Memory module: [`packages/memory/README.md`](packages/memory/README.md)
 - Planning module: [`packages/planning/README.md`](packages/planning/README.md)
-- Maintainer workflow: [`docs/contributor-playbook.md`](docs/contributor-playbook.md)
+- Maintainer workflow: [`docs/maintainer/contributor-playbook.md`](docs/maintainer/contributor-playbook.md)

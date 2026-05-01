@@ -272,17 +272,17 @@ def _write_docs_surfaces(tmp_path: Path, *, drift_readme: bool = False) -> None:
 
 For maintainers:
 
-- `docs/contributor-playbook.md` - choose the right ownership surface and validation lane before editing.
-- `docs/maintainer-commands.md` - canonical command index for routine maintenance.
+- `docs/maintainer/contributor-playbook.md` - choose the right ownership surface and validation lane before editing.
+- `docs/maintainer/maintainer-commands.md` - canonical command index for routine maintenance.
 - `docs/collaboration-safety.md` - concurrent-edit and git hygiene rules.
-- `docs/installed-contract-design-checklist.md` - review bar for new or changed shipped surfaces.
+- `docs/maintainer/installed-contract-design-checklist.md` - review bar for new or changed shipped surfaces.
 - `.agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md` - classify internal friction before routing it onward.
 - `docs/workflow-contract-changes.md` - compact record of recent workflow-surface changes.
 
-for agent maintainers, the primary operating path is `agents.md`, active execplan, and `docs/contributor-playbook.md`.
+for agent maintainers, the primary operating path is `agents.md`, active execplan, and `docs/maintainer/contributor-playbook.md`.
 """
     if drift_readme:
-        readme = "# agentic-workspace\n\n## Docs Map\n\nFor maintainers:\n\n- `docs/contributor-playbook.md`\n"
+        readme = "# agentic-workspace\n\n## Docs Map\n\nFor maintainers:\n\n- `docs/maintainer/contributor-playbook.md`\n"
     _write(tmp_path / "README.md", readme)
     _write(
         tmp_path / "docs" / "contributor-playbook.md",
@@ -291,7 +291,7 @@ for agent maintainers, the primary operating path is `agents.md`, active execpla
 
 Use this playbook to choose the right package, planning surface, and validation lane before making changes in `agentic-workspace`.
 
-Use `docs/maintainer-commands.md` when you need the literal command to run; use this playbook when you need routing,
+Use `docs/maintainer/maintainer-commands.md` when you need the literal command to run; use this playbook when you need routing,
 ownership, or validation guidance.
 
 ## Agent Maintainer Path
@@ -322,7 +322,7 @@ Use this page when you need the canonical command to run, not the broader routin
 
 Use these rules when multiple agents or contributors are working through git.
 
-Use `docs/maintainer-commands.md` for command lookup and `docs/workflow-contract-changes.md` for compact workflow
+Use `docs/maintainer/maintainer-commands.md` for command lookup and `docs/workflow-contract-changes.md` for compact workflow
 history; this page is only for concurrent-edit and merge-safety rules.
 """,
     )
@@ -333,7 +333,7 @@ history; this page is only for concurrent-edit and merge-safety rules.
 
 Use this checklist when adding or materially changing a shipped installed surface in a package payload.
 
-Use `docs/maintainer-commands.md` for commands and `docs/contributor-playbook.md` for routing; this page is only the
+Use `docs/maintainer/maintainer-commands.md` for commands and `docs/maintainer/contributor-playbook.md` for routing; this page is only the
 review bar for collaboration-sensitive installed surfaces.
 """,
     )
@@ -430,7 +430,7 @@ def test_self_improvement_skill_requires_operational_affordance_review() -> None
     )
 
     assert "Required Operational-Affordance Review" in skill_text
-    assert "docs/operational-affordance-design.md" in skill_text
+    assert "docs/maintainer/operational-affordance-design.md" in skill_text
     assert "`primary_next_action`" in skill_text
     assert "`irrelevant_actions_demoted`" in skill_text
     assert "`resolved_invocation`" in skill_text
@@ -440,9 +440,9 @@ def test_self_improvement_skill_requires_operational_affordance_review() -> None
 
 
 def test_contributor_playbook_requires_operational_affordance_review() -> None:
-    text = (WORKSPACE_ROOT / "docs" / "contributor-playbook.md").read_text(encoding="utf-8")
+    text = (WORKSPACE_ROOT / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
 
-    assert "docs/operational-affordance-design.md" in text
+    assert "docs/maintainer/operational-affordance-design.md" in text
     assert "operational-affordance review" in text
     assert "one primary next action" in text
     assert "resolved config/local invocation" in text
@@ -461,7 +461,7 @@ def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: 
 
 
 def test_contributor_playbook_routes_first_contact_through_compact_queries() -> None:
-    text = (WORKSPACE_ROOT / "docs" / "contributor-playbook.md").read_text(encoding="utf-8")
+    text = (WORKSPACE_ROOT / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
     startup_section = text.split("## Start Here", 1)[1].split("##", 1)[0].lower()
 
     assert "agentic-workspace start --format json" in startup_section

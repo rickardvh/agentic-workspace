@@ -1,0 +1,57 @@
+# Modules
+
+`agentic-workspace` composes first-party modules behind one root lifecycle and context CLI. Modules own domain behavior; the root package owns orchestration, shared config, compact routing, and lifecycle coordination.
+
+## Module Profiles
+
+| Profile | Modules | Checked-in footprint |
+| --- | --- | --- |
+| routing-only | none | root config, startup, ownership, and report routing surfaces |
+| memory | Memory | durable repo knowledge surfaces |
+| planning | Planning | active execution state and execplan surfaces |
+| full | Planning and Memory | both active work state and durable repo knowledge |
+
+The root package currently bundles first-party modules for simple `uvx` and `pipx` lifecycle use. That may change later, but the installed repository footprint is already selected by profile.
+
+## Planning
+
+Planning owns active execution state. Use it when work needs to stay bounded, resumable, and finishable across sessions.
+
+Planning is good for:
+
+- active queue state;
+- bounded execution plans;
+- handoff and restart contracts;
+- proof expectations for active work;
+- honest closeout and required continuation routing.
+
+Planning is not a ticketing system, backlog manager, durable knowledge base, or broad documentation system.
+
+Package reference: [Planning README](../../packages/planning/README.md).
+
+## Memory
+
+Memory owns durable repo knowledge that is expensive to rediscover. Use it when agents repeatedly relearn the same boundaries, runbooks, invariants, or subsystem orientation.
+
+Memory is good for:
+
+- durable technical facts;
+- subsystem orientation;
+- recurring failure lessons;
+- authority boundaries;
+- operator runbooks;
+- routing hints that help agents read less.
+
+Memory is not active task state, execution history, issue triage, or a replacement for canonical docs.
+
+Package reference: [Memory README](../../packages/memory/README.md).
+
+## Command Generation
+
+`packages/command-generation/` is an internal package boundary for generic command package generation. It is not a host-repo module and is not part of the ordinary installed runtime.
+
+Package reference: [Command generation README](../../packages/command-generation/README.md).
+
+## Module Contracts
+
+The module registry declares available modules, profiles, component metadata, and package footprint policy. See [Module registry](../reference/module-registry.md) for the generated field reference.

@@ -2,7 +2,7 @@
 
 Use these rules when multiple agents or contributors are working through git.
 
-Use `docs/maintainer-commands.md` for command lookup and `docs/workflow-contract-changes.md` for compact workflow history; this page is only for concurrent-edit and merge-safety rules.
+Use `docs/maintainer/maintainer-commands.md` for command lookup; this page is only for concurrent-edit and merge-safety rules.
 
 - Keep `.agentic-workspace/memory/repo/current/` out of ordinary active-state flow. Use it only for optional routing calibration or migration review; durable facts move into memory/docs and active state stays in planning/status.
 - Archive execplans aggressively once they stop affecting future execution.

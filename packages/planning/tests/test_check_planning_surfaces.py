@@ -438,7 +438,7 @@ def _baseline_readme() -> str:
     return """
 # Agentic Workspace
 
-For agent maintainers, the primary operating path is `AGENTS.md`, `TODO.md`, the active execplan, and `docs/contributor-playbook.md`.
+For agent maintainers, the primary operating path is `AGENTS.md`, `TODO.md`, the active execplan, and `docs/maintainer/contributor-playbook.md`.
 """
 
 
@@ -559,7 +559,7 @@ def _write_startup_surfaces(
     _write(tmp_path / "docs" / "agent-installation.md", _baseline_install())
     _write(tmp_path / "README.md", readme or _baseline_readme())
     _write(
-        tmp_path / "docs" / "contributor-playbook.md",
+        tmp_path / "docs" / "maintainer" / "contributor-playbook.md",
         contributor_playbook or _baseline_contributor_playbook(),
     )
     _write_generated_agent_surfaces(tmp_path, manifest)
@@ -1221,7 +1221,7 @@ def test_startup_policy_ignores_generic_readme_but_warns_for_contributor_drift(t
     startup_warnings = [warning for warning in warnings if warning.warning_class == "startup_policy_drift"]
 
     assert not _has_warning_path_suffix(startup_warnings, "README.md")
-    assert _has_warning_path_suffix(startup_warnings, "docs/contributor-playbook.md")
+    assert _has_warning_path_suffix(startup_warnings, "docs/maintainer/contributor-playbook.md")
 
 
 def test_config_workflow_obligations_are_validated_in_config_not_entrypoint(tmp_path: Path) -> None:
@@ -1282,7 +1282,7 @@ def test_docs_surface_role_drift_warns_when_summary_first_hierarchy_is_missing(t
     _write_startup_surfaces(tmp_path)
     _write_hierarchy_docs(tmp_path)
     _write(
-        tmp_path / "docs" / "contributor-playbook.md",
+        tmp_path / "docs" / "maintainer" / "contributor-playbook.md",
         """
 # Contributor Playbook
 
@@ -1294,4 +1294,4 @@ def test_docs_surface_role_drift_warns_when_summary_first_hierarchy_is_missing(t
 
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     docs_warnings = [warning for warning in warnings if warning.warning_class == "docs_surface_role_drift"]
-    assert _has_warning_path_suffix(docs_warnings, "docs/contributor-playbook.md")
+    assert _has_warning_path_suffix(docs_warnings, "docs/maintainer/contributor-playbook.md")

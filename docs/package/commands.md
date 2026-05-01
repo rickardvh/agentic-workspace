@@ -1,0 +1,48 @@
+# Command Map
+
+This page is a human navigation map for the shipped `agentic-workspace` command surface. For exact option shapes, see the generated [CLI commands reference](../reference/cli-commands.md).
+
+## Ordinary Host-Repo Commands
+
+| Command | Use when |
+| --- | --- |
+| `agentic-workspace init --target ./repo --preset memory` | bootstrap the smallest common durable-knowledge install |
+| `agentic-workspace start --target ./repo --format json` | begin ordinary work from compact startup context |
+| `agentic-workspace summary --target ./repo --format json` | inspect active planning, handoff, and continuation state |
+| `agentic-workspace preflight --target ./repo --format json` | bundle startup defaults, config, and active state for takeover |
+| `agentic-workspace proof --target ./repo --changed <paths> --format json` | choose validation and proof routes for changed paths |
+| `agentic-workspace report --target ./repo --format json` | inspect combined module health, warnings, and next actions |
+| `agentic-workspace doctor --target ./repo --format json` | diagnose missing, stale, or conflicting installed surfaces |
+
+## Lifecycle Mutation Commands
+
+| Command | Use when |
+| --- | --- |
+| `init` | set up a repo from a preset, choosing conservative install or adopt behavior |
+| `install` | add selected modules explicitly |
+| `upgrade --dry-run` | preview managed-surface refreshes |
+| `upgrade` | apply managed-surface refreshes |
+| `uninstall --dry-run` | preview conservative removal |
+| `uninstall` | remove managed surfaces when ownership is clear |
+
+## Routing And Inspection Commands
+
+| Command | Use when |
+| --- | --- |
+| `defaults` | inspect policy, startup, validation, and preset defaults |
+| `config` | inspect resolved repo and local workspace posture |
+| `ownership` | answer which surface owns a path or concern |
+| `modules` | list available or installed modules |
+| `skills` | list registered package or repo skills |
+| `status` | summarize installed module state |
+
+## Advanced Diagnostics
+
+| Command | Use when |
+| --- | --- |
+| `setup` | inspect bounded post-bootstrap setup findings |
+| `reconcile` | compare planning state with optional external work evidence |
+| `external-intent refresh-github` | refresh optional GitHub issue evidence through the adapter |
+| `note-delegation-outcome` | record local-only delegation calibration data |
+
+The deeper model for these groups is described in [Lifecycle and context commands](lifecycle.md).

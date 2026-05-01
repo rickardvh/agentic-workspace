@@ -1,0 +1,25 @@
+# Maintainer Documentation
+
+This section is for source-checkout maintenance of this repository. It is not the first-contact documentation for users installing `agentic-workspace` into another repository.
+
+## Core Maintainer Routes
+
+- [Contributor playbook](contributor-playbook.md): routing, ownership, validation lanes, and maintainer workflow.
+- [Maintainer commands](maintainer-commands.md): literal command index.
+- [Dogfooding feedback](dogfooding-feedback.md): friction classification and admission policy.
+- [Installed-contract design checklist](installed-contract-design-checklist.md): review bar for collaboration-sensitive installed surfaces.
+- [Operational affordance design](operational-affordance-design.md): design review rubric for operational surfaces.
+
+## Boundary And Measurement
+
+- [Source, payload, and root install boundary](source-payload-operational-install.md): maintainer boundary between package source, shipped payload, and root install.
+- [Lazy discovery measurements](lazy-discovery-measurements.md): framework for checking whether compact selectors beat broad reads.
+- [Benchmarking contract](benchmarking-contract.md): benchmark shape and evaluation policy.
+
+## Related Supporting Docs
+
+- [Design principles](../design-principles.md)
+- [Architecture](../architecture.md)
+- [Integration contract](../integration-contract.md)
+- [Module capability contract](../module-capability-contract.md)
+- [Historical reviews](../reviews/)

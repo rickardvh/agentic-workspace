@@ -191,9 +191,9 @@ Only open raw module files or broader docs when the report points you to a follo
 
 ## Relationship To Lazy Discovery
 
-Use [`.agentic-workspace/docs/compact-contract-profile.md`](.agentic-workspace/docs/compact-contract-profile.md) for the selector-shaped answer envelope that should sit underneath the report surface when one answer is enough.
+Use [`.agentic-workspace/docs/compact-contract-profile.md`](compact-contract-profile.md) for the selector-shaped answer envelope that should sit underneath the report surface when one answer is enough.
 
-Use [`docs/lazy-discovery-measurements.md`](docs/lazy-discovery-measurements.md) when you want to check whether a narrow query is actually cheaper than a broad dump.
+Use [`docs/maintainer/lazy-discovery-measurements.md`](../../docs/maintainer/lazy-discovery-measurements.md) when you want to check whether a narrow query is actually cheaper than a broad dump.
 
 Use `agentic-workspace setup --target ./repo --format json` when the report has already identified a bounded follow-through path and you want the public setup surface rather than the broader combined report.
-Use [`.agentic-workspace/docs/standing-intent-contract.md`](.agentic-workspace/docs/standing-intent-contract.md) for the standing-intent classes and owner mapping behind the effective report view.
+Use [`.agentic-workspace/docs/standing-intent-contract.md`](standing-intent-contract.md) for the standing-intent classes and owner mapping behind the effective report view.

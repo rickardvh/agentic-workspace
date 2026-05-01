@@ -68,6 +68,6 @@ These selectors should answer:
 ## Relationship To Other Docs
 
 - Use [`.agentic-workspace/docs/reporting-contract.md`](reporting-contract.md) for the compact front-door route to combined workspace state.
-- Use [`.agentic-workspace/docs/proof-surfaces-contract.md`](.agentic-workspace/docs/proof-surfaces-contract.md) for proof-lane semantics.
-- Use [`.agentic-workspace/docs/ownership-authority-contract.md`](.agentic-workspace/docs/ownership-authority-contract.md) for ownership semantics.
-- Use [`docs/lazy-discovery-measurements.md`](docs/lazy-discovery-measurements.md) when you want to verify that the selector path is actually cheaper than the broad dump.
+- Use [`.agentic-workspace/docs/proof-surfaces-contract.md`](proof-surfaces-contract.md) for proof-lane semantics.
+- Use [`.agentic-workspace/docs/ownership-authority-contract.md`](ownership-authority-contract.md) for ownership semantics.
+- Use [`docs/maintainer/lazy-discovery-measurements.md`](../../docs/maintainer/lazy-discovery-measurements.md) when you want to verify that the selector path is actually cheaper than the broad dump.

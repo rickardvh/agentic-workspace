@@ -4,13 +4,13 @@
 
 Use this playbook to choose the right package, planning surface, and validation lane before making changes in `agentic-workspace`.
 
-Use `docs/maintainer-commands.md` when you need the literal command to run; use this playbook when you need routing, ownership, or validation guidance.
+Use `docs/maintainer/maintainer-commands.md` when you need the literal command to run; use this playbook when you need routing, ownership, or validation guidance.
 
 This playbook is primarily for maintainers operating as coding agents. Human contributors can use it too, but it is intentionally optimized for explicit routing, bounded reads, and narrow validation.
 
 Use `docs/design-principles.md` when a change affects product shape, ownership, lifecycle behavior, or the amount of ceremony the repo imposes on normal work.
-Use `docs/operational-affordance-design.md` when a change affects startup, recovery, proof, closeout, lifecycle, Memory, planning, agent-aid, or other operational surfaces that should carry agents to the next correct action.
-Use `docs/dogfooding-feedback.md` when the missing judgment is whether repo friction should become product work, how to classify it, or whether it has earned queue entry.
+Use `docs/maintainer/operational-affordance-design.md` when a change affects startup, recovery, proof, closeout, lifecycle, Memory, planning, agent-aid, or other operational surfaces that should carry agents to the next correct action.
+Use `docs/maintainer/dogfooding-feedback.md` when the missing judgment is whether repo friction should become product work, how to classify it, or whether it has earned queue entry.
 Use `agentic-workspace defaults --section improvement_intake --format json` when the question is how to route setup findings, dogfooding friction, review findings, validation friction, or Memory improvement signals through one shared decision model.
 Use `.agentic-workspace/docs/compatibility-policy.md` when you need to judge whether a surface is stable, mutable, or generated before making the change.
 Use `.agentic-workspace/docs/lifecycle-and-config-contract.md` when you need the canonical root `init` mode matrix, configuration rules, or prompt semantics.
@@ -23,10 +23,10 @@ Use `.agentic-workspace/docs/ownership-authority-contract.md` when the missing j
 
 - `README.md`: public entrypoint and ordinary user path.
 - `AGENTS.md`: repo-owned startup adapter for agents.
-- `docs/contributor-playbook.md`: maintainer routing, ownership, and validation guide.
-- `docs/maintainer-commands.md`: literal command index.
+- `docs/maintainer/contributor-playbook.md`: maintainer routing, ownership, and validation guide.
+- `docs/maintainer/maintainer-commands.md`: literal command index.
 - `docs/design-principles.md`: product doctrine and tradeoff guidance.
-- `docs/dogfooding-feedback.md`: friction admission and routing policy.
+- `docs/maintainer/dogfooding-feedback.md`: friction admission and routing policy.
 - `.agentic-workspace/docs/*`: product-managed installed contracts.
 - `packages/*/README.md`: package-specific install, ownership, and development reference.
 - `docs/reviews/*`: evidence and history, not ordinary startup input.
@@ -157,15 +157,15 @@ When internal use reveals friction, classify it before routing it onward.
 - Docs or routing issue
 - Monorepo-only friction
 
-Use `docs/dogfooding-feedback.md` for the durable admission and routing policy.
+Use `docs/maintainer/dogfooding-feedback.md` for the durable admission and routing policy.
 Use `.agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md` for the capture convention and preferred destinations.
 Use `.agentic-workspace/planning/reviews/README.md` `context-cost` mode when the question is which startup or handoff surfaces are actually used, skipped, or too insider-shaped for normal work.
 
-Use `docs/installed-contract-design-checklist.md` when a package change adds or materially reshapes an installed file, generated mirror, or other collaboration-sensitive contract surface.
+Use `docs/maintainer/installed-contract-design-checklist.md` when a package change adds or materially reshapes an installed file, generated mirror, or other collaboration-sensitive contract surface.
 
 ## Review Expectations
 
 - Preserve package boundaries and independent CLI entrypoints.
 - Prefer explicit adapters, manifests, and generated artifacts over private cross-package assumptions.
 - Capture meaningful follow-up work through the planning helpers or the narrowest current planning surface instead of leaving it in chat-only residue.
-- For any changed operational surface, run an operational-affordance review from `docs/operational-affordance-design.md`: name the one primary next action, demote irrelevant or deep actions, use resolved config/local invocation, keep raw files behind compact routing, and confirm weak agents can proceed without learning package internals while strong agents can still inspect or override safely.
+- For any changed operational surface, run an operational-affordance review from `docs/maintainer/operational-affordance-design.md`: name the one primary next action, demote irrelevant or deep actions, use resolved config/local invocation, keep raw files behind compact routing, and confirm weak agents can proceed without learning package internals while strong agents can still inspect or override safely.

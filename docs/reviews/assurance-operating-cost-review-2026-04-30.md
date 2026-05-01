@@ -36,7 +36,7 @@
 | --- | --- | --- | --- |
 | `docs/host-repo-dogfooding-report-template.md` | repo docs | Reusable host feedback shape for #600. | No |
 | `docs/reviews/assurance-operating-cost-review-2026-04-30.md` | repo reviews | Filled review and operating-cost decisions for #599. | No |
-| `docs/dogfooding-feedback.md` | repo docs | Routes host reports to the new template. | No |
+| `docs/maintainer/dogfooding-feedback.md` | repo docs | Routes host reports to the new template. | No |
 | `.agentic-workspace/planning/execplans/host-feedback-and-operating-cost.plan.json` | planning | Active lane proof and closeout state. | No |
 
 ## Friction Items

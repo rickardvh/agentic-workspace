@@ -156,7 +156,7 @@ Route to a planning review instead of closing when:
 
 ## Required Operational-Affordance Review
 
-When a pass changes startup, recovery, proof, closeout, lifecycle, Memory, planning, agent-aid, or other operational surfaces, review it against `docs/operational-affordance-design.md` before closing.
+When a pass changes startup, recovery, proof, closeout, lifecycle, Memory, planning, agent-aid, or other operational surfaces, review it against `docs/maintainer/operational-affordance-design.md` before closing.
 
 Record a compact answer in the execplan closeout, review artifact, or issue-close proof:
 

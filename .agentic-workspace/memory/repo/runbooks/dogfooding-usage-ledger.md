@@ -11,7 +11,7 @@ Local dogfooding evaluation procedure for recording which surfaces are actually 
 ## Applies to
 
 - `.agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md`
-- `docs/lazy-discovery-measurements.md`
+- `docs/maintainer/lazy-discovery-measurements.md`
 - repo-local dogfooding notes captured during normal work
 
 ## Load when
@@ -84,7 +84,7 @@ Local dogfooding evaluation procedure for recording which surfaces are actually 
 ## Verified against
 
 - `.agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md`
-- `docs/lazy-discovery-measurements.md`
+- `docs/maintainer/lazy-discovery-measurements.md`
 - `.agentic-workspace/memory/repo/runbooks/README.md`
 - `.agentic-workspace/memory/repo/manifest.toml`
 

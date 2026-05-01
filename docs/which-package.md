@@ -5,7 +5,7 @@ Pick the preset that matches the repo problem.
 
 Agentic Workspace is primarily a quiet repo-native capability layer. If you want the smallest useful core, start by checking whether the `memory` profile is enough.
 
-For capability status, documentation freshness, and role signals, use [`docs/documentation-status.md`](documentation-status.md). Keep the README as the stable public entrypoint rather than a status dashboard.
+For the full shipped-package documentation map, use [`docs/index.md`](index.md). For capability status, documentation freshness, and role signals, use [`docs/documentation-status.md`](documentation-status.md). Keep the README as the stable public entrypoint rather than a status dashboard.
 
 ## Fast Chooser
 
@@ -29,6 +29,9 @@ Direct package CLIs, package-local maintainer workflows, and debugging-oriented 
 
 ## Read Next
 
+- Package overview: [`docs/package/overview.md`](package/overview.md)
+- Module responsibilities: [`docs/package/modules.md`](package/modules.md)
+- Installed surfaces: [`docs/package/installed-surfaces.md`](package/installed-surfaces.md)
 - Compact operating map and first question: [`.agentic-workspace/docs/compact-contract-profile.md`](../.agentic-workspace/docs/compact-contract-profile.md)
 - Memory path: [`packages/memory/README.md`](../packages/memory/README.md)
 - Planning path: [`packages/planning/README.md`](../packages/planning/README.md)

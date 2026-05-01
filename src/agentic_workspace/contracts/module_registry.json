@@ -481,7 +481,7 @@
         "AGENTS.md",
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans",
-        "docs/contributor-playbook.md"
+        "docs/maintainer/contributor-playbook.md"
       ],
       "generated_artifacts": [],
       "startup_steps": [

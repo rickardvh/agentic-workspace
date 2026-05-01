@@ -73,7 +73,7 @@ Repo-directed improvement should clear a higher bar. One-off agent discomfort, l
 - Prefer fixing the shipped package or contract over adding repo-local workaround residue when the problem clearly generalizes.
 - Do not normalize repo-specific hacks as product behavior.
 - When a symptom does not generalize cleanly, route it into repo-owned planning, memory, or docs instead of forcing a package change.
-- When the answer is plausibly yes to “should the product have found, prevented, or made this cheaper?”, record that signal durably.
+- When the answer is plausibly yes to "should the product have found, prevented, or made this cheaper?", record that signal durably.
 
 ## Practical Standard
 

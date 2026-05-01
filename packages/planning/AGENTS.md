@@ -18,7 +18,7 @@ Package-local contract for work under `packages/planning/`.
 - This package contains the reusable `agentic-planning-bootstrap` source, shipped planning payload, helper rendering/check logic, and tests.
 - Treat `bootstrap/` as packaged target-repository content, not as the active planning system of this monorepo.
 - Treat `.agentic-workspace/planning/state.toml`, `.agentic-workspace/planning/execplans/`, and root tooling as the operational authority for this repository.
-- When a task crosses package source, shipped payload, and root install boundaries, use `docs/source-payload-operational-install.md` to keep the layers separate.
+- When a task crosses package source, shipped payload, and root install boundaries, use `../../docs/maintainer/source-payload-operational-install.md` to keep the layers separate.
 
 ## Architecture Context
 

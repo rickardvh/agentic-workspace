@@ -30,4 +30,4 @@ This contract is still first-party only.
 
 It exists so the repo can stabilize the right internal seams before external extension is supported.
 
-See [`docs/extension-boundary.md`](docs/extension-boundary.md) for the readiness gates that still block public third-party module support.
+See [`docs/extension-boundary.md`](extension-boundary.md) for the readiness gates that still block public third-party module support.

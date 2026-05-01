@@ -1721,7 +1721,7 @@ def _improvement_intake_payload(
         {
             "id": "dogfooding_friction",
             "audience": "source-checkout-only",
-            "source": "docs/dogfooding-feedback.md",
+            "source": "docs/maintainer/dogfooding-feedback.md",
             "evidence_class": "maintainer dogfooding signal",
             "confidence_field": "repeated practical friction or maintainer override",
             "primary_route": "active execplan, roadmap, Memory, docs, or issue follow-up",

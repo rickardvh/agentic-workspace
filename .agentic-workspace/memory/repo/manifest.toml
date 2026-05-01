@@ -197,13 +197,13 @@ task_relevance = "optional"
 subsystems = ["memory-system", "planning"]
 surfaces = ["review", "routing"]
 routes_from = [
-  "docs/contributor-playbook.md",
-  "docs/lazy-discovery-measurements.md",
+  "docs/maintainer/contributor-playbook.md",
+  "docs/maintainer/lazy-discovery-measurements.md",
   ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
 ]
 stale_when = [
-  "docs/contributor-playbook.md",
-  "docs/lazy-discovery-measurements.md",
+  "docs/maintainer/contributor-playbook.md",
+  "docs/maintainer/lazy-discovery-measurements.md",
   ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
 ]
 memory_role = "durable_truth"
@@ -217,8 +217,8 @@ canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["memory-system", "planning"]
 surfaces = ["review", "architecture"]
-routes_from = [".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md", "docs/lazy-discovery-measurements.md"]
-stale_when = [".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md", "docs/lazy-discovery-measurements.md"]
+routes_from = [".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md", "docs/maintainer/lazy-discovery-measurements.md"]
+stale_when = [".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md", "docs/maintainer/lazy-discovery-measurements.md"]
 memory_role = "durable_truth"
 
 [notes.".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"]

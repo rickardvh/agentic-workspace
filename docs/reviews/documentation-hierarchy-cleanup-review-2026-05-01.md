@@ -79,7 +79,7 @@ Recommended action: promote the stable conclusions into current package docs and
 
 Severity: medium.
 
-`docs/contributor-playbook.md` is valuable, but it has become a dense router for startup, ownership, validation lanes, dogfooding, package boundaries, design guardrails, and review expectations. That is useful for maintainers, but it should not sit beside user-facing package explanation as if it were a normal next read.
+`docs/maintainer/contributor-playbook.md` is valuable, but it has become a dense router for startup, ownership, validation lanes, dogfooding, package boundaries, design guardrails, and review expectations. That is useful for maintainers, but it should not sit beside user-facing package explanation as if it were a normal next read.
 
 Recommended action: move or re-index maintainer-only material under a maintainer section and leave `README.md` pointing to it only for contributor workflows.
 
@@ -151,14 +151,14 @@ Promote stable content into current docs:
 
 Move or re-index as maintainer-only:
 
-- `docs/contributor-playbook.md`
-- `docs/maintainer-commands.md`
-- `docs/dogfooding-feedback.md`
-- `docs/installed-contract-design-checklist.md`
-- `docs/operational-affordance-design.md`
-- `docs/source-payload-operational-install.md`
-- `docs/lazy-discovery-measurements.md`
-- `docs/benchmarking-contract.md`
+- `docs/maintainer/contributor-playbook.md`
+- `docs/maintainer/maintainer-commands.md`
+- `docs/maintainer/dogfooding-feedback.md`
+- `docs/maintainer/installed-contract-design-checklist.md`
+- `docs/maintainer/operational-affordance-design.md`
+- `docs/maintainer/source-payload-operational-install.md`
+- `docs/maintainer/lazy-discovery-measurements.md`
+- `docs/maintainer/benchmarking-contract.md`
 
 Keep as supporting doctrine or status:
 

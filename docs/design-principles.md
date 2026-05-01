@@ -197,8 +197,8 @@ A change is suspicious when it tends to:
 
 Use narrower owner docs for tactical maintainer policy instead of growing this page:
 
-- `docs/contributor-playbook.md` for maintainer routing, ownership, and validation lanes
-- `docs/dogfooding-feedback.md` for dogfooding, product-friction routing, and new-work admission policy
+- `docs/maintainer/contributor-playbook.md` for maintainer routing, ownership, and validation lanes
+- `docs/maintainer/dogfooding-feedback.md` for dogfooding, product-friction routing, and new-work admission policy
 - `.agentic-workspace/docs/lifecycle-and-config-contract.md` and `.agentic-workspace/docs/reporting-contract.md` for tactical contract details
 
 ## Short Version
