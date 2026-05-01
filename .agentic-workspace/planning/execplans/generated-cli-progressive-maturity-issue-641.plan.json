@@ -19,8 +19,8 @@
     "execution": {
       "milestone": "generated-cli-progressive-maturity-issue-641",
       "status": "active",
-      "next_step": "Commit and push the summary promotion, then continue #643 with the next bounded root read-only command.",
-      "proof": "Previous proof covered defaults/status foundation; this continuation must rerun focused generated-adapter proof and make check."
+      "next_step": "Continue #643 by evaluating the remaining root diagnostic/reporting commands (`report`, `reconcile`, `setup`, `status`, and `doctor`) for generated read-only adapter promotion or explicit maturity deferral.",
+      "proof": "Focused generated-adapter proof, Node-backed package conformance, full make check, and dogfooding closeout selectors passed for the expanded root read-only promotion batch."
     },
     "scope": {
       "touched": [
@@ -39,7 +39,11 @@
         "docs/reviews/generated-cli-progressive-maturity-2026-05-01.md",
         "docs/reviews/generated-cli-adapter-high-assurance-report-2026-05-01.md",
         ".agentic-workspace/planning/state.toml",
-        ".agentic-workspace/planning/execplans/generated-cli-progressive-maturity-issue-641.plan.json"
+        ".agentic-workspace/planning/execplans/generated-cli-progressive-maturity-issue-641.plan.json",
+        "src/agentic_workspace/contracts/command_adapter_generation.json",
+        "src/agentic_workspace/contracts/conformance_contracts.json",
+        "src/agentic_workspace/contracts/conformance/*.process.json",
+        "generated/typescript/workspace-cli/*"
       ],
       "invariants": [
         "Generated parser/help/dispatch wiring is derived from command_package_ir.json.",
@@ -61,12 +65,12 @@
     "activation trigger": "When another command family is selected for generated adapter promotion."
   },
   "iterative_follow_through": {
-    "what this slice enabled": "Runtime-backed generated Python parser/dispatch for root `defaults`, Planning `status`, and Memory `status`, plus static checks that enforce generated routing before handwritten parsers.",
-    "intentionally deferred": "Remaining root read-only commands, package-local read-only breadth beyond status, and lifecycle dry-run/mutation generated adapters.",
+    "what this slice enabled": "Runtime-backed generated Python parser/dispatch for root defaults/config/modules/start/summary/implement/preflight/proof/ownership/skills, plus Planning `status` and Memory `status`; static checks enforce generated routing before handwritten parsers.",
+    "intentionally deferred": "Root diagnostic/reporting commands that still need separate conformance (`report`, `reconcile`, `setup`, `status`, `doctor`), package-local read-only breadth beyond status, and lifecycle dry-run/mutation generated adapters.",
     "discovered implications": "High-assurance generated-adapter work must activate checked-in planning before implementation, not only during closeout.",
     "proof achieved now": "yes",
     "validation still needed": "CI after PR creation.",
-    "next likely slice": "#643 root read-only command expansion: promote `agentic-workspace summary` next; it is read-only but needs planning-module availability conformance."
+    "next likely slice": "Continue #643 by evaluating the remaining root diagnostic/reporting commands (`report`, `reconcile`, `setup`, `status`, and `doctor`) for generated read-only adapter promotion or explicit maturity deferral."
   },
   "intent_interpretation": {
     "literal request": "Ingest and implement #641 in a new branch, create a PR, use high-assurance workflow, report using the dogfooding template, implement full intent, create child issues if necessary, and implement child issues using progressive maturity.",
@@ -327,7 +331,7 @@
     "optional_deps": "Node and Docker availability for expanded generated package conformance."
   },
   "immediate_next_action": [
-    "Promote `agentic-workspace summary` through the generated root read-only adapter path for #643."
+    "Continue #643 by evaluating the remaining root diagnostic/reporting commands (`report`, `reconcile`, `setup`, `status`, and `doctor`) for generated read-only adapter promotion or explicit maturity deferral."
   ],
   "blockers": [
     "None."
@@ -342,7 +346,12 @@
     "tests/test_contract_tooling.py",
     "docs/reviews/generated-cli-progressive-maturity-2026-05-01.md",
     ".agentic-workspace/planning/state.toml",
-    ".agentic-workspace/planning/execplans/generated-cli-progressive-maturity-issue-641.plan.json"
+    ".agentic-workspace/planning/execplans/generated-cli-progressive-maturity-issue-641.plan.json",
+    "src/agentic_workspace/contracts/command_adapter_generation.json",
+    "src/agentic_workspace/contracts/conformance_contracts.json",
+    "src/agentic_workspace/contracts/conformance/*.process.json",
+    "generated/typescript/workspace-cli/*",
+    "docs/reviews/generated-cli-adapter-high-assurance-report-2026-05-01.md"
   ],
   "invariants": [
     "Generated interface truth stays in contracts/IR.",
@@ -350,13 +359,13 @@
     "Progressive maturity is not skipped."
   ],
   "contract_decisions_to_freeze": [
-    "Python targets for root defaults, Planning status, and Memory status are `runtime-backed-read-only-adapter`.",
-    "TypeScript root defaults remains `runnable-read-only-adapter` by process handoff.",
+    "Python targets for root defaults/config/modules/start/summary/implement/preflight/proof/ownership/skills, Planning status, and Memory status are `runtime-backed-read-only-adapter`.",
+    "TypeScript root read-only promoted commands remain `runnable-read-only-adapter` by process handoff.",
     "Lifecycle mutation remains deferred."
   ],
   "open_questions_to_close": [
-    "Whether Docker conformance is available locally for this proof run.",
-    "Whether make check surfaces additional generated docs drift after schema reference regeneration."
+    "Whether `report` and `reconcile` can be promoted without broader selector/profile conformance work.",
+    "Whether lifecycle diagnostics (`setup`, `status`, `doctor`) should wait for descriptor binding cleanup before adapter promotion."
   ],
   "validation_commands": [
     "uv run pytest tests/test_contract_tooling.py -q",
@@ -382,15 +391,15 @@
     "Branch is committed, pushed, and opened as a PR."
   ],
   "execution_run": {
-    "run status": "active-after-config-proof",
+    "run status": "active-after-expanded-root-read-only-proof",
     "executor": "Codex",
     "handoff source": "GitHub issue #641 plus user correction to use package workflow",
-    "what happened": "Child issues were created; an active execplan was added after user correction; generated Python adapters were promoted for root defaults, root config, root modules, root start, root summary, Planning status, and Memory status; lifecycle mutation remains deferred through progressive maturity.",
+    "what happened": "Child issues were created; an active execplan was added after user correction; generated Python adapters were promoted for root defaults, root config, root modules, root start, root summary, root implement, root preflight, root proof, root ownership, root skills, Planning status, and Memory status; lifecycle mutation remains deferred through progressive maturity.",
     "scope touched": "Generated CLI contracts, generator, root/planning/memory CLI entrypoints, checks, tests, and review docs.",
-    "changed surfaces": "command_package_ir, generated_cli_package outputs, command-generation generator/schema, root/planning/memory CLI entrypoints, generated package checks, focused tests, docs/reviews, planning state.",
-    "validations run": "uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py -q; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/generate/generate_command_packages.py --check; make check; dogfooding closeout selectors.",
-    "result for continuation": "Commit, push, and create PR; CI remains the next external proof.",
-    "next step": "Commit and push the summary promotion, then continue #643 with the next bounded root read-only command."
+    "changed surfaces": "command_adapter_generation, command_package_ir, generated_cli_package outputs, command-generation generator/schema, root/planning/memory CLI entrypoints, generated package checks, focused tests, docs/reviews, planning state, and conformance fixtures.",
+    "validations run": "uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/generate/generate_command_packages.py --check; make check; uv run agentic-workspace report --target . --section workflow_obligations --format json; uv run agentic-workspace report --target . --section closeout_trust --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json",
+    "result for continuation": "Commit and push the expanded root read-only batch, then continue evaluating the remaining #643 diagnostic/reporting commands.",
+    "next step": "Continue #643 by evaluating the remaining root diagnostic/reporting commands (`report`, `reconcile`, `setup`, `status`, and `doctor`) for generated read-only adapter promotion or explicit maturity deferral."
   },
   "finished_run_review": {
     "review status": "complete-before-pr",
@@ -402,15 +411,15 @@
     "follow-on decision": "Create PR and let CI/review verify."
   },
   "proof_report": {
-    "validation proof": "Focused contract tooling and generated tool conformance, generated package conformance with Node required, generated adapter/package freshness, full make check, and dogfooding closeout selectors all passed locally through the config, modules, start, and summary promotions.",
-    "proof achieved now": "yes",
-    "evidence for \"proof achieved\" state": "uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py -q; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/generate/generate_command_packages.py --check; make check"
+    "validation proof": "Focused contract tooling, generated package conformance with Node required, generated adapter/package freshness, full make check, and dogfooding closeout selectors passed locally for the expanded root read-only promotions.",
+    "proof achieved now": "yes-for-expanded-root-read-only-batch",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/generate/generate_command_packages.py --check; make check; uv run agentic-workspace report --target . --section workflow_obligations --format json; uv run agentic-workspace report --target . --section closeout_trust --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json"
   },
   "intent_satisfaction": {
     "original intent": "Implement #641 and child issues using high-assurance workflow and progressive maturity, then create a PR.",
     "was original intent fully satisfied?": "yes for #641's first runtime-backed generated-adapter milestone; progressive child expansion remains routed.",
-    "evidence of intent satisfaction": "Runtime-backed generated Python adapters for root defaults, Planning status, and Memory status; maturity matrix; child issue routing; dogfooding report; local proof passed.",
-    "unsolved intent passed to": "#642, #643, #644, #645"
+    "evidence of intent satisfaction": "Runtime-backed generated Python adapters for root defaults/config/modules/start/summary/implement/preflight/proof/ownership/skills, Planning status, and Memory status; maturity matrix; child issue routing; dogfooding report; local proof in progress.",
+    "unsolved intent passed to": "#642, #643 remaining diagnostics/reporting, #644 package-local breadth, #645, #649, #650"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve larger outcomes and checked-in planning for work whose proof or continuation would be expensive to reconstruct.",
@@ -419,8 +428,8 @@
     "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
   },
   "closure_check": {
-    "slice status": "bounded slice complete pending PR",
-    "larger-intent status": "routed-follow-up",
+    "slice status": "expanded root read-only batch complete pending commit",
+    "larger-intent status": "active-follow-through",
     "closure decision": "archive-after-pr",
     "why this decision is honest": "This PR proves the progressive runtime-backed adapter foundation but does not overclaim weak-agent-safe or mutation-capable maturity.",
     "evidence carried forward": "docs/reviews/generated-cli-progressive-maturity-2026-05-01.md and docs/reviews/generated-cli-adapter-high-assurance-report-2026-05-01.md",
@@ -450,31 +459,39 @@
     "retention after promotion": "retain"
   },
   "execution_summary": {
-    "outcome delivered": "Progressive generated CLI adapter foundation for #641 with runtime-backed Python adapters for root defaults/config/modules/start/summary and package status commands, plus documented expansion lanes.",
-    "validation confirmed": "Local high-assurance proof passed.",
-    "follow-on routed to": "#642, #643, #644, #645",
+    "outcome delivered": "Progressive generated CLI adapter foundation for #641 with runtime-backed Python adapters for root defaults/config/modules/start/summary/implement/preflight/proof/ownership/skills and package status commands, plus documented expansion lanes.",
+    "validation confirmed": "Focused proof, Node-backed adapter conformance, generator freshness, full make check, and dogfooding closeout selectors passed.",
+    "follow-on routed to": "#642, #643 remaining diagnostics/reporting, #644, #645, #649, #650",
     "post-work posterity capture": "Dogfooding report and progressive maturity review.",
-    "knowledge promoted (Memory/Docs/Config)": "Docs/reviews plus #645.",
-    "resume from": "Create PR and wait for CI/review."
+    "knowledge promoted (Memory/Docs/Config)": "Docs/reviews plus #645, #649, and #650.",
+    "resume from": "Continue #643 by evaluating the remaining root diagnostic/reporting commands (`report`, `reconcile`, `setup`, `status`, and `doctor`) for generated read-only adapter promotion or explicit maturity deferral."
   },
   "improvement_signal_review": {
     "status": "active",
     "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
     "source": "operating_posture",
     "signals found": [
-      "High-assurance work began without checked-in planning."
+      "High-assurance work began without checked-in planning.",
+      "Active execplan next-action guidance is duplicated across fields and can become stale after incremental promotion.",
+      "Generated package regeneration can produce line-ending-only working-tree noise."
     ],
     "signals fixed": [
       "Created this execplan and will update planning state before continuing."
     ],
     "signals routed": [
-      "#645"
+      "#645",
+      "#649",
+      "#650"
     ],
     "signals dismissed": [],
-    "next owner": "#645"
+    "next owner": "#645, #649, #650"
   },
   "drift_log": [
     "2026-05-01: Execplan created after user caught missing high-assurance planning workflow.",
-    "2026-05-01: Local high-assurance validation passed; dogfooding friction routed to #645."
+    "2026-05-01: Local high-assurance validation passed; dogfooding friction routed to #645.",
+    "2026-05-01: Expanded root read-only generated adapter promotion to implement/preflight/proof/ownership/skills; focused proof passed.",
+    "2026-05-01: Dogfooding workflow robustness issues created as #649 and #650.",
+    "2026-05-01: Full make check passed for expanded root read-only generated adapter batch.",
+    "2026-05-01: Dogfooding closeout selectors passed; reconcile still reports provider evidence should be refreshed after external issue creation."
   ]
 }

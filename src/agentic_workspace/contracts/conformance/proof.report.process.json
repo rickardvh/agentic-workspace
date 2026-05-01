@@ -1,0 +1,82 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "proof.report.process",
+  "operation_id": "proof.report",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "proof",
+      "--target",
+      ".",
+      "--changed",
+      "README.md",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "profile"
+          ],
+          "equals": "compact-contract-answer/v1"
+        },
+        {
+          "path": [
+            "surface"
+          ],
+          "equals": "proof"
+        },
+        {
+          "path": [
+            "matched"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "answer",
+            "kind"
+          ],
+          "equals": "proof-selection/v1"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": [
+        ".agentic-workspace"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

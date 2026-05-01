@@ -34,6 +34,36 @@
       "adapter_kind": "process"
     },
     {
+      "id": "implement.context.process",
+      "operation_id": "implement.context",
+      "path": "conformance/implement.context.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "preflight.report.process",
+      "operation_id": "preflight.report",
+      "path": "conformance/preflight.report.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "proof.report.process",
+      "operation_id": "proof.report",
+      "path": "conformance/proof.report.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "ownership.report.process",
+      "operation_id": "ownership.report",
+      "path": "conformance/ownership.report.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "skills.report.process",
+      "operation_id": "skills.report",
+      "path": "conformance/skills.report.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.status.process",
       "operation_id": "planning.status.report",
       "path": "conformance/planning.status.process.json",

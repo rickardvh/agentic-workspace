@@ -14,8 +14,8 @@
 ## Run Summary
 
 - Requested outcome: Finish the single-source generated executable adapter migration foundation, implement child issues through progressive maturity, commit, push, and create a PR.
-- What landed: Runtime-backed generated Python parser/dispatch for root `defaults`, `config`, `modules`, `start`, and `summary`, Planning `status`, and Memory `status`; generated IR/schema support for parser `interface`; static checks that require generated Python routing before handwritten parsers; review documentation for the progressive maturity matrix.
-- What did not land: Mutation-capable lifecycle adapters and full root read-only command expansion. Those remain intentionally below higher maturity because #642 and #643 require additional conformance before promotion.
+- What landed: Runtime-backed generated Python parser/dispatch for root `defaults`, `config`, `modules`, `start`, `summary`, `implement`, `preflight`, `proof`, `ownership`, and `skills`, Planning `status`, and Memory `status`; generated IR/schema support for parser `interface`; static checks that require generated Python routing before handwritten parsers; review documentation for the progressive maturity matrix.
+- What did not land: Mutation-capable lifecycle adapters, package-local breadth beyond `status`, and the remaining root diagnostic/reporting commands. Those remain intentionally below higher maturity because #642, #643, and #644 require additional conformance before promotion.
 - Closure decision: `routed follow-up`
 - Residue destination: `planning, issue, docs`
 
@@ -50,6 +50,8 @@
 | High-assurance work initially began without an active execplan. | User interruption; summary later reported `active_count: 0` before plan creation. | product-general | yes | issue | `#645` |
 | The package caught malformed execplan fields only after the plan was written. | `planning_record_schema_drift` warnings for `control_gates`, `threat_failure_aids`, and `durable_residue`. | successful behavior | no | preserve | none |
 | Formatter drift exposed that generated Python output must itself be ruff-stable. | `make check` failed on `src/agentic_workspace/generated_cli_package/__init__.py`; fixed generator quoting. | product-general | yes | fix now | fixed in this branch |
+| Active execplan next-action guidance can become stale across repeated fields. | `summary` kept routing to the already-promoted `summary` command after later promotion batches were underway. | product-general | yes | issue | `#649` |
+| Generated package regeneration can leave line-ending-only working-tree noise. | Regeneration repeatedly reported CRLF/LF drift in generated Python and TypeScript package outputs. | product-general | yes | issue | `#650` |
 
 ## Operating-Cost Review
 
@@ -71,3 +73,5 @@
 - Created/used #643 for remaining root read-only command generated-adapter migration.
 - Created/used #644 for Planning and Memory read-only command expansion.
 - Created #645 for a guard or stronger route so broad high-assurance package work enters checked-in planning before implementation.
+- Created #649 for canonicalizing or checking active execplan next-action projections.
+- Created #650 for avoiding generated package line-ending-only drift.

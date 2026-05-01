@@ -11879,10 +11879,77 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_implement_context_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="implement", target_root=target_root)
+    payload = _implement_payload(
+        target_root=target_root,
+        changed_paths=list(getattr(args, "changed", []) or []),
+        task_text=getattr(args, "task", None),
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
+def _run_preflight_report_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="preflight", target_root=target_root)
+    payload = _run_preflight_command(
+        target_root=target_root,
+        active_only=bool(getattr(args, "active_only", False)),
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
+def _run_proof_report_adapter(args: argparse.Namespace) -> int:
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="proof", target_root=target_root)
+    _emit_proof(
+        format_name=args.format,
+        target_root=target_root,
+        descriptors=descriptors,
+        route=getattr(args, "route", None),
+        current_only=bool(getattr(args, "current", False)),
+        changed_paths=list(getattr(args, "changed", []) or []),
+    )
+    return 0
+
+
+def _run_ownership_report_adapter(args: argparse.Namespace) -> int:
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="ownership", target_root=target_root)
+    _emit_ownership(
+        format_name=args.format,
+        target_root=target_root,
+        descriptors=descriptors,
+        concern=getattr(args, "concern", None),
+        repo_path=getattr(args, "path", None),
+    )
+    return 0
+
+
+def _run_skills_report_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else None
+    if target_root is not None:
+        _validate_target_root(command_name="skills", target_root=target_root)
+    _emit_skills(format_name=args.format, target_root=target_root, task_text=getattr(args, "task", None))
+    return 0
+
+
 _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "config.report": _run_config_report_adapter,
     "defaults.report": _run_defaults_report_adapter,
+    "implement.context": _run_implement_context_adapter,
     "modules.report": _run_modules_report_adapter,
+    "ownership.report": _run_ownership_report_adapter,
+    "preflight.report": _run_preflight_report_adapter,
+    "proof.report": _run_proof_report_adapter,
+    "skills.report": _run_skills_report_adapter,
     "start.context": _run_start_context_adapter,
     "summary.report": _run_summary_report_adapter,
 }

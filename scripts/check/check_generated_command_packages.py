@@ -105,6 +105,50 @@ def _selected_summary_fields(stdout: str) -> dict[str, object]:
     }
 
 
+def _selected_implement_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    proof = payload.get("proof", {}) if isinstance(payload.get("proof"), dict) else {}
+    return {
+        "kind": payload.get("kind"),
+        "proof_kind": proof.get("kind"),
+    }
+
+
+def _selected_preflight_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    return {
+        "kind": payload.get("kind"),
+        "mode": payload.get("mode"),
+    }
+
+
+def _selected_proof_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    answer = payload.get("answer", {}) if isinstance(payload.get("answer"), dict) else {}
+    return {
+        "profile": payload.get("profile"),
+        "surface": payload.get("surface"),
+        "matched": payload.get("matched"),
+        "answer_kind": answer.get("kind"),
+    }
+
+
+def _selected_ownership_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    return {
+        "profile": payload.get("profile"),
+        "surface": payload.get("surface"),
+        "matched": payload.get("matched"),
+    }
+
+
+def _selected_skills_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    return {
+        "task": payload.get("task"),
+    }
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -211,6 +255,82 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                 "adapter failure: invalid-option stderr presence drifted from canonical process; "
                 f"canonical={canonical_invalid.stderr!r}, adapter={adapter_invalid.stderr!r}"
             )
+
+        def compare_adapter(
+            *,
+            label: str,
+            success_args: list[str],
+            selected_fields,
+            expected_fields: dict[str, object],
+        ) -> None:
+            canonical_process = _capture(
+                [python, str(shim), *success_args],
+                cwd=fixture_root,
+                env=_conformance_env(),
+            )
+            if canonical_process.returncode != 0:
+                errors.append(
+                    f"runtime primitive failure: canonical {label} command exited {canonical_process.returncode}; "
+                    f"stderr={canonical_process.stderr!r}"
+                )
+                return
+            try:
+                canonical_selected = selected_fields(canonical_process.stdout)
+            except json.JSONDecodeError as exc:
+                errors.append(f"runtime primitive failure: canonical {label} stdout was not JSON: {exc}")
+                return
+            if canonical_selected != expected_fields:
+                errors.append(
+                    f"runtime primitive failure: canonical {label} output shape drifted; "
+                    f"expected selected fields {expected_fields!r}, got {canonical_selected!r}"
+                )
+                return
+
+            adapter_process = _capture(
+                [node, str(cli), *success_args],
+                cwd=fixture_root,
+                env=_conformance_env(runtime=runtime),
+            )
+            if adapter_process.returncode != canonical_process.returncode:
+                errors.append(
+                    f"adapter failure: {label} exit code drifted from canonical process; "
+                    f"expected {canonical_process.returncode}, got {adapter_process.returncode}; stderr={adapter_process.stderr!r}"
+                )
+            else:
+                try:
+                    adapter_selected = selected_fields(adapter_process.stdout)
+                except json.JSONDecodeError as exc:
+                    errors.append(f"adapter failure: {label} stdout was not JSON: {exc}; stdout={adapter_process.stdout!r}")
+                else:
+                    if adapter_selected != canonical_selected:
+                        errors.append(
+                            f"adapter failure: {label} JSON selected fields drifted from canonical process; "
+                            f"expected {canonical_selected!r}, got {adapter_selected!r}"
+                        )
+            if adapter_process.stderr.strip():
+                errors.append(f"adapter failure: {label} emitted unexpected stderr: {adapter_process.stderr!r}")
+
+            invalid_args = [*success_args, "--definitely-invalid"]
+            canonical_invalid_process = _capture(
+                [python, str(shim), *invalid_args],
+                cwd=fixture_root,
+                env=_conformance_env(),
+            )
+            adapter_invalid_process = _capture(
+                [node, str(cli), *invalid_args],
+                cwd=fixture_root,
+                env=_conformance_env(runtime=runtime),
+            )
+            if adapter_invalid_process.returncode != canonical_invalid_process.returncode:
+                errors.append(
+                    f"adapter failure: {label} invalid-option exit code drifted from canonical process; "
+                    f"expected {canonical_invalid_process.returncode}, got {adapter_invalid_process.returncode}"
+                )
+            if bool(adapter_invalid_process.stderr.strip()) != bool(canonical_invalid_process.stderr.strip()):
+                errors.append(
+                    f"adapter failure: {label} invalid-option stderr presence drifted from canonical process; "
+                    f"canonical={canonical_invalid_process.stderr!r}, adapter={adapter_invalid_process.stderr!r}"
+                )
 
         config_args = ["config", "--target", ".", "--format", "json"]
         canonical_config = _capture(
@@ -491,6 +611,54 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                 "adapter failure: summary invalid-option stderr presence drifted from canonical process; "
                 f"canonical={canonical_summary_invalid.stderr!r}, adapter={adapter_summary_invalid.stderr!r}"
             )
+
+        compare_adapter(
+            label="implement",
+            success_args=["implement", "--target", ".", "--changed", "README.md", "--task", "generated-adapter-proof", "--format", "json"],
+            selected_fields=_selected_implement_fields,
+            expected_fields={
+                "kind": "implementer-context/v1",
+                "proof_kind": "proof-selection/v1",
+            },
+        )
+        compare_adapter(
+            label="preflight",
+            success_args=["preflight", "--target", ".", "--active-only", "--format", "json"],
+            selected_fields=_selected_preflight_fields,
+            expected_fields={
+                "kind": "preflight-response/v1",
+                "mode": "active-state-only",
+            },
+        )
+        compare_adapter(
+            label="proof",
+            success_args=["proof", "--target", ".", "--changed", "README.md", "--format", "json"],
+            selected_fields=_selected_proof_fields,
+            expected_fields={
+                "profile": "compact-contract-answer/v1",
+                "surface": "proof",
+                "matched": True,
+                "answer_kind": "proof-selection/v1",
+            },
+        )
+        compare_adapter(
+            label="ownership",
+            success_args=["ownership", "--target", ".", "--concern", "startup", "--format", "json"],
+            selected_fields=_selected_ownership_fields,
+            expected_fields={
+                "profile": "compact-contract-answer/v1",
+                "surface": "ownership",
+                "matched": False,
+            },
+        )
+        compare_adapter(
+            label="skills",
+            success_args=["skills", "--target", ".", "--task", "proof", "--format", "json"],
+            selected_fields=_selected_skills_fields,
+            expected_fields={
+                "task": "proof",
+            },
+        )
 
         unsupported = _capture(
             [node, str(cli), "workspace-status", "--format", "json"],

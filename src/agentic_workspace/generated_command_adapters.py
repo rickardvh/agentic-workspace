@@ -87,6 +87,39 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
     },
     "status": "generated"
   },
+  "implement": {
+    "command": {
+      "command_manifest": "cli_commands.json",
+      "name": "implement",
+      "option_group_manifest": "cli_option_groups.json",
+      "program": "agentic-workspace"
+    },
+    "conformance_refs": [
+      "implement.context.process"
+    ],
+    "effect_hints": {
+      "destructive": false,
+      "idempotent": true,
+      "read_only": true,
+      "requires_preflight_gate": false,
+      "writes_repo_state": false
+    },
+    "id": "implement.context.cli",
+    "operation_id": "implement.context",
+    "runtime_binding": {
+      "kind": "operation-primitive-sequence",
+      "primitive_refs": [
+        "workspace.root.resolve",
+        "implementer.context.assemble",
+        "output.emit"
+      ]
+    },
+    "schemas": {
+      "input": [],
+      "output": []
+    },
+    "status": "generated"
+  },
   "modules": {
     "command": {
       "command_manifest": "cli_commands.json",
@@ -111,6 +144,143 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "primitive_refs": [
         "workspace.root.resolve",
         "workspace.modules.inspect",
+        "output.emit"
+      ]
+    },
+    "schemas": {
+      "input": [],
+      "output": []
+    },
+    "status": "generated"
+  },
+  "ownership": {
+    "command": {
+      "command_manifest": "cli_commands.json",
+      "name": "ownership",
+      "option_group_manifest": "cli_option_groups.json",
+      "program": "agentic-workspace"
+    },
+    "conformance_refs": [
+      "ownership.report.process"
+    ],
+    "effect_hints": {
+      "destructive": false,
+      "idempotent": true,
+      "read_only": true,
+      "requires_preflight_gate": false,
+      "writes_repo_state": false
+    },
+    "id": "ownership.report.cli",
+    "operation_id": "ownership.report",
+    "runtime_binding": {
+      "kind": "operation-primitive-sequence",
+      "primitive_refs": [
+        "workspace.root.resolve",
+        "ownership.answer.resolve",
+        "output.emit"
+      ]
+    },
+    "schemas": {
+      "input": [],
+      "output": []
+    },
+    "status": "generated"
+  },
+  "preflight": {
+    "command": {
+      "command_manifest": "cli_commands.json",
+      "name": "preflight",
+      "option_group_manifest": "cli_option_groups.json",
+      "program": "agentic-workspace"
+    },
+    "conformance_refs": [
+      "preflight.report.process"
+    ],
+    "effect_hints": {
+      "destructive": false,
+      "idempotent": false,
+      "read_only": true,
+      "requires_preflight_gate": false,
+      "writes_repo_state": false
+    },
+    "id": "preflight.report.cli",
+    "operation_id": "preflight.report",
+    "runtime_binding": {
+      "kind": "operation-primitive-sequence",
+      "primitive_refs": [
+        "workspace.root.resolve",
+        "workspace.defaults.load",
+        "workspace.config.load",
+        "planning.summary.load",
+        "preflight.token.create",
+        "preflight.context.assemble",
+        "output.emit"
+      ]
+    },
+    "schemas": {
+      "input": [],
+      "output": []
+    },
+    "status": "generated"
+  },
+  "proof": {
+    "command": {
+      "command_manifest": "cli_commands.json",
+      "name": "proof",
+      "option_group_manifest": "cli_option_groups.json",
+      "program": "agentic-workspace"
+    },
+    "conformance_refs": [
+      "proof.report.process"
+    ],
+    "effect_hints": {
+      "destructive": false,
+      "idempotent": true,
+      "read_only": true,
+      "requires_preflight_gate": false,
+      "writes_repo_state": false
+    },
+    "id": "proof.report.cli",
+    "operation_id": "proof.report",
+    "runtime_binding": {
+      "kind": "operation-primitive-sequence",
+      "primitive_refs": [
+        "workspace.root.resolve",
+        "proof.routes.resolve",
+        "proof.routes.resolve",
+        "output.emit"
+      ]
+    },
+    "schemas": {
+      "input": [],
+      "output": []
+    },
+    "status": "generated"
+  },
+  "skills": {
+    "command": {
+      "command_manifest": "cli_commands.json",
+      "name": "skills",
+      "option_group_manifest": "cli_option_groups.json",
+      "program": "agentic-workspace"
+    },
+    "conformance_refs": [
+      "skills.report.process"
+    ],
+    "effect_hints": {
+      "destructive": false,
+      "idempotent": true,
+      "read_only": true,
+      "requires_preflight_gate": false,
+      "writes_repo_state": false
+    },
+    "id": "skills.report.cli",
+    "operation_id": "skills.report",
+    "runtime_binding": {
+      "kind": "operation-primitive-sequence",
+      "primitive_refs": [
+        "workspace.root.resolve",
+        "skills.registry.inspect",
         "output.emit"
       ]
     },
