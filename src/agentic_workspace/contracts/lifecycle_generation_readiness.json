@@ -14,100 +14,396 @@
     {
       "surface": "root",
       "command": "install",
-      "phases": ["resolve context", "resolve selection", "plan changes", "validate plan", "apply changes", "verify result", "emit output/proof"],
-      "adapter_owned_phases": ["resolve selection", "emit output/proof"],
-      "runtime_owned_phases": ["resolve context", "plan changes", "validate plan", "apply changes", "verify result"],
-      "effects": {"read_only": false, "writes_repo_state": true, "destructive_potential": false, "idempotency": "planned-idempotent", "preflight_required": true, "local_only_interaction": true, "branch_sensitive": true, "review_required_when_ambiguous": true},
+      "phases": [
+        "resolve context",
+        "resolve selection",
+        "plan changes",
+        "validate plan",
+        "apply changes",
+        "verify result",
+        "emit output/proof"
+      ],
+      "adapter_owned_phases": [
+        "resolve selection",
+        "emit output/proof"
+      ],
+      "runtime_owned_phases": [
+        "resolve context",
+        "plan changes",
+        "validate plan",
+        "apply changes",
+        "verify result"
+      ],
+      "effects": {
+        "read_only": false,
+        "writes_repo_state": true,
+        "destructive_potential": false,
+        "idempotency": "planned-idempotent",
+        "preflight_required": true,
+        "local_only_interaction": true,
+        "branch_sensitive": true,
+        "review_required_when_ambiguous": true
+      },
       "generation_eligibility": "deferred-mutation",
-      "conformance_refs": ["install.lifecycle.dry-run.process"],
-      "mutation_promotion_blockers": ["strict preflight refusal coverage for apply path", "explicit lifecycle verify primitive", "black-box apply failure coverage"],
-      "notes": "May create or refresh package-managed surfaces; generated adapter must not own mutation semantics."
+      "conformance_refs": [
+        "install.lifecycle.dry-run.process"
+      ],
+      "mutation_promotion_blockers": [
+        "strict preflight refusal coverage for apply path",
+        "explicit lifecycle verify primitive",
+        "black-box apply failure coverage"
+      ],
+      "notes": "May create or refresh package-managed surfaces; generated adapter must not own mutation semantics.",
+      "capability_maturity": {
+        "dry_run_plan": "proved",
+        "strict_preflight_refusal": "unproved",
+        "destructive_refusal": "not-applicable",
+        "apply_mutation": "deferred",
+        "verify": "deferred"
+      }
     },
     {
       "surface": "root",
       "command": "init",
-      "phases": ["resolve context", "resolve selection", "plan changes", "validate plan", "apply changes", "verify result", "emit output/proof"],
-      "adapter_owned_phases": ["resolve selection", "emit output/proof"],
-      "runtime_owned_phases": ["resolve context", "plan changes", "validate plan", "apply changes", "verify result"],
-      "effects": {"read_only": false, "writes_repo_state": true, "destructive_potential": false, "idempotency": "planned-idempotent", "preflight_required": true, "local_only_interaction": true, "branch_sensitive": true, "review_required_when_ambiguous": true},
+      "phases": [
+        "resolve context",
+        "resolve selection",
+        "plan changes",
+        "validate plan",
+        "apply changes",
+        "verify result",
+        "emit output/proof"
+      ],
+      "adapter_owned_phases": [
+        "resolve selection",
+        "emit output/proof"
+      ],
+      "runtime_owned_phases": [
+        "resolve context",
+        "plan changes",
+        "validate plan",
+        "apply changes",
+        "verify result"
+      ],
+      "effects": {
+        "read_only": false,
+        "writes_repo_state": true,
+        "destructive_potential": false,
+        "idempotency": "planned-idempotent",
+        "preflight_required": true,
+        "local_only_interaction": true,
+        "branch_sensitive": true,
+        "review_required_when_ambiguous": true
+      },
       "generation_eligibility": "deferred-mutation",
-      "conformance_refs": ["init.lifecycle.dry-run.process"],
-      "mutation_promotion_blockers": ["strict preflight refusal coverage for apply path", "explicit lifecycle verify primitive", "black-box apply failure coverage"],
-      "notes": "Alias-like lifecycle entry must share install planning and verification."
+      "conformance_refs": [
+        "init.lifecycle.dry-run.process"
+      ],
+      "mutation_promotion_blockers": [
+        "strict preflight refusal coverage for apply path",
+        "explicit lifecycle verify primitive",
+        "black-box apply failure coverage"
+      ],
+      "notes": "Alias-like lifecycle entry must share install planning and verification.",
+      "capability_maturity": {
+        "dry_run_plan": "proved",
+        "strict_preflight_refusal": "unproved",
+        "destructive_refusal": "not-applicable",
+        "apply_mutation": "deferred",
+        "verify": "deferred"
+      }
     },
     {
       "surface": "root",
       "command": "adopt",
-      "phases": ["resolve context", "resolve selection", "plan changes", "validate plan", "apply changes", "verify result", "emit output/proof"],
-      "adapter_owned_phases": ["resolve selection", "emit output/proof"],
-      "runtime_owned_phases": ["resolve context", "plan changes", "validate plan", "apply changes", "verify result"],
-      "effects": {"read_only": false, "writes_repo_state": true, "destructive_potential": false, "idempotency": "context-dependent", "preflight_required": true, "local_only_interaction": true, "branch_sensitive": true, "review_required_when_ambiguous": true},
+      "phases": [
+        "resolve context",
+        "resolve selection",
+        "plan changes",
+        "validate plan",
+        "apply changes",
+        "verify result",
+        "emit output/proof"
+      ],
+      "adapter_owned_phases": [
+        "resolve selection",
+        "emit output/proof"
+      ],
+      "runtime_owned_phases": [
+        "resolve context",
+        "plan changes",
+        "validate plan",
+        "apply changes",
+        "verify result"
+      ],
+      "effects": {
+        "read_only": false,
+        "writes_repo_state": true,
+        "destructive_potential": false,
+        "idempotency": "context-dependent",
+        "preflight_required": true,
+        "local_only_interaction": true,
+        "branch_sensitive": true,
+        "review_required_when_ambiguous": true
+      },
       "generation_eligibility": "deferred-mutation",
-      "notes": "Adoption must preserve repo-owned files and needs explicit ownership checks."
+      "notes": "Adoption must preserve repo-owned files and needs explicit ownership checks.",
+      "capability_maturity": {
+        "dry_run_plan": "unproved",
+        "strict_preflight_refusal": "unproved",
+        "destructive_refusal": "not-applicable",
+        "apply_mutation": "deferred",
+        "verify": "deferred"
+      }
     },
     {
       "surface": "root",
       "command": "upgrade",
-      "phases": ["resolve context", "resolve selection", "plan changes", "validate plan", "apply changes", "verify result", "emit output/proof"],
-      "adapter_owned_phases": ["resolve selection", "emit output/proof"],
-      "runtime_owned_phases": ["resolve context", "plan changes", "validate plan", "apply changes", "verify result"],
-      "effects": {"read_only": false, "writes_repo_state": true, "destructive_potential": false, "idempotency": "planned-idempotent", "preflight_required": true, "local_only_interaction": true, "branch_sensitive": true, "review_required_when_ambiguous": true},
+      "phases": [
+        "resolve context",
+        "resolve selection",
+        "plan changes",
+        "validate plan",
+        "apply changes",
+        "verify result",
+        "emit output/proof"
+      ],
+      "adapter_owned_phases": [
+        "resolve selection",
+        "emit output/proof"
+      ],
+      "runtime_owned_phases": [
+        "resolve context",
+        "plan changes",
+        "validate plan",
+        "apply changes",
+        "verify result"
+      ],
+      "effects": {
+        "read_only": false,
+        "writes_repo_state": true,
+        "destructive_potential": false,
+        "idempotency": "planned-idempotent",
+        "preflight_required": true,
+        "local_only_interaction": true,
+        "branch_sensitive": true,
+        "review_required_when_ambiguous": true
+      },
       "generation_eligibility": "deferred-mutation",
-      "conformance_refs": ["upgrade.lifecycle.dry-run.process", "upgrade.lifecycle.strict-preflight-refusal.process"],
-      "mutation_promotion_blockers": ["explicit lifecycle verify primitive", "black-box apply failure coverage"],
-      "notes": "Dry-run and apply must use the same planner."
+      "conformance_refs": [
+        "upgrade.lifecycle.dry-run.process",
+        "upgrade.lifecycle.strict-preflight-refusal.process"
+      ],
+      "mutation_promotion_blockers": [
+        "explicit lifecycle verify primitive",
+        "black-box apply failure coverage"
+      ],
+      "notes": "Dry-run and apply must use the same planner.",
+      "capability_maturity": {
+        "dry_run_plan": "proved",
+        "strict_preflight_refusal": "proved",
+        "destructive_refusal": "not-applicable",
+        "apply_mutation": "deferred",
+        "verify": "deferred"
+      }
     },
     {
       "surface": "root",
       "command": "uninstall",
-      "phases": ["resolve context", "resolve selection", "plan changes", "validate plan", "apply changes", "verify result", "emit output/proof"],
-      "adapter_owned_phases": ["resolve selection", "emit output/proof"],
-      "runtime_owned_phases": ["resolve context", "plan changes", "validate plan", "apply changes", "verify result"],
-      "effects": {"read_only": false, "writes_repo_state": true, "destructive_potential": true, "idempotency": "context-dependent", "preflight_required": true, "local_only_interaction": true, "branch_sensitive": true, "review_required_when_ambiguous": true},
+      "phases": [
+        "resolve context",
+        "resolve selection",
+        "plan changes",
+        "validate plan",
+        "apply changes",
+        "verify result",
+        "emit output/proof"
+      ],
+      "adapter_owned_phases": [
+        "resolve selection",
+        "emit output/proof"
+      ],
+      "runtime_owned_phases": [
+        "resolve context",
+        "plan changes",
+        "validate plan",
+        "apply changes",
+        "verify result"
+      ],
+      "effects": {
+        "read_only": false,
+        "writes_repo_state": true,
+        "destructive_potential": true,
+        "idempotency": "context-dependent",
+        "preflight_required": true,
+        "local_only_interaction": true,
+        "branch_sensitive": true,
+        "review_required_when_ambiguous": true
+      },
       "generation_eligibility": "deferred-destructive",
-      "conformance_refs": ["uninstall.lifecycle.destructive-refusal.process", "uninstall.lifecycle.strict-preflight-refusal.process"],
-      "mutation_promotion_blockers": ["explicit lifecycle verify primitive", "black-box apply failure coverage", "ownership checks for deletion candidates beyond ambiguous shared-layer refusal"],
-      "notes": "Must refuse ambiguous ownership and preserve local-only state unless explicitly targeted."
+      "conformance_refs": [
+        "uninstall.lifecycle.destructive-refusal.process",
+        "uninstall.lifecycle.strict-preflight-refusal.process"
+      ],
+      "mutation_promotion_blockers": [
+        "explicit lifecycle verify primitive",
+        "black-box apply failure coverage",
+        "ownership checks for deletion candidates beyond ambiguous shared-layer refusal"
+      ],
+      "notes": "Must refuse ambiguous ownership and preserve local-only state unless explicitly targeted.",
+      "capability_maturity": {
+        "dry_run_plan": "unproved",
+        "strict_preflight_refusal": "proved",
+        "destructive_refusal": "proved",
+        "apply_mutation": "deferred",
+        "verify": "deferred"
+      }
     },
     {
       "surface": "root",
       "command": "doctor",
-      "phases": ["resolve context", "resolve selection", "plan changes", "validate plan", "verify result", "emit output/proof"],
-      "adapter_owned_phases": ["resolve selection", "emit output/proof"],
-      "runtime_owned_phases": ["resolve context", "plan changes", "validate plan", "verify result"],
-      "effects": {"read_only": true, "writes_repo_state": false, "destructive_potential": false, "idempotency": "idempotent", "preflight_required": false, "local_only_interaction": true, "branch_sensitive": false, "review_required_when_ambiguous": false},
+      "phases": [
+        "resolve context",
+        "resolve selection",
+        "plan changes",
+        "validate plan",
+        "verify result",
+        "emit output/proof"
+      ],
+      "adapter_owned_phases": [
+        "resolve selection",
+        "emit output/proof"
+      ],
+      "runtime_owned_phases": [
+        "resolve context",
+        "plan changes",
+        "validate plan",
+        "verify result"
+      ],
+      "effects": {
+        "read_only": true,
+        "writes_repo_state": false,
+        "destructive_potential": false,
+        "idempotency": "idempotent",
+        "preflight_required": false,
+        "local_only_interaction": true,
+        "branch_sensitive": false,
+        "review_required_when_ambiguous": false
+      },
       "generation_eligibility": "eligible-read-only",
-      "notes": "Read-only diagnostic surfaces are the first lifecycle generation candidates."
+      "notes": "Read-only diagnostic surfaces are the first lifecycle generation candidates.",
+      "capability_maturity": {
+        "dry_run_plan": "not-applicable",
+        "strict_preflight_refusal": "not-applicable",
+        "destructive_refusal": "not-applicable",
+        "apply_mutation": "not-applicable",
+        "verify": "proved"
+      }
     },
     {
       "surface": "root",
       "command": "status",
-      "phases": ["resolve context", "verify result", "emit output/proof"],
-      "adapter_owned_phases": ["emit output/proof"],
-      "runtime_owned_phases": ["resolve context", "verify result"],
-      "effects": {"read_only": true, "writes_repo_state": false, "destructive_potential": false, "idempotency": "idempotent", "preflight_required": false, "local_only_interaction": true, "branch_sensitive": false, "review_required_when_ambiguous": false},
+      "phases": [
+        "resolve context",
+        "verify result",
+        "emit output/proof"
+      ],
+      "adapter_owned_phases": [
+        "emit output/proof"
+      ],
+      "runtime_owned_phases": [
+        "resolve context",
+        "verify result"
+      ],
+      "effects": {
+        "read_only": true,
+        "writes_repo_state": false,
+        "destructive_potential": false,
+        "idempotency": "idempotent",
+        "preflight_required": false,
+        "local_only_interaction": true,
+        "branch_sensitive": false,
+        "review_required_when_ambiguous": false
+      },
       "generation_eligibility": "eligible-read-only",
-      "notes": "Package status analogues should share the same output meaning."
+      "notes": "Package status analogues should share the same output meaning.",
+      "capability_maturity": {
+        "dry_run_plan": "not-applicable",
+        "strict_preflight_refusal": "not-applicable",
+        "destructive_refusal": "not-applicable",
+        "apply_mutation": "not-applicable",
+        "verify": "proved"
+      }
     },
     {
       "surface": "planning-package",
       "command": "status",
-      "phases": ["resolve context", "verify result", "emit output/proof"],
-      "adapter_owned_phases": ["emit output/proof"],
-      "runtime_owned_phases": ["resolve context", "verify result"],
-      "effects": {"read_only": true, "writes_repo_state": false, "destructive_potential": false, "idempotency": "idempotent", "preflight_required": false, "local_only_interaction": false, "branch_sensitive": false, "review_required_when_ambiguous": false},
+      "phases": [
+        "resolve context",
+        "verify result",
+        "emit output/proof"
+      ],
+      "adapter_owned_phases": [
+        "emit output/proof"
+      ],
+      "runtime_owned_phases": [
+        "resolve context",
+        "verify result"
+      ],
+      "effects": {
+        "read_only": true,
+        "writes_repo_state": false,
+        "destructive_potential": false,
+        "idempotency": "idempotent",
+        "preflight_required": false,
+        "local_only_interaction": false,
+        "branch_sensitive": false,
+        "review_required_when_ambiguous": false
+      },
       "generation_eligibility": "eligible-read-only",
-      "notes": "Already has generated adapter metadata for the first package read-only proof."
+      "notes": "Already has generated adapter metadata for the first package read-only proof.",
+      "capability_maturity": {
+        "dry_run_plan": "not-applicable",
+        "strict_preflight_refusal": "not-applicable",
+        "destructive_refusal": "not-applicable",
+        "apply_mutation": "not-applicable",
+        "verify": "proved"
+      }
     },
     {
       "surface": "memory-package",
       "command": "status",
-      "phases": ["resolve context", "verify result", "emit output/proof"],
-      "adapter_owned_phases": ["emit output/proof"],
-      "runtime_owned_phases": ["resolve context", "verify result"],
-      "effects": {"read_only": true, "writes_repo_state": false, "destructive_potential": false, "idempotency": "idempotent", "preflight_required": false, "local_only_interaction": false, "branch_sensitive": false, "review_required_when_ambiguous": false},
+      "phases": [
+        "resolve context",
+        "verify result",
+        "emit output/proof"
+      ],
+      "adapter_owned_phases": [
+        "emit output/proof"
+      ],
+      "runtime_owned_phases": [
+        "resolve context",
+        "verify result"
+      ],
+      "effects": {
+        "read_only": true,
+        "writes_repo_state": false,
+        "destructive_potential": false,
+        "idempotency": "idempotent",
+        "preflight_required": false,
+        "local_only_interaction": false,
+        "branch_sensitive": false,
+        "review_required_when_ambiguous": false
+      },
       "generation_eligibility": "eligible-read-only",
-      "notes": "Recorded as the next package read-only migration candidate."
+      "notes": "Recorded as the next package read-only migration candidate.",
+      "capability_maturity": {
+        "dry_run_plan": "not-applicable",
+        "strict_preflight_refusal": "not-applicable",
+        "destructive_refusal": "not-applicable",
+        "apply_mutation": "not-applicable",
+        "verify": "proved"
+      }
     }
   ],
   "primitive_review": [

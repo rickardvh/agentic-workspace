@@ -80,6 +80,51 @@ def test_process_conformance_harness_catches_forbidden_writes(tmp_path: Path) ->
         run_process_conformance(contract=contract, fixture_root=fixture_root, repo_root=fixture_root)
 
 
+def test_process_conformance_setup_steps_define_baseline(tmp_path: Path) -> None:
+    contract = copy.deepcopy(conformance_contract_manifest("conformance/defaults.report.process.json"))
+    contract["adapter"]["command_template"] = [
+        "{python}",
+        "-c",
+        (
+            "from pathlib import Path; "
+            "assert Path('prepared.txt').read_text() == 'ready'; "
+            'print(\'{"profile":"compact-contract-answer/v1","surface":"defaults",'
+            '"selector":{"section":"startup"},"matched":true,'
+            '"answer":{"default_canonical_agent_instructions_file":"AGENTS.md"},"refs":[]}\')'
+        ),
+    ]
+    contract["expectations"]["stdout"].pop("schema")
+    contract["fixtures"][0]["setup_steps"] = [
+        {
+            "id": "prepare-installed-state",
+            "command_template": ["{python}", "-c", "from pathlib import Path; Path('prepared.txt').write_text('ready')"],
+            "cwd": "fixture_root",
+            "allowed_write_paths": ["prepared.txt"],
+        }
+    ]
+    fixture_root = tmp_path / contract["fixtures"][0]["id"]
+    materialize_fixture(fixture=contract["fixtures"][0], fixture_root=fixture_root)
+
+    run_process_conformance(contract=contract, fixture_root=fixture_root, repo_root=fixture_root)
+
+
+def test_process_conformance_setup_steps_reject_unlisted_writes(tmp_path: Path) -> None:
+    contract = copy.deepcopy(conformance_contract_manifest("conformance/defaults.report.process.json"))
+    contract["fixtures"][0]["setup_steps"] = [
+        {
+            "id": "bad-setup",
+            "command_template": ["{python}", "-c", "from pathlib import Path; Path('unexpected.txt').write_text('bad')"],
+            "cwd": "fixture_root",
+            "allowed_write_paths": ["prepared.txt"],
+        }
+    ]
+    fixture_root = tmp_path / contract["fixtures"][0]["id"]
+    materialize_fixture(fixture=contract["fixtures"][0], fixture_root=fixture_root)
+
+    with pytest.raises(AssertionError, match="forbidden fixture path"):
+        run_process_conformance(contract=contract, fixture_root=fixture_root, repo_root=fixture_root)
+
+
 def test_conformance_registry_points_at_schema_valid_contracts() -> None:
     registry = conformance_contracts_manifest()
 

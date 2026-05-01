@@ -30,10 +30,20 @@ def run_process_conformance(
 
     expectations = _mapping(contract["expectations"])
     runs = 2 if _mapping(expectations["idempotency"]).get("run_twice") is True else 1
-    before_fixture = _snapshot_tree(fixture_root)
     outside_sentinel = repo_root.parent / f".{fixture_root.name}-outside-sentinel"
     outside_sentinel.write_text("unchanged\n", encoding="utf-8")
     outside_hash = _file_hash(outside_sentinel)
+    fixture = _fixture_for_root(contract=contract, fixture_root=fixture_root)
+    if fixture is not None:
+        _run_setup_steps(
+            fixture=fixture,
+            fixture_root=fixture_root,
+            repo_root=repo_root,
+            command_overrides=command_overrides,
+            outside_sentinel=outside_sentinel,
+            outside_hash=outside_hash,
+        )
+    before_fixture = _snapshot_tree(fixture_root)
 
     previous_stdout: str | None = None
     for run_index in range(runs):
@@ -65,6 +75,51 @@ def materialize_fixture(*, fixture: Mapping[str, Any], fixture_root: Path) -> No
         path = _safe_join(fixture_root, str(relative))
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(str(contents), encoding="utf-8")
+
+
+def _fixture_for_root(*, contract: Mapping[str, Any], fixture_root: Path) -> Mapping[str, Any] | None:
+    fixture_id = fixture_root.name
+    for fixture in contract.get("fixtures", []):
+        if isinstance(fixture, Mapping) and str(fixture.get("id", "")) == fixture_id:
+            return fixture
+    return None
+
+
+def _run_setup_steps(
+    *,
+    fixture: Mapping[str, Any],
+    fixture_root: Path,
+    repo_root: Path,
+    command_overrides: Mapping[str, Sequence[str]] | None,
+    outside_sentinel: Path,
+    outside_hash: str,
+) -> None:
+    for setup_step in fixture.get("setup_steps", []):
+        step = _mapping(setup_step)
+        before = _snapshot_tree(fixture_root)
+        result = subprocess.run(
+            _expand_command_template(_strings(step["command_template"]), command_overrides=command_overrides),
+            cwd=fixture_root if step.get("cwd") == "fixture_root" else repo_root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            raise AssertionError(f"setup step {step.get('id')} failed with exit {result.returncode}; stderr={result.stderr!r}")
+        after = _snapshot_tree(fixture_root)
+        _assert_filesystem_effects(
+            before=before,
+            after=after,
+            fixture_root=fixture_root,
+            expectations={
+                "allowed_write_paths": list(step.get("allowed_write_paths", [])),
+                "required_paths": [],
+                "forbidden_paths": [],
+            },
+            contract_id=f"setup step {step.get('id')}",
+        )
+        if _file_hash(outside_sentinel) != outside_hash:
+            raise AssertionError(f"setup step {step.get('id')} changed a file outside the fixture root")
 
 
 def _assert_process_result(*, result: subprocess.CompletedProcess[str], expectations: Mapping[str, Any]) -> None:

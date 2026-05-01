@@ -82,6 +82,49 @@
               "description": "File content keyed by fixture-relative path."
             },
             "description": "Files to materialize before running this fixture."
+          },
+          "setup_steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "command_template",
+                "cwd",
+                "allowed_write_paths"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Stable setup-step identifier."
+                },
+                "command_template": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "One argv token in the setup command template."
+                  },
+                  "description": "Command argv template executed before the adapter command."
+                },
+                "cwd": {
+                  "enum": [
+                    "fixture_root",
+                    "repo_root"
+                  ],
+                  "description": "Working directory used when executing the setup command."
+                },
+                "allowed_write_paths": {
+                  "$ref": "#/$defs/path_list",
+                  "description": "Fixture paths the setup command may create or modify."
+                }
+              },
+              "additionalProperties": false,
+              "description": "A setup command that prepares the fixture before adapter execution."
+            },
+            "description": "Optional setup commands that run after file materialization and before adapter execution."
           }
         },
         "additionalProperties": false,

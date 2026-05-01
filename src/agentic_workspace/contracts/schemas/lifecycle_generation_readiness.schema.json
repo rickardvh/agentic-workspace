@@ -142,6 +142,40 @@
             ],
             "description": "Allowed generation eligibility value for routing or validation."
           },
+          "capability_maturity": {
+            "type": "object",
+            "required": [
+              "dry_run_plan",
+              "strict_preflight_refusal",
+              "destructive_refusal",
+              "apply_mutation",
+              "verify"
+            ],
+            "properties": {
+              "dry_run_plan": {
+                "$ref": "#/$defs/capability_state",
+                "description": "Maturity of no-write lifecycle planning proof for this command."
+              },
+              "strict_preflight_refusal": {
+                "$ref": "#/$defs/capability_state",
+                "description": "Maturity of strict-preflight refusal proof for this command."
+              },
+              "destructive_refusal": {
+                "$ref": "#/$defs/capability_state",
+                "description": "Maturity of destructive or ambiguous-ownership refusal proof for this command."
+              },
+              "apply_mutation": {
+                "$ref": "#/$defs/capability_state",
+                "description": "Maturity of mutation/apply behavior for this command."
+              },
+              "verify": {
+                "$ref": "#/$defs/capability_state",
+                "description": "Maturity of post-command verification proof for this command."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Capability-level maturity matrix; dry-run/refusal proof must not imply apply mutation maturity."
+          },
           "conformance_refs": {
             "$ref": "#/$defs/non_empty_strings",
             "description": "Conformance contracts that currently prove this command's generated-adapter readiness boundary."
@@ -183,6 +217,15 @@
   },
   "additionalProperties": false,
   "$defs": {
+    "capability_state": {
+      "enum": [
+        "not-applicable",
+        "unproved",
+        "proved",
+        "deferred"
+      ],
+      "description": "Maturity state for one lifecycle capability."
+    },
     "non_empty_strings": {
       "type": "array",
       "minItems": 1,

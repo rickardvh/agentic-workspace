@@ -201,6 +201,30 @@
       "path": "operations/memory.report.report.json",
       "command": "report",
       "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "memory.route-report.report",
+      "path": "operations/memory.route-report.report.json",
+      "command": "route-report",
+      "migration_status": "validated-contract"
+    },
+    {
+      "id": "memory.promotion-report.report",
+      "path": "operations/memory.promotion-report.report.json",
+      "command": "promotion-report",
+      "migration_status": "validated-contract"
+    },
+    {
+      "id": "memory.list-files.report",
+      "path": "operations/memory.list-files.report.json",
+      "command": "list-files",
+      "migration_status": "validated-contract"
+    },
+    {
+      "id": "memory.list-skills.report",
+      "path": "operations/memory.list-skills.report.json",
+      "command": "list-skills",
+      "migration_status": "validated-contract"
     }
   ]
 }

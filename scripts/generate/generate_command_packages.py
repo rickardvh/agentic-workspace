@@ -9,11 +9,23 @@ SCRIPT_ROOT = REPO_ROOT / "scripts" / "generate"
 if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
-from workspace_command_generation import generate_workspace_command_packages, render_workspace_command_package_outputs  # noqa: E402
+from workspace_command_generation import (  # noqa: E402
+    generate_workspace_command_packages,
+    load_workspace_command_package_ir,
+    render_workspace_command_package_outputs,
+)
 
 
 def _render_outputs(manifest: dict[str, object]) -> list[tuple[Path, str]]:
     return [(output.path, output.content) for output in render_workspace_command_package_outputs(manifest, repo_root=REPO_ROOT)]
+
+
+def _is_line_ending_only_drift(path: Path, expected: str) -> bool:
+    if not path.exists():
+        return False
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        current = handle.read()
+    return current != expected and current.replace("\r\n", "\n") == expected
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -27,8 +39,14 @@ def main(argv: list[str] | None = None) -> int:
     stale_outputs = generate_workspace_command_packages(repo_root=REPO_ROOT, check=bool(args.check))
     if args.check:
         if stale_outputs:
+            rendered = dict(_render_outputs(load_workspace_command_package_ir(repo_root=REPO_ROOT)))
             for output in stale_outputs:
-                print(f"{output} is stale; regenerate command packages.")
+                path = REPO_ROOT / output
+                expected = rendered.get(path)
+                if expected is not None and _is_line_ending_only_drift(path, expected):
+                    print(f"{output} has line-ending drift; regenerate command packages to normalize LF output.")
+                else:
+                    print(f"{output} is stale; regenerate command packages.")
             return 1
         print("[ok] generated command packages")
     return 0

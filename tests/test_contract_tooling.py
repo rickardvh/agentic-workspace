@@ -299,11 +299,16 @@ def test_lifecycle_generation_readiness_records_phase_risk_and_fixture_plan() ->
     assert commands[("root", "doctor")]["generation_eligibility"] == "eligible-read-only"
     assert commands[("root", "uninstall")]["generation_eligibility"] == "deferred-destructive"
     assert commands[("root", "uninstall")]["effects"]["destructive_potential"] is True
+    assert commands[("root", "install")]["capability_maturity"]["dry_run_plan"] == "proved"
+    assert commands[("root", "install")]["capability_maturity"]["apply_mutation"] == "deferred"
+    assert commands[("root", "uninstall")]["capability_maturity"]["destructive_refusal"] == "proved"
     assert "uninstall.lifecycle.destructive-refusal.process" in commands[("root", "uninstall")]["conformance_refs"]
     assert "upgrade.lifecycle.strict-preflight-refusal.process" in commands[("root", "upgrade")]["conformance_refs"]
+    assert commands[("root", "upgrade")]["capability_maturity"]["strict_preflight_refusal"] == "proved"
     assert commands[("root", "upgrade")]["mutation_promotion_blockers"]
     assert commands[("planning-package", "status")]["generation_eligibility"] == "eligible-read-only"
     assert commands[("memory-package", "status")]["generation_eligibility"] == "eligible-read-only"
+    assert commands[("memory-package", "status")]["capability_maturity"]["verify"] == "proved"
     assert any("strict preflight" in fixture for fixture in manifest["conformance_fixture_plan"])
     assert any("Dry-run lifecycle conformance" in decision for decision in manifest["dry_run_conformance_decision"])
 
@@ -423,6 +428,21 @@ def test_command_generation_loader_uses_explicit_ir_and_schema_paths() -> None:
     }
 
 
+def test_operation_command_parity_uses_package_program_namespace() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    root_commands = module._known_command_names_for_program("agentic-workspace")
+    memory_commands = module._known_command_names_for_program("agentic-memory-bootstrap")
+
+    assert "route-report" not in root_commands
+    assert {"route-report", "promotion-report", "list-files", "list-skills"}.issubset(memory_commands)
+    assert module._validate_operation_registry(module.operation_contracts_manifest()) == []
+
+
 def test_workspace_command_generation_integration_owns_repo_paths() -> None:
     module_path = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "workspace_command_generation.py"
     spec = importlib.util.spec_from_file_location("workspace_command_generation", module_path)
@@ -443,6 +463,16 @@ def test_generate_command_packages_wrapper_uses_workspace_consumer_integration()
     assert "workspace_command_generation" in text
     assert "load_command_package_ir" not in text
     assert "agentic_workspace.contract_tooling" not in text
+
+
+def test_command_package_generator_normalizes_line_endings() -> None:
+    generator = (
+        Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "agentic_command_generation" / "generator.py"
+    )
+    wrapper = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_packages.py"
+
+    assert 'newline="\\n"' in generator.read_text(encoding="utf-8")
+    assert "line-ending drift" in wrapper.read_text(encoding="utf-8")
 
 
 def test_generic_command_generation_package_has_no_workspace_imports() -> None:

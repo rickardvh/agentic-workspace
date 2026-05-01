@@ -383,11 +383,16 @@ def generate_command_packages(
     stale_outputs: list[str] = []
     for output in render_outputs(manifest, repo_root=repo_root, source_path=source_path, regenerate_command=regenerate_command):
         if check:
-            current = output.path.read_text(encoding="utf-8") if output.path.exists() else ""
+            current = _read_generated_text(output.path) if output.path.exists() else ""
             if current != output.content:
                 stale_outputs.append(output.path.relative_to(repo_root).as_posix())
         else:
             output.path.parent.mkdir(parents=True, exist_ok=True)
-            output.path.write_text(output.content, encoding="utf-8")
+            output.path.write_text(output.content, encoding="utf-8", newline="\n")
             print(f"[ok] wrote {output.path.relative_to(repo_root).as_posix()}")
     return stale_outputs
+
+
+def _read_generated_text(path: Path) -> str:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        return handle.read()
