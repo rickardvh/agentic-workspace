@@ -1,50 +1,55 @@
 # Workspace Workflow
 
-## Purpose
+CLI-first bootstrap router for Agentic Workspace systems installed in a repository.
 
-Shared product-managed startup and ownership contract for Agentic Workspace systems installed in a repository.
+Keep this file concise, product-managed, and replaceable. It is the fallback router when an agent cannot get enough direction from compact CLI or structured JSON output.
 
-Keep this file concise, product-managed, and replaceable. It is a compatibility router, not the full operating layer.
+## First Route
 
-When skill support is available, prefer task-specific package skills discovered through `agentic-workspace skills --target . --task "<task>" --format json`. When skill support is unavailable, fall back to this file plus compact CLI commands.
+1. Run `agentic-workspace preflight --format json` for takeover, recovery, or first-contact context.
+2. If you need the ordinary startup order, run `agentic-workspace defaults --section startup --format json`.
+3. If the configured startup file, posture, or workflow obligations matter, run `agentic-workspace config --target . --format json`.
+4. If current work, active planning, proof, or handoff state matters, run `agentic-workspace summary --format json`.
+5. Open raw planning, memory, module, or workflow files only when compact output points there.
 
-## Ownership model
+## Structured Priority
 
-- `AGENTS.md` is the repo-owned entrypoint.
-- `.agentic-workspace/` is the product-managed enclave.
-- Repo-owned execution surfaces stay outside `.agentic-workspace/` unless they contain explicit managed fences.
+- Use `preflight`, `defaults`, `config`, `summary`, `report`, `skills`, and `proof` before prose when the CLI is available.
+- Treat `.agentic-workspace/planning/state.toml` and active `.agentic-workspace/planning/execplans/*.plan.json` as execution authority only after summary or preflight routes you there.
+- Treat GitHub, Linear, Jira, Notion, and similar trackers as optional intake evidence. They are not the universal workflow and do not replace checked-in planning.
+- Use package skills when `agentic-workspace skills --target . --task "<task>" --format json` recommends one; otherwise stay with compact CLI and this fallback.
+
+## Work Routing Gate
+
+Before implementation, decide the smallest workflow shape that fits the current request:
+
+- `direct`: one coherent local pass can finish safely and validation is obvious. No durable plan is required.
+- `bounded`: one slice needs explicit done-when, proof, or short restart state. Use the configured planning surface when restart cost matters and Planning is installed.
+- `lane`: work spans milestones, managed payloads, proof scope, or handoff risk. When Planning is installed, create checked-in active planning and an execplan before edits; otherwise leave an equivalent durable handoff in the repo's configured workflow surface.
+- `epic`: work contains multiple lanes or needs product shaping. Create a review or decomposition artifact first, split it into bounded lanes or slices, then write implementation execplans only for ready slices.
+
+For lane or epic work, do not jump straight from the prompt to implementation. Assess risk and scope first; record `adaptive_assurance` when the Planning module is installed and risk is medium or higher, and keep decomposition evidence with the durable workflow surface.
+
+## Fallback Procedure
+
+Use this section only when CLI or JSON surfaces are unavailable.
+
+1. Read the repo startup file and this file.
+2. Decide whether the work is direct, bounded, lane, or epic.
+3. For lane or epic work, use the configured planning or handoff surface before implementation.
+4. For epic work, decompose before writing implementation execplans.
+5. Run the narrowest validation that proves the changed surface.
+6. Before closeout, separate validation success, issue completion, intent satisfaction, dogfooding findings, and durable residue.
+
+## Ownership
+
+- Repo-owned startup instructions stay outside `.agentic-workspace/` unless they are inside explicit managed fences.
 - Product-managed startup guidance, ownership metadata, and module-local managed assets belong under `.agentic-workspace/`.
-
-## Fence rule
-
 - Product-managed text inserted into repo-owned files must live inside explicit `agentic-workspace:*` fences.
-- Unfenced prose in repo-owned files is repo-owned by default.
-- Prefer a short pointer fence over large managed prose blocks in repo-owned files.
+- Prefer a short visible pointer fence over large managed prose blocks in repo-owned files.
 
-## Module layout
+## Dogfooding
 
-- `.agentic-workspace/WORKFLOW.md` is the shared workspace-level startup contract.
-- `.agentic-workspace/OWNERSHIP.toml` is the ownership ledger for managed paths, fences, and uninstall policy.
-- `.agentic-workspace/<module>/` is the module-owned root for upgrade-replaceable assets.
-- Module-specific workflow detail should live inside the relevant module directory when the shared contract is insufficient.
-
-## Repo boundary
-
-- Keep repo-owned execution, planning, and knowledge surfaces outside `.agentic-workspace/` unless they use explicit managed fences.
-- Do not hide active execution state or durable repository knowledge behind product-managed indirection.
-- Preserve strict boundaries between planning, memory, routing, checks, and workspace orchestration.
-
-## Module delegation
-
-- Treat this file as the only required top-level startup handoff from `AGENTS.md`.
-- Use package skills for procedural work when available; use this file to recover the fallback route.
-- Use `.agentic-workspace/memory/WORKFLOW.md` for memory-specific operating rules.
-- Read module-local workflow files only when the shared workspace contract routes you there or when the task directly changes that module's behavior or workflow.
-- Add module-local workflow files only when a module needs guidance that should not live in the shared workspace contract.
-
-## Self-Optimisation
-
-- Treat dogfooding evaluation as a standing workflow requirement, not an optional closeout flourish.
-- During implementation and before claiming completion, identify what could have been safer, cheaper, or more efficient.
-- Fix actionable findings immediately when they are in scope; otherwise route them into checked-in planning, issue follow-up, Memory, docs, or config with a clear owner.
-- Surface actionable self-optimisation findings in handoff or final output even when the user did not ask for them explicitly.
+- Treat dogfooding evaluation as a standing closeout requirement for planned work.
+- Fix actual bugs or unintended behavior immediately when they are in scope.
+- Route durable friction into checked-in planning, issue follow-up, Memory, docs, config, or tests with a clear owner.

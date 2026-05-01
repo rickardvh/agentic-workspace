@@ -9374,7 +9374,12 @@ def _remove_todo_items(todo_path: Path, items_to_remove: list[TodoItem]) -> list
             active = state.get("active")
             if isinstance(active, dict) and isinstance(active.get("execplans"), list):
                 active["execplans"] = [
-                    item for item in active["execplans"] if not (isinstance(item, dict) and str(item.get("id", "")) in item_ids)
+                    item
+                    for item in active["execplans"]
+                    if not (
+                        (isinstance(item, dict) and str(item.get("id", "")) in item_ids)
+                        or (isinstance(item, str) and any(item_id in item for item_id in item_ids))
+                    )
                 ]
             raw_work_items = state.get("work_items", [])
             if isinstance(raw_work_items, list):
@@ -9837,6 +9842,12 @@ def _merge_todo_state_from_toml_lines(state: dict[str, Any], lines: list[str]) -
 
 
 def _state_to_toml_lines(state: dict[str, Any]) -> list[str]:
+    def _format_inline_item(item: object) -> str:
+        if isinstance(item, dict):
+            item_str = ", ".join(f"{k} = {json.dumps(v)}" for k, v in item.items())
+            return f"{{ {item_str} }}"
+        return json.dumps(item)
+
     lines = []
     for key in ("kind", "schema_version"):
         if key in state:
@@ -9850,8 +9861,7 @@ def _state_to_toml_lines(state: dict[str, Any]) -> list[str]:
         else:
             lines.append("work_items = [")
             for item in items:
-                item_str = ", ".join(f"{k} = {json.dumps(v)}" for k, v in item.items())
-                lines.append(f"  {{ {item_str} }},")
+                lines.append(f"  {_format_inline_item(item)},")
             lines.append("]")
         lines.append("")
     if "active" in state:
@@ -9862,8 +9872,7 @@ def _state_to_toml_lines(state: dict[str, Any]) -> list[str]:
         else:
             lines.append("execplans = [")
             for item in execplans:
-                item_str = ", ".join(f"{k} = {json.dumps(v)}" for k, v in item.items())
-                lines.append(f"  {{ {item_str} }},")
+                lines.append(f"  {_format_inline_item(item)},")
             lines.append("]")
         lines.append("")
     if "todo" in state:
@@ -9876,8 +9885,7 @@ def _state_to_toml_lines(state: dict[str, Any]) -> list[str]:
                 else:
                     lines.append(f"{key} = [")
                     for item in items:
-                        item_str = ", ".join(f"{k} = {json.dumps(v)}" for k, v in item.items())
-                        lines.append(f"  {{ {item_str} }},")
+                        lines.append(f"  {_format_inline_item(item)},")
                     lines.append("]")
         lines.append("")
 
@@ -9891,8 +9899,7 @@ def _state_to_toml_lines(state: dict[str, Any]) -> list[str]:
                 else:
                     lines.append(f"{key} = [")
                     for item in items:
-                        item_str = ", ".join(f"{k} = {json.dumps(v)}" for k, v in item.items())
-                        lines.append(f"  {{ {item_str} }},")
+                        lines.append(f"  {_format_inline_item(item)},")
                     lines.append("]")
         lines.append("")
     return lines

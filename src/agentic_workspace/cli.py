@@ -2900,31 +2900,7 @@ def _workspace_agents_template(
         "- refresh_command: null",
         "",
         WORKSPACE_POINTER_BLOCK,
-        "",
-        "Keep this file thin. Treat it as the repo-owned startup adapter over the structured workspace surfaces under `.agentic-workspace/`.",
-        "",
-        "## Startup",
-        "",
-        f"- Use `{cli_invoke} start --format json` for ordinary compact startup context.",
-        f"- Use `{cli_invoke} preflight --format json` when you need bundled takeover or recovery context.",
-        f"- Use `{cli_invoke} defaults --section startup --format json` when startup order or first-contact routing is the question.",
-        f"- Use `{cli_invoke} config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.",
-        f"- Use `{cli_invoke} summary --format json` when only active planning or ownership state is the question.",
-        "- Open module, planning, memory, or deeper routing files only when the compact answers point there.",
-        "- Read package-local `AGENTS.md` only for the package being edited.",
     ]
-    lines.extend(
-        [
-            "",
-            "## Repo Rules",
-            "",
-            "Do not start coding from chat context alone when the same information exists in checked-in files.",
-            "Do not bulk-read all planning surfaces.",
-            "Keep package boundaries explicit.",
-            "Preserve independent package versioning and CLI entry points.",
-            "Keep repo-custom workflow obligations in `.agentic-workspace/config.toml`; let `AGENTS.md` stay a compact router.",
-        ]
-    )
     return "\n".join(lines) + "\n"
 
 
@@ -7613,6 +7589,10 @@ def _run_preflight_command(
                 "next_proof": "select proof after changed paths are known",
             },
             "first_compact_queries": first_compact_queries,
+            "work_intent_gate": _guidance_with_cli_invoke(
+                value=startup_payload.get("work_intent_gate", {}),
+                cli_invoke=config.cli_invoke,
+            ),
             "escalation_rules": escalation_rules,  # Top 2 most common
             "skill_routing": skill_routing,
         },
@@ -10488,6 +10468,33 @@ def _defaults_payload() -> dict[str, Any]:
                     "startup or routing ambiguity survives the compact startup answer",
                     "the task crosses a planning, memory, or lifecycle boundary that the small model cannot settle safely",
                 ],
+            },
+            "work_intent_gate": {
+                "rule": "Choose the smallest workflow shape before implementation; when Planning is installed, broad work should become checked-in planning before edits.",
+                "levels": [
+                    {
+                        "id": "direct",
+                        "use_when": "One coherent local pass can finish safely and validation is obvious.",
+                        "required_surface": "chat plus narrow code/docs context",
+                    },
+                    {
+                        "id": "bounded",
+                        "use_when": "The task is one slice but needs explicit done-when, proof, or short continuation state.",
+                        "required_surface": "configured planning or handoff surface when restart cost matters",
+                    },
+                    {
+                        "id": "lane",
+                        "use_when": "The work spans milestones, managed payloads, proof scope, or handoff risk.",
+                        "required_surface": "Planning active item plus execplan when installed; otherwise equivalent durable handoff surface",
+                    },
+                    {
+                        "id": "epic",
+                        "use_when": "The request contains multiple lanes or needs product shaping before implementation.",
+                        "required_surface": "review or decomposition artifact first; split into bounded lanes before implementation execplans where Planning is installed",
+                    },
+                ],
+                "external_tracker_rule": "GitHub, Linear, Jira, Notion, and similar trackers are optional intake evidence; checked-in planning remains execution authority.",
+                "assurance_rule": "Assess assurance from risk and scope signals; high-risk lane or epic work records adaptive_assurance when Planning is installed.",
             },
             "default_canonical_agent_instructions_file": DEFAULT_AGENT_INSTRUCTIONS_FILE,
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),

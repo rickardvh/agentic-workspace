@@ -8,27 +8,5 @@ Authority marker:
 - refresh_command: null
 
 <!-- agentic-workspace:workflow:start -->
-Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules.
+Start with `.agentic-workspace/WORKFLOW.md`; it routes work through CLI-first startup guidance before implementation.
 <!-- agentic-workspace:workflow:end -->
-
-Keep this file thin. Treat it as the repo-owned startup adapter over the structured workspace surfaces under `.agentic-workspace/`.
-
-## Startup
-
-Treat `start`, `summary`, `report`, `defaults`, and `preflight` as context-router views, not separate handbooks.
-
-- Use `uv run agentic-workspace start --format json` for ordinary compact startup context.
-- Use `uv run agentic-workspace summary --format json` when current planning, active work, or handoff state is the question.
-- Use `uv run agentic-workspace report --target . --format json` when combined workspace routing, diagnostics, warnings, or section selectors are needed.
-- Use `uv run agentic-workspace defaults --section startup --format json` when startup order or first-contact routing policy is the question.
-- Use `uv run agentic-workspace preflight --format json` when you need bundled takeover or recovery context.
-- Use `uv run agentic-workspace config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.
-- Open module, planning, memory, or deeper routing files only when the compact answers point there.
-- Read package-local `AGENTS.md` only for the package being edited.
-
-## Repo Rules
-
-- Do not bulk-read all planning surfaces.
-- Keep package boundaries explicit.
-- Preserve independent package versioning and CLI entry points.
-- Keep repo-custom workflow obligations in `.agentic-workspace/config.toml`; let `AGENTS.md` stay a compact router.

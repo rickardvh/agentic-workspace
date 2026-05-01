@@ -11,7 +11,7 @@ An installed host repository gets a small set of checked-in surfaces. Their purp
 | `.agentic-workspace/` | product-managed enclave | shared workspace configuration, contracts, module roots, and local boundaries |
 | `.agentic-workspace/config.toml` | repo-owned config | selected modules, posture, workflow obligations, and repo-specific settings |
 | `.agentic-workspace/OWNERSHIP.toml` | repo-owned ledger | managed paths, fences, and authority metadata |
-| `.agentic-workspace/WORKFLOW.md` | product-managed workflow adapter | short shared workflow rules for the installed workspace |
+| `.agentic-workspace/WORKFLOW.md` | product-managed workflow adapter | CLI-first bootstrap router and Markdown fallback for installed workspaces |
 | `.agentic-workspace/local/` | local-only ignored area | machine-local overrides, caches, and non-shared runtime aids |
 
 The package keeps `AGENTS.md` thin. Durable rules and structured state live under `.agentic-workspace/` or in repo-owned docs, not in a growing startup manual.

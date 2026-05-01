@@ -336,6 +336,11 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["startup"]["tiny_safe_model"]["entry_query"] == "agentic-workspace preflight --format json"
     assert payload["startup"]["tiny_safe_model"]["first_compact_queries"][0] == "agentic-workspace defaults --section startup --format json"
     assert payload["startup"]["tiny_safe_model"]["deeper_reads_become_valid_when"][0].startswith("the active summary points")
+    work_gate = payload["startup"]["work_intent_gate"]
+    assert work_gate["rule"].startswith("Choose the smallest workflow shape before implementation")
+    assert [level["id"] for level in work_gate["levels"]] == ["direct", "bounded", "lane", "epic"]
+    assert "optional intake evidence" in work_gate["external_tracker_rule"]
+    assert "adaptive_assurance" in work_gate["assurance_rule"]
     assert ".agentic-workspace/planning/state.toml" not in payload["startup"]["primary"][2]
     assert payload["startup"]["first_queries"][0]["command"] == "agentic-workspace preflight --format json"
     assert payload["startup"]["first_queries"][0]["field"] == "startup_guidance"
@@ -3598,13 +3603,13 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
     assert (target / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     agents_text = (target / "AGENTS.md").read_text(encoding="utf-8")
     assert "<!-- agentic-workspace:workflow:start -->" in agents_text
-    assert "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules." in agents_text
-    assert "agentic-workspace start --format json" in agents_text
-    assert "agentic-workspace preflight --format json" in agents_text
+    assert "CLI-first startup guidance before implementation" in agents_text
+    assert "agentic-workspace start --format json" not in agents_text
+    assert "agentic-workspace preflight --format json" not in agents_text
     assert (
         "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself." not in agents_text
     )
-    assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." in agents_text
+    assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." not in agents_text
     assert "## Module Notes" not in agents_text
     assert "<!-- agentic-memory:workflow:start -->" not in agents_text
     assert "<PROJECT_NAME>" not in agents_text
@@ -3620,8 +3625,8 @@ def test_install_real_init_can_use_gemini_as_root_startup_entrypoint(tmp_path: P
     assert (target / "GEMINI.md").exists()
     assert not (target / "AGENTS.md").exists()
     gemini_text = (target / "GEMINI.md").read_text(encoding="utf-8")
-    assert "Keep this file thin." in gemini_text
-    assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." in gemini_text
+    assert "CLI-first startup guidance before implementation" in gemini_text
+    assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." not in gemini_text
     assert "Read `GEMINI.md` first." in (target / "llms.txt").read_text(encoding="utf-8")
 
 
@@ -6068,7 +6073,7 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
         (tmp_path / "AGENTS.md"),
         "# Agent Instructions\n\n"
         "<!-- agentic-workspace:workflow:start -->\n"
-        "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules.\n"
+        "Start with `.agentic-workspace/WORKFLOW.md`; it routes work through CLI-first startup guidance before implementation.\n"
         "<!-- agentic-workspace:workflow:end -->\n\n"
         "Local repo instructions.\n",
         encoding="utf-8",
@@ -6209,6 +6214,8 @@ def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None
     assert startup["primary_next_action"]["risk"] == "read-only routing"
     assert startup["primary_next_action"]["required_inputs"] == ["target repo", "current task"]
     assert startup["primary_next_action"]["next_proof"] == "select proof after changed paths are known"
+    assert startup["work_intent_gate"]["levels"][2]["id"] == "lane"
+    assert "checked-in planning" in startup["work_intent_gate"]["rule"]
     assert startup["skill_routing"]["status"] == "advisory"
     configured_cli = payload["resolved_config"]["workspace_config"]["cli_invoke"]
     assert startup["skill_routing"]["query"] == f'{configured_cli} skills --target ./repo --task "<task>" --format json'
@@ -7861,7 +7868,7 @@ def test_upgrade_preserves_repo_owned_agents_content_outside_workspace_fence(tmp
     assert "Keep this repo-specific guidance." in updated
     assert "More local instructions." in updated
     assert "<!-- agentic-workspace:workflow:start -->" in updated
-    assert "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules." in updated
+    assert "CLI-first startup guidance before implementation" in updated
 
 
 def test_upgrade_dry_run_syncs_module_update_source_metadata_from_repo_config(tmp_path: Path, capsys) -> None:
@@ -8103,7 +8110,8 @@ def test_workspace_agents_template_keeps_descriptor_guidance_out_of_root_entrypo
 
     assert "Read `signals.md` when the signals module is installed." not in rendered
     assert "Signal routing: `signals.md`" not in rendered
-    assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." in rendered
+    assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." not in rendered
+    assert "CLI-first startup guidance before implementation" in rendered
     assert "## Module Notes" not in rendered
 
 

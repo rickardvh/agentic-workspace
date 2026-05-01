@@ -1,0 +1,415 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workflow Bootstrap CLI-First Classification",
+  "goal": [
+    "Implement #647 so managed startup bootstrap routes agents through compact CLI and structured planning surfaces before broad implementation, while keeping host repo instruction injection minimal."
+  ],
+  "non_goals": [
+    "Make GitHub issue ingestion the universal workflow.",
+    "Inject long workflow prose into host-owned AGENTS.md files.",
+    "Require execplans for narrow direct tasks.",
+    "Remove Markdown workflow fallback for agents that cannot use CLI or JSON surfaces."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "The shipped workflow bootstrap makes agents classify work intent and prefer structured package surfaces before implementation, especially for lane and epic work.",
+      "constraints": "Stay provider-neutral, keep AGENTS.md fence visible and machine-detectable, align source checkout and packaged payload copies, and validate managed adapter behavior.",
+      "latitude": "Choose concise wording and test coverage that make the intended route difficult to skip without turning WORKFLOW.md into a long handbook.",
+      "escalation": "Stop before redesigning the planning schema, requiring GitHub, or changing uninstall/upgrade ownership semantics beyond the managed fence text."
+    },
+    "execution": {
+      "milestone": "workflow-bootstrap-router",
+      "status": "completed",
+      "next_step": "Archive this completed plan after final status, commit, and push.",
+      "proof": "make check passed after the markdownlint-friendly fence correction; focused workspace, memory installer, maintainer-surface, and planning checker tests passed."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/WORKFLOW.md",
+        "src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md",
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/workflow-bootstrap-cli-first-classification-issue-647.plan.json",
+        ".agentic-workspace/planning/reviews/workflow-bootstrap-classification-decomposition-2026-05-01.review.json"
+      ],
+      "invariants": [
+        "External trackers remain optional intake adapters, not universal workflow.",
+        "AGENTS.md stays a repo-owned adapter with only a small managed fence.",
+        "WORKFLOW.md prefers CLI and JSON surfaces before prose fallback.",
+        "Lane and epic work must be classified and shaped before implementation."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Reduce agent misuse by making the common startup path funnel agents into package-native classification, planning, and proof surfaces.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "#647"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Future broad work should encounter classification and structured startup routes before implementation.",
+    "intentionally deferred": "A hard runtime enforcement mechanism that blocks agents before they have read any package surface.",
+    "discovered implications": "The catch-22 means the earliest universal intervention is a visible managed fence plus CLI-first WORKFLOW.md routing.",
+    "proof achieved now": "make check passed after focused workspace, memory installer, maintainer-surface, and planning checker tests.",
+    "validation still needed": "none for this lane",
+    "next likely slice": "none if #647 acceptance is met"
+  },
+  "intent_interpretation": {
+    "literal request": "Create an issue for this and immediately ingest and implement it.",
+    "inferred intended outcome": "Turn the discussed workflow-bootstrap gap into tracked, checked-in package work and complete it now.",
+    "chosen concrete what": "Create #647, decompose it as an active lane, then implement the managed fence and CLI-first workflow router.",
+    "interpretation distance": "low",
+    "review guidance": "Verify that the implementation used package planning before code edits and did not make GitHub-specific intake universal."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/WORKFLOW.md; src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md; AGENTS.md only if root adapter needs local alignment; src/agentic_workspace/config.py; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; planning state/review/execplan; generated maintainer surfaces only if refresh requires them.",
+    "max changed files": "Prefer under 12 files before generated surfaces.",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json; make check.",
+    "ask-before-refactor threshold": "Changing planning schema, issue intake adapters, ownership ledger semantics, or uninstall behavior.",
+    "stop before touching": "Provider-specific GitHub implementation paths except source references and issue closeout."
+  },
+  "stop_conditions": {
+    "stop when": "#647 acceptance is implemented, validated, pushed, and planning state is closed or honestly routed.",
+    "escalate when boundary reached": "A clean fix requires new planning schema or hard enforcement outside managed bootstrap surfaces.",
+    "escalate on scope drift": "The work expands into unrelated planning-engine redesign or tracker synchronization.",
+    "escalate on proof failure": "Focused adapter tests or make check fail in ways that cannot be fixed within the lane."
+  },
+  "context_budget": {
+    "live working set": "#647 issue body, decomposition review, state.toml, this plan, WORKFLOW.md, payload mirror, config pointer block, startup/defaults guidance, tests.",
+    "recoverable later": "Historical workflow reviews and archived plans.",
+    "externalize before shift": "Update execution_run, proof_report, closure_check, and improvement_signal_review before stopping.",
+    "pre-work config pull": "uv run agentic-workspace preflight --format json",
+    "pre-work memory pull": ".agentic-workspace/memory/repo/index.md only if durable routing ambiguity appears.",
+    "tiny resumability note": "Continue #647 from this active execplan; next step is implementation of the managed fence and WORKFLOW router.",
+    "context-shift triggers": "Before broad CLI startup refactor or after validation failure."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the workflow-bootstrap funnel robustly enough that future agents are less likely to skip package workflow on large work.",
+    "hard constraints": "Provider-neutral, CLI-first, minimal visible managed fence, no long AGENTS injection, no universal GitHub dependency.",
+    "agent may decide locally": "Exact wording, test assertions, and whether startup defaults need small field additions.",
+    "escalate when": "The necessary solution would require mandatory runtime hooks before AGENTS.md is read."
+  },
+  "adaptive_assurance": {
+    "level": "high",
+    "reason": "The change affects first-contact workflow instructions and package-managed payloads that influence broad future agent behavior.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "requirement_refs",
+      "audit_refs"
+    ],
+    "proof_profiles": [
+      "adapter-surface-refresh",
+      "workspace-cli-tests",
+      "planning-surface-health",
+      "dogfooding-closeout"
+    ],
+    "required_gates": [
+      "decomposition-before-implementation",
+      "managed-payload-alignment",
+      "focused-tests",
+      "make-check",
+      "closeout-dogfooding"
+    ]
+  },
+  "traceability_refs": {
+    "requirement_refs": [
+      "#647"
+    ],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [
+      ".agentic-workspace/WORKFLOW.md",
+      ".agentic-workspace/OWNERSHIP.toml"
+    ],
+    "risk_refs": [
+      "agent skips package workflow for broad work",
+      "host repo AGENTS injection becomes too large or invisible"
+    ],
+    "security_refs": [],
+    "audit_refs": [
+      ".agentic-workspace/planning/reviews/workflow-bootstrap-classification-decomposition-2026-05-01.review.json"
+    ],
+    "acceptance_refs": [
+      "#647 acceptance"
+    ],
+    "decision_refs": []
+  },
+  "control_gates": [
+    {
+      "id": "decomposition-before-implementation",
+      "status": "satisfied",
+      "evidence": [
+        ".agentic-workspace/planning/reviews/workflow-bootstrap-classification-decomposition-2026-05-01.review.json"
+      ],
+      "blocking": true,
+      "next_action": "Continue implementation."
+    },
+    {
+      "id": "managed-payload-alignment",
+      "status": "satisfied",
+      "evidence": [
+        ".agentic-workspace/WORKFLOW.md",
+        "src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md",
+        "src/agentic_workspace/config.py",
+        "packages/memory/src/repo_memory_bootstrap/_installer_shared.py"
+      ],
+      "blocking": true,
+      "next_action": "none"
+    },
+    {
+      "id": "validation",
+      "status": "satisfied",
+      "evidence": [
+        "uv run pytest tests/test_workspace_cli.py packages/memory/tests/test_installer.py -q",
+        "uv run pytest tests/test_maintainer_surfaces.py packages/planning/tests/test_check_planning_surfaces.py -q",
+        "make maintainer-surfaces",
+        "uv run python scripts/check/check_planning_surfaces.py",
+        "make check"
+      ],
+      "blocking": true,
+      "next_action": "none"
+    }
+  ],
+  "implementation_blockers": [],
+  "risk_registry_refs": [],
+  "invariant_refs": [
+    "external trackers are optional intake adapters",
+    "AGENTS.md managed fence remains minimal",
+    "workflow bootstrap is CLI-first"
+  ],
+  "test_data_policy": {
+    "classification": "no-test-data",
+    "forbidden": [],
+    "fixture_owner": "tests/test_workspace_cli.py",
+    "proof_required": [
+      "installed fixture text",
+      "managed fence text",
+      "workflow content assertions"
+    ],
+    "refs": []
+  },
+  "layer_scaffold": {
+    "type": "workspace-startup-adapter",
+    "required_refs": [
+      ".agentic-workspace/WORKFLOW.md",
+      "src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md",
+      "src/agentic_workspace/config.py"
+    ],
+    "common_risks": [
+      "too much prose in host adapter",
+      "CLI guidance not visible early enough",
+      "fallback prose becomes another full handbook"
+    ],
+    "suggested_proof_profiles": [
+      "workspace_cli",
+      "maintainer_surfaces"
+    ],
+    "suggested_gates": [
+      "payload mirror alignment",
+      "focused CLI tests"
+    ],
+    "non_goals": [
+      "universal GitHub dependency"
+    ],
+    "durable_residue_prompts": [
+      "Only create follow-up issues for concrete dogfooding bugs or unintended behavior."
+    ]
+  },
+  "architecture_decision_promotion": {
+    "status": "none",
+    "target": "",
+    "decision_refs": [],
+    "promotion_needed": false,
+    "notes": "This is an implementation of the existing package-owned bootstrap direction, not a new architecture decision."
+  },
+  "threat_failure_aids": [],
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#647",
+      "label": "workflow bootstrap issue",
+      "role": "intake",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/647"
+    },
+    {
+      "kind": "summary",
+      "target": "GitHub issue #647",
+      "label": "normalized intake",
+      "role": "intake-summary",
+      "locator": "The managed AGENTS.md fence points to WORKFLOW.md, but that file does not strongly bootstrap agents into the actual package workflow. The fix should keep injected host-repo text minimal while making the workflow router CLI-first, classification-driven, and provider-neutral."
+    },
+    {
+      "kind": "review",
+      "target": ".agentic-workspace/planning/reviews/workflow-bootstrap-classification-decomposition-2026-05-01.review.json",
+      "label": "decomposition review",
+      "role": "shape",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "workflow-bootstrap-router",
+    "status": "completed",
+    "scope": "Managed fence, WORKFLOW router, payload alignment, and tests.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive completed plan after commit-ready verification."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/WORKFLOW.md",
+    "src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md",
+    "src/agentic_workspace/config.py",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/workflow-bootstrap-cli-first-classification-issue-647.plan.json",
+    ".agentic-workspace/planning/reviews/workflow-bootstrap-classification-decomposition-2026-05-01.review.json"
+  ],
+  "invariants": [
+    "Host AGENTS.md injection stays visible, minimal, and machine-detectable.",
+    "CLI and JSON surfaces are preferred before Markdown prose.",
+    "Markdown fallback remains enough for weak agents.",
+    "Broad work requires classification and decomposition before implementation."
+  ],
+  "contract_decisions_to_freeze": [
+    "Work intent levels: direct, bounded, lane, epic.",
+    "Epic work decomposes before execplan authoring.",
+    "External trackers are intake evidence only."
+  ],
+  "open_questions_to_close": [
+    "Which startup/defaults tests need explicit assertions for the new bootstrap route?"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "make check"
+  ],
+  "required_tools": [
+    "uv",
+    "make",
+    "gh"
+  ],
+  "completion_criteria": [
+    "Managed fence text is visible, minimal, and still detectable by start/end markers.",
+    "Installed and packaged WORKFLOW.md route first to CLI/JSON surfaces and define fallback classification.",
+    "Tests assert the managed fence and workflow bootstrap content.",
+    "Closeout dogfooding is recorded and actionable findings are fixed or routed."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "issue #647 and decomposition review",
+    "what happened": "Created #647, classified it as a high-assurance lane, decomposed before implementation, changed the managed pointer fence to visible non-heading Markdown, rewrote WORKFLOW.md and payload mirror as CLI-first routers, added a configuration-aware work_intent_gate to structured startup/preflight output, aligned memory/planning stale-contract checks, and updated tests/docs.",
+    "scope touched": "workspace startup adapter, managed workflow payloads, memory pointer recognition, planning checker, tests, docs, and planning artifacts",
+    "changed surfaces": "AGENTS.md, .agentic-workspace/WORKFLOW.md, src/agentic_workspace/config.py, src/agentic_workspace/cli.py, src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md, packages/memory/src/repo_memory_bootstrap/_installer_shared.py, packages/planning/scripts/check/check_planning_surfaces.py, tests, docs/package/installed-surfaces.md, planning state/review/execplan",
+    "validations run": "uv run pytest tests/test_workspace_cli.py packages/memory/tests/test_installer.py -q; uv run pytest tests/test_maintainer_surfaces.py packages/planning/tests/test_check_planning_surfaces.py -q; uv run pytest tests/test_workspace_cli.py packages/memory/tests/test_installer.py tests/test_maintainer_surfaces.py packages/planning/tests/test_check_planning_surfaces.py -q; uv run ruff check selected changed files; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; make check; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace report --target . --section workflow_obligations --format json; uv run agentic-workspace report --target . --section closeout_trust --format json; uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json; uv run agentic-workspace external-intent refresh-github --target . --state all --storage cache --format json",
+    "result for continuation": "No required continuation for #647.",
+    "next step": "Commit and push the branch."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "make check passed after focused tests, maintainer/planning checks, and the markdownlint-friendly fence correction.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "497 targeted tests passed for workspace, memory installer, maintainer surfaces, and planning checker; make check passed all workspace, memory, planning, lint, typecheck, format, verify, maintainer, inventory, and path checks."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create an issue for the discussed bootstrap gap, ingest it, and implement it immediately.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Issue #647 was created and ingested into checked-in planning; implementation adds CLI-first startup routing and a configuration-aware workflow-shape gate to managed workflow surfaces and structured startup output; validation passed.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package reduce code archaeology and operating ambiguity for agents.",
+    "slice shaping bias": "Prefer structured, CLI-first workflow routing over more prose.",
+    "broader-lane validation question": "Can a future agent see that broad work must be classified and planned before implementation?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The managed fence is minimal, visible, and markdownlint-friendly; WORKFLOW.md is CLI-first with a configuration-aware workflow-shape fallback; structured startup/preflight expose the work intent gate; and stale dependent checks were fixed.",
+    "evidence carried forward": "make check plus focused tests and the decomposition review.",
+    "reopen trigger": "A fresh init or upgrade fails to show the visible managed fence, WORKFLOW.md no longer routes lane/epic work through classification, or structured startup output omits work_intent_gate."
+  },
+  "generated_closeout": {
+    "status": "not-generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; structured execplan fields remain authoritative",
+    "text": ""
+  },
+  "memory_learning_capture": {
+    "status": "complete",
+    "memory consult recommended?": "yes",
+    "memory notes read": "",
+    "future agents should not rediscover": "Thin fence and CLI-first bootstrap are now encoded in docs, workflow payloads, structured startup output, and tests.",
+    "decision": "promote_to_docs_contracts_checks_code",
+    "target": ".agentic-workspace/WORKFLOW.md; src/agentic_workspace/cli.py; tests",
+    "reason": "The durable learning is now in product surfaces and regression tests rather than a separate memory note."
+  },
+  "durable_residue": {
+    "status": "docs",
+    "learned constraint": "The host repo managed fence must remain visible, minimal, machine-detectable, and markdownlint-friendly; WORKFLOW.md owns the CLI-first startup router.",
+    "motivation worth preserving": "This is the earliest universal place to funnel agents toward package workflow before broad work.",
+    "canonical owner now": ".agentic-workspace/WORKFLOW.md and structured startup output",
+    "promotion trigger": "already promoted; recheck if startup adapter, WORKFLOW.md, or work_intent_gate drifts",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "CLI-first workflow bootstrap with direct/bounded/lane/epic routing guidance and a minimal visible managed fence.",
+    "validation confirmed": "make check passed.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": ".agentic-workspace/WORKFLOW.md, structured startup/preflight work_intent_gate, tests, and docs/package/installed-surfaces.md",
+    "knowledge promoted (Memory/Docs/Config)": "docs/checks/code",
+    "resume from": "none after archive"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Memory package still recognized only the old workspace pointer block.",
+      "Planning surface checker still required old AGENTS startup-order prose.",
+      "A heading inside the managed fence caused markdownlint MD022 friction and overstated classification as universal."
+    ],
+    "signals fixed": [
+      "Updated packages/memory/src/repo_memory_bootstrap/_installer_shared.py to recognize the visible workspace fence.",
+      "Updated packages/planning/scripts/check/check_planning_surfaces.py and tests to validate the thin managed fence instead of duplicated startup prose.",
+      "Removed the heading from the fence and made the workflow-shape gate conditional on configured Planning surfaces."
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "External-intent reconcile shows unrelated open external work after refresh; no #647 follow-up needed."
+    ],
+    "next owner": "none"
+  },
+  "drift_log": [
+    "2026-05-01: #647 created and ingested; decomposition completed before implementation; active high-assurance execplan opened.",
+    "2026-05-01: Implemented CLI-first workflow bootstrap and fixed stale pointer/checker assumptions found through dogfooding validation."
+  ]
+}
