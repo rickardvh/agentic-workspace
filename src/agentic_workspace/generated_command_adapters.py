@@ -17,6 +17,41 @@ from typing import Any
 GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
     r"""
 {
+  "config": {
+    "command": {
+      "command_manifest": "cli_commands.json",
+      "name": "config",
+      "option_group_manifest": "cli_option_groups.json",
+      "program": "agentic-workspace"
+    },
+    "conformance_refs": [
+      "config.report.process"
+    ],
+    "effect_hints": {
+      "destructive": false,
+      "idempotent": true,
+      "read_only": true,
+      "requires_preflight_gate": false,
+      "writes_repo_state": false
+    },
+    "id": "config.report.cli",
+    "operation_id": "config.report",
+    "runtime_binding": {
+      "kind": "operation-primitive-sequence",
+      "primitive_refs": [
+        "workspace.root.resolve",
+        "workspace.config.load",
+        "workspace.config.emit"
+      ]
+    },
+    "schemas": {
+      "input": [],
+      "output": [
+        "workspace_config.schema.json"
+      ]
+    },
+    "status": "generated"
+  },
   "defaults": {
     "command": {
       "command_manifest": "cli_commands.json",

@@ -11826,7 +11826,20 @@ def _run_defaults_report_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_config_report_adapter(args: argparse.Namespace) -> int:
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="config", target_root=target_root)
+    _emit_config(
+        format_name=args.format,
+        config=config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors))),
+    )
+    return 0
+
+
 _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
+    "config.report": _run_config_report_adapter,
     "defaults.report": _run_defaults_report_adapter,
 }
 

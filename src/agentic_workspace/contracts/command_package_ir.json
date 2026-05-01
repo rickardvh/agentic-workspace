@@ -273,6 +273,90 @@
               "output emission"
             ]
           }
+        },
+        {
+          "adapter_id": "config.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "config",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "config",
+            "help": "Show the resolved repo-owned workspace config layered onto product defaults.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "config.report",
+            "path": "operations/config.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.config.load",
+              "workspace.config.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "workspace_config.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "config.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "config loading",
+              "payload assembly",
+              "output emission"
+            ]
+          }
         }
       ]
     },

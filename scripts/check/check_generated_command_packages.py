@@ -55,6 +55,17 @@ def _selected_defaults_fields(stdout: str) -> dict[str, object]:
     }
 
 
+def _selected_config_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    workspace = payload.get("workspace", {}) if isinstance(payload.get("workspace"), dict) else {}
+    return {
+        "exists": payload.get("exists"),
+        "agent_instructions_file": workspace.get("agent_instructions_file"),
+        "workflow_artifact_profile": workspace.get("workflow_artifact_profile"),
+        "default_preset": workspace.get("default_preset"),
+    }
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -160,6 +171,76 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
             errors.append(
                 "adapter failure: invalid-option stderr presence drifted from canonical process; "
                 f"canonical={canonical_invalid.stderr!r}, adapter={adapter_invalid.stderr!r}"
+            )
+
+        config_args = ["config", "--target", ".", "--format", "json"]
+        canonical_config = _capture(
+            [python, str(shim), *config_args],
+            cwd=fixture_root,
+            env=_conformance_env(),
+        )
+        if canonical_config.returncode != 0:
+            return [f"runtime primitive failure: canonical config command exited {canonical_config.returncode}; stderr={canonical_config.stderr!r}"]
+        try:
+            canonical_config_fields = _selected_config_fields(canonical_config.stdout)
+        except json.JSONDecodeError as exc:
+            return [f"runtime primitive failure: canonical config stdout was not JSON: {exc}"]
+        expected_config_fields = {
+            "exists": False,
+            "agent_instructions_file": "AGENTS.md",
+            "workflow_artifact_profile": "repo-owned",
+            "default_preset": "full",
+        }
+        if canonical_config_fields != expected_config_fields:
+            return [
+                "runtime primitive failure: canonical config output shape drifted; "
+                f"expected selected fields {expected_config_fields!r}, got {canonical_config_fields!r}"
+            ]
+
+        adapter_config = _capture(
+            [node, str(cli), *config_args],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=runtime),
+        )
+        if adapter_config.returncode != canonical_config.returncode:
+            errors.append(
+                "adapter failure: config exit code drifted from canonical process; "
+                f"expected {canonical_config.returncode}, got {adapter_config.returncode}; stderr={adapter_config.stderr!r}"
+            )
+        else:
+            try:
+                adapter_config_fields = _selected_config_fields(adapter_config.stdout)
+            except json.JSONDecodeError as exc:
+                errors.append(f"adapter failure: config stdout was not JSON: {exc}; stdout={adapter_config.stdout!r}")
+            else:
+                if adapter_config_fields != canonical_config_fields:
+                    errors.append(
+                        "adapter failure: config JSON selected fields drifted from canonical process; "
+                        f"expected {canonical_config_fields!r}, got {adapter_config_fields!r}"
+                    )
+        if adapter_config.stderr.strip():
+            errors.append(f"adapter failure: config emitted unexpected stderr: {adapter_config.stderr!r}")
+
+        config_invalid_args = ["config", "--target", ".", "--format", "json", "--definitely-invalid"]
+        canonical_config_invalid = _capture(
+            [python, str(shim), *config_invalid_args],
+            cwd=fixture_root,
+            env=_conformance_env(),
+        )
+        adapter_config_invalid = _capture(
+            [node, str(cli), *config_invalid_args],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=runtime),
+        )
+        if adapter_config_invalid.returncode != canonical_config_invalid.returncode:
+            errors.append(
+                "adapter failure: config invalid-option exit code drifted from canonical process; "
+                f"expected {canonical_config_invalid.returncode}, got {adapter_config_invalid.returncode}"
+            )
+        if bool(adapter_config_invalid.stderr.strip()) != bool(canonical_config_invalid.stderr.strip()):
+            errors.append(
+                "adapter failure: config invalid-option stderr presence drifted from canonical process; "
+                f"canonical={canonical_config_invalid.stderr!r}, adapter={adapter_config_invalid.stderr!r}"
             )
 
         unsupported = _capture(

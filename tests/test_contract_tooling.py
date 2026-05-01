@@ -220,7 +220,7 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
     adapters = {adapter["id"]: adapter for adapter in adapter_manifest["adapters"]}
     commands = {command["adapter_id"]: command for package in package_ir["packages"] for command in package["commands"]}
 
-    assert set(commands) == {"defaults.report.cli", "planning.status.cli", "memory.status.cli"}
+    assert set(commands) == {"defaults.report.cli", "config.report.cli", "planning.status.cli", "memory.status.cli"}
     defaults_command = commands["defaults.report.cli"]
     defaults_adapter = adapters["defaults.report.cli"]
 
@@ -446,25 +446,32 @@ def test_generated_python_command_package_metadata_is_current() -> None:
     from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE, generated_command_names, supports_generated_command
 
     assert GENERATED_COMMAND_PACKAGE["program"] == "agentic-workspace"
-    assert {command["adapter_id"] for command in GENERATED_COMMAND_PACKAGE["commands"]} == {"defaults.report.cli"}
+    assert {command["adapter_id"] for command in GENERATED_COMMAND_PACKAGE["commands"]} == {
+        "defaults.report.cli",
+        "config.report.cli",
+    }
     target_kinds = {target["kind"] for target in GENERATED_COMMAND_PACKAGE["targets"]}
     assert {"python", "typescript", "bash", "powershell"} <= target_kinds
-    assert generated_command_names() == ("defaults",)
+    assert generated_command_names() == ("config", "defaults")
     assert supports_generated_command(["defaults", "--format", "json"]) is True
-    assert supports_generated_command(["config", "--format", "json"]) is False
+    assert supports_generated_command(["config", "--format", "json"]) is True
 
 
-def test_generated_python_command_package_parses_and_dispatches_runtime_operation() -> None:
+def test_generated_python_command_package_parses_and_dispatches_runtime_operations() -> None:
     from agentic_workspace.generated_cli_package import run_generated_command
 
-    calls: list[tuple[str, str, str | None]] = []
+    calls: list[tuple[str, str | None, str, str | None]] = []
 
     def runtime_handler(operation_id: str, args: argparse.Namespace) -> int:
-        calls.append((operation_id, args.format, args.section))
+        calls.append((operation_id, getattr(args, "target", None), args.format, getattr(args, "section", None)))
         return 0
 
     assert run_generated_command(["defaults", "--section", "startup", "--format", "json"], runtime_handler) == 0
-    assert calls == [("defaults.report", "json", "startup")]
+    assert run_generated_command(["config", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert calls == [
+        ("defaults.report", None, "json", "startup"),
+        ("config.report", ".", "json", None),
+    ]
 
 
 def test_package_generated_python_command_packages_parse_status_runtime_operations() -> None:
@@ -506,6 +513,7 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     )
     assert package_json["agenticWorkspace"]["declaredEntrypoints"] == ["agentic-workspace"]
     assert "defaults.report.cli" in source_text
+    assert "config.report.cli" in source_text
     assert "DO NOT EDIT DIRECTLY" in source_text
     assert "generated package metadata exposes expected commands" in test_text
     assert "generated runnable adapter delegates supported command to runtime process" in test_text
@@ -618,7 +626,7 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     )
     assert all(status["where_to_edit"]["runtime_behavior"] == "hand-written operation/primitive implementation code" for status in statuses)
     commands_by_program = {status["program"]: status["command_surfaces"] for status in statuses}
-    assert commands_by_program["agentic-workspace"] == ["defaults"]
+    assert commands_by_program["agentic-workspace"] == ["defaults", "config"]
     assert commands_by_program["agentic-planning-bootstrap"] == ["status"]
     assert commands_by_program["agentic-memory-bootstrap"] == ["status"]
 

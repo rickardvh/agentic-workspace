@@ -88,6 +88,90 @@ export const generatedCommandPackage = {
         ]
       },
       "status": "generated"
+    },
+    {
+      "adapter_id": "config.report.cli",
+      "command": {
+        "manifest_ref": "cli_commands.json",
+        "name": "config"
+      },
+      "conformance_refs": [
+        "config.report.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Show the resolved repo-owned workspace config layered onto product defaults.",
+        "name": "config",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "config.report",
+        "path": "operations/config.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "target root resolution",
+          "config loading",
+          "payload assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "schema refs",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.config.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "workspace_config.schema.json"
+        ]
+      },
+      "status": "generated"
     }
   ],
   "id": "root-workspace",

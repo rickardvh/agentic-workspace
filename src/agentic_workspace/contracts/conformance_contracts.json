@@ -10,6 +10,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "config.report.process",
+      "operation_id": "config.report",
+      "path": "conformance/config.report.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.status.process",
       "operation_id": "planning.status.report",
       "path": "conformance/planning.status.process.json",
