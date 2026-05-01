@@ -93,6 +93,18 @@ def _selected_start_fields(stdout: str) -> dict[str, object]:
     }
 
 
+def _selected_summary_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    machine_first = payload.get("machine_first_planning", {}) if isinstance(payload.get("machine_first_planning"), dict) else {}
+    execplans = payload.get("execplans", {}) if isinstance(payload.get("execplans"), dict) else {}
+    return {
+        "kind": payload.get("kind"),
+        "profile": payload.get("profile"),
+        "machine_first_status": machine_first.get("status"),
+        "active_count": execplans.get("active_count"),
+    }
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -408,6 +420,76 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
             errors.append(
                 "adapter failure: start invalid-option stderr presence drifted from canonical process; "
                 f"canonical={canonical_start_invalid.stderr!r}, adapter={adapter_start_invalid.stderr!r}"
+            )
+
+        summary_args = ["summary", "--target", ".", "--profile", "compact", "--format", "json"]
+        canonical_summary = _capture(
+            [python, str(shim), *summary_args],
+            cwd=fixture_root,
+            env=_conformance_env(),
+        )
+        if canonical_summary.returncode != 0:
+            return [f"runtime primitive failure: canonical summary command exited {canonical_summary.returncode}; stderr={canonical_summary.stderr!r}"]
+        try:
+            canonical_summary_fields = _selected_summary_fields(canonical_summary.stdout)
+        except json.JSONDecodeError as exc:
+            return [f"runtime primitive failure: canonical summary stdout was not JSON: {exc}"]
+        expected_summary_fields = {
+            "kind": "planning-summary/v1",
+            "profile": "compact",
+            "machine_first_status": "no-active-execplan",
+            "active_count": 0,
+        }
+        if canonical_summary_fields != expected_summary_fields:
+            return [
+                "runtime primitive failure: canonical summary output shape drifted; "
+                f"expected selected fields {expected_summary_fields!r}, got {canonical_summary_fields!r}"
+            ]
+
+        adapter_summary = _capture(
+            [node, str(cli), *summary_args],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=runtime),
+        )
+        if adapter_summary.returncode != canonical_summary.returncode:
+            errors.append(
+                "adapter failure: summary exit code drifted from canonical process; "
+                f"expected {canonical_summary.returncode}, got {adapter_summary.returncode}; stderr={adapter_summary.stderr!r}"
+            )
+        else:
+            try:
+                adapter_summary_fields = _selected_summary_fields(adapter_summary.stdout)
+            except json.JSONDecodeError as exc:
+                errors.append(f"adapter failure: summary stdout was not JSON: {exc}; stdout={adapter_summary.stdout!r}")
+            else:
+                if adapter_summary_fields != canonical_summary_fields:
+                    errors.append(
+                        "adapter failure: summary JSON selected fields drifted from canonical process; "
+                        f"expected {canonical_summary_fields!r}, got {adapter_summary_fields!r}"
+                    )
+        if adapter_summary.stderr.strip():
+            errors.append(f"adapter failure: summary emitted unexpected stderr: {adapter_summary.stderr!r}")
+
+        summary_invalid_args = ["summary", "--target", ".", "--profile", "compact", "--format", "json", "--definitely-invalid"]
+        canonical_summary_invalid = _capture(
+            [python, str(shim), *summary_invalid_args],
+            cwd=fixture_root,
+            env=_conformance_env(),
+        )
+        adapter_summary_invalid = _capture(
+            [node, str(cli), *summary_invalid_args],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=runtime),
+        )
+        if adapter_summary_invalid.returncode != canonical_summary_invalid.returncode:
+            errors.append(
+                "adapter failure: summary invalid-option exit code drifted from canonical process; "
+                f"expected {canonical_summary_invalid.returncode}, got {adapter_summary_invalid.returncode}"
+            )
+        if bool(adapter_summary_invalid.stderr.strip()) != bool(canonical_summary_invalid.stderr.strip()):
+            errors.append(
+                "adapter failure: summary invalid-option stderr presence drifted from canonical process; "
+                f"canonical={canonical_summary_invalid.stderr!r}, adapter={adapter_summary_invalid.stderr!r}"
             )
 
         unsupported = _capture(

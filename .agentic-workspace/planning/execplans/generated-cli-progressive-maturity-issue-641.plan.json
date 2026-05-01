@@ -19,7 +19,7 @@
     "execution": {
       "milestone": "generated-cli-progressive-maturity-issue-641",
       "status": "active",
-      "next_step": "Commit and push the start promotion, then continue #643 with the next bounded root read-only command.",
+      "next_step": "Commit and push the summary promotion, then continue #643 with the next bounded root read-only command.",
       "proof": "Previous proof covered defaults/status foundation; this continuation must rerun focused generated-adapter proof and make check."
     },
     "scope": {
@@ -385,12 +385,12 @@
     "run status": "active-after-config-proof",
     "executor": "Codex",
     "handoff source": "GitHub issue #641 plus user correction to use package workflow",
-    "what happened": "Child issues were created; an active execplan was added after user correction; generated Python adapters were promoted for root defaults, root config, root modules, root start, Planning status, and Memory status; lifecycle mutation remains deferred through progressive maturity.",
+    "what happened": "Child issues were created; an active execplan was added after user correction; generated Python adapters were promoted for root defaults, root config, root modules, root start, root summary, Planning status, and Memory status; lifecycle mutation remains deferred through progressive maturity.",
     "scope touched": "Generated CLI contracts, generator, root/planning/memory CLI entrypoints, checks, tests, and review docs.",
     "changed surfaces": "command_package_ir, generated_cli_package outputs, command-generation generator/schema, root/planning/memory CLI entrypoints, generated package checks, focused tests, docs/reviews, planning state.",
     "validations run": "uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py -q; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/generate/generate_command_packages.py --check; make check; dogfooding closeout selectors.",
     "result for continuation": "Commit, push, and create PR; CI remains the next external proof.",
-    "next step": "Commit and push the start promotion, then continue #643 with the next bounded root read-only command."
+    "next step": "Commit and push the summary promotion, then continue #643 with the next bounded root read-only command."
   },
   "finished_run_review": {
     "review status": "complete-before-pr",
@@ -402,7 +402,7 @@
     "follow-on decision": "Create PR and let CI/review verify."
   },
   "proof_report": {
-    "validation proof": "Focused contract tooling and generated tool conformance, generated package conformance with Node required, generated adapter/package freshness, full make check, and dogfooding closeout selectors all passed locally through the config, modules, and start promotions.",
+    "validation proof": "Focused contract tooling and generated tool conformance, generated package conformance with Node required, generated adapter/package freshness, full make check, and dogfooding closeout selectors all passed locally through the config, modules, start, and summary promotions.",
     "proof achieved now": "yes",
     "evidence for \"proof achieved\" state": "uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py -q; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/generate/generate_command_packages.py --check; make check"
   },
@@ -450,7 +450,7 @@
     "retention after promotion": "retain"
   },
   "execution_summary": {
-    "outcome delivered": "Progressive generated CLI adapter foundation for #641 with runtime-backed Python adapters for root defaults/config/modules/start and package status commands, plus documented expansion lanes.",
+    "outcome delivered": "Progressive generated CLI adapter foundation for #641 with runtime-backed Python adapters for root defaults/config/modules/start/summary and package status commands, plus documented expansion lanes.",
     "validation confirmed": "Local high-assurance proof passed.",
     "follow-on routed to": "#642, #643, #644, #645",
     "post-work posterity capture": "Dogfooding report and progressive maturity review.",

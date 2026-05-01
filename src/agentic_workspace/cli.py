@@ -11857,11 +11857,34 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_summary_report_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="summary", target_root=target_root)
+    from repo_planning_bootstrap.cli import _print_summary
+    from repo_planning_bootstrap.installer import format_summary_json, planning_summary
+
+    summary_profile = args.profile if args.format == "json" else "full"
+    summary = planning_summary(target=target_root.as_posix(), profile=summary_profile)
+    if isinstance(summary, dict):
+        config = _load_workspace_config(target_root=target_root)
+        summary["memory_consult"] = _memory_consult_payload(
+            target_root=target_root,
+            compact=summary_profile == "compact",
+            cli_invoke=config.cli_invoke,
+        )
+    if args.format == "json":
+        print(format_summary_json(summary))
+    else:
+        _print_summary(summary)
+    return 0
+
+
 _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "config.report": _run_config_report_adapter,
     "defaults.report": _run_defaults_report_adapter,
     "modules.report": _run_modules_report_adapter,
     "start.context": _run_start_context_adapter,
+    "summary.report": _run_summary_report_adapter,
 }
 
 

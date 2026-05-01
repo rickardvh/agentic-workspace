@@ -361,6 +361,98 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
         ]
       },
       "status": "generated"
+    },
+    {
+      "adapter_id": "summary.report.cli",
+      "command": {
+        "manifest_ref": "cli_commands.json",
+        "name": "summary"
+      },
+      "conformance_refs": [
+        "summary.report.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Show the active execution summary from the planning module.",
+        "name": "summary",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Optional repository path to read summary from.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "compact",
+              "full"
+            ],
+            "default": "compact",
+            "flags": [
+              "--profile"
+            ],
+            "name": "profile"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "summary.report",
+        "path": "operations/summary.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "target root resolution",
+          "planning summary loading",
+          "memory consult augmentation",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "planning.summary.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
     }
   ],
   "id": "root-workspace",
@@ -543,6 +635,46 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
       ]
     },
     "operation_id": "start.context"
+  },
+  {
+    "adapter_id": "summary.report.cli",
+    "interface": {
+      "help": "Show the active execution summary from the planning module.",
+      "name": "summary",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path to read summary from.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "compact",
+            "full"
+          ],
+          "default": "compact",
+          "flags": [
+            "--profile"
+          ],
+          "name": "profile"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "summary.report"
   }
 ]
 """
