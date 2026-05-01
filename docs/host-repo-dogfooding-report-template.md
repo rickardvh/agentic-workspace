@@ -10,7 +10,7 @@ The report should be compact enough to file as a Markdown issue, review artifact
 - Report date: `YYYY-MM-DD`
 - Reporter / agent runtime: `<human, agent, or mixed>`
 - Package source: `<version, commit, source checkout, or installed package>`
-- Installed preset/modules: `<minimal|planning|memory|full>` plus module list
+- Installed preset/modules: `<routing-only|planning|memory|full>` plus module list
 - Run goal: `<one sentence>`
 - Slice type: `<direct task|active execplan|handoff/restart|review|closeout>`
 - Assurance level: `<absent|low|medium|high|critical>` plus source
@@ -40,7 +40,7 @@ List only the surfaces relevant to product learning.
 
 | Surface | Owner | Why it changed | Host-private? |
 | --- | --- | --- | --- |
-|  |  |  |  |
+| `<path or command>` | `<workspace|planning|memory|host repo|agent/operator>` | `<short reason>` | `<yes|no|redacted>` |
 
 ## Friction Items
 
@@ -48,7 +48,7 @@ Classify every item before routing it. Do not treat every observation as package
 
 | Observation | Evidence | Likely owner | Product should absorb? | Recommendation | Follow-up target |
 | --- | --- | --- | --- | --- | --- |
-|  | `<path, command, issue, or short transcript>` | `<product-general|repo-local adaptation|host docs/config|agent/operator mistake|successful behavior|non-actionable>` | `<yes|maybe|no>` | `<fix now|issue|docs|memory|dismiss|preserve>` |  |
+| `<one concrete observation>` | `<path, command, issue, or short transcript>` | `<product-general|repo-local adaptation|host docs/config|agent/operator mistake|successful behavior|non-actionable>` | `<yes|maybe|no>` | `<fix now|issue|docs|memory|dismiss|preserve>` | `<issue number, host path, or none>` |
 
 ## Operating-Cost Review
 
@@ -56,9 +56,9 @@ Use this section when assurance, planning, or proof machinery changed the cost o
 
 | Work shape | Required fields | Inferred or optional fields | Default output impact | Decision |
 | --- | --- | --- | --- | --- |
-| Low-risk direct task |  |  |  | `<keep|hide|merge|remove|follow up>` |
-| Medium-risk planned task |  |  |  | `<keep|hide|merge|remove|follow up>` |
-| High/critical task |  |  |  | `<keep|hide|merge|remove|follow up>` |
+| Low-risk direct task | `<fields needed to proceed safely>` | `<fields that can stay absent or inferred>` | `<none|small|too noisy>` | `<keep|hide|merge|remove|follow up>` |
+| Medium-risk planned task | `<fields needed for restart or handoff>` | `<fields that can be selector-owned>` | `<none|small|too noisy>` | `<keep|hide|merge|remove|follow up>` |
+| High/critical task | `<fields needed for gates, proof, and trust>` | `<fields that can be derived from proof evidence>` | `<none|small|too noisy>` | `<keep|hide|merge|remove|follow up>` |
 
 ## Privacy And Sensitivity
 
