@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/implementer-context.schema.json",
   "title": "Implementer Context Payload",
-  "description": "Schema for Implementer Context Payload.",
+  "description": "Cheap implementer context for a bounded changed-path scope.",
   "type": "object",
   "required": [
     "kind",
@@ -21,11 +21,11 @@
   "properties": {
     "kind": {
       "const": "implementer-context/v1",
-      "description": "The kind constant field in Implementer Context Payload."
+      "description": "Discriminator for the implementer context payload shape."
     },
     "target": {
       "type": "string",
-      "description": "The target string field in Implementer Context Payload."
+      "description": "Resolved target repository for the implementation context."
     },
     "changed_paths": {
       "type": "array",
@@ -33,7 +33,7 @@
         "type": "string",
         "description": "Item string accepted by changed paths in Implementer Context Payload."
       },
-      "description": "The changed paths array field in Implementer Context Payload."
+      "description": "Changed paths used to select proof, ownership, and inspect scope."
     },
     "inspect_files": {
       "type": "array",
@@ -42,7 +42,7 @@
         "description": "Item string accepted by inspect files in Implementer Context Payload."
       },
       "minItems": 1,
-      "description": "The inspect files array field in Implementer Context Payload."
+      "description": "Files the implementer should inspect before editing."
     },
     "files_to_avoid": {
       "type": "array",
@@ -51,11 +51,11 @@
         "description": "Item string accepted by files to avoid in Implementer Context Payload."
       },
       "minItems": 1,
-      "description": "The files to avoid array field in Implementer Context Payload."
+      "description": "Files that should stay untouched for this bounded task."
     },
     "package_boundary": {
       "$ref": "#/$defs/package_boundary",
-      "description": "The package boundary reference field in Implementer Context Payload."
+      "description": "Package/root boundary warnings that affect implementation scope."
     },
     "path_boundaries": {
       "type": "array",
@@ -63,7 +63,7 @@
         "$ref": "#/$defs/path_boundary",
         "description": "Item reference accepted by path boundaries in Implementer Context Payload."
       },
-      "description": "The path boundaries array field in Implementer Context Payload."
+      "description": "Path-specific ownership and locality constraints for the changed paths."
     },
     "authority_markers": {
       "type": "array",
@@ -71,11 +71,11 @@
         "$ref": "#/$defs/authority_marker",
         "description": "Item reference accepted by authority markers in Implementer Context Payload."
       },
-      "description": "The authority markers array field in Implementer Context Payload."
+      "description": "Authority markers relevant to the implementation scope."
     },
     "proof": {
       "type": "object",
-      "description": "The proof object field in Implementer Context Payload."
+      "description": "Selected proof lane and validation commands for the changed paths."
     },
     "required_validation_commands": {
       "type": "array",
@@ -83,7 +83,7 @@
         "type": "string",
         "description": "Item string accepted by required validation commands in Implementer Context Payload."
       },
-      "description": "The required validation commands array field in Implementer Context Payload."
+      "description": "Commands that must pass before claiming implementation complete."
     },
     "handoff_requirements": {
       "type": "object",
@@ -112,15 +112,15 @@
         }
       },
       "additionalProperties": false,
-      "description": "The handoff requirements object field in Implementer Context Payload."
+      "description": "Information that must be preserved before pausing or handing off work."
     },
     "next_allowed_action": {
       "type": "string",
-      "description": "The next allowed action string field in Implementer Context Payload."
+      "description": "Smallest safe implementation action after reading this context."
     },
     "task_routing": {
       "type": "object",
-      "description": "The task routing object field in Implementer Context Payload."
+      "description": "Routing guidance when the task is too broad, misplaced, or needs planning first."
     }
   },
   "additionalProperties": false,

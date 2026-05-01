@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/startup-context.schema.json",
   "title": "Startup Context Payload",
-  "description": "Schema for Startup Context Payload.",
+  "description": "Startup routing payload returned when an agent needs the minimum safe context for entering or resuming work in a repository.",
   "type": "object",
   "required": [
     "kind",
@@ -22,19 +22,19 @@
   "properties": {
     "kind": {
       "const": "startup-context/v1",
-      "description": "The kind constant field in Startup Context Payload."
+      "description": "Discriminator for the startup context payload shape."
     },
     "target": {
       "type": "string",
-      "description": "The target string field in Startup Context Payload."
+      "description": "Resolved target repository for the startup decision."
     },
     "invoked_cli_identity": {
       "$ref": "#/$defs/invoked_cli_identity",
-      "description": "The invoked cli identity reference field in Startup Context Payload."
+      "description": "Observed identity of the Agentic Workspace CLI that produced this payload."
     },
     "cli_compatibility": {
       "$ref": "#/$defs/cli_compatibility",
-      "description": "The cli compatibility reference field in Startup Context Payload."
+      "description": "Compatibility assessment between the invoked CLI and any repo-configured CLI expectations."
     },
     "startup_sequence": {
       "type": "array",
@@ -70,15 +70,15 @@
         "additionalProperties": false,
         "description": "Item object accepted by startup sequence in Startup Context Payload."
       },
-      "description": "The startup sequence array field in Startup Context Payload."
+      "description": "Ordered surfaces and commands an agent should use before opening broader repo context."
     },
     "feature_tier": {
       "type": "object",
-      "description": "The feature tier object field in Startup Context Payload."
+      "description": "Resolved feature tier and package footprint for the target repository."
     },
     "context_router": {
       "type": "object",
-      "description": "The context router object field in Startup Context Payload."
+      "description": "Available compact context-router views and when to use each one."
     },
     "active_state_summary": {
       "type": "object",
@@ -105,11 +105,11 @@
         }
       },
       "additionalProperties": false,
-      "description": "The active state summary object field in Startup Context Payload."
+      "description": "Small active-work projection used to decide whether raw planning state needs to be opened."
     },
     "package_boundary": {
       "$ref": "#/$defs/package_boundary",
-      "description": "The package boundary reference field in Startup Context Payload."
+      "description": "Current package/root boundary information for the command invocation."
     },
     "authority_markers": {
       "type": "array",
@@ -117,7 +117,7 @@
         "$ref": "#/$defs/authority_marker",
         "description": "Item reference accepted by authority markers in Startup Context Payload."
       },
-      "description": "The authority markers array field in Startup Context Payload."
+      "description": "Authority markers relevant to startup, ownership, and safe editing."
     },
     "immediate_next_allowed_action": {
       "type": "object",
@@ -185,31 +185,31 @@
         }
       },
       "additionalProperties": false,
-      "description": "The immediate next allowed action object field in Startup Context Payload."
+      "description": "Next bounded action the agent may take without reading broader surfaces."
     },
     "workflow_obligations": {
       "type": "object",
-      "description": "The workflow obligations object field in Startup Context Payload."
+      "description": "Repo-configured workflow obligations relevant to the startup context."
     },
     "closeout_obligations": {
       "type": "object",
-      "description": "The closeout obligations object field in Startup Context Payload."
+      "description": "Closeout obligations that may apply before claiming work is complete."
     },
     "memory_consult": {
       "type": "object",
-      "description": "The memory consult object field in Startup Context Payload."
+      "description": "Memory lookup guidance for durable repo knowledge when startup context says it is relevant."
     },
     "operating_posture": {
       "type": "object",
-      "description": "The operating posture object field in Startup Context Payload."
+      "description": "Compact statement of the current operating mode and risk posture."
     },
     "skill_routing": {
       "$ref": "#/$defs/skill_routing",
-      "description": "The skill routing reference field in Startup Context Payload."
+      "description": "Skill-discovery route and fallback guidance for task-specific instructions."
     },
     "proof": {
       "type": "object",
-      "description": "The proof object field in Startup Context Payload."
+      "description": "Proof-selection summary for the current startup or changed-path context."
     },
     "path_boundaries": {
       "type": "array",
@@ -217,7 +217,7 @@
         "$ref": "#/$defs/path_boundary",
         "description": "Item reference accepted by path boundaries in Startup Context Payload."
       },
-      "description": "The path boundaries array field in Startup Context Payload."
+      "description": "Path-level ownership or package-boundary warnings that constrain the next action."
     }
   },
   "additionalProperties": false,

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/operation.schema.json",
   "title": "Agentic Workspace Operation Contract",
-  "description": "Schema for Agentic Workspace Operation Contract.",
+  "description": "Contract for one Agentic Workspace operation, including command shape, effects, IO, guards, and proof.",
   "type": "object",
   "required": [
     "schema_version",
@@ -20,12 +20,12 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/operation/v1",
-      "description": "The schema version constant field in Agentic Workspace Operation Contract."
+      "description": "Operation contract version."
     },
     "id": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9_.-]*$",
-      "description": "The id string field in Agentic Workspace Operation Contract."
+      "description": "Stable operation identifier."
     },
     "command_surface": {
       "type": "object",
@@ -55,16 +55,16 @@
         }
       },
       "additionalProperties": false,
-      "description": "The command surface object field in Agentic Workspace Operation Contract."
+      "description": "CLI command or subcommand shape that exposes the operation."
     },
     "summary": {
       "type": "string",
       "minLength": 1,
-      "description": "The summary string field in Agentic Workspace Operation Contract."
+      "description": "Short human-readable operation summary."
     },
     "intent": {
       "type": "string",
-      "description": "The intent string field in Agentic Workspace Operation Contract."
+      "description": "User or system intent the operation is designed to satisfy."
     },
     "classification": {
       "type": "string",
@@ -75,7 +75,7 @@
         "local-record-append",
         "derived-output"
       ],
-      "description": "The classification enumerated value field in Agentic Workspace Operation Contract."
+      "description": "Output and authority classification for the operation."
     },
     "inputs": {
       "type": "array",
@@ -115,7 +115,7 @@
         "additionalProperties": false,
         "description": "Item object accepted by inputs in Agentic Workspace Operation Contract."
       },
-      "description": "The inputs array field in Agentic Workspace Operation Contract."
+      "description": "Inputs the operation accepts and where they come from."
     },
     "output": {
       "type": "object",
@@ -143,7 +143,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The output object field in Agentic Workspace Operation Contract."
+      "description": "Output kind and schema produced by the operation."
     },
     "effects": {
       "type": "object",
@@ -176,7 +176,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The effects object field in Agentic Workspace Operation Contract."
+      "description": "Side-effect model for safe execution and automation."
     },
     "locality": {
       "type": "object",
@@ -208,7 +208,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The locality object field in Agentic Workspace Operation Contract."
+      "description": "Repo, network, and outside-repo locality requirements."
     },
     "reads": {
       "type": "array",
@@ -216,7 +216,7 @@
         "$ref": "#/$defs/surface_access",
         "description": "Item reference accepted by reads in Agentic Workspace Operation Contract."
       },
-      "description": "The reads array field in Agentic Workspace Operation Contract."
+      "description": "Surfaces or state the operation reads."
     },
     "writes": {
       "type": "array",
@@ -239,7 +239,7 @@
         ],
         "description": "Item composed value accepted by writes in Agentic Workspace Operation Contract."
       },
-      "description": "The writes array field in Agentic Workspace Operation Contract."
+      "description": "Surfaces or state the operation writes."
     },
     "steps": {
       "type": "array",
@@ -291,7 +291,7 @@
         "additionalProperties": false,
         "description": "Item object accepted by steps in Agentic Workspace Operation Contract."
       },
-      "description": "The steps array field in Agentic Workspace Operation Contract."
+      "description": "Primitive implementation steps that define operation behavior."
     },
     "guards": {
       "type": "array",
@@ -300,7 +300,7 @@
         "minLength": 1,
         "description": "Item string accepted by guards in Agentic Workspace Operation Contract."
       },
-      "description": "The guards array field in Agentic Workspace Operation Contract."
+      "description": "Safety or escalation guards for using the operation."
     },
     "proof": {
       "type": "array",
@@ -309,7 +309,7 @@
         "minLength": 1,
         "description": "Item string accepted by proof in Agentic Workspace Operation Contract."
       },
-      "description": "The proof array field in Agentic Workspace Operation Contract."
+      "description": "Validation expectations for the operation contract."
     },
     "projections": {
       "type": "object",
@@ -369,7 +369,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The projections object field in Agentic Workspace Operation Contract."
+      "description": "Adapter projections such as CLI, MCP, or skill bindings."
     },
     "migration_status": {
       "type": "string",
@@ -378,7 +378,7 @@
         "validated-contract",
         "runtime-consumed"
       ],
-      "description": "The migration status enumerated value field in Agentic Workspace Operation Contract."
+      "description": "Maturity of the operation contract relative to implementation."
     }
   },
   "additionalProperties": false,

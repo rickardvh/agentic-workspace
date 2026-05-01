@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/workspace-local-override.schema.json",
   "title": "Agentic Workspace Local Mixed-Agent Override",
-  "description": "Schema for Agentic Workspace Local Mixed-Agent Override.",
+  "description": "Machine-local override schema for invocation preferences, delegation capabilities, safety posture, and local memory.",
   "type": "object",
   "required": [
     "schema_version"
@@ -10,7 +10,7 @@
   "properties": {
     "schema_version": {
       "const": 1,
-      "description": "The schema version constant field in Agentic Workspace Local Mixed-Agent Override."
+      "description": "Local override contract version."
     },
     "workspace": {
       "type": "object",
@@ -22,7 +22,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The workspace object field in Agentic Workspace Local Mixed-Agent Override."
+      "description": "Local workspace preferences that should not be checked into shared repo config."
     },
     "runtime": {
       "type": "object",
@@ -41,7 +41,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The runtime object field in Agentic Workspace Local Mixed-Agent Override."
+      "description": "Capabilities of the current agent/runtime on this machine."
     },
     "handoff": {
       "type": "object",
@@ -52,7 +52,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The handoff object field in Agentic Workspace Local Mixed-Agent Override."
+      "description": "Local preferences for internal or external delegation handoff."
     },
     "safety": {
       "type": "object",
@@ -67,7 +67,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The safety object field in Agentic Workspace Local Mixed-Agent Override."
+      "description": "Local safety limits for command execution and verification."
     },
     "local_memory": {
       "type": "object",
@@ -83,7 +83,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The local memory object field in Agentic Workspace Local Mixed-Agent Override."
+      "description": "Machine-local memory opt-in and path configuration."
     },
     "delegation_targets": {
       "type": "object",
@@ -163,7 +163,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The delegation targets object field in Agentic Workspace Local Mixed-Agent Override."
+      "description": "Named local delegation targets available to this runtime."
     }
   },
   "additionalProperties": false,

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/command-package-ir.schema.json",
   "title": "Agentic Workspace Command Package IR",
-  "description": "Schema for Agentic Workspace Command Package IR.",
+  "description": "Intermediate representation for generating command package metadata and language/runtime adapters.",
   "type": "object",
   "required": [
     "schema_version",
@@ -15,16 +15,16 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/command-package-ir/v1",
-      "description": "The schema version constant field in Agentic Workspace Command Package IR."
+      "description": "Command package IR contract version."
     },
     "summary": {
       "type": "string",
       "minLength": 1,
-      "description": "The summary string field in Agentic Workspace Command Package IR."
+      "description": "Short summary of the generated command package boundary."
     },
     "schema": {
       "const": "schemas/command_package_ir.schema.json",
-      "description": "The schema constant field in Agentic Workspace Command Package IR."
+      "description": "Schema reference carried by the IR document."
     },
     "source_contracts": {
       "type": "array",
@@ -34,7 +34,7 @@
         "minLength": 1,
         "description": "Item string accepted by source contracts in Agentic Workspace Command Package IR."
       },
-      "description": "The source contracts array field in Agentic Workspace Command Package IR."
+      "description": "Contract files that feed or constrain command package generation."
     },
     "generation_policy": {
       "type": "object",
@@ -159,7 +159,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The generation policy object field in Agentic Workspace Command Package IR."
+      "description": "Policy for what generation owns, what runtime code owns, and how adapters stay safe."
     },
     "packages": {
       "type": "array",
@@ -168,7 +168,7 @@
         "$ref": "#/$defs/package",
         "description": "Item reference accepted by packages in Agentic Workspace Command Package IR."
       },
-      "description": "The packages array field in Agentic Workspace Command Package IR."
+      "description": "Generated command packages and their command bindings."
     }
   },
   "additionalProperties": false,

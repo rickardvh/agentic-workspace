@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/setup-findings.schema.json",
   "title": "Agentic Workspace Setup Findings",
-  "description": "Schema for Agentic Workspace Setup Findings.",
+  "description": "Setup findings payload for post-bootstrap issues that may need promotion into planning, docs, config, or follow-up work.",
   "type": "object",
   "required": [
     "kind",
@@ -11,7 +11,7 @@
   "properties": {
     "kind": {
       "const": "workspace-setup-findings/v1",
-      "description": "The kind constant field in Agentic Workspace Setup Findings."
+      "description": "Discriminator for setup findings payloads."
     },
     "findings": {
       "type": "array",
@@ -142,7 +142,7 @@
         "additionalProperties": false,
         "description": "Item object accepted by findings in Agentic Workspace Setup Findings."
       },
-      "description": "The findings array field in Agentic Workspace Setup Findings."
+      "description": "Setup findings discovered during install, doctor, or setup review."
     }
   },
   "additionalProperties": false,

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/module-registry.schema.json",
   "title": "Module Registry",
-  "description": "Schema for Module Registry.",
+  "description": "Registry of workspace modules, feature tiers, component classes, and generated command metadata.",
   "type": "object",
   "required": [
     "schema_version",
@@ -18,7 +18,7 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/module-registry/v1",
-      "description": "The schema version constant field in Module Registry."
+      "description": "Registry contract version."
     },
     "module_command_args": {
       "type": "object",
@@ -32,7 +32,7 @@
         },
         "description": "Additional named array entry for module command args in Module Registry."
       },
-      "description": "The module command args object field in Module Registry."
+      "description": "Accepted command-line module arguments and aliases."
     },
     "package_footprint": {
       "type": "object",
@@ -96,7 +96,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The package footprint object field in Module Registry."
+      "description": "Policy explaining what the package installs and what it deliberately avoids."
     },
     "component_model": {
       "type": "object",
@@ -221,7 +221,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The component model object field in Module Registry."
+      "description": "Declarative component model used to describe module-owned resources without requiring an MCP runtime."
     },
     "module_profiles": {
       "type": "array",
@@ -291,7 +291,7 @@
         "additionalProperties": false,
         "description": "Item object accepted by module profiles in Module Registry."
       },
-      "description": "The module profiles array field in Module Registry."
+      "description": "Module profile summaries used for selection, reporting, and docs."
     },
     "workspace_components": {
       "type": "object",
@@ -340,7 +340,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "The workspace components object field in Module Registry."
+      "description": "Root workspace components that are not owned by a single module."
     },
     "feature_tiers": {
       "type": "array",
@@ -396,7 +396,7 @@
         "additionalProperties": false,
         "description": "Item object accepted by feature tiers in Module Registry."
       },
-      "description": "The feature tiers array field in Module Registry."
+      "description": "Named install/feature tiers and their ordinary operating cost."
     },
     "advanced_features": {
       "type": "array",
@@ -444,7 +444,7 @@
         "additionalProperties": false,
         "description": "Item object accepted by advanced features in Module Registry."
       },
-      "description": "The advanced features array field in Module Registry."
+      "description": "Optional advanced feature gates that are not ordinary startup requirements."
     },
     "modules": {
       "type": "array",
@@ -634,7 +634,7 @@
         "additionalProperties": false,
         "description": "Item object accepted by modules in Module Registry."
       },
-      "description": "The modules array field in Module Registry."
+      "description": "Registered modules and their descriptors."
     }
   },
   "$defs": {

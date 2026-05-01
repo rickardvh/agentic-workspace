@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/workspace-report.schema.json",
   "title": "Workspace Report",
-  "description": "Schema for Workspace Report.",
+  "description": "Combined workspace report payload for installed modules, config posture, diagnostics, and next-action routing.",
   "type": "object",
   "required": [
     "kind",
@@ -90,15 +90,15 @@
         }
       },
       "additionalProperties": false,
-      "description": "The schema object field in Workspace Report."
+      "description": "Report schema metadata and the shared fields exposed by this report profile."
     },
     "command": {
       "type": "string",
-      "description": "The command string field in Workspace Report."
+      "description": "Command invocation represented by this report."
     },
     "target": {
       "type": "string",
-      "description": "The target string field in Workspace Report."
+      "description": "Resolved repository path the report describes."
     },
     "invoked_cli_identity": {
       "$ref": "#/$defs/invoked_cli_identity",
@@ -114,7 +114,7 @@
         "type": "string",
         "description": "Item string accepted by selected modules in Workspace Report."
       },
-      "description": "The selected modules array field in Workspace Report."
+      "description": "Modules selected for this report invocation."
     },
     "installed_modules": {
       "type": "array",
@@ -122,19 +122,19 @@
         "type": "string",
         "description": "Item string accepted by installed modules in Workspace Report."
       },
-      "description": "The installed modules array field in Workspace Report."
+      "description": "Installed Agentic Workspace modules detected in the target repository."
     },
     "feature_tier": {
       "type": "object",
-      "description": "The feature tier object field in Workspace Report."
+      "description": "Resolved feature tier, package footprint, and ordinary operating scope."
     },
     "health": {
       "type": "string",
-      "description": "The health string field in Workspace Report."
+      "description": "Overall workspace health signal for quick routing."
     },
     "report_profile": {
       "type": "object",
-      "description": "The report profile object field in Workspace Report."
+      "description": "Report profile metadata, including which sections are decision-grade."
     },
     "output_contract": {
       "type": "object",
@@ -142,87 +142,87 @@
     },
     "operating_posture": {
       "type": "object",
-      "description": "The operating posture object field in Workspace Report."
+      "description": "Current operating posture for agent work in this repository."
     },
     "config_enforcement": {
       "type": "object",
-      "description": "The config enforcement object field in Workspace Report."
+      "description": "How repo config expectations are applied and reported."
     },
     "branch_workflow_posture": {
       "type": "object",
-      "description": "The branch workflow posture object field in Workspace Report."
+      "description": "Branch and worktree posture relevant to safe continuation."
     },
     "local_memory": {
       "type": "object",
-      "description": "The local memory object field in Workspace Report."
+      "description": "Machine-local memory configuration and advisory state."
     },
     "memory_consult": {
       "type": "object",
-      "description": "The memory consult object field in Workspace Report."
+      "description": "Recommended checked-in Memory lookup route for the current report."
     },
     "agent_aids": {
       "type": "object",
-      "description": "The agent aids object field in Workspace Report."
+      "description": "Reusable agent aid availability, manifest coverage, and startup role information."
     },
     "agent_configuration_system": {
       "type": "object",
-      "description": "The agent configuration system object field in Workspace Report."
+      "description": "How repo-owned agent configuration classes are represented in this workspace."
     },
     "agent_configuration_queries": {
       "type": "object",
-      "description": "The agent configuration queries object field in Workspace Report."
+      "description": "Compact queries agents should ask before opening broader configuration docs."
     },
     "system_intent_mirror": {
       "type": "object",
-      "description": "The system intent mirror object field in Workspace Report."
+      "description": "Compiled system-intent mirror status and source metadata."
     },
     "workflow_obligations": {
       "type": "object",
-      "description": "The workflow obligations object field in Workspace Report."
+      "description": "Repo-configured workflow obligations surfaced for report consumers."
     },
     "product_managed_enclave": {
       "type": "object",
-      "description": "The product managed enclave object field in Workspace Report."
+      "description": "Product-managed workspace enclave boundaries and ownership signals."
     },
     "surface_value_guardrail": {
       "type": "object",
-      "description": "The surface value guardrail object field in Workspace Report."
+      "description": "Durable-surface review guardrail for avoiding unnecessary new surfaces."
     },
     "effective_authority": {
       "type": "object",
-      "description": "The effective authority object field in Workspace Report."
+      "description": "Resolved authority hierarchy for workspace, module, and repo-owned surfaces."
     },
     "operational_compression": {
       "type": "object",
-      "description": "The operational compression object field in Workspace Report."
+      "description": "Compression signals that keep ordinary agent startup and reporting cheap."
     },
     "maintenance_pressure": {
       "type": "object",
-      "description": "The maintenance pressure object field in Workspace Report."
+      "description": "Maintainer-facing pressure signals and optional follow-up routes."
     },
     "closeout_trust": {
       "type": "object",
-      "description": "The closeout trust object field in Workspace Report."
+      "description": "Trust signals for whether recent or current work can be safely closed."
     },
     "external_work_reconciliation": {
       "type": "object",
-      "description": "The external work reconciliation object field in Workspace Report."
+      "description": "Provider-agnostic reconciliation between checked-in planning and external work evidence."
     },
     "external_work_delta": {
       "type": "object",
-      "description": "The external work delta object field in Workspace Report."
+      "description": "Delta view for external work evidence when a prior snapshot is available."
     },
     "findings": {
       "type": "array",
-      "description": "The findings array field in Workspace Report."
+      "description": "Diagnostic findings emitted by the report."
     },
     "next_action": {
       "type": "object",
-      "description": "The next action object field in Workspace Report."
+      "description": "Recommended next action derived from report health and routing signals."
     },
     "discovery": {
       "type": "object",
-      "description": "The discovery object field in Workspace Report."
+      "description": "Discovery hints for relevant repo surfaces and compact commands."
     },
     "standing_intent": {
       "type": "object",
@@ -250,11 +250,11 @@
     },
     "module_reports": {
       "type": "array",
-      "description": "The module reports array field in Workspace Report."
+      "description": "Module-owned report fragments included in the combined workspace report."
     },
     "execution_shape": {
       "type": "object",
-      "description": "The execution shape object field in Workspace Report."
+      "description": "How the current task or report context should be shaped for safe execution."
     }
   },
   "additionalProperties": false,

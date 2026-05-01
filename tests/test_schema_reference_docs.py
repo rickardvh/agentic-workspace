@@ -42,3 +42,18 @@ def test_schema_reference_default_targets_cover_all_contract_schemas() -> None:
     schemas = sorted(path.relative_to(module.REPO_ROOT) for path in (module.REPO_ROOT / module.SCHEMA_ROOT).glob("*.schema.json"))
 
     assert sorted(target.schema_path for target in module.DEFAULT_TARGETS) == schemas
+
+
+def test_schema_reference_curated_descriptions_cover_high_value_schemas() -> None:
+    module = _load_generator()
+
+    startup = module.render_schema_reference(Path("src/agentic_workspace/contracts/schemas/startup_context.schema.json"))
+    report = module.render_schema_reference(Path("src/agentic_workspace/contracts/schemas/workspace_report.schema.json"))
+    aid = module.render_schema_reference(Path("src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json"))
+
+    assert "minimum safe context for entering or resuming work" in startup
+    assert "Ordered surfaces and commands an agent should use" in startup
+    assert "Combined workspace report payload for installed modules" in report
+    assert "Recommended next action derived from report health" in report
+    assert "Manifest for a checked-in agent aid" in aid
+    assert "Observed friction or repeated need that justified creating the aid" in aid
