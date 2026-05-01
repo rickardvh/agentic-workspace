@@ -360,8 +360,44 @@ def _run_status_report_adapter(args: argparse.Namespace) -> int:
     return _emit(collect_status(target=args.target), args.format)
 
 
+def _run_doctor_report_adapter(args: argparse.Namespace) -> int:
+    return _emit(doctor_bootstrap(target=args.target), args.format)
+
+
+def _run_summary_report_adapter(args: argparse.Namespace) -> int:
+    summary_profile = args.profile if args.format == "json" else "full"
+    summary = planning_summary(target=args.target, profile=summary_profile)
+    if args.format == "json":
+        print(format_summary_json(summary))
+    else:
+        _print_summary(summary)
+    return 0
+
+
+def _run_report_adapter(args: argparse.Namespace) -> int:
+    report = planning_report(target=args.target)
+    if args.format == "json":
+        print(json.dumps(report, indent=2))
+    else:
+        _print_report(report)
+    return 0
+
+
+def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
+    reconcile = planning_reconcile(target=args.target)
+    if args.format == "json":
+        print(json.dumps(reconcile, indent=2))
+    else:
+        _print_reconcile(reconcile)
+    return 0
+
+
 _GENERATED_RUNTIME_HANDLERS = {
+    "planning.doctor.report": _run_doctor_report_adapter,
+    "planning.reconcile.report": _run_reconcile_report_adapter,
+    "planning.report.report": _run_report_adapter,
     "planning.status.report": _run_status_report_adapter,
+    "planning.summary.report": _run_summary_report_adapter,
 }
 
 

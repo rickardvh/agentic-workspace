@@ -110,6 +110,42 @@
       "path": "conformance/doctor.report.process.json",
       "operation_id": "doctor.report",
       "adapter_kind": "process"
+    },
+    {
+      "id": "planning.doctor.process",
+      "operation_id": "planning.doctor.report",
+      "path": "conformance/planning.doctor.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.summary.process",
+      "operation_id": "planning.summary.report",
+      "path": "conformance/planning.summary.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.report.process",
+      "operation_id": "planning.report.report",
+      "path": "conformance/planning.report.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.reconcile.process",
+      "operation_id": "planning.reconcile.report",
+      "path": "conformance/planning.reconcile.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.doctor.process",
+      "operation_id": "memory.doctor.report",
+      "path": "conformance/memory.doctor.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.report.process",
+      "operation_id": "memory.report.report",
+      "path": "conformance/memory.report.process.json",
+      "adapter_kind": "process"
     }
   ]
 }

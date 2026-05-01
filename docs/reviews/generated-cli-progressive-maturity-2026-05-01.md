@@ -38,6 +38,8 @@ Generated command surfaces move through these levels:
 | Root workspace TypeScript package | Root read-only/context/diagnostic generated commands | `runnable-read-only-adapter` | unchanged | canonical Python process handoff | Node-backed conformance |
 | Planning Python CLI | `agentic-planning-bootstrap status` | `metadata-proof-fixture` | `runtime-backed-read-only-adapter` | `planning.bootstrap.status.load`, `output.emit` | generated parser/dispatch test and process smoke proof |
 | Memory Python CLI | `agentic-memory-bootstrap status` | `metadata-proof-fixture` | `runtime-backed-read-only-adapter` | `memory.bootstrap.status.load`, `output.emit` | generated parser/dispatch test and process smoke proof |
+| Planning Python CLI | `agentic-planning-bootstrap doctor`, `summary`, `report`, `reconcile` | handwritten package parser/dispatch | `runtime-backed-read-only-adapter` | package-local planning report primitives | generated parser/dispatch test and process conformance |
+| Memory Python CLI | `agentic-memory-bootstrap doctor`, `report` | handwritten package parser/dispatch | `runtime-backed-read-only-adapter` | package-local memory report primitives | generated parser/dispatch test and process conformance |
 
 ## Remaining Root Read-Only Commands
 
@@ -60,7 +62,7 @@ Tracked by #643. These commands already have interface declarations in `cli_comm
 
 ## Package Read-Only Commands
 
-Tracked by #644. This PR implements the first package-local promotion for both packages: `status` is now generated parser/dispatch with hand-owned runtime primitives. The next package candidates should follow after package-local conformance fixtures are added for `doctor`, `report`, `summary`, and routing/reporting commands.
+Tracked by #644. This PR promotes the stable package-local read-only commands that fit the current operation registry model: Planning `status`, `doctor`, `summary`, `report`, and `reconcile`; Memory `status`, `doctor`, and `report`. Memory-only unique commands such as `route-report`, `promotion-report`, `list-files`, and `list-skills` need a separate package-command namespace follow-up before promotion, because the operation registry currently validates command names against global/root command names.
 
 ## Lifecycle Dry-Run And Mutation Commands
 

@@ -165,6 +165,42 @@
       "path": "operations/uninstall.lifecycle.json",
       "command": "uninstall",
       "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "planning.doctor.report",
+      "path": "operations/planning.doctor.report.json",
+      "command": "doctor",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.summary.report",
+      "path": "operations/planning.summary.report.json",
+      "command": "summary",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.report.report",
+      "path": "operations/planning.report.report.json",
+      "command": "report",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.reconcile.report",
+      "path": "operations/planning.reconcile.report.json",
+      "command": "reconcile",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "memory.doctor.report",
+      "path": "operations/memory.doctor.report.json",
+      "command": "doctor",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "memory.report.report",
+      "path": "operations/memory.report.report.json",
+      "command": "report",
+      "migration_status": "runtime-consumed"
     }
   ]
 }

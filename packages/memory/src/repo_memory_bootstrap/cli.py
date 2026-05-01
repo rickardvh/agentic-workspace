@@ -639,16 +639,44 @@ def _run_generated_cli_package_if_supported(argv: list[str]) -> int | None:
 
 
 def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) -> int:
-    if operation_id == "memory.status.report":
-        return _handle_status(args)
+    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
+    if handler is not None:
+        result = handler(args)
+        return 0 if result is None else result
     build_generated_cli_package_parser().error(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
 
 
 def _run_generated_command_adapter(args: argparse.Namespace, *, adapter: dict[str, object]) -> int:
     operation_id = str(adapter["operation_id"])
-    if operation_id == "memory.status.report":
-        return _handle_status(args)
+    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
+    if handler is not None:
+        result = handler(args)
+        return 0 if result is None else result
     raise ValueError(f"Unsupported generated command adapter operation: {operation_id}")
+
+
+def _handle_generated_doctor(args: argparse.Namespace) -> int | None:
+    for name in (
+        "project_name",
+        "project_purpose",
+        "key_repo_docs",
+        "key_subsystems",
+        "primary_build_command",
+        "primary_test_command",
+        "other_key_commands",
+    ):
+        if not hasattr(args, name):
+            setattr(args, name, None)
+    if not hasattr(args, "policy_profile"):
+        args.policy_profile = "default"
+    return _handle_doctor(args)
+
+
+_GENERATED_RUNTIME_HANDLERS = {
+    "memory.doctor.report": _handle_generated_doctor,
+    "memory.report.report": _handle_report,
+    "memory.status.report": _handle_status,
+}
 
 
 def _emit_result(result, *, output_format: str, include_install_summary: bool = False) -> None:

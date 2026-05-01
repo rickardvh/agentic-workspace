@@ -237,7 +237,13 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "status.report.cli",
         "doctor.report.cli",
         "planning.status.cli",
+        "planning.doctor.cli",
+        "planning.summary.cli",
+        "planning.report.cli",
+        "planning.reconcile.cli",
         "memory.status.cli",
+        "memory.doctor.cli",
+        "memory.report.cli",
     }
     defaults_command = commands["defaults.report.cli"]
     defaults_adapter = adapters["defaults.report.cli"]
@@ -573,14 +579,26 @@ def test_package_generated_python_command_packages_parse_status_runtime_operatio
     calls: list[tuple[str, str | None, str]] = []
 
     def runtime_handler(operation_id: str, args: argparse.Namespace) -> int:
-        calls.append((operation_id, args.target, args.format))
+        calls.append((operation_id, getattr(args, "target", None), args.format))
         return 0
 
     assert run_planning_generated_command(["status", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_planning_generated_command(["doctor", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_planning_generated_command(["summary", "--target", ".", "--profile", "compact", "--format", "json"], runtime_handler) == 0
+    assert run_planning_generated_command(["report", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_planning_generated_command(["reconcile", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_memory_generated_command(["status", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_memory_generated_command(["doctor", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_memory_generated_command(["report", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert calls == [
         ("planning.status.report", ".", "json"),
+        ("planning.doctor.report", ".", "json"),
+        ("planning.summary.report", ".", "json"),
+        ("planning.report.report", ".", "json"),
+        ("planning.reconcile.report", ".", "json"),
         ("memory.status.report", ".", "json"),
+        ("memory.doctor.report", ".", "json"),
+        ("memory.report.report", ".", "json"),
     ]
 
 
@@ -748,8 +766,8 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
         "status",
         "doctor",
     ]
-    assert commands_by_program["agentic-planning-bootstrap"] == ["status"]
-    assert commands_by_program["agentic-memory-bootstrap"] == ["status"]
+    assert commands_by_program["agentic-planning-bootstrap"] == ["status", "doctor", "summary", "report", "reconcile"]
+    assert commands_by_program["agentic-memory-bootstrap"] == ["doctor", "report", "status"]
 
 
 def test_generated_adapter_contracts_match_live_cli_surfaces() -> None:

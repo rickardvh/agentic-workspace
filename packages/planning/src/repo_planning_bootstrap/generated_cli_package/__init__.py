@@ -97,6 +97,330 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
         "output": []
       },
       "status": "generated"
+    },
+    {
+      "adapter_id": "planning.doctor.cli",
+      "command": {
+        "manifest_ref": "package:planning:cli",
+        "name": "doctor"
+      },
+      "conformance_refs": [
+        "planning.doctor.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Read-only doctor report.",
+        "name": "doctor",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "planning.doctor.report",
+        "path": "operations/planning.doctor.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.bootstrap.doctor.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "planning.summary.cli",
+      "command": {
+        "manifest_ref": "package:planning:cli",
+        "name": "summary"
+      },
+      "conformance_refs": [
+        "planning.summary.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Read-only summary report.",
+        "name": "summary",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "compact",
+              "full"
+            ],
+            "default": "compact",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Summary profile.",
+            "name": "profile"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "planning.summary.report",
+        "path": "operations/planning.summary.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.summary.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "planning.report.cli",
+      "command": {
+        "manifest_ref": "package:planning:cli",
+        "name": "report"
+      },
+      "conformance_refs": [
+        "planning.report.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Read-only report report.",
+        "name": "report",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "planning.report.report",
+        "path": "operations/planning.report.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.report.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "planning.reconcile.cli",
+      "command": {
+        "manifest_ref": "package:planning:cli",
+        "name": "reconcile"
+      },
+      "conformance_refs": [
+        "planning.reconcile.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Read-only reconcile report.",
+        "name": "reconcile",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "planning.reconcile.report",
+        "path": "operations/planning.reconcile.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.reconcile.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
     }
   ],
   "id": "planning-bootstrap",
@@ -161,6 +485,134 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
       ]
     },
     "operation_id": "planning.status.report"
+  },
+  {
+    "adapter_id": "planning.doctor.cli",
+    "interface": {
+      "help": "Read-only doctor report.",
+      "name": "doctor",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.doctor.report"
+  },
+  {
+    "adapter_id": "planning.summary.cli",
+    "interface": {
+      "help": "Read-only summary report.",
+      "name": "summary",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "compact",
+            "full"
+          ],
+          "default": "compact",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Summary profile.",
+          "name": "profile"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.summary.report"
+  },
+  {
+    "adapter_id": "planning.report.cli",
+    "interface": {
+      "help": "Read-only report report.",
+      "name": "report",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.report.report"
+  },
+  {
+    "adapter_id": "planning.reconcile.cli",
+    "interface": {
+      "help": "Read-only reconcile report.",
+      "name": "reconcile",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.reconcile.report"
   }
 ]
 """

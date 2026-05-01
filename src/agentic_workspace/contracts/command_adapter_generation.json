@@ -1414,6 +1414,450 @@
       ]
     },
     {
+      "id": "planning.doctor.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning-bootstrap",
+        "name": "doctor",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "package:planning:cli"
+      },
+      "operation_ref": {
+        "id": "planning.doctor.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.doctor.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.bootstrap.doctor.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "planning.doctor.process"
+      ]
+    },
+    {
+      "id": "planning.summary.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning-bootstrap",
+        "name": "summary",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "package:planning:cli"
+      },
+      "operation_ref": {
+        "id": "planning.summary.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.summary.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.summary.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "planning.summary.process"
+      ]
+    },
+    {
+      "id": "planning.report.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning-bootstrap",
+        "name": "report",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "package:planning:cli"
+      },
+      "operation_ref": {
+        "id": "planning.report.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.report.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.report.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "planning.report.process"
+      ]
+    },
+    {
+      "id": "planning.reconcile.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning-bootstrap",
+        "name": "reconcile",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "package:planning:cli"
+      },
+      "operation_ref": {
+        "id": "planning.reconcile.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.reconcile.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.reconcile.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "planning.reconcile.process"
+      ]
+    },
+    {
+      "id": "memory.doctor.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory-bootstrap",
+        "name": "doctor",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.doctor.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.doctor.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.bootstrap.doctor.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.doctor.process"
+      ]
+    },
+    {
+      "id": "memory.report.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory-bootstrap",
+        "name": "report",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.report.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.report.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.report.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.report.process"
+      ]
+    },
+    {
       "id": "memory.status.cli",
       "status": "generated",
       "command": {
