@@ -8337,7 +8337,7 @@ def _warning_remediation(warning_class: str) -> str | None:
         "execplan_immediate_next_action_drift": "Reduce Immediate Next Action to one concrete next step.",
         "execplan_next_action_projection_drift": (
             "Update machine_readable_contract.execution.next_step, or make immediate_next_action[0] match it; "
-            "compact summary uses the machine-readable next_step when both are present."
+            "compact summary uses immediate_next_action[0] when both are present."
         ),
         "execplan_readiness_drift": "Set Ready/Blocked explicitly so the active milestone can be resumed without re-deriving state.",
         "execplan_log_drift": "Compress the drift log into short decision notes or archive the completed plan.",
@@ -8533,6 +8533,15 @@ def _extract_section_bullets(path: Path, heading: str) -> list[str]:
 def _execplan_next_action_projection(plan_path: Path) -> dict[str, str]:
     record = _load_execplan_record(plan_path)
     if isinstance(record, dict):
+        immediate = record.get("immediate_next_action", [])
+        if isinstance(immediate, list):
+            for item in immediate:
+                next_action = str(item).strip()
+                if next_action:
+                    return {
+                        "next_action": next_action,
+                        "source": "immediate_next_action[0]",
+                    }
         machine_contract = record.get("machine_readable_contract", {})
         if isinstance(machine_contract, dict):
             execution = machine_contract.get("execution", {})
@@ -8542,15 +8551,6 @@ def _execplan_next_action_projection(plan_path: Path) -> dict[str, str]:
                     return {
                         "next_action": next_step,
                         "source": "machine_readable_contract.execution.next_step",
-                    }
-        immediate = record.get("immediate_next_action", [])
-        if isinstance(immediate, list):
-            for item in immediate:
-                next_action = str(item).strip()
-                if next_action:
-                    return {
-                        "next_action": next_action,
-                        "source": "immediate_next_action[0]",
                     }
     immediate = _extract_section_bullets(plan_path, "Immediate Next Action")
     if immediate:
@@ -8579,7 +8579,7 @@ def _execplan_next_action_warnings(*, target_root: Path, plan_files: list[Path])
                     "path": plan_path.relative_to(target_root).as_posix(),
                     "message": (
                         "machine_readable_contract.execution.next_step diverges from immediate_next_action[0]; "
-                        "summary uses machine_readable_contract.execution.next_step as the canonical next-action projection."
+                        "summary uses immediate_next_action[0] as the canonical next-action projection."
                     ),
                 }
             )

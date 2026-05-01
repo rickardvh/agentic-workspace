@@ -153,6 +153,22 @@
     {
       "id": "memory.report.load",
       "summary": "Load package-local memory report state for a target repository."
+    },
+    {
+      "id": "memory.route_report.load",
+      "summary": "Load package-local memory routing aggregate report state."
+    },
+    {
+      "id": "memory.promotion_report.load",
+      "summary": "Load package-local memory promotion candidate report state."
+    },
+    {
+      "id": "memory.bootstrap.files.list",
+      "summary": "List packaged memory bootstrap files without mutating a target repository."
+    },
+    {
+      "id": "memory.bootstrap.skills.list",
+      "summary": "List packaged memory bootstrap lifecycle skills."
     }
   ]
 }

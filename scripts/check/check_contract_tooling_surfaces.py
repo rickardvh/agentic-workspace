@@ -760,6 +760,24 @@ def _validate_lifecycle_generation_readiness(payload: dict[str, object]) -> list
             errors.append(f"lifecycle {surface_command} destructive command must be deferred-destructive")
         if effects.get("writes_repo_state") and eligibility == "eligible-read-only":
             errors.append(f"lifecycle {surface_command} mutating command cannot be eligible-read-only")
+        capability_maturity = command.get("capability_maturity", {})
+        if not isinstance(capability_maturity, dict):
+            errors.append(f"lifecycle {surface_command} capability_maturity must be an object")
+            continue
+        required_capabilities = {
+            "dry_run_plan",
+            "strict_preflight_refusal",
+            "destructive_refusal",
+            "apply_mutation",
+            "verify",
+        }
+        missing_capabilities = sorted(required_capabilities - set(capability_maturity))
+        if missing_capabilities:
+            errors.append(f"lifecycle {surface_command} missing capability maturity: {', '.join(missing_capabilities)}")
+        if effects.get("writes_repo_state") and capability_maturity.get("apply_mutation") == "proved":
+            errors.append(f"lifecycle {surface_command} apply mutation cannot be proved while generation remains deferred")
+        if not effects.get("writes_repo_state") and capability_maturity.get("apply_mutation") != "not-applicable":
+            errors.append(f"lifecycle {surface_command} read-only command apply mutation must be not-applicable")
     missing = sorted(expected_commands - actual_commands)
     if missing:
         errors.append(f"lifecycle_generation_readiness.json missing command classifications: {missing}")
@@ -920,6 +938,16 @@ def _executable_command_surfaces(command_specs: list[dict[str, object]]) -> set[
             continue
         surfaces.add((command_name, None))
     return surfaces
+
+
+def _known_command_names_for_program(program: str) -> set[str]:
+    if program == cli_commands_manifest()["program"]:
+        return {command["name"] for command in cli_commands_manifest()["commands"]}
+    parser = _program_parser(program)
+    subparsers = _subparser_action(parser) if parser is not None else None
+    if subparsers is None:
+        return set()
+    return {str(command_name) for command_name in subparsers.choices}
 
 
 def _program_parser(program: str) -> argparse.ArgumentParser | None:
@@ -1329,7 +1357,6 @@ def main(argv: list[str] | None = None) -> int:
 
     operation_contracts = operation_contracts_manifest()
     operation_primitives = operation_primitives_manifest()
-    known_commands = {command["name"] for command in cli_commands_manifest()["commands"]}
     known_primitives = {primitive["id"] for primitive in operation_primitives["primitives"]}
     operation_surfaces: list[tuple[str, str | None]] = []
     for operation_ref in operation_contracts["operations"]:
@@ -1343,8 +1370,15 @@ def main(argv: list[str] | None = None) -> int:
                 _validate(operation, "operation.schema.json"),
             )
         )
+        surface_program = str(command_surface.get("program", cli_commands_manifest()["program"]))
+        known_commands = _known_command_names_for_program(surface_program)
         if operation_ref["command"] not in known_commands:
-            checks.append(("operation command parity", [f"unknown command for operation {operation_ref['id']}"]))
+            checks.append(
+                (
+                    "operation command parity",
+                    [f"unknown command for operation {operation_ref['id']} on program {surface_program}"],
+                )
+            )
         registry_errors: list[str] = []
         if operation["id"] != operation_ref["id"]:
             registry_errors.append(f"operation id mismatch for {operation_ref['path']}")

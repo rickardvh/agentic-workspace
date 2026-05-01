@@ -7111,7 +7111,7 @@ candidates = []
     assert any(action.kind == "would move" for action in low_result.actions)
 
 
-def test_summary_uses_machine_next_step_and_warns_on_duplicate_drift(tmp_path: Path) -> None:
+def test_summary_uses_immediate_next_action_and_warns_on_duplicate_drift(tmp_path: Path) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 
     _write(
@@ -7158,8 +7158,8 @@ candidates = []
 
     summary = planning_installer.planning_summary(target=tmp_path, profile="compact")
 
-    assert summary["planning_record"]["next_action"] == "canonical machine next action."
-    assert summary["resumable_contract"]["current_next_action_source"] == "machine_readable_contract.execution.next_step"
+    assert summary["planning_record"]["next_action"] == "legacy markdown-like next action."
+    assert summary["resumable_contract"]["current_next_action_source"] == "immediate_next_action[0]"
     assert any(
         warning["warning_class"] == "execplan_next_action_projection_drift" for warning in summary["planning_surface_health"]["warnings"]
     )

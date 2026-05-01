@@ -1,0 +1,75 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.promotion-report.report",
+  "command_surface": {
+    "program": "agentic-memory-bootstrap",
+    "command": "promotion-report",
+    "format_option": "format"
+  },
+  "summary": "Report memory notes that should be promoted into canonical docs or eliminated through stronger tooling.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "notes",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "mode",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "memory manifest and note metadata",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "load_promotion_report",
+      "uses": "memory.promotion_report.load",
+      "description": "Load package-local memory promotion candidate state."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit promotion report in the requested format."
+    }
+  ],
+  "guards": [
+    "Promotion report must remain read-only."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "operation command parity checks agentic-memory-bootstrap live parser"
+  ],
+  "migration_status": "validated-contract"
+}

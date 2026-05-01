@@ -1,0 +1,65 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.list-files.report",
+  "command_surface": {
+    "program": "agentic-memory-bootstrap",
+    "command": "list-files",
+    "format_option": "format"
+  },
+  "summary": "Preview packaged memory bootstrap files without applying them to a target repository.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "packaged memory bootstrap payload",
+      "required": true
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "list_files",
+      "uses": "memory.bootstrap.files.list",
+      "description": "List packaged memory bootstrap files."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit file list in the requested format."
+    }
+  ],
+  "guards": [
+    "List-files must remain read-only."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "operation command parity checks agentic-memory-bootstrap live parser"
+  ],
+  "migration_status": "validated-contract"
+}

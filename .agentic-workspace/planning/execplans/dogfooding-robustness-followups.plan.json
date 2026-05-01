@@ -20,8 +20,8 @@
     "execution": {
       "milestone": "dogfooding-robustness-followups",
       "status": "active",
-      "next_step": "Commit and push the workflow/archive robustness batch, then implement #650, #651, #652, and #653.",
-      "proof": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py -q"
+      "next_step": "Commit and push the generated-output and conformance/modeling batch, then close the implemented dogfooding issues.",
+      "proof": "make check"
     },
     "scope": {
       "touched": [
@@ -58,11 +58,11 @@
   },
   "iterative_follow_through": {
     "what this slice enabled": "Implemented the workflow/archive robustness batch for #645, #649, #654, and #655.",
-    "intentionally deferred": "#650, #651, #652, and #653 remain for the generated-output and conformance/modeling batch.",
+    "intentionally deferred": "No named dogfooding issue remains intentionally deferred in this lane.",
     "discovered implications": "Archive-size guardrails will also block this execplan unless it is distilled before closeout.",
-    "proof achieved now": "partial",
-    "validation still needed": "Contract tooling, generated conformance, and make check after remaining issues.",
-    "next likely slice": "Workflow/archive robustness first, then generated adapter namespace and lifecycle conformance maturity."
+    "proof achieved now": "yes",
+    "validation still needed": "Issue closure and closeout distillation.",
+    "next likely slice": "Close implemented issues and archive this execplan after compacting it below archive guardrails."
   },
   "intent_interpretation": {
     "literal request": "Merged. Fix the dogfooding issues next.",
@@ -186,7 +186,11 @@
       ],
       "status": "pending",
       "evidence": [
-        "2026-05-01: uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py -q"
+        "2026-05-01: uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py -q",
+        "2026-05-01: uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py -q",
+        "2026-05-01: uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+        "2026-05-01: uv run python scripts/generate/generate_command_packages.py --check",
+        "2026-05-01: uv run python scripts/check/check_structured_file_inventory.py --quiet-success"
       ],
       "blocking": true,
       "next_action": "Run focused tests after each batch."
@@ -197,8 +201,10 @@
       "required_for": [
         "closeout"
       ],
-      "status": "pending",
-      "evidence": [],
+      "status": "satisfied",
+      "evidence": [
+        "2026-05-01: make check"
+      ],
       "blocking": true,
       "next_action": "Run make check before archive."
     }
@@ -352,7 +358,7 @@
     "optional_deps": "Node for generated adapter conformance if #651 is implemented in this lane."
   },
   "immediate_next_action": [
-    "Commit and push the workflow/archive robustness batch, then implement #650, #651, #652, and #653."
+    "Commit and push the generated-output and conformance/modeling batch, then close the implemented dogfooding issues."
   ],
   "blockers": [
     "None."
@@ -400,8 +406,8 @@
     "scope touched": "Planning summary/projection, archive-plan validation, focused tests, and active execplan.",
     "changed surfaces": "Planning state, execplan, planning bootstrap installer, and workspace CLI tests.",
     "validations run": "uv run agentic-workspace summary --format json; uv run pytest tests/test_workspace_cli.py -q -k \"next_step_and_warns or required_traceability_ref_paths or oversized_archive or broad_work_planning_guard or adaptive_assurance_end_to_end\"; uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py -q",
-    "result for continuation": "#645, #649, #654, and #655 implemented locally with focused proof.",
-    "next step": "Commit and push the workflow/archive robustness batch, then implement #650, #651, #652, and #653."
+    "result for continuation": "#645, #649, #650, #651, #652, #653, #654, and #655 implemented locally with full proof.",
+    "next step": "Commit and push the generated-output and conformance/modeling batch, then close the implemented dogfooding issues."
   },
   "finished_run_review": {
     "review status": "pending",
@@ -413,9 +419,9 @@
     "follow-on decision": "pending"
   },
   "proof_report": {
-    "validation proof": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py -q",
-    "proof achieved now": "partial",
-    "evidence for \"proof achieved\" state": "257 passed in 65.18s for the workflow/archive robustness batch."
+    "validation proof": "make check",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "make check passed after focused planning, contract, generated package, conformance, and structured inventory checks."
   },
   "intent_satisfaction": {
     "original intent": "Fix the dogfooding issues next.",
@@ -485,6 +491,10 @@
     "signals fixed": [
       "#645 high-assurance planning guard",
       "#649 canonical next action",
+      "#650 generated output line endings",
+      "#651 package-local command identity",
+      "#652 lifecycle maturity split",
+      "#653 conformance setup phases",
       "#654 archive strict closeout field shape",
       "#655 archive size guardrail"
     ],
@@ -494,6 +504,7 @@
   },
   "drift_log": [
     "2026-05-01: Created active dogfooding robustness execplan after #641 merge.",
-    "2026-05-01: Implemented workflow/archive robustness batch for #645, #649, #654, and #655; focused planning tests passed."
+    "2026-05-01: Implemented workflow/archive robustness batch for #645, #649, #654, and #655; focused planning tests passed.",
+    "2026-05-01: Implemented generated-output and conformance/modeling batch for #650, #651, #652, and #653; make check passed."
   ]
 }
