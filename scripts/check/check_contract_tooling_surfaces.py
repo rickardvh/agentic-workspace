@@ -778,9 +778,24 @@ def _validate_lifecycle_generation_readiness(payload: dict[str, object]) -> list
             errors.append(f"lifecycle {surface_command} apply mutation cannot be proved while generation remains deferred")
         if not effects.get("writes_repo_state") and capability_maturity.get("apply_mutation") != "not-applicable":
             errors.append(f"lifecycle {surface_command} read-only command apply mutation must be not-applicable")
+        if eligibility == "eligible-dry-run-refusal":
+            dry_run_proved = capability_maturity.get("dry_run_plan") == "proved"
+            refusal_proved = (
+                capability_maturity.get("strict_preflight_refusal") == "proved"
+                or capability_maturity.get("destructive_refusal") == "proved"
+            )
+            if not dry_run_proved and not refusal_proved:
+                errors.append(f"lifecycle {surface_command} eligible-dry-run-refusal requires proved dry-run or refusal conformance")
+            if capability_maturity.get("apply_mutation") == "proved":
+                errors.append(f"lifecycle {surface_command} eligible-dry-run-refusal must not prove apply mutation")
+            if not command.get("conformance_refs"):
+                errors.append(f"lifecycle {surface_command} eligible-dry-run-refusal requires conformance_refs")
     missing = sorted(expected_commands - actual_commands)
     if missing:
         errors.append(f"lifecycle_generation_readiness.json missing command classifications: {missing}")
+    mutation_criteria = payload.get("mutation_promotion_criteria", [])
+    if not isinstance(mutation_criteria, list) or len(mutation_criteria) < 5:
+        errors.append("lifecycle_generation_readiness.json mutation_promotion_criteria must list explicit safety gates")
     return errors
 
 

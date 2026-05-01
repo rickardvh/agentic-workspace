@@ -44,7 +44,7 @@
         "branch_sensitive": true,
         "review_required_when_ambiguous": true
       },
-      "generation_eligibility": "deferred-mutation",
+      "generation_eligibility": "eligible-dry-run-refusal",
       "conformance_refs": [
         "install.lifecycle.dry-run.process"
       ],
@@ -53,7 +53,7 @@
         "explicit lifecycle verify primitive",
         "black-box apply failure coverage"
       ],
-      "notes": "May create or refresh package-managed surfaces; generated adapter must not own mutation semantics.",
+      "notes": "May create or refresh package-managed surfaces; generated adapter must not own mutation semantics. Dry-run/refusal generated-adapter maturity is eligible; apply mutation remains deferred.",
       "capability_maturity": {
         "dry_run_plan": "proved",
         "strict_preflight_refusal": "unproved",
@@ -95,7 +95,7 @@
         "branch_sensitive": true,
         "review_required_when_ambiguous": true
       },
-      "generation_eligibility": "deferred-mutation",
+      "generation_eligibility": "eligible-dry-run-refusal",
       "conformance_refs": [
         "init.lifecycle.dry-run.process"
       ],
@@ -104,7 +104,7 @@
         "explicit lifecycle verify primitive",
         "black-box apply failure coverage"
       ],
-      "notes": "Alias-like lifecycle entry must share install planning and verification.",
+      "notes": "Alias-like lifecycle entry must share install planning and verification. Dry-run/refusal generated-adapter maturity is eligible; apply mutation remains deferred.",
       "capability_maturity": {
         "dry_run_plan": "proved",
         "strict_preflight_refusal": "unproved",
@@ -189,7 +189,7 @@
         "branch_sensitive": true,
         "review_required_when_ambiguous": true
       },
-      "generation_eligibility": "deferred-mutation",
+      "generation_eligibility": "eligible-dry-run-refusal",
       "conformance_refs": [
         "upgrade.lifecycle.dry-run.process",
         "upgrade.lifecycle.strict-preflight-refusal.process"
@@ -198,7 +198,7 @@
         "explicit lifecycle verify primitive",
         "black-box apply failure coverage"
       ],
-      "notes": "Dry-run and apply must use the same planner.",
+      "notes": "Dry-run and apply must use the same planner. Dry-run/refusal generated-adapter maturity is eligible; apply mutation remains deferred.",
       "capability_maturity": {
         "dry_run_plan": "proved",
         "strict_preflight_refusal": "proved",
@@ -250,14 +250,15 @@
         "black-box apply failure coverage",
         "ownership checks for deletion candidates beyond ambiguous shared-layer refusal"
       ],
-      "notes": "Must refuse ambiguous ownership and preserve local-only state unless explicitly targeted.",
+      "notes": "Must refuse ambiguous ownership and preserve local-only state unless explicitly targeted. Refusal-safe generated-adapter maturity is eligible; destructive apply remains deferred.",
       "capability_maturity": {
         "dry_run_plan": "unproved",
         "strict_preflight_refusal": "proved",
         "destructive_refusal": "proved",
         "apply_mutation": "deferred",
         "verify": "deferred"
-      }
+      },
+      "refusal_generation_eligibility": "eligible-refusal-only"
     },
     {
       "surface": "root",
@@ -436,8 +437,17 @@
   ],
   "generation_decision": [
     "Read-only doctor/status lifecycle surfaces may be generated after output contracts are explicit.",
-    "install/init/adopt/upgrade remain deferred mutation surfaces until lifecycle.verify and plan/apply output contracts are explicit.",
+    "install/init/upgrade dry-run or refusal-safe interfaces may promote under eligible-dry-run-refusal; apply mutation remains deferred until lifecycle.verify and plan/apply output contracts are explicit.",
     "uninstall remains deferred destructive until refusal fixtures and ownership checks are black-box conformance-covered.",
     "Generated adapters may own command shape and dispatch only; runtime primitives own planning, mutation, verification, and local inspection."
+  ],
+  "mutation_promotion_criteria": [
+    "dry-run and apply must share the same lifecycle planner",
+    "dry-run output must be stable and black-box conformance-backed",
+    "apply output must record actual writes, preserved local-only state, and refusals",
+    "strict preflight refusal must be proved before mutation dispatch",
+    "destructive or ambiguous ownership paths must refuse safely before deletion",
+    "idempotency must be covered for commands that promise planned-idempotent behavior",
+    "generated adapters must delegate mutation to hand-owned runtime primitives and must not own mutation logic"
   ]
 }

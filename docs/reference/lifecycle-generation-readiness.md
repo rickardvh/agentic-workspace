@@ -20,3 +20,4 @@ Readiness contract for deciding whether lifecycle surfaces can be generated safe
 | `conformance_fixture_plan` | ref `#/$defs/non_empty_strings` | yes |  | Conformance fixture plan referenced contract shape used by this contract. |  |  |
 | `generation_decision` | ref `#/$defs/non_empty_strings` | yes |  | Generation decision referenced contract shape used by this contract. |  |  |
 | `dry_run_conformance_decision` | ref `#/$defs/non_empty_strings` | no |  | Decision rules for dry-run lifecycle conformance and mutation promotion gates. |  |  |
+| `mutation_promotion_criteria` | array of string | no |  | Proof criteria required before a lifecycle command may expose mutation-capable generated dispatch. |  |  |

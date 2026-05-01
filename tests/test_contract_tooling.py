@@ -244,6 +244,10 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "memory.status.cli",
         "memory.doctor.cli",
         "memory.report.cli",
+        "memory.route-report.cli",
+        "memory.promotion-report.cli",
+        "memory.list-files.cli",
+        "memory.list-skills.cli",
     }
     defaults_command = commands["defaults.report.cli"]
     defaults_adapter = adapters["defaults.report.cli"]
@@ -298,6 +302,8 @@ def test_lifecycle_generation_readiness_records_phase_risk_and_fixture_plan() ->
     ]
     assert commands[("root", "doctor")]["generation_eligibility"] == "eligible-read-only"
     assert commands[("root", "uninstall")]["generation_eligibility"] == "deferred-destructive"
+    assert commands[("root", "uninstall")]["refusal_generation_eligibility"] == "eligible-refusal-only"
+    assert commands[("root", "upgrade")]["generation_eligibility"] == "eligible-dry-run-refusal"
     assert commands[("root", "uninstall")]["effects"]["destructive_potential"] is True
     assert commands[("root", "install")]["capability_maturity"]["dry_run_plan"] == "proved"
     assert commands[("root", "install")]["capability_maturity"]["apply_mutation"] == "deferred"
@@ -801,7 +807,15 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
         "doctor",
     ]
     assert commands_by_program["agentic-planning-bootstrap"] == ["status", "doctor", "summary", "report", "reconcile"]
-    assert commands_by_program["agentic-memory-bootstrap"] == ["doctor", "report", "status"]
+    assert commands_by_program["agentic-memory-bootstrap"] == [
+        "doctor",
+        "report",
+        "status",
+        "route-report",
+        "promotion-report",
+        "list-files",
+        "list-skills",
+    ]
 
 
 def test_generated_adapter_contracts_match_live_cli_surfaces() -> None:

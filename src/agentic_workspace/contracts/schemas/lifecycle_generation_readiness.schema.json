@@ -137,6 +137,7 @@
           "generation_eligibility": {
             "enum": [
               "eligible-read-only",
+              "eligible-dry-run-refusal",
               "deferred-mutation",
               "deferred-destructive"
             ],
@@ -187,6 +188,13 @@
           "notes": {
             "type": "string",
             "description": "Additional notes that qualify this record."
+          },
+          "refusal_generation_eligibility": {
+            "enum": [
+              "none",
+              "eligible-refusal-only"
+            ],
+            "description": "Whether a destructive lifecycle command may expose generated refusal-safe dispatch while apply remains deferred."
           }
         },
         "additionalProperties": false,
@@ -213,6 +221,15 @@
     "dry_run_conformance_decision": {
       "$ref": "#/$defs/non_empty_strings",
       "description": "Decision rules for dry-run lifecycle conformance and mutation promotion gates."
+    },
+    "mutation_promotion_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Proof criteria required before a lifecycle command may expose mutation-capable generated dispatch."
     }
   },
   "additionalProperties": false,

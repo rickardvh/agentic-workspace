@@ -247,6 +247,332 @@ export const generatedCommandPackage = {
         "output": []
       },
       "status": "generated"
+    },
+    {
+      "adapter_id": "memory.route-report.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "route-report"
+      },
+      "conformance_refs": [
+        "memory.route-report.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Show a compact aggregate routing snapshot derived from checked-in feedback cases and fixtures.",
+        "name": "route-report",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.route-report.report",
+        "path": "operations/memory.route-report.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory bootstrap inspection",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.route_report.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "memory.promotion-report.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "promotion-report"
+      },
+      "conformance_refs": [
+        "memory.promotion-report.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Suggest memory notes that should be promoted into canonical docs or considered for elimination through skills, scripts, tests, or refactors.",
+        "name": "promotion-report",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "default": [],
+            "flags": [
+              "--notes"
+            ],
+            "help": "Explicit memory notes to inspect.",
+            "name": "notes",
+            "nargs": "*"
+          },
+          {
+            "choices": [
+              "all",
+              "remediation"
+            ],
+            "default": "all",
+            "flags": [
+              "--mode"
+            ],
+            "help": "Report all candidates or only medium/high-confidence remediation candidates.",
+            "name": "mode"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.promotion-report.report",
+        "path": "operations/memory.promotion-report.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory bootstrap inspection",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.promotion_report.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "memory.list-files.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "list-files"
+      },
+      "conformance_refs": [
+        "memory.list-files.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Preview packaged bootstrap files.",
+        "name": "list-files",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.list-files.report",
+        "path": "operations/memory.list-files.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory bootstrap inspection",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.bootstrap.files.list",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "memory.list-skills.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "list-skills"
+      },
+      "conformance_refs": [
+        "memory.list-skills.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "List bundled bootstrap-lifecycle skills.",
+        "name": "list-skills",
+        "options": [
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.list-skills.report",
+        "path": "operations/memory.list-skills.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory bootstrap inspection",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.bootstrap.skills.list",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
     }
   ],
   "id": "memory-bootstrap",

@@ -18,9 +18,9 @@
     },
     "execution": {
       "milestone": "generated-cli-followups-657-660",
-      "status": "active",
-      "next_step": "Inspect generated command package coverage and current checks for #657.",
-      "proof": "Focused generated-command and conformance checks, then make check before closeout."
+      "status": "complete",
+      "next_step": "Commit and archive the drained lane.",
+      "proof": "Generated adapter/package freshness, contract tooling, generated conformance tests, and make check pass."
     },
     "scope": {
       "touched": [
@@ -58,10 +58,10 @@
   "iterative_follow_through": {
     "what this slice enabled": "Post-migration generated CLI authority, Memory package-local read-only promotion, lifecycle dry-run/refusal maturity, and mutation-gate clarity.",
     "intentionally deferred": "#661 generated/python relocation remains deferred until generated CLIs are fully landed.",
-    "discovered implications": "pending",
-    "proof achieved now": "pending",
-    "validation still needed": "focused checks and make check",
-    "next likely slice": "none if queue drains"
+    "discovered implications": "Memory read-only package-local commands were stable enough to promote; lifecycle dry-run/refusal needed a separate maturity label from mutation apply.",
+    "proof achieved now": "Generated CLI authority audit, Memory generated command promotion, lifecycle dry-run/refusal readiness, and mutation promotion gates are checked in.",
+    "validation still needed": "none before archive",
+    "next likely slice": "archive this plan; #661 remains the deferred generated/python relocation slice"
   },
   "intent_interpretation": {
     "literal request": "Ingest and implement #657-#660; follow the same dogfooding protocol; feed new findings into the current queue and keep working until the queue is empty.",
@@ -154,33 +154,36 @@
   "control_gates": [
     {
       "id": "queue-empty",
-      "status": "pending",
+      "status": "satisfied",
       "owner_role": "agent",
       "required_for": [
         "archive"
       ],
       "blocking": true,
       "evidence": [
-        "state.toml work_items for #657-#660 are empty, closed, or explicitly routed"
+        "state.toml work_items is empty after #657-#660 implementation"
       ],
-      "next_action": "Implement queued issue slices and remove completed queue items."
+      "next_action": "Archive the completed execplan."
     },
     {
       "id": "focused-proof",
-      "status": "pending",
+      "status": "satisfied",
       "owner_role": "agent",
       "required_for": [
         "archive"
       ],
       "blocking": true,
       "evidence": [
-        "generated command and conformance checks pass"
+        "uv run python scripts/generate/generate_command_adapters.py --check",
+        "uv run python scripts/generate/generate_command_packages.py --check",
+        "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+        "uv run pytest tests/test_generated_tool_conformance.py tests/test_contract_tooling.py -q"
       ],
-      "next_action": "Run focused generated CLI proof after implementation."
+      "next_action": "No focused proof remains."
     },
     {
       "id": "make-check",
-      "status": "pending",
+      "status": "satisfied",
       "owner_role": "agent",
       "required_for": [
         "archive"
@@ -189,7 +192,7 @@
       "evidence": [
         "make check passes"
       ],
-      "next_action": "Run full check before closeout."
+      "next_action": "Archive the completed execplan."
     }
   ],
   "implementation_blockers": [],
@@ -284,14 +287,14 @@
   ],
   "active_milestone": {
     "id": "ingest-and-audit",
-    "status": "active",
+    "status": "completed",
     "scope": "#657 first, then generated adapter promotion and lifecycle maturity queue",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Inspect generated command package coverage and current checks for #657."
+    "Commit the implementation batch and archive the execplan."
   ],
   "blockers": [
     "None."
@@ -343,35 +346,35 @@
     "Issues are closed or linked to closing commits/PR."
   ],
   "execution_run": {
-    "run status": "not-started",
+    "run status": "completed",
     "executor": "Codex",
     "handoff source": "user request and GitHub issues #657-#660",
-    "what happened": "Plan created; implementation pending.",
-    "scope touched": "planning state only so far",
-    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/generated-cli-followups-657-660.plan.json",
-    "validations run": "agentic-workspace summary; gh issue view #657-#660",
-    "result for continuation": "continue implementation",
-    "next step": "Inspect generated command coverage and checks for #657."
+    "what happened": "Audited generated CLI authority, promoted stable Memory read-only package-local commands, separated lifecycle dry-run/refusal maturity from mutation apply, and added enforceable mutation promotion gates.",
+    "scope touched": "planning state, generated CLI contracts, Memory runtime routing, conformance contracts, lifecycle readiness contract/schema, generated outputs, tests, and reference docs",
+    "changed surfaces": ".agentic-workspace planning files; src/agentic_workspace/contracts; packages/memory generated/runtime files; generated/typescript/memory-cli; scripts/check; tests; docs/reference; docs/reviews",
+    "validations run": "generated command adapters --check; generated command packages --check; contract tooling --quiet-success; pytest tests/test_generated_tool_conformance.py tests/test_contract_tooling.py -q; make check",
+    "result for continuation": "queue drained; archive after commit",
+    "next step": "Archive the completed execplan."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
     "config compliance": "used package workflow and checked-in planning",
-    "misinterpretation risk": "medium until queue is fully drained",
-    "follow-on decision": "pending"
+    "misinterpretation risk": "low",
+    "follow-on decision": "#661 remains deferred and no lane-created bug findings remain queued"
   },
   "proof_report": {
-    "validation proof": "pending",
-    "proof achieved now": "pending",
-    "evidence for \"proof achieved\" state": "pending"
+    "validation proof": "Focused generated-command checks, contract tooling, generated conformance tests, and make check passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run pytest tests/test_generated_tool_conformance.py tests/test_contract_tooling.py -q; make check"
   },
   "intent_satisfaction": {
     "original intent": "Ingest and implement #657-#660 and dogfood findings until queue is empty.",
-    "was original intent fully satisfied?": "pending",
-    "evidence of intent satisfaction": "pending",
-    "unsolved intent passed to": "pending"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#657 audit doc added; #658 Memory commands promoted; #659 lifecycle dry-run/refusal maturity represented; #660 mutation criteria enforced by contract tooling; state.toml queue empty.",
+    "unsolved intent passed to": "none for #657-#660"
   },
   "system_intent_alignment": {
     "relevant system intent": "Use checked-in execution state for broad work and keep command authority explicit.",
@@ -380,11 +383,11 @@
     "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
   },
   "closure_check": {
-    "slice status": "pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
-    "why this decision is honest": "pending",
-    "evidence carried forward": "pending",
+    "slice status": "complete",
+    "larger-intent status": "complete for #657-#660",
+    "closure decision": "archive after commit",
+    "why this decision is honest": "The queue is empty, mutation apply remains explicitly deferred, #661 stays out of scope, and full checks pass.",
+    "evidence carried forward": "Generated CLI authority audit, lifecycle readiness mutation gates, conformance contracts, generated outputs, and passing checks.",
     "reopen trigger": "Generated CLI queue item remains open or proof fails."
   },
   "generated_closeout": {
@@ -394,36 +397,42 @@
     "text": ""
   },
   "memory_learning_capture": {
-    "status": "pending",
-    "memory consult recommended?": "pending",
+    "status": "complete",
+    "memory consult recommended?": "no",
     "memory notes read": "",
-    "future agents should not rediscover": "pending",
-    "decision": "pending",
+    "future agents should not rediscover": "Lifecycle dry-run/refusal promotion is distinct from mutation apply promotion; uninstall remains deferred-destructive with refusal-only eligibility.",
+    "decision": "promote_to_docs_contracts_checks_code",
     "target": "",
-    "reason": "Choose one: none, update_existing_memory_note, create_memory_note, promote_to_docs_contracts_checks_code, route_to_planning, evidence_only."
+    "reason": "promotion logic is now encoded in lifecycle readiness contracts, schema, docs, and contract tooling checks"
   },
   "durable_residue": {
-    "status": "none",
-    "learned constraint": "pending until closeout",
-    "motivation worth preserving": "pending until closeout",
-    "canonical owner now": "none",
-    "promotion trigger": "pending until closeout",
+    "status": "contract",
+    "learned constraint": "Do not classify destructive lifecycle mutation as generated-ready just because its refusal path is generated-eligible.",
+    "motivation worth preserving": "Generated command authority should be broad for stable read-only commands but honest around mutation maturity.",
+    "canonical owner now": "src/agentic_workspace/contracts/lifecycle_generation_readiness.json and scripts/check/check_contract_tooling_surfaces.py",
+    "promotion trigger": "mutation-capable generated adapter proposal",
     "retention after promotion": "retain"
   },
   "execution_summary": {
-    "outcome delivered": "pending",
-    "validation confirmed": "pending",
-    "follow-on routed to": "pending",
-    "post-work posterity capture": "pending",
-    "knowledge promoted (Memory/Docs/Config)": "pending",
-    "resume from": "this active execplan"
+    "outcome delivered": "#657-#660 implemented and queue drained.",
+    "validation confirmed": "make check and focused generated CLI proof passed.",
+    "follow-on routed to": "#661 for generated/python relocation, outside this lane.",
+    "post-work posterity capture": "generated CLI authority audit plus lifecycle readiness reference docs",
+    "knowledge promoted (Memory/Docs/Config)": "Docs/contracts/checks",
+    "resume from": "archive-ready execplan"
   },
   "improvement_signal_review": {
     "status": "active",
     "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
     "source": "operating_posture",
-    "signals found": [],
-    "signals fixed": [],
+    "signals found": [
+      "The initial plan draft tried to represent the queue inside unsupported execplan fields; planning surface checks forced the queue into state.toml work_items.",
+      "Lifecycle refusal eligibility can be confused with destructive apply eligibility unless the contract has separate fields."
+    ],
+    "signals fixed": [
+      "Moved active lane queue into schema-valid state.toml work_items before implementation.",
+      "Added eligible-dry-run-refusal and refusal_generation_eligibility so destructive apply remains deferred while refusal paths can mature."
+    ],
     "signals routed": [],
     "signals dismissed": [],
     "next owner": "state.toml work_items until empty"

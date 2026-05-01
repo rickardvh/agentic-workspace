@@ -674,7 +674,11 @@ def _handle_generated_doctor(args: argparse.Namespace) -> int | None:
 
 _GENERATED_RUNTIME_HANDLERS = {
     "memory.doctor.report": _handle_generated_doctor,
+    "memory.list-files.report": _handle_list_files,
+    "memory.list-skills.report": _handle_list_skills,
+    "memory.promotion-report.report": _handle_promotion_report,
     "memory.report.report": _handle_report,
+    "memory.route-report.report": _handle_route_report,
     "memory.status.report": _handle_status,
 }
 

@@ -176,6 +176,30 @@
       "operation_id": "memory.report.report",
       "path": "conformance/memory.report.process.json",
       "adapter_kind": "process"
+    },
+    {
+      "id": "memory.route-report.process",
+      "operation_id": "memory.route-report.report",
+      "path": "conformance/memory.route-report.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.promotion-report.process",
+      "operation_id": "memory.promotion-report.report",
+      "path": "conformance/memory.promotion-report.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.list-files.process",
+      "operation_id": "memory.list-files.report",
+      "path": "conformance/memory.list-files.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.list-skills.process",
+      "operation_id": "memory.list-skills.report",
+      "path": "conformance/memory.list-skills.process.json",
+      "adapter_kind": "process"
     }
   ]
 }

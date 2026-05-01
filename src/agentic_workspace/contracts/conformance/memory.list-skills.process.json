@@ -1,0 +1,57 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "memory.list-skills.process",
+  "operation_id": "memory.list-skills.report",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_memory_cli}",
+      "list-skills",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "memory-list-skills-process",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "mode"
+          ],
+          "equals": "skills"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": []
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

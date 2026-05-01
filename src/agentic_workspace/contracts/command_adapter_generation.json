@@ -1930,6 +1930,302 @@
       "conformance_refs": [
         "memory.status.process"
       ]
+    },
+    {
+      "id": "memory.route-report.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory-bootstrap",
+        "name": "route-report",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.route-report.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.route-report.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.route_report.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "live memory surface inspection",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.route-report.process"
+      ]
+    },
+    {
+      "id": "memory.promotion-report.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory-bootstrap",
+        "name": "promotion-report",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.promotion-report.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.promotion-report.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.promotion_report.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "live memory surface inspection",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.promotion-report.process"
+      ]
+    },
+    {
+      "id": "memory.list-files.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory-bootstrap",
+        "name": "list-files",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.list-files.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.list-files.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.bootstrap.files.list",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "live memory surface inspection",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.list-files.process"
+      ]
+    },
+    {
+      "id": "memory.list-skills.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory-bootstrap",
+        "name": "list-skills",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.list-skills.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.list-skills.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.bootstrap.skills.list",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "live memory surface inspection",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.list-skills.process"
+      ]
     }
   ]
 }
