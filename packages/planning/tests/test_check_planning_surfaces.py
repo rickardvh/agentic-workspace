@@ -403,13 +403,9 @@ def _baseline_agents() -> str:
     return """
 # Agent Instructions
 
-1. Read `AGENTS.md`.
-2. Read `TODO.md`.
-3. Read the active feature plan in `.agentic-workspace/planning/execplans/` when the TODO surface points there.
-4. Read `ROADMAP.md` only when promoting work.
-
-Do not bulk-read all planning surfaces.
-When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
+<!-- agentic-workspace:workflow:start -->
+Start with `.agentic-workspace/WORKFLOW.md`; it routes work through CLI-first startup guidance before implementation.
+<!-- agentic-workspace:workflow:end -->
 """
 
 
