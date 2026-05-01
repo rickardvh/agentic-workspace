@@ -87,6 +87,40 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
     },
     "status": "generated"
   },
+  "doctor": {
+    "command": {
+      "command_manifest": "cli_commands.json",
+      "name": "doctor",
+      "option_group_manifest": "cli_option_groups.json",
+      "program": "agentic-workspace"
+    },
+    "conformance_refs": [
+      "doctor.report.process"
+    ],
+    "effect_hints": {
+      "destructive": false,
+      "idempotent": true,
+      "read_only": true,
+      "requires_preflight_gate": false,
+      "writes_repo_state": false
+    },
+    "id": "doctor.report.cli",
+    "operation_id": "doctor.report",
+    "runtime_binding": {
+      "kind": "operation-primitive-sequence",
+      "primitive_refs": [
+        "workspace.root.resolve",
+        "workspace.selection.resolve",
+        "workspace.report.assemble",
+        "output.emit"
+      ]
+    },
+    "schemas": {
+      "input": [],
+      "output": []
+    },
+    "status": "generated"
+  },
   "implement": {
     "command": {
       "command_manifest": "cli_commands.json",
@@ -257,6 +291,109 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
     },
     "status": "generated"
   },
+  "reconcile": {
+    "command": {
+      "command_manifest": "cli_commands.json",
+      "name": "reconcile",
+      "option_group_manifest": "cli_option_groups.json",
+      "program": "agentic-workspace"
+    },
+    "conformance_refs": [
+      "reconcile.report.process"
+    ],
+    "effect_hints": {
+      "destructive": false,
+      "idempotent": true,
+      "read_only": true,
+      "requires_preflight_gate": false,
+      "writes_repo_state": false
+    },
+    "id": "reconcile.report.cli",
+    "operation_id": "reconcile.report",
+    "runtime_binding": {
+      "kind": "operation-primitive-sequence",
+      "primitive_refs": [
+        "workspace.root.resolve",
+        "planning.reconcile.load",
+        "output.emit"
+      ]
+    },
+    "schemas": {
+      "input": [],
+      "output": []
+    },
+    "status": "generated"
+  },
+  "report": {
+    "command": {
+      "command_manifest": "cli_commands.json",
+      "name": "report",
+      "option_group_manifest": "cli_option_groups.json",
+      "program": "agentic-workspace"
+    },
+    "conformance_refs": [
+      "report.combined.process"
+    ],
+    "effect_hints": {
+      "destructive": false,
+      "idempotent": true,
+      "read_only": true,
+      "requires_preflight_gate": false,
+      "writes_repo_state": false
+    },
+    "id": "report.combined.cli",
+    "operation_id": "report.combined",
+    "runtime_binding": {
+      "kind": "operation-primitive-sequence",
+      "primitive_refs": [
+        "workspace.root.resolve",
+        "workspace.config.load",
+        "workspace.selection.resolve",
+        "workspace.report.assemble",
+        "workspace.report.select",
+        "output.emit"
+      ]
+    },
+    "schemas": {
+      "input": [],
+      "output": []
+    },
+    "status": "generated"
+  },
+  "setup": {
+    "command": {
+      "command_manifest": "cli_commands.json",
+      "name": "setup",
+      "option_group_manifest": "cli_option_groups.json",
+      "program": "agentic-workspace"
+    },
+    "conformance_refs": [
+      "setup.guidance.process"
+    ],
+    "effect_hints": {
+      "destructive": false,
+      "idempotent": true,
+      "read_only": true,
+      "requires_preflight_gate": false,
+      "writes_repo_state": false
+    },
+    "id": "setup.guidance.cli",
+    "operation_id": "setup.guidance",
+    "runtime_binding": {
+      "kind": "operation-primitive-sequence",
+      "primitive_refs": [
+        "workspace.root.resolve",
+        "workspace.selection.resolve",
+        "workspace.report.assemble",
+        "output.emit"
+      ]
+    },
+    "schemas": {
+      "input": [],
+      "output": []
+    },
+    "status": "generated"
+  },
   "skills": {
     "command": {
       "command_manifest": "cli_commands.json",
@@ -323,6 +460,40 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "output": [
         "startup_context.schema.json"
       ]
+    },
+    "status": "generated"
+  },
+  "status": {
+    "command": {
+      "command_manifest": "cli_commands.json",
+      "name": "status",
+      "option_group_manifest": "cli_option_groups.json",
+      "program": "agentic-workspace"
+    },
+    "conformance_refs": [
+      "status.report.process"
+    ],
+    "effect_hints": {
+      "destructive": false,
+      "idempotent": true,
+      "read_only": true,
+      "requires_preflight_gate": false,
+      "writes_repo_state": false
+    },
+    "id": "status.report.cli",
+    "operation_id": "status.report",
+    "runtime_binding": {
+      "kind": "operation-primitive-sequence",
+      "primitive_refs": [
+        "workspace.root.resolve",
+        "workspace.selection.resolve",
+        "workspace.report.assemble",
+        "output.emit"
+      ]
+    },
+    "schemas": {
+      "input": [],
+      "output": []
     },
     "status": "generated"
   },

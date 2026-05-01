@@ -231,6 +231,11 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "proof.report.cli",
         "ownership.report.cli",
         "skills.report.cli",
+        "report.combined.cli",
+        "reconcile.report.cli",
+        "setup.guidance.cli",
+        "status.report.cli",
+        "doctor.report.cli",
         "planning.status.cli",
         "memory.status.cli",
     }
@@ -470,19 +475,29 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "proof.report.cli",
         "ownership.report.cli",
         "skills.report.cli",
+        "report.combined.cli",
+        "reconcile.report.cli",
+        "setup.guidance.cli",
+        "status.report.cli",
+        "doctor.report.cli",
     }
     target_kinds = {target["kind"] for target in GENERATED_COMMAND_PACKAGE["targets"]}
     assert {"python", "typescript", "bash", "powershell"} <= target_kinds
     assert generated_command_names() == (
         "config",
         "defaults",
+        "doctor",
         "implement",
         "modules",
         "ownership",
         "preflight",
         "proof",
+        "reconcile",
+        "report",
+        "setup",
         "skills",
         "start",
+        "status",
         "summary",
     )
     assert supports_generated_command(["defaults", "--format", "json"]) is True
@@ -495,6 +510,11 @@ def test_generated_python_command_package_metadata_is_current() -> None:
     assert supports_generated_command(["proof", "--format", "json"]) is True
     assert supports_generated_command(["ownership", "--format", "json"]) is True
     assert supports_generated_command(["skills", "--format", "json"]) is True
+    assert supports_generated_command(["report", "--format", "json"]) is True
+    assert supports_generated_command(["reconcile", "--format", "json"]) is True
+    assert supports_generated_command(["setup", "--format", "json"]) is True
+    assert supports_generated_command(["status", "--format", "json"]) is True
+    assert supports_generated_command(["doctor", "--format", "json"]) is True
 
 
 def test_generated_python_command_package_parses_and_dispatches_runtime_operations() -> None:
@@ -522,6 +542,11 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
     assert run_generated_command(["proof", "--target", ".", "--changed", "README.md", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["ownership", "--target", ".", "--concern", "startup", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["skills", "--target", ".", "--task", "proof", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["report", "--target", ".", "--profile", "router", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["reconcile", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["setup", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["status", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["doctor", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
     assert calls == [
         ("defaults.report", None, "json", "startup"),
         ("config.report", ".", "json", None),
@@ -533,6 +558,11 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
         ("proof.report", ".", "json", None),
         ("ownership.report", ".", "json", None),
         ("skills.report", ".", "json", None),
+        ("report.combined", ".", "json", None),
+        ("reconcile.report", ".", "json", None),
+        ("setup.guidance", ".", "json", None),
+        ("status.report", ".", "json", None),
+        ("doctor.report", ".", "json", None),
     ]
 
 
@@ -584,6 +614,11 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert "proof.report.cli" in source_text
     assert "ownership.report.cli" in source_text
     assert "skills.report.cli" in source_text
+    assert "report.combined.cli" in source_text
+    assert "reconcile.report.cli" in source_text
+    assert "setup.guidance.cli" in source_text
+    assert "status.report.cli" in source_text
+    assert "doctor.report.cli" in source_text
     assert "DO NOT EDIT DIRECTLY" in source_text
     assert "generated package metadata exposes expected commands" in test_text
     assert "generated runnable adapter delegates supported command to runtime process" in test_text
@@ -707,6 +742,11 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
         "proof",
         "ownership",
         "skills",
+        "report",
+        "reconcile",
+        "setup",
+        "status",
+        "doctor",
     ]
     assert commands_by_program["agentic-planning-bootstrap"] == ["status"]
     assert commands_by_program["agentic-memory-bootstrap"] == ["status"]

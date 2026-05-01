@@ -11941,16 +11941,112 @@ def _run_skills_report_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _selected_runtime_context(
+    *,
+    args: argparse.Namespace,
+    command_name: str,
+) -> tuple[Path, dict[str, ModuleDescriptor], WorkspaceConfig, list[str], str | None]:
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name=command_name, target_root=target_root)
+    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
+    selected_modules, resolved_preset = _selected_modules(
+        command_name=command_name,
+        preset_name=getattr(args, "preset", None),
+        module_arg=getattr(args, "modules", None),
+        target_root=target_root,
+        descriptors=descriptors,
+        config=config,
+    )
+    _validate_selected_module_contract(selected_modules=selected_modules, descriptors=descriptors)
+    return target_root, descriptors, config, selected_modules, resolved_preset
+
+
+def _run_report_combined_adapter(args: argparse.Namespace) -> int:
+    target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name="report")
+    if getattr(args, "startup", False):
+        _emit_startup_report(format_name=args.format, target_root=target_root, descriptors=descriptors, config=config)
+        return 0
+    if getattr(args, "section", None) in {"external_work_reconciliation", "external_work_delta"}:
+        _ensure_external_intent_cache_if_available(target_root=target_root)
+    payload = _run_report_command(
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        config=config,
+    )
+    payload = _select_report_payload(
+        payload,
+        profile=str(getattr(args, "profile", "router")),
+        section=getattr(args, "section", None),
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
+def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="reconcile", target_root=target_root)
+    from repo_planning_bootstrap.cli import _print_reconcile
+    from repo_planning_bootstrap.installer import planning_reconcile
+
+    _ensure_external_intent_cache_if_available(target_root=target_root)
+    payload = planning_reconcile(target=target_root)
+    if args.format == "json":
+        _emit_payload(payload=payload, format_name=args.format)
+    else:
+        _print_reconcile(payload)
+    return 0
+
+
+def _run_setup_guidance_adapter(args: argparse.Namespace) -> int:
+    target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name="setup")
+    _emit_setup(
+        format_name=args.format,
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        config=config,
+    )
+    return 0
+
+
+def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
+    command_name = str(args.command)
+    target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name=command_name)
+    payload = _run_lifecycle_command(
+        command_name=command_name,
+        target_root=target_root,
+        local_only_repo_root=None,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        dry_run=False,
+        non_interactive=bool(getattr(args, "non_interactive", False)),
+        config=config,
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
 _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "config.report": _run_config_report_adapter,
     "defaults.report": _run_defaults_report_adapter,
+    "doctor.report": _run_lifecycle_report_adapter,
     "implement.context": _run_implement_context_adapter,
     "modules.report": _run_modules_report_adapter,
     "ownership.report": _run_ownership_report_adapter,
     "preflight.report": _run_preflight_report_adapter,
     "proof.report": _run_proof_report_adapter,
+    "reconcile.report": _run_reconcile_report_adapter,
+    "report.combined": _run_report_combined_adapter,
+    "setup.guidance": _run_setup_guidance_adapter,
     "skills.report": _run_skills_report_adapter,
     "start.context": _run_start_context_adapter,
+    "status.report": _run_lifecycle_report_adapter,
     "summary.report": _run_summary_report_adapter,
 }
 

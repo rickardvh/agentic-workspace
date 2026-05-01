@@ -924,6 +924,540 @@ export const generatedCommandPackage = {
         "output": []
       },
       "status": "generated"
+    },
+    {
+      "adapter_id": "report.combined.cli",
+      "command": {
+        "manifest_ref": "cli_commands.json",
+        "name": "report"
+      },
+      "conformance_refs": [
+        "report.combined.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Show a compact combined workspace report for installed modules, mixed-agent posture, and next-action guidance.",
+        "name": "report",
+        "options": [
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          },
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "flags": [
+              "--preset"
+            ],
+            "help": "Named module bundle.",
+            "name": "preset"
+          },
+          {
+            "flags": [
+              "--modules"
+            ],
+            "help": "Comma-separated module selection.",
+            "name": "modules"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--non-interactive"
+            ],
+            "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+            "name": "non_interactive"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--startup"
+            ],
+            "help": "Return the high-signal orientation block for fresh agents.",
+            "name": "startup"
+          },
+          {
+            "choices": [
+              "router",
+              "full"
+            ],
+            "default": "router",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Select the compact router profile or the full combined report.",
+            "name": "profile"
+          },
+          {
+            "flags": [
+              "--section"
+            ],
+            "help": "Return one top-level full-report section in the compact contract profile.",
+            "name": "section"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "report.combined",
+        "path": "operations/report.combined.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "target root resolution",
+          "config loading",
+          "module selection",
+          "combined report assembly",
+          "profile or section selection",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "schema refs",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.report.assemble",
+          "workspace.report.select",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "reconcile.report.cli",
+      "command": {
+        "manifest_ref": "cli_commands.json",
+        "name": "reconcile"
+      },
+      "conformance_refs": [
+        "reconcile.report.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Show stale planning state against provider-agnostic external work evidence.",
+        "name": "reconcile",
+        "options": [
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          },
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Optional repository path used to reconcile planning state.",
+            "name": "target"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "reconcile.report",
+        "path": "operations/reconcile.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "target root resolution",
+          "external intent cache refresh when available",
+          "planning reconciliation loading",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "schema refs",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "planning.reconcile.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "setup.guidance.cli",
+      "command": {
+        "manifest_ref": "cli_commands.json",
+        "name": "setup"
+      },
+      "conformance_refs": [
+        "setup.guidance.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Show the bounded post-bootstrap setup guidance for a mature repository.",
+        "name": "setup",
+        "options": [
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          },
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "flags": [
+              "--preset"
+            ],
+            "help": "Named module bundle.",
+            "name": "preset"
+          },
+          {
+            "flags": [
+              "--modules"
+            ],
+            "help": "Comma-separated module selection.",
+            "name": "modules"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--non-interactive"
+            ],
+            "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+            "name": "non_interactive"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "setup.guidance",
+        "path": "operations/setup.guidance.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "target root resolution",
+          "module selection",
+          "setup guidance assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "schema refs",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.selection.resolve",
+          "workspace.report.assemble",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "status.report.cli",
+      "command": {
+        "manifest_ref": "cli_commands.json",
+        "name": "status"
+      },
+      "conformance_refs": [
+        "status.report.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Report installed modules and workspace health summary.",
+        "name": "status",
+        "options": [
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          },
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "flags": [
+              "--preset"
+            ],
+            "help": "Named module bundle.",
+            "name": "preset"
+          },
+          {
+            "flags": [
+              "--modules"
+            ],
+            "help": "Comma-separated module selection.",
+            "name": "modules"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--non-interactive"
+            ],
+            "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+            "name": "non_interactive"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "status.report",
+        "path": "operations/status.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "target root resolution",
+          "module selection",
+          "status report assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "schema refs",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.selection.resolve",
+          "workspace.report.assemble",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "doctor.report.cli",
+      "command": {
+        "manifest_ref": "cli_commands.json",
+        "name": "doctor"
+      },
+      "conformance_refs": [
+        "doctor.report.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Report drift, missing surfaces, and recommended remediation.",
+        "name": "doctor",
+        "options": [
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          },
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "flags": [
+              "--preset"
+            ],
+            "help": "Named module bundle.",
+            "name": "preset"
+          },
+          {
+            "flags": [
+              "--modules"
+            ],
+            "help": "Comma-separated module selection.",
+            "name": "modules"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--non-interactive"
+            ],
+            "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+            "name": "non_interactive"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "doctor.report",
+        "path": "operations/doctor.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "target root resolution",
+          "module selection",
+          "doctor report assembly",
+          "repair guidance assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "schema refs",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.selection.resolve",
+          "workspace.report.assemble",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
     }
   ],
   "id": "root-workspace",

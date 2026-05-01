@@ -149,6 +149,48 @@ def _selected_skills_fields(stdout: str) -> dict[str, object]:
     }
 
 
+def _selected_report_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    return {
+        "kind": payload.get("kind"),
+        "command": payload.get("command"),
+    }
+
+
+def _selected_reconcile_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    return {
+        "kind": payload.get("kind"),
+        "status": payload.get("status"),
+    }
+
+
+def _selected_setup_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    return {
+        "kind": payload.get("kind"),
+        "command": payload.get("command"),
+    }
+
+
+def _selected_lifecycle_report_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    return {
+        "command": payload.get("command"),
+        "health": payload.get("health"),
+    }
+
+
+def _selected_doctor_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    repair_plan = payload.get("repair_plan", {}) if isinstance(payload.get("repair_plan"), dict) else {}
+    return {
+        "command": payload.get("command"),
+        "health": payload.get("health"),
+        "repair_plan_kind": repair_plan.get("kind"),
+    }
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -657,6 +699,52 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
             selected_fields=_selected_skills_fields,
             expected_fields={
                 "task": "proof",
+            },
+        )
+        compare_adapter(
+            label="report",
+            success_args=["report", "--target", ".", "--profile", "router", "--format", "json"],
+            selected_fields=_selected_report_fields,
+            expected_fields={
+                "kind": "workspace-report-router/v1",
+                "command": "report",
+            },
+        )
+        compare_adapter(
+            label="reconcile",
+            success_args=["reconcile", "--target", ".", "--format", "json"],
+            selected_fields=_selected_reconcile_fields,
+            expected_fields={
+                "kind": "planning-reconcile/v1",
+                "status": "clean",
+            },
+        )
+        compare_adapter(
+            label="setup",
+            success_args=["setup", "--target", ".", "--modules", "planning", "--format", "json"],
+            selected_fields=_selected_setup_fields,
+            expected_fields={
+                "kind": "workspace-setup/v1",
+                "command": "setup",
+            },
+        )
+        compare_adapter(
+            label="status",
+            success_args=["status", "--target", ".", "--modules", "planning", "--format", "json"],
+            selected_fields=_selected_lifecycle_report_fields,
+            expected_fields={
+                "command": "status",
+                "health": "attention-needed",
+            },
+        )
+        compare_adapter(
+            label="doctor",
+            success_args=["doctor", "--target", ".", "--modules", "planning", "--format", "json"],
+            selected_fields=_selected_doctor_fields,
+            expected_fields={
+                "command": "doctor",
+                "health": "attention-needed",
+                "repair_plan_kind": "workspace-repair-plan/v1",
             },
         )
 

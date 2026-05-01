@@ -14,8 +14,8 @@
 ## Run Summary
 
 - Requested outcome: Finish the single-source generated executable adapter migration foundation, implement child issues through progressive maturity, commit, push, and create a PR.
-- What landed: Runtime-backed generated Python parser/dispatch for root `defaults`, `config`, `modules`, `start`, `summary`, `implement`, `preflight`, `proof`, `ownership`, and `skills`, Planning `status`, and Memory `status`; generated IR/schema support for parser `interface`; static checks that require generated Python routing before handwritten parsers; review documentation for the progressive maturity matrix.
-- What did not land: Mutation-capable lifecycle adapters, package-local breadth beyond `status`, and the remaining root diagnostic/reporting commands. Those remain intentionally below higher maturity because #642, #643, and #644 require additional conformance before promotion.
+- What landed: Runtime-backed generated Python parser/dispatch for root read-only/context/diagnostic commands (`defaults`, `config`, `modules`, `start`, `summary`, `implement`, `preflight`, `proof`, `ownership`, `skills`, `report`, `reconcile`, `setup`, `status`, and `doctor`), Planning `status`, and Memory `status`; generated IR/schema support for parser `interface`; static checks that require generated Python routing before handwritten parsers; review documentation for the progressive maturity matrix.
+- What did not land: Mutation-capable lifecycle adapters and package-local breadth beyond `status`. Those remain intentionally below higher maturity because #642 and #644 require additional conformance before promotion.
 - Closure decision: `routed follow-up`
 - Residue destination: `planning, issue, docs`
 
