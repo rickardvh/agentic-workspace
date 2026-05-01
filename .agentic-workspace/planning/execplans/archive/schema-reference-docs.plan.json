@@ -1,0 +1,184 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Schema Reference Docs",
+  "goal": [
+    "Implement GitHub issues #631 and #633 from checked-in planning rather than executing directly from the tracker.",
+    "Generate deterministic Markdown reference documentation from annotated JSON Schemas, starting with workspace_config.schema.json.",
+    "Add a lightweight annotation coverage check that starts with workspace_config.schema.json and can expand to other schemas later."
+  ],
+  "non_goals": [
+    "Do not build a full documentation site.",
+    "Do not annotate every schema in this slice.",
+    "Do not make generated docs authoritative over the JSON Schemas."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "A generated workspace config schema reference plus coverage guardrails for generator-useful annotations.",
+      "constraints": "Keep docs generated from schema annotations; keep rollout incremental beyond workspace_config.schema.json.",
+      "latitude": "Choose docs/reference or docs/generated, script shape, check wiring, and focused tests.",
+      "escalation": "Escalate if implementing #631 or #633 requires broad schema rewrites or a documentation site."
+    },
+    "execution": {
+      "milestone": "schema-reference-docs",
+      "status": "completed",
+      "next_step": "Close #631 and #633 after commit and push.",
+      "proof": "Schema reference tests, generator freshness/annotation check, contract tooling, structured inventory, strict planning surfaces, maintainer surfaces, full workspace tests/lint, and make check passed."
+    },
+    "scope": {
+      "touched": [
+        "scripts/",
+        "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+        "docs/reference/",
+        "docs/generated/",
+        ".agentic-workspace/docs/workspace-config-contract.md",
+        "Makefile",
+        "tests/",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/schema-reference-docs.plan.json"
+      ],
+      "invariants": [
+        "Generated reference docs derive from schema annotations.",
+        "Coverage enforcement starts with workspace_config.schema.json and remains expandable."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "All public, package, adapter, and maintainer-facing JSON Schemas eventually carry enough annotations for useful generated reference documentation.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "GitHub issues #631 and #633 until closed; follow-up work should be captured in issues or state.toml."
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "GitHub issues or .agentic-workspace/planning/state.toml",
+    "activation trigger": "Additional schemas become annotated enough to add to generated reference docs."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "First generated schema reference page and a coverage pattern.",
+    "intentionally deferred": "Rendering every schema and building a docs site.",
+    "discovered implications": "The generator can use one schema=output target shape and an incremental annotation policy without forcing all schemas into the first enforcement set.",
+    "proof achieved now": "passed",
+    "validation still needed": "none for #631/#633.",
+    "next likely slice": "Add additional annotated schemas to the generated reference set."
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest and implement both docs issues.",
+    "inferred intended outcome": "Move #631 and #633 into checked-in planning, then ship both together.",
+    "chosen concrete what": "One checked-in execplan for generator plus annotation coverage check.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm generated docs stay reference-shaped and do not duplicate narrative docs."
+  },
+  "execution_bounds": {
+    "allowed paths": "Generator/check scripts, Makefile, tests, docs/reference or docs/generated, workspace config contract doc link, schema reference inputs, and this planning state.",
+    "max changed files": "Keep changes to the generator/check/docs/test surface needed for #631 and #633.",
+    "required validation commands": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; selected tests; make maintainer-surfaces; make check",
+    "ask-before-refactor threshold": "Ask before restructuring docs generation or annotation conventions across all schemas.",
+    "stop before touching": "Unrelated README/startup drift unless the selected checks require it."
+  },
+  "stop_conditions": {
+    "stop when": "The implementation needs broad schema annotation beyond workspace_config.schema.json.",
+    "escalate when boundary reached": "A useful generator cannot be built without a larger docs framework.",
+    "escalate on scope drift": "Files outside docs generation/checking become necessary.",
+    "escalate on proof failure": "Selected proof failures point to unrelated drift."
+  },
+  "context_budget": {
+    "live working set": "This execplan, #631, #633, workspace_config.schema.json, docs generation/check patterns, and focused tests.",
+    "recoverable later": "Historical schema/docs backlog.",
+    "externalize before shift": "Update this execplan and state.toml before pausing.",
+    "pre-work config pull": "summary/config/proof outputs.",
+    "pre-work memory pull": "Only if narrow routing points to a relevant memory note.",
+    "tiny resumability note": "Implement generated schema reference docs and annotation coverage checks.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement both docs issues.",
+    "hard constraints": "Do not skip ingestion; keep generated docs derived from schema annotations.",
+    "agent may decide locally": "Docs home, script names, check shape, and tests.",
+    "escalate when": "The issues conflict or require redesigning the docs stack."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/631",
+      "label": "#631 [Docs]: Generate lightweight Markdown reference docs from JSON Schemas",
+      "role": "intake-source"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/633",
+      "label": "#633 [Docs]: Add schema annotation coverage checks for generated references",
+      "role": "intake-source"
+    }
+  ],
+  "active_milestone": {
+    "id": "schema-reference-docs",
+    "status": "completed",
+    "scope": "Generated workspace config schema reference and annotation coverage check.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect docs generation and check patterns, then implement generator/check/tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/schema-reference-docs.plan.json"
+  ],
+  "invariants": [
+    "JSON Schema remains the source of truth for generated field references.",
+    "The coverage check must allow incremental rollout."
+  ],
+  "contract_decisions_to_freeze": [
+    "Initial generated docs home and check interface."
+  ],
+  "open_questions_to_close": [
+    "Use docs/reference or docs/generated for the initial generated page.",
+    "Where to wire regeneration and coverage checks."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "make maintainer-surfaces",
+    "make check"
+  ],
+  "required_tools": [
+    "python",
+    "pytest",
+    "ruff",
+    "make"
+  ],
+  "completion_criteria": [
+    "A generated Markdown reference for workspace_config.schema.json exists under the chosen docs home.",
+    "The generator can accept schema paths so future schemas can be added without redesign.",
+    "A deterministic check verifies generated docs freshness and annotation coverage for workspace_config.schema.json.",
+    "Docs or contract links point readers to the generated reference where useful.",
+    "Issues #631 and #633 are closed after validation and push."
+  ],
+  "execution_run": {
+    "status": "completed",
+    "last_updated": "2026-05-01",
+    "notes": "Implemented generated workspace config schema reference docs and annotation coverage checks."
+  },
+  "proof_report": {
+    "status": "passed",
+    "commands": [
+      "uv run pytest tests/test_schema_reference_docs.py -q",
+      "uv run python scripts/generate/generate_schema_reference.py --check --check-annotations",
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+      "uv run python scripts/check/check_planning_surfaces.py --strict",
+      "uv run pytest tests -q",
+      "uv run ruff check src tests",
+      "uv run ruff check scripts/generate/generate_schema_reference.py",
+      "make maintainer-surfaces",
+      "make check"
+    ]
+  },
+  "finished_run_review": {
+    "status": "completed",
+    "summary": "Issues #631 and #633 landed as one bounded docs slice. The generated reference is derived from schema annotations, and coverage/freshness checks are wired into maintainer surfaces."
+  }
+}

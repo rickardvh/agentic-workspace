@@ -74,6 +74,8 @@ Agentic Workspace preserves bounded repo-native operating state. It does not rep
 
 Advanced diagnostics, source-checkout maintainer workflows, local integration helpers, and adapter-generation infrastructure are documented separately and are not ordinary host-repo workflow. For documentation roles, freshness, and maturity signals, see [`docs/documentation-status.md`](docs/documentation-status.md) and [`docs/maturity-model.md`](docs/maturity-model.md).
 
+For agent maintainers, the primary operating path is `AGENTS.md`, the active execplan when one is surfaced by compact startup output, and `docs/contributor-playbook.md`.
+
 ## Learn More
 
 - Choosing an install shape: [`docs/which-package.md`](docs/which-package.md)

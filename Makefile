@@ -13,7 +13,7 @@ COMPACT_RUN = uv run python scripts/check/run_compact_command.py
 	format format-workspace format-memory format-planning \
 	format-check format-check-workspace format-check-memory format-check-planning \
 	verify verify-workspace verify-memory verify-planning \
-	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict structured-file-inventory agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-external-agent-handoff absolute-paths \
+	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict structured-file-inventory agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-external-agent-handoff render-schema-reference schema-reference-docs absolute-paths \
 	check check-memory check-planning check-all
 
 help:
@@ -41,6 +41,7 @@ help:
 	@echo "  maintainer-surfaces  Run maintainer-surface freshness and liveness checks."
 	@echo "  render-agent-docs    Regenerate root planning docs from the managed manifest."
 	@echo "  render-external-agent-handoff  Regenerate the root llms.txt adapter."
+	@echo "  render-schema-reference  Regenerate generated JSON Schema reference docs."
 	@echo "  absolute-paths       Fail if tracked files contain absolute filesystem paths."
 	@echo "  check                Run the full root validation lane."
 	@echo "  check-memory         Run package-local checks for packages/memory."
@@ -160,10 +161,10 @@ source-payload-operational-install:
 source-payload-operational-install-strict:
 	@$(COMPACT_RUN) --label "source-payload boundary strict" -- uv run python scripts/check/check_source_payload_operational_install.py --strict
 
-maintainer-surfaces: render-agent-docs render-external-agent-handoff planning-surfaces source-payload-operational-install verify-memory verify-planning
+maintainer-surfaces: render-agent-docs render-external-agent-handoff schema-reference-docs planning-surfaces source-payload-operational-install verify-memory verify-planning
 	@$(COMPACT_RUN) --label "maintainer surfaces" -- uv run python scripts/check/check_maintainer_surfaces.py
 
-maintainer-surfaces-strict: render-agent-docs render-external-agent-handoff planning-surfaces-strict source-payload-operational-install-strict verify-memory verify-planning
+maintainer-surfaces-strict: render-agent-docs render-external-agent-handoff schema-reference-docs planning-surfaces-strict source-payload-operational-install-strict verify-memory verify-planning
 	@$(COMPACT_RUN) --label "maintainer surfaces strict" -- uv run python scripts/check/check_maintainer_surfaces.py --strict
 
 render-agent-docs:
@@ -171,6 +172,12 @@ render-agent-docs:
 
 render-external-agent-handoff:
 	@$(COMPACT_RUN) --label "render llms" -- uv run python scripts/render_external_agent_handoff.py
+
+render-schema-reference:
+	@$(COMPACT_RUN) --label "render schema reference" -- uv run python scripts/generate/generate_schema_reference.py
+
+schema-reference-docs:
+	@$(COMPACT_RUN) --label "schema reference docs" -- uv run python scripts/generate/generate_schema_reference.py --check --check-annotations
 
 absolute-paths:
 	@$(COMPACT_RUN) --label "absolute paths" -- uv run python scripts/check/check_no_absolute_paths.py

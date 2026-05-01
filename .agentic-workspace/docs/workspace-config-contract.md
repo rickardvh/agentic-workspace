@@ -28,6 +28,9 @@ Treat Agentic Workspace as a repo-owned agent configuration system with four con
 The workspace layer owns the substrate and composition logic.
 Planning and Memory remain behavior modules inside that substrate rather than ambient prose branches.
 
+For field-level shape, defaults, examples, and schema annotations, use the generated reference at `../../docs/reference/workspace-config.md`.
+This contract explains authority and usage; the generated reference is derived from `src/agentic_workspace/contracts/schemas/workspace_config.schema.json`.
+
 ## Authority Map
 
 - **Repo-owned workspace policy** lives in `.agentic-workspace/config.toml`.
