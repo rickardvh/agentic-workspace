@@ -165,6 +165,20 @@ Do not optimize for single-run cheapness if it raises total cost across planning
 
 Do not save model tokens by creating human bureaucracy.
 
+### 22. Documentation should form an abstraction ladder
+
+Each page should be complete at its own level, expose a narrow interface, link deeper instead of copying internals, and have one clear owner.
+
+Treat documentation like a small object model:
+
+- one doc, one primary job
+- public entrypoints describe what adopters need before maintainer internals
+- higher-level pages hide lower-level detail until a reader chooses to follow it
+- links compose docs; copied truth creates drift
+- role, owner, and refresh expectations belong in the documentation-status index
+
+The README, `docs/index.md`, package docs, generated reference docs, maintainer docs, and historical reviews should remain distinct rungs. A reader should not need maintainer workflow docs to understand the shipped package, and a maintainer should be able to tell when a page leaks detail from the wrong rung.
+
 ## Design Tests
 
 A change is moving in the right direction when it helps answer yes to questions like:
@@ -181,6 +195,7 @@ A change is moving in the right direction when it helps answer yes to questions 
 - Does it replace, merge, demote, or remove an older surface rather than merely adding another one?
 - If it is a compatibility layer, does it name the consumer, transition reason, and likely removal path?
 - If it is a routing surface, is it clearly just routing rather than a second source of changing truth?
+- If it is documentation, does the page have one primary audience, one authority role, and links to deeper detail instead of copying it?
 
 A change is suspicious when it tends to:
 
@@ -194,6 +209,7 @@ A change is suspicious when it tends to:
 - preserve both an old and new model without a named beneficiary
 - leave behind generated helper artefacts because removal feels riskier than commitment
 - turn temporary compatibility into a durable product layer
+- mix adopter, maintainer, reference, and historical evidence in one page without a clear owner
 
 ## Tactical Policy Lives Elsewhere
 
@@ -212,6 +228,7 @@ Agentic Workspace should make repositories quietly well-run for agents and human
 - one owner per concern
 - explicit seams
 - selective adoption
+- documentation as an abstraction ladder
 - quiet leverage over visible ceremony
 - direct convergence over compatibility sprawl
 - static routing help only when it clearly earns its keep
