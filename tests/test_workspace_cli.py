@@ -7111,6 +7111,249 @@ candidates = []
     assert any(action.kind == "would move" for action in low_result.actions)
 
 
+def test_summary_uses_machine_next_step_and_warns_on_duplicate_drift(tmp_path: Path) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+work_items = [
+  { id = "drifted", title = "Drifted", maturity = "active", status = "active", path = ".agentic-workspace/planning/execplans/drifted.plan.json", durable_residue = "pending", residue_owner = "this-execplan", residue_promotion_trigger = "closeout" },
+]
+
+[active]
+execplans = [
+  ".agentic-workspace/planning/execplans/drifted.plan.json",
+]
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record = planning_installer._build_execplan_record_from_todo_item(
+        title="Drifted",
+        item_id="drifted",
+        status="active",
+        why_now="prove next action drift.",
+        next_action="legacy markdown-like next action.",
+        done_when="summary uses the machine next step.",
+    )
+    record["machine_readable_contract"] = {
+        "execution": {
+            "next_step": "canonical machine next action.",
+        }
+    }
+    planning_installer._write_execplan_record(
+        record_path=tmp_path / ".agentic-workspace" / "planning" / "execplans" / "drifted.plan.json",
+        record=record,
+    )
+
+    summary = planning_installer.planning_summary(target=tmp_path, profile="compact")
+
+    assert summary["planning_record"]["next_action"] == "canonical machine next action."
+    assert summary["resumable_contract"]["current_next_action_source"] == "machine_readable_contract.execution.next_step"
+    assert any(
+        warning["warning_class"] == "execplan_next_action_projection_drift" for warning in summary["planning_surface_health"]["warnings"]
+    )
+
+
+def test_archive_plan_reports_exact_required_traceability_ref_paths(tmp_path: Path) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    record = planning_installer._build_execplan_record_from_todo_item(
+        title="Missing Traceability",
+        item_id="missing-traceability",
+        status="completed",
+        why_now="prove closeout field paths.",
+        next_action="archive after proof.",
+        done_when="archive warning is actionable.",
+    )
+    record.update(
+        {
+            "delegated_judgment": {
+                "requested outcome": "prove strict closeout paths",
+                "hard constraints": "synthetic only",
+                "agent may decide locally": "fixture shape",
+                "escalate when": "paths are ambiguous",
+            },
+            "execution_summary": {
+                "outcome delivered": "Synthetic strict closeout path proved.",
+                "validation confirmed": "pytest",
+                "follow-on routed to": "none",
+                "post-work posterity capture": "test",
+                "resume from": "none",
+            },
+            "proof_report": {
+                "validation proof": "pytest",
+                "proof achieved now": "yes",
+                'evidence for "proof achieved" state': "test",
+            },
+            "intent_satisfaction": {
+                "original intent": "prove strict closeout paths",
+                "was original intent fully satisfied?": "yes",
+                "evidence of intent satisfaction": "test",
+                "unsolved intent passed to": "none",
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "synthetic proof exists",
+                "evidence carried forward": "test",
+                "reopen trigger": "warning loses field paths",
+            },
+            "adaptive_assurance": {
+                "strict_closeout": True,
+                "required_refs": ["security_refs"],
+            },
+            "traceability_refs": {
+                "requirement_refs": ["#1"],
+            },
+            "durable_residue": {
+                "status": "none",
+                "learned constraint": "No reusable product constraint in this synthetic fixture.",
+                "motivation worth preserving": "Only the archive-size guardrail behavior matters.",
+                "canonical owner now": "none",
+                "promotion trigger": "none",
+                "retention after promotion": "retain",
+            },
+        }
+    )
+    planning_installer._write_execplan_record(
+        record_path=tmp_path / ".agentic-workspace" / "planning" / "execplans" / "missing-traceability.plan.json",
+        record=record,
+    )
+
+    result = planning_installer.archive_execplan("missing-traceability", target=tmp_path, dry_run=True)
+
+    warning = next(warning for warning in result.warnings if warning["warning_class"] == "archive_adaptive_assurance_blocked")
+    assert "traceability_refs.security_refs" in warning["message"]
+    assert "adaptive_assurance.required_refs names traceability_refs field names" in warning["message"]
+
+
+def test_archive_plan_blocks_oversized_archive_before_write(tmp_path: Path) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    _write(
+        tmp_path / "src" / "agentic_workspace" / "contracts" / "structured_file_inventory.json",
+        """
+{
+  "entries": [
+    {
+      "pattern": ".agentic-workspace/planning/execplans/archive/*.plan.json",
+      "guardrails": {
+        "max_bytes": 300
+      }
+    }
+  ]
+}
+""",
+    )
+    record = planning_installer._build_execplan_record_from_todo_item(
+        title="Too Large",
+        item_id="too-large",
+        status="completed",
+        why_now="prove archive guardrail.",
+        next_action="archive after distillation.",
+        done_when="archive refuses oversized records.",
+    )
+    record.update(
+        {
+            "goal": ["x" * 600],
+            "delegated_judgment": {
+                "requested outcome": "prove archive size guardrail",
+                "hard constraints": "synthetic only",
+                "agent may decide locally": "fixture shape",
+                "escalate when": "archive writes too early",
+            },
+            "execution_summary": {
+                "outcome delivered": "Synthetic archive size guardrail proved.",
+                "validation confirmed": "pytest",
+                "follow-on routed to": "none",
+                "post-work posterity capture": "test",
+                "resume from": "none",
+            },
+            "proof_report": {
+                "validation proof": "pytest",
+                "proof achieved now": "yes",
+                'evidence for "proof achieved" state': "test",
+            },
+            "intent_satisfaction": {
+                "original intent": "prove archive size guardrail",
+                "was original intent fully satisfied?": "yes",
+                "evidence of intent satisfaction": "test",
+                "unsolved intent passed to": "none",
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "synthetic proof exists",
+                "evidence carried forward": "test",
+                "reopen trigger": "archive writes oversized record",
+            },
+            "durable_residue": {
+                "status": "none",
+                "learned constraint": "No reusable product constraint in this synthetic fixture.",
+                "motivation worth preserving": "Only the archive-size guardrail behavior matters.",
+                "canonical owner now": "none",
+                "promotion trigger": "none",
+                "retention after promotion": "retain",
+            },
+        }
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "too-large.plan.json"
+    planning_installer._write_execplan_record(record_path=record_path, record=record)
+
+    result = planning_installer.archive_execplan("too-large", target=tmp_path, dry_run=True)
+
+    assert record_path.exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "too-large.plan.json").exists()
+    warning = next(warning for warning in result.warnings if warning["warning_class"] == "archive_size_guardrail_blocked")
+    assert "max_bytes=300" in warning["message"]
+    assert any(action.kind == "manual review" for action in result.actions)
+
+
+def test_summary_surfaces_broad_work_planning_guard_for_narrow_direct_state(tmp_path: Path) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+work_items = []
+
+[active]
+execplans = []
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    summary = planning_installer.planning_summary(target=tmp_path, profile="compact")
+
+    guard = summary["execution_readiness"]["broad_work_planning_guard"]
+    assert guard["status"] == "available-if-work-widens"
+    assert "high-assurance" in guard["applies_to"]
+    assert summary["execution_readiness"]["direct_work_allowed"] is True
+
+
 def test_proof_changed_selector_routes_generated_command_packages(capsys) -> None:
     assert (
         cli.main(

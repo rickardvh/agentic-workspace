@@ -1511,10 +1511,10 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
     active_execplans: list[dict[str, str]] = []
     completed_execplans: list[dict[str, Any]] = []
     archived_execplans = 0
+    plan_files: list[Path] = []
     if execplan_dir.exists():
         # Collect unique execplan stems, preferring .plan.json over .md
         seen_stems: set[str] = set()
-        plan_files: list[Path] = []
         for path in sorted(execplan_dir.glob("*.plan.json")):
             stem = path.name[: -len(".plan.json")]
             seen_stems.add(stem)
@@ -1548,6 +1548,7 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
     warnings = _run_planning_checker(target_root)
     warnings.extend(_planning_state_v1_warnings(target_root=target_root, state=state))
     warnings.extend(_completed_execplan_warnings(completed_execplans))
+    warnings.extend(_execplan_next_action_warnings(target_root=target_root, plan_files=plan_files))
     drift = _detect_payload_drift(target_root)
     warnings.extend(drift)
     planning_surface_health = _planning_surface_health(warnings)
@@ -2131,6 +2132,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             ],
             "resumable_contract": [
                 "current_next_action",
+                "current_next_action_source",
                 "active_milestone",
                 "completion_criteria",
                 "proof_expectations",
@@ -2344,6 +2346,12 @@ def _execution_readiness_payload(
                     and external_state.get("untracked_open_count") == 0
                 )
     historical_only_candidates = bool(derived_candidates) and external_work_quiet and not roadmap_lanes and not roadmap_candidates
+    broad_work_planning_guard = {
+        "applies_to": "broad, high-assurance, multi-surface, or hard-to-reconstruct package work",
+        "required_before_implementation": "Create or continue one checked-in execplan before code edits.",
+        "direct_work_exception": "Narrow direct tasks may proceed without an execplan until they widen into sequencing, proof, or handoff risk.",
+        "promotion_command": "agentic-planning-bootstrap promote-to-plan <item-id> --target . --format json",
+    }
     if active_execplans:
         return {
             "status": "planning-backed",
@@ -2356,6 +2364,7 @@ def _execution_readiness_payload(
                 "summary": "Use the active planning record as the execution authority for broad work.",
                 "next_step": "Continue from planning_record, resumable_contract, or handoff_contract before implementation.",
             },
+            "broad_work_planning_guard": {**broad_work_planning_guard, "status": "satisfied"},
             "rule": "Broad planned work should execute from the active checked-in planning record.",
         }
     if active_items:
@@ -2373,6 +2382,7 @@ def _execution_readiness_payload(
                     "when the active item needs milestone sequencing, proof scope, or handoff continuity."
                 ),
             },
+            "broad_work_planning_guard": {**broad_work_planning_guard, "status": "required-for-broad-work"},
             "rule": "A TODO row can own narrow direct work, but broad planned work needs an active execplan.",
         }
     if derived_candidates and not historical_only_candidates:
@@ -2392,6 +2402,7 @@ def _execution_readiness_payload(
                     "then evaluate intent again after implementation."
                 ),
             },
+            "broad_work_planning_guard": {**broad_work_planning_guard, "status": "required-for-broad-work"},
             "rule": (
                 "Unsatisfied or reopened larger intent is execution pressure even when no external tracker item exists; "
                 "autopilot should plan, implement, and re-evaluate until intent is satisfied or explicitly routed."
@@ -2412,6 +2423,7 @@ def _execution_readiness_payload(
                     "for the selected lane, then continue from the compact planning contract."
                 ),
             },
+            "broad_work_planning_guard": {**broad_work_planning_guard, "status": "required-for-broad-work"},
             "rule": "Roadmap candidates are not execution authority; broad planned work must be promoted before implementation.",
         }
     return {
@@ -2425,6 +2437,7 @@ def _execution_readiness_payload(
             "summary": "No active planning-backed slice is present; narrow direct work may proceed.",
             "next_step": "Promote to planning only if the work widens into milestone sequencing, proof scope, or handoff continuity.",
         },
+        "broad_work_planning_guard": {**broad_work_planning_guard, "status": "available-if-work-widens"},
         "rule": (
             "Direct execution is acceptable for narrow work; broad planned work needs checked-in planning first. "
             "When current external and roadmap work are quiet, historical archive-derived candidates remain audit evidence rather than current execution pressure."
@@ -2646,6 +2659,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "direct_work_allowed": bool(execution_readiness.get("direct_work_allowed", True)),
             "derived_follow_up_candidate_count": execution_readiness.get("derived_follow_up_candidate_count", 0),
             "recommendation": execution_readiness.get("recommendation", {}),
+            "broad_work_planning_guard": execution_readiness.get("broad_work_planning_guard", {}),
             "rule": execution_readiness.get("rule", ""),
         },
         "autopilot_loop": dict(summary.get("autopilot_loop", {})),
@@ -2709,6 +2723,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             dict(summary.get("resumable_contract", {})),
             fields=(
                 "current_next_action",
+                "current_next_action_source",
                 "active_milestone",
                 "completion_criteria",
                 "proof_expectations",
@@ -5467,7 +5482,8 @@ def _active_resumable_contract(
         }
 
     milestone = _execplan_active_milestone(plan_path)
-    current_next_action = _extract_section_bullets(plan_path, "Immediate Next Action")
+    next_action_projection = _execplan_next_action_projection(plan_path)
+    current_next_action = next_action_projection["next_action"]
     completion_criteria = _extract_section_bullets(plan_path, "Completion Criteria")
     blockers = [item for item in _extract_section_bullets(plan_path, "Blockers") if item.lower() != "none."]
     if not current_next_action or not completion_criteria:
@@ -5478,7 +5494,8 @@ def _active_resumable_contract(
 
     return {
         "status": "present",
-        "current_next_action": current_next_action[0],
+        "current_next_action": current_next_action,
+        "current_next_action_source": next_action_projection["source"],
         "active_milestone": {
             "id": milestone.get("id", "").strip(),
             "status": milestone.get("status", "").strip(),
@@ -7882,6 +7899,22 @@ def archive_execplan(
         )
         result.add("suggested fix", legacy_roadmap_path, note)
 
+    archive_size_warning = _archive_size_guardrail_warning(
+        target_root=target_root,
+        destination_record=destination_record,
+        record_path=record_path,
+        plan_path=plan_path,
+        has_record=has_record,
+    )
+    if archive_size_warning is not None:
+        result.warnings.append(archive_size_warning)
+        result.add(
+            "manual review",
+            destination_record,
+            "archive record would exceed the structured-file inventory max_bytes guardrail before write",
+        )
+        return result
+
     if dry_run:
         if has_record:
             result.add("would move", destination_record, f"archive {record_path.relative_to(target_root).as_posix()}")
@@ -7914,6 +7947,54 @@ def archive_execplan(
     return result
 
 
+def _archive_size_guardrail_warning(
+    *,
+    target_root: Path,
+    destination_record: Path,
+    record_path: Path,
+    plan_path: Path,
+    has_record: bool,
+) -> dict[str, str] | None:
+    max_bytes = _structured_file_inventory_max_bytes(target_root, ".agentic-workspace/planning/execplans/archive/*.plan.json")
+    if max_bytes is None:
+        return None
+    if has_record:
+        projected_bytes = record_path.stat().st_size if record_path.exists() else 0
+    else:
+        record = _build_execplan_record_from_markdown(plan_path)
+        projected_bytes = len((json.dumps(record, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
+    if projected_bytes <= max_bytes:
+        return None
+    return {
+        "warning_class": "archive_size_guardrail_blocked",
+        "path": destination_record.relative_to(target_root).as_posix(),
+        "message": (
+            f"Archive would write {projected_bytes} bytes, exceeding structured-file inventory max_bytes={max_bytes} "
+            "for .agentic-workspace/planning/execplans/archive/*.plan.json; distill or shrink the execplan before archiving."
+        ),
+    }
+
+
+def _structured_file_inventory_max_bytes(target_root: Path, pattern: str) -> int | None:
+    inventory_path = target_root / "src" / "agentic_workspace" / "contracts" / "structured_file_inventory.json"
+    if not inventory_path.exists():
+        return None
+    try:
+        inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    entries = inventory.get("entries", [])
+    if not isinstance(entries, list):
+        return None
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("pattern") != pattern:
+            continue
+        guardrails = entry.get("guardrails", {})
+        if isinstance(guardrails, dict) and isinstance(guardrails.get("max_bytes"), int):
+            return int(guardrails["max_bytes"])
+    return None
+
+
 def _adaptive_assurance_closeout_warning(*, plan_path: Path, target_root: Path) -> dict[str, str] | None:
     adaptive_assurance = _execplan_raw_dict(plan_path, "adaptive_assurance")
     if not bool(adaptive_assurance.get("strict_closeout", False)):
@@ -7921,7 +8002,7 @@ def _adaptive_assurance_closeout_warning(*, plan_path: Path, target_root: Path) 
     traceability_refs = _execplan_raw_dict(plan_path, "traceability_refs")
     required_refs = [str(item).strip() for item in adaptive_assurance.get("required_refs", []) if str(item).strip()]
     missing_required_refs = [
-        ref_field
+        f"traceability_refs.{ref_field}"
         for ref_field in required_refs
         if not isinstance(traceability_refs.get(ref_field), list) or not traceability_refs.get(ref_field)
     ]
@@ -7946,7 +8027,10 @@ def _adaptive_assurance_closeout_warning(*, plan_path: Path, target_root: Path) 
         return None
     details = []
     if missing_required_refs:
-        details.append(f"missing required refs: {', '.join(missing_required_refs)}")
+        details.append(
+            f"missing required traceability ref fields: {', '.join(missing_required_refs)} "
+            "(adaptive_assurance.required_refs names traceability_refs field names, not literal issue ids or document refs)"
+        )
     if pending_blocking_gates:
         details.append(f"pending blocking gates: {', '.join(pending_blocking_gates)}")
     if unresolved_blockers:
@@ -7954,7 +8038,11 @@ def _adaptive_assurance_closeout_warning(*, plan_path: Path, target_root: Path) 
     return {
         "warning_class": "archive_adaptive_assurance_blocked",
         "path": plan_path.relative_to(target_root).as_posix(),
-        "message": "Strict adaptive-assurance closeout is blocked; " + "; ".join(details) + ".",
+        "message": (
+            "Strict adaptive-assurance closeout is blocked; "
+            + "; ".join(details)
+            + ". Rerun after updating those fields, or use `archive-plan --prepare-closeout` first if closeout fields still need normalization."
+        ),
     }
 
 
@@ -8247,6 +8335,10 @@ def _warning_remediation(warning_class: str) -> str | None:
             "compare the plan with .agentic-workspace/planning/execplans/README.md and .agentic-workspace/docs/execution-flow-contract.md."
         ),
         "execplan_immediate_next_action_drift": "Reduce Immediate Next Action to one concrete next step.",
+        "execplan_next_action_projection_drift": (
+            "Update machine_readable_contract.execution.next_step, or make immediate_next_action[0] match it; "
+            "compact summary uses the machine-readable next_step when both are present."
+        ),
         "execplan_readiness_drift": "Set Ready/Blocked explicitly so the active milestone can be resumed without re-deriving state.",
         "execplan_log_drift": "Compress the drift log into short decision notes or archive the completed plan.",
         "execplan_notebook_drift": "Strip status-journal residue out of the plan and keep only the current execution contract.",
@@ -8436,6 +8528,62 @@ def _extract_section_bullets(path: Path, heading: str) -> list[str]:
         if match:
             values.append(match.group(1).strip())
     return values
+
+
+def _execplan_next_action_projection(plan_path: Path) -> dict[str, str]:
+    record = _load_execplan_record(plan_path)
+    if isinstance(record, dict):
+        machine_contract = record.get("machine_readable_contract", {})
+        if isinstance(machine_contract, dict):
+            execution = machine_contract.get("execution", {})
+            if isinstance(execution, dict):
+                next_step = str(execution.get("next_step", "")).strip()
+                if next_step:
+                    return {
+                        "next_action": next_step,
+                        "source": "machine_readable_contract.execution.next_step",
+                    }
+        immediate = record.get("immediate_next_action", [])
+        if isinstance(immediate, list):
+            for item in immediate:
+                next_action = str(item).strip()
+                if next_action:
+                    return {
+                        "next_action": next_action,
+                        "source": "immediate_next_action[0]",
+                    }
+    immediate = _extract_section_bullets(plan_path, "Immediate Next Action")
+    if immediate:
+        return {
+            "next_action": immediate[0],
+            "source": "Immediate Next Action[0]",
+        }
+    return {"next_action": "", "source": ""}
+
+
+def _execplan_next_action_warnings(*, target_root: Path, plan_files: list[Path]) -> list[dict[str, str]]:
+    warnings: list[dict[str, str]] = []
+    for plan_path in plan_files:
+        record = _load_execplan_record(plan_path)
+        if not isinstance(record, dict):
+            continue
+        machine_contract = record.get("machine_readable_contract", {})
+        execution = machine_contract.get("execution", {}) if isinstance(machine_contract, dict) else {}
+        machine_next = str(execution.get("next_step", "")).strip() if isinstance(execution, dict) else ""
+        raw_immediate = record.get("immediate_next_action", [])
+        immediate = [str(item).strip() for item in raw_immediate if str(item).strip()] if isinstance(raw_immediate, list) else []
+        if machine_next and immediate and machine_next != immediate[0]:
+            warnings.append(
+                {
+                    "warning_class": "execplan_next_action_projection_drift",
+                    "path": plan_path.relative_to(target_root).as_posix(),
+                    "message": (
+                        "machine_readable_contract.execution.next_step diverges from immediate_next_action[0]; "
+                        "summary uses machine_readable_contract.execution.next_step as the canonical next-action projection."
+                    ),
+                }
+            )
+    return warnings
 
 
 def _execplan_capability_posture(path: Path) -> dict[str, str]:

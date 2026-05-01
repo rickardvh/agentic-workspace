@@ -1,10 +1,14 @@
 kind = "agentic-planning-state"
 schema_version = "planning-state/v1"
 
-work_items = []
+work_items = [
+  { id = "dogfooding-robustness-followups", title = "Dogfooding Robustness Followups", maturity = "active", status = "active", path = ".agentic-workspace/planning/execplans/dogfooding-robustness-followups.plan.json", durable_residue = "pending", residue_owner = "this-execplan", residue_promotion_trigger = "closeout" },
+]
 
 [active]
-execplans = []
+execplans = [
+  ".agentic-workspace/planning/execplans/dogfooding-robustness-followups.plan.json",
+]
 
 [todo]
 active_items = []

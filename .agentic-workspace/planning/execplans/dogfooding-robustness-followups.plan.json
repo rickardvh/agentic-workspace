@@ -1,0 +1,499 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Dogfooding Robustness Followups",
+  "goal": [
+    "Implement the open dogfooding issues created or surfaced around the generated CLI adapter lane: #645, #649, #650, #651, #652, #653, #654, and #655."
+  ],
+  "non_goals": [
+    "Do not reopen the already-merged #641 generated-adapter foundation.",
+    "Do not promote mutation-capable lifecycle adapters without apply/verify proof.",
+    "Do not force execplans for narrow direct tasks.",
+    "Do not weaken archive or structured-file guardrails to hide closeout friction."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Dogfooding findings become concrete workflow and contract robustness improvements rather than standing open issues.",
+      "constraints": "Use checked-in planning before broad implementation, keep package boundaries explicit, close issues only after local proof, and commit/push in bounded batches.",
+      "latitude": "Implement issues in dependency order; route any oversized or unsafe item into a narrower child issue if it cannot be responsibly completed in this lane.",
+      "escalation": "Stop before broad behavior rewrites, lifecycle mutation enablement, or weakening storage/checking policy."
+    },
+    "execution": {
+      "milestone": "dogfooding-robustness-followups",
+      "status": "active",
+      "next_step": "Commit and push the workflow/archive robustness batch, then implement #650, #651, #652, and #653.",
+      "proof": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py -q"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/dogfooding-robustness-followups.plan.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/src/repo_planning_bootstrap/summary.py",
+        "src/agentic_workspace/contracts/operation_contracts.json",
+        "src/agentic_workspace/contracts/operations/*.json",
+        "src/agentic_workspace/contracts/conformance/*.json",
+        "src/agentic_workspace/contracts/schemas/*.json",
+        "scripts/check/*.py",
+        "tests/*.py",
+        "docs/reviews/*.md"
+      ],
+      "invariants": [
+        "Workflow guards must funnel broad/high-assurance work into planning without blocking narrow direct work.",
+        "Generated adapter and operation parity checks must remain strict for the correct command surface.",
+        "Lifecycle maturity must separate dry-run/refusal proof from apply/mutation proof.",
+        "Archive guardrails must be enforced before a completed plan is written into historical audit storage."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Improve the package's ability to keep agents in the correct workflow and reduce repeated dogfooding friction.",
+    "this slice completes the larger intended outcome": "yes if the named dogfooding issues are implemented or explicitly routed with narrower follow-ups.",
+    "continuation surface": "GitHub issues #645, #649, #650, #651, #652, #653, #654, #655 and this execplan.",
+    "parent lane": "post-#641 dogfooding follow-through"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "None known yet.",
+    "owner surface": "This execplan until closeout.",
+    "activation trigger": "A named issue proves too broad or requires behavior outside the bounded surfaces."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Implemented the workflow/archive robustness batch for #645, #649, #654, and #655.",
+    "intentionally deferred": "#650, #651, #652, and #653 remain for the generated-output and conformance/modeling batch.",
+    "discovered implications": "Archive-size guardrails will also block this execplan unless it is distilled before closeout.",
+    "proof achieved now": "partial",
+    "validation still needed": "Contract tooling, generated conformance, and make check after remaining issues.",
+    "next likely slice": "Workflow/archive robustness first, then generated adapter namespace and lifecycle conformance maturity."
+  },
+  "intent_interpretation": {
+    "literal request": "Merged. Fix the dogfooding issues next.",
+    "inferred intended outcome": "Continue the post-merge dogfooding queue without losing the package workflow discipline that the previous lane established.",
+    "chosen concrete what": "Use one active plan for the dogfooding follow-up lane and implement issues in bounded batches, closing each after proof.",
+    "interpretation distance": "low",
+    "review guidance": "Verify that fixes reduce workflow friction without adding heavyweight process for narrow work."
+  },
+  "execution_bounds": {
+    "allowed paths": "Planning/archive workflow code, summary/projection code, command/operation/conformance contracts, generated adapter checks, focused docs/reviews, tests, and this planning state.",
+    "max changed files": "Broad but bounded to the named dogfooding issues.",
+    "required validation commands": "uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py tests/test_workspace_summary_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make check",
+    "ask-before-refactor threshold": "Ask before replacing the planning data model, changing package versioning, or enabling lifecycle mutation adapters.",
+    "stop before touching": "Unrelated documentation cleanup, unrelated historical archive rewrites, unrelated CLI behavior changes."
+  },
+  "stop_conditions": {
+    "stop when": "A fix would weaken a safety guard instead of improving the workflow.",
+    "escalate when boundary reached": "A dogfooding issue needs a large architectural change that cannot be proved in the current lane.",
+    "escalate on scope drift": "Implementation starts requiring unrelated package rewrites.",
+    "escalate on proof failure": "make check or focused conformance reveals an invariant break that cannot be fixed within the issue scope."
+  },
+  "context_budget": {
+    "live working set": "#645, #649, #650, #651, #652, #653, #654, #655, planning archive/summary code, operation/conformance contracts, generated checks.",
+    "recoverable later": "Historical #641 chat context and older dogfooding issues not named in this plan.",
+    "externalize before shift": "Update execution_run, drift_log, and issue comments before pausing.",
+    "pre-work config pull": "AGENTS.md and summary loaded; master synced.",
+    "pre-work memory pull": "Use compact memory routing only if issue implementation uncovers durable repo knowledge not represented by checks.",
+    "tiny resumability note": "Dogfooding robustness lane: start with #645/#649/#654/#655.",
+    "context-shift triggers": "Before leaving a partially implemented issue, record the exact failing check or next file to edit."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Fix dogfooding issues next.",
+    "hard constraints": "Use package workflow, avoid skipping planning for broad work, close issues only after proof, commit and push as useful batches.",
+    "agent may decide locally": "Issue order, batching, exact contract shape, and when a finding deserves a new issue.",
+    "escalate when": "A named issue cannot be implemented without weakening safety or expanding beyond the current lane."
+  },
+  "adaptive_assurance": {
+    "level": "high",
+    "reason": "The lane changes workflow guards, planning archive behavior, generated adapter contract checks, and lifecycle conformance semantics.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "requirement_refs",
+      "domain_model_refs",
+      "audit_refs",
+      "acceptance_refs"
+    ],
+    "proof_profiles": [
+      "focused planning tests",
+      "contract tooling",
+      "generated conformance",
+      "full make check"
+    ],
+    "required_gates": [
+      "active plan before edits",
+      "focused proof per issue batch",
+      "full make check before closeout",
+      "dogfooding issue state reconciled"
+    ]
+  },
+  "traceability_refs": {
+    "requirement_refs": [
+      "#645",
+      "#649",
+      "#650",
+      "#651",
+      "#652",
+      "#653",
+      "#654",
+      "#655"
+    ],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [
+      ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+      "src/agentic_workspace/contracts/command_adapter_generation.json",
+      "src/agentic_workspace/contracts/operation_contracts.json",
+      "src/agentic_workspace/contracts/conformance_contracts.json"
+    ],
+    "risk_refs": [
+      "docs/reviews/generated-cli-adapter-high-assurance-report-2026-05-01.md"
+    ],
+    "security_refs": [],
+    "audit_refs": [
+      ".agentic-workspace/planning/execplans/archive/generated-cli-progressive-maturity-issue-641.plan.json"
+    ],
+    "acceptance_refs": [
+      "#645 acceptance",
+      "#649 acceptance",
+      "#650 acceptance",
+      "#651 acceptance",
+      "#652 suggested improvement",
+      "#653 suggested improvement",
+      "#654 suggested improvement",
+      "#655 suggested improvement"
+    ],
+    "decision_refs": [
+      "Implement workflow/archive robustness before deeper adapter namespace and lifecycle maturity expansion."
+    ]
+  },
+  "control_gates": [
+    {
+      "id": "active-plan-before-edits",
+      "owner_role": "executor",
+      "required_for": [
+        "implementation"
+      ],
+      "status": "satisfied",
+      "evidence": [
+        "This checked-in execplan created before code edits."
+      ],
+      "blocking": true,
+      "next_action": "None."
+    },
+    {
+      "id": "focused-proof",
+      "owner_role": "executor",
+      "required_for": [
+        "each issue batch"
+      ],
+      "status": "pending",
+      "evidence": [
+        "2026-05-01: uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py -q"
+      ],
+      "blocking": true,
+      "next_action": "Run focused tests after each batch."
+    },
+    {
+      "id": "full-check",
+      "owner_role": "executor",
+      "required_for": [
+        "closeout"
+      ],
+      "status": "pending",
+      "evidence": [],
+      "blocking": true,
+      "next_action": "Run make check before archive."
+    }
+  ],
+  "implementation_blockers": [],
+  "risk_registry_refs": [],
+  "invariant_refs": [
+    "No workflow guard may block narrow direct work.",
+    "Archive guardrails remain enforced.",
+    "Generated adapter parity remains surface-specific.",
+    "Lifecycle mutation promotion remains deferred without apply proof."
+  ],
+  "test_data_policy": {
+    "classification": "source-checkout synthetic fixtures only",
+    "forbidden": [
+      "host-private data",
+      "network-dependent runtime behavior beyond GitHub issue/PR metadata"
+    ],
+    "fixture_owner": "tests and scripts/check",
+    "proof_required": [
+      "focused pytest",
+      "contract tooling",
+      "make check"
+    ],
+    "refs": []
+  },
+  "layer_scaffold": {
+    "type": "dogfooding-workflow-robustness",
+    "required_refs": [
+      "#645",
+      "#649",
+      "#650",
+      "#651",
+      "#652",
+      "#653",
+      "#654",
+      "#655"
+    ],
+    "common_risks": [
+      "Making workflow heavier instead of clearer.",
+      "Hiding archive-size problems by loosening guardrails.",
+      "Conflating lifecycle dry-run maturity with mutation maturity.",
+      "Weakening root command parity while enabling package-local commands."
+    ],
+    "suggested_proof_profiles": [
+      "summary/projection tests",
+      "archive-plan tests",
+      "structured inventory checks",
+      "generated adapter conformance"
+    ],
+    "suggested_gates": [
+      "focused proof per batch",
+      "full make check",
+      "issue closure evidence"
+    ],
+    "non_goals": [
+      "All lifecycle mutation adapters",
+      "All historical dogfooding backlog"
+    ],
+    "durable_residue_prompts": [
+      "Record any new friction as narrow dogfooding issues."
+    ]
+  },
+  "architecture_decision_promotion": {
+    "status": "candidate",
+    "target": "docs/reviews/dogfooding-robustness-followups-2026-05-01.md",
+    "decision_refs": [
+      "Workflow/archive guardrails should be actionable at the point of failure."
+    ],
+    "promotion_needed": false,
+    "notes": "A review note is enough unless the fixes change public command semantics."
+  },
+  "threat_failure_aids": [
+    {
+      "id": "planning-overhead",
+      "concern": "The high-assurance guard could force plans for narrow work.",
+      "source_ref": "#645",
+      "advisory": "Keep the guard scoped to broad/high-assurance or multi-surface package work."
+    },
+    {
+      "id": "archive-policy-weakening",
+      "concern": "Archive-size fixes could weaken historical audit storage policy.",
+      "source_ref": "#655",
+      "advisory": "Enforce guardrails before write; do not raise limits as the default fix."
+    }
+  ],
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#645",
+      "label": "high-assurance planning guard",
+      "role": "requirement",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "issue",
+      "target": "#649",
+      "label": "canonical next action",
+      "role": "requirement",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "issue",
+      "target": "#650",
+      "label": "generated output line endings",
+      "role": "requirement",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "issue",
+      "target": "#651",
+      "label": "package-local command identity",
+      "role": "requirement",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "issue",
+      "target": "#652",
+      "label": "lifecycle maturity split",
+      "role": "requirement",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "issue",
+      "target": "#653",
+      "label": "conformance setup phases",
+      "role": "requirement",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "issue",
+      "target": "#654",
+      "label": "archive strict assurance remediation",
+      "role": "requirement",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "issue",
+      "target": "#655",
+      "label": "archive size guardrail",
+      "role": "requirement",
+      "locator": "GitHub"
+    }
+  ],
+  "active_milestone": {
+    "id": "dogfooding-robustness-followups",
+    "status": "active",
+    "scope": "Implement dogfooding workflow robustness issues.",
+    "ready": "Issues and branch are available.",
+    "blocked": "No current blocker.",
+    "optional_deps": "Node for generated adapter conformance if #651 is implemented in this lane."
+  },
+  "immediate_next_action": [
+    "Commit and push the workflow/archive robustness batch, then implement #650, #651, #652, and #653."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/execplans/dogfooding-robustness-followups.plan.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "Planning state stays clean and machine-readable.",
+    "Issue closures require implementation evidence.",
+    "Narrow direct work remains allowed."
+  ],
+  "contract_decisions_to_freeze": [
+    "Broad/high-assurance package work needs checked-in planning before implementation.",
+    "Archive closeout errors should name actionable field paths.",
+    "Archive size policy should fail before writing oversized archives."
+  ],
+  "open_questions_to_close": [
+    "Whether #651/#652/#653 can land in the same PR after workflow/archive robustness or need narrower child issues."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py tests/test_workspace_summary_cli.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "make check"
+  ],
+  "required_tools": [
+    "uv",
+    "make",
+    "gh",
+    "node if generated adapter conformance is changed"
+  ],
+  "completion_criteria": [
+    "Named dogfooding issues are implemented and closed, or explicitly routed with narrower follow-ups.",
+    "Focused proof and make check pass.",
+    "Active execplan is archived and planning state is clean.",
+    "Branch is committed and pushed."
+  ],
+  "execution_run": {
+    "run status": "active",
+    "executor": "Codex",
+    "handoff source": "User request after #641 PR merge.",
+    "what happened": "Created active execplan before implementation.",
+    "scope touched": "Planning summary/projection, archive-plan validation, focused tests, and active execplan.",
+    "changed surfaces": "Planning state, execplan, planning bootstrap installer, and workspace CLI tests.",
+    "validations run": "uv run agentic-workspace summary --format json; uv run pytest tests/test_workspace_cli.py -q -k \"next_step_and_warns or required_traceability_ref_paths or oversized_archive or broad_work_planning_guard or adaptive_assurance_end_to_end\"; uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py -q",
+    "result for continuation": "#645, #649, #654, and #655 implemented locally with focused proof.",
+    "next step": "Commit and push the workflow/archive robustness batch, then implement #650, #651, #652, and #653."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "active checked-in execplan created before implementation",
+    "misinterpretation risk": "medium until issue batching is complete",
+    "follow-on decision": "pending"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py -q",
+    "proof achieved now": "partial",
+    "evidence for \"proof achieved\" state": "257 passed in 65.18s for the workflow/archive robustness batch."
+  },
+  "intent_satisfaction": {
+    "original intent": "Fix the dogfooding issues next.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "Pending implementation.",
+    "unsolved intent passed to": "none yet"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve larger outcomes and checked-in planning for work whose proof or continuation would be expensive to reconstruct.",
+    "slice shaping bias": "Use progressive maturity and explicit continuation surfaces.",
+    "broader-lane validation question": "Does this lane reduce workflow friction without adding unnecessary process overhead?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "active",
+    "larger-intent status": "active",
+    "closure decision": "not-ready",
+    "why this decision is honest": "Implementation has not started.",
+    "evidence carried forward": "Pending.",
+    "reopen trigger": "Focused proof or issue review finds unsatisfied acceptance."
+  },
+  "generated_closeout": {
+    "status": "not-generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; structured execplan fields remain authoritative",
+    "text": ""
+  },
+  "memory_learning_capture": {
+    "status": "pending",
+    "memory consult recommended?": "pending",
+    "memory notes read": "",
+    "future agents should not rediscover": "pending",
+    "decision": "pending",
+    "target": "",
+    "reason": "Route only if a reusable learning is not already captured by issues/checks."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "",
+    "motivation worth preserving": "",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Pending.",
+    "validation confirmed": "Pending.",
+    "follow-on routed to": "Pending.",
+    "post-work posterity capture": "Pending.",
+    "knowledge promoted (Memory/Docs/Config)": "Pending.",
+    "resume from": "Implement #645, #649, #654, and #655 first."
+  },
+  "improvement_signal_review": {
+    "status": "active",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "#645 high-assurance planning guard",
+      "#649 canonical next action",
+      "#650 generated output line endings",
+      "#651 package-local command identity",
+      "#652 lifecycle maturity split",
+      "#653 conformance setup phases",
+      "#654 archive strict closeout field shape",
+      "#655 archive size guardrail"
+    ],
+    "signals fixed": [
+      "#645 high-assurance planning guard",
+      "#649 canonical next action",
+      "#654 archive strict closeout field shape",
+      "#655 archive size guardrail"
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "this execplan"
+  },
+  "drift_log": [
+    "2026-05-01: Created active dogfooding robustness execplan after #641 merge.",
+    "2026-05-01: Implemented workflow/archive robustness batch for #645, #649, #654, and #655; focused planning tests passed."
+  ]
+}
