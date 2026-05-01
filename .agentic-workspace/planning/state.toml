@@ -4,9 +4,7 @@ schema_version = "planning-state/v1"
 work_items = []
 
 [active]
-execplans = [
-  { id = "generated-cli-followups-657-660", path = ".agentic-workspace/planning/execplans/generated-cli-followups-657-660.plan.json", status = "active", maturity = "active" },
-]
+execplans = []
 
 [todo]
 active_items = []

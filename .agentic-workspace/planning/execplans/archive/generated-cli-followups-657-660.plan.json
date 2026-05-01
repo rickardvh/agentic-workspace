@@ -374,7 +374,7 @@
     "original intent": "Ingest and implement #657-#660 and dogfood findings until queue is empty.",
     "was original intent fully satisfied?": "yes",
     "evidence of intent satisfaction": "#657 audit doc added; #658 Memory commands promoted; #659 lifecycle dry-run/refusal maturity represented; #660 mutation criteria enforced by contract tooling; state.toml queue empty.",
-    "unsolved intent passed to": "none for #657-#660"
+    "unsolved intent passed to": "none"
   },
   "system_intent_alignment": {
     "relevant system intent": "Use checked-in execution state for broad work and keep command authority explicit.",
@@ -384,8 +384,8 @@
   },
   "closure_check": {
     "slice status": "complete",
-    "larger-intent status": "complete for #657-#660",
-    "closure decision": "archive after commit",
+    "larger-intent status": "complete",
+    "closure decision": "archive-and-close",
     "why this decision is honest": "The queue is empty, mutation apply remains explicitly deferred, #661 stays out of scope, and full checks pass.",
     "evidence carried forward": "Generated CLI authority audit, lifecycle readiness mutation gates, conformance contracts, generated outputs, and passing checks.",
     "reopen trigger": "Generated CLI queue item remains open or proof fails."
