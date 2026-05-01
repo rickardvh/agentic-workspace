@@ -16,6 +16,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "modules.report.process",
+      "operation_id": "modules.report",
+      "path": "conformance/modules.report.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.status.process",
       "operation_id": "planning.status.report",
       "path": "conformance/planning.status.process.json",

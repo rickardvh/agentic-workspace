@@ -14,7 +14,7 @@
 ## Run Summary
 
 - Requested outcome: Finish the single-source generated executable adapter migration foundation, implement child issues through progressive maturity, commit, push, and create a PR.
-- What landed: Runtime-backed generated Python parser/dispatch for root `defaults` and `config`, Planning `status`, and Memory `status`; generated IR/schema support for parser `interface`; static checks that require generated Python routing before handwritten parsers; review documentation for the progressive maturity matrix.
+- What landed: Runtime-backed generated Python parser/dispatch for root `defaults`, `config`, and `modules`, Planning `status`, and Memory `status`; generated IR/schema support for parser `interface`; static checks that require generated Python routing before handwritten parsers; review documentation for the progressive maturity matrix.
 - What did not land: Mutation-capable lifecycle adapters and full root read-only command expansion. Those remain intentionally below higher maturity because #642 and #643 require additional conformance before promotion.
 - Closure decision: `routed follow-up`
 - Residue destination: `planning, issue, docs`
@@ -36,7 +36,7 @@
 | --- | --- | --- | --- |
 | `src/agentic_workspace/contracts/command_package_ir.json` | workspace | Declare Python runtime-backed maturity and generated parser interface | no |
 | `packages/command-generation/src/agentic_command_generation/generator.py` | workspace | Generate runtime-backed Python adapter packages | no |
-| `src/agentic_workspace/cli.py` | workspace | Route generated parser/dispatch before handwritten parser for promoted commands and bind `config` to hand-owned config primitives | no |
+| `src/agentic_workspace/cli.py` | workspace | Route generated parser/dispatch before handwritten parser for promoted commands and bind root read-only commands to hand-owned primitives | no |
 | `packages/planning/src/repo_planning_bootstrap/cli.py` | planning | Route generated parser/dispatch for promoted package status command | no |
 | `packages/memory/src/repo_memory_bootstrap/cli.py` | memory | Route generated parser/dispatch for promoted package status command | no |
 | `scripts/check/check_generated_command_packages.py` | workspace | Enforce progressive maturity and generated-routing checks | no |

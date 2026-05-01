@@ -186,6 +186,87 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
         ]
       },
       "status": "generated"
+    },
+    {
+      "adapter_id": "modules.report.cli",
+      "command": {
+        "manifest_ref": "cli_commands.json",
+        "name": "modules"
+      },
+      "conformance_refs": [
+        "modules.report.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "List workspace modules available to the orchestrator.",
+        "name": "modules",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Optional repository path used to report installed modules.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "modules.report",
+        "path": "operations/modules.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "target root resolution",
+          "module descriptor inspection",
+          "installed-signal detection",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.modules.inspect",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
     }
   ],
   "id": "root-workspace",
@@ -301,6 +382,35 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
       ]
     },
     "operation_id": "config.report"
+  },
+  {
+    "adapter_id": "modules.report.cli",
+    "interface": {
+      "help": "List workspace modules available to the orchestrator.",
+      "name": "modules",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to report installed modules.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "modules.report"
   }
 ]
 """

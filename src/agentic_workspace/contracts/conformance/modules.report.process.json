@@ -1,0 +1,76 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "modules.report.process",
+  "operation_id": "modules.report",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "modules",
+      "--target",
+      ".",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "package_footprint",
+            "status"
+          ],
+          "equals": "intentional-temporary"
+        },
+        {
+          "path": [
+            "component_model",
+            "alignment"
+          ],
+          "equals": "mcp-style-adapter-ready"
+        },
+        {
+          "path": [
+            "feature_tiers_compatibility",
+            "status"
+          ],
+          "equals": "deprecated-alias"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": [
+        ".agentic-workspace"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

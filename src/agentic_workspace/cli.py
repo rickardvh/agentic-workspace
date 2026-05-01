@@ -11838,9 +11838,18 @@ def _run_config_report_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_modules_report_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else None
+    if target_root is not None:
+        _validate_target_root(command_name="modules", target_root=target_root)
+    _emit_modules(format_name=args.format, target_root=target_root)
+    return 0
+
+
 _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "config.report": _run_config_report_adapter,
     "defaults.report": _run_defaults_report_adapter,
+    "modules.report": _run_modules_report_adapter,
 }
 
 

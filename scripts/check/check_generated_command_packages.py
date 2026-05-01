@@ -66,6 +66,21 @@ def _selected_config_fields(stdout: str) -> dict[str, object]:
     }
 
 
+def _selected_modules_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    package_footprint = payload.get("package_footprint", {}) if isinstance(payload.get("package_footprint"), dict) else {}
+    component_model = payload.get("component_model", {}) if isinstance(payload.get("component_model"), dict) else {}
+    compatibility = payload.get("feature_tiers_compatibility", {}) if isinstance(payload.get("feature_tiers_compatibility"), dict) else {}
+    modules = payload.get("modules", [])
+    module_names = [module.get("name") for module in modules if isinstance(module, dict)] if isinstance(modules, list) else []
+    return {
+        "package_footprint_status": package_footprint.get("status"),
+        "component_model_alignment": component_model.get("alignment"),
+        "feature_tiers_compatibility_status": compatibility.get("status"),
+        "module_names": module_names,
+    }
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -241,6 +256,76 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
             errors.append(
                 "adapter failure: config invalid-option stderr presence drifted from canonical process; "
                 f"canonical={canonical_config_invalid.stderr!r}, adapter={adapter_config_invalid.stderr!r}"
+            )
+
+        modules_args = ["modules", "--target", ".", "--format", "json"]
+        canonical_modules = _capture(
+            [python, str(shim), *modules_args],
+            cwd=fixture_root,
+            env=_conformance_env(),
+        )
+        if canonical_modules.returncode != 0:
+            return [f"runtime primitive failure: canonical modules command exited {canonical_modules.returncode}; stderr={canonical_modules.stderr!r}"]
+        try:
+            canonical_modules_fields = _selected_modules_fields(canonical_modules.stdout)
+        except json.JSONDecodeError as exc:
+            return [f"runtime primitive failure: canonical modules stdout was not JSON: {exc}"]
+        expected_modules_fields = {
+            "package_footprint_status": "intentional-temporary",
+            "component_model_alignment": "mcp-style-adapter-ready",
+            "feature_tiers_compatibility_status": "deprecated-alias",
+            "module_names": ["planning", "memory"],
+        }
+        if canonical_modules_fields != expected_modules_fields:
+            return [
+                "runtime primitive failure: canonical modules output shape drifted; "
+                f"expected selected fields {expected_modules_fields!r}, got {canonical_modules_fields!r}"
+            ]
+
+        adapter_modules = _capture(
+            [node, str(cli), *modules_args],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=runtime),
+        )
+        if adapter_modules.returncode != canonical_modules.returncode:
+            errors.append(
+                "adapter failure: modules exit code drifted from canonical process; "
+                f"expected {canonical_modules.returncode}, got {adapter_modules.returncode}; stderr={adapter_modules.stderr!r}"
+            )
+        else:
+            try:
+                adapter_modules_fields = _selected_modules_fields(adapter_modules.stdout)
+            except json.JSONDecodeError as exc:
+                errors.append(f"adapter failure: modules stdout was not JSON: {exc}; stdout={adapter_modules.stdout!r}")
+            else:
+                if adapter_modules_fields != canonical_modules_fields:
+                    errors.append(
+                        "adapter failure: modules JSON selected fields drifted from canonical process; "
+                        f"expected {canonical_modules_fields!r}, got {adapter_modules_fields!r}"
+                    )
+        if adapter_modules.stderr.strip():
+            errors.append(f"adapter failure: modules emitted unexpected stderr: {adapter_modules.stderr!r}")
+
+        modules_invalid_args = ["modules", "--target", ".", "--format", "json", "--definitely-invalid"]
+        canonical_modules_invalid = _capture(
+            [python, str(shim), *modules_invalid_args],
+            cwd=fixture_root,
+            env=_conformance_env(),
+        )
+        adapter_modules_invalid = _capture(
+            [node, str(cli), *modules_invalid_args],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=runtime),
+        )
+        if adapter_modules_invalid.returncode != canonical_modules_invalid.returncode:
+            errors.append(
+                "adapter failure: modules invalid-option exit code drifted from canonical process; "
+                f"expected {canonical_modules_invalid.returncode}, got {adapter_modules_invalid.returncode}"
+            )
+        if bool(adapter_modules_invalid.stderr.strip()) != bool(canonical_modules_invalid.stderr.strip()):
+            errors.append(
+                "adapter failure: modules invalid-option stderr presence drifted from canonical process; "
+                f"canonical={canonical_modules_invalid.stderr!r}, adapter={adapter_modules_invalid.stderr!r}"
             )
 
         unsupported = _capture(
