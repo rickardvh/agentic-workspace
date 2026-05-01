@@ -1,6 +1,6 @@
 # Documentation Status
 
-This page is a compact role and freshness index for the public documentation set. It helps readers distinguish current product capability from long-horizon doctrine, maintainer references, and historical evidence.
+This page is a compact role and freshness index for the documentation set. It is not the package overview. For current shipped behavior, start with [docs/index.md](index.md) and the `docs/package/` hierarchy; use this page only to understand each document's role and freshness.
 
 Last reviewed: 2026-05-01.
 Refresh route: update this index when a public doc changes role, starts owning current capability claims, or is reviewed for freshness.

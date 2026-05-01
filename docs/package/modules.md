@@ -11,7 +11,7 @@
 | planning | Planning | active execution state and execplan surfaces |
 | full | Planning and Memory | both active work state and durable repo knowledge |
 
-The root package currently bundles first-party modules for simple `uvx` and `pipx` lifecycle use. That may change later, but the installed repository footprint is already selected by profile.
+The root package currently bundles first-party modules for simple `uvx` and `pipx` lifecycle use. That may change later, but the installed repository footprint is already selected by profile. The exact profile and component metadata is defined by the generated [Module registry](../reference/module-registry.md) and [Module capability](../reference/module-capability.md) references.
 
 ## Planning
 
@@ -54,4 +54,4 @@ Package reference: [Command generation README](../../packages/command-generation
 
 ## Module Contracts
 
-The module registry declares available modules, profiles, component metadata, and package footprint policy. See [Module registry](../reference/module-registry.md) for the generated field reference.
+The module registry declares available modules, profiles, component metadata, and package footprint policy. See [Module registry](../reference/module-registry.md) for the generated field reference. The lower-level command and component generation path is documented by [Command package IR](../reference/command-package-ir.md), [Command adapter generation](../reference/command-adapter-generation.md), and [Lifecycle generation readiness](../reference/lifecycle-generation-readiness.md).

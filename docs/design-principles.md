@@ -6,6 +6,8 @@ Agentic Workspace should make repositories easier to enter, easier to resume, an
 
 The product should feel smaller than the internals behind it and should earn every visible surface it keeps.
 
+For current shipped package behavior, start with [`docs/index.md`](index.md) and [`docs/package/overview.md`](package/overview.md). This page explains why the shape should stay coherent; it should not be used as the first product map.
+
 ## Must-Internalize Doctrine
 
 ### 1. Repository-native state beats chat residue

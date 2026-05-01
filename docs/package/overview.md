@@ -18,6 +18,8 @@ The root package ships:
 
 The root package currently depends on the first-party Planning and Memory packages so one command can orchestrate ordinary lifecycle work. Presets control the checked-in repository footprint, not the Python dependency graph.
 
+Exact profile and footprint metadata is defined in the generated [Module registry](../reference/module-registry.md). Exact command metadata is defined in [CLI commands](../reference/cli-commands.md).
+
 ## Runtime Model
 
 Installed repositories get a `.agentic-workspace/` directory plus small adapter files. The adapters route agents to compact CLI answers instead of becoming a second handbook.
@@ -39,6 +41,8 @@ If takeover, recovery, config, and active state should be bundled in one answer,
 ```bash
 agentic-workspace preflight --target ./repo --format json
 ```
+
+For exact startup and report payload shapes, see [Startup context](../reference/startup-context.md) and [Workspace report](../reference/workspace-report.md).
 
 ## Presets
 

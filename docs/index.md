@@ -13,7 +13,7 @@ This documentation is organized around the shipped package first, then the suppo
 
 ## Reference Material
 
-- [Generated schema reference](reference/): generated field-level documentation for machine-readable contracts.
+- [Generated schema reference](reference/index.md): generated field-level documentation for machine-readable contracts.
 - [Workspace configuration reference](reference/workspace-config.md): schema reference for `.agentic-workspace/config.toml`.
 - [CLI command contract](reference/cli-commands.md): generated reference for the declared root command surface.
 - [Module registry contract](reference/module-registry.md): generated reference for module profiles, components, and package footprint metadata.
@@ -28,7 +28,7 @@ This documentation is organized around the shipped package first, then the suppo
 
 - [Which package should I install?](which-package.md): compact preset selector and package-choice explanation.
 - [Architecture](architecture.md): current composition and module-boundary summary.
-- [Documentation status](documentation-status.md): role and freshness index for the docs set.
-- [Maturity model](maturity-model.md): current support and adoption expectations.
-- [Design principles](design-principles.md): product doctrine and tradeoff guidance.
+- [Documentation status](documentation-status.md): role and freshness index after the package docs answer the current behavior question.
+- [Maturity model](maturity-model.md): support and adoption expectations, not a product map.
+- [Design principles](design-principles.md): product doctrine and tradeoff guidance, not first-contact package documentation.
 - [Historical reviews](reviews/): dated audits and evidence. These support future work, but they are not first-contact package documentation.

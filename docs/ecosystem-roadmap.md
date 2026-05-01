@@ -6,6 +6,8 @@ This page records the current ecosystem stance without turning it into a promise
 
 For the broader long-horizon capability map behind that stance, see `docs/agent-os-capabilities.md`.
 
+For current shipped package behavior, start with [`docs/index.md`](index.md) and [`docs/package/overview.md`](package/overview.md). This roadmap is supporting context, not an immediate product promise.
+
 When the current stance changes, update this page and move any concrete next work into `roadmap` in `.agentic-workspace/planning/state.toml` instead of accumulating latent backlog prose here.
 Use a doctrine-refresh review when the current ecosystem stance may have drifted from actual shipped behavior or extraction discipline.
 

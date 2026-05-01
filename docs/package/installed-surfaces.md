@@ -16,6 +16,22 @@ An installed host repository gets a small set of checked-in surfaces. Their purp
 
 The package keeps `AGENTS.md` thin. Durable rules and structured state live under `.agentic-workspace/` or in repo-owned docs, not in a growing startup manual.
 
+## Surface Classes
+
+The installed and source-checkout surfaces fall into different classes. Keeping those classes distinct is what prevents the docs set from becoming another startup burden.
+
+| Class | Examples | How readers should use it |
+| --- | --- | --- |
+| core entrypoint | `AGENTS.md`, `llms.txt`, `agentic-workspace start`, `agentic-workspace summary` | start here or let compact commands route deeper |
+| secondary/deep surface | `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/docs/`, `.agentic-workspace/planning/`, `.agentic-workspace/memory/` | open only when a compact command or package doc points there |
+| machine contract | `.agentic-workspace/OWNERSHIP.toml`, contract JSON, schema JSON, manifest files | inspect through commands or generated references before hand-reading |
+| generated adapter | `llms.txt`, generated agent aids, `docs/reference/*.md` | treat as derived output; edit the source contract or renderer instead |
+| local-only surface | `.agentic-workspace/local/` | machine-local cache or override, not shared authority |
+| review artifact | `docs/reviews/*.md` | dated evidence for future work, not current product documentation |
+| maintainer machinery | `scripts/`, package bootstrap payloads, generated-package development files | source-checkout workflow only, not ordinary host-repo operation |
+
+Stable conclusions in this table come from the dated visible-surface and shipped-payload reviews, now promoted here so readers do not need to mine review history for the current answer.
+
 ## Planning Surfaces
 
 Planning adds active execution state:
@@ -44,6 +60,19 @@ Memory adds durable anti-rediscovery knowledge:
 | `.agentic-workspace/memory/skills/` | package-managed memory skills |
 
 Memory should reduce rediscovery cost. It is not a task tracker, execution log, or broad product documentation replacement.
+
+## Payload And Source Boundaries
+
+The root workspace package, Planning package, Memory package, and command-generation package have different delivery roles:
+
+| Area | Shipped or installed role | Hidden/source-checkout role |
+| --- | --- | --- |
+| root workspace package | root CLI, shared lifecycle orchestration, contracts, generated adapters, config/report/proof routing | contract tooling, generated-package development, maintainer checks |
+| Planning | active planning state, execplan templates, selected installed contract docs, planning schemas | package tests, payload verification, optional richer planning surfaces |
+| Memory | durable memory note skeleton, manifest, workflow, package-managed skills, note templates | memory package tests, payload verification, package-local bootstrap source |
+| command generation | none in ordinary host-repo operation | internal renderer and schema boundary for generated CLI packages |
+
+For exact contract fields behind this overview, see [Workspace config](../reference/workspace-config.md), [Workspace surfaces manifest](../reference/workspace-surfaces-manifest.md), [Module registry](../reference/module-registry.md), and [Command package IR](../reference/command-package-ir.md).
 
 ## Ownership Rule
 

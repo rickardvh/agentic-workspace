@@ -10,6 +10,8 @@ It is the durable home for the capability structure of an agent-oriented checked
 
 This document is not a bounded roadmap, backlog, or implementation plan.
 
+For current shipped package behavior, start with [`docs/index.md`](index.md) and [`docs/package/overview.md`](package/overview.md). This page is vision-oriented supporting context.
+
 Long-horizon direction can change as the product evolves.
 When a capability description, promotion stance, or architectural emphasis no longer matches current dogfooding reality, update this document directly and route any newly-bounded follow-on into `roadmap` in `.agentic-workspace/planning/state.toml` instead of leaving stale intent embedded here.
 

@@ -1,6 +1,6 @@
 # Command Map
 
-This page is a human navigation map for the shipped `agentic-workspace` command surface. For exact option shapes, see the generated [CLI commands reference](../reference/cli-commands.md).
+This page is a human navigation map for the shipped `agentic-workspace` command surface. For exact option shapes, see the generated [CLI commands reference](../reference/cli-commands.md) and [CLI option groups](../reference/cli-option-groups.md).
 
 ## Ordinary Host-Repo Commands
 
@@ -46,3 +46,12 @@ This page is a human navigation map for the shipped `agentic-workspace` command 
 | `note-delegation-outcome` | record local-only delegation calibration data |
 
 The deeper model for these groups is described in [Lifecycle and context commands](lifecycle.md).
+
+## Exact Result Shapes
+
+- `start --format json`: [Startup context](../reference/startup-context.md).
+- `preflight --format json`: [Preflight policy](../reference/preflight-policy.md) plus startup, config, and planning state projections.
+- `report --format json`: [Workspace report](../reference/workspace-report.md).
+- `proof --format json`: [Proof selection rules](../reference/proof-selection-rules.md) and [Proof routes manifest](../reference/proof-routes-manifest.md).
+- `config --format json`: [Workspace config](../reference/workspace-config.md) and [Workspace local override](../reference/workspace-local-override.md).
+- generated adapter and operation contracts: [Operation contracts](../reference/operation-contracts.md), [Operation primitives](../reference/operation-primitives.md), and [Command adapter generation](../reference/command-adapter-generation.md).

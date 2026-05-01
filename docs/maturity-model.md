@@ -4,6 +4,8 @@ Last doctrinal review: 2026-04-10
 
 This page explains what current maturity labels mean in this ecosystem.
 
+For current shipped package behavior, start with [`docs/index.md`](index.md) and [`docs/package/overview.md`](package/overview.md). This page is only the support and adoption-readiness signal.
+
 ## Role Boundary
 
 This page owns maturity labels and the rationale for the current label of each shipped surface.
