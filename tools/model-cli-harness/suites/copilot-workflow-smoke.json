@@ -6,6 +6,12 @@
     "copilot": {
       "default_model": "claude-haiku-4.5",
       "timeout_seconds": 900,
+      "required_shells": [
+        "pwsh"
+      ],
+      "block_on_preflight_failure": true,
+      "provider_home_env": "COPILOT_HOME",
+      "provider_home_path": "{run_root}/copilot-home",
       "command": [
         "copilot",
         "--model",

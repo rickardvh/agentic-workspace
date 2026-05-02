@@ -1,0 +1,205 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Model CLI harness preflight and state isolation",
+  "goal": [
+    "Implement #673 by adding explicit model-CLI harness preflight and optional provider state isolation so evaluation failures are classified before model output is scored."
+  ],
+  "non_goals": [
+    "Do not require installing PowerShell 7 or authenticating an isolated Copilot home in tests.",
+    "Do not run paid model evaluations as proof for this implementation slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Make the harness record executable, shell, package-CLI, and provider-state prerequisites before execution.",
+      "constraints": "Keep the harness dry-run first and avoid storing local absolute paths in checked-in docs/issues.",
+      "latitude": "Add suite adapter fields, runner preflight output, docs, and unit tests.",
+      "escalation": "Escalate before changing Copilot authentication behavior beyond opt-in environment controls."
+    },
+    "execution": {
+      "milestone": "model-cli-harness-preflight-673",
+      "status": "completed",
+      "next_step": "Commit, push, and close #673.",
+      "proof": "Run focused harness tests, planning surface check, and make check."
+    },
+    "scope": {
+      "touched": [
+        "scripts/model_cli_harness/run_model_cli_harness.py",
+        "tools/model-cli-harness/suites/copilot-workflow-smoke.json",
+        "docs/maintainer/model-cli-dogfooding-harness.md",
+        "tests/test_model_cli_harness.py"
+      ],
+      "invariants": [
+        "No checked-in local absolute paths.",
+        "No external model execution during tests.",
+        "Preflight must distinguish environment-blocked runs from model/package failures."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Model CLI dogfooding should produce trustworthy evidence about package usability across agent CLIs.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Can you fix #673 yourself? The issue body contains absolute paths on my local machine, which is bad.",
+    "inferred intended outcome": "Sanitize the issue and implement harness preflight/isolation so future model evaluations are not polluted by environment confounds.",
+    "chosen concrete what": "Add adapter preflight fields, environment handling, result status classification, docs, and tests.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "model CLI harness script/suite/docs/tests and this execplan",
+    "max changed files": "about 6",
+    "required validation commands": "uv run pytest tests/test_model_cli_harness.py -q; uv run python scripts/check/check_planning_surfaces.py; make check",
+    "ask-before-refactor threshold": "Adding a product CLI command, benchmark database, or CI integration.",
+    "stop before touching": "Package runtime behavior outside the harness."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Model CLI harness preflight and state isolation.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "model-cli-harness-preflight-673",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Fill in execution bounds, touched paths, and validation before implementation starts."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "Fill in the concrete files before implementation starts."
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "Fill in the narrowest command that proves the promoted work."
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Model CLI harness preflight and state isolation is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap new-plan",
+    "what happened": "Sanitized #673 issue body and implemented adapter preflight, environment-blocked result classification, optional provider-home isolation, Copilot prerequisites, docs, and tests.",
+    "scope touched": "model CLI harness script, Copilot suite config, maintainer docs, harness tests",
+    "changed surfaces": "scripts/model_cli_harness/run_model_cli_harness.py, tools/model-cli-harness/suites/copilot-workflow-smoke.json, docs/maintainer/model-cli-dogfooding-harness.md, tests/test_model_cli_harness.py",
+    "validations run": "focused harness tests, dry-run and execute-blocked Copilot harness checks, planning surface checker, make check",
+    "result for continuation": "#673 can be closed after commit/push",
+    "next step": "commit and push"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used checked-in planning and package archive flow",
+    "misinterpretation risk": "low",
+    "follow-on decision": "close #673"
+  },
+  "proof_report": {
+    "validation proof": "make check passed; focused harness tests passed; Copilot execute-mode now reports environment-blocked when pwsh is missing without calling the model.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "make check exited 0."
+  },
+  "intent_satisfaction": {
+    "original intent": "Fix #673 and remove local absolute paths from the issue body.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Issue body no longer contains local home-directory paths; harness preflight/isolation behavior is implemented and tested.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "#673 implemented.",
+    "validation confirmed": "make check passed.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive this execplan",
+    "knowledge promoted (Memory/Docs/Config)": "docs/maintainer/model-cli-dogfooding-harness.md updated",
+    "resume from": "no active continuation"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The issue body was sanitized and the harness now records/prevents environment-confounded model execution by default.",
+    "evidence carried forward": "tests, docs, suite config, and make check output.",
+    "reopen trigger": "Preflight fails to classify missing adapter prerequisites or provider-home isolation regresses."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-02: Scaffolded by agentic-planning-bootstrap new-plan."
+  ]
+}

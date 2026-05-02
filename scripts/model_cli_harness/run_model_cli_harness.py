@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -83,7 +84,7 @@ def _prepare_fixture(*, suite_path: Path, scenario: dict[str, Any], paths: Harne
     shutil.copytree(fixture_path, paths.repo_path)
 
 
-def _run_command(command: list[str], *, cwd: Path, timeout_seconds: int) -> dict[str, Any]:
+def _run_command(command: list[str], *, cwd: Path, timeout_seconds: int, env: dict[str, str] | None = None) -> dict[str, Any]:
     resolved_command = list(command)
     executable = shutil.which(resolved_command[0])
     if executable is not None:
@@ -95,6 +96,7 @@ def _run_command(command: list[str], *, cwd: Path, timeout_seconds: int) -> dict
         capture_output=True,
         timeout=timeout_seconds,
         check=False,
+        env=env,
     )
     return {
         "command": resolved_command,
@@ -104,6 +106,62 @@ def _run_command(command: list[str], *, cwd: Path, timeout_seconds: int) -> dict
         "stdout": completed.stdout,
         "stderr": completed.stderr,
     }
+
+
+def _preflight_requirement(name: str, *, kind: str) -> dict[str, Any]:
+    resolved = shutil.which(name)
+    return {
+        "kind": kind,
+        "name": name,
+        "status": "present" if resolved else "missing",
+        "resolved_path": resolved or "",
+        "blocking": resolved is None,
+    }
+
+
+def _adapter_preflight(adapter: dict[str, Any], *, command: list[str]) -> dict[str, Any]:
+    requirements: list[dict[str, Any]] = []
+    if command:
+        requirements.append(_preflight_requirement(command[0], kind="adapter_executable"))
+    for name in adapter.get("required_executables", []):
+        if not isinstance(name, str):
+            raise ValueError("adapter.required_executables entries must be strings")
+        requirements.append(_preflight_requirement(name, kind="required_executable"))
+    for name in adapter.get("required_shells", []):
+        if not isinstance(name, str):
+            raise ValueError("adapter.required_shells entries must be strings")
+        requirements.append(_preflight_requirement(name, kind="required_shell"))
+
+    missing = [item for item in requirements if item["status"] == "missing"]
+    block_on_failure = bool(adapter.get("block_on_preflight_failure", True))
+    status = "environment-blocked" if block_on_failure and missing else "ready"
+    return {
+        "status": status,
+        "block_on_failure": block_on_failure,
+        "requirements": requirements,
+        "missing_count": len(missing),
+        "missing": missing,
+    }
+
+
+def _adapter_environment(
+    adapter: dict[str, Any],
+    *,
+    replacements: dict[str, str],
+    isolate_provider_home: bool,
+) -> dict[str, str]:
+    env = dict(os.environ)
+    configured = adapter.get("env", {})
+    if configured:
+        if not isinstance(configured, dict) or not all(isinstance(key, str) and isinstance(value, str) for key, value in configured.items()):
+            raise ValueError("adapter.env must be an object of string values")
+        env.update({key: _replace_placeholders(value, replacements=replacements) for key, value in configured.items()})
+    provider_home_env = adapter.get("provider_home_env")
+    if isolate_provider_home and provider_home_env:
+        if not isinstance(provider_home_env, str):
+            raise ValueError("adapter.provider_home_env must be a string")
+        env[provider_home_env] = _replace_placeholders(str(adapter.get("provider_home_path", "{run_root}/provider-home")), replacements=replacements)
+    return env
 
 
 def _copy_transcript(stdout: str, transcript_path: Path) -> None:
@@ -179,6 +237,8 @@ def run_suite(
     execute: bool,
     output_root: Path,
     timeout_seconds: int | None,
+    isolate_provider_home: bool = False,
+    allow_environment_blocked: bool = False,
 ) -> dict[str, Any]:
     suite = _load_json(suite_path)
     suite_id = str(suite.get("id", suite_path.stem))
@@ -226,6 +286,15 @@ def run_suite(
         if not isinstance(command_template, list) or not all(isinstance(item, str) for item in command_template):
             raise ValueError(f"adapter '{adapter_id}' must define command as a string list")
         command = _render_list(command_template, replacements=replacements)
+        preflight = _adapter_preflight(adapter, command=command)
+        adapter_env = _adapter_environment(
+            adapter,
+            replacements=replacements,
+            isolate_provider_home=isolate_provider_home,
+        )
+        provider_home_env = adapter.get("provider_home_env")
+        if isolate_provider_home and isinstance(provider_home_env, str) and provider_home_env in adapter_env:
+            Path(adapter_env[provider_home_env]).mkdir(parents=True, exist_ok=True)
 
         setup_results: list[dict[str, Any]] = []
         setup_commands = scenario.get("setup_commands", [])
@@ -240,6 +309,7 @@ def run_suite(
                         _render_list(setup_command, replacements=replacements),
                         cwd=paths.repo_path,
                         timeout_seconds=effective_timeout,
+                        env=adapter_env,
                     )
                 )
 
@@ -252,12 +322,26 @@ def run_suite(
             "run_root": str(paths.run_root),
             "prompt": prompt,
             "command": command,
+            "preflight": preflight,
+            "isolate_provider_home": isolate_provider_home,
             "setup_results": setup_results,
             "expected_signals": scenario.get("expected_signals", []),
             "score_notes": scenario.get("score_notes", []),
         }
-        if execute:
-            result = _run_command(command, cwd=paths.repo_path, timeout_seconds=effective_timeout)
+        if execute and preflight["status"] == "environment-blocked" and not allow_environment_blocked:
+            invocation["result"] = {
+                "status": "environment-blocked",
+                "detail": "Adapter preflight failed; use --allow-environment-blocked to run anyway.",
+            }
+            invocation["warnings"] = [
+                {
+                    "warning_class": "model_cli_environment_blocked",
+                    "message": "Adapter preflight failed before model execution.",
+                    "missing": ", ".join(item["name"] for item in preflight["missing"]),
+                }
+            ]
+        elif execute:
+            result = _run_command(command, cwd=paths.repo_path, timeout_seconds=effective_timeout, env=adapter_env)
             _copy_transcript(str(result.get("stdout", "")), paths.transcript_path)
             invocation["result"] = result
             invocation["transcript_path"] = str(paths.transcript_path)
@@ -295,6 +379,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--execute", action="store_true", help="Run the model CLI. Defaults to dry-run.")
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--timeout-seconds", type=int)
+    parser.add_argument(
+        "--isolate-provider-home",
+        action="store_true",
+        help="Set the adapter provider-home environment variable to a run-local directory when configured.",
+    )
+    parser.add_argument(
+        "--allow-environment-blocked",
+        action="store_true",
+        help="Run even when adapter preflight reports missing required local tools.",
+    )
     parser.add_argument("--format", choices=["text", "json"], default="text")
     return parser
 
@@ -310,6 +404,8 @@ def main(argv: list[str] | None = None) -> int:
             execute=args.execute,
             output_root=args.output_root.resolve(),
             timeout_seconds=args.timeout_seconds,
+            isolate_provider_home=args.isolate_provider_home,
+            allow_environment_blocked=args.allow_environment_blocked,
         )
     except Exception as exc:  # noqa: BLE001
         if args.format == "json":

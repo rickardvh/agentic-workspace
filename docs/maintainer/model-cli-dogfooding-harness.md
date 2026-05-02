@@ -13,6 +13,8 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
 
 The runner defaults to dry-run. It copies the scenario fixture into `scratch/model-cli-harness`, renders the prompt, writes `run.json`, and prints the exact CLI command it would execute. Add `--execute` only when you intentionally want to spend model calls and allow the configured CLI to operate in the copied fixture.
 
+Before execution, the runner evaluates adapter prerequisites such as the CLI executable and declared shell/tool dependencies. If a blocking prerequisite is missing, the scenario result is `environment-blocked` and the model is not called. Use `--allow-environment-blocked` only when deliberately collecting partial evidence from a degraded runtime.
+
 ```powershell
 uv run python scripts/model_cli_harness/run_model_cli_harness.py `
   --adapter copilot `
@@ -21,11 +23,25 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
   --execute
 ```
 
+Copilot stores authenticated state under `COPILOT_HOME`. The harness does not isolate this by default because an empty home may not be authenticated. To run with run-local provider state after arranging authentication for that home, pass:
+
+```powershell
+uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+  --adapter copilot `
+  --model claude-haiku-4.5 `
+  --scenario startup-orientation `
+  --execute `
+  --isolate-provider-home
+```
+
 ## Reuse Contract
 
 Suites live under `tools/model-cli-harness/suites/`. Each suite defines:
 
 - `adapters`: command templates with placeholders such as `{prompt}`, `{repo}`, `{model}`, `{share_path}`, and `{source_root}`.
+- `required_executables` and `required_shells`: optional preflight requirements.
+- `block_on_preflight_failure`: whether missing requirements should prevent model execution.
+- `provider_home_env` and `provider_home_path`: optional state-isolation hook used by `--isolate-provider-home`.
 - `scenarios`: disposable fixture name, human prompt, expected signals, and scoring notes.
 - `fixtures`: copied repos under `tools/model-cli-harness/fixtures/`.
 
@@ -50,5 +66,6 @@ Treat one-off capability failures cautiously. Give more weight to repeated ambig
 - Scenario repository mutations should happen only in copied fixtures under `scratch/`.
 - Provider CLIs may still maintain their own local state outside the fixture. For Copilot, the harness routes logs to the run directory, but authenticated session/config state may still use `COPILOT_HOME` unless the operator provides an isolated authenticated home.
 - The Copilot adapter denies `git push`.
+- The Copilot adapter requires `pwsh` before execution because its shell tool uses PowerShell 7 on Windows.
 - The runner emits warnings when transcripts report shell-runtime failures or modified files outside the copied fixture.
 - Normal tests should validate command rendering and fixture isolation, not run external models.
