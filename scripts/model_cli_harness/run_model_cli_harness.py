@@ -84,8 +84,12 @@ def _prepare_fixture(*, suite_path: Path, scenario: dict[str, Any], paths: Harne
 
 
 def _run_command(command: list[str], *, cwd: Path, timeout_seconds: int) -> dict[str, Any]:
+    resolved_command = list(command)
+    executable = shutil.which(resolved_command[0])
+    if executable is not None:
+        resolved_command[0] = executable
     completed = subprocess.run(  # noqa: S603
-        command,
+        resolved_command,
         cwd=cwd,
         text=True,
         capture_output=True,
@@ -93,7 +97,8 @@ def _run_command(command: list[str], *, cwd: Path, timeout_seconds: int) -> dict
         check=False,
     )
     return {
-        "command": command,
+        "command": resolved_command,
+        "original_command": command,
         "cwd": str(cwd),
         "returncode": completed.returncode,
         "stdout": completed.stdout,
@@ -104,6 +109,65 @@ def _run_command(command: list[str], *, cwd: Path, timeout_seconds: int) -> dict
 def _copy_transcript(stdout: str, transcript_path: Path) -> None:
     transcript_path.parent.mkdir(parents=True, exist_ok=True)
     transcript_path.write_text(stdout, encoding="utf-8")
+
+
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def _execution_warnings(*, stdout: str, repo_path: Path) -> list[dict[str, str]]:
+    warnings: list[dict[str, str]] = []
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        event_text = json.dumps(event)
+        if "pwsh.exe" in event_text and "not recognized" in event_text:
+            warnings.append(
+                {
+                    "warning_class": "model_cli_shell_unavailable",
+                    "message": "The model CLI could not run shell commands because pwsh.exe was unavailable.",
+                }
+            )
+        if event.get("type") != "result":
+            continue
+        usage = event.get("usage", {})
+        if not isinstance(usage, dict):
+            continue
+        code_changes = usage.get("codeChanges", {})
+        if not isinstance(code_changes, dict):
+            continue
+        modified = code_changes.get("filesModified", [])
+        if not isinstance(modified, list):
+            continue
+        external_paths = [
+            str(path)
+            for item in modified
+            if isinstance(item, str)
+            for path in [Path(item)]
+            if not _is_relative_to(path, repo_path)
+        ]
+        if external_paths:
+            warnings.append(
+                {
+                    "warning_class": "model_cli_external_write",
+                    "message": "The model CLI reported modified files outside the copied scenario repository.",
+                    "paths": "; ".join(external_paths),
+                }
+            )
+    deduped: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for warning in warnings:
+        key = (warning["warning_class"], warning["message"])
+        if key not in seen:
+            deduped.append(warning)
+            seen.add(key)
+    return deduped
 
 
 def run_suite(
@@ -198,11 +262,13 @@ def run_suite(
             invocation["result"] = result
             invocation["transcript_path"] = str(paths.transcript_path)
             invocation["share_path"] = str(paths.share_path)
+            invocation["warnings"] = _execution_warnings(stdout=str(result.get("stdout", "")), repo_path=paths.repo_path)
         else:
             invocation["result"] = {
                 "status": "dry-run",
                 "detail": "Use --execute to run the model CLI.",
             }
+            invocation["warnings"] = []
         _write_json(paths.run_root / "run.json", invocation)
         run_results.append(invocation)
 

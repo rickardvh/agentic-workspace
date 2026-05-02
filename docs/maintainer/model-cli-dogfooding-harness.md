@@ -47,7 +47,8 @@ Treat one-off capability failures cautiously. Give more weight to repeated ambig
 ## Safety Defaults
 
 - Dry-run is the default.
-- Real execution happens only in copied fixtures under `scratch/`.
+- Scenario repository mutations should happen only in copied fixtures under `scratch/`.
+- Provider CLIs may still maintain their own local state outside the fixture. For Copilot, the harness routes logs to the run directory, but authenticated session/config state may still use `COPILOT_HOME` unless the operator provides an isolated authenticated home.
 - The Copilot adapter denies `git push`.
+- The runner emits warnings when transcripts report shell-runtime failures or modified files outside the copied fixture.
 - Normal tests should validate command rendering and fixture isolation, not run external models.
-

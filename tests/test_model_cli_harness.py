@@ -100,3 +100,53 @@ def test_model_cli_harness_rejects_unknown_scenario(tmp_path: Path) -> None:
         assert "scenario 'missing'" in str(exc)
     else:
         raise AssertionError("expected missing scenario to fail")
+
+
+def test_model_cli_harness_resolves_path_shims(tmp_path: Path, monkeypatch) -> None:
+    harness = _load_harness()
+    shim = tmp_path / "fake-cli.cmd"
+    shim.write_text("@echo off\necho resolved\n", encoding="utf-8")
+    monkeypatch.setenv("PATH", str(tmp_path))
+
+    result = harness._run_command(["fake-cli", "--version"], cwd=tmp_path, timeout_seconds=10)
+
+    assert result["returncode"] == 0
+    assert result["command"][0].lower().endswith("fake-cli.cmd")
+    assert result["original_command"] == ["fake-cli", "--version"]
+    assert "resolved" in result["stdout"]
+
+
+def test_model_cli_harness_extracts_execution_warnings(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    stdout = "\n".join(
+        [
+            json.dumps(
+                {
+                    "type": "tool.execution_complete",
+                    "error": {"message": "pwsh.exe is not recognized as an internal or external command"},
+                }
+            ),
+            json.dumps(
+                {
+                    "type": "result",
+                    "usage": {
+                        "codeChanges": {
+                            "filesModified": [
+                                str(repo / "inside.md"),
+                                str(tmp_path / "outside.md"),
+                            ]
+                        }
+                    },
+                }
+            ),
+        ]
+    )
+
+    warnings = harness._execution_warnings(stdout=stdout, repo_path=repo)
+
+    assert {warning["warning_class"] for warning in warnings} == {
+        "model_cli_shell_unavailable",
+        "model_cli_external_write",
+    }
