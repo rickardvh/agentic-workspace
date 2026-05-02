@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
 import tarfile
 import tempfile
 import tomllib
@@ -192,13 +194,42 @@ def test_planning_artifacts_contain_required_contract_inventory(kind: str) -> No
 
 
 @pytest.mark.parametrize("kind", ("wheel", "sdist"))
-def test_planning_artifacts_exclude_generated_cli_package_metadata(kind: str) -> None:
+def test_planning_artifacts_ship_generated_cli_package_import_dependency(kind: str) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         artifact = _build_artifact(kind, Path(tmpdir))
         entries = _raw_artifact_entries(artifact)
 
     assert any(entry.endswith("repo_planning_bootstrap/generated_command_adapters.py") for entry in entries)
-    assert not any("repo_planning_bootstrap/generated_cli_package/" in entry for entry in entries)
+    assert any(entry.endswith("repo_planning_bootstrap/generated_cli_package/__init__.py") for entry in entries)
+
+
+def test_installed_planning_wheel_imports_cli_module() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        wheel_path = _build_artifact("wheel", tmpdir_path)
+        install_root = tmpdir_path / "installed"
+        subprocess.run(
+            ["uv", "pip", "install", "--no-deps", "--target", str(install_root), str(wheel_path)],
+            cwd=PLANNING_PACKAGE_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import repo_planning_bootstrap.cli; from repo_planning_bootstrap.generated_cli_package import build_generated_parser",
+            ],
+            cwd=tmpdir_path,
+            env={**os.environ, "PYTHONPATH": str(install_root)},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_payload_surface_classification_covers_package_payload_sources() -> None:

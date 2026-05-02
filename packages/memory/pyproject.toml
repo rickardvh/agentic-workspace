@@ -34,9 +34,6 @@ agentic-memory-bootstrap = "repo_memory_bootstrap.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/repo_memory_bootstrap"]
-exclude = [
-  "src/repo_memory_bootstrap/generated_cli_package",
-]
 
 [tool.hatch.build.targets.wheel.force-include]
 "bootstrap" = "src/repo_memory_bootstrap/_payload"
@@ -49,9 +46,6 @@ include = [
   "/bootstrap",
   "/skills",
   "/src/repo_memory_bootstrap",
-]
-exclude = [
-  "/src/repo_memory_bootstrap/generated_cli_package",
 ]
 
 [tool.pytest.ini_options]

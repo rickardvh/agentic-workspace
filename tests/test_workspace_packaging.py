@@ -130,3 +130,49 @@ def test_installed_workspace_wheel_imports_cli_module() -> None:
         )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_installed_workspace_stack_runs_summary_adapter() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        wheel_path = _build_artifact(tmpdir, "wheel")
+        install_root = tmpdir_path / "installed"
+        subprocess.run(
+            [
+                "uv",
+                "pip",
+                "install",
+                "--target",
+                str(install_root),
+                str(WORKSPACE_ROOT / "packages" / "memory"),
+                str(WORKSPACE_ROOT / "packages" / "planning"),
+                str(wheel_path),
+            ],
+            cwd=WORKSPACE_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        target = tmpdir_path / "repo"
+        target.mkdir()
+        subprocess.run(["git", "init"], cwd=target, capture_output=True, text=True, check=True)
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "agentic_workspace.cli",
+                "summary",
+                "--target",
+                str(target),
+                "--format",
+                "json",
+            ],
+            cwd=tmpdir_path,
+            env={**os.environ, "PYTHONPATH": str(install_root)},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    assert result.returncode == 0, result.stderr

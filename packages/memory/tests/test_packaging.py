@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
+import sys
 import tarfile
 import tempfile
 from pathlib import Path
@@ -142,22 +144,51 @@ def test_memory_artifacts_do_not_ship_executable_bootstrap_payload() -> None:
             assert executable_entries == []
 
 
-def test_memory_wheel_excludes_generated_cli_package_metadata() -> None:
+def test_memory_wheel_ships_generated_cli_package_import_dependency() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         wheel_path = _build_artifact("wheel", Path(tmpdir))
         inventory = _raw_artifact_inventory(wheel_path)
 
     assert "repo_memory_bootstrap/generated_command_adapters.py" in inventory
-    assert not any("repo_memory_bootstrap/generated_cli_package/" in path for path in inventory)
+    assert "repo_memory_bootstrap/generated_cli_package/__init__.py" in inventory
 
 
-def test_memory_sdist_excludes_generated_cli_package_metadata() -> None:
+def test_memory_sdist_ships_generated_cli_package_import_dependency() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         sdist_path = _build_artifact("sdist", Path(tmpdir))
         inventory = _raw_artifact_inventory(sdist_path)
 
     assert "src/repo_memory_bootstrap/generated_command_adapters.py" in inventory
-    assert not any("src/repo_memory_bootstrap/generated_cli_package/" in path for path in inventory)
+    assert "src/repo_memory_bootstrap/generated_cli_package/__init__.py" in inventory
+
+
+def test_installed_memory_wheel_imports_cli_module() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        wheel_path = _build_artifact("wheel", tmpdir_path)
+        install_root = tmpdir_path / "installed"
+        subprocess.run(
+            ["uv", "pip", "install", "--no-deps", "--target", str(install_root), str(wheel_path)],
+            cwd=MEMORY_PACKAGE_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import repo_memory_bootstrap.cli; from repo_memory_bootstrap.generated_cli_package import build_generated_parser",
+            ],
+            cwd=tmpdir_path,
+            env={**os.environ, "PYTHONPATH": str(install_root)},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    assert result.returncode == 0, result.stderr
 
 
 def _build_artifact(kind: str, output_dir: Path) -> Path:

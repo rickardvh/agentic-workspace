@@ -33,9 +33,6 @@ agentic-planning-bootstrap = "repo_planning_bootstrap.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/repo_planning_bootstrap"]
-exclude = [
-  "src/repo_planning_bootstrap/generated_cli_package",
-]
 
 [tool.hatch.build.targets.wheel.force-include]
 "bootstrap/AGENTS.template.md" = "src/repo_planning_bootstrap/_payload/AGENTS.template.md"
@@ -57,9 +54,6 @@ include = [
   "/skills",
   "/src/repo_planning_bootstrap",
   "/tests",
-]
-exclude = [
-  "/src/repo_planning_bootstrap/generated_cli_package",
 ]
 
 [tool.pytest.ini_options]
