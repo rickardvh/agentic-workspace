@@ -25,6 +25,17 @@ Cheap implementer context for a bounded changed-path scope.
 | `authority_markers` | array of ref `#/$defs/authority_marker` | yes |  | Authority markers relevant to the implementation scope. |  |  |
 | `proof` | object | yes |  | Selected proof lane and validation commands for the changed paths. |  |  |
 | `required_validation_commands` | array of string | yes |  | Commands that must pass before claiming implementation complete. |  |  |
+| `orientation` | object | yes |  | Minimum workspace orientation guidance for the implementer. |  |  |
+| `orientation.status` | string | yes |  | Whether the implementer context is based on changed paths or an unknown scope. |  |  |
+| `orientation.minimum_before_editing` | string | yes |  | Minimum orientation step an agent should complete before implementation. |  |  |
+| `orientation.preflight_command` | string | yes |  | Command for one-call startup, config, and active-state orientation. |  |  |
+| `orientation.summary_command` | string | yes |  | Command for active planning and handoff-state orientation. |  |  |
+| `orientation.trust_note` | string | yes |  | Review-trust consequence when workspace orientation is skipped for planned or high-risk work. |  |  |
+| `inference_limits` | object | yes |  | Limits of changed-path implementer-context inference. |  |  |
+| `inference_limits.rule` | string | yes |  | Boundary for what implement --changed can derive from available workspace state. |  |  |
+| `inference_limits.can_infer` | array of string | yes |  | Information classes derived from paths, config, active planning, or package metadata. |  |  |
+| `inference_limits.cannot_infer` | array of string | yes |  | Information classes that still require human or agent judgment. |  |  |
+| `inference_limits.when_uncertain` | string | yes |  | Routing instruction when changed-path context is insufficient. |  |  |
 | `handoff_requirements` | object | yes |  | Information that must be preserved before pausing or handing off work. |  |  |
 | `handoff_requirements.before_handoff` | array of string | yes |  | Ordered before handoff entries used by this contract. |  |  |
 | `handoff_requirements.stop_when` | array of string | yes |  | Ordered stop when entries used by this contract. |  |  |

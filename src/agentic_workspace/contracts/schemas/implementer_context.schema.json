@@ -15,6 +15,8 @@
     "authority_markers",
     "proof",
     "required_validation_commands",
+    "orientation",
+    "inference_limits",
     "handoff_requirements",
     "next_allowed_action"
   ],
@@ -84,6 +86,79 @@
         "description": "One entry in the required validation commands list."
       },
       "description": "Commands that must pass before claiming implementation complete."
+    },
+    "orientation": {
+      "type": "object",
+      "required": [
+        "status",
+        "minimum_before_editing",
+        "preflight_command",
+        "summary_command",
+        "trust_note"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Whether the implementer context is based on changed paths or an unknown scope."
+        },
+        "minimum_before_editing": {
+          "type": "string",
+          "description": "Minimum orientation step an agent should complete before implementation."
+        },
+        "preflight_command": {
+          "type": "string",
+          "description": "Command for one-call startup, config, and active-state orientation."
+        },
+        "summary_command": {
+          "type": "string",
+          "description": "Command for active planning and handoff-state orientation."
+        },
+        "trust_note": {
+          "type": "string",
+          "description": "Review-trust consequence when workspace orientation is skipped for planned or high-risk work."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Minimum workspace orientation guidance for the implementer."
+    },
+    "inference_limits": {
+      "type": "object",
+      "required": [
+        "rule",
+        "can_infer",
+        "cannot_infer",
+        "when_uncertain"
+      ],
+      "properties": {
+        "rule": {
+          "type": "string",
+          "description": "Boundary for what implement --changed can derive from available workspace state."
+        },
+        "can_infer": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One class of guidance the command can infer."
+          },
+          "minItems": 1,
+          "description": "Information classes derived from paths, config, active planning, or package metadata."
+        },
+        "cannot_infer": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One class of guidance the command cannot infer."
+          },
+          "minItems": 1,
+          "description": "Information classes that still require human or agent judgment."
+        },
+        "when_uncertain": {
+          "type": "string",
+          "description": "Routing instruction when changed-path context is insufficient."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Limits of changed-path implementer-context inference."
     },
     "handoff_requirements": {
       "type": "object",

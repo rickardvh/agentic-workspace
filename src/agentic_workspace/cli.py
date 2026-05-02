@@ -6538,10 +6538,19 @@ def _report_closeout_trust_payload(
         if isinstance(signal, dict) and signal.get("kind") == "closed_without_planning_residue"
     ]
     sample_signals = [message for message in sample_signals if message][:3]
-    trust = "lower-trust" if lower_trust_closeout_count > 0 else "normal"
+    package_workflow_evidence = _package_workflow_evidence_payload(planning_report=planning_report)
+    package_absence_signals: list[str] = []
+    if package_workflow_evidence.get("status") == "present" and package_workflow_evidence.get("trust") == "lower-trust":
+        missing = ", ".join(str(item) for item in package_workflow_evidence.get("missing_expected_surfaces", []))
+        missing = missing or "package workflow evidence"
+        package_absence_signals.append(
+            f"Active planning record is present, but package workflow evidence is incomplete or absent: missing {missing}."
+        )
+    effective_lower_trust_count = lower_trust_closeout_count + len(package_absence_signals)
+    trust = "lower-trust" if effective_lower_trust_count > 0 else "normal"
     if trust == "lower-trust":
         summary = (
-            f"{lower_trust_closeout_count} closeout signal(s) suggest package bypass or missing planning residue; "
+            f"{effective_lower_trust_count} closeout signal(s) suggest package bypass, missing package evidence, or missing planning residue; "
             "treat closeout trust as lower until checked-in residue is visible."
         )
         recommended_next_action = str(
@@ -6554,10 +6563,13 @@ def _report_closeout_trust_payload(
     return {
         "status": "present",
         "trust": trust,
-        "lower_trust_closeout_count": lower_trust_closeout_count,
+        "lower_trust_closeout_count": effective_lower_trust_count,
+        "planning_residue_lower_trust_count": lower_trust_closeout_count,
+        "package_evidence_lower_trust_count": len(package_absence_signals),
         "summary": summary,
-        "sample_signals": sample_signals,
-        "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
+        "sample_signals": [*sample_signals, *package_absence_signals][:3],
+        "absence_signals": package_absence_signals,
+        "package_workflow_evidence": package_workflow_evidence,
         "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report),
         "historical_review_artifacts": _historical_review_artifacts_policy(
             planning_report=planning_report,
@@ -7981,7 +7993,7 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
     proof = (
-        _proof_selection_for_changed_paths(changed_paths=normalized_paths)
+        _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root)
         if normalized_paths
         else copy.deepcopy(implementer_template["unknown_scope_proof"])
     )
@@ -8000,6 +8012,41 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         "authority_markers": [_authority_marker_for_path(path) for path in (normalized_paths or ["AGENTS.md", "llms.txt"])],
         "proof": proof,
         "required_validation_commands": proof["required_commands"],
+        "orientation": {
+            "status": "changed-path-context" if normalized_paths else "unknown-scope",
+            "minimum_before_editing": (
+                "Inspect the listed files, path boundaries, workflow obligations, and selected proof before editing."
+                if normalized_paths
+                else "Provide --changed paths or run preflight before broad implementation."
+            ),
+            "preflight_command": "agentic-workspace preflight --format json",
+            "summary_command": "agentic-workspace summary --format json",
+            "trust_note": (
+                "Skipping workspace orientation may be faster for this edit, but lowers continuation and review trust for planned or high-risk work."
+            ),
+        },
+        "inference_limits": {
+            "rule": (
+                "implement --changed derives bounded context from changed paths, config, active planning, and package metadata; "
+                "it does not know unstated intent."
+            ),
+            "can_infer": [
+                "path-owned proof lanes",
+                "configured workflow obligations visible from the target",
+                "active planning assurance when Planning exposes it",
+                "path boundary and generated-surface warnings",
+            ],
+            "cannot_infer": [
+                "whether the human intended a larger lane than the changed paths imply",
+                "whether proof commands were actually executed unless evidence is recorded elsewhere",
+                "whether missing changed paths hide additional risk",
+                "whether external tracker state is authoritative for the repo",
+            ],
+            "when_uncertain": (
+                "Run preflight or summary and promote to checked-in planning before implementation when scope, proof, "
+                "or continuation is not obvious."
+            ),
+        },
         "handoff_requirements": copy.deepcopy(implementer_template["handoff_requirements"]),
         "next_allowed_action": (
             implementer_template["next_allowed_action"]["attention"]

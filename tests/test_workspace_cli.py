@@ -4920,6 +4920,105 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert "proof, intent satisfaction, issue state" in terminal_action["changes_closure"]
 
 
+def test_report_closeout_trust_lowers_trust_when_active_plan_has_no_package_evidence(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "bypassed-workflow.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Bypassed Workflow",
+            "active_milestone": {"id": "bypassed-workflow", "status": "active"},
+            "delegated_judgment": {
+                "requested outcome": "Implement broad work.",
+                "hard constraints": "Keep workflow evidence visible.",
+                "agent may decide locally": "Implementation details.",
+                "escalate when": "Workflow unavailable.",
+            },
+            "immediate_next_action": ["Finish the lane."],
+            "completion_criteria": ["Closeout trust can detect missing package evidence."],
+            "validation_commands": ["make check"],
+            "intent_continuity": {
+                "larger intended outcome": "Close a broad workflow lane.",
+                "this slice completes the larger intended outcome": "yes",
+                "continuation surface": "none",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "no",
+                "owner surface": "none",
+                "activation trigger": "none",
+            },
+            "iterative_follow_through": {
+                "what this slice enabled": "absence detection",
+                "intentionally deferred": "external enforcement",
+                "discovered implications": "none",
+                "proof achieved now": "pending",
+                "validation still needed": "make check",
+                "next likely slice": "none",
+            },
+            "context_budget": {
+                "live working set": "closeout trust",
+                "recoverable later": "archive",
+                "externalize before shift": "plan",
+                "pre-work config pull": "",
+                "pre-work memory pull": "",
+                "tiny resumability note": "missing package evidence",
+                "context-shift triggers": "closeout",
+            },
+            "execution_run": {
+                "run status": "active",
+                "executor": "test",
+                "handoff source": "chat only",
+                "what happened": "Implemented without recording package workflow use.",
+                "scope touched": "test",
+                "changed surfaces": "test",
+                "validations run": "make check",
+                "result for continuation": "close",
+                "next step": "close",
+            },
+            "proof_report": {
+                "validation proof": "make check",
+                "proof achieved now": "pending",
+                'evidence for "proof achieved" state': "none",
+            },
+            "closure_check": {
+                "slice status": "active",
+                "larger-intent status": "open",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "fixture",
+                "evidence carried forward": "none",
+                "reopen trigger": "missing evidence",
+            },
+        },
+    )
+    (target / ".agentic-workspace" / "planning" / "state.toml").write_text(
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'bypassed-workflow', title = 'Bypassed workflow', surface = '.agentic-workspace/planning/execplans/bypassed-workflow.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    closeout = payload["closeout_trust"]
+    assert closeout["trust"] == "lower-trust"
+    assert closeout["lower_trust_closeout_count"] == 1
+    assert closeout["planning_residue_lower_trust_count"] == 0
+    assert closeout["package_evidence_lower_trust_count"] == 1
+    assert "missing preflight, summary, report, proof" in closeout["absence_signals"][0]
+    evidence = closeout["package_workflow_evidence"]
+    assert evidence["trust"] == "lower-trust"
+    assert evidence["missing_expected_surfaces"] == ["preflight", "summary", "report", "proof"]
+
+
 def test_report_surfaces_local_only_memory_status(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -6653,6 +6752,13 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
         "agentic-workspace defaults --section root_cli_authority --format json",
     ]
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
+    assert payload["orientation"]["status"] == "changed-path-context"
+    assert "preflight" in payload["orientation"]["preflight_command"]
+    assert "lowers continuation and review trust" in payload["orientation"]["trust_note"]
+    assert "unstated intent" in payload["inference_limits"]["rule"]
+    assert (
+        "whether proof commands were actually executed unless evidence is recorded elsewhere" in payload["inference_limits"]["cannot_infer"]
+    )
     assert payload["path_boundaries"][0]["authority"] == "payload"
     assert payload["path_boundaries"][0]["requires_attention"] is True
     assert payload["authority_markers"][0]["safe_to_edit"] is False

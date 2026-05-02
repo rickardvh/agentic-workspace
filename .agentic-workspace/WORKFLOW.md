@@ -1,27 +1,29 @@
 # Workspace Workflow
 
-CLI-first bootstrap router for Agentic Workspace systems installed in a repository.
+Mandatory CLI-first bootstrap router for Agentic Workspace systems installed in a repository.
 
-Keep this file concise, product-managed, and replaceable. It is the fallback router when an agent cannot get enough direction from compact CLI or structured JSON output.
+Keep this file concise, product-managed, and replaceable. It is the fallback router when an agent cannot get enough direction from compact CLI or structured JSON output. Do not treat this workflow as optional for non-trivial agent work.
 
 ## First Route
 
-1. Run `agentic-workspace preflight --format json` for takeover, recovery, or first-contact context.
-2. If you need the ordinary startup order, run `agentic-workspace defaults --section startup --format json`.
-3. If the configured startup file, posture, or workflow obligations matter, run `agentic-workspace config --target . --format json`.
-4. If current work, active planning, proof, or handoff state matters, run `agentic-workspace summary --format json`.
-5. Open raw planning, memory, module, or workflow files only when compact output points there.
+1. Before implementation, run `agentic-workspace preflight --format json` for takeover, recovery, or first-contact context.
+2. If changed paths are already known, run `agentic-workspace implement --changed <paths> --format json` for bounded implementer context.
+3. If current work, active planning, proof, or handoff state matters, run `agentic-workspace summary --format json`.
+4. If the configured startup file, posture, or workflow obligations matter, run `agentic-workspace config --target . --format json`.
+5. If you need the ordinary startup order, run `agentic-workspace defaults --section startup --format json`.
+6. Open raw planning, memory, module, or workflow files only when compact output points there.
 
 ## Structured Priority
 
-- Use `preflight`, `defaults`, `config`, `summary`, `report`, `skills`, and `proof` before prose when the CLI is available.
+- Use `preflight`, `implement --changed`, `defaults`, `config`, `summary`, `report`, `skills`, and `proof` before prose when the CLI is available.
+- At minimum, orient through `preflight` or `implement --changed` before editing files unless the user explicitly asks for a tiny direct change and validation is obvious.
 - Treat `.agentic-workspace/planning/state.toml` and active `.agentic-workspace/planning/execplans/*.plan.json` as execution authority only after summary or preflight routes you there.
 - Treat GitHub, Linear, Jira, Notion, and similar trackers as optional intake evidence. They are not the universal workflow and do not replace checked-in planning.
 - Use package skills when `agentic-workspace skills --target . --task "<task>" --format json` recommends one; otherwise stay with compact CLI and this fallback.
 
 ## Work Routing Gate
 
-Before implementation, decide the smallest workflow shape that fits the current request:
+Before implementation, decide the smallest workflow shape that fits the current request. This is required orientation, not a suggestion:
 
 - `direct`: one coherent local pass can finish safely and validation is obvious. No durable plan is required.
 - `bounded`: one slice needs explicit done-when, proof, or short restart state. Use the configured planning surface when restart cost matters and Planning is installed.
@@ -29,6 +31,8 @@ Before implementation, decide the smallest workflow shape that fits the current 
 - `epic`: work contains multiple lanes or needs product shaping. Create a review or decomposition artifact first, split it into bounded lanes or slices, then write implementation execplans only for ready slices.
 
 For lane or epic work, do not jump straight from the prompt to implementation. Assess risk and scope first; record `adaptive_assurance` when the Planning module is installed and risk is medium or higher, and keep decomposition evidence with the durable workflow surface.
+
+Skipping workspace orientation may be faster for a local edit, but it lowers continuation and review trust for planned, lane, epic, high-risk, or unclear-proof work.
 
 ## Fallback Procedure
 

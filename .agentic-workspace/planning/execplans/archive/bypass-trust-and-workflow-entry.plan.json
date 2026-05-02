@@ -1,0 +1,369 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Bypass Trust And Workflow Entry",
+  "goal": [
+    "Make closeout trust report lower trust when a broad active plan has missing package workflow evidence, even when the package is only consulted at closeout.",
+    "Clarify implement --changed as an inference-limited implementer entrypoint.",
+    "Make WORKFLOW wording more imperative and explicit about minimum orientation before implementation."
+  ],
+  "non_goals": [
+    "Do not add PR templates, CI jobs, git hooks, or mandatory external enforcement.",
+    "Do not claim bypass can be detected when no later actor invokes the package."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Late package consultation can identify missing workflow evidence as lower trust, and first-contact workflow text pushes agents more strongly into CLI orientation.",
+      "constraints": "Keep enforcement advisory and portable; do not require repo-specific review templates or CI.",
+      "latitude": "May adjust report payload shape, implement payload guidance, managed workflow text, tests, and docs.",
+      "escalation": "Stop before adding host-repo templates, CI examples as default payload, or invasive policy gates."
+    },
+    "execution": {
+      "milestone": "bypass-trust-and-workflow-entry",
+      "status": "complete",
+      "next_step": "Archive the completed plan.",
+      "proof": "Focused CLI tests, contract checks, source/payload check, and make check passed."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/WORKFLOW.md",
+        "src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        "docs/package/overview.md"
+      ],
+      "invariants": [
+        "Missing evidence lowers trust only when the package is consulted later.",
+        "implement --changed reports derived guidance and uncertainty, not omniscient answers.",
+        "AGENTS.md stays a thin pointer."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Agents are harder to accidentally route around the package on large or complex work without making the product invasive.",
+    "this slice completes the larger intended outcome": "yes for non-invasive late trust and workflow wording",
+    "continuation surface": "none unless implementation reveals a product gap",
+    "parent lane": "workflow robustness"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "new finding during implementation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Closeout trust can flag missing workflow evidence from absence, and WORKFLOW states mandatory orientation steps more clearly.",
+    "intentionally deferred": "External enforcement hooks and repo-specific templates.",
+    "discovered implications": "implement --changed could use the target root when selecting proof, so it now picks up config and active planning assurance instead of path-only defaults.",
+    "proof achieved now": "yes",
+    "validation still needed": "none before archive",
+    "next likely slice": "none"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement closeout trust / bypass detection from absence; consider implement --changed; make AGENTS/WORKFLOW more imperative.",
+    "inferred intended outcome": "Improve workflow robustness without invasive human or CI workflow changes.",
+    "chosen concrete what": "Report missing package evidence as lower trust when active broad planning exists, add implementer caveats, and harden WORKFLOW wording.",
+    "interpretation distance": "low",
+    "review guidance": "Check that the package does not overclaim detection when it was never invoked."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace CLI/report code, tests, managed workflow payload/current install copy, and package docs.",
+    "max changed files": "Focused documentation and CLI/test files only.",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q; make check",
+    "ask-before-refactor threshold": "Ask before adding config schema policy, default PR templates, CI generation, or hooks.",
+    "stop before touching": "GitHub templates, CI workflows, package install lifecycle semantics unrelated to WORKFLOW payload."
+  },
+  "stop_conditions": {
+    "stop when": "Closeout trust absence detection, implementer entrypoint wording, WORKFLOW wording, and tests are landed and validated.",
+    "escalate when boundary reached": "Need for host-specific automation or new config schema policy emerges.",
+    "escalate on scope drift": "The fix starts changing planning schema semantics broadly.",
+    "escalate on proof failure": "Focused tests or make check fail outside the touched surfaces."
+  },
+  "context_budget": {
+    "live working set": "closeout_trust functions, implement payload, WORKFLOW payload, tests.",
+    "recoverable later": "User discussion and archived prior workflow lanes.",
+    "externalize before shift": "Update this execplan execution_run/proof_report/closure_check.",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "Add late lower-trust absence signal without external enforcement.",
+    "context-shift triggers": "Before committing or if tests reveal larger contract drift."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Improve non-invasive workflow robustness.",
+    "hard constraints": "No PR templates, CI, hooks, or overclaiming bypass detection.",
+    "agent may decide locally": "Exact payload field names and wording.",
+    "escalate when": "A config/schema policy change appears necessary."
+  },
+  "adaptive_assurance": {
+    "level": "medium",
+    "reason": "Touches workflow guidance and closeout trust semantics, but does not mutate installed state or schemas.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "requirement_refs",
+      "acceptance_refs"
+    ],
+    "proof_profiles": [
+      "workspace-cli-tests",
+      "full-check"
+    ],
+    "required_gates": [
+      "focused-tests",
+      "make-check"
+    ]
+  },
+  "traceability_refs": {
+    "requirement_refs": [
+      "user feedback: closeout trust absence detection",
+      "user feedback: implement --changed as bounded entrypoint",
+      "user feedback: imperative WORKFLOW orientation"
+    ],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [
+      "src/agentic_workspace/cli.py:_report_closeout_trust_payload",
+      "src/agentic_workspace/cli.py:_implement_payload",
+      ".agentic-workspace/WORKFLOW.md"
+    ],
+    "risk_refs": [
+      "overclaiming bypass detection",
+      "invasive workflow defaults"
+    ],
+    "security_refs": [],
+    "audit_refs": [],
+    "acceptance_refs": [
+      "closeout_trust reports lower trust when active planning exists but package workflow evidence is absent",
+      "implement --changed explains inference limits and next orientation route",
+      "WORKFLOW states required minimum orientation before implementation"
+    ],
+    "decision_refs": [
+      "PR templates and CI are deferred as invasive/repo-specific"
+    ]
+  },
+  "control_gates": [
+    {
+      "id": "focused-tests",
+      "status": "satisfied",
+      "owner_role": "agent",
+      "required_for": [
+        "archive"
+      ],
+      "blocking": true,
+      "evidence": [
+        "uv run pytest tests/test_workspace_cli.py::test_implement_command_returns_bounded_context_and_boundary_warnings tests/test_workspace_cli.py::test_implement_task_routes_broad_issue_ingestion_to_planning tests/test_workspace_cli.py::test_report_closeout_trust_lowers_trust_when_active_plan_has_no_package_evidence tests/test_workspace_cli.py::test_report_closeout_trust_surfaces_package_workflow_evidence tests/test_workspace_cli.py::test_report_surfaces_compact_lower_trust_closeout_summary tests/test_generated_tool_conformance.py -q"
+      ],
+      "next_action": "No focused test work remains."
+    },
+    {
+      "id": "make-check",
+      "status": "satisfied",
+      "owner_role": "agent",
+      "required_for": [
+        "archive"
+      ],
+      "blocking": true,
+      "evidence": [
+        "make check"
+      ],
+      "next_action": "Archive the completed plan."
+    }
+  ],
+  "implementation_blockers": [],
+  "risk_registry_refs": [
+    "Do not imply the package can observe a bypass when never invoked."
+  ],
+  "invariant_refs": [
+    "AGENTS.md remains a thin pointer; WORKFLOW is fallback routing, not a full manual."
+  ],
+  "test_data_policy": {
+    "classification": "synthetic repo fixtures only",
+    "forbidden": [
+      "network-dependent evidence",
+      "CI or PR-template mutation"
+    ],
+    "fixture_owner": "tests/test_workspace_cli.py",
+    "proof_required": [
+      "closeout trust absence signal",
+      "implement payload inference-limit guidance"
+    ],
+    "refs": [
+      "tests/test_workspace_cli.py"
+    ]
+  },
+  "layer_scaffold": {
+    "type": "workflow-robustness",
+    "required_refs": [
+      "closeout_trust",
+      "implement --changed",
+      "WORKFLOW.md"
+    ],
+    "common_risks": [
+      "too much prose",
+      "overclaiming detection",
+      "invasive host workflow defaults"
+    ],
+    "suggested_proof_profiles": [
+      "focused tests",
+      "make check"
+    ],
+    "suggested_gates": [
+      "focused-tests",
+      "make-check"
+    ],
+    "non_goals": [
+      "PR template",
+      "CI job",
+      "git hook"
+    ],
+    "durable_residue_prompts": [
+      "If missing schema policy becomes necessary, route a follow-up instead of adding it opportunistically."
+    ]
+  },
+  "architecture_decision_promotion": {
+    "status": "none",
+    "target": "",
+    "decision_refs": [],
+    "promotion_needed": false,
+    "notes": "This is a behavior/writing refinement, not a new architecture decision."
+  },
+  "threat_failure_aids": [],
+  "references": [],
+  "active_milestone": {
+    "id": "absence-signal-and-entry-wording",
+    "status": "completed",
+    "scope": "closeout trust, implement payload guidance, WORKFLOW wording",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive the completed plan."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/WORKFLOW.md",
+    "src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Lower-trust from absence is only visible once the package is invoked.",
+    "External enforcement remains optional and outside the default product surface."
+  ],
+  "contract_decisions_to_freeze": [
+    "Package workflow evidence absence lowers trust for broad active planning records."
+  ],
+  "open_questions_to_close": [
+    "Which evidence absence can be detected without self-report? Active planning plus missing package workflow evidence can lower trust when closeout_trust is run.",
+    "What should implement --changed honestly infer? Paths, config, active planning assurance, and package metadata, with explicit cannot-infer limits.",
+    "How imperative should WORKFLOW be without becoming a second manual? It now requires preflight or implement --changed orientation while keeping AGENTS thin."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "make check"
+  ],
+  "required_tools": [
+    "uv",
+    "make"
+  ],
+  "completion_criteria": [
+    "Closeout trust emits absence-based lower-trust signal for active broad work with missing package evidence.",
+    "Implement context states inference limits and concrete orientation next step.",
+    "WORKFLOW requires at least compact orientation before implementation.",
+    "Focused tests and make check pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace summary --format json",
+    "what happened": "Implemented closeout trust absence detection, added implement --changed orientation/inference-limit fields, and made WORKFLOW wording more imperative.",
+    "scope touched": "workspace CLI/report behavior, implementer context schema/reference docs, workflow payload/current install, tests, planning state",
+    "changed surfaces": ".agentic-workspace/WORKFLOW.md; src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md; src/agentic_workspace/cli.py; src/agentic_workspace/contracts/schemas/implementer_context.schema.json; docs/reference/implementer-context.md; tests/test_workspace_cli.py",
+    "validations run": "focused pytest; contract tooling; source/payload operational install check; make check",
+    "result for continuation": "archive",
+    "next step": "Archive the completed plan."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used package workflow and checked-in planning",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none required"
+  },
+  "proof_report": {
+    "validation proof": "Focused CLI/conformance tests, contract tooling, source/payload boundary check, and make check.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "uv run pytest ... -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_source_payload_operational_install.py; make check"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement non-invasive bypass trust and stronger workflow orientation.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "closeout_trust lowers trust from missing package evidence; implement --changed exposes orientation and inference limits; WORKFLOW now states minimum orientation imperatively.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package useful as an amortized coordination layer without invasive workflow defaults.",
+    "slice shaping bias": "Prefer reportable trust signals and low-cost entrypoints over external enforcement.",
+    "broader-lane validation question": "Can a late package invocation see enough absence to lower closeout trust honestly?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The requested non-invasive changes are implemented; invasive PR/CI/hooks remain explicitly non-goals, not unresolved slice intent.",
+    "evidence carried forward": "tests and generated implementer-context reference docs",
+    "reopen trigger": "bypass detection overclaims or workflow wording remains too optional"
+  },
+  "generated_closeout": {
+    "status": "not-generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; structured execplan fields remain authoritative",
+    "text": ""
+  },
+  "memory_learning_capture": {
+    "status": "complete",
+    "memory consult recommended?": "no",
+    "memory notes read": "",
+    "future agents should not rediscover": "Bypass detection is only late trust assessment; it requires someone to invoke closeout_trust.",
+    "decision": "promote_to_docs_contracts_checks_code",
+    "target": "",
+    "reason": "Behavior is encoded in CLI output, schema docs, workflow payload, and tests."
+  },
+  "durable_residue": {
+    "status": "check",
+    "learned constraint": "Absence-based bypass detection cannot work unless the package is invoked later; when invoked, active planning plus missing package evidence is a lower-trust signal.",
+    "motivation worth preserving": "Make bypass visible without adding invasive host workflow defaults.",
+    "canonical owner now": "src/agentic_workspace/cli.py closeout_trust and tests/test_workspace_cli.py",
+    "promotion trigger": "changes to closeout_trust or implement --changed",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Non-invasive workflow robustness changes implemented.",
+    "validation confirmed": "make check passed.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "behavior tests and generated reference docs",
+    "knowledge promoted (Memory/Docs/Config)": "CLI/schema/docs/checks",
+    "resume from": "archive-ready execplan"
+  },
+  "improvement_signal_review": {
+    "status": "active",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "implement --changed selected proof without passing target_root, so it could miss config and active planning assurance."
+    ],
+    "signals fixed": [
+      "implement --changed now passes target_root into proof selection and documents inference limits."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none unless implementation reveals a follow-up"
+  },
+  "drift_log": [
+    "2026-05-02: Plan created before workflow robustness implementation."
+  ]
+}
