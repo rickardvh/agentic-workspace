@@ -1,0 +1,214 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Reusable model CLI dogfooding harness",
+  "goal": [
+    "Create a reusable model-CLI dogfooding harness that can run Copilot/Haiku and later CLIs against disposable Agentic Workspace scenarios."
+  ],
+  "non_goals": [
+    "Do not build a full benchmark dashboard in this slice.",
+    "Do not require executing paid model calls during normal validation.",
+    "Do not bake Copilot-specific behavior into the core harness format."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Provide a reusable harness contract, runner, and first Copilot adapter configuration for black-box workflow dogfooding.",
+      "constraints": "Keep the runner dry-run by default and isolate execution in scratch fixtures.",
+      "latitude": "Choose simple JSON config and script shape that is easy to extend to other model CLIs.",
+      "escalation": "Stop before adding product runtime dependencies or automatic issue creation."
+    },
+    "execution": {
+      "milestone": "model-cli-dogfooding-harness",
+      "status": "completed",
+      "next_step": "Commit and push the harness scaffold.",
+      "proof": "Run focused tests for the harness plus planning surface checks."
+    },
+    "scope": {
+      "touched": [
+        "docs/maintainer/",
+        "tools/model-cli-harness/",
+        "scripts/model_cli_harness/",
+        "tests/"
+      ],
+      "invariants": [
+        "Harness execution must default to dry-run.",
+        "Scenario repos must be copied into scratch before execution.",
+        "Adapter commands must be data-driven so non-Copilot CLIs can be added later."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Use external model CLIs as black-box package dogfooding probes so weaker/cheaper agents reveal workflow ambiguity early.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Draw up a test harness that can be reused for other models and CLIs.",
+    "inferred intended outcome": "Create a practical, reusable harness design and first scaffold for Copilot/Haiku black-box workflow evaluation.",
+    "chosen concrete what": "Add a JSON-configured runner, Copilot suite example, documentation, and dry-run tests.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "docs/maintainer/, tools/model-cli-harness/, scripts/model_cli_harness/, tests/, active planning closeout",
+    "max changed files": "about 8",
+    "required validation commands": "uv run pytest tests/test_model_cli_harness.py -q; uv run python scripts/check/check_planning_surfaces.py",
+    "ask-before-refactor threshold": "Adding a persistent benchmark database, CI integration, or product CLI command.",
+    "stop before touching": "Package runtime behavior, generated CLI adapters, or unrelated docs."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Implement docs/config/runner/tests for model CLI harness; keep execution dry-run by default.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a reusable model CLI dogfooding harness.",
+    "hard constraints": "Dry-run by default; disposable fixtures; adapter-neutral core.",
+    "agent may decide locally": "File layout, config fields, prompt template, and dry-run proof.",
+    "escalate when": "The harness needs to run paid model calls or mutate real repos during proof."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "model-cli-dogfooding-harness",
+    "status": "completed",
+    "scope": "Add the first reusable model CLI dogfooding harness scaffold.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add docs, config, runner, and dry-run tests for reusable model CLI dogfooding."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "docs/maintainer/",
+    "tools/model-cli-harness/",
+    "scripts/model_cli_harness/",
+    "tests/test_model_cli_harness.py"
+  ],
+  "invariants": [
+    "Harness execution defaults to dry-run.",
+    "Scenario repos are copied into scratch before execution.",
+    "Adapter command construction is data-driven."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_model_cli_harness.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "python",
+    "pytest",
+    "copilot for manual execute-mode runs"
+  ],
+  "completion_criteria": [
+    "Reusable model CLI dogfooding harness is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap new-plan",
+    "what happened": "Added a reusable model CLI dogfooding harness with Copilot adapter config, disposable fixtures, dry-run runner, maintainer docs, and unit tests.",
+    "scope touched": "docs/maintainer, tools/model-cli-harness, scripts/model_cli_harness, tests",
+    "changed surfaces": "new harness script, suite config, fixtures, docs, tests, and planning archive",
+    "validations run": "uv run pytest tests/test_model_cli_harness.py -q; ruff check; dry-run harness command; planning surface checker; make check",
+    "result for continuation": "harness scaffold ready; execute-mode runs can be performed intentionally with --execute",
+    "next step": "commit and push"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used checked-in planning and archived closeout",
+    "misinterpretation risk": "low; no external model calls were run in validation",
+    "follow-on decision": "run execute-mode Copilot/Haiku scenarios manually when ready"
+  },
+  "proof_report": {
+    "validation proof": "make check passed; focused harness tests and lint passed; dry-run harness rendered a Copilot command and copied a disposable fixture.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "make check exited 0 after harness changes."
+  },
+  "intent_satisfaction": {
+    "original intent": "Draw up a test harness that can be reused for other models and CLIs.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Added adapter-neutral suite format, Copilot adapter, reusable runner, fixtures, docs, and tests.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Reusable model CLI harness scaffold delivered.",
+    "validation confirmed": "make check passed.",
+    "follow-on routed to": "manual execute-mode dogfooding run when desired",
+    "post-work posterity capture": "archive this execplan",
+    "knowledge promoted (Memory/Docs/Config)": "docs/maintainer/model-cli-dogfooding-harness.md",
+    "resume from": "tools/model-cli-harness/suites/copilot-workflow-smoke.json"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The reusable scaffold exists and is validated without requiring paid model execution.",
+    "evidence carried forward": "docs, runner, fixtures, suite config, tests, and make check output.",
+    "reopen trigger": "Need to automate scoring, add new adapters, or execute and analyze real Copilot/Haiku runs."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-02: Scaffolded by agentic-planning-bootstrap new-plan."
+  ]
+}

@@ -1,0 +1,10 @@
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[active]
+execplans = ["freehand-lane.plan.json"]
+
+[todo]
+active_items = []
+queued_items = []
+

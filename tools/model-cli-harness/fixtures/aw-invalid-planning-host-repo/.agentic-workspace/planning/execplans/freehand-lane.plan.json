@@ -1,0 +1,18 @@
+{
+  "kind": "planning-execplan/v1",
+  "lane_id": "lane-1-foundation",
+  "title": "Freehand lane that should not be treated as valid",
+  "tasks": [
+    {
+      "task_id": "1.1",
+      "title": "Generic task",
+      "estimated_effort": "30 minutes"
+    }
+  ],
+  "validation_gates": {
+    "after_completion": [
+      "tests pass"
+    ]
+  }
+}
+

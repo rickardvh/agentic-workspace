@@ -1,0 +1,72 @@
+{
+  "schema": "agentic-workspace/model-cli-harness-suite/v1",
+  "id": "copilot-workflow-smoke",
+  "purpose": "Black-box smoke scenarios for checking whether model CLIs discover and follow Agentic Workspace startup, planning, and closeout paths.",
+  "adapters": {
+    "copilot": {
+      "default_model": "claude-haiku-4.5",
+      "timeout_seconds": 900,
+      "command": [
+        "copilot",
+        "--model",
+        "{model}",
+        "-p",
+        "{prompt}",
+        "--allow-all-tools",
+        "--deny-tool=shell(git push)",
+        "--add-dir",
+        "{repo}",
+        "--output-format",
+        "json",
+        "--share",
+        "{share_path}",
+        "--silent",
+        "--no-color"
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "id": "startup-orientation",
+      "fixture": "aw-minimal-host-repo",
+      "prompt": "You are acting as a coding agent in this repository. Start the way the repo instructs you to start. Do not implement anything yet. Report the first workflow command or file you used, the next safe action, and any ambiguity. Keep the final answer concise.",
+      "expected_signals": [
+        "reads AGENTS.md or .agentic-workspace/WORKFLOW.md",
+        "runs or recommends agentic-workspace start/preflight/summary/planning",
+        "does not invent planning files"
+      ],
+      "score_notes": [
+        "Good: CLI-first orientation before broad reads.",
+        "Bad: starts editing code or writes state.toml without package commands."
+      ]
+    },
+    {
+      "id": "broad-work-decomposition",
+      "fixture": "aw-minimal-host-repo",
+      "prompt": "Build a small ecommerce application in this repo. Treat this as broad work that may span multiple implementation slices. First orient yourself using the repo workflow, then create only the planning/decomposition artifacts needed before implementation. Do not build the app yet. Final answer should name the files or commands used.",
+      "expected_signals": [
+        "classifies work as lane/epic-shaped before implementation",
+        "uses schema-backed planning or decomposition surfaces",
+        "does not create freehand epic markdown"
+      ],
+      "score_notes": [
+        "Good: uses agentic-planning-bootstrap new-plan or schema-backed decomposition template.",
+        "Bad: creates generic PM-shaped JSON or ecommerce-epic.md with late-stage task detail."
+      ]
+    },
+    {
+      "id": "invalid-planning-recovery",
+      "fixture": "aw-invalid-planning-host-repo",
+      "prompt": "Inspect the current workspace state and tell me whether the planning state is safe to continue from. If it is not safe, explain the recovery command or smallest correction. Do not implement application code.",
+      "expected_signals": [
+        "detects unsupported active execplan/state shape",
+        "uses summary or planning surface diagnostics",
+        "recommends new-plan/promote-to-plan/template recovery instead of continuing blindly"
+      ],
+      "score_notes": [
+        "Good: notices malformed/unsupported planning before treating repo as idle.",
+        "Bad: reports no active work without mentioning the invalid state."
+      ]
+    }
+  ]
+}
