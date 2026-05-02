@@ -2164,6 +2164,32 @@ def test_planning_summary_projects_decomposition_records(tmp_path: Path) -> None
     assert summary["decomposition"]["records"][0]["candidate_lanes"][0]["id"] == "storefront"
 
 
+def test_planning_summary_warns_for_misplaced_decomposition_records(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / "planning/ecommerce-app-decomposition.json",
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Shop build",
+                "status": "needs-shaping",
+                "larger_intended_outcome": "Build the shop.",
+                "non_goals": [],
+                "candidate_lanes": [],
+                "proof_expectations": [],
+                "promotion_rule": "Promote ready lanes only.",
+            },
+            indent=2,
+        ),
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    warnings = summary["planning_surface_health"]["warnings"]
+    assert summary["planning_surface_health"]["status"] == "not-clean"
+    assert any(warning["warning_class"] == "planning_decomposition_artifact_misplaced" for warning in warnings)
+
+
 def test_planning_cli_create_review_writes_valid_review_record(tmp_path: Path, capsys) -> None:
     result = planning_cli.main(
         [

@@ -77,6 +77,7 @@ WARNING_PLANNING_EVIDENCE_SCHEMA_DRIFT = "planning_evidence_schema_drift"
 WARNING_EXECPLAN_FOREIGN_PM_SHAPE = "execplan_foreign_pm_shape"
 WARNING_PLANNING_STATE_UNSUPPORTED_ACTIVATION_SHAPE = "planning_state_unsupported_activation_shape"
 WARNING_EPIC_ARTIFACT_UNSUPPORTED = "planning_epic_artifact_unsupported"
+WARNING_DECOMPOSITION_ARTIFACT_MISPLACED = "planning_decomposition_artifact_misplaced"
 WARNING_ROADMAP_EXECUTION_DRIFT = "roadmap_execution_drift"
 WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL = "roadmap_missing_promotion_signal"
 WARNING_ROADMAP_MISSING_REOPEN_SIGNAL = "roadmap_missing_reopen_signal"
@@ -435,6 +436,60 @@ def _check_planning_record_schemas(repo_root: Path) -> list[PlanningWarning]:
                     expected_kind="planning-review/v1",
                 )
             )
+    return warnings
+
+
+def _looks_like_decomposition_record(path: Path) -> bool:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return False
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("kind") == "planning-decomposition/v1":
+        return True
+    decomposition_keys = {"candidate_lanes", "larger_intended_outcome", "promotion_rule"}
+    if decomposition_keys.intersection(payload):
+        return True
+    lowered_name = path.name.lower()
+    return "decomposition" in lowered_name and "planning" in lowered_name
+
+
+def _misplaced_decomposition_artifact_warnings(*, repo_root: Path) -> list[PlanningWarning]:
+    planning_root = repo_root / ".agentic-workspace" / "planning"
+    canonical_dir = planning_root / "decompositions"
+    warnings: list[PlanningWarning] = []
+    candidates: list[Path] = []
+    if planning_root.exists():
+        for path in sorted(planning_root.glob("*.json")):
+            if path.name == "TEMPLATE.decomposition.json":
+                continue
+            candidates.append(path)
+    top_level_planning = repo_root / "planning"
+    if top_level_planning.exists():
+        candidates.extend(sorted(path for path in top_level_planning.rglob("*.json") if path.is_file()))
+
+    seen: set[Path] = set()
+    for path in candidates:
+        if path in seen or not path.is_file():
+            continue
+        seen.add(path)
+        if canonical_dir in path.parents:
+            continue
+        if not _looks_like_decomposition_record(path):
+            continue
+        warnings.append(
+            PlanningWarning(
+                WARNING_DECOMPOSITION_ARTIFACT_MISPLACED,
+                _render_path(path),
+                (
+                    "This looks like a planning decomposition record but is outside the canonical "
+                    "`.agentic-workspace/planning/decompositions/*.decomposition.json` surface. Move it "
+                    "there or recreate it from `TEMPLATE.decomposition.json`; otherwise `summary` cannot "
+                    "treat it as shared planning state."
+                ),
+            )
+        )
     return warnings
 
 
@@ -2362,6 +2417,7 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
     warnings: list[PlanningWarning] = []
     warnings.extend(_unsupported_state_activation_shape_warnings(state, repo_root=repo_root))
     warnings.extend(_unsupported_epic_artifact_warnings(repo_root=repo_root))
+    warnings.extend(_misplaced_decomposition_artifact_warnings(repo_root=repo_root))
 
     if config_path.exists():
         config_text = "\n".join(_read_lines(config_path)).lower()

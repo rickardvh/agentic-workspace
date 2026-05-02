@@ -1382,3 +1382,37 @@ def test_checker_validates_decomposition_and_warns_for_freehand_epic_md(tmp_path
 
     assert not [warning for warning in warnings if warning.warning_class == "planning_record_schema_drift"]
     assert any(warning.warning_class == "planning_epic_artifact_unsupported" for warning in warnings)
+
+
+def test_checker_warns_for_misplaced_decomposition_json(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_misplaced_decomposition")
+    _install_planning_record_schemas(tmp_path)
+    _write_startup_surfaces(tmp_path)
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
+    misplaced_records = [
+        tmp_path / ".agentic-workspace/planning/planning-decomposition-shop.json",
+        tmp_path / "planning/shop-decomposition.json",
+    ]
+    for path in misplaced_records:
+        _write(
+            path,
+            json.dumps(
+                {
+                    "kind": "planning-decomposition/v1",
+                    "title": "Shop",
+                    "status": "needs-shaping",
+                    "larger_intended_outcome": "Build shop.",
+                    "non_goals": [],
+                    "candidate_lanes": [],
+                    "proof_expectations": [],
+                    "promotion_rule": "Promote ready lanes.",
+                },
+                indent=2,
+            ),
+        )
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    misplaced = [warning for warning in warnings if warning.warning_class == "planning_decomposition_artifact_misplaced"]
+
+    assert len(misplaced) == 2
+    assert all(".agentic-workspace/planning/decompositions" in warning.message for warning in misplaced)

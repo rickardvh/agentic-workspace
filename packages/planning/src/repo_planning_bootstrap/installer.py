@@ -8644,6 +8644,10 @@ def _warning_remediation(warning_class: str) -> str | None:
             "when they carry non-reconstructable future routing."
         ),
         "planning_memory_boundary_blur": "Move durable technical facts into memory or canonical docs, then leave planning surfaces lean.",
+        "planning_decomposition_artifact_misplaced": (
+            "Move the record to `.agentic-workspace/planning/decompositions/<id>.decomposition.json` or recreate it from "
+            "`TEMPLATE.decomposition.json`, then rerun `agentic-workspace summary --target . --format json`."
+        ),
         "startup_policy_drift": "Restore the minimal startup order in AGENTS, quickstart, and manifest.",
     }.get(warning_class)
 
