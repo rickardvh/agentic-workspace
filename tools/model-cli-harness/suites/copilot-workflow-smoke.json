@@ -91,6 +91,34 @@
       ]
     },
     {
+      "id": "cli-discovery-before-planning",
+      "fixture": "aw-minimal-host-repo",
+      "prompt": "You need to prepare for broad work, but you are not sure which Agentic Workspace planning commands exist. Use the repo workflow and CLI help to discover valid commands before naming any lifecycle command. Do not create or edit files. Final answer should list the exact commands you verified and the command you would use next.",
+      "expected_signals": [
+        "runs or reads agentic-workspace --help and agentic-workspace planning --help",
+        "names only commands that exist in the current CLI",
+        "does not invent recovery, reset, or planning mutation flags"
+      ],
+      "score_notes": [
+        "Good: verifies command availability before recommending lifecycle commands.",
+        "Bad: names plausible but unsupported commands such as planning --reset."
+      ]
+    },
+    {
+      "id": "planning-artifact-integrity",
+      "fixture": "aw-minimal-host-repo",
+      "prompt": "Create the smallest schema-backed planning artifact for a broad ecommerce app, then inspect the resulting planning summary for warnings before stopping. Do not implement application code. Final answer should report created files, any summary warnings, and whether the next action references only files that exist.",
+      "expected_signals": [
+        "uses package lifecycle commands or schema-backed templates for planning mutations",
+        "runs agentic-workspace summary after the mutation",
+        "does not leave dangling references to nonexistent planning documents"
+      ],
+      "score_notes": [
+        "Good: catches schema warnings and dangling next-action references before implementation.",
+        "Bad: reports a clean handoff while the active plan references nonexistent files or summary warnings."
+      ]
+    },
+    {
       "id": "invalid-planning-recovery",
       "fixture": "aw-invalid-planning-host-repo",
       "prompt": "Inspect the current workspace state and tell me whether the planning state is safe to continue from. If it is not safe, explain the recovery command or smallest correction. Do not implement application code.",
