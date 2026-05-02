@@ -108,29 +108,62 @@ def _run_command(command: list[str], *, cwd: Path, timeout_seconds: int, env: di
     }
 
 
-def _preflight_requirement(name: str, *, kind: str) -> dict[str, Any]:
+def _candidate_path(value: str, *, replacements: dict[str, str]) -> str:
+    return os.path.expandvars(_replace_placeholders(value, replacements=replacements))
+
+
+def _resolve_requirement(name: str, *, candidate_paths: list[str] | None = None, replacements: dict[str, str] | None = None) -> str | None:
     resolved = shutil.which(name)
+    if resolved:
+        return resolved
+    for candidate in candidate_paths or []:
+        candidate_path = Path(_candidate_path(candidate, replacements=replacements or {}))
+        if candidate_path.exists():
+            return str(candidate_path)
+    return None
+
+
+def _preflight_requirement(
+    requirement: str | dict[str, Any],
+    *,
+    kind: str,
+    replacements: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    if isinstance(requirement, str):
+        name = requirement
+        candidate_paths: list[str] = []
+        add_parent_to_path = False
+    elif isinstance(requirement, dict):
+        raw_name = requirement.get("name")
+        if not isinstance(raw_name, str) or not raw_name.strip():
+            raise ValueError(f"{kind} requirement objects must include a string name")
+        name = raw_name
+        raw_candidates = requirement.get("candidate_paths", [])
+        if not isinstance(raw_candidates, list) or not all(isinstance(item, str) for item in raw_candidates):
+            raise ValueError(f"{kind} requirement candidate_paths must be a string list")
+        candidate_paths = raw_candidates
+        add_parent_to_path = bool(requirement.get("add_parent_to_path", False))
+    else:
+        raise ValueError(f"{kind} requirements must be strings or objects")
+    resolved = _resolve_requirement(name, candidate_paths=candidate_paths, replacements=replacements)
     return {
         "kind": kind,
         "name": name,
         "status": "present" if resolved else "missing",
         "resolved_path": resolved or "",
+        "add_parent_to_path": add_parent_to_path,
         "blocking": resolved is None,
     }
 
 
-def _adapter_preflight(adapter: dict[str, Any], *, command: list[str]) -> dict[str, Any]:
+def _adapter_preflight(adapter: dict[str, Any], *, command: list[str], replacements: dict[str, str]) -> dict[str, Any]:
     requirements: list[dict[str, Any]] = []
     if command:
-        requirements.append(_preflight_requirement(command[0], kind="adapter_executable"))
-    for name in adapter.get("required_executables", []):
-        if not isinstance(name, str):
-            raise ValueError("adapter.required_executables entries must be strings")
-        requirements.append(_preflight_requirement(name, kind="required_executable"))
-    for name in adapter.get("required_shells", []):
-        if not isinstance(name, str):
-            raise ValueError("adapter.required_shells entries must be strings")
-        requirements.append(_preflight_requirement(name, kind="required_shell"))
+        requirements.append(_preflight_requirement(command[0], kind="adapter_executable", replacements=replacements))
+    for requirement in adapter.get("required_executables", []):
+        requirements.append(_preflight_requirement(requirement, kind="required_executable", replacements=replacements))
+    for requirement in adapter.get("required_shells", []):
+        requirements.append(_preflight_requirement(requirement, kind="required_shell", replacements=replacements))
 
     missing = [item for item in requirements if item["status"] == "missing"]
     block_on_failure = bool(adapter.get("block_on_preflight_failure", True))
@@ -141,6 +174,11 @@ def _adapter_preflight(adapter: dict[str, Any], *, command: list[str]) -> dict[s
         "requirements": requirements,
         "missing_count": len(missing),
         "missing": missing,
+        "path_prepend": [
+            str(Path(item["resolved_path"]).parent)
+            for item in requirements
+            if item.get("add_parent_to_path") and item.get("resolved_path")
+        ],
     }
 
 
@@ -162,6 +200,23 @@ def _adapter_environment(
             raise ValueError("adapter.provider_home_env must be a string")
         env[provider_home_env] = _replace_placeholders(str(adapter.get("provider_home_path", "{run_root}/provider-home")), replacements=replacements)
     return env
+
+
+def _prepend_env_path(env: dict[str, str], entries: list[str]) -> dict[str, str]:
+    if not entries:
+        return env
+    updated = dict(env)
+    current_path = updated.get("PATH", "")
+    unique_entries = []
+    seen = set()
+    for entry in entries:
+        normalized = str(Path(entry))
+        key = normalized.lower()
+        if key not in seen:
+            unique_entries.append(normalized)
+            seen.add(key)
+    updated["PATH"] = os.pathsep.join(unique_entries + ([current_path] if current_path else []))
+    return updated
 
 
 def _copy_transcript(stdout: str, transcript_path: Path) -> None:
@@ -279,6 +334,8 @@ def run_suite(
             "transcript_path": str(paths.transcript_path),
             "model": resolved_model,
             "source_root": str(REPO_ROOT),
+            "program_files": os.environ.get("ProgramFiles", ""),
+            "local_app_data": os.environ.get("LOCALAPPDATA", ""),
         }
         prompt = _render_prompt(str(scenario.get("prompt", "")), replacements=replacements)
         replacements["prompt"] = prompt
@@ -286,12 +343,13 @@ def run_suite(
         if not isinstance(command_template, list) or not all(isinstance(item, str) for item in command_template):
             raise ValueError(f"adapter '{adapter_id}' must define command as a string list")
         command = _render_list(command_template, replacements=replacements)
-        preflight = _adapter_preflight(adapter, command=command)
+        preflight = _adapter_preflight(adapter, command=command, replacements=replacements)
         adapter_env = _adapter_environment(
             adapter,
             replacements=replacements,
             isolate_provider_home=isolate_provider_home,
         )
+        adapter_env = _prepend_env_path(adapter_env, preflight["path_prepend"])
         provider_home_env = adapter.get("provider_home_env")
         if isolate_provider_home and isinstance(provider_home_env, str) and provider_home_env in adapter_env:
             Path(adapter_env[provider_home_env]).mkdir(parents=True, exist_ok=True)

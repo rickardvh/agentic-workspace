@@ -196,6 +196,35 @@ def test_model_cli_harness_blocks_execution_when_preflight_fails(tmp_path: Path)
     assert any(warning["warning_class"] == "model_cli_environment_blocked" for warning in result["warnings"])
 
 
+def test_model_cli_harness_resolves_candidate_paths_and_prepends_path(tmp_path: Path, monkeypatch) -> None:
+    harness = _load_harness()
+    tool_dir = tmp_path / "tool"
+    tool_dir.mkdir()
+    tool = tool_dir / "pwsh.exe"
+    tool.write_text("placeholder\n", encoding="utf-8")
+    monkeypatch.setenv("PATH", "")
+
+    preflight = harness._adapter_preflight(
+        {
+            "required_shells": [
+                {
+                    "name": "pwsh",
+                    "candidate_paths": [str(tool)],
+                    "add_parent_to_path": True,
+                }
+            ]
+        },
+        command=["fake-cli"],
+        replacements={},
+    )
+    env = harness._prepend_env_path({"PATH": "base"}, preflight["path_prepend"])
+
+    assert preflight["status"] == "environment-blocked"
+    assert preflight["requirements"][1]["status"] == "present"
+    assert preflight["path_prepend"] == [str(tool_dir)]
+    assert env["PATH"].startswith(str(tool_dir))
+
+
 def test_model_cli_harness_can_isolate_provider_home(tmp_path: Path) -> None:
     fixture = tmp_path / "fixtures" / "repo"
     fixture.mkdir(parents=True)

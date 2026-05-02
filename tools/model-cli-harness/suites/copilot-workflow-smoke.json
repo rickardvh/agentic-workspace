@@ -7,7 +7,15 @@
       "default_model": "claude-haiku-4.5",
       "timeout_seconds": 900,
       "required_shells": [
-        "pwsh"
+        {
+          "name": "pwsh",
+          "candidate_paths": [
+            "{program_files}/PowerShell/7/pwsh.exe",
+            "{program_files}/PowerShell/7-preview/pwsh.exe",
+            "{local_app_data}/Microsoft/powershell/7/pwsh.exe"
+          ],
+          "add_parent_to_path": true
+        }
       ],
       "block_on_preflight_failure": true,
       "provider_home_env": "COPILOT_HOME",

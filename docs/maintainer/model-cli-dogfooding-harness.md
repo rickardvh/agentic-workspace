@@ -39,7 +39,7 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
 Suites live under `tools/model-cli-harness/suites/`. Each suite defines:
 
 - `adapters`: command templates with placeholders such as `{prompt}`, `{repo}`, `{model}`, `{share_path}`, and `{source_root}`.
-- `required_executables` and `required_shells`: optional preflight requirements.
+- `required_executables` and `required_shells`: optional preflight requirements. Entries may be strings or objects with `name`, `candidate_paths`, and `add_parent_to_path`.
 - `block_on_preflight_failure`: whether missing requirements should prevent model execution.
 - `provider_home_env` and `provider_home_path`: optional state-isolation hook used by `--isolate-provider-home`.
 - `scenarios`: disposable fixture name, human prompt, expected signals, and scoring notes.
@@ -66,6 +66,6 @@ Treat one-off capability failures cautiously. Give more weight to repeated ambig
 - Scenario repository mutations should happen only in copied fixtures under `scratch/`.
 - Provider CLIs may still maintain their own local state outside the fixture. For Copilot, the harness routes logs to the run directory, but authenticated session/config state may still use `COPILOT_HOME` unless the operator provides an isolated authenticated home.
 - The Copilot adapter denies `git push`.
-- The Copilot adapter requires `pwsh` before execution because its shell tool uses PowerShell 7 on Windows.
+- The Copilot adapter requires `pwsh` before execution because its shell tool uses PowerShell 7 on Windows. The suite includes standard PowerShell install paths and prepends the discovered parent directory to the model CLI `PATH`.
 - The runner emits warnings when transcripts report shell-runtime failures or modified files outside the copied fixture.
 - Normal tests should validate command rendering and fixture isolation, not run external models.
