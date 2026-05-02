@@ -40,6 +40,7 @@ from agentic_workspace.config import (
     SUPPORTED_ASSURANCE_LEVELS,
     SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
     SUPPORTED_CAPABILITY_LOCATIONS,
+    SUPPORTED_DELEGATION_CONTROL_MODES,
     SUPPORTED_DELEGATION_OUTCOMES,
     SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS,
     SUPPORTED_DELEGATION_TARGET_STRENGTHS,
@@ -71,6 +72,7 @@ from agentic_workspace.config import (
     AssuranceConfig,
     DelegationOutcomeRecord,
     DelegationTargetProfile,
+    MixedAgentLocalOverride,
     ModuleUpdatePolicy,
     WorkspaceConfig,
     WorkspaceUsageError,
@@ -7992,6 +7994,7 @@ def _compact_start_closeout_obligations(value: Any) -> dict[str, Any]:
 def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None = None) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
+    config = _load_workspace_config(target_root=target_root)
     proof = (
         _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root)
         if normalized_paths
@@ -8047,6 +8050,11 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
                 "or continuation is not obvious."
             ),
         },
+        "execution_posture": _execution_posture_payload(
+            config=config,
+            changed_paths=normalized_paths,
+            task_text=task_text,
+        ),
         "handoff_requirements": copy.deepcopy(implementer_template["handoff_requirements"]),
         "next_allowed_action": (
             implementer_template["next_allowed_action"]["attention"]
@@ -8128,6 +8136,166 @@ def _implementation_task_routing(*, target_root: Path, task_text: str | None) ->
             "narrow the request to one explicit issue if direct work is truly small",
         ],
         "rule": "Broad external-work ingestion is not executable from issue text alone when no active planning record exists.",
+    }
+
+
+def _capability_posture_for_implementation(*, changed_paths: list[str], task_text: str | None) -> dict[str, Any]:
+    normalized_task = " ".join((task_text or "").lower().split())
+    path_text = " ".join(path.lower() for path in changed_paths)
+    combined = f"{normalized_task} {path_text}".strip()
+    if not combined:
+        return {
+            "status": "insufficient-task-signal",
+            "posture": {},
+            "reason": "No task text or changed paths were provided, so execution posture cannot infer task capability safely.",
+        }
+    judgment_terms = (
+        "architecture",
+        "contract",
+        "schema",
+        "config",
+        "orchestration",
+        "delegation",
+        "workflow",
+        "planning",
+        "assurance",
+        "risk",
+        "policy",
+    )
+    mechanical_terms = ("format", "typo", "docs", "documentation", "generated", "snapshot", "fixture", "lint", "mechanical")
+    if any(term in combined for term in judgment_terms):
+        return {
+            "status": "inferred",
+            "posture": {
+                "execution class": "boundary-shaping",
+                "recommended strength": "strong",
+                "preferred location": "either",
+                "delegation friendly": "yes",
+                "strong external reasoning": "allowed",
+                "why": "The task touches workflow, config, schema, or orchestration behavior where quality-sensitive judgment matters.",
+            },
+            "reason": "judgment-heavy terms were present in the task or changed paths",
+        }
+    if any(term in combined for term in mechanical_terms):
+        return {
+            "status": "inferred",
+            "posture": {
+                "execution class": "mechanical-follow-through",
+                "recommended strength": "weak",
+                "preferred location": "either",
+                "delegation friendly": "yes",
+                "strong external reasoning": "avoid",
+                "why": "The task appears bounded and mechanical enough for a cheaper executor when proof remains unchanged.",
+            },
+            "reason": "mechanical or documentation terms were present in the task or changed paths",
+        }
+    return {
+        "status": "inferred",
+        "posture": {
+            "execution class": "mixed",
+            "recommended strength": "medium",
+            "preferred location": "either",
+            "delegation friendly": "yes",
+            "strong external reasoning": "allowed",
+            "why": "The task has enough context for a mixed local posture but not enough to justify automatic escalation.",
+        },
+        "reason": "defaulted to mixed posture from available task context",
+    }
+
+
+def _delegation_control_payload(local_override: MixedAgentLocalOverride) -> dict[str, Any]:
+    configured_mode = local_override.delegation_mode or "suggest"
+    safe_to_auto = bool(local_override.safe_to_auto_run_commands)
+    if configured_mode == "auto" and not safe_to_auto:
+        effective_mode = "suggest"
+        execution_permitted = False
+        disabled_reason = "delegation.mode is auto, but safety.safe_to_auto_run_commands is not true"
+    else:
+        effective_mode = configured_mode
+        execution_permitted = configured_mode == "auto" and safe_to_auto
+        disabled_reason = None
+    if effective_mode == "off":
+        next_action = "Do not use local delegation targets; stay direct unless another checked-in workflow surface requires escalation."
+    elif effective_mode == "manual":
+        next_action = "Prepare a handoff packet or prompt only; a human or runtime must execute it."
+    elif effective_mode == "suggest":
+        next_action = "Suggest a target and rationale, but do not execute delegation automatically."
+    else:
+        next_action = "Automatic delegation may proceed only within local safety and target-profile limits."
+    return {
+        "configured_mode": configured_mode,
+        "effective_mode": effective_mode,
+        "supported_modes": list(SUPPORTED_DELEGATION_CONTROL_MODES),
+        "source": "local-override" if local_override.delegation_mode is not None else "default",
+        "execution_permitted": execution_permitted,
+        "safe_to_auto_run_commands": safe_to_auto,
+        "disabled_reason": disabled_reason,
+        "human_control": {
+            "rule": "Local delegation posture may prepare or suggest work, but must not take control away from the human unless effective_mode is auto.",
+            "next_action": next_action,
+        },
+    }
+
+
+def _execution_posture_payload(
+    *,
+    config: WorkspaceConfig,
+    changed_paths: list[str],
+    task_text: str | None,
+) -> dict[str, Any]:
+    posture = _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
+    runtime_resolution = _runtime_resolution_payload(config=config, capability_posture=posture["posture"])
+    delegation_control = _delegation_control_payload(config.local_override)
+    target = next(
+        (
+            profile
+            for profile in runtime_resolution["profile_recommendations"]
+            if profile["recommendation"] in ("recommended", "acceptable")
+        ),
+        None,
+    )
+    recommendation = runtime_resolution["recommendation"]
+    if recommendation == "stay-local":
+        quality_tradeoff = "Stay direct when delegation overhead is not justified or local bounded execution is sufficient."
+        token_tradeoff = "Token saving is acceptable only if the task stays bounded and proof requirements are unchanged."
+    elif recommendation == "stronger-reasoning":
+        quality_tradeoff = "Use stronger reasoning because quality-sensitive judgment is likely worth the overhead."
+        token_tradeoff = "Token saving should wait until the judgment-heavy part is resolved without compromising quality."
+    elif recommendation == "external-delegation":
+        quality_tradeoff = "External delegation is justified only if the selected target materially improves fit for this task."
+        token_tradeoff = "External delegation may save local tokens, but only under the same proof and quality requirements."
+    else:
+        quality_tradeoff = "Manual handoff is the safer path when automated execution authority is absent or unclear."
+        token_tradeoff = "Manual handoff may save tokens later, but the immediate value is preserving judgment quality and control."
+    ready_handoff = None
+    if recommendation in ("stronger-reasoning", "external-delegation", "manual-handoff") and delegation_control["effective_mode"] in (
+        "manual",
+        "suggest",
+    ):
+        ready_handoff = {
+            "kind": "agentic-workspace/delegation-handoff-prompt/v1",
+            "mode": delegation_control["effective_mode"],
+            "target": target["name"] if target else None,
+            "prompt": (
+                "Use the active task, changed paths, proof expectations, and hard constraints to answer one bounded "
+                "question. Improve quality where judgment matters; do not trade away proof or scope control for token savings."
+            ),
+        }
+    return {
+        "kind": "agentic-workspace/execution-posture/v1",
+        "capability_posture": posture,
+        "runtime_resolution": runtime_resolution,
+        "delegation_control": delegation_control,
+        "selected_target": target,
+        "recommended_action": recommendation,
+        "quality_tradeoff": quality_tradeoff,
+        "token_tradeoff": token_tradeoff,
+        "ready_handoff": ready_handoff,
+        "inference_limits": [
+            "Task posture is inferred from changed paths and optional --task text; it is not proof of human intent.",
+            "No delegation target may reduce required validation, review, or closeout evidence.",
+            "Automatic execution is permitted only when local delegation control resolves to auto.",
+        ],
     }
 
 
@@ -11033,12 +11201,28 @@ def _defaults_payload() -> dict[str, Any]:
                 "supported_target_locations": list(SUPPORTED_CAPABILITY_LOCATIONS),
                 "supported_capability_classes": list(SUPPORTED_CAPABILITY_EXECUTION_CLASSES),
                 "supported_target_execution_methods": list(SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS),
+                "supported_delegation_modes": list(SUPPORTED_DELEGATION_CONTROL_MODES),
                 "intended_scope": [
                     "machine-specific capability posture",
                     "account- or cost-profile asymmetry",
                     "local execution preferences that do not redefine repo semantics",
                     "available delegation target hints that stay advisory and local-only",
                 ],
+            },
+            "delegation_control": {
+                "field": "delegation.mode",
+                "default": "suggest",
+                "supported_modes": list(SUPPORTED_DELEGATION_CONTROL_MODES),
+                "quality_first_rule": (
+                    "Delegation should improve quality where it matters and is worth the overhead; "
+                    "token saving is valid only when safe and not quality-compromising."
+                ),
+                "mode_semantics": {
+                    "off": "do not recommend local delegation targets",
+                    "manual": "prepare handoff packets or prompts only",
+                    "suggest": "recommend a target and rationale, but do not execute",
+                    "auto": "permit automatic delegation only when local safety and target rules allow it",
+                },
             },
             "local_outcome_artifact": {
                 "path": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
@@ -13339,7 +13523,7 @@ def _delegation_outcome_advisory(
     }
 
 
-def _sourced_value(value: bool | None, *, source: str) -> dict[str, Any]:
+def _sourced_value(value: Any, *, source: str) -> dict[str, Any]:
     return {"value": value, "source": source if value is not None else "unset"}
 
 
@@ -13864,6 +14048,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "status": "applied" if local_override.applied else "available-not-set",
             "rule": "local-only machine/runtime posture; may not override repo-owned semantics",
         },
+        "delegation_control": _delegation_control_payload(local_override),
         "delegation_targets": {
             "supported": True,
             "status": "configured" if local_override.delegation_targets else "available-not-set",
@@ -13933,6 +14118,10 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "requires_human_verification_on_pr": _sourced_value(
                 local_override.requires_human_verification_on_pr,
                 source="local-override",
+            ),
+            "delegation_mode": _sourced_value(
+                local_override.delegation_mode or "suggest",
+                source="local-override" if local_override.delegation_mode is not None else "default",
             ),
         },
         "derived_mode": {

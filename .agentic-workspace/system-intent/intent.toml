@@ -9,7 +9,7 @@ interpretation_notes = "Manually extracted on 2026-04-24 and refined on 2026-04-
 confidence = "high"
 needs_review = false
 preferred_source = "SYSTEM_INTENT.md"
-last_synced_at = "2026-04-26"
+last_synced_at = "2026-05-02"
 
 [[source_records]]
 path = "SYSTEM_INTENT.md"
@@ -21,6 +21,6 @@ line_count = 226
 [[source_records]]
 path = "README.md"
 present = true
-sha256 = "22943aed87e838750393e567bbe041add2caefd46f20464fda84653eb6b6114a"
-first_heading = "agentic-workspace"
-line_count = 66
+sha256 = "f4aebb86f512d2f65def2858210ad2813de322212ae90d25553f016688334713"
+first_heading = "Agentic Workspace"
+line_count = 105

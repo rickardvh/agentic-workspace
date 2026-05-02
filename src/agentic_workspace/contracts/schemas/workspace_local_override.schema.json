@@ -18,7 +18,7 @@
         "cli_invoke": {
           "type": "string",
           "minLength": 1,
-          "description": "Cli invoke text value used by this contract."
+          "description": "Command prefix this machine should show in copyable Agentic Workspace commands, such as `uv run agentic-workspace`."
         }
       },
       "additionalProperties": false,
@@ -29,15 +29,15 @@
       "properties": {
         "supports_internal_delegation": {
           "type": "boolean",
-          "description": "Supports internal delegation true/false policy flag used by this contract."
+          "description": "Whether the current runtime can hand work to an internal subagent or equivalent in-session worker."
         },
         "strong_planner_available": {
           "type": "boolean",
-          "description": "Strong planner available true/false policy flag used by this contract."
+          "description": "Whether this local environment has a stronger planning or reasoning path available for quality-sensitive work."
         },
         "cheap_bounded_executor_available": {
           "type": "boolean",
-          "description": "Cheap bounded executor available true/false policy flag used by this contract."
+          "description": "Whether this local environment has a lower-cost executor suitable for bounded implementation when quality is not compromised."
         }
       },
       "additionalProperties": false,
@@ -48,7 +48,7 @@
       "properties": {
         "prefer_internal_delegation_when_available": {
           "type": "boolean",
-          "description": "Prefer internal delegation when available true/false policy flag used by this contract."
+          "description": "Prefer an in-session or same-runtime handoff when it is available and safe, instead of preparing an external handoff."
         }
       },
       "additionalProperties": false,
@@ -59,27 +59,45 @@
       "properties": {
         "safe_to_auto_run_commands": {
           "type": "boolean",
-          "description": "Safe to auto run commands true/false policy flag used by this contract."
+          "description": "Whether this local environment may automatically run configured commands when another local policy explicitly permits automation."
         },
         "requires_human_verification_on_pr": {
           "type": "boolean",
-          "description": "Requires human verification on pr true/false policy flag used by this contract."
+          "description": "Whether pull request or review closeout on this machine should remain lower-trust until a human verifies it."
         }
       },
       "additionalProperties": false,
       "description": "Local safety limits for command execution and verification."
+    },
+    "delegation": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "off",
+            "manual",
+            "suggest",
+            "auto"
+          ],
+          "default": "suggest",
+          "description": "Local control mode for delegation: disable target recommendations, prepare manual handoff prompts, suggest targets without execution, or allow automatic delegation only when safety settings permit it."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Machine-local delegation control. This decides how far local tooling may go after recommending stay-local, stronger-reasoning, external-delegation, or manual-handoff."
     },
     "local_memory": {
       "type": "object",
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enabled true/false policy flag used by this contract."
+          "description": "Whether this machine may use local-only repo memory in addition to checked-in shared Memory."
         },
         "path": {
           "type": "string",
           "minLength": 1,
-          "description": "Path segments or repository path used by this contract."
+          "description": "Repository-relative path for local-only memory; it must stay ignored and non-authoritative."
         }
       },
       "additionalProperties": false,
@@ -102,7 +120,7 @@
                 "medium",
                 "weak"
               ],
-              "description": "Allowed strength value for routing or validation."
+              "description": "Human- or agent-declared capability strength for this target. Use it as a routing hint, not as proof that the target can close the work."
             },
             "location": {
               "type": "string",
@@ -111,22 +129,22 @@
                 "external",
                 "either"
               ],
-              "description": "Allowed location value for routing or validation."
+              "description": "Where this target runs from the current machine's perspective: local, external, or either. This is a local availability and boundary hint."
             },
             "confidence": {
               "type": "number",
               "minimum": 0,
               "maximum": 1,
-              "description": "Confidence contract value used by this contract."
+              "description": "Advisory confidence in this target profile from 0 to 1. Agents may tune it from local outcome evidence, but it does not create execution authority."
             },
             "task_fit": {
               "type": "array",
               "items": {
                 "type": "string",
                 "minLength": 1,
-                "description": "One entry in the task fit list."
+                "description": "One kind of task this target has proven or is expected to handle well."
               },
-              "description": "Ordered task fit entries used by this contract."
+              "description": "Advisory task-fit labels used to explain when this target is appropriate."
             },
             "capability_classes": {
               "type": "array",
@@ -138,9 +156,9 @@
                   "mixed",
                   "mechanical-follow-through"
                 ],
-                "description": "One entry in the capability classes list."
+                "description": "One capability class this target may be suitable for."
               },
-              "description": "Ordered capability classes entries used by this contract."
+              "description": "Advisory capability classes for routing quality-sensitive or mechanical work. These are estimates, not guarantees."
             },
             "execution_methods": {
               "type": "array",
@@ -153,13 +171,13 @@
                   "api",
                   "manual"
                 ],
-                "description": "One entry in the execution methods list."
+                "description": "One locally available way to reach this target."
               },
-              "description": "Ordered execution methods entries used by this contract."
+              "description": "Human-owned execution boundary for this target. Automatic use still requires delegation.mode = \"auto\" and local safety permission."
             }
           },
           "additionalProperties": false,
-          "description": "+$ details used by this contract."
+          "description": "One local delegation target profile. Availability fields are human-owned controls; confidence, task fit, and capability classes are advisory estimates."
         }
       },
       "additionalProperties": false,

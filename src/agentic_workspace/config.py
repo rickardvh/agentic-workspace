@@ -120,6 +120,12 @@ SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS = (
     "api",
     "manual",
 )
+SUPPORTED_DELEGATION_CONTROL_MODES = (
+    "off",
+    "manual",
+    "suggest",
+    "auto",
+)
 WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
 WORKSPACE_POINTER_BLOCK = (
@@ -202,6 +208,7 @@ class MixedAgentLocalOverride:
     prefer_internal_delegation_when_available: bool | None
     safe_to_auto_run_commands: bool | None
     requires_human_verification_on_pr: bool | None
+    delegation_mode: str | None
     local_memory_enabled: bool | None
     local_memory_path: Path
     delegation_targets: tuple[DelegationTargetProfile, ...]
@@ -832,6 +839,7 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         prefer_internal_delegation_when_available=None,
         safe_to_auto_run_commands=None,
         requires_human_verification_on_pr=None,
+        delegation_mode=None,
         local_memory_enabled=None,
         local_memory_path=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
         delegation_targets=(),
@@ -857,7 +865,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         )
 
     unknown_top_level = sorted(
-        set(payload) - {"schema_version", "workspace", "runtime", "handoff", "safety", "local_memory", "delegation_targets"}
+        set(payload) - {"schema_version", "workspace", "runtime", "handoff", "safety", "delegation", "local_memory", "delegation_targets"}
     )
     if unknown_top_level:
         unknown_text = ", ".join(unknown_top_level)
@@ -910,6 +918,21 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
     if unknown_safety:
         unknown_text = ", ".join(unknown_safety)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [safety] contains unsupported field(s): {unknown_text}.")
+
+    raw_delegation = payload.get("delegation", {})
+    if raw_delegation is None:
+        raw_delegation = {}
+    if not isinstance(raw_delegation, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [delegation] section must be a table.")
+    unknown_delegation = sorted(set(raw_delegation) - {"mode"})
+    if unknown_delegation:
+        unknown_text = ", ".join(unknown_delegation)
+        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [delegation] contains unsupported field(s): {unknown_text}.")
+    delegation_mode = raw_delegation.get("mode")
+    if delegation_mode is not None:
+        if not isinstance(delegation_mode, str) or delegation_mode not in SUPPORTED_DELEGATION_CONTROL_MODES:
+            allowed_text = ", ".join(SUPPORTED_DELEGATION_CONTROL_MODES)
+            raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} delegation.mode must be one of: {allowed_text}.")
 
     raw_local_memory = payload.get("local_memory", {})
     if raw_local_memory is None:
@@ -967,6 +990,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             key="requires_human_verification_on_pr",
             config_path=WORKSPACE_LOCAL_CONFIG_PATH,
         ),
+        delegation_mode=delegation_mode,
         local_memory_enabled=require_optional_bool(
             payload=raw_local_memory,
             key="enabled",

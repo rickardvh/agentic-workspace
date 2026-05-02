@@ -1996,6 +1996,34 @@ candidates = []
     assert any(action.kind == "manual review" and "already points at" in action.detail for action in result.actions)
 
 
+def test_promote_todo_item_to_execplan_creates_missing_compact_execplan_surface(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "active", path = ".agentic-workspace/planning/execplans/plan-alpha.plan.json", why_now = "this item is active but the plan was not created yet.", next_action = "create the plan." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    result = promote_todo_item_to_execplan("plan-alpha", target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+
+    assert record_path.exists()
+    assert any(action.kind == "created" and action.path == record_path for action in result.actions)
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    item = state["todo"]["active_items"][0]
+    assert item["path"] == ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    assert item["surface"] == ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    assert "next_action" not in item
+
+
 def test_planning_cli_dogfoods_compact_state_for_summary_promote_and_archive(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(

@@ -1,0 +1,373 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Local Delegation Orchestration Posture",
+  "goal": [
+    "Make local delegation posture explicit, human-controlled, and useful from the pre-implementation CLI path.",
+    "Frame delegation as quality-first, with token savings only when safe and not quality-compromising.",
+    "Clarify local delegation target ownership in schemas and generated reference docs."
+  ],
+  "non_goals": [
+    "Do not add repo-shared CI enforcement, PR templates, or tracker-specific workflow.",
+    "Do not turn local config into a scheduler or hard-code vendor/model routing in shared repo config.",
+    "Do not auto-execute external delegation without explicit local opt-in and visible safety posture."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Ship the linked local delegation issues #662, #663, and #664 as one coherent package surface.",
+      "constraints": "Delegation stays local-advisory unless explicitly opted into locally; human control remains visible; quality improvement outranks token savings.",
+      "latitude": "Choose compact field names and output shape that fit existing config/defaults/implementer-context patterns.",
+      "escalation": "Stop before adding a scheduler, making GitHub issue ingestion universal, or changing unrelated planning storage contracts."
+    },
+    "execution": {
+      "milestone": "local-delegation-control-and-implementer-posture",
+      "status": "completed",
+      "next_step": "archive this completed plan and close the linked issues after push",
+      "proof": "Focused workspace CLI tests pass; schema reference is regenerated; planning surfaces remain clean."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+        "src/agentic_workspace/contracts/workspace_surfaces.json",
+        "docs/reference/workspace-local-override.md",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/local-delegation-orchestration-662-664.plan.json"
+      ],
+      "invariants": [
+        "Machine-local delegation posture must not become shared repo authority.",
+        "Delegation should improve quality where worth it or save tokens only when safe.",
+        "Pre-implementation CLI output should be compact and machine-readable."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make agents more reliably enter the correct workflow and act as orchestrators when local posture permits it.",
+    "this slice completes the larger intended outcome": "yes for the linked issues; no for full external runtime integration.",
+    "continuation surface": ".agentic-workspace/planning/state.toml active item local-delegation-orchestration-662-664",
+    "parent lane": "local-delegation-orchestration-662-664"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "none",
+    "owner surface": "none",
+    "activation trigger": "new dogfooding evidence that agents still miss execution posture or misuse local delegation mode"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "planned: local delegation control mode, implementer-context execution posture, and clearer local override docs.",
+    "intentionally deferred": "actual external executor invocation, PR/CI enforcement, and runtime-specific wrappers.",
+    "discovered implications": "none yet",
+    "proof achieved now": "none yet",
+    "validation still needed": "focused tests, schema reference generation, planning checks, and dogfooding closeout.",
+    "next likely slice": "none unless closeout finds runtime wrapper or evidence-capture gaps"
+  },
+  "intent_interpretation": {
+    "literal request": "ingest and implement the three newly created delegation issues",
+    "inferred intended outcome": "move from advisory delegation posture to an actionable, human-controlled pre-implementation decision surface",
+    "chosen concrete what": "one active execplan covering #662 through #664, implemented through config parsing, CLI output, schemas, docs, and tests",
+    "interpretation distance": "low",
+    "review guidance": "Reject changes that make token savings override quality/proof, hide human-control posture, or route execution through GitHub-specific intake."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/config.py; src/agentic_workspace/cli.py; src/agentic_workspace/contracts/; docs/reference/; tests/test_workspace_cli.py; planning state and this execplan",
+    "max changed files": "10",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q -k \"delegation or runtime or implement or config or defaults\"; cd packages/planning && uv run pytest tests/test_installer.py -q; uv run python scripts/generate/generate_schema_reference.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py; make check",
+    "ask-before-refactor threshold": "stop before changing planning storage schema, adding executor invocation, or broadening into CI/review-template enforcement",
+    "stop before touching": "packages/planning runtime internals, external adapter ingestion flow, or generated CLI architecture unrelated to local delegation posture"
+  },
+  "stop_conditions": {
+    "stop when": "the work would require actual runtime execution control instead of local advisory/suggestion output",
+    "escalate when boundary reached": "human-control vocabulary cannot be represented without larger config redesign",
+    "escalate on scope drift": "implementation starts solving generic issue intake or scheduler behavior",
+    "escalate on proof failure": "focused CLI tests cannot prove config parsing and implementer-context output"
+  },
+  "context_budget": {
+    "live working set": "config local override parser, mixed_agent defaults/config payload, implementer context payload, local override schema/reference, focused CLI tests",
+    "recoverable later": "older runtime-posture archives and broad product thesis docs",
+    "externalize before shift": "field names, control-mode semantics, and implementer-context output contract",
+    "pre-work config pull": "uv run agentic-workspace config --target . --format json",
+    "pre-work memory pull": ".agentic-workspace/memory/repo/index.md plus ownership decision notes",
+    "tiny resumability note": "Implement #662 first in config/defaults, #663 by reusing runtime_resolution in implementer context, and #664 by tightening schema descriptions.",
+    "context-shift triggers": "after config mode shape lands; before closeout; if schema generation changes many unrelated references"
+  },
+  "delegated_judgment": {
+    "requested outcome": "make delegation actionable but human-controlled from local posture and pre-implementation CLI output",
+    "hard constraints": "local-only authority, quality-first routing, token savings only when safe, no scheduler",
+    "agent may decide locally": "exact JSON field names, whether default mode is suggest or manual, and whether first pass includes preflight in addition to implement",
+    "escalate when": "implementation would execute a target, require repo-shared local posture, or make the package decide human intent without enough task semantics"
+  },
+  "adaptive_assurance": {
+    "level": "medium",
+    "reason": "Config/schema/CLI contract changes affect shipped agent behavior but remain local-advisory and testable with focused CLI tests.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "acceptance_refs"
+    ],
+    "proof_profiles": [
+      "focused-cli",
+      "schema-reference",
+      "planning-surface"
+    ],
+    "required_gates": [
+      "focused tests",
+      "schema reference regeneration/check",
+      "planning surface check",
+      "dogfooding closeout"
+    ]
+  },
+  "traceability_refs": {
+    "acceptance_refs": [
+      "GitHub issue #662 satisfied: local delegation control mode is parsed from local config and surfaced in defaults/config output.",
+      "GitHub issue #663 satisfied: implement --changed emits execution_posture with capability posture, runtime resolution, delegation control, and handoff guidance.",
+      "GitHub issue #664 satisfied: local override schema annotations and generated reference docs clarify human-owned versus agent-managed local delegation target fields.",
+      "GitHub issue #665 satisfied: promote-to-plan creates a missing execplan for a pre-routed compact active TODO row and has a regression test."
+    ]
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/662",
+      "label": "quality-first local delegation control mode",
+      "role": "source",
+      "locator": "GitHub issue #662"
+    },
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/663",
+      "label": "execution posture in implementer context",
+      "role": "source",
+      "locator": "GitHub issue #663"
+    },
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/664",
+      "label": "local override ownership docs",
+      "role": "source",
+      "locator": "GitHub issue #664"
+    },
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/665",
+      "label": "promote-to-plan missing execplan path dogfooding fix",
+      "role": "dogfooding-fix",
+      "locator": "GitHub issue #665"
+    }
+  ],
+  "active_milestone": {
+    "id": "local-delegation-control-and-implementer-posture",
+    "status": "completed",
+    "scope": "Implement local delegation control mode, use runtime_resolution in implementer context, and clarify local override schema/reference docs.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect config/CLI/schema/test local delegation surfaces, then implement the smallest compatible payload changes."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/config.py",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+    "src/agentic_workspace/contracts/workspace_surfaces.json",
+    "docs/reference/workspace-local-override.md",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/local-delegation-orchestration-662-664.plan.json"
+  ],
+  "invariants": [
+    "Local delegation posture remains local-only and advisory unless explicitly local-auto enabled.",
+    "Quality-improving escalation must be distinguishable from token-saving delegation.",
+    "Token savings cannot reduce proof, safety, or quality requirements."
+  ],
+  "contract_decisions_to_freeze": [
+    "Default delegation mode should not execute targets.",
+    "Implementer context should expose an execution posture block without requiring agents to reread prose docs.",
+    "Target confidence/task-fit/capability-class fields are advisory estimates, not hard guarantees."
+  ],
+  "open_questions_to_close": [
+    "Should the default local mode be suggest or manual?",
+    "What minimum task posture can implementer context derive from --task and changed paths without overclaiming?",
+    "How much ownership annotation belongs directly in the schema in the first pass?"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"delegation or runtime or implement or config or defaults\"",
+    "cd packages/planning && uv run pytest tests/test_installer.py -q",
+    "uv run python scripts/generate/generate_schema_reference.py",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "make check"
+  ],
+  "required_tools": [
+    "uv",
+    "gh"
+  ],
+  "completion_criteria": [
+    "#662 acceptance criteria are satisfied by local config parsing and defaults/config output.",
+    "#663 acceptance criteria are satisfied by implementer-context execution posture output.",
+    "#664 acceptance criteria are satisfied by schema annotations and generated reference docs.",
+    "#665 acceptance criteria are satisfied by creating missing execplans for pre-routed compact TODO rows.",
+    "Focused tests and planning/schema checks pass.",
+    "Linked issues are closed after commit/push."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "GitHub issues #662, #663, #664, plus dogfooding bug #665",
+    "what happened": "Added local delegation.mode parsing and defaults/config reporting; added implementer-context execution_posture with runtime resolution, human-control mode, quality and token tradeoff fields, and optional handoff prompt; clarified local override schema/reference descriptions; fixed promote-to-plan so pre-routed compact TODO rows create missing execplan records.",
+    "scope touched": "workspace config/CLI/schema/docs/tests, planning promote-to-plan implementation/tests, planning state and this execplan",
+    "changed surfaces": "config.py, cli.py, workspace local override schema, implementer context schema, generated reference docs, workspace surfaces manifest, workspace CLI tests, planning installer/tests, planning state",
+    "validations run": "agentic-workspace preflight --target . --format json; agentic-workspace summary --format json; agentic-workspace report --target . --section workflow_obligations --format json; agentic-workspace report --target . --section closeout_trust --format json; agentic-workspace proof --target . --changed <changed paths> --format json; uv run pytest tests/test_workspace_cli.py -q -k \"delegation or runtime or implement or config or defaults\" (73 passed); cd packages/planning && uv run pytest tests/test_installer.py -q (176 passed); uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py; uv run pytest tests -q (429 passed); make check (passed)",
+    "package workflow surfaces used": [
+      "agentic-workspace preflight --target . --format json",
+      "agentic-workspace summary --format json",
+      "agentic-workspace report --target . --section workflow_obligations --format json",
+      "agentic-workspace report --target . --section closeout_trust --format json",
+      "agentic-workspace proof --target . --changed <changed paths> --format json",
+      "agentic-workspace implement --target . --changed <changed paths> --task \"fix promote-to-plan missing execplan path dogfooding issue #665\" --format json",
+      "agentic-workspace skills --target . --task \"dogfooding closeout review local delegation orchestration lane\" --format json",
+      "agentic-workspace system-intent --target . --sync --format json"
+    ],
+    "result for continuation": "implementation complete; linked issues can close after commit and push",
+    "next step": "archive this plan after commit evidence is available"
+  },
+  "execution_summary": {
+    "outcome delivered": "Implemented local delegation control mode, execution_posture in implementer context, clarified local override schema/reference docs, and fixed the dogfooding promote-to-plan missing execplan behavior.",
+    "validation confirmed": "Focused workspace CLI tests, planning installer tests, full workspace tests, contract tooling, planning surface checks, closeout_trust, proof selection, and make check passed.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "Archived execplan evidence after commit/push; dogfooding finding #665 was promoted to code and regression test.",
+    "knowledge promoted (memory/docs/config)": "docs/reference/workspace-local-override.md and docs/reference/implementer-context.md regenerated; no Memory note needed.",
+    "resume from": "No active continuation; reopen from linked issues or archive only if the same delegation posture or promote-to-plan behavior regresses."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "Focused workspace CLI tests, planning installer tests, contract tooling, structured inventory, planning surfaces, full workspace tests, and make check passed.",
+    "proof achieved now": "Local delegation mode is queryable from defaults/config; implementer context exposes execution posture; generated reference docs describe local override ownership; promote-to-plan creates missing pre-routed execplan records.",
+    "evidence for \"proof achieved\" state": "73 focused workspace CLI tests passed; 176 planning installer tests passed; 429 workspace tests passed; make check passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "ingest and implement #662-#664",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#662 local delegation mode shipped; #663 execution_posture shipped in implementer context; #664 schema/reference docs improved; #665 dogfooding bug fixed; make check passed.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "All linked issue acceptance criteria are implemented and validated, and the dogfooding finding was fixed in code with a regression test.",
+    "evidence carried forward": "make check passed; focused workspace CLI tests passed; planning installer tests passed; contract tooling and planning surface checks passed; closeout_trust reports normal.",
+    "reopen trigger": "agents still skip delegation posture, local delegation mode causes hidden execution authority, or promote-to-plan again fails to materialize a pre-routed missing execplan."
+  },
+  "memory_learning_capture": {
+    "status": "completed",
+    "memory consult recommended?": "yes",
+    "memory notes read": ".agentic-workspace/memory/repo/index.md; installed-system-consolidation-2026-04-05.md; workspace-orchestrator-ownership-ledger-2026-04-05.md",
+    "future agents should not rediscover": "promote-to-plan must create a missing execplan record when active state already names one",
+    "decision": "promote_to_code_and_test",
+    "target": "packages/planning/src/repo_planning_bootstrap/installer.py and packages/planning/tests/test_installer.py",
+    "reason": "The durable learning is now encoded as package behavior and a regression test."
+  },
+  "improvement_signal_review": {
+    "status": "active",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "promote-to-plan did not create the plan when the active row already named a missing plan path"
+    ],
+    "signals fixed": [
+      "Created #665 and fixed promote-to-plan missing execplan creation with a regression test."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "dogfooding closeout"
+  },
+  "drift_log": [
+    "2026-05-02: Ingested GitHub issues #662, #663, and #664 as one active planned lane."
+  ],
+  "durable_residue": {
+    "status": "evidence_only",
+    "learned constraint": "No future-relevant learning was identified beyond the archived proof record.",
+    "motivation worth preserving": "none beyond evidence-only archive",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [
+        {
+          "summary": "docs/reference/workspace-local-override.md and docs/reference/implementer-context.md regenerated; no Memory note needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "docs/reference/workspace-local-override.md and docs/reference/implementer-context.md regenerated; no Memory note needed.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "docs/reference/workspace-local-override.md and docs/reference/implementer-context.md regenerated; no Memory note needed.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "quality-first local delegation control mode",
+          "owner": "issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/662"
+        },
+        {
+          "summary": "execution posture in implementer context",
+          "owner": "issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/663"
+        },
+        {
+          "summary": "local override ownership docs",
+          "owner": "issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/664"
+        },
+        {
+          "summary": "promote-to-plan missing execplan path dogfooding fix",
+          "owner": "issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/665"
+        }
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: ingest and implement #662-#664\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Focused workspace CLI tests, planning installer tests, contract tooling, structured inventory, planning surfaces, full workspace tests, and make check passed.\nChanged surfaces: config.py, cli.py, workspace local override schema, implementer context schema, generated reference docs, workspace surfaces manifest, workspace CLI tests, planning installer/tests, planning state\nDurable residue: evidence_only (archive)\nMemory learning: promote_to_code_and_test\nFollow-up: none"
+  }
+}

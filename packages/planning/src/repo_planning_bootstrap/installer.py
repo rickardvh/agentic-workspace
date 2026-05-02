@@ -6561,7 +6561,53 @@ def promote_todo_item_to_execplan(
     current_surface = item.fields.get("surface", "")
     existing_execplan_ref = _surface_execplan_reference(current_surface)
     if existing_execplan_ref:
-        result.add("manual review", todo_path, f"TODO item '{item_id}' already points at '{existing_execplan_ref}'")
+        existing_execplan_path = target_root / existing_execplan_ref
+        existing_execplan_record_path = _canonical_execplan_record_path(existing_execplan_path)
+        if existing_execplan_path.exists() or existing_execplan_record_path.exists():
+            result.add("manual review", todo_path, f"TODO item '{item_id}' already points at '{existing_execplan_ref}'")
+            return result
+        slug = _slugify(plan_slug or existing_execplan_record_path.name.removesuffix(".plan.json"))
+        next_action = (
+            item.fields.get("next action", "").strip()
+            or item.fields.get("suggested first slice", "").strip()
+            or item.fields.get("promotion signal", "").strip()
+        )
+        done_when = item.fields.get("done when", "").strip() or item.fields.get("outcome", "").strip()
+        why_now = item.fields.get("why now", "").strip() or item.fields.get("reason", "").strip()
+        status = _normalize_status(item.fields.get("status", "planned"))
+        if status == "planned":
+            status = "in-progress"
+        plan_record = _build_execplan_record_from_todo_item(
+            title=_title_from_slug(slug),
+            item_id=item_id,
+            status=status,
+            why_now=why_now,
+            next_action=next_action,
+            done_when=done_when,
+        )
+        surface_relative = existing_execplan_record_path.relative_to(target_root)
+        updated_fields = dict(item.fields)
+        updated_fields["surface"] = surface_relative.as_posix()
+        updated_fields.pop("next action", None)
+        updated_fields.pop("done when", None)
+        if compact_item is not None:
+            new_state = _update_compact_todo_item_in_state(state, item_id, {"surface": surface_relative.as_posix()})
+            if new_state is None:
+                result.add("manual review", todo_path, f"TODO item '{item_id}' could not be updated in compact state")
+                return result
+        else:
+            new_todo_lines = _rewrite_todo_item(todo_lines, item, updated_fields)
+        if dry_run:
+            result.add("would create", existing_execplan_record_path, "scaffold missing canonical execplan record from TODO path")
+            result.add("would update", todo_path, f"confirm '{item_id}' points at {surface_relative.as_posix()}")
+            return result
+        _write_execplan_record(record_path=existing_execplan_record_path, record=plan_record)
+        if compact_item is not None:
+            _write_state_to_toml(target_root, new_state)
+        else:
+            todo_path.write_text("\n".join(new_todo_lines).rstrip() + "\n", encoding="utf-8")
+        result.add("created", existing_execplan_record_path, "scaffolded missing canonical execplan record from TODO path")
+        result.add("updated", todo_path, f"confirmed '{item_id}' points at {surface_relative.as_posix()}")
         return result
 
     slug = _slugify(plan_slug or item_id)

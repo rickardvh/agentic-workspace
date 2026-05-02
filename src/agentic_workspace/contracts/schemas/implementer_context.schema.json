@@ -17,6 +17,7 @@
     "required_validation_commands",
     "orientation",
     "inference_limits",
+    "execution_posture",
     "handoff_requirements",
     "next_allowed_action"
   ],
@@ -159,6 +160,76 @@
       },
       "additionalProperties": false,
       "description": "Limits of changed-path implementer-context inference."
+    },
+    "execution_posture": {
+      "type": "object",
+      "required": [
+        "kind",
+        "capability_posture",
+        "runtime_resolution",
+        "delegation_control",
+        "selected_target",
+        "recommended_action",
+        "quality_tradeoff",
+        "token_tradeoff",
+        "ready_handoff",
+        "inference_limits"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/execution-posture/v1",
+          "description": "Discriminator for the execution posture payload."
+        },
+        "capability_posture": {
+          "type": "object",
+          "description": "Task capability posture inferred from changed paths and optional task text."
+        },
+        "runtime_resolution": {
+          "type": "object",
+          "description": "Compact stay-local, stronger-reasoning, external-delegation, or manual-handoff recommendation."
+        },
+        "delegation_control": {
+          "type": "object",
+          "description": "Local human-control mode and whether automatic delegation is permitted."
+        },
+        "selected_target": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Suggested local delegation target when one matches the inferred posture."
+        },
+        "recommended_action": {
+          "type": "string",
+          "description": "Recommended execution category for the implementer."
+        },
+        "quality_tradeoff": {
+          "type": "string",
+          "description": "Why the recommendation preserves or improves implementation quality."
+        },
+        "token_tradeoff": {
+          "type": "string",
+          "description": "When token saving is acceptable or should be deferred."
+        },
+        "ready_handoff": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Prompt or handoff packet to use when local mode allows manual or suggested delegation."
+        },
+        "inference_limits": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One limit of the inferred execution posture."
+          },
+          "minItems": 1,
+          "description": "Limits that prevent the posture recommendation from becoming hidden execution authority."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Actionable local execution posture for orchestration before implementation."
     },
     "handoff_requirements": {
       "type": "object",

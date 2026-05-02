@@ -545,6 +545,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "handoff.prefer_internal_delegation_when_available",
         "safety.safe_to_auto_run_commands",
         "safety.requires_human_verification_on_pr",
+        "delegation.mode",
         "local_memory.enabled",
         "local_memory.path",
         "delegation_targets.<target>.strength",
@@ -568,6 +569,12 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "api",
         "manual",
     ]
+    assert payload["mixed_agent"]["local_override"]["supported_delegation_modes"] == ["off", "manual", "suggest", "auto"]
+    delegation_control = payload["mixed_agent"]["delegation_control"]
+    assert delegation_control["field"] == "delegation.mode"
+    assert delegation_control["default"] == "suggest"
+    assert "quality" in delegation_control["quality_first_rule"]
+    assert delegation_control["mode_semantics"]["auto"].startswith("permit automatic delegation")
     assert payload["mixed_agent"]["local_outcome_artifact"] == {
         "path": ".agentic-workspace/delegation-outcomes.json",
         "kind": "agentic-workspace/delegation-outcomes/v1",
@@ -2320,6 +2327,57 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
     assert posture_effect["status"] == "configured"
     assert posture_effect["configured_profiles"] == ["fast_docs", "primary_planner"]
     assert posture_effect["proof_burden"].startswith("lower-trust profiles require")
+
+
+def test_config_command_reports_local_delegation_control_mode(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = false",
+                "",
+                "[delegation]",
+                'mode = "auto"',
+                "",
+                "[delegation_targets.local_worker]",
+                'strength = "medium"',
+                'execution_methods = ["internal"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    control = payload["mixed_agent"]["delegation_control"]
+    assert control["configured_mode"] == "auto"
+    assert control["effective_mode"] == "suggest"
+    assert control["execution_permitted"] is False
+    assert control["disabled_reason"] == "delegation.mode is auto, but safety.safe_to_auto_run_commands is not true"
+    assert payload["mixed_agent"]["effective_posture"]["delegation_mode"] == {
+        "value": "auto",
+        "source": "local-override",
+    }
+
+
+def test_config_command_rejects_invalid_local_delegation_control_mode(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        'schema_version = 1\n\n[delegation]\nmode = "delegate-everything"\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--target", str(target), "--format", "json"])
+    assert "delegation.mode must be one of" in capsys.readouterr().err
 
 
 def test_defaults_command_reports_runtime_resolution_policy(capsys) -> None:
@@ -6756,6 +6814,11 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
     assert "preflight" in payload["orientation"]["preflight_command"]
     assert "lowers continuation and review trust" in payload["orientation"]["trust_note"]
     assert "unstated intent" in payload["inference_limits"]["rule"]
+    assert payload["execution_posture"]["kind"] == "agentic-workspace/execution-posture/v1"
+    assert payload["execution_posture"]["delegation_control"]["effective_mode"] == "suggest"
+    assert payload["execution_posture"]["delegation_control"]["execution_permitted"] is False
+    assert "quality" in payload["execution_posture"]["quality_tradeoff"]
+    assert "Token saving" in payload["execution_posture"]["token_tradeoff"]
     assert (
         "whether proof commands were actually executed unless evidence is recorded elsewhere" in payload["inference_limits"]["cannot_infer"]
     )
@@ -6798,6 +6861,58 @@ def test_implement_task_allows_narrow_single_issue_context(capsys) -> None:
     assert payload["task_routing"]["issue_refs"] == ["#424"]
     assert payload["task_routing"]["broad_external_work"] is False
     assert payload["next_allowed_action"] == "Inspect only the listed files and run the required validation commands."
+
+
+def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[runtime]",
+                "strong_planner_available = true",
+                "cheap_bounded_executor_available = true",
+                "",
+                "[delegation]",
+                'mode = "manual"',
+                "",
+                "[delegation_targets.planner]",
+                'strength = "strong"',
+                'location = "local"',
+                'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
+                'execution_methods = ["internal"]',
+            ]
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+                "--task",
+                "update delegation config schema",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    posture = payload["execution_posture"]
+    assert posture["capability_posture"]["posture"]["execution class"] == "boundary-shaping"
+    assert posture["runtime_resolution"]["recommendation"] == "stronger-reasoning"
+    assert posture["delegation_control"]["effective_mode"] == "manual"
+    assert posture["delegation_control"]["execution_permitted"] is False
+    assert posture["selected_target"]["name"] == "planner"
+    assert posture["ready_handoff"]["mode"] == "manual"
+    assert "quality" in posture["ready_handoff"]["prompt"]
 
 
 def test_ownership_path_answer_includes_authority_marker_and_boundary_warning(capsys) -> None:

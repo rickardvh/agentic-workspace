@@ -36,6 +36,17 @@ Cheap implementer context for a bounded changed-path scope.
 | `inference_limits.can_infer` | array of string | yes |  | Information classes derived from paths, config, active planning, or package metadata. |  |  |
 | `inference_limits.cannot_infer` | array of string | yes |  | Information classes that still require human or agent judgment. |  |  |
 | `inference_limits.when_uncertain` | string | yes |  | Routing instruction when changed-path context is insufficient. |  |  |
+| `execution_posture` | object | yes |  | Actionable local execution posture for orchestration before implementation. |  |  |
+| `execution_posture.kind` | const `"agentic-workspace/execution-posture/v1"` | yes |  | Discriminator for the execution posture payload. |  |  |
+| `execution_posture.capability_posture` | object | yes |  | Task capability posture inferred from changed paths and optional task text. |  |  |
+| `execution_posture.runtime_resolution` | object | yes |  | Compact stay-local, stronger-reasoning, external-delegation, or manual-handoff recommendation. |  |  |
+| `execution_posture.delegation_control` | object | yes |  | Local human-control mode and whether automatic delegation is permitted. |  |  |
+| `execution_posture.selected_target` | object \| null | yes |  | Suggested local delegation target when one matches the inferred posture. |  |  |
+| `execution_posture.recommended_action` | string | yes |  | Recommended execution category for the implementer. |  |  |
+| `execution_posture.quality_tradeoff` | string | yes |  | Why the recommendation preserves or improves implementation quality. |  |  |
+| `execution_posture.token_tradeoff` | string | yes |  | When token saving is acceptable or should be deferred. |  |  |
+| `execution_posture.ready_handoff` | object \| null | yes |  | Prompt or handoff packet to use when local mode allows manual or suggested delegation. |  |  |
+| `execution_posture.inference_limits` | array of string | yes |  | Limits that prevent the posture recommendation from becoming hidden execution authority. |  |  |
 | `handoff_requirements` | object | yes |  | Information that must be preserved before pausing or handing off work. |  |  |
 | `handoff_requirements.before_handoff` | array of string | yes |  | Ordered before handoff entries used by this contract. |  |  |
 | `handoff_requirements.stop_when` | array of string | yes |  | Ordered stop when entries used by this contract. |  |  |

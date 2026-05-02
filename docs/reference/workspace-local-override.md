@@ -13,24 +13,26 @@ Machine-local override schema for invocation preferences, delegation capabilitie
 | (root) | object | yes |  | Machine-local override schema for invocation preferences, delegation capabilities, safety posture, and local memory. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `schema_version` | const `1` | yes |  | Local override contract version. |  |  |
 | `workspace` | object | no |  | Local workspace preferences that should not be checked into shared repo config. |  |  |
-| `workspace.cli_invoke` | string | no |  | Cli invoke text value used by this contract. |  |  |
+| `workspace.cli_invoke` | string | no |  | Command prefix this machine should show in copyable Agentic Workspace commands, such as `uv run agentic-workspace`. |  |  |
 | `runtime` | object | no |  | Capabilities of the current agent/runtime on this machine. |  |  |
-| `runtime.supports_internal_delegation` | boolean | no |  | Supports internal delegation true/false policy flag used by this contract. |  |  |
-| `runtime.strong_planner_available` | boolean | no |  | Strong planner available true/false policy flag used by this contract. |  |  |
-| `runtime.cheap_bounded_executor_available` | boolean | no |  | Cheap bounded executor available true/false policy flag used by this contract. |  |  |
+| `runtime.supports_internal_delegation` | boolean | no |  | Whether the current runtime can hand work to an internal subagent or equivalent in-session worker. |  |  |
+| `runtime.strong_planner_available` | boolean | no |  | Whether this local environment has a stronger planning or reasoning path available for quality-sensitive work. |  |  |
+| `runtime.cheap_bounded_executor_available` | boolean | no |  | Whether this local environment has a lower-cost executor suitable for bounded implementation when quality is not compromised. |  |  |
 | `handoff` | object | no |  | Local preferences for internal or external delegation handoff. |  |  |
-| `handoff.prefer_internal_delegation_when_available` | boolean | no |  | Prefer internal delegation when available true/false policy flag used by this contract. |  |  |
+| `handoff.prefer_internal_delegation_when_available` | boolean | no |  | Prefer an in-session or same-runtime handoff when it is available and safe, instead of preparing an external handoff. |  |  |
 | `safety` | object | no |  | Local safety limits for command execution and verification. |  |  |
-| `safety.safe_to_auto_run_commands` | boolean | no |  | Safe to auto run commands true/false policy flag used by this contract. |  |  |
-| `safety.requires_human_verification_on_pr` | boolean | no |  | Requires human verification on pr true/false policy flag used by this contract. |  |  |
+| `safety.safe_to_auto_run_commands` | boolean | no |  | Whether this local environment may automatically run configured commands when another local policy explicitly permits automation. |  |  |
+| `safety.requires_human_verification_on_pr` | boolean | no |  | Whether pull request or review closeout on this machine should remain lower-trust until a human verifies it. |  |  |
+| `delegation` | object | no |  | Machine-local delegation control. This decides how far local tooling may go after recommending stay-local, stronger-reasoning, external-delegation, or manual-handoff. |  |  |
+| `delegation.mode` | enum `"off"`, `"manual"`, `"suggest"`, `"auto"` | no | `"suggest"` | Local control mode for delegation: disable target recommendations, prepare manual handoff prompts, suggest targets without execution, or allow automatic delegation only when safety settings permit it. |  |  |
 | `local_memory` | object | no |  | Machine-local memory opt-in and path configuration. |  |  |
-| `local_memory.enabled` | boolean | no |  | Enabled true/false policy flag used by this contract. |  |  |
-| `local_memory.path` | string | no |  | Path segments or repository path used by this contract. |  |  |
+| `local_memory.enabled` | boolean | no |  | Whether this machine may use local-only repo memory in addition to checked-in shared Memory. |  |  |
+| `local_memory.path` | string | no |  | Repository-relative path for local-only memory; it must stay ignored and non-authoritative. |  |  |
 | `delegation_targets` | object | no |  | Named local delegation targets available to this runtime. |  |  |
-| `delegation_targets.<^.+$>` | object | no |  | +$ details used by this contract. |  |  |
-| `delegation_targets.<^.+$>.strength` | enum `"strong"`, `"medium"`, `"weak"` | yes |  | Allowed strength value for routing or validation. |  |  |
-| `delegation_targets.<^.+$>.location` | enum `"local"`, `"external"`, `"either"` | no |  | Allowed location value for routing or validation. |  |  |
-| `delegation_targets.<^.+$>.confidence` | number | no |  | Confidence contract value used by this contract. |  |  |
-| `delegation_targets.<^.+$>.task_fit` | array of string | no |  | Ordered task fit entries used by this contract. |  |  |
-| `delegation_targets.<^.+$>.capability_classes` | array of enum `"boundary-shaping"`, `"reasoning-heavy"`, `"mixed"`, `"mechanical-follow-through"` | no |  | Ordered capability classes entries used by this contract. |  |  |
-| `delegation_targets.<^.+$>.execution_methods` | array of enum `"internal"`, `"cli"`, `"api"`, `"manual"` | yes |  | Ordered execution methods entries used by this contract. |  |  |
+| `delegation_targets.<^.+$>` | object | no |  | One local delegation target profile. Availability fields are human-owned controls; confidence, task fit, and capability classes are advisory estimates. |  |  |
+| `delegation_targets.<^.+$>.strength` | enum `"strong"`, `"medium"`, `"weak"` | yes |  | Human- or agent-declared capability strength for this target. Use it as a routing hint, not as proof that the target can close the work. |  |  |
+| `delegation_targets.<^.+$>.location` | enum `"local"`, `"external"`, `"either"` | no |  | Where this target runs from the current machine's perspective: local, external, or either. This is a local availability and boundary hint. |  |  |
+| `delegation_targets.<^.+$>.confidence` | number | no |  | Advisory confidence in this target profile from 0 to 1. Agents may tune it from local outcome evidence, but it does not create execution authority. |  |  |
+| `delegation_targets.<^.+$>.task_fit` | array of string | no |  | Advisory task-fit labels used to explain when this target is appropriate. |  |  |
+| `delegation_targets.<^.+$>.capability_classes` | array of enum `"boundary-shaping"`, `"reasoning-heavy"`, `"mixed"`, `"mechanical-follow-through"` | no |  | Advisory capability classes for routing quality-sensitive or mechanical work. These are estimates, not guarantees. |  |  |
+| `delegation_targets.<^.+$>.execution_methods` | array of enum `"internal"`, `"cli"`, `"api"`, `"manual"` | yes |  | Human-owned execution boundary for this target. Automatic use still requires delegation.mode = "auto" and local safety permission. |  |  |
