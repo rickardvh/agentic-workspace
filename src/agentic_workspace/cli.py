@@ -1291,6 +1291,8 @@ def _workspace_self_adaptation_guardrail_payload() -> dict[str, Any]:
 
 def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
     target_arg = f" --target {target}" if target else " --target ."
+    new_plan_command = f"agentic-planning-bootstrap new-plan --id <id> --title <title>{target_arg} --activate --format json"
+    promote_command = f"agentic-planning-bootstrap promote-to-plan <item-id>{target_arg} --format json"
     return {
         "kind": "agentic-workspace/planning-help/v1",
         "summary": "Planning files are checked-in execution authority, but their outer structure is package-owned.",
@@ -1300,10 +1302,41 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             f"agentic-workspace proof{target_arg} --changed <paths> --format json",
         ],
         "lifecycle_commands": [
-            f"agentic-planning-bootstrap new-plan --id <id> --title <title>{target_arg} --activate --format json",
-            f"agentic-planning-bootstrap promote-to-plan <item-id>{target_arg} --format json",
+            new_plan_command,
+            promote_command,
             f"agentic-planning-bootstrap archive-plan <plan>{target_arg} --format json",
         ],
+        "durable_state_bridge": {
+            "use_when": [
+                "the user asks to leave repo-visible state for future agents",
+                "the work needs handoff or continuation across sessions",
+                "a private runtime plan or todo list contains decisions that must survive the current agent",
+                "the task is broad enough that a root PLAN.md would be tempting",
+            ],
+            "preferred_command": new_plan_command,
+            "promote_existing_item_command": promote_command,
+            "canonical_surfaces": [
+                ".agentic-workspace/planning/state.toml",
+                ".agentic-workspace/planning/execplans/<id>.plan.json",
+                ".agentic-workspace/planning/decompositions/<id>.decomposition.json for epic shaping",
+            ],
+            "must_not_create": [
+                "PLAN.md",
+                "DOC_CLEANUP_PLAN.md",
+                "planning/*.json outside .agentic-workspace/planning/decompositions/",
+                ".agentic-workspace/WORKFLOW.md task notes",
+            ],
+            "planning_only_write_scope": [
+                ".agentic-workspace/planning/state.toml",
+                ".agentic-workspace/planning/execplans/",
+                ".agentic-workspace/planning/decompositions/",
+            ],
+            "planning_only_rule": (
+                "When the user asks to prepare, plan, decompose, hand off, or explicitly says not to implement yet, "
+                "do not create product source, package, dependency, schema, or app scaffold files unless explicitly requested."
+            ),
+            "after_write": f"agentic-workspace summary{target_arg} --format json",
+        },
         "rules": [
             "Use CLI first for orientation and proof selection.",
             "Use package lifecycle commands for planning mutations when available.",
@@ -1313,6 +1346,8 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
                 "and bridge durable decisions into checked-in Planning before implementation, handoff, or closeout; "
                 "do not edit .agentic-workspace/WORKFLOW.md as task state."
             ),
+            "Do not create root PLAN.md, DOC_CLEANUP_PLAN.md, or similar freehand durable-state files unless repo config explicitly routes there.",
+            "For planning-only preparation, keep writes to planning/decomposition surfaces and do not scaffold product files before implementation is requested.",
             "Do not invent the outer structure of planning-execplan/v1.",
             "Edit intent, scope, proof, and closeout content inside schema-backed checked-in records.",
             "After any planning mutation, run agentic-workspace summary --format json or the planning surface checker.",
@@ -1322,7 +1357,8 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "local_root": ".agentic-workspace/local/integrations/<vendor-or-runtime>/",
             "rule": (
                 "Runtime-native planning can be useful local working memory, but it is not repo-shared execution "
-                "authority until summarized into checked-in Agentic Workspace Planning."
+                "authority until summarized into checked-in Agentic Workspace Planning. Use durable_state_bridge "
+                "instead of writing a freehand root plan file."
             ),
             "bridge_before": ["implementation for lane/epic work", "handoff", "closeout"],
         },
@@ -1352,6 +1388,14 @@ def _print_planning_help(payload: dict[str, Any]) -> None:
     print("Planning lifecycle:")
     for command in payload["lifecycle_commands"]:
         print(f"- {command}")
+    durable_bridge = payload.get("durable_state_bridge", {})
+    if isinstance(durable_bridge, dict) and durable_bridge:
+        print("")
+        print("Durable repo-visible state bridge:")
+        print(f"- Preferred: {durable_bridge.get('preferred_command', '')}")
+        print(f"- After write: {durable_bridge.get('after_write', '')}")
+        for blocked in durable_bridge.get("must_not_create", []):
+            print(f"- Do not create: {blocked}")
     print("")
     print("Rules:")
     for rule in payload["rules"]:

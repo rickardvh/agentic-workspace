@@ -2359,10 +2359,27 @@ def _execution_readiness_payload(
                 )
     historical_only_candidates = bool(derived_candidates) and external_work_quiet and not roadmap_lanes and not roadmap_candidates
     broad_work_planning_guard = {
-        "applies_to": "broad, high-assurance, multi-surface, or hard-to-reconstruct package work",
-        "required_before_implementation": "Create or continue one checked-in execplan before code edits.",
+        "applies_to": "broad/high-assurance/multi-surface work",
+        "required_before_implementation": "Create or continue one checked-in execplan before edits.",
         "direct_work_exception": "Narrow direct tasks may proceed without an execplan until they widen into sequencing, proof, or handoff risk.",
-        "promotion_command": "agentic-planning-bootstrap promote-to-plan <item-id> --target . --format json",
+        "promotion_command": "agentic-planning-bootstrap promote-to-plan <item-id>",
+        "new_plan_command": "agentic-planning-bootstrap new-plan --id <id> --title <title> --activate",
+        "durable_state_rule": (
+            "For repo-visible durable state, handoff, continuation, or future-agent plans, use checked-in planning, not root PLAN.md."
+        ),
+        "canonical_durable_state_surfaces": [
+            ".agentic-workspace/planning/state.toml",
+            ".agentic-workspace/planning/execplans/<id>.plan.json",
+            ".agentic-workspace/planning/decompositions/<id>.decomposition.json",
+        ],
+        "planning_only_write_scope": [
+            ".agentic-workspace/planning/state.toml",
+            ".agentic-workspace/planning/execplans/",
+            ".agentic-workspace/planning/decompositions/",
+        ],
+        "planning_only_rule": (
+            "When asked to prepare, plan, decompose, hand off, or not implement yet, do not create product source, package, schema, or app files."
+        ),
     }
     if active_execplans:
         return {
@@ -2499,7 +2516,10 @@ def _planning_decomposition_projection(*, target_root: Path, decomposition_dir: 
                 }
             )
     status = "none"
-    recommended_next_action = "No schema-backed decomposition records are present."
+    recommended_next_action = (
+        "No schema-backed decomposition records are present. For epic-shaped or multi-lane work, create "
+        ".agentic-workspace/planning/decompositions/<id>.decomposition.json from the shipped template, then promote ready lanes into execplans."
+    )
     if records:
         status = "present"
         recommended_next_action = (
@@ -2698,6 +2718,20 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     idle_unavailable_reason = (
         "no active planning record" if todo.get("active_count", 0) == 0 and execplans.get("active_count", 0) == 0 else None
     )
+    broad_work_planning_guard = dict(execution_readiness.get("broad_work_planning_guard", {}))
+    compact_broad_work_guard = {
+        key: broad_work_planning_guard[key]
+        for key in (
+            "status",
+            "applies_to",
+            "required_before_implementation",
+            "new_plan_command",
+            "durable_state_rule",
+            "canonical_durable_state_surfaces",
+            "planning_only_rule",
+        )
+        if key in broad_work_planning_guard
+    }
 
     compact_summary: dict[str, Any] = {
         "kind": summary.get("kind", "planning-summary/v1"),
@@ -2743,7 +2777,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "direct_work_allowed": bool(execution_readiness.get("direct_work_allowed", True)),
             "derived_follow_up_candidate_count": execution_readiness.get("derived_follow_up_candidate_count", 0),
             "recommendation": execution_readiness.get("recommendation", {}),
-            "broad_work_planning_guard": execution_readiness.get("broad_work_planning_guard", {}),
+            "broad_work_planning_guard": compact_broad_work_guard,
             "rule": execution_readiness.get("rule", ""),
         },
         "autopilot_loop": dict(summary.get("autopilot_loop", {})),
@@ -2919,6 +2953,12 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         "warnings": summary.get("warnings", []),
         "warning_count": summary.get("warning_count", 0),
     }
+    if planning_surface_health.get("recovery_required"):
+        compact_summary["planning_surface_health"]["recovery_required"] = True
+        compact_summary["planning_surface_health"]["unsafe_to_continue_reason"] = planning_surface_health.get(
+            "unsafe_to_continue_reason",
+            "",
+        )
     return compact_summary
 
 
@@ -3271,6 +3311,13 @@ def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
         "status": "not-clean",
         "warning_count": len(health_warnings),
         "recommended_next_action": first_fix,
+        "recovery_required": True,
+        "unsafe_to_continue_reason": (
+            f"{health_warnings[0]['warning_class']} at {health_warnings[0]['path']}; "
+            "resolve planning-surface health before treating the repo as safe to continue."
+            if health_warnings[0]["path"]
+            else f"{health_warnings[0]['warning_class']}; resolve planning-surface health before treating the repo as safe to continue."
+        ),
         "warnings": health_warnings,
         "authoring_affordances": {
             "closed_work_item_scaffold": PLANNING_STATE_CLOSED_ITEM_SCAFFOLD,
@@ -8673,6 +8720,10 @@ def _warning_remediation(warning_class: str) -> str | None:
         "planning_decomposition_artifact_misplaced": (
             "Move the record to `.agentic-workspace/planning/decompositions/<id>.decomposition.json` or recreate it from "
             "`TEMPLATE.decomposition.json`, then rerun `agentic-workspace summary --target . --format json`."
+        ),
+        "planning_artifact_freehand": (
+            "Replace the freehand artifact with `agentic-planning-bootstrap new-plan --id <id> --title <title> --target . "
+            "--activate --format json` or a schema-backed decomposition record, then rerun `agentic-workspace summary --target . --format json`."
         ),
         "startup_policy_drift": "Restore the minimal startup order in AGENTS, quickstart, and manifest.",
     }.get(warning_class)

@@ -404,7 +404,7 @@ def _baseline_agents() -> str:
 # Agent Instructions
 
 <!-- agentic-workspace:workflow:start -->
-Start with `.agentic-workspace/WORKFLOW.md`; it routes work through CLI-first startup guidance before implementation.
+Start with `.agentic-workspace/WORKFLOW.md` before non-trivial edits; it routes startup, scope, proof, and durable repo-visible state.
 <!-- agentic-workspace:workflow:end -->
 """
 
@@ -1417,3 +1417,25 @@ def test_checker_warns_for_misplaced_decomposition_json(tmp_path: Path) -> None:
 
     assert len(misplaced) == 2
     assert all(".agentic-workspace/planning/decompositions" in warning.message for warning in misplaced)
+
+
+def test_checker_warns_for_freehand_planning_artifacts(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_freehand_artifacts")
+    _write(
+        tmp_path / ".agentic-workspace/planning/documentation_cleanup_plan.json",
+        json.dumps(
+            {
+                "goal": ["Clean up docs later."],
+                "active_milestone": {"id": "docs"},
+                "completion_criteria": ["Future agent can continue."],
+            },
+            indent=2,
+        ),
+    )
+    _write(tmp_path / "DOC_CLEANUP_PLAN.md", "# Documentation Cleanup Plan\n\n- Continue later.\n")
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+
+    freehand = [warning for warning in warnings if warning.warning_class == "planning_artifact_freehand"]
+    assert len(freehand) == 2
+    assert all("durable_state_bridge" in warning.message for warning in freehand)

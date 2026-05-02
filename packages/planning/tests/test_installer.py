@@ -2190,6 +2190,21 @@ def test_planning_summary_warns_for_misplaced_decomposition_records(tmp_path: Pa
     assert any(warning["warning_class"] == "planning_decomposition_artifact_misplaced" for warning in warnings)
 
 
+def test_planning_summary_warns_for_freehand_planning_artifacts(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/documentation_cleanup_plan.json",
+        json.dumps({"goal": ["Clean up docs later."], "completion_criteria": ["Future agent can continue."]}, indent=2),
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    warnings = summary["planning_surface_health"]["warnings"]
+    warning = next(warning for warning in warnings if warning["warning_class"] == "planning_artifact_freehand")
+    assert "new-plan" in warning["suggested_fix"]
+    assert summary["planning_surface_health"]["status"] == "not-clean"
+
+
 def test_planning_cli_create_review_writes_valid_review_record(tmp_path: Path, capsys) -> None:
     result = planning_cli.main(
         [

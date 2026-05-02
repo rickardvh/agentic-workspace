@@ -43,7 +43,7 @@
       ]
     },
     "gemini": {
-      "default_model": "gemini-3-flash",
+      "default_model": "gemini-3-flash-preview",
       "timeout_seconds": 900,
       "block_on_preflight_failure": true,
       "command": [

@@ -187,7 +187,7 @@ WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
 WORKSPACE_POINTER_BLOCK = (
     f"{WORKSPACE_WORKFLOW_MARKER_START}\n"
-    "Start with `.agentic-workspace/WORKFLOW.md`; it routes work through CLI-first startup guidance before implementation.\n"
+    "Start with `.agentic-workspace/WORKFLOW.md` before non-trivial edits; it routes startup, scope, proof, and durable repo-visible state.\n"
     f"{WORKSPACE_WORKFLOW_MARKER_END}"
 )
 EMBEDDED_WORKFLOW_HEADINGS = (

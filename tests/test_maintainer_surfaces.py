@@ -121,7 +121,7 @@ def _write_planning_surfaces(tmp_path: Path) -> None:
 # Agent Instructions
 
 <!-- agentic-workspace:workflow:start -->
-Start with `.agentic-workspace/WORKFLOW.md`; it routes work through CLI-first startup guidance before implementation.
+Start with `.agentic-workspace/WORKFLOW.md` before non-trivial edits; it routes startup, scope, proof, and durable repo-visible state.
 <!-- agentic-workspace:workflow:end -->
 """,
     )

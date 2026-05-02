@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -120,12 +121,12 @@ def test_model_cli_harness_suite_renders_gemini_adapter(tmp_path: Path) -> None:
 
     result = payload["results"][0]
     assert payload["adapter"] == "gemini"
-    assert payload["model"] == "gemini-3-flash"
+    assert payload["model"] == "gemini-3-flash-preview"
     assert result["result"]["status"] == "dry-run"
     assert result["command"][0:5] == [
         "gemini",
         "--model",
-        "gemini-3-flash",
+        "gemini-3-flash-preview",
         "--prompt",
         result["prompt"],
     ]
@@ -237,6 +238,18 @@ def test_model_cli_harness_warns_on_runtime_failures_and_mutations(tmp_path: Pat
     }.issubset({warning["warning_class"] for warning in warnings})
 
 
+def test_model_cli_harness_skips_semantic_scoring_when_model_did_not_answer() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="invalid-planning-recovery",
+        result={"returncode": 1, "stdout": "", "stderr": "ModelNotFoundError: Requested entity was not found."},
+        mutation_summary={"status": "clean"},
+    )
+
+    assert warnings == []
+
+
 def test_model_cli_harness_scores_runtime_native_planning_as_semantic_failure() -> None:
     harness = _load_harness()
 
@@ -283,6 +296,52 @@ def test_model_cli_harness_scores_misplaced_planning_artifacts_as_semantic_failu
     assert any("summary inspection was unavailable" in message for message in messages)
 
 
+def test_model_cli_harness_scores_broad_prep_product_files_as_semantic_failure() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="broad-work-decomposition",
+        result={
+            "stdout": json.dumps({"response": "Prepared a bounded slice and created app folders."}),
+            "stderr": "",
+        },
+        mutation_summary={
+            "status": "changed",
+            "created": [
+                ".agentic-workspace/planning/execplans/ecommerce.plan.json",
+                "ecommerce-app/README.md",
+                "ecommerce-app/docs/slice-1-handoff.md",
+            ],
+        },
+    )
+
+    assert any("planning-only broad-work preparation" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_scores_broad_prep_proposal_only() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="broad-work-decomposition",
+        result={
+            "stdout": json.dumps(
+                {
+                    "response": (
+                        "Proposed strategy: create durable state in .agentic-workspace/planning/records/. "
+                        "I'll wait for your agreement before drafting the formal plan."
+                    ),
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean", "created": []},
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("proposal instead of creating durable repo-visible planning state" in message for message in messages)
+    assert any("non-canonical `.agentic-workspace/planning/records/`" in message for message in messages)
+
+
 def test_model_cli_harness_scores_inaccessible_workflow_as_semantic_failure() -> None:
     harness = _load_harness()
 
@@ -327,6 +386,102 @@ def test_model_cli_harness_scores_manual_invalid_planning_recovery_as_semantic_f
     messages = [warning["message"] for warning in warnings]
     assert any("summary diagnostics" in message for message in messages)
     assert any("manual planning-state clearing" in message for message in messages)
+
+
+def test_model_cli_harness_scores_windows_manual_invalid_planning_recovery() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="invalid-planning-recovery",
+        result={
+            "stdout": json.dumps(
+                {
+                    "response": ("Clear the invalid state with rm -r .agentic-workspace\\planning\\execplans\\freehand-lane.plan.json."),
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert any("manual planning-state clearing" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_scores_copilot_transcript_final_answer_only() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="invalid-planning-recovery",
+        result={
+            "final_message": (
+                "# Copilot CLI Session\n\n"
+                "### File view\n`agentic-workspace summary --target . --format json`\n\n"
+                "### X Copilot\nClear the invalid state with "
+                "rm -r .agentic-workspace\\planning\\execplans\\freehand-lane.plan.json.\n"
+                "---\n\n<sub>Generated by [GitHub Copilot CLI](https://github.com/features/copilot/cli)</sub>"
+            ),
+            "stdout": "",
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("summary diagnostics" in message for message in messages)
+    assert any("manual planning-state clearing" in message for message in messages)
+
+
+def test_model_cli_harness_scores_destructive_vcs_invalid_recovery_as_semantic_failure() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="invalid-planning-recovery",
+        result={
+            "stdout": json.dumps({"response": "The repo is unsafe. Run git restore . before continuing."}),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert any("destructive VCS cleanup" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_scores_false_safe_invalid_recovery_as_semantic_failure() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="invalid-planning-recovery",
+        result={
+            "stdout": json.dumps({"response": "You can safely proceed. No recovery command needed."}),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert any("reported invalid planning state as safe" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_does_not_score_negated_safe_invalid_recovery_as_false_safe() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="invalid-planning-recovery",
+        result={
+            "stdout": json.dumps({"response": "It is not safe to continue. The planning state is blocked."}),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert not any("reported invalid planning state as safe" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_sets_git_ceiling_to_run_root(tmp_path: Path) -> None:
+    harness = _load_harness()
+
+    env = harness._with_git_ceiling({"GIT_CEILING_DIRECTORIES": "existing"}, run_root=tmp_path / "run")
+
+    assert env["GIT_CEILING_DIRECTORIES"].split(os.pathsep)[-1] == str((tmp_path / "run").resolve())
 
 
 def test_model_cli_harness_scores_direct_task_overplanning_as_semantic_failure() -> None:

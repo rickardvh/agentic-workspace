@@ -78,6 +78,7 @@ WARNING_EXECPLAN_FOREIGN_PM_SHAPE = "execplan_foreign_pm_shape"
 WARNING_PLANNING_STATE_UNSUPPORTED_ACTIVATION_SHAPE = "planning_state_unsupported_activation_shape"
 WARNING_EPIC_ARTIFACT_UNSUPPORTED = "planning_epic_artifact_unsupported"
 WARNING_DECOMPOSITION_ARTIFACT_MISPLACED = "planning_decomposition_artifact_misplaced"
+WARNING_PLANNING_ARTIFACT_FREEHAND = "planning_artifact_freehand"
 WARNING_ROADMAP_EXECUTION_DRIFT = "roadmap_execution_drift"
 WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL = "roadmap_missing_promotion_signal"
 WARNING_ROADMAP_MISSING_REOPEN_SIGNAL = "roadmap_missing_reopen_signal"
@@ -487,6 +488,75 @@ def _misplaced_decomposition_artifact_warnings(*, repo_root: Path) -> list[Plann
                     "`.agentic-workspace/planning/decompositions/*.decomposition.json` surface. Move it "
                     "there or recreate it from `TEMPLATE.decomposition.json`; otherwise `summary` cannot "
                     "treat it as shared planning state."
+                ),
+            )
+        )
+    return warnings
+
+
+def _looks_like_freehand_planning_artifact(path: Path) -> bool:
+    lowered_name = path.name.lower()
+    if not lowered_name.endswith((".json", ".md")):
+        return False
+    plan_markers = ("plan", "planning", "handoff", "cleanup", "roadmap", "epic")
+    if any(marker in lowered_name for marker in plan_markers):
+        return True
+    if lowered_name.endswith(".json"):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            return False
+        if not isinstance(payload, dict):
+            return False
+        freehand_keys = {"tasks", "validation_gates", "proof_surface", "goal", "active_milestone", "completion_criteria"}
+        return bool(freehand_keys.intersection(payload))
+    return False
+
+
+def _freehand_planning_artifact_warnings(*, repo_root: Path) -> list[PlanningWarning]:
+    planning_root = repo_root / ".agentic-workspace" / "planning"
+    canonical_prefixes = (
+        planning_root / "execplans",
+        planning_root / "decompositions",
+        planning_root / "reviews",
+        planning_root / "evidence",
+        planning_root / "schemas",
+    )
+    allowed_planning_root_names = {
+        "state.toml",
+        "agent-manifest.json",
+        "README.md",
+        "TEMPLATE.md",
+        "TEMPLATE.plan.json",
+        "TEMPLATE.decomposition.json",
+    }
+    candidates: list[Path] = []
+    if planning_root.exists():
+        candidates.extend(path for path in planning_root.glob("*") if path.is_file())
+    for pattern in ("*PLAN.md", "*Plan.md", "*plan.md", "*PLANNING.md", "*planning.md", "*HANDOFF.md", "*handoff.md"):
+        candidates.extend(path for path in repo_root.glob(pattern) if path.is_file())
+
+    warnings: list[PlanningWarning] = []
+    seen: set[Path] = set()
+    for path in sorted(candidates):
+        if path in seen or not path.is_file():
+            continue
+        seen.add(path)
+        if path.name in allowed_planning_root_names:
+            continue
+        if any(prefix in path.parents for prefix in canonical_prefixes):
+            continue
+        if not _looks_like_freehand_planning_artifact(path):
+            continue
+        warnings.append(
+            PlanningWarning(
+                WARNING_PLANNING_ARTIFACT_FREEHAND,
+                _render_path(path),
+                (
+                    "This looks like freehand planning or handoff state outside the canonical planning surfaces. "
+                    "Use `agentic-workspace planning --format json` and its `durable_state_bridge` route; prefer "
+                    "`agentic-planning-bootstrap new-plan --id <id> --title <title> --target . --activate --format json` "
+                    "or `.agentic-workspace/planning/decompositions/*.decomposition.json` for epic shaping."
                 ),
             )
         )
@@ -1021,7 +1091,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     required_agents_fragments = (
         "<!-- agentic-workspace:workflow:start -->",
         ".agentic-workspace/workflow.md",
-        "cli-first startup guidance before implementation",
+        "routes startup, scope, proof, and durable repo-visible state",
         "<!-- agentic-workspace:workflow:end -->",
     )
     if not all(fragment in agents_text for fragment in required_agents_fragments):
@@ -2420,6 +2490,7 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
     warnings.extend(_unsupported_state_activation_shape_warnings(state, repo_root=repo_root))
     warnings.extend(_unsupported_epic_artifact_warnings(repo_root=repo_root))
     warnings.extend(_misplaced_decomposition_artifact_warnings(repo_root=repo_root))
+    warnings.extend(_freehand_planning_artifact_warnings(repo_root=repo_root))
 
     if config_path.exists():
         config_text = "\n".join(_read_lines(config_path)).lower()

@@ -129,6 +129,8 @@ queued_items = []
     warnings = payload["planning_surface_health"]["warnings"]
     assert any(warning["warning_class"] == "planning_state_unsupported_activation_shape" for warning in warnings)
     assert payload["planning_surface_health"]["status"] == "not-clean"
+    assert payload["planning_surface_health"]["recovery_required"] is True
+    assert "resolve planning-surface health" in payload["planning_surface_health"]["unsafe_to_continue_reason"]
     warning_text = json.dumps(payload["planning_surface_health"])
     assert "do not delete state.toml" in warning_text.lower()
     assert "recovery_sequence" in payload["planning_surface_health"]["authoring_affordances"]
