@@ -41,6 +41,24 @@
         "--silent",
         "--no-color"
       ]
+    },
+    "gemini": {
+      "default_model": "gemini-3-flash",
+      "timeout_seconds": 900,
+      "block_on_preflight_failure": true,
+      "command": [
+        "gemini",
+        "--model",
+        "{model}",
+        "--prompt",
+        "{prompt}",
+        "--approval-mode",
+        "yolo",
+        "--include-directories",
+        "{repo}",
+        "--output-format",
+        "json"
+      ]
     }
   },
   "scenarios": [

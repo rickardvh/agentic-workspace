@@ -2,12 +2,21 @@
 
 The model CLI harness runs external coding agents as black-box users of Agentic Workspace. It is meant to expose workflow ambiguity in smaller or differently trained agents, not to benchmark generic coding ability.
 
-The first adapter targets GitHub Copilot CLI, including runs such as Claude Haiku through Copilot:
+The smoke suite includes adapters for GitHub Copilot CLI and Gemini CLI. The Copilot adapter supports runs such as Claude Haiku through Copilot:
 
 ```powershell
 uv run python scripts/model_cli_harness/run_model_cli_harness.py `
   --adapter copilot `
   --model claude-haiku-4.5 `
+  --scenario startup-orientation
+```
+
+The Gemini adapter defaults to Gemini 3 Flash:
+
+```powershell
+uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+  --adapter gemini `
+  --model gemini-3-flash `
   --scenario startup-orientation
 ```
 
@@ -67,5 +76,6 @@ Treat one-off capability failures cautiously. Give more weight to repeated ambig
 - Provider CLIs may still maintain their own local state outside the fixture. For Copilot, the harness routes logs to the run directory, but authenticated session/config state may still use `COPILOT_HOME` unless the operator provides an isolated authenticated home.
 - The Copilot adapter denies `git push`.
 - The Copilot adapter requires `pwsh` before execution because its shell tool uses PowerShell 7 on Windows. The suite includes standard PowerShell install paths and prepends the discovered parent directory to the model CLI `PATH`.
+- The Gemini adapter runs `gemini --prompt` in headless mode and records JSON output. It uses `--approval-mode yolo` only when the operator explicitly passes `--execute`; dry-run remains the default.
 - The runner emits warnings when transcripts report shell-runtime failures or modified files outside the copied fixture.
 - Normal tests should validate command rendering and fixture isolation, not run external models.

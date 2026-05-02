@@ -105,6 +105,35 @@ def test_model_cli_harness_rejects_unknown_scenario(tmp_path: Path) -> None:
         raise AssertionError("expected missing scenario to fail")
 
 
+def test_model_cli_harness_suite_renders_gemini_adapter(tmp_path: Path) -> None:
+    harness = _load_harness()
+
+    payload = harness.run_suite(
+        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        adapter_id="gemini",
+        model=None,
+        scenario_filter="startup-orientation",
+        execute=False,
+        output_root=tmp_path / "out",
+        timeout_seconds=None,
+    )
+
+    result = payload["results"][0]
+    assert payload["adapter"] == "gemini"
+    assert payload["model"] == "gemini-3-flash"
+    assert result["result"]["status"] == "dry-run"
+    assert result["command"][0:5] == [
+        "gemini",
+        "--model",
+        "gemini-3-flash",
+        "--prompt",
+        result["prompt"],
+    ]
+    assert "--approval-mode" in result["command"]
+    assert "--include-directories" in result["command"]
+    assert result["repo_path"] in result["command"]
+
+
 def test_model_cli_harness_resolves_path_shims(tmp_path: Path, monkeypatch) -> None:
     harness = _load_harness()
     shim = tmp_path / "fake-cli.cmd"
