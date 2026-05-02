@@ -259,6 +259,7 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
 
     assert set(command_roles) == {
         "modules",
+        "planning",
         "summary",
         "start",
         "implement",
@@ -285,6 +286,7 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
     assert command_roles["install"] == "core_lifecycle"
     assert command_roles["upgrade"] == "core_lifecycle"
     assert command_roles["start"] == "core_context_router"
+    assert command_roles["planning"] == "core_context_router"
     assert command_roles["report"] == "core_context_router"
     assert command_roles["modules"] == "module_delegation_front_door"
     assert command_roles["setup"] == "reusable_host_repo_diagnostics"
@@ -7882,6 +7884,24 @@ def test_invalid_command_shows_preflight_fallback_hint(capsys) -> None:
     assert "Did you mean: preflight?" in stderr
     assert "agentic-workspace start --format json" in stderr
     assert "agentic-workspace preflight --format json" in stderr
+
+
+def test_planning_help_command_returns_lifecycle_guidance(capsys) -> None:
+    assert cli.main(["planning", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["kind"] == "agentic-workspace/planning-help/v1"
+    assert any("new-plan" in command for command in payload["lifecycle_commands"])
+    assert any("Do not invent" in rule for rule in payload["rules"])
+
+
+def test_planning_help_text_is_actionable(capsys) -> None:
+    assert cli.main(["planning"]) == 0
+    output = capsys.readouterr().out
+
+    assert "Planning lifecycle" in output
+    assert "agentic-planning-bootstrap new-plan" in output
+    assert "planning-execplan/v1" in output
 
 
 def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, capsys) -> None:

@@ -31,6 +31,7 @@ PLANNING_EXTERNAL_INTENT_CACHE_PATH = Path(".agentic-workspace") / "local" / "ca
 PLANNING_FINISHED_WORK_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "finished-work-evidence.json"
 PLANNING_SCHEMA_ROOT = PLANNING_MANAGED_ROOT / "schemas"
 EXECPLAN_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-execplan.schema.json"
+DECOMPOSITION_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-decomposition.schema.json"
 REVIEW_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-review.schema.json"
 EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-external-intent-evidence.schema.json"
 
@@ -67,7 +68,10 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/planning/execplans/README.md"),
     Path(".agentic-workspace/planning/execplans/TEMPLATE.plan.json"),
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
+    Path(".agentic-workspace/planning/decompositions/README.md"),
+    Path(".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json"),
     EXECPLAN_RECORD_SCHEMA_PATH,
+    DECOMPOSITION_RECORD_SCHEMA_PATH,
     REVIEW_RECORD_SCHEMA_PATH,
     EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH,
     FINISHED_WORK_EVIDENCE_SCHEMA_PATH,
@@ -96,7 +100,10 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path(".agentic-workspace/planning/execplans/README.md"),
     Path(".agentic-workspace/planning/execplans/TEMPLATE.plan.json"),
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
+    Path(".agentic-workspace/planning/decompositions/README.md"),
+    Path(".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json"),
     EXECPLAN_RECORD_SCHEMA_PATH,
+    DECOMPOSITION_RECORD_SCHEMA_PATH,
     REVIEW_RECORD_SCHEMA_PATH,
     EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH,
     FINISHED_WORK_EVIDENCE_SCHEMA_PATH,
@@ -1464,6 +1471,7 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
     legacy_todo_path = target_root / PLANNING_STATE_PATH
     roadmap_path = target_root / "ROADMAP.md"
     execplan_dir = target_root / ".agentic-workspace" / "planning" / "execplans"
+    decomposition_dir = target_root / ".agentic-workspace" / "planning" / "decompositions"
 
     state = _read_state_from_toml(target_root)
     if state:
@@ -1507,6 +1515,7 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
         todo_item_count = len(todo_items)
 
     ownership_review = _ownership_review(target_root)
+    decomposition_projection = _planning_decomposition_projection(target_root=target_root, decomposition_dir=decomposition_dir)
 
     active_execplans: list[dict[str, str]] = []
     completed_execplans: list[dict[str, Any]] = []
@@ -1546,6 +1555,7 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
 
     state = _read_state_from_toml(target_root)
     warnings = _run_planning_checker(target_root)
+    warnings.extend(_unsupported_planning_state_activation_shape_warnings(target_root=target_root, state=state))
     warnings.extend(_planning_state_v1_warnings(target_root=target_root, state=state))
     warnings.extend(_completed_execplan_warnings(completed_execplans))
     warnings.extend(_execplan_next_action_warnings(target_root=target_root, plan_files=plan_files))
@@ -1654,6 +1664,7 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
             "archived_count": archived_execplans,
         },
         "machine_first_planning": _machine_first_planning_payload(active_execplans=active_execplans),
+        "decomposition": decomposition_projection,
         "work_maturity": work_maturity,
         "execution_readiness": execution_readiness,
         "autopilot_loop": _autopilot_loop_status(
@@ -2030,6 +2041,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "todo",
             "execplans",
             "machine_first_planning",
+            "decomposition",
             "work_maturity",
             "execution_readiness",
             "autopilot_loop",
@@ -2445,6 +2457,68 @@ def _execution_readiness_payload(
     }
 
 
+def _planning_decomposition_projection(*, target_root: Path, decomposition_dir: Path) -> dict[str, Any]:
+    records: list[dict[str, Any]] = []
+    active_refs: list[str] = []
+    ready_lane_count = 0
+    if decomposition_dir.exists():
+        for path in sorted(decomposition_dir.glob("*.decomposition.json")):
+            if path.name == "TEMPLATE.decomposition.json":
+                continue
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(payload, dict) or payload.get("kind") != "planning-decomposition/v1":
+                continue
+            lanes = payload.get("candidate_lanes", [])
+            lane_summaries: list[dict[str, str]] = []
+            if isinstance(lanes, list):
+                for raw in lanes:
+                    if not isinstance(raw, dict):
+                        continue
+                    lane = {
+                        "id": str(raw.get("id", "")).strip(),
+                        "title": str(raw.get("title", "")).strip(),
+                        "readiness": str(raw.get("readiness", "")).strip(),
+                        "owner_surface": str(raw.get("owner_surface", "")).strip(),
+                    }
+                    if lane["readiness"] == "ready":
+                        ready_lane_count += 1
+                    if lane["owner_surface"]:
+                        active_refs.append(lane["owner_surface"])
+                    lane_summaries.append({key: value for key, value in lane.items() if value})
+            records.append(
+                {
+                    "path": path.relative_to(target_root).as_posix(),
+                    "title": str(payload.get("title", "")).strip(),
+                    "outcome": str(payload.get("larger_intended_outcome", "")).strip(),
+                    "status": str(payload.get("status", "")).strip(),
+                    "lane_count": len(lane_summaries),
+                    "candidate_lanes": lane_summaries,
+                }
+            )
+    status = "none"
+    recommended_next_action = "No schema-backed decomposition records are present."
+    if records:
+        status = "present"
+        recommended_next_action = (
+            "Use ready decomposition lanes to create or promote bounded execplans; keep implementation detail in execplans."
+        )
+    return {
+        "status": status,
+        "record_count": len(records),
+        "records": records,
+        "ready_lane_count": ready_lane_count,
+        "active_execplan_refs": sorted(set(active_refs)),
+        "recommended_next_action": recommended_next_action,
+        "rule": (
+            "Epic is a work-shape classification; schema-backed decomposition records capture high-level outcome and candidate lanes, "
+            "while ready implementation slices are promoted into execplans."
+        ),
+    }
+
+
 def _autopilot_loop_status(
     *,
     execution_readiness: dict[str, Any],
@@ -2590,6 +2664,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     todo = dict(summary.get("todo", {}))
     execplans = dict(summary.get("execplans", {}))
     machine_first_planning = dict(summary.get("machine_first_planning", {}))
+    decomposition = dict(summary.get("decomposition", {}))
     work_maturity = dict(summary.get("work_maturity", {}))
     execution_readiness = dict(summary.get("execution_readiness", {}))
     roadmap = dict(summary.get("roadmap", {}))
@@ -2651,6 +2726,15 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "active_canonical_count": machine_first_planning.get("active_canonical_count", 0),
             "active_markdown_fallback_count": machine_first_planning.get("active_markdown_fallback_count", 0),
             "rule": machine_first_planning.get("rule", ""),
+        },
+        "decomposition": {
+            "status": decomposition.get("status", "none"),
+            "record_count": decomposition.get("record_count", 0),
+            "records": decomposition.get("records", []),
+            "ready_lane_count": decomposition.get("ready_lane_count", 0),
+            "active_execplan_refs": decomposition.get("active_execplan_refs", []),
+            "recommended_next_action": decomposition.get("recommended_next_action", ""),
+            "rule": decomposition.get("rule", ""),
         },
         "work_maturity": _compact_work_maturity_projection(work_maturity),
         "execution_readiness": {
@@ -3657,6 +3741,47 @@ def _planning_state_v1_warning(path: str, message: str, *, suggested_fix: str = 
     if suggested_fix:
         warning["suggested_fix"] = suggested_fix
     return warning
+
+
+def _unsupported_planning_state_activation_shape_warnings(
+    *,
+    target_root: Path,
+    state: dict[str, Any] | None,
+) -> list[dict[str, str]]:
+    if not isinstance(state, dict):
+        return []
+    warnings: list[dict[str, str]] = []
+    state_path = target_root / PLANNING_STATE_PATH
+    for section_name, bucket_name in (("active", "execplans"), ("queued", "execplans")):
+        section = state.get(section_name)
+        if not isinstance(section, dict):
+            continue
+        raw_items = section.get(bucket_name, [])
+        if not isinstance(raw_items, list):
+            continue
+        for raw in raw_items:
+            if isinstance(raw, dict):
+                continue
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            candidate = target_root / ".agentic-workspace" / "planning" / "execplans" / raw.strip()
+            exists_suffix = " and the referenced file exists" if candidate.exists() else ""
+            warnings.append(
+                {
+                    "warning_class": "planning_state_unsupported_activation_shape",
+                    "path": state_path.as_posix(),
+                    "message": (
+                        f"`[{section_name}].{bucket_name}` contains string reference `{raw}`{exists_suffix}, "
+                        "but current planning state expects item objects in `todo.active_items` or `todo.queued_items`."
+                    ),
+                    "suggested_fix": (
+                        "Recover with `agentic-planning-bootstrap new-plan --id <id> --title <title> --activate`, "
+                        'or migrate the reference to `{ id = "<id>", maturity = "active", status = "active", '
+                        'surface = ".agentic-workspace/planning/execplans/<plan>.plan.json" }`.'
+                    ),
+                }
+            )
+    return warnings
 
 
 def _planning_handoff_schema() -> dict[str, Any]:
@@ -6669,6 +6794,112 @@ def promote_todo_item_to_execplan(
     return result
 
 
+def create_execplan_scaffold(
+    *,
+    plan_id: str,
+    title: str,
+    source: str = "",
+    target: str | Path | None = None,
+    activate: bool = False,
+    queue: bool = False,
+    overwrite: bool = False,
+    dry_run: bool = False,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    slug = _slugify(plan_id)
+    result = InstallResult(target_root=target_root, message=f"Create execplan scaffold '{slug}'", dry_run=dry_run)
+    if not slug:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, "--id must contain at least one alphanumeric character")
+        return result
+    if activate and queue:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, "choose only one of --activate or --queue")
+        return result
+
+    plan_title = title.strip() or _title_from_slug(slug)
+    state_path = target_root / PLANNING_STATE_PATH
+    record_path = target_root / ".agentic-workspace" / "planning" / "execplans" / f"{slug}.plan.json"
+    record_relative = record_path.relative_to(target_root).as_posix()
+    if record_path.exists() and not overwrite:
+        result.add("manual review", record_path, "target canonical execplan record already exists; pass --overwrite to replace it")
+        return result
+
+    source_text = source.strip()
+    plan_record = _build_execplan_record_from_todo_item(
+        title=plan_title,
+        item_id=slug,
+        status="active" if activate else "planned",
+        why_now=source_text or f"Create a bounded plan for {plan_title}.",
+        next_action="Fill in execution bounds, touched paths, and validation before implementation starts.",
+        done_when=f"{plan_title} is implemented, validated, and closed out honestly.",
+    )
+    plan_record["execution_run"]["handoff source"] = "agentic-planning-bootstrap new-plan"
+    plan_record["drift_log"] = [f"{date.today().isoformat()}: Scaffolded by agentic-planning-bootstrap new-plan."]
+    if source_text:
+        plan_record["references"] = [{"kind": "source", "target": source_text, "label": source_text, "role": "intake", "locator": ""}]
+
+    try:
+        findings = _json_schema_findings(payload=plan_record, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
+    except Exception as exc:  # pragma: no cover - defensive guard around schema loading
+        result.add("manual review", record_path, f"could not validate scaffold against schema: {exc}")
+        return result
+    if findings:
+        result.add("manual review", record_path, f"scaffold did not validate against planning-execplan.schema.json: {'; '.join(findings)}")
+        return result
+
+    state = _read_state_from_toml(target_root) or {
+        "kind": PLANNING_STATE_KIND,
+        "schema_version": PLANNING_STATE_SCHEMA_VERSION,
+        "work_items": [],
+        "active": {"execplans": []},
+        "todo": {"active_items": [], "queued_items": []},
+        "roadmap": {"lanes": [], "candidates": []},
+    }
+    updated_state = copy.deepcopy(state)
+    if activate or queue:
+        if _compact_todo_item_from_state(updated_state, slug) is not None:
+            result.add("manual review", state_path, f"planning item '{slug}' already exists in state.toml")
+            return result
+        todo = updated_state.get("todo")
+        if not isinstance(todo, dict):
+            todo = {}
+        bucket = "active_items" if activate else "queued_items"
+        items = todo.get(bucket, [])
+        if not isinstance(items, list):
+            items = []
+        state_item: dict[str, Any] = {
+            "id": slug,
+            "title": plan_title,
+            "maturity": "active" if activate else "ready",
+            "status": "active" if activate else "next",
+            "surface": record_relative,
+            "why_now": source_text or "Created by new-plan scaffold.",
+            "owner_role": "implementation",
+            "handoff_ready": True,
+        }
+        if source_text:
+            state_item["refs"] = [source_text]
+        items.append(state_item)
+        todo[bucket] = items
+        todo.setdefault("active_items", [])
+        todo.setdefault("queued_items", [])
+        updated_state["todo"] = todo
+
+    if dry_run:
+        result.add("would create" if not record_path.exists() else "would update", record_path, "schema-valid execplan scaffold")
+        if activate or queue:
+            result.add("would update", state_path, f"register '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
+        result.add("next", target_root / PLANNING_STATE_PATH, "run `agentic-workspace summary --target . --format json`")
+        return result
+
+    _write_execplan_record(record_path=record_path, record=plan_record)
+    result.add("created" if not overwrite else "updated", record_path, "schema-valid execplan scaffold")
+    if activate or queue:
+        _write_state_to_toml(target_root, updated_state)
+        result.add("updated", state_path, f"registered '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
+    result.add("next", state_path, "run `agentic-workspace summary --target . --format json`")
+    return result
+
+
 def _render_inactive_execplan_residue(*, plan_path: Path, target_root: Path) -> str:
     title = _execplan_title(plan_path)
     intent_continuity = _execplan_intent_continuity(plan_path)
@@ -8175,6 +8406,8 @@ def _lifecycle_operation_name(message: str) -> str:
         return "uninstall"
     if "archive" in lowered:
         return "archive-plan"
+    if "create execplan scaffold" in lowered or "new-plan" in lowered:
+        return "new-plan"
     if "promote" in lowered:
         return "promote-to-plan"
     if "create review" in lowered:

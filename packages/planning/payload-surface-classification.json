@@ -23,9 +23,12 @@
       "packages/planning/bootstrap/.agentic-workspace/docs/workspace-config-contract.md",
       "packages/planning/bootstrap/.agentic-workspace/planning/UPGRADE-SOURCE.toml",
       "packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/README.md",
+      "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md",
       "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/execplans/archive/README.md",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-decomposition.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
@@ -41,9 +44,12 @@
       ".agentic-workspace/docs/workspace-config-contract.md",
       ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
       ".agentic-workspace/planning/agent-manifest.json",
+      ".agentic-workspace/planning/decompositions/README.md",
+      ".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
       ".agentic-workspace/planning/execplans/README.md",
       ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
       ".agentic-workspace/planning/execplans/archive/README.md",
+      ".agentic-workspace/planning/schemas/planning-decomposition.schema.json",
       ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
       ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
       ".agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
@@ -176,6 +182,20 @@
       "rationale": "Machine-readable capability routing is valuable when enabled, but should not expand the default prose surface."
     },
     {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/README.md",
+      "installed_path": ".agentic-workspace/planning/decompositions/README.md",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Explains the schema-backed decomposition surface for epic-shaped work before lane execplans are promoted."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
+      "installed_path": ".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Canonical schema-backed decomposition template that keeps epic-shaped shaping distinct from implementation execplans."
+    },
+    {
       "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md",
       "installed_path": ".agentic-workspace/planning/execplans/README.md",
       "classification": "core daily-operation planning",
@@ -195,6 +215,13 @@
       "classification": "core daily-operation planning",
       "owner": "planning package payload",
       "rationale": "Defines archive role so completed plans stop cluttering active state while preserving recovery evidence."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-decomposition.schema.json",
+      "installed_path": ".agentic-workspace/planning/schemas/planning-decomposition.schema.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Schema for decomposition records so epic-shaped shaping can be validated and projected without unmanaged Markdown artifacts."
     },
     {
       "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",

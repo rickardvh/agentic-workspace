@@ -19,6 +19,10 @@
       "summary": "Load compact active planning summary when the planning module is installed."
     },
     {
+      "id": "planning.help.build",
+      "summary": "Build planning orientation guidance and lifecycle command affordances without mutating planning state."
+    },
+    {
       "id": "planning.reconcile.load",
       "summary": "Load provider-agnostic planning reconciliation state when the planning module is installed."
     },

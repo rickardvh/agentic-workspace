@@ -35,7 +35,7 @@ def _write(path: Path, text: str) -> None:
 
 def _install_planning_record_schemas(target: Path) -> None:
     schema_root = WORKSPACE_ROOT / ".agentic-workspace" / "planning" / "schemas"
-    for name in ("planning-execplan.schema.json", "planning-review.schema.json"):
+    for name in ("planning-execplan.schema.json", "planning-review.schema.json", "planning-decomposition.schema.json"):
         destination = target / ".agentic-workspace" / "planning" / "schemas" / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text((schema_root / name).read_text(encoding="utf-8"), encoding="utf-8")
@@ -1291,3 +1291,94 @@ def test_docs_surface_role_drift_warns_when_summary_first_hierarchy_is_missing(t
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     docs_warnings = [warning for warning in warnings if warning.warning_class == "docs_surface_role_drift"]
     assert _has_warning_path_suffix(docs_warnings, "docs/maintainer/contributor-playbook.md")
+
+
+def test_checker_blocks_generic_pm_shaped_execplan(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_generic_pm_execplan")
+    _install_planning_record_schemas(tmp_path)
+    _write_startup_surfaces(tmp_path)
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
+    _write(
+        tmp_path / ".agentic-workspace/planning/execplans/lane-1.plan.json",
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "created_at": "2026-05-02T07:22:00Z",
+                "lane_id": "lane-1-foundation",
+                "title": "Lane 1",
+                "status": "ready-for-implementation",
+                "tasks": [{"task_id": "1.1", "title": "Project setup", "estimated_effort": "30 minutes"}],
+                "validation_gates": {"after_completion": ["build passes"]},
+                "proof_surface": {"proof_commands": ["npm test"]},
+                "notes": {"handoff": "continue later"},
+            },
+            indent=2,
+        ),
+    )
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    warning_classes = {warning.warning_class for warning in warnings}
+
+    assert "execplan_foreign_pm_shape" in warning_classes
+    assert "planning_record_schema_drift" in warning_classes
+    assert any("new-plan" in warning.message for warning in warnings)
+
+
+def test_checker_warns_for_unsupported_state_activation_strings(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_unsupported_state_shape")
+    _write_startup_surfaces(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[active]
+execplans = ["lane.plan.json"]
+
+[todo]
+active_items = []
+queued_items = []
+""",
+    )
+    _write(tmp_path / ".agentic-workspace/planning/execplans/lane.plan.json", json.dumps({"kind": "planning-execplan/v1"}))
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    state_warnings = [warning for warning in warnings if warning.warning_class == "planning_state_unsupported_activation_shape"]
+
+    assert state_warnings
+    assert "todo.active_items" in state_warnings[0].message
+
+
+def test_checker_validates_decomposition_and_warns_for_freehand_epic_md(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_decomposition")
+    _install_planning_record_schemas(tmp_path)
+    _write_startup_surfaces(tmp_path)
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
+    _write(
+        tmp_path / ".agentic-workspace/planning/decompositions/shop.decomposition.json",
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Shop",
+                "status": "ready-for-lane-promotion",
+                "larger_intended_outcome": "Build shop.",
+                "non_goals": [],
+                "candidate_lanes": [
+                    {
+                        "id": "storefront",
+                        "title": "Storefront",
+                        "readiness": "ready",
+                        "outcome": "Browsable storefront.",
+                        "owner_surface": ".agentic-workspace/planning/execplans/storefront.plan.json",
+                    }
+                ],
+                "proof_expectations": ["Promoted lanes carry exact proof."],
+                "promotion_rule": "Promote ready lanes.",
+            },
+            indent=2,
+        ),
+    )
+    _write(tmp_path / ".agentic-workspace/planning/ecommerce-epic.md", "# Ecommerce Epic\n\nFreehand lanes.\n")
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+
+    assert not [warning for warning in warnings if warning.warning_class == "planning_record_schema_drift"]
+    assert any(warning.warning_class == "planning_epic_artifact_unsupported" for warning in warnings)

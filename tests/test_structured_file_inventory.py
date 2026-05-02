@@ -107,8 +107,10 @@ def test_planning_record_entries_are_schema_backed() -> None:
     planning_patterns = {
         ".agentic-workspace/planning/execplans/*.plan.json": "planning-execplan.schema.json",
         ".agentic-workspace/planning/execplans/archive/*.plan.json": "planning-execplan.schema.json",
+        ".agentic-workspace/planning/decompositions/*.decomposition.json": "planning-decomposition.schema.json",
         ".agentic-workspace/planning/reviews/*.review.json": "planning-review.schema.json",
         "packages/planning/bootstrap/.agentic-workspace/planning/execplans/*.plan.json": "planning-execplan.schema.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/*.decomposition.json": "planning-decomposition.schema.json",
         "packages/planning/bootstrap/.agentic-workspace/planning/reviews/*.review.json": "planning-review.schema.json",
     }
     entries = {entry["pattern"]: entry for entry in inventory["entries"] if entry["pattern"] in planning_patterns}

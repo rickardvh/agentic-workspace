@@ -11,6 +11,12 @@
       "migration_status": "draft-contract-only"
     },
     {
+      "id": "planning.help",
+      "path": "operations/planning.help.json",
+      "command": "planning",
+      "migration_status": "draft-contract-only"
+    },
+    {
       "id": "summary.report",
       "path": "operations/summary.report.json",
       "command": "summary",

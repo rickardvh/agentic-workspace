@@ -1278,6 +1278,53 @@ def _workspace_self_adaptation_guardrail_payload() -> dict[str, Any]:
     return copy.deepcopy(_REPO_FRICTION_POLICY["workspace_self_adaptation_guardrail"])
 
 
+def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
+    target_arg = f" --target {target}" if target else " --target ."
+    return {
+        "kind": "agentic-workspace/planning-help/v1",
+        "summary": "Planning files are checked-in execution authority, but their outer structure is package-owned.",
+        "orientation": [
+            f"agentic-workspace summary{target_arg} --format json",
+            f"agentic-workspace preflight{target_arg} --format json",
+            f"agentic-workspace proof{target_arg} --changed <paths> --format json",
+        ],
+        "lifecycle_commands": [
+            f"agentic-planning-bootstrap new-plan --id <id> --title <title>{target_arg} --activate --format json",
+            f"agentic-planning-bootstrap promote-to-plan <item-id>{target_arg} --format json",
+            f"agentic-planning-bootstrap archive-plan <plan>{target_arg} --format json",
+        ],
+        "rules": [
+            "Use CLI first for orientation and proof selection.",
+            "Use package lifecycle commands for planning mutations when available.",
+            "Do not invent the outer structure of planning-execplan/v1.",
+            "Edit intent, scope, proof, and closeout content inside schema-backed checked-in records.",
+            "After any planning mutation, run agentic-workspace summary --format json or the planning surface checker.",
+        ],
+        "fallback": (
+            "If lifecycle commands are unavailable, copy the package template exactly, edit content inside the schema shape, "
+            "register the item in .agentic-workspace/planning/state.toml, then rerun summary."
+        ),
+    }
+
+
+def _print_planning_help(payload: dict[str, Any]) -> None:
+    print(payload["summary"])
+    print("")
+    print("Orientation:")
+    for command in payload["orientation"]:
+        print(f"- {command}")
+    print("")
+    print("Planning lifecycle:")
+    for command in payload["lifecycle_commands"]:
+        print(f"- {command}")
+    print("")
+    print("Rules:")
+    for rule in payload["rules"]:
+        print(f"- {rule}")
+    print("")
+    print(f"Fallback: {payload['fallback']}")
+
+
 def _repo_directed_improvement_evidence_threshold_payload() -> dict[str, Any]:
     return copy.deepcopy(_REPO_FRICTION_POLICY["repo_directed_improvement_threshold"])
 
@@ -1872,6 +1919,14 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         except WorkspaceUsageError as exc:
             parser.error(str(exc))
+
+    if args.command == "planning":
+        payload = _planning_help_payload(target=args.target)
+        if args.format == "json":
+            print(json.dumps(payload, indent=2))
+        else:
+            _print_planning_help(payload)
+        return 0
 
     generated_adapter = _generated_adapter_for_command(str(args.command))
     if generated_adapter is not None:
@@ -10700,6 +10755,11 @@ def _defaults_payload() -> dict[str, Any]:
             },
             "work_intent_gate": {
                 "rule": "Choose the smallest workflow shape before implementation; when Planning is installed, broad work should become checked-in planning before edits.",
+                "planning_mutation_rule": (
+                    "Use compact CLI for orientation and proof selection; use package lifecycle commands such as "
+                    "`agentic-planning-bootstrap new-plan`, `promote-to-plan`, and `archive-plan` for planning mutations when available; "
+                    "edit checked-in planning records directly only for bounded content/fallback edits, then rerun summary."
+                ),
                 "levels": [
                     {
                         "id": "direct",
@@ -10714,12 +10774,12 @@ def _defaults_payload() -> dict[str, Any]:
                     {
                         "id": "lane",
                         "use_when": "The work spans milestones, managed payloads, proof scope, or handoff risk.",
-                        "required_surface": "Planning active item plus execplan when installed; otherwise equivalent durable handoff surface",
+                        "required_surface": "Planning active item plus schema-backed execplan created by package command when installed; otherwise equivalent durable handoff surface",
                     },
                     {
                         "id": "epic",
                         "use_when": "The request contains multiple lanes or needs product shaping before implementation.",
-                        "required_surface": "review or decomposition artifact first; split into bounded lanes before implementation execplans where Planning is installed",
+                        "required_surface": "schema-backed decomposition record first when Planning provides one; split into bounded lanes before implementation execplans",
                     },
                 ],
                 "external_tracker_rule": "GitHub, Linear, Jira, Notion, and similar trackers are optional intake evidence; checked-in planning remains execution authority.",

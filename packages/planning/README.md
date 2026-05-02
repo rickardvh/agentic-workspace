@@ -155,8 +155,10 @@ Treat these files as the current planning compatibility contract surfaces that s
 
 - `AGENTS.md`
 - `.agentic-workspace/planning/state.toml`
+- `.agentic-workspace/planning/decompositions/README.md`
+- `.agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json`
 - `.agentic-workspace/planning/execplans/README.md`
-- `.agentic-workspace/planning/execplans/TEMPLATE.md`
+- `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/planning/execplans/archive/README.md`
 - `.agentic-workspace/docs/lifecycle-and-config-contract.md`
 - `.agentic-workspace/docs/execution-flow-contract.md`
@@ -298,9 +300,12 @@ The package ships these payload files:
 - `.agentic-workspace/docs/workspace-config-contract.md`
 - `.agentic-workspace/planning/UPGRADE-SOURCE.toml`
 - `.agentic-workspace/planning/agent-manifest.json`
+- `.agentic-workspace/planning/decompositions/README.md`
+- `.agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json`
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/planning/execplans/archive/README.md`
+- `.agentic-workspace/planning/schemas/planning-decomposition.schema.json`
 - `.agentic-workspace/planning/schemas/planning-execplan.schema.json`
 - `.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json`
 - `.agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json`

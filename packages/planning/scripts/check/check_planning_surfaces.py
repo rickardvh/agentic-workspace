@@ -45,6 +45,7 @@ LEGACY_ROADMAP_PATH = REPO_ROOT / "ROADMAP.md"
 EXECPLAN_DIR = REPO_ROOT / ".agentic-workspace" / "planning" / "execplans"
 PLANNING_SCHEMA_DIR = REPO_ROOT / ".agentic-workspace" / "planning" / "schemas"
 EXECPLAN_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_DIR / "planning-execplan.schema.json"
+DECOMPOSITION_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_DIR / "planning-decomposition.schema.json"
 REVIEW_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_DIR / "planning-review.schema.json"
 
 TODO_MAX_LINES = 150
@@ -73,6 +74,9 @@ WARNING_EXECPLAN_PROOF_DRIFT = "execplan_proof_drift"
 WARNING_EXECPLAN_INTENT_SATISFACTION_DRIFT = "execplan_intent_satisfaction_drift"
 WARNING_PLANNING_RECORD_SCHEMA_DRIFT = "planning_record_schema_drift"
 WARNING_PLANNING_EVIDENCE_SCHEMA_DRIFT = "planning_evidence_schema_drift"
+WARNING_EXECPLAN_FOREIGN_PM_SHAPE = "execplan_foreign_pm_shape"
+WARNING_PLANNING_STATE_UNSUPPORTED_ACTIVATION_SHAPE = "planning_state_unsupported_activation_shape"
+WARNING_EPIC_ARTIFACT_UNSUPPORTED = "planning_epic_artifact_unsupported"
 WARNING_ROADMAP_EXECUTION_DRIFT = "roadmap_execution_drift"
 WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL = "roadmap_missing_promotion_signal"
 WARNING_ROADMAP_MISSING_REOPEN_SIGNAL = "roadmap_missing_reopen_signal"
@@ -84,6 +88,18 @@ WARNING_DOCS_SURFACE_ROLE_DRIFT = "docs_surface_role_drift"
 WARNING_GENERATED_DOCS_DRIFT = "generated_docs_drift"
 WARNING_ARCHIVE_ACCUMULATION_DRIFT = "archive_accumulation_drift"
 WARNING_PLANNING_MEMORY_BOUNDARY_BLUR = "planning_memory_boundary_blur"
+
+GENERIC_PM_EXECPLAN_FIELDS = {
+    "tasks",
+    "estimated_effort",
+    "validation_gates",
+    "proof_surface",
+    "lane_id",
+    "epic_ref",
+    "notes",
+    "depends_on",
+    "can_run_parallel_with",
+}
 
 EXPECTED_EXECPLAN_SECTIONS = [
     "Goal",
@@ -286,14 +302,50 @@ def _schema_record_warnings(
     warnings: list[PlanningWarning] = []
     for error in errors:
         location = ".".join(str(part) for part in error.path) or "<root>"
+        message = f"{location}: {error.message}"
+        if expected_kind == "planning-execplan/v1" and location == "<root>" and error.validator == "additionalProperties":
+            message = (
+                f"{message}. This is not a valid Agentic Workspace execplan; create the outer structure with "
+                "`agentic-planning-bootstrap new-plan --id <id> --title <title>` or promote an existing item with "
+                "`agentic-planning-bootstrap promote-to-plan <item-id>`."
+            )
         warnings.append(
             PlanningWarning(
                 warning_class,
                 _render_path(record_path),
-                f"{location}: {error.message}",
+                message,
             )
         )
     return warnings
+
+
+def _foreign_pm_shape_warnings(record_path: Path) -> list[PlanningWarning]:
+    payload = _load_json(record_path)
+    if not isinstance(payload, dict) or payload.get("kind") != "planning-execplan/v1":
+        return []
+    found = sorted(str(key) for key in payload if str(key) in GENERIC_PM_EXECPLAN_FIELDS)
+    required_missing = [
+        field for field in ("goal", "non_goals", "active_milestone", "validation_commands", "completion_criteria") if field not in payload
+    ]
+    if not found and not required_missing:
+        return []
+    parts = []
+    if found:
+        parts.append(f"generic PM fields present: {', '.join(found)}")
+    if required_missing:
+        parts.append(f"required Agentic Workspace fields missing: {', '.join(required_missing)}")
+    return [
+        PlanningWarning(
+            WARNING_EXECPLAN_FOREIGN_PM_SHAPE,
+            _render_path(record_path),
+            (
+                "This is not a valid Agentic Workspace execplan shape; "
+                + "; ".join(parts)
+                + ". Recover with `agentic-planning-bootstrap new-plan --id <id> --title <title>` "
+                "or `agentic-planning-bootstrap promote-to-plan <item-id>` before implementation."
+            ),
+        )
+    ]
 
 
 def _check_planning_evidence_schemas(repo_root: Path) -> list[PlanningWarning]:
@@ -337,12 +389,15 @@ def _check_planning_evidence_schemas(repo_root: Path) -> list[PlanningWarning]:
 
 def _check_planning_record_schemas(repo_root: Path) -> list[PlanningWarning]:
     execplan_dir = repo_root / ".agentic-workspace" / "planning" / "execplans"
+    decomposition_dir = repo_root / ".agentic-workspace" / "planning" / "decompositions"
     review_dir = repo_root / ".agentic-workspace" / "planning" / "reviews"
     schema_dir = repo_root / ".agentic-workspace" / "planning" / "schemas"
     execplan_schema_path = schema_dir / "planning-execplan.schema.json"
+    decomposition_schema_path = schema_dir / "planning-decomposition.schema.json"
     review_schema_path = schema_dir / "planning-review.schema.json"
     warnings: list[PlanningWarning] = []
     for record_path in sorted(execplan_dir.glob("*.plan.json")):
+        warnings.extend(_foreign_pm_shape_warnings(record_path))
         warnings.extend(
             _schema_record_warnings(
                 record_path=record_path,
@@ -353,11 +408,22 @@ def _check_planning_record_schemas(repo_root: Path) -> list[PlanningWarning]:
     archive_dir = execplan_dir / "archive"
     if archive_dir.exists():
         for record_path in sorted(archive_dir.glob("*.plan.json")):
+            warnings.extend(_foreign_pm_shape_warnings(record_path))
             warnings.extend(
                 _schema_record_warnings(
                     record_path=record_path,
                     schema_path=execplan_schema_path,
                     expected_kind="planning-execplan/v1",
+                )
+            )
+    if decomposition_dir.exists():
+        for record_path in sorted(decomposition_dir.glob("*.decomposition.json")):
+            warnings.extend(
+                _schema_record_warnings(
+                    record_path=record_path,
+                    schema_path=decomposition_schema_path,
+                    expected_kind="planning-decomposition/v1",
+                    record_label="planning decomposition record",
                 )
             )
     if review_dir.exists():
@@ -442,6 +508,62 @@ def _todo_items_from_state(state: dict[str, object] | None) -> list[dict[str, st
             )
 
     return items
+
+
+def _unsupported_state_activation_shape_warnings(state: dict[str, object] | None, *, repo_root: Path) -> list[PlanningWarning]:
+    if not isinstance(state, dict):
+        return []
+    warnings: list[PlanningWarning] = []
+    for section_name, bucket_name in (("active", "execplans"), ("queued", "execplans")):
+        section = state.get(section_name)
+        if not isinstance(section, dict):
+            continue
+        raw_items = section.get(bucket_name, [])
+        if not isinstance(raw_items, list):
+            continue
+        for raw in raw_items:
+            if isinstance(raw, dict):
+                continue
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            candidate = repo_root / ".agentic-workspace" / "planning" / "execplans" / raw.strip()
+            exists_suffix = " and the referenced file exists" if candidate.exists() else ""
+            warnings.append(
+                PlanningWarning(
+                    WARNING_PLANNING_STATE_UNSUPPORTED_ACTIVATION_SHAPE,
+                    _render_path(repo_root / ".agentic-workspace" / "planning" / "state.toml"),
+                    (
+                        f"`[{section_name}].{bucket_name}` contains string reference `{raw}`{exists_suffix}, "
+                        "but current planning state expects item objects in `todo.active_items` or `todo.queued_items`. "
+                        "Recover with `agentic-planning-bootstrap new-plan --id <id> --title <title> --activate` "
+                        "or migrate the reference to a supported item object."
+                    ),
+                )
+            )
+    return warnings
+
+
+def _unsupported_epic_artifact_warnings(*, repo_root: Path) -> list[PlanningWarning]:
+    planning_root = repo_root / ".agentic-workspace" / "planning"
+    if not planning_root.exists():
+        return []
+    warnings: list[PlanningWarning] = []
+    supported_dir = planning_root / "decompositions"
+    for path in sorted(planning_root.glob("*epic*.md")):
+        if not path.is_file() or supported_dir in path.parents:
+            continue
+        warnings.append(
+            PlanningWarning(
+                WARNING_EPIC_ARTIFACT_UNSUPPORTED,
+                _render_path(path),
+                (
+                    "Freehand epic Markdown is not a first-class planning surface. Use a schema-backed "
+                    "`planning-decomposition/v1` record in `.agentic-workspace/planning/decompositions/` "
+                    "to capture epic-shaped decomposition before promoting ready lanes into execplans."
+                ),
+            )
+        )
+    return warnings
 
 
 def _roadmap_counts_from_state(state: dict[str, object] | None) -> tuple[int, int]:
@@ -2238,6 +2360,8 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
     execplan_dir = repo_root / ".agentic-workspace" / "planning" / "execplans"
 
     warnings: list[PlanningWarning] = []
+    warnings.extend(_unsupported_state_activation_shape_warnings(state, repo_root=repo_root))
+    warnings.extend(_unsupported_epic_artifact_warnings(repo_root=repo_root))
 
     if config_path.exists():
         config_text = "\n".join(_read_lines(config_path)).lower()

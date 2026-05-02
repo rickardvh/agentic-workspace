@@ -53,6 +53,25 @@
       "classification_note": "compact active planning and handoff state"
     },
     {
+      "name": "planning",
+      "help": "Show planning workflow help and lifecycle commands.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used in example commands."
+        }
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "planning lifecycle help and schema-owned mutation guidance"
+    },
+    {
       "name": "start",
       "help": "Return the minimum safe startup context for beginning work in a target repository.",
       "uses_option_groups": [

@@ -18,6 +18,10 @@ Keep this file concise, product-managed, and replaceable. It is the fallback rou
 - Use `preflight`, `implement --changed`, `defaults`, `config`, `summary`, `report`, `skills`, and `proof` before prose when the CLI is available.
 - At minimum, orient through `preflight` or `implement --changed` before editing files unless the user explicitly asks for a tiny direct change and validation is obvious.
 - Treat `.agentic-workspace/planning/state.toml` and active `.agentic-workspace/planning/execplans/*.plan.json` as execution authority only after summary or preflight routes you there.
+- Prefer package commands for planning mutations when available: `agentic-planning-bootstrap new-plan --id <id> --title <title> --activate`, `agentic-planning-bootstrap promote-to-plan <item-id>`, and `agentic-planning-bootstrap archive-plan <plan>`.
+- Do not invent the outer structure of `planning-execplan/v1`; agents may edit intent, scope, proof, and closeout content inside schema-backed checked-in records.
+- After any planning mutation or fallback edit, run `agentic-workspace summary --format json` or the planning surface checker before implementation.
+- Templates are fallback scaffolds, not permission to create a new unchecked shape.
 - Treat GitHub, Linear, Jira, Notion, and similar trackers as optional intake evidence. They are not the universal workflow and do not replace checked-in planning.
 - Use package skills when `agentic-workspace skills --target . --task "<task>" --format json` recommends one; otherwise stay with compact CLI and this fallback.
 
@@ -27,8 +31,8 @@ Before implementation, decide the smallest workflow shape that fits the current 
 
 - `direct`: one coherent local pass can finish safely and validation is obvious. No durable plan is required.
 - `bounded`: one slice needs explicit done-when, proof, or short restart state. Use the configured planning surface when restart cost matters and Planning is installed.
-- `lane`: work spans milestones, managed payloads, proof scope, or handoff risk. When Planning is installed, create checked-in active planning and an execplan before edits; otherwise leave an equivalent durable handoff in the repo's configured workflow surface.
-- `epic`: work contains multiple lanes or needs product shaping. Create a review or decomposition artifact first, split it into bounded lanes or slices, then write implementation execplans only for ready slices.
+- `lane`: work spans milestones, managed payloads, proof scope, or handoff risk. When Planning is installed, create checked-in active planning and an execplan with package commands before edits; otherwise leave an equivalent durable handoff in the repo's configured workflow surface.
+- `epic`: work contains multiple lanes or needs product shaping. Use a schema-backed decomposition record when Planning provides one, split it into bounded lanes or slices, then write implementation execplans only for ready slices.
 
 For lane or epic work, do not jump straight from the prompt to implementation. Assess risk and scope first; record `adaptive_assurance` when the Planning module is installed and risk is medium or higher, and keep decomposition evidence with the durable workflow surface.
 
@@ -40,7 +44,7 @@ Use this section only when CLI or JSON surfaces are unavailable.
 
 1. Read the repo startup file and this file.
 2. Decide whether the work is direct, bounded, lane, or epic.
-3. For lane or epic work, use the configured planning or handoff surface before implementation.
+3. For lane or epic work, use package-owned scaffolds first; edit checked-in planning files directly only as bounded fallback.
 4. For epic work, decompose before writing implementation execplans.
 5. Run the narrowest validation that proves the changed surface.
 6. Before closeout, separate validation success, issue completion, intent satisfaction, dogfooding findings, and durable residue.

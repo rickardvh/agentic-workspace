@@ -37,6 +37,7 @@ packages = ["src/repo_planning_bootstrap"]
 [tool.hatch.build.targets.wheel.force-include]
 "bootstrap/AGENTS.template.md" = "src/repo_planning_bootstrap/_payload/AGENTS.template.md"
 "bootstrap/.agentic-workspace/docs" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/docs"
+"bootstrap/.agentic-workspace/planning/decompositions" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/decompositions"
 "bootstrap/.agentic-workspace/planning/execplans" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/execplans"
 "bootstrap/.agentic-workspace/planning/reviews" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/reviews"
 "bootstrap/.agentic-workspace/planning/schemas" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/schemas"

@@ -107,6 +107,30 @@ def test_workspace_summary_json_accepts_full_profile(tmp_path: Path, capsys) -> 
     assert payload["schema"]["schema_version"] == "planning-summary-schema/v1"
 
 
+def test_workspace_summary_warns_for_unsupported_active_execplan_strings(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[active]
+execplans = ["lane.plan.json"]
+
+[todo]
+active_items = []
+queued_items = []
+""",
+    )
+    _write(tmp_path / ".agentic-workspace/planning/execplans/lane.plan.json", json.dumps({"kind": "planning-execplan/v1"}))
+
+    exit_code = cli.main(["summary", "--target", str(tmp_path), "--format", "json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    warnings = payload["planning_surface_health"]["warnings"]
+    assert any(warning["warning_class"] == "planning_state_unsupported_activation_shape" for warning in warnings)
+    assert payload["planning_surface_health"]["status"] == "not-clean"
+
+
 def test_workspace_reconcile_json_exposes_provider_agnostic_planning_state(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(

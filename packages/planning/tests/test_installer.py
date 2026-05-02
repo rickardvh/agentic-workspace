@@ -2067,6 +2067,103 @@ candidates = []
     assert "compact-cli" not in state_text
 
 
+def test_planning_cli_new_plan_creates_valid_active_scaffold(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+
+    assert (
+        planning_cli.main(
+            [
+                "new-plan",
+                "--id",
+                "Plan Alpha",
+                "--title",
+                "Plan Alpha",
+                "--source",
+                "#666",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    assert any(action["kind"] == "created" and action["path"].endswith("plan-alpha.plan.json") for action in payload["actions"])
+    assert record_path.exists()
+    assert not installer_mod.planning_record_schema_findings(record_path)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    assert summary["todo"]["active_items"][0]["id"] == "plan-alpha"
+    assert summary["execplans"]["active_execplans"][0]["path"].endswith("plan-alpha.plan.json")
+
+
+def test_planning_cli_new_plan_refuses_duplicate_without_overwrite(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    args = [
+        "new-plan",
+        "--id",
+        "Plan Alpha",
+        "--title",
+        "Plan Alpha",
+        "--target",
+        str(tmp_path),
+        "--format",
+        "json",
+    ]
+
+    assert planning_cli.main(args) == 0
+    capsys.readouterr()
+    assert planning_cli.main(args) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert any(action["kind"] == "manual review" and "already exists" in action["detail"] for action in payload["actions"])
+
+
+def test_planning_summary_projects_decomposition_records(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/decompositions/shop.decomposition.json",
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Shop build",
+                "status": "ready-for-lane-promotion",
+                "larger_intended_outcome": "Build the shop.",
+                "non_goals": ["Do not implement everything in one lane."],
+                "candidate_lanes": [
+                    {
+                        "id": "storefront",
+                        "title": "Storefront",
+                        "readiness": "ready",
+                        "outcome": "Browsable storefront.",
+                        "owner_surface": ".agentic-workspace/planning/execplans/storefront.plan.json",
+                        "proof": "Build and smoke test.",
+                        "depends_on": [],
+                        "parallel_with": [],
+                    }
+                ],
+                "dependency_assumptions": [],
+                "parallelization_assumptions": [],
+                "proof_expectations": ["Promoted lanes carry exact proof."],
+                "promotion_rule": "Promote ready lanes only.",
+                "references": [],
+                "notes": "",
+            },
+            indent=2,
+        ),
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    assert summary["decomposition"]["status"] == "present"
+    assert summary["decomposition"]["record_count"] == 1
+    assert summary["decomposition"]["ready_lane_count"] == 1
+    assert summary["decomposition"]["records"][0]["candidate_lanes"][0]["id"] == "storefront"
+
+
 def test_planning_cli_create_review_writes_valid_review_record(tmp_path: Path, capsys) -> None:
     result = planning_cli.main(
         [

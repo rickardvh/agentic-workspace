@@ -305,6 +305,18 @@
       }
     },
     {
+      "pattern": ".agentic-workspace/planning/decompositions/*.decomposition.json",
+      "format": "json",
+      "owner": "planning",
+      "status": "schema-backed",
+      "schema_or_validator": ".agentic-workspace/planning/schemas/planning-decomposition.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Epic-shaped decomposition records validate against the planning decomposition schema before lanes are promoted into execplans.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
       "pattern": ".agentic-workspace/planning/reviews/*.review.json",
       "format": "json",
       "owner": "planning-review",
@@ -482,6 +494,18 @@
       "editable_by_agents": true,
       "generated": false,
       "notes": "Bootstrap execplan templates share the execplan schema.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
+      "pattern": "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/*.decomposition.json",
+      "format": "json",
+      "owner": "planning-payload",
+      "status": "schema-backed",
+      "schema_or_validator": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-decomposition.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Bootstrap decomposition templates share the decomposition schema.",
       "storage_class": "source-of-truth",
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },

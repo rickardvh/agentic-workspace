@@ -22,6 +22,7 @@ from repo_planning_bootstrap.installer import (
     archive_execplan,
     archive_parent_lane_closeout,
     collect_status,
+    create_execplan_scaffold,
     create_review_record,
     doctor_bootstrap,
     format_actions,
@@ -46,7 +47,10 @@ from repo_planning_bootstrap.installer import (
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agentic-planning-bootstrap",
-        description="Install and maintain a lightweight checked-in planning bootstrap for execution.",
+        description=(
+            "Install and maintain checked-in planning surfaces. Despite the historical 'bootstrap' name, "
+            "this CLI also owns ongoing planning lifecycle commands such as new-plan, promote-to-plan, and archive-plan."
+        ),
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -116,6 +120,18 @@ def build_parser() -> argparse.ArgumentParser:
     handoff_parser = subparsers.add_parser("handoff", help="Emit the compact delegated-worker handoff derived from active planning state.")
     handoff_parser.add_argument("--target")
     handoff_parser.add_argument("--format", choices=("text", "json"), default="text")
+
+    new_plan_parser = subparsers.add_parser("new-plan", help="Create a schema-valid execplan scaffold and optionally register it.")
+    new_plan_parser.add_argument("--id", required=True, help="Stable slug/id for the plan; used as the .plan.json filename.")
+    new_plan_parser.add_argument("--title", required=True, help="Human-readable plan title.")
+    new_plan_parser.add_argument("--source", default="", help="Optional source reference such as an issue URL or chat-intake summary.")
+    new_plan_parser.add_argument("--target")
+    state_group = new_plan_parser.add_mutually_exclusive_group()
+    state_group.add_argument("--activate", action="store_true", help="Register the new plan in todo.active_items.")
+    state_group.add_argument("--queue", action="store_true", help="Register the new plan in todo.queued_items.")
+    new_plan_parser.add_argument("--overwrite", action="store_true", help="Replace an existing scaffold with the same id.")
+    new_plan_parser.add_argument("--dry-run", action="store_true")
+    new_plan_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     promote_parser = subparsers.add_parser("promote-to-plan", help="Promote a direct TODO item into an execplan scaffold.")
     promote_parser.add_argument("item_id")
@@ -246,6 +262,20 @@ def main(argv: list[str] | None = None) -> int:
         else:
             _print_handoff(handoff)
         return 0
+    if args.command == "new-plan":
+        return _emit(
+            create_execplan_scaffold(
+                plan_id=args.id,
+                title=args.title,
+                source=args.source,
+                target=args.target,
+                activate=args.activate,
+                queue=args.queue,
+                overwrite=args.overwrite,
+                dry_run=args.dry_run,
+            ),
+            args.format,
+        )
     if args.command == "promote-to-plan":
         return _emit(
             promote_todo_item_to_execplan(

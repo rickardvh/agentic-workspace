@@ -1,0 +1,354 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning workflow robustness for issues #666-#672",
+  "goal": [
+    "Implement the post-feedback planning robustness issues #666 through #672 so agents can create valid plans, recover from guessed planning shapes, and use schema-backed decomposition for epic-shaped work."
+  ],
+  "non_goals": [
+    "Do not remove existing bootstrap CLI names or break compatibility aliases in this lane.",
+    "Do not turn Agentic Workspace into a general project-management system."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Make the valid planning path cheaper than freehanding invalid planning artifacts.",
+      "constraints": "Stay provider-neutral and preserve checked-in planning as execution authority.",
+      "latitude": "Implement safe CLI, schema, checker, summary, and documentation changes needed for the issue set.",
+      "escalation": "Stop if naming migration requires breaking public commands."
+    },
+    "execution": {
+      "milestone": "implement-issues-666-672",
+      "status": "completed",
+      "next_step": "Archive this execplan and close issues #666-#672 after commit/push.",
+      "proof": "Run focused planning/root CLI tests, planning surface checks, maintainer surface refresh where guidance changes, and make check before closeout."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/",
+        "packages/planning/bootstrap/.agentic-workspace/planning/",
+        "src/agentic_workspace/cli.py",
+        "tests/",
+        "docs/"
+      ],
+      "invariants": [
+        "Existing bootstrap commands remain usable.",
+        "Summary/preflight must not report clean idle when unrecognized active intent is present.",
+        "Generated/scaffolded records must validate against shipped schemas."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Agentic Workspace should funnel large agent work into reliable planning before implementation and make bypass/freehand mistakes visible.",
+    "this slice completes the larger intended outcome": "partial but intended to close issues #666-#672",
+    "continuation surface": "GitHub issues #666-#672 plus this execplan closeout",
+    "parent lane": "post-feedback planning workflow robustness"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "Any discovered dogfooding friction should become narrow follow-up issues unless it is an immediate bug in this lane.",
+    "owner surface": ".agentic-workspace/planning/execplans/planning-workflow-robustness-666-672.plan.json",
+    "activation trigger": "closeout review"
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest and implement the issues created since the feedback.",
+    "inferred intended outcome": "Close the workflow gaps exposed by the external agent's invalid planning artifacts.",
+    "chosen concrete what": "Implement the seven created issues as one planning robustness lane.",
+    "interpretation distance": "low",
+    "review guidance": "Check whether the changes make the correct workflow easier and invalid workflow harder."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning package, root workspace CLI, shipped planning payload, tests, docs/reference when needed",
+    "max changed files": "bounded by issue acceptance criteria",
+    "required validation commands": "focused pytest, planning surface checker, make check",
+    "ask-before-refactor threshold": "breaking CLI/package rename or broad state model replacement",
+    "stop before touching": "unrelated memory/runtime features"
+  },
+  "stop_conditions": {
+    "stop when": "public command renaming would break compatibility or issue scope requires a larger architecture decision",
+    "escalate when boundary reached": "create a follow-up issue and report it",
+    "escalate on scope drift": "do not add unrelated planning product work",
+    "escalate on proof failure": "fix failing focused tests before continuing"
+  },
+  "context_budget": {
+    "live working set": "issue bodies, planning CLI/installer/checker/schema code, root CLI command wiring, tests",
+    "recoverable later": "full archive history and unrelated package docs",
+    "externalize before shift": "record dogfooding findings as GitHub issues",
+    "pre-work config pull": "preflight and summary already run",
+    "pre-work memory pull": "not required unless code context points to a durable invariant",
+    "tiny resumability note": "continue from this execplan and summary output",
+    "context-shift triggers": "large naming migration or decomposition model uncertainty"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the issue set without waiting for additional chat clarification.",
+    "hard constraints": "Commit and push as work progresses; use package workflow; close/fix actual bugs immediately.",
+    "agent may decide locally": "Exact schema field names, command help wording, and test organization.",
+    "escalate when": "A public breaking rename is needed."
+  },
+  "adaptive_assurance": {
+    "level": "high",
+    "reason": "This touches startup/planning funnel behavior and shipped package surfaces that exist to prevent agent mistakes.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "acceptance_refs"
+    ],
+    "proof_profiles": [
+      "focused planning tests",
+      "root CLI tests",
+      "planning surface checker",
+      "make check"
+    ],
+    "required_gates": [
+      "summary sees active plan",
+      "new scaffold records validate",
+      "invalid PM-shaped execplan is blocked",
+      "unsupported state shape is reported"
+    ]
+  },
+  "traceability_refs": {
+    "acceptance_refs": [
+      "#666 implemented by new-plan scaffold command and package tests.",
+      "#667 implemented by top-level planning help command and operation contract.",
+      "#668 implemented by checker warnings for generic PM-shaped execplans.",
+      "#669 implemented by bootstrap naming clarification and naming note.",
+      "#670 implemented by WORKFLOW guidance updates clarifying CLI-first orientation versus package-owned mutations.",
+      "#671 implemented by unsupported state activation shape detection in checker and installed summary.",
+      "#672 implemented by schema-backed decomposition artifacts, projection, payload packaging, and unsupported epic Markdown warning."
+    ]
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/666",
+      "label": "#666",
+      "role": "scope",
+      "locator": ""
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/667",
+      "label": "#667",
+      "role": "scope",
+      "locator": ""
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/668",
+      "label": "#668",
+      "role": "scope",
+      "locator": ""
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/669",
+      "label": "#669",
+      "role": "scope",
+      "locator": ""
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/670",
+      "label": "#670",
+      "role": "scope",
+      "locator": ""
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/671",
+      "label": "#671",
+      "role": "scope",
+      "locator": ""
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/672",
+      "label": "#672",
+      "role": "scope",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "implement-issues-666-672",
+    "status": "completed",
+    "scope": "Implement the accepted issue cluster and update planning state/proof.",
+    "ready": "issue bodies and current planning code inspected",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement the new-plan scaffold, planning help router, malformed-shape detection, unsupported state-shape detection, decomposition schema/projection, and guidance updates."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/",
+    "packages/planning/bootstrap/.agentic-workspace/planning/",
+    "src/agentic_workspace/cli.py",
+    "tests/",
+    "docs/"
+  ],
+  "invariants": [
+    "Checked-in planning remains the execution authority.",
+    "Package commands should create or normalize planning structure when available.",
+    "Direct file edits are bounded fallback/content edits, not permission to invent schema shape."
+  ],
+  "open_questions_to_close": [
+    "How minimal can the first decomposition artifact be while still preventing unmanaged epic Markdown drift?",
+    "What first safe naming slice clarifies bootstrap lifecycle responsibility without breaking users?"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests tests/test_workspace_summary_cli.py tests/test_workspace_cli.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "make maintainer-surfaces",
+    "make check"
+  ],
+  "required_tools": [
+    "uv",
+    "pytest",
+    "gh"
+  ],
+  "completion_criteria": [
+    "#666-#672 acceptance criteria are implemented or narrowed into explicit follow-up issues where the issue itself calls for migration planning.",
+    "Focused and full validation pass.",
+    "Dogfooding friction is fixed immediately if it is an actual bug, otherwise routed into issues.",
+    "Changes are committed and pushed to master."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "planning-intake-upstream-task",
+    "what happened": "Implemented issues #666-#672: new-plan scaffold, planning help, malformed execplan/state detection, first-class decomposition artifacts, CLI-first guidance, naming note, tests, and operation contracts.",
+    "scope touched": "planning package, root workspace CLI, shipped planning payload, contracts, docs, and focused tests",
+    "changed surfaces": "planning package source/checker/tests, root CLI/contracts/tests, planning payload templates/schemas/guidance, and docs/planning-cli-naming.md",
+    "validations run": "focused pytest suites, new-plan temp-repo smoke test, contract tooling, maintainer surfaces, planning surface checker, make check",
+    "result for continuation": "archive lane after commit and close issues #666-#672",
+    "next step": "commit, push, close issues"
+  },
+  "proof_report": {
+    "validation proof": "make check passed after focused tests, contract tooling, maintainer surfaces, planning surface checker, and new-plan smoke test.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "make check exited 0; focused test groups passed; temp installed workspace created and activated a new schema-backed plan."
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest and implement the issues we have created since the feedback.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Implemented issues #666-#672: new-plan scaffold, planning help, invalid execplan/state detection, decomposition artifacts, guidance, naming notes, tests, and operation contracts. make check passed.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Issue cluster implementation and proof are complete; remaining broad external-work snapshot warnings are unrelated repository backlog.",
+    "evidence carried forward": "make check passed; focused tests and smoke test passed; planning surface checker clean.",
+    "reopen trigger": "Reopen if generated planning scaffolds fail validation, planning help is missing, or summary again reports idle for unsupported active state."
+  },
+  "durable_residue": {
+    "status": "evidence_only",
+    "learned constraint": "Planning lifecycle mutations should prefer package commands, while direct file edits remain bounded content edits inside schema-backed records.",
+    "motivation worth preserving": "Captured in WORKFLOW.md, planning help, decomposition README/template, and docs/planning-cli-naming.md.",
+    "canonical owner now": "shipped planning guidance and CLI help",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Planning workflow robustness issue cluster #666-#672 implemented.",
+    "validation confirmed": "make check passed.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive this execplan after commit",
+    "knowledge promoted (Memory/Docs/Config)": "docs/planning-cli-naming.md plus shipped WORKFLOW/decomposition guidance",
+    "resume from": "no active continuation for this lane"
+  },
+  "improvement_signal_review": {
+    "status": "reviewed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Operation contract parity caught the new planning help command only during make check."
+    ],
+    "signals fixed": [
+      "Added planning.help operation contract and planning.help.build primitive."
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "Closeout-trust lower-trust signal comes from pre-existing external-work snapshot backlog unrelated to this lane."
+    ],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No additional dogfooding issue created; lane-local friction was fixed in this patch.",
+          "owner": "discard",
+          "source": "improvement_signal_review"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "docs/planning-cli-naming.md plus shipped WORKFLOW/decomposition guidance",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#666",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/666"
+        },
+        {
+          "summary": "#667",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/667"
+        },
+        {
+          "summary": "#668",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/668"
+        },
+        {
+          "summary": "#669",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/669"
+        },
+        {
+          "summary": "#670",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/670"
+        },
+        {
+          "summary": "#671",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/671"
+        },
+        {
+          "summary": "#672",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/672"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-05-02: Created before implementation from issues #666-#672."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "evidence_only",
+    "target": "shipped planning guidance and CLI help",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Ingest and implement the issues we have created since the feedback.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: make check passed after focused tests, contract tooling, maintainer surfaces, planning surface checker, and new-plan smoke test.\nChanged surfaces: planning package source/checker/tests, root CLI/contracts/tests, planning payload templates/schemas/guidance, and docs/planning-cli-naming.md\nDurable residue: evidence_only (shipped planning guidance and CLI help)\nMemory learning: evidence_only\nFollow-up: none"
+  }
+}
