@@ -8618,6 +8618,10 @@ def _warning_remediation(warning_class: str) -> str | None:
             "Update machine_readable_contract.execution.next_step, or make immediate_next_action[0] match it; "
             "compact summary uses immediate_next_action[0] when both are present."
         ),
+        "execplan_missing_file_reference": (
+            "Update active plan next actions and references so they point only to existing files, or create the referenced "
+            "checked-in planning artifact before handoff."
+        ),
         "execplan_readiness_drift": "Set Ready/Blocked explicitly so the active milestone can be resumed without re-deriving state.",
         "execplan_log_drift": "Compress the drift log into short decision notes or archive the completed plan.",
         "execplan_notebook_drift": "Strip status-journal residue out of the plan and keep only the current execution contract.",
@@ -8859,6 +8863,77 @@ def _execplan_next_action_warnings(*, target_root: Path, plan_files: list[Path])
                     "message": (
                         "machine_readable_contract.execution.next_step diverges from immediate_next_action[0]; "
                         "summary uses immediate_next_action[0] as the canonical next-action projection."
+                    ),
+                }
+            )
+        warnings.extend(_execplan_missing_reference_warnings(target_root=target_root, plan_path=plan_path, record=record))
+    return warnings
+
+
+_FILE_REFERENCE_SUFFIXES = {
+    ".md",
+    ".json",
+    ".toml",
+    ".yaml",
+    ".yml",
+    ".txt",
+    ".py",
+    ".js",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".sh",
+    ".ps1",
+}
+
+
+def _file_reference_candidates(text: str) -> list[str]:
+    candidates: list[str] = []
+    for token in re.findall(r"`([^`]+)`|([^\s,;:]+)", text):
+        raw = token[0] or token[1]
+        value = raw.strip().strip("\"'()[]{}<>.,")
+        if not value or "://" in value or value.startswith("-"):
+            continue
+        normalized = value.replace("\\", "/")
+        if normalized.startswith("//"):
+            continue
+        suffix = Path(normalized).suffix.lower()
+        if suffix in _FILE_REFERENCE_SUFFIXES or "/" in normalized:
+            candidates.append(normalized)
+    return _dedupe(candidates)
+
+
+def _execplan_missing_reference_warnings(*, target_root: Path, plan_path: Path, record: dict[str, Any]) -> list[dict[str, str]]:
+    warnings: list[dict[str, str]] = []
+    values: list[tuple[str, str]] = []
+    raw_immediate = record.get("immediate_next_action", [])
+    if isinstance(raw_immediate, list):
+        values.extend(("immediate_next_action", str(item)) for item in raw_immediate if str(item).strip())
+    machine_contract = record.get("machine_readable_contract", {})
+    execution = machine_contract.get("execution", {}) if isinstance(machine_contract, dict) else {}
+    if isinstance(execution, dict) and str(execution.get("next_step", "")).strip():
+        values.append(("machine_readable_contract.execution.next_step", str(execution["next_step"])))
+    for reference in record.get("references", []):
+        if not isinstance(reference, dict):
+            continue
+        for key in ("path", "locator", "source", "target"):
+            if str(reference.get(key, "")).strip():
+                values.append((f"references[].{key}", str(reference[key])))
+    for field_name, value in values:
+        for candidate in _file_reference_candidates(value):
+            if candidate.startswith("#"):
+                continue
+            candidate_path = (target_root / candidate).resolve()
+            if candidate_path.exists():
+                continue
+            warnings.append(
+                {
+                    "warning_class": "execplan_missing_file_reference",
+                    "path": plan_path.relative_to(target_root).as_posix(),
+                    "message": f"{field_name} references `{candidate}`, but that path does not exist in the target repository.",
+                    "suggested_fix": (
+                        "Update the active plan so next actions and references point only to existing files, "
+                        "or create the referenced checked-in planning artifact before handoff."
                     ),
                 }
             )

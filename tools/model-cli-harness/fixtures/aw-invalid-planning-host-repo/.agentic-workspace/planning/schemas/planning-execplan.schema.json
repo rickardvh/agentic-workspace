@@ -1,0 +1,285 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-planning-bootstrap/planning-execplan.schema.json",
+  "title": "Planning Execplan Record",
+  "type": "object",
+  "required": ["kind", "title", "goal", "non_goals", "active_milestone", "validation_commands", "completion_criteria"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": { "const": "planning-execplan/v1" },
+    "title": { "type": "string" },
+    "goal": { "$ref": "#/$defs/string_array" },
+    "non_goals": { "$ref": "#/$defs/string_array" },
+    "machine_readable_contract": { "type": "object" },
+    "intent_continuity": { "$ref": "#/$defs/string_map" },
+    "required_continuation": { "$ref": "#/$defs/string_map" },
+    "iterative_follow_through": { "$ref": "#/$defs/string_map" },
+    "intent_interpretation": { "$ref": "#/$defs/string_map" },
+    "execution_bounds": { "$ref": "#/$defs/string_map" },
+    "stop_conditions": { "$ref": "#/$defs/string_map" },
+    "context_budget": { "$ref": "#/$defs/string_map" },
+    "delegated_judgment": { "$ref": "#/$defs/string_map" },
+    "adaptive_assurance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "level": { "enum": ["low", "medium", "high", "critical"] },
+        "reason": { "type": "string" },
+        "agent_may_escalate": { "type": "boolean" },
+        "agent_may_deescalate": { "type": "boolean" },
+        "strict_closeout": { "type": "boolean" },
+        "required_refs": { "$ref": "#/$defs/string_array" },
+        "proof_profiles": { "$ref": "#/$defs/string_array" },
+        "required_gates": { "$ref": "#/$defs/string_array" }
+      }
+    },
+    "traceability_refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requirement_refs": { "$ref": "#/$defs/string_array" },
+        "regulation_refs": { "$ref": "#/$defs/string_array" },
+        "compliance_refs": { "$ref": "#/$defs/string_array" },
+        "domain_model_refs": { "$ref": "#/$defs/string_array" },
+        "risk_refs": { "$ref": "#/$defs/string_array" },
+        "security_refs": { "$ref": "#/$defs/string_array" },
+        "audit_refs": { "$ref": "#/$defs/string_array" },
+        "acceptance_refs": { "$ref": "#/$defs/string_array" },
+        "decision_refs": { "$ref": "#/$defs/string_array" }
+      }
+    },
+    "control_gates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/control_gate" }
+    },
+    "implementation_blockers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/implementation_blocker" }
+    },
+    "risk_registry_refs": { "$ref": "#/$defs/string_array" },
+    "invariant_refs": { "$ref": "#/$defs/string_array" },
+    "test_data_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "classification": { "type": "string" },
+        "forbidden": { "$ref": "#/$defs/string_array" },
+        "fixture_owner": { "type": "string" },
+        "proof_required": { "$ref": "#/$defs/string_array" },
+        "refs": { "$ref": "#/$defs/string_array" }
+      }
+    },
+    "layer_scaffold": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string" },
+        "required_refs": { "$ref": "#/$defs/string_array" },
+        "common_risks": { "$ref": "#/$defs/string_array" },
+        "suggested_proof_profiles": { "$ref": "#/$defs/string_array" },
+        "suggested_gates": { "$ref": "#/$defs/string_array" },
+        "non_goals": { "$ref": "#/$defs/string_array" },
+        "durable_residue_prompts": { "$ref": "#/$defs/string_array" }
+      }
+    },
+    "architecture_decision_promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": { "enum": ["none", "candidate", "needed", "promoted", "deferred"] },
+        "target": { "type": "string" },
+        "decision_refs": { "$ref": "#/$defs/string_array" },
+        "promotion_needed": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    },
+    "threat_failure_aids": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/threat_failure_aid" }
+    },
+    "parent_lane": { "$ref": "#/$defs/string_map" },
+    "capability_posture": { "$ref": "#/$defs/string_map" },
+    "references": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reference" }
+    },
+    "active_milestone": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "properties": {
+        "id": { "type": "string" },
+        "status": { "type": "string" },
+        "scope": { "type": "string" },
+        "ready": { "type": "string" },
+        "blocked": { "type": "string" },
+        "optional_deps": { "type": "string" }
+      }
+    },
+    "immediate_next_action": { "$ref": "#/$defs/string_array" },
+    "blockers": { "$ref": "#/$defs/string_array" },
+    "touched_paths": { "$ref": "#/$defs/string_array" },
+    "invariants": { "$ref": "#/$defs/string_array" },
+    "contract_decisions_to_freeze": { "$ref": "#/$defs/string_array" },
+    "open_questions_to_close": { "$ref": "#/$defs/string_array" },
+    "validation_commands": { "$ref": "#/$defs/string_array" },
+    "required_tools": { "$ref": "#/$defs/string_array" },
+    "completion_criteria": { "$ref": "#/$defs/string_array" },
+    "execution_run": { "$ref": "#/$defs/string_map" },
+    "finished_run_review": { "$ref": "#/$defs/string_map" },
+    "proof_report": { "$ref": "#/$defs/string_map" },
+    "intent_satisfaction": { "$ref": "#/$defs/string_map" },
+    "system_intent_alignment": { "$ref": "#/$defs/string_map" },
+    "closure_check": { "$ref": "#/$defs/string_map" },
+    "generated_closeout": { "$ref": "#/$defs/string_map" },
+    "memory_learning_capture": { "$ref": "#/$defs/string_map" },
+    "durable_residue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": ["none", "memory", "docs", "contract", "check", "planning", "evidence_only"]
+        },
+        "learned constraint": { "type": "string" },
+        "motivation worth preserving": { "type": "string" },
+        "canonical owner now": { "type": "string" },
+        "promotion trigger": { "type": "string" },
+        "retention after promotion": { "type": "string" }
+      }
+    },
+    "execution_summary": { "$ref": "#/$defs/string_map" },
+    "improvement_signal_review": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "status": { "type": "string" },
+        "signals found": { "anyOf": [{ "type": "string" }, { "$ref": "#/$defs/string_array" }] },
+        "signals fixed": { "anyOf": [{ "type": "string" }, { "$ref": "#/$defs/string_array" }] },
+        "signals routed": { "anyOf": [{ "type": "string" }, { "$ref": "#/$defs/string_array" }] },
+        "signals dismissed": { "anyOf": [{ "type": "string" }, { "$ref": "#/$defs/string_array" }] },
+        "next owner": { "type": "string" }
+      }
+    },
+    "closeout_distillation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "buckets": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "discard": { "$ref": "#/$defs/distillation_items" },
+            "continuation": { "$ref": "#/$defs/distillation_items" },
+            "memory": { "$ref": "#/$defs/distillation_items" },
+            "config_check": { "$ref": "#/$defs/distillation_items" },
+            "docs": { "$ref": "#/$defs/distillation_items" },
+            "issue_follow_up": { "$ref": "#/$defs/distillation_items" }
+          }
+        }
+      }
+    },
+    "drift_log": { "$ref": "#/$defs/string_array" },
+    "proof_expectations": { "$ref": "#/$defs/string_array" },
+    "anti_overfitting_review": { "type": "object" },
+    "direct_cli_edit_review": { "type": "object" },
+    "cost_assessment": { "type": "object" },
+    "parent_acceptance_map": {
+      "anyOf": [
+        { "type": "object" },
+        { "type": "array" }
+      ]
+    }
+  },
+  "$defs": {
+    "string_array": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          { "type": "string" },
+          { "type": "object" }
+        ]
+      }
+    },
+    "string_map": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          { "type": "string" },
+          { "type": "array" },
+          { "type": "object" },
+          { "type": "boolean" },
+          { "type": "number" },
+          { "type": "null" }
+        ]
+      }
+    },
+    "reference": {
+      "anyOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "type": "string" },
+            "target": { "type": "string" },
+            "label": { "type": "string" },
+            "role": { "type": "string" },
+            "locator": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "control_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "owner_role": { "type": "string" },
+        "required_for": { "$ref": "#/$defs/string_array" },
+        "status": { "enum": ["pending", "satisfied", "waived", "blocked"] },
+        "evidence": { "$ref": "#/$defs/string_array" },
+        "blocking": { "type": "boolean" },
+        "next_action": { "type": "string" }
+      }
+    },
+    "implementation_blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "status": { "type": "string" },
+        "do_not_implement": { "type": "boolean" },
+        "blocked_by": { "$ref": "#/$defs/string_array" },
+        "allowed_work": { "$ref": "#/$defs/string_array" },
+        "evidence": { "$ref": "#/$defs/string_array" },
+        "next_action": { "type": "string" }
+      }
+    },
+    "threat_failure_aid": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "concern": { "type": "string" },
+        "source_ref": { "type": "string" },
+        "advisory": { "type": "string" }
+      }
+    },
+    "distillation_items": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "summary": { "type": "string" },
+              "owner": { "type": "string" },
+              "source": { "type": "string" }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

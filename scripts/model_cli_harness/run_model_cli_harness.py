@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -93,6 +94,8 @@ def _run_command(command: list[str], *, cwd: Path, timeout_seconds: int, env: di
         resolved_command,
         cwd=cwd,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         timeout=timeout_seconds,
         check=False,
@@ -105,6 +108,37 @@ def _run_command(command: list[str], *, cwd: Path, timeout_seconds: int, env: di
         "returncode": completed.returncode,
         "stdout": completed.stdout,
         "stderr": completed.stderr,
+    }
+
+
+def _file_snapshot(root: Path) -> dict[str, dict[str, Any]]:
+    snapshot: dict[str, dict[str, Any]] = {}
+    if not root.exists():
+        return snapshot
+    for path in sorted(item for item in root.rglob("*") if item.is_file()):
+        relative = path.relative_to(root).as_posix()
+        data = path.read_bytes()
+        snapshot[relative] = {
+            "size": len(data),
+            "sha256": hashlib.sha256(data).hexdigest(),
+        }
+    return snapshot
+
+
+def _snapshot_diff(before: dict[str, dict[str, Any]], after: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    before_paths = set(before)
+    after_paths = set(after)
+    created = sorted(after_paths - before_paths)
+    deleted = sorted(before_paths - after_paths)
+    modified = sorted(path for path in before_paths & after_paths if before[path] != after[path])
+    return {
+        "status": "changed" if created or modified or deleted else "clean",
+        "created_count": len(created),
+        "modified_count": len(modified),
+        "deleted_count": len(deleted),
+        "created": created,
+        "modified": modified,
+        "deleted": deleted,
     }
 
 
@@ -232,9 +266,69 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
     return True
 
 
-def _execution_warnings(*, stdout: str, repo_path: Path) -> list[dict[str, str]]:
+def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_summary: dict[str, Any] | None = None) -> list[dict[str, str]]:
     warnings: list[dict[str, str]] = []
-    for line in stdout.splitlines():
+    returncode = result.get("returncode")
+    stdout = result.get("stdout")
+    stderr = result.get("stderr")
+    stdout_text = stdout if isinstance(stdout, str) else ""
+    stderr_text = stderr if isinstance(stderr, str) else ""
+    combined_text = f"{stdout_text}\n{stderr_text}"
+    if isinstance(returncode, int) and returncode != 0:
+        warnings.append(
+            {
+                "warning_class": "model_cli_nonzero_exit",
+                "message": f"The model CLI exited with status {returncode}.",
+            }
+        )
+    if result.get("capture_warning"):
+        warnings.append(
+            {
+                "warning_class": "model_cli_output_capture_degraded",
+                "message": str(result["capture_warning"]),
+            }
+        )
+    if stdout is None:
+        warnings.append(
+            {
+                "warning_class": "model_cli_stdout_missing",
+                "message": "The model CLI result did not include captured stdout.",
+            }
+        )
+    if "ModelNotFoundError" in combined_text or "Requested entity was not found" in combined_text:
+        warnings.append(
+            {
+                "warning_class": "model_cli_model_not_found",
+                "message": "The model provider rejected the configured model name.",
+            }
+        )
+    if "AttachConsole failed" in combined_text:
+        warnings.append(
+            {
+                "warning_class": "model_cli_runtime_stderr",
+                "message": "The model CLI emitted AttachConsole failures on stderr.",
+            }
+        )
+    if "GaxiosError" in combined_text or "Internal error encountered" in combined_text:
+        warnings.append(
+            {
+                "warning_class": "model_cli_provider_error",
+                "message": "The model CLI reported provider or API errors during execution.",
+            }
+        )
+    if mutation_summary and mutation_summary.get("status") == "changed":
+        warnings.append(
+            {
+                "warning_class": "model_cli_fixture_mutation",
+                "message": (
+                    "The model CLI changed the copied scenario repository "
+                    f"({mutation_summary.get('created_count', 0)} created, "
+                    f"{mutation_summary.get('modified_count', 0)} modified, "
+                    f"{mutation_summary.get('deleted_count', 0)} deleted)."
+                ),
+            }
+        )
+    for line in stdout_text.splitlines():
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
@@ -370,6 +464,7 @@ def run_suite(
                         env=adapter_env,
                     )
                 )
+        baseline_snapshot = _file_snapshot(paths.repo_path)
 
         invocation: dict[str, Any] = {
             "scenario_id": scenario_id,
@@ -401,15 +496,18 @@ def run_suite(
         elif execute:
             result = _run_command(command, cwd=paths.repo_path, timeout_seconds=effective_timeout, env=adapter_env)
             _copy_transcript(str(result.get("stdout", "")), paths.transcript_path)
+            mutation_summary = _snapshot_diff(baseline_snapshot, _file_snapshot(paths.repo_path))
             invocation["result"] = result
+            invocation["mutation_summary"] = mutation_summary
             invocation["transcript_path"] = str(paths.transcript_path)
             invocation["share_path"] = str(paths.share_path)
-            invocation["warnings"] = _execution_warnings(stdout=str(result.get("stdout", "")), repo_path=paths.repo_path)
+            invocation["warnings"] = _execution_warnings(result=result, repo_path=paths.repo_path, mutation_summary=mutation_summary)
         else:
             invocation["result"] = {
                 "status": "dry-run",
                 "detail": "Use --execute to run the model CLI.",
             }
+            invocation["mutation_summary"] = {"status": "not-run"}
             invocation["warnings"] = []
         _write_json(paths.run_root / "run.json", invocation)
         run_results.append(invocation)

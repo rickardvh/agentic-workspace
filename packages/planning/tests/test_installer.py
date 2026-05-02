@@ -4430,6 +4430,21 @@ def test_planning_summary_exposes_compact_planning_surface_health_when_not_clean
     assert "Restore the current template sections" in summary["planning_surface_health"]["recommended_next_action"]
 
 
+def test_planning_summary_warns_when_execplan_next_action_references_missing_file(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(plan_path)
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["immediate_next_action"] = ["Review implementation slices in plan.md before coding."]
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    warnings = summary["planning_surface_health"]["warnings"]
+
+    assert any(warning["warning_class"] == "execplan_missing_file_reference" for warning in warnings)
+    assert any("plan.md" in warning["message"] for warning in warnings)
+
+
 def test_planning_summary_warns_on_reconstructable_closed_work_history(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(

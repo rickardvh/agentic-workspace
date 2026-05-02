@@ -19,6 +19,7 @@ Keep this file concise, product-managed, and replaceable. It is the fallback rou
 - At minimum, orient through `preflight` or `implement --changed` before editing files unless the user explicitly asks for a tiny direct change and validation is obvious.
 - Treat `.agentic-workspace/planning/state.toml` and active `.agentic-workspace/planning/execplans/*.plan.json` as execution authority only after summary or preflight routes you there.
 - Prefer package commands for planning mutations when available: `agentic-planning-bootstrap new-plan --id <id> --title <title> --activate`, `agentic-planning-bootstrap promote-to-plan <item-id>`, and `agentic-planning-bootstrap archive-plan <plan>`.
+- Prefer checked-in Agentic Workspace Planning as the shared authority. If your runtime is hardwired to use native plans or todos, use them as private working memory and bridge durable decisions into checked-in Planning before implementation, handoff, or closeout. Local bridge shims belong under `.agentic-workspace/local/integrations/<vendor-or-runtime>/` and are not shared authority.
 - Do not invent the outer structure of `planning-execplan/v1`; agents may edit intent, scope, proof, and closeout content inside schema-backed checked-in records.
 - After any planning mutation or fallback edit, run `agentic-workspace summary --format json` or the planning surface checker before implementation.
 - Templates are fallback scaffolds, not permission to create a new unchecked shape.

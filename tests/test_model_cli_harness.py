@@ -176,12 +176,56 @@ def test_model_cli_harness_extracts_execution_warnings(tmp_path: Path) -> None:
         ]
     )
 
-    warnings = harness._execution_warnings(stdout=stdout, repo_path=repo)
+    warnings = harness._execution_warnings(result={"returncode": 0, "stdout": stdout, "stderr": ""}, repo_path=repo)
 
     assert {warning["warning_class"] for warning in warnings} == {
         "model_cli_shell_unavailable",
         "model_cli_external_write",
     }
+
+
+def test_model_cli_harness_warns_on_runtime_failures_and_mutations(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._execution_warnings(
+        result={
+            "returncode": 1,
+            "stdout": None,
+            "stderr": "ModelNotFoundError: Requested entity was not found.\nError: AttachConsole failed\nGaxiosError: Internal error encountered.",
+        },
+        repo_path=repo,
+        mutation_summary={"status": "changed", "created_count": 1, "modified_count": 2, "deleted_count": 0},
+    )
+
+    assert {
+        "model_cli_nonzero_exit",
+        "model_cli_stdout_missing",
+        "model_cli_model_not_found",
+        "model_cli_runtime_stderr",
+        "model_cli_provider_error",
+        "model_cli_fixture_mutation",
+    }.issubset({warning["warning_class"] for warning in warnings})
+
+
+def test_model_cli_harness_snapshot_diff_reports_fixture_mutations(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "keep.txt").write_text("before\n", encoding="utf-8")
+    (repo / "delete.txt").write_text("delete\n", encoding="utf-8")
+    before = harness._file_snapshot(repo)
+
+    (repo / "keep.txt").write_text("after\n", encoding="utf-8")
+    (repo / "delete.txt").unlink()
+    (repo / "new.txt").write_text("new\n", encoding="utf-8")
+    diff = harness._snapshot_diff(before, harness._file_snapshot(repo))
+
+    assert diff["status"] == "changed"
+    assert diff["created"] == ["new.txt"]
+    assert diff["modified"] == ["keep.txt"]
+    assert diff["deleted"] == ["delete.txt"]
 
 
 def test_model_cli_harness_blocks_execution_when_preflight_fails(tmp_path: Path) -> None:

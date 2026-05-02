@@ -513,6 +513,16 @@ def _runtime_artifact_shim_pattern_payload() -> dict[str, Any]:
             "internal agent plans that need compact checked-in planning updates",
             "runtime check bundles that need compact pass/fail plus inspectable logs",
             "handoff or resume state that needs a bounded workspace continuation record",
+            "runtime-native planning systems that the agent is already optimized or hardwired to use",
+        ],
+        "bridge_rule": (
+            "Use runtime-native plans as private working memory when they help, but bridge decisions, scope, proof, "
+            "and continuation into checked-in Agentic Workspace Planning before implementation handoff or closeout."
+        ),
+        "preferred_bridge_steps": [
+            "capture the runtime-native plan or todo list under the local integration area when it is useful evidence",
+            "summarize only durable intent, scope, proof, and next action into checked-in planning state",
+            "run agentic-workspace summary --format json after the bridge and resolve warnings before implementation",
         ],
         "artifact_classes": ["internal-plan", "check-bundle", "handoff-state", "runtime-export"],
         "metadata_required": [
@@ -532,6 +542,7 @@ def _runtime_artifact_shim_pattern_payload() -> dict[str, Any]:
             "local shims never become shared authority by existing locally",
             "promote only through checked-in planning, memory, agent-aid, docs, or repo-native review surfaces",
             "record proof before treating shim output as repo-shared state",
+            "a runtime-native plan or todo list does not satisfy required Agentic Workspace Planning until bridged",
         ],
         "discovery": [
             "agentic-workspace defaults --section agent_aid_storage --format json",
@@ -1296,10 +1307,33 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         "rules": [
             "Use CLI first for orientation and proof selection.",
             "Use package lifecycle commands for planning mutations when available.",
+            "Prefer checked-in Agentic Workspace plans as the shared authority for required planning.",
+            (
+                "If an agent runtime is hardwired to use native plans or todos, treat them as private working memory "
+                "and bridge durable decisions into checked-in Planning before implementation, handoff, or closeout."
+            ),
             "Do not invent the outer structure of planning-execplan/v1.",
             "Edit intent, scope, proof, and closeout content inside schema-backed checked-in records.",
             "After any planning mutation, run agentic-workspace summary --format json or the planning surface checker.",
         ],
+        "runtime_native_bridge": {
+            "status": "allowed-as-local-aid",
+            "local_root": ".agentic-workspace/local/integrations/<vendor-or-runtime>/",
+            "rule": (
+                "Runtime-native planning can be useful local working memory, but it is not repo-shared execution "
+                "authority until summarized into checked-in Agentic Workspace Planning."
+            ),
+            "bridge_before": ["implementation for lane/epic work", "handoff", "closeout"],
+        },
+        "unsafe_state_recovery": {
+            "inspect": f"agentic-workspace summary{target_arg} --format json",
+            "doctor": f"agentic-workspace doctor{target_arg} --format json",
+            "preferred": f"agentic-planning-bootstrap archive-plan <plan>{target_arg} --format json",
+            "manual_fallback": (
+                "Make the smallest schema-preserving edit to .agentic-workspace/planning/state.toml or the active "
+                "plan, then rerun summary; do not invent reset flags."
+            ),
+        },
         "fallback": (
             "If lifecycle commands are unavailable, copy the package template exactly, edit content inside the schema shape, "
             "register the item in .agentic-workspace/planning/state.toml, then rerun summary."
@@ -1321,6 +1355,16 @@ def _print_planning_help(payload: dict[str, Any]) -> None:
     print("Rules:")
     for rule in payload["rules"]:
         print(f"- {rule}")
+    bridge = payload.get("runtime_native_bridge", {})
+    if isinstance(bridge, dict) and bridge:
+        print("")
+        print(f"Runtime-native planning bridge: {bridge.get('rule', '')}")
+    recovery = payload.get("unsafe_state_recovery", {})
+    if isinstance(recovery, dict) and recovery:
+        print("")
+        print("Unsafe-state recovery:")
+        for key in ("inspect", "doctor", "preferred", "manual_fallback"):
+            print(f"- {key}: {recovery.get(key, '')}")
     print("")
     print(f"Fallback: {payload['fallback']}")
 

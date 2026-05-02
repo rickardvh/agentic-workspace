@@ -93,11 +93,12 @@
     {
       "id": "cli-discovery-before-planning",
       "fixture": "aw-minimal-host-repo",
-      "prompt": "You need to prepare for broad work, but you are not sure which Agentic Workspace planning commands exist. Use the repo workflow and CLI help to discover valid commands before naming any lifecycle command. Do not create or edit files. Final answer should list the exact commands you verified and the command you would use next.",
+      "prompt": "You need to prepare for broad work, but you are not sure which Agentic Workspace planning commands exist. Use the repo workflow and CLI help to discover valid commands before naming any lifecycle command. If your runtime has its own plan or todo tools, you may use them as private working memory, but do not count them as checked-in Agentic Workspace Planning. Do not create or edit files. Final answer should list the exact commands you verified and the command you would use next.",
       "expected_signals": [
         "runs or reads agentic-workspace --help and agentic-workspace planning --help",
         "names only commands that exist in the current CLI",
-        "does not invent recovery, reset, or planning mutation flags"
+        "does not invent recovery, reset, or planning mutation flags",
+        "distinguishes runtime-native plans from checked-in Agentic Workspace planning"
       ],
       "score_notes": [
         "Good: verifies command availability before recommending lifecycle commands.",
@@ -107,11 +108,12 @@
     {
       "id": "planning-artifact-integrity",
       "fixture": "aw-minimal-host-repo",
-      "prompt": "Create the smallest schema-backed planning artifact for a broad ecommerce app, then inspect the resulting planning summary for warnings before stopping. Do not implement application code. Final answer should report created files, any summary warnings, and whether the next action references only files that exist.",
+      "prompt": "Create the smallest checked-in Agentic Workspace schema-backed planning artifact for a broad ecommerce app, then inspect the resulting planning summary for warnings before stopping. If your runtime creates a private plan or todo list, bridge only durable decisions into the checked-in planning artifact. Do not implement application code. Final answer should report created files, any summary warnings, and whether the next action references only files that exist.",
       "expected_signals": [
         "uses package lifecycle commands or schema-backed templates for planning mutations",
         "runs agentic-workspace summary after the mutation",
-        "does not leave dangling references to nonexistent planning documents"
+        "does not leave dangling references to nonexistent planning documents",
+        "does not treat runtime-native todos as the repo-shared planning artifact"
       ],
       "score_notes": [
         "Good: catches schema warnings and dangling next-action references before implementation.",

@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/planning-external-intent-evidence.schema.json",
+  "title": "Planning External Intent Evidence",
+  "type": "object",
+  "required": ["kind", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "planning-external-intent-evidence/v1"
+    },
+    "systems": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "refreshed_at": {
+      "type": "string"
+    },
+    "refresh_metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "adapter": {
+          "type": "string"
+        },
+        "repository": {
+          "type": "string"
+        },
+        "refreshed_at": {
+          "type": "string"
+        },
+        "item_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "open_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "closed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "state": {
+          "type": "string"
+        },
+        "state_source": {
+          "type": "string"
+        },
+        "limit_source": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["system", "id", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "system": {
+            "type": "string",
+            "minLength": 1
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": "string"
+          },
+          "reopens": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "planning_residue_expected": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "source_repository": {
+            "type": "string"
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "comments_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "previous_items": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}

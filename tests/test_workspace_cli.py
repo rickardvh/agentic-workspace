@@ -973,6 +973,16 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
                 "internal agent plans that need compact checked-in planning updates",
                 "runtime check bundles that need compact pass/fail plus inspectable logs",
                 "handoff or resume state that needs a bounded workspace continuation record",
+                "runtime-native planning systems that the agent is already optimized or hardwired to use",
+            ],
+            "bridge_rule": (
+                "Use runtime-native plans as private working memory when they help, but bridge decisions, scope, proof, "
+                "and continuation into checked-in Agentic Workspace Planning before implementation handoff or closeout."
+            ),
+            "preferred_bridge_steps": [
+                "capture the runtime-native plan or todo list under the local integration area when it is useful evidence",
+                "summarize only durable intent, scope, proof, and next action into checked-in planning state",
+                "run agentic-workspace summary --format json after the bridge and resolve warnings before implementation",
             ],
             "artifact_classes": ["internal-plan", "check-bundle", "handoff-state", "runtime-export"],
             "metadata_required": [
@@ -992,6 +1002,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
                 "local shims never become shared authority by existing locally",
                 "promote only through checked-in planning, memory, agent-aid, docs, or repo-native review surfaces",
                 "record proof before treating shim output as repo-shared state",
+                "a runtime-native plan or todo list does not satisfy required Agentic Workspace Planning until bridged",
             ],
             "discovery": [
                 "agentic-workspace defaults --section agent_aid_storage --format json",
@@ -7893,6 +7904,9 @@ def test_planning_help_command_returns_lifecycle_guidance(capsys) -> None:
     assert payload["kind"] == "agentic-workspace/planning-help/v1"
     assert any("new-plan" in command for command in payload["lifecycle_commands"])
     assert any("Do not invent" in rule for rule in payload["rules"])
+    assert payload["runtime_native_bridge"]["status"] == "allowed-as-local-aid"
+    assert "not repo-shared execution authority" in payload["runtime_native_bridge"]["rule"]
+    assert "do not invent reset flags" in payload["unsafe_state_recovery"]["manual_fallback"]
 
 
 def test_planning_help_text_is_actionable(capsys) -> None:
@@ -7902,6 +7916,8 @@ def test_planning_help_text_is_actionable(capsys) -> None:
     assert "Planning lifecycle" in output
     assert "agentic-planning-bootstrap new-plan" in output
     assert "planning-execplan/v1" in output
+    assert "Runtime-native planning bridge" in output
+    assert "Unsafe-state recovery" in output
 
 
 def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, capsys) -> None:
