@@ -6,6 +6,8 @@ Agentic Workspace should make repositories easier to enter, easier to resume, an
 
 The product should feel smaller than the internals behind it and should earn every visible surface it keeps.
 
+Its core thesis is amortized coordination: accept a small checked-in operating cost when that cost prevents larger future costs from repeated rediscovery, unsafe handoff, stale context, weak proof, duplicated work, or unreviewable agent output.
+
 For current shipped package behavior, start with [`docs/index.md`](index.md) and [`docs/package/overview.md`](package/overview.md). This page explains why the shape should stay coherent; it should not be used as the first product map.
 
 ## Must-Internalize Doctrine
@@ -49,6 +51,8 @@ The product should reduce inference through clearer ownership, narrower startup 
 ### 6. Simplicity should remain viable
 
 Small local work should stay cheap. Add structure when ambiguity, restart cost, collaboration risk, or proof burden justify it, not by default.
+
+Do not pretend the structure is free. For small or short-lived repositories, the overhead may not pay back; for long-running agent-heavy work, the package should make the saved future cost visible.
 
 ### 7. Be quiet by default
 
@@ -164,6 +168,8 @@ Features that claim to reduce restart cost, token cost, or handoff burden should
 Do not optimize for single-run cheapness if it raises total cost across planning, execution, interruption, handoff, review, or restart.
 
 Do not save model tokens by creating human bureaucracy.
+
+The system should surface what the overhead bought: rediscovery avoided, scope contained, proof selected, continuation preserved, handoff made cheaper, repeated friction converted into a durable improvement, or bypass/lower-trust work made visible.
 
 ### 22. Documentation should form an abstraction ladder
 

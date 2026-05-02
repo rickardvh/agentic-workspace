@@ -1,30 +1,43 @@
 # Agentic Workspace
 
-Agentic Workspace installs a small repo-native operating layer that helps agents enter, resume, hand off, and verify work from checked-in state.
+Agentic Workspace is for repositories where agent work must survive time: multiple sessions, tools, branches, contributors, or non-trivial proof expectations. It adds a small repo-native operating layer so agents can preserve intent, recover context, validate changes, and hand off safely without relying on chat history.
 
 ## Why Use It?
 
 Use Agentic Workspace when agent work keeps depending on context that disappears between sessions, tools, branches, or handoffs.
 
+It is not zero-overhead productivity tooling. It adds small, intentional coordination overhead so large or long-running agent-heavy projects avoid larger future costs: rediscovery, unsafe handoff, stale context, weak proof, duplicated work, and unreviewable output.
+
 - Agents can start from repo state instead of chat history.
 - Durable repo knowledge can live in checked-in Memory.
 - Active work can use checked-in Planning when continuity matters.
 - Proof, startup, and handoff routes become explicit and cheaper to rediscover.
+- Repeated friction can become a checked-in note, plan, doc, test, scaffold, or issue instead of staying tribal knowledge.
 
-## When To Use It
+## When It Pays Back
 
 Good fit:
 
 - a repo needs a repeatable agent startup path;
 - agents keep rediscovering the same repo facts;
 - active work needs resumable plans, proof expectations, or handoff state;
-- a team wants lightweight repo-owned context without a database or service.
+- context loss between sessions, branches, or tools is costly;
+- long-running intent or partial closeout needs a checked-in owner;
+- recurring mistakes should become repo knowledge, proof, or follow-up work.
 
 Not a fit:
 
 - you need project management, ticketing, runtime orchestration, or database-backed planning;
 - you want a plugin platform or third-party extension API;
+- the repo is small enough to reread cheaply;
+- tasks usually finish in one sitting;
 - a simple README note or existing repo command already solves the problem.
+
+It can still pay back for solo work. The question is not team size; the question is whether the handoff to a future session, future branch, or future agent would otherwise lose important context, intent, or proof expectations.
+
+## What Lightweight Means
+
+Lightweight means a small checked-in footprint, no database or service, selective adoption, compact command outputs, no full project-management system, and no runtime orchestration. It does not mean free to use or zero cognitive overhead.
 
 ## Install
 

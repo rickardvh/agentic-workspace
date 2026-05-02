@@ -6,6 +6,8 @@ Agentic Memory is a checked-in repo-memory contract for anti-rediscovery knowled
 
 Choose this package when you want a repository to keep durable, shared repo knowledge that survives across sessions, contributors, branches, and agent tools.
 
+Memory is intentional overhead. It pays back when the note an agent reads is cheaper than re-deriving the same invariant, trap, runbook, or subsystem boundary from code and chat history. It can be useful for solo work too: the handoff may be to a future session or a future agent rather than to another person.
+
 Use it for:
 
 - invariants and authority boundaries
@@ -85,11 +87,13 @@ Good fits:
 - a repo where agents repeatedly have to relearn operator sequences, subsystem boundaries, or recurring failure modes
 - a repo that already has task tracking, but no durable shared knowledge layer
 - a repo with many short sessions or many contributors switching tools
+- a repo where recurring friction should become durable context, canonical docs, tests, tooling, or follow-up work
 
 Bad fits:
 
 - a repo that only needs a milestone tracker or backlog board
 - a repo where every important fact is already cheap to rediscover from code and canonical docs
+- notes that merely restate obvious code, task chatter, or broad documentation
 
 ## Example Scenarios
 
@@ -107,7 +111,7 @@ Some AI agents, such as GitHub Copilot, have their own built-in memory, but that
 - **Captures anti-rediscovery knowledge that no single session owns.** Invariants, authority boundaries, recurring traps, and operator procedures accumulate across many sessions and many contributors. No individual agent memory is the right home for team-wide lessons.
 - **Stays auditable and reviewable.** Checked-in notes go through normal code review and version history, making it visible when knowledge changes and why.
 
-`agentic-memory-bootstrap` installs a lightweight `.agentic-workspace/memory/repo/` tree that agents load selectively on each task start, giving them the smallest useful slice of durable context without bulk-reading the codebase.
+`agentic-memory-bootstrap` installs a small `.agentic-workspace/memory/repo/` tree that agents load selectively on each task start, giving them the smallest useful slice of durable context without bulk-reading the codebase.
 
 For many users the simplest mental model is: planning tells an agent what matters now; memory tells an agent what is expensive to forget.
 When both modules are installed, the combined install should be cheaper than either one alone: planning borrows durable context from memory, and completed planning work promotes durable residue back into memory or canonical docs instead of re-explaining it forever.

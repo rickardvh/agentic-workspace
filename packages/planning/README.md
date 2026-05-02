@@ -8,6 +8,8 @@ Active agent work often needs more than a TODO line but less than a project-mana
 
 Use Planning when the current work itself is the fragile thing. Use Memory when the durable knowledge around the work is the fragile thing.
 
+Planning is intentional overhead. It pays back when the next session, branch, or agent would otherwise have to reconstruct scope, proof expectations, blockers, or the difference between a completed slice and an unfinished larger intent.
+
 ## What It Does
 
 Choose this package when you want active work in a repository to stay bounded, resumable, and finishable across fragmented sessions.
@@ -62,11 +64,13 @@ The ordinary model is direct first, planned when useful:
 - a repo where active work drifts between sessions and needs a checked-in active queue
 - a repo that wants bounded execution contracts without introducing a full project-management system
 - a repo using agents heavily enough that chat-only task continuity is too fragile
+- a solo or team repo where future handoff cost is high enough to justify checked-in execution state
 
 ## Bad Fits
 
 - a repo looking for durable subsystem documentation or knowledge capture rather than execution steering
 - a repo expecting a full ticketing, sprint, or PM platform
+- work that is small enough to finish in one coherent pass with obvious validation
 
 Bundled skills:
 
