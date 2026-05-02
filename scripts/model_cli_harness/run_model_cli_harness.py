@@ -209,9 +209,7 @@ def _adapter_preflight(adapter: dict[str, Any], *, command: list[str], replaceme
         "missing_count": len(missing),
         "missing": missing,
         "path_prepend": [
-            str(Path(item["resolved_path"]).parent)
-            for item in requirements
-            if item.get("add_parent_to_path") and item.get("resolved_path")
+            str(Path(item["resolved_path"]).parent) for item in requirements if item.get("add_parent_to_path") and item.get("resolved_path")
         ],
     }
 
@@ -225,14 +223,18 @@ def _adapter_environment(
     env = dict(os.environ)
     configured = adapter.get("env", {})
     if configured:
-        if not isinstance(configured, dict) or not all(isinstance(key, str) and isinstance(value, str) for key, value in configured.items()):
+        if not isinstance(configured, dict) or not all(
+            isinstance(key, str) and isinstance(value, str) for key, value in configured.items()
+        ):
             raise ValueError("adapter.env must be an object of string values")
         env.update({key: _replace_placeholders(value, replacements=replacements) for key, value in configured.items()})
     provider_home_env = adapter.get("provider_home_env")
     if isolate_provider_home and provider_home_env:
         if not isinstance(provider_home_env, str):
             raise ValueError("adapter.provider_home_env must be a string")
-        env[provider_home_env] = _replace_placeholders(str(adapter.get("provider_home_path", "{run_root}/provider-home")), replacements=replacements)
+        env[provider_home_env] = _replace_placeholders(
+            str(adapter.get("provider_home_path", "{run_root}/provider-home")), replacements=replacements
+        )
     return env
 
 
@@ -259,9 +261,12 @@ def _copy_transcript(stdout: str, transcript_path: Path) -> None:
 
 
 def _response_text(result: dict[str, Any]) -> str:
+    final_message = result.get("final_message")
     stdout = result.get("stdout")
     stderr = result.get("stderr")
     parts: list[str] = []
+    if isinstance(final_message, str) and final_message.strip():
+        parts.append(final_message)
     if isinstance(stdout, str):
         stripped = stdout.strip()
         if stripped.startswith("{"):
@@ -280,6 +285,11 @@ def _response_text(result: dict[str, Any]) -> str:
                 data = event.get("data")
                 if isinstance(data, dict) and isinstance(data.get("content"), str):
                     parts.append(data["content"])
+                message = event.get("message")
+                if isinstance(message, str):
+                    parts.append(message)
+                elif isinstance(message, dict) and isinstance(message.get("content"), str):
+                    parts.append(message["content"])
         if not parts:
             parts.append(stdout)
     if isinstance(stderr, str):
@@ -289,16 +299,22 @@ def _response_text(result: dict[str, Any]) -> str:
 
 def _created_path_is_misplaced_planning_artifact(path: str) -> bool:
     normalized = path.replace("\\", "/").strip()
-    if not normalized.endswith(".json"):
+    suffixes = (".json", ".md")
+    if not normalized.endswith(suffixes):
         return False
-    canonical_prefix = ".agentic-workspace/planning/decompositions/"
-    if normalized.startswith(canonical_prefix) and normalized.endswith(".decomposition.json"):
+    canonical_decomposition_prefix = ".agentic-workspace/planning/decompositions/"
+    canonical_execplan_prefix = ".agentic-workspace/planning/execplans/"
+    if normalized.startswith(canonical_decomposition_prefix) and normalized.endswith(".decomposition.json"):
         return False
-    planning_markers = ("decomposition", "planning")
+    if normalized.startswith(canonical_execplan_prefix) and normalized.endswith(".plan.json"):
+        return False
+    planning_markers = ("decomposition", "planning", "plan", "epic", "roadmap")
+    name = Path(normalized).name.lower()
     return (
         normalized.startswith("planning/")
         or normalized.startswith(".agentic-workspace/planning/")
         and any(marker in normalized.lower() for marker in planning_markers)
+        or any(marker in name for marker in planning_markers)
     )
 
 
@@ -341,7 +357,7 @@ def _semantic_workflow_warnings(
         if "agentic-workspace --help" not in response_lower and "agentic-workspace planning" not in response_lower:
             add("The agent did not report verifying Agentic Workspace CLI help before naming planning commands.")
 
-    if scenario_id in {"planning-artifact-integrity", "broad-work-decomposition"}:
+    if scenario_id in {"planning-artifact-integrity", "broad-work-decomposition", "native-plan-bridge"}:
         created = mutation_summary.get("created", []) if isinstance(mutation_summary, dict) else []
         misplaced = [path for path in created if isinstance(path, str) and _created_path_is_misplaced_planning_artifact(path)]
         if misplaced:
@@ -360,6 +376,48 @@ def _semantic_workflow_warnings(
             add("The agent claimed planning summary inspection was unavailable instead of running Agentic Workspace summary.")
         if scenario_id == "planning-artifact-integrity" and "agentic-workspace summary" not in response_lower:
             add("The agent did not report running `agentic-workspace summary` after creating planning state.")
+
+    if scenario_id == "direct-task-minimal-overhead":
+        created = mutation_summary.get("created", []) if isinstance(mutation_summary, dict) else []
+        planning_created = [
+            path for path in created if isinstance(path, str) and path.replace("\\", "/").startswith(".agentic-workspace/planning/")
+        ]
+        if planning_created:
+            add(
+                "The agent created planning artifacts for a direct wording edit where workspace overhead should stay minimal.",
+                evidence=", ".join(planning_created),
+            )
+        if (
+            any(marker in response_lower for marker in ("execplan", "decomposition", "epic", "lane"))
+            and "README.md".lower() not in response_lower
+        ):
+            add("The agent appeared to escalate a direct wording edit into planning-shaped work.")
+
+    if scenario_id == "native-plan-bridge":
+        modified = mutation_summary.get("modified", []) if isinstance(mutation_summary, dict) else []
+        workflow_modified = [path for path in modified if isinstance(path, str) and path.replace("\\", "/") == ".agentic-workspace/WORKFLOW.md"]
+        if workflow_modified:
+            add(
+                "The agent modified workflow instructions instead of leaving durable execution state for future agents.",
+                evidence=", ".join(workflow_modified),
+            )
+        created = mutation_summary.get("created", []) if isinstance(mutation_summary, dict) else []
+        freehand = [path for path in created if isinstance(path, str) and _created_path_is_misplaced_planning_artifact(path)]
+        if freehand:
+            add(
+                "The agent created a freehand planning or handoff artifact instead of using canonical repo workflow surfaces.",
+                evidence=", ".join(freehand),
+            )
+        if any(marker in response_lower for marker in ("/plan", "todo", "task list", "private plan")) and not any(
+            marker in response_lower
+            for marker in (
+                ".agentic-workspace/planning",
+                "agentic workspace planning",
+                "checked-in workspace planning",
+                "repo-shared",
+            )
+        ):
+            add("The agent used or described runtime-native planning without clearly bridging durable decisions to Agentic Workspace.")
 
     if scenario_id == "invalid-planning-recovery":
         if "agentic-workspace summary" not in response_lower and "planning_surface_health" not in response_lower:
@@ -472,11 +530,7 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
         if not isinstance(modified, list):
             continue
         external_paths = [
-            str(path)
-            for item in modified
-            if isinstance(item, str)
-            for path in [Path(item)]
-            if not _is_relative_to(path, repo_path)
+            str(path) for item in modified if isinstance(item, str) for path in [Path(item)] if not _is_relative_to(path, repo_path)
         ]
         if external_paths:
             warnings.append(
@@ -614,6 +668,8 @@ def run_suite(
             ]
         elif execute:
             result = _run_command(command, cwd=paths.repo_path, timeout_seconds=effective_timeout, env=adapter_env)
+            if paths.share_path.exists():
+                result["final_message"] = paths.share_path.read_text(encoding="utf-8")
             _copy_transcript(str(result.get("stdout", "")), paths.transcript_path)
             mutation_summary = _snapshot_diff(baseline_snapshot, _file_snapshot(paths.repo_path))
             invocation["result"] = result

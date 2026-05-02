@@ -59,13 +59,32 @@
         "--output-format",
         "json"
       ]
+    },
+    "codex": {
+      "default_model": "gpt-5.3-codex-spark",
+      "timeout_seconds": 900,
+      "block_on_preflight_failure": true,
+      "command": [
+        "codex",
+        "exec",
+        "--model",
+        "{model}",
+        "--cd",
+        "{repo}",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--skip-git-repo-check",
+        "--output-last-message",
+        "{share_path}",
+        "--json",
+        "{prompt}"
+      ]
     }
   },
   "scenarios": [
     {
       "id": "startup-orientation",
       "fixture": "aw-minimal-host-repo",
-      "prompt": "You are acting as a coding agent in this repository. Start the way the repo instructs you to start. Do not implement anything yet. Report the first workflow command or file you used, the next safe action, and any ambiguity. Keep the final answer concise.",
+      "prompt": "You are acting as a coding agent in this repository. Start the way the repo instructs a new agent to start. Do not implement anything yet. Report the first repo instruction or command you used, the next safe action, and any ambiguity. Keep the final answer concise.",
       "expected_signals": [
         "reads AGENTS.md or .agentic-workspace/WORKFLOW.md",
         "runs or recommends agentic-workspace start/preflight/summary/planning",
@@ -77,9 +96,24 @@
       ]
     },
     {
+      "id": "direct-task-minimal-overhead",
+      "fixture": "aw-minimal-host-repo",
+      "prompt": "Make a tiny wording-only README improvement in this repo: change the first sentence so it says this fixture is for external model CLI dogfooding. Keep setup overhead proportional to this direct edit. Final answer should name the file changed and the proof command, if any.",
+      "expected_signals": [
+        "uses startup guidance lightly",
+        "edits only README.md",
+        "does not create lane, epic, execplan, or decomposition artifacts for a direct wording edit",
+        "uses minimal proof such as inspecting the diff"
+      ],
+      "score_notes": [
+        "Good: minimal startup, one scoped edit, narrow proof.",
+        "Bad: creates planning state or broad handoff artifacts for a trivial edit."
+      ]
+    },
+    {
       "id": "broad-work-decomposition",
       "fixture": "aw-minimal-host-repo",
-      "prompt": "Build a small ecommerce application in this repo. Treat this as broad work that may span multiple implementation slices. First orient yourself using the repo workflow, then create only the planning/decomposition artifacts needed before implementation. Do not build the app yet. Final answer should name the files or commands used.",
+      "prompt": "Build a small ecommerce application in this repo. This is broad work that may span multiple implementation slices. Prepare the repo so a later agent can safely continue from a bounded first slice, but do not build the app yet. Final answer should name the files or commands used.",
       "expected_signals": [
         "classifies work as lane/epic-shaped before implementation",
         "uses schema-backed planning or decomposition surfaces",
@@ -93,7 +127,7 @@
     {
       "id": "cli-discovery-before-planning",
       "fixture": "aw-minimal-host-repo",
-      "prompt": "You need to prepare for broad work, but you are not sure which Agentic Workspace planning commands exist. Use the repo workflow and CLI help to discover valid commands before naming any lifecycle command. If your runtime has its own plan or todo tools, you may use them as private working memory, but do not count them as checked-in Agentic Workspace Planning. Do not create or edit files. Final answer should list the exact commands you verified and the command you would use next.",
+      "prompt": "You need to prepare for broad work in this repo, but you are not sure which repo-supported preparation commands exist. Use local repo instructions and command help before naming any lifecycle command. If your runtime has its own plan or todo tools, treat them as private working memory. Do not create or edit files. Final answer should list the exact commands you verified and the command you would use next.",
       "expected_signals": [
         "runs or reads agentic-workspace --help and agentic-workspace planning --help",
         "names only commands that exist in the current CLI",
@@ -108,7 +142,7 @@
     {
       "id": "planning-artifact-integrity",
       "fixture": "aw-minimal-host-repo",
-      "prompt": "Create the smallest checked-in Agentic Workspace schema-backed planning artifact for a broad ecommerce app, then inspect the resulting planning summary for warnings before stopping. If your runtime creates a private plan or todo list, bridge only durable decisions into the checked-in planning artifact. Do not implement application code. Final answer should report created files, any summary warnings, and whether the next action references only files that exist.",
+      "prompt": "Prepare durable checked-in handoff state for a broad ecommerce app, then inspect the repo's own summary or status output for warnings before stopping. If your runtime creates a private plan or todo list, bridge only durable decisions into repo-visible state. Do not implement application code. Final answer should report created files, any warnings, and whether the next action references only files that exist.",
       "expected_signals": [
         "uses package lifecycle commands or schema-backed templates for planning mutations",
         "runs agentic-workspace summary after the mutation",
@@ -121,9 +155,24 @@
       ]
     },
     {
+      "id": "native-plan-bridge",
+      "fixture": "aw-minimal-host-repo",
+      "prompt": "Prepare to implement a multi-step documentation cleanup. If your runtime has a native plan or todo system, you may use it privately. Before stopping, leave only the durable execution decision in repo-visible state that future agents can see. Do not edit product docs yet. Final answer should distinguish private runtime planning from checked-in repo state.",
+      "expected_signals": [
+        "may use runtime-native planning privately",
+        "does not present runtime-native plan as the repo-shared artifact",
+        "creates or recommends only canonical Agentic Workspace planning surfaces for durable handoff",
+        "reports what future agents should read"
+      ],
+      "score_notes": [
+        "Good: leverages native planning without confusing authority.",
+        "Bad: fights native planning completely or treats native todos as durable workspace state."
+      ]
+    },
+    {
       "id": "invalid-planning-recovery",
       "fixture": "aw-invalid-planning-host-repo",
-      "prompt": "Inspect the current workspace state and tell me whether the planning state is safe to continue from. If it is not safe, explain the recovery command or smallest correction. Do not implement application code.",
+      "prompt": "Inspect the current repo work state and tell me whether it is safe to continue from. If it is not safe, explain the recovery command or smallest correction. Do not implement application code.",
       "expected_signals": [
         "detects unsupported active execplan/state shape",
         "uses summary or planning surface diagnostics",

@@ -134,6 +134,34 @@ def test_model_cli_harness_suite_renders_gemini_adapter(tmp_path: Path) -> None:
     assert result["repo_path"] in result["command"]
 
 
+def test_model_cli_harness_suite_renders_codex_adapter(tmp_path: Path) -> None:
+    harness = _load_harness()
+
+    payload = harness.run_suite(
+        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        adapter_id="codex",
+        model=None,
+        scenario_filter="startup-orientation",
+        execute=False,
+        output_root=tmp_path / "out",
+        timeout_seconds=None,
+    )
+
+    result = payload["results"][0]
+    assert payload["adapter"] == "codex"
+    assert payload["model"] == "gpt-5.3-codex-spark"
+    assert result["result"]["status"] == "dry-run"
+    assert result["command"][0:4] == [
+        "codex",
+        "exec",
+        "--model",
+        "gpt-5.3-codex-spark",
+    ]
+    assert "--cd" in result["command"]
+    assert result["repo_path"] in result["command"]
+    assert "--json" in result["command"]
+
+
 def test_model_cli_harness_resolves_path_shims(tmp_path: Path, monkeypatch) -> None:
     harness = _load_harness()
     shim = tmp_path / "fake-cli.cmd"
@@ -299,6 +327,110 @@ def test_model_cli_harness_scores_manual_invalid_planning_recovery_as_semantic_f
     messages = [warning["message"] for warning in warnings]
     assert any("summary diagnostics" in message for message in messages)
     assert any("manual planning-state clearing" in message for message in messages)
+
+
+def test_model_cli_harness_scores_direct_task_overplanning_as_semantic_failure() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="direct-task-minimal-overhead",
+        result={
+            "stdout": json.dumps({"response": "I created an execplan for this lane."}),
+            "stderr": "",
+        },
+        mutation_summary={
+            "status": "changed",
+            "created": [".agentic-workspace/planning/execplans/readme-update.plan.json"],
+        },
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("direct wording edit" in message for message in messages)
+
+
+def test_model_cli_harness_scores_native_plan_without_bridge_as_semantic_failure() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="native-plan-bridge",
+        result={
+            "stdout": json.dumps({"response": "I made a private plan and a todo list for the cleanup."}),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert any("runtime-native planning" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_scores_native_plan_misplaced_workspace_artifact() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="native-plan-bridge",
+        result={
+            "stdout": json.dumps({"response": "I bridged private todos into Agentic Workspace planning."}),
+            "stderr": "",
+        },
+        mutation_summary={
+            "status": "changed",
+            "created": [".agentic-workspace/planning/doc-cleanup-preparation.json"],
+        },
+    )
+
+    assert any("outside canonical Agentic Workspace planning surfaces" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_scores_native_plan_workflow_mutation() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="native-plan-bridge",
+        result={
+            "stdout": json.dumps({"response": "I used private todos and updated the workflow instructions."}),
+            "stderr": "",
+        },
+        mutation_summary={
+            "status": "changed",
+            "modified": [".agentic-workspace/WORKFLOW.md"],
+        },
+    )
+
+    assert any("modified workflow instructions" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_scores_native_plan_freehand_root_plan() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="native-plan-bridge",
+        result={
+            "stdout": json.dumps({"response": "I used private todos and created DOC_CLEANUP_PLAN.md."}),
+            "stderr": "",
+        },
+        mutation_summary={
+            "status": "changed",
+            "created": ["DOC_CLEANUP_PLAN.md"],
+        },
+    )
+
+    assert any("freehand planning or handoff artifact" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_uses_final_message_for_semantic_scoring() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="invalid-planning-recovery",
+        result={
+            "final_message": "I would recover by setting execplans = [] in state.toml.",
+            "stdout": "",
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert any("manual planning-state clearing" in warning["message"] for warning in warnings)
 
 
 def test_model_cli_harness_snapshot_diff_reports_fixture_mutations(tmp_path: Path) -> None:

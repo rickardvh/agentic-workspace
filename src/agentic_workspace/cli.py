@@ -1310,7 +1310,8 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "Prefer checked-in Agentic Workspace plans as the shared authority for required planning.",
             (
                 "If an agent runtime is hardwired to use native plans or todos, treat them as private working memory "
-                "and bridge durable decisions into checked-in Planning before implementation, handoff, or closeout."
+                "and bridge durable decisions into checked-in Planning before implementation, handoff, or closeout; "
+                "do not edit .agentic-workspace/WORKFLOW.md as task state."
             ),
             "Do not invent the outer structure of planning-execplan/v1.",
             "Edit intent, scope, proof, and closeout content inside schema-backed checked-in records.",
