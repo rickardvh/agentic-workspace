@@ -639,6 +639,12 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["mixed_agent"]["delegated_run_guardrail"]["closeout_gate"]["lower_trust_when"][0] == (
         "target advisory review burden is high"
     )
+    assert payload["mixed_agent"]["delegated_run_guardrail"]["weak_target_escalation"]["quality_over_cost"].startswith(
+        "Cost saving is valid"
+    )
+    assert payload["mixed_agent"]["delegated_run_guardrail"]["strong_target_downrouting"]["quality_over_cost"].startswith(
+        "Down-routing is valid"
+    )
     assert payload["delegation_posture"]["canonical_doc"] == ".agentic-workspace/docs/delegation-posture-contract.md"
     assert payload["delegation_posture"]["command"] == "agentic-workspace defaults --section delegation_posture --format json"
     assert payload["delegation_posture"]["rule"] == (
@@ -657,6 +663,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["delegation_posture"]["secondary"] == [
         "Do not treat config as a scheduler.",
         "Do not delegate when the task stays cheap and direct.",
+        "Do not use weak targets for high-judgment work just to save tokens; escalate first.",
+        "Do not spend strong-agent budget on mechanical work when a safe cheaper route is configured.",
         "Do not silently rewrite ends.",
     ]
     assert payload["delegation_posture"]["capability_posture_fields"] == [
@@ -2409,6 +2417,8 @@ def test_defaults_command_reports_runtime_resolution_policy(capsys) -> None:
     assert "recommended strength" in rr["posture_source_fields"]
     assert "strong external reasoning" in rr["posture_source_fields"]
     assert len(rr["resolution_algorithm"]) >= 4
+    assert any("weak target below recommended_strength" in item for item in rr["resolution_algorithm"])
+    assert any("strong target above recommended_strength" in item for item in rr["resolution_algorithm"])
     assert rr["confidence_levels"] == ["high", "medium", "low"]
 
 
@@ -2522,6 +2532,95 @@ def test_config_command_runtime_resolution_recommends_stay_local_for_mechanical_
     assert rr["recommendation"] == "stay-local"
     assert rr["confidence"] == "high"
     assert any("mechanical-follow-through" in r for r in rr["reasons"])
+    assert rr["weak_target_guardrail"]["status"] == "inactive"
+    assert rr["downrouting_guardrail"]["status"] == "inactive"
+
+
+def test_runtime_resolution_marks_weak_target_escalation_for_boundary_work(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "suggest"',
+                "",
+                "[delegation_targets.haiku]",
+                'strength = "weak"',
+                'location = "external"',
+                "confidence = 0.7",
+                'task_fit = ["bounded docs edits"]',
+                'capability_classes = ["mechanical-follow-through"]',
+                'execution_methods = ["cli"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = cli._load_workspace_config(target_root=target)
+    rr = cli._runtime_resolution_payload(
+        config=config,
+        capability_posture={"execution class": "boundary-shaping", "recommended strength": "strong"},
+    )
+
+    haiku = rr["profile_recommendations"][0]
+    assert haiku["name"] == "haiku"
+    assert haiku["recommendation"] == "poor-fit"
+    assert haiku["capability_mismatch"] is True
+    assert haiku["required_action"] == "escalate-before-execution"
+    assert rr["weak_target_guardrail"]["status"] == "active"
+    assert rr["weak_target_guardrail"]["effective_mode"] == "suggest"
+    assert "do not execute the weak target automatically" in rr["weak_target_guardrail"]["mode_action"]
+    assert rr["weak_target_guardrail"]["mismatched_targets"][0]["name"] == "haiku"
+
+
+def test_runtime_resolution_marks_strong_target_downrouting_for_mechanical_work(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "suggest"',
+                "",
+                "[delegation_targets.haiku]",
+                'strength = "weak"',
+                'location = "external"',
+                "confidence = 0.7",
+                'task_fit = ["bounded docs edits"]',
+                'capability_classes = ["mechanical-follow-through"]',
+                'execution_methods = ["cli"]',
+                "",
+                "[delegation_targets.strong_planner]",
+                'strength = "strong"',
+                'location = "local"',
+                "confidence = 0.9",
+                'task_fit = ["architecture", "review"]',
+                'capability_classes = ["boundary-shaping", "reasoning-heavy", "mechanical-follow-through"]',
+                'execution_methods = ["internal"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = cli._load_workspace_config(target_root=target)
+    rr = cli._runtime_resolution_payload(
+        config=config,
+        capability_posture={"execution class": "mechanical-follow-through", "recommended strength": "weak"},
+    )
+
+    strong = next(item for item in rr["profile_recommendations"] if item["name"] == "strong_planner")
+    assert strong["required_action"] == "delegate-down-when-safe"
+    assert strong["overqualified_for_task"] is True
+    assert rr["downrouting_guardrail"]["status"] == "active"
+    assert rr["downrouting_guardrail"]["cheaper_fit_targets"][0]["name"] == "haiku"
+    assert "cheaper bounded executor" in rr["downrouting_guardrail"]["mode_action"]
 
 
 def test_config_command_runtime_resolution_recommends_manual_handoff_when_strong_external_preferred_and_no_external_targets(

@@ -11464,6 +11464,35 @@ def _defaults_payload() -> dict[str, Any]:
                         "explicit execution residue proving bounded scope and validations",
                     ],
                 },
+                "weak_target_escalation": {
+                    "rule": (
+                        "A weak target may save tokens only for work inside its advertised fit. When runtime_resolution "
+                        "marks a weak target below the recommended strength for boundary-shaping or reasoning-heavy work, "
+                        "the target must not execute directly; it must escalate, request a stronger planner, or return a "
+                        "compact manual handoff depending on delegation.mode."
+                    ),
+                    "mode_actions": {
+                        "off": "stay direct only for current-agent execution; do not delegate to the weak target",
+                        "manual": "prepare a strong_handoff_packet and stop for human/runtime execution",
+                        "suggest": "recommend a stronger planner or handoff packet; do not execute the weak target automatically",
+                        "auto": "route to a stronger configured target when safety allows; otherwise stop with manual-handoff",
+                    },
+                    "quality_over_cost": "Cost saving is valid only after capability fit and proof expectations remain safe.",
+                },
+                "strong_target_downrouting": {
+                    "rule": (
+                        "A strong target should not monopolize mechanical-follow-through work when a configured cheaper "
+                        "bounded executor fits the task and proof remains clear. Prefer down-routing in suggest/auto modes, "
+                        "but keep execution quality and human control ahead of token saving."
+                    ),
+                    "mode_actions": {
+                        "off": "stay direct; do not force delegation for cheap work",
+                        "manual": "prepare a compact handoff for the cheaper target and stop",
+                        "suggest": "recommend the cheaper bounded executor and keep the strong target as planner/reviewer fallback",
+                        "auto": "delegate to the cheaper bounded executor when safety allows; otherwise stay direct",
+                    },
+                    "quality_over_cost": "Down-routing is valid only when the task is bounded, mechanical, and cheaply provable.",
+                },
             },
             "success_measures": [
                 "lower long-run token cost",
@@ -11485,6 +11514,8 @@ def _defaults_payload() -> dict[str, Any]:
                     "strong external reasoning",
                 ],
                 "resolution_algorithm": [
+                    "weak target below recommended_strength on boundary-shaping or reasoning-heavy work -> escalate-before-execution; never treat the weak target as the executor of record",
+                    "strong target above recommended_strength on mechanical-follow-through work -> delegate-down-when-safe if a cheaper fit exists; keep strong planner/reviewer fallback",
                     "strong_external_reasoning='preferred' → external-delegation if external targets exist, else stronger-reasoning, else manual-handoff",
                     "execution_class in (boundary-shaping, reasoning-heavy) or recommended_strength=strong → stronger-reasoning if available, else external-delegation, else manual-handoff",
                     "execution_class=mixed → stay-local if local profiles acceptable, else stronger-reasoning",
@@ -11547,6 +11578,8 @@ def _defaults_payload() -> dict[str, Any]:
             "secondary": [
                 "Do not treat config as a scheduler.",
                 "Do not delegate when the task stays cheap and direct.",
+                "Do not use weak targets for high-judgment work just to save tokens; escalate first.",
+                "Do not spend strong-agent budget on mechanical work when a safe cheaper route is configured.",
                 "Do not silently rewrite ends.",
             ],
             "capability_posture_fields": [
@@ -13831,19 +13864,34 @@ def _capability_resolution_for_profile(
 
     score = 0
     reasons: list[str] = []
+    capability_mismatch = False
+    required_action = "execute-with-normal-proof"
+    overqualified_for_task = False
 
     if recommended_strength:
         profile_rank = _strength_rank(profile.strength)
         required_rank = _strength_rank(recommended_strength)
         if profile_rank < required_rank:
+            capability_mismatch = True
             score -= 3
             reasons.append("target strength is below the recommended strength")
+            if profile.strength == "weak" and (
+                recommended_strength == "strong" or execution_class in ("boundary-shaping", "reasoning-heavy")
+            ):
+                required_action = "escalate-before-execution"
+                reasons.append("weak target must escalate before high-judgment execution")
+            else:
+                required_action = "review-before-execution"
         elif profile.strength == recommended_strength:
             score += 3
             reasons.append("target strength matches the recommended strength")
         else:
+            overqualified_for_task = True
             score += 1
             reasons.append("target strength exceeds the recommended strength")
+            if profile.strength == "strong" and recommended_strength == "weak" and execution_class == "mechanical-follow-through":
+                required_action = "delegate-down-when-safe"
+                reasons.append("strong target should down-route mechanical work when a cheaper fit is available")
 
     location_score = _location_match_score(preferred_location=preferred_location, target_location=profile.location)
     score += location_score
@@ -13891,6 +13939,9 @@ def _capability_resolution_for_profile(
         "status": status,
         "score": score,
         "reasons": reasons,
+        "capability_mismatch": capability_mismatch,
+        "overqualified_for_task": overqualified_for_task,
+        "required_action": required_action,
     }
 
 
@@ -14001,6 +14052,9 @@ def _runtime_resolution_payload(
                 "recommendation": rec["status"],
                 "score": rec["score"],
                 "reasons": rec["reasons"],
+                "capability_mismatch": rec["capability_mismatch"],
+                "overqualified_for_task": rec["overqualified_for_task"],
+                "required_action": rec["required_action"],
             }
         )
 
@@ -14016,6 +14070,19 @@ def _runtime_resolution_payload(
     ]
     recommended_local_profiles = [
         p for p in profile_recommendations if p["recommendation"] in ("recommended", "acceptable") and p["location"] in ("local", "either")
+    ]
+    weak_target_mismatches = [
+        p for p in profile_recommendations if p["strength"] == "weak" and p.get("required_action") == "escalate-before-execution"
+    ]
+    overqualified_strong_targets = [
+        p for p in profile_recommendations if p["strength"] == "strong" and p.get("required_action") == "delegate-down-when-safe"
+    ]
+    cheaper_fit_targets = [
+        p
+        for p in profile_recommendations
+        if p["strength"] in ("weak", "medium")
+        and p["recommendation"] in ("recommended", "acceptable")
+        and execution_class == "mechanical-follow-through"
     ]
 
     recommendation: str
@@ -14118,6 +14185,95 @@ def _runtime_resolution_payload(
         "guidance": _RUNTIME_RESOLUTION_GUIDANCE[recommendation],
         "posture_source": "provided" if posture else "none",
         "resolution_categories": list(_RUNTIME_RESOLUTION_CATEGORIES),
+        "weak_target_guardrail": _weak_target_guardrail_payload(
+            local_override=local_override,
+            weak_target_mismatches=weak_target_mismatches,
+        ),
+        "downrouting_guardrail": _downrouting_guardrail_payload(
+            local_override=local_override,
+            overqualified_strong_targets=overqualified_strong_targets,
+            cheaper_fit_targets=cheaper_fit_targets,
+        ),
+    }
+
+
+def _weak_target_guardrail_payload(
+    *,
+    local_override: MixedAgentLocalOverride,
+    weak_target_mismatches: list[dict[str, Any]],
+) -> dict[str, Any]:
+    delegation_control = _delegation_control_payload(local_override)
+    effective_mode = delegation_control["effective_mode"]
+    mode_actions = {
+        "off": "do not delegate to the weak target; current executor must stay direct only if it can satisfy the task itself",
+        "manual": "prepare a strong_handoff_packet and stop for human or runtime execution",
+        "suggest": "recommend a stronger planner or compact handoff; do not execute the weak target automatically",
+        "auto": "route to a stronger configured target when safety allows; otherwise stop with manual-handoff",
+    }
+    return {
+        "status": "active" if weak_target_mismatches else "inactive",
+        "rule": (
+            "Weak targets may save tokens only when the task fits their advertised capability. "
+            "For boundary-shaping, reasoning-heavy, or strong-strength work, a weak target below recommended strength "
+            "must escalate before execution."
+        ),
+        "effective_mode": effective_mode,
+        "mode_action": mode_actions.get(effective_mode, mode_actions["suggest"]),
+        "quality_over_cost": "Token saving is valid only when it does not compromise capability fit, proof, or review trust.",
+        "mismatched_targets": [
+            {
+                "name": str(item.get("name", "")),
+                "strength": str(item.get("strength", "")),
+                "required_action": str(item.get("required_action", "")),
+                "reasons": list(item.get("reasons", [])),
+            }
+            for item in weak_target_mismatches
+        ],
+    }
+
+
+def _downrouting_guardrail_payload(
+    *,
+    local_override: MixedAgentLocalOverride,
+    overqualified_strong_targets: list[dict[str, Any]],
+    cheaper_fit_targets: list[dict[str, Any]],
+) -> dict[str, Any]:
+    delegation_control = _delegation_control_payload(local_override)
+    effective_mode = delegation_control["effective_mode"]
+    active = bool(overqualified_strong_targets and cheaper_fit_targets)
+    mode_actions = {
+        "off": "stay direct; do not force delegation for cheap work",
+        "manual": "prepare a compact handoff for the cheaper target and stop",
+        "suggest": "recommend the cheaper bounded executor and keep the strong target as planner/reviewer fallback",
+        "auto": "delegate to the cheaper bounded executor when safety allows; otherwise stay direct",
+    }
+    return {
+        "status": "active" if active else "inactive",
+        "rule": (
+            "Strong targets should down-route mechanical-follow-through work when a configured cheaper target fits the task "
+            "and validation remains clear. Strong reasoning remains the fallback for planning, review, or proof ambiguity."
+        ),
+        "effective_mode": effective_mode,
+        "mode_action": mode_actions.get(effective_mode, mode_actions["suggest"]),
+        "quality_over_cost": "Down-routing is valid only when it does not compromise capability fit, proof, or review trust.",
+        "overqualified_targets": [
+            {
+                "name": str(item.get("name", "")),
+                "strength": str(item.get("strength", "")),
+                "required_action": str(item.get("required_action", "")),
+                "reasons": list(item.get("reasons", [])),
+            }
+            for item in overqualified_strong_targets
+        ],
+        "cheaper_fit_targets": [
+            {
+                "name": str(item.get("name", "")),
+                "strength": str(item.get("strength", "")),
+                "recommendation": str(item.get("recommendation", "")),
+                "score": item.get("score", 0),
+            }
+            for item in cheaper_fit_targets
+        ],
     }
 
 

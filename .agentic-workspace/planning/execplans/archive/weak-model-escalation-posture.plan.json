@@ -1,0 +1,249 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Weak Model Escalation Posture",
+  "goal": [
+    "Make delegation targets route by capability fit: weak targets escalate out of high-judgment work, and strong targets down-route mechanical work when a safe cheaper fit exists."
+  ],
+  "non_goals": [
+    "Do not hard-code vendor-specific model names into shipped workflow policy.",
+    "Do not make local config an automatic scheduler.",
+    "Do not broaden model CLI evaluations into a full benchmark."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Expose capability mismatch and overqualification as first-class delegation posture outcomes and evaluate them for model CLI targets.",
+      "constraints": "Keep policy model-neutral and local-posture-driven; weak targets may save tokens only when safe, and strong targets should not spend premium reasoning on safely delegable mechanical work.",
+      "latitude": "Tighten defaults/config payloads, docs, harness scoring, and smoke scenarios when they directly support capability-fit escalation or down-routing.",
+      "escalation": "Escalate before changing local-config schema semantics or adding vendor-specific scheduling rules."
+    },
+    "execution": {
+      "milestone": "weak-model-escalation-posture",
+      "status": "completed",
+      "next_step": "Archive this completed plan.",
+      "proof": "uv run pytest tests/test_workspace_cli.py tests/test_model_cli_harness.py; make check"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        "scripts/model_cli_harness/run_model_cli_harness.py",
+        "tests/test_model_cli_harness.py",
+        "tools/model-cli-harness/suites/copilot-workflow-smoke.json",
+        ".agentic-workspace/docs/capability-aware-execution.md",
+        ".agentic-workspace/docs/delegation-posture-contract.md",
+        ".agentic-workspace/docs/capability-contract.json",
+        ".agentic-workspace/planning/execplans/weak-model-escalation-posture.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make weaker agents safer, make stronger reasoning more reusable, and reduce total cost without compromising quality.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Runtime/defaults payloads, docs, and model CLI harness checks now make weak-target escalation and strong-target down-routing visible.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes",
+    "validation still needed": "none",
+    "next likely slice": "none"
+  },
+  "intent_interpretation": {
+    "literal request": "Weak Model Escalation Posture",
+    "inferred intended outcome": "User request: Haiku is a weak model and should escalate beyond capability depending on delegation posture",
+    "chosen concrete what": "Add explicit weak-target escalation and strong-target down-routing guidance to runtime resolution/defaults, then add model CLI scoring for capability-fit behavior.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/cli.py, tests/test_workspace_cli.py, scripts/model_cli_harness/run_model_cli_harness.py, tests/test_model_cli_harness.py, tools/model-cli-harness/suites/copilot-workflow-smoke.json, .agentic-workspace/docs/capability-aware-execution.md, .agentic-workspace/docs/delegation-posture-contract.md, .agentic-workspace/docs/capability-contract.json, and this execplan.",
+    "max changed files": "About 10 files.",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py tests/test_model_cli_harness.py; make check",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Delegation targets should route by capability fit: weak models escalate beyond fit, strong models down-route lesser work when safe.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "The solution requires local config schema changes, runtime-specific automation, or vendor-specific model scheduling."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "User request: Haiku is a weak model and should escalate beyond capability depending on delegation posture",
+      "label": "User request: Haiku is a weak model and should escalate beyond capability depending on delegation posture",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "weak-model-escalation-posture",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    "scripts/model_cli_harness/run_model_cli_harness.py",
+    "tests/test_model_cli_harness.py",
+    "tools/model-cli-harness/suites/copilot-workflow-smoke.json",
+    ".agentic-workspace/docs/capability-aware-execution.md",
+    ".agentic-workspace/docs/delegation-posture-contract.md",
+    ".agentic-workspace/docs/capability-contract.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_model_cli_harness.py",
+    "make check"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Runtime/defaults payloads make weak-target capability mismatch and strong-target overqualification actionable.",
+    "Harness has a scenario and scoring for capability-fit escalation and down-routing.",
+    "Docs explain that token saving is valid only when task fit and proof remain safe.",
+    "Focused tests and make check pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap new-plan",
+    "what happened": "Added capability mismatch and overqualification guardrails, docs, and model CLI evaluation scoring.",
+    "scope touched": "Planned runtime-resolution, docs, and harness surfaces only.",
+    "changed surfaces": "src/agentic_workspace/cli.py; tests/test_workspace_cli.py; scripts/model_cli_harness/run_model_cli_harness.py; tests/test_model_cli_harness.py; tools/model-cli-harness/suites/copilot-workflow-smoke.json; .agentic-workspace/docs/capability-aware-execution.md; .agentic-workspace/docs/delegation-posture-contract.md; .agentic-workspace/docs/capability-contract.json",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -k runtime_resolution/delegation_posture/config_command; uv run pytest tests/test_model_cli_harness.py; make check",
+    "result for continuation": "No continuation needed.",
+    "next step": "Archive this completed plan."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive"
+  },
+  "proof_report": {
+    "validation proof": "Focused pytest and make check passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_workspace_cli.py -k runtime_resolution/delegation_posture/config_command; uv run pytest tests/test_model_cli_harness.py; make check"
+  },
+  "intent_satisfaction": {
+    "original intent": "User request: Haiku is a weak model and should escalate beyond capability depending on delegation posture",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Runtime/defaults payloads, docs, and model CLI harness now cover weak-target escalation and strong-target down-routing; focused tests and make check pass.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Capability-fit routing is symmetric: weak targets escalate high-judgment work, and strong targets down-route mechanical work when a safe cheaper fit exists.",
+    "validation confirmed": "Focused pytest and make check passed.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "Archived plan evidence only.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "archive"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The capability-fit routing slice is complete and validated.",
+    "evidence carried forward": "Focused pytest for workspace runtime resolution and model CLI harness; full make check.",
+    "reopen trigger": "Agents still execute high-judgment work through weak targets or retain strong targets for safe mechanical work without justification in future evaluations."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No durable residue beyond implemented guardrails, docs, harness scenario, and archived validation evidence.",
+          "owner": "archive",
+          "source": ""
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-02: Scaffolded by agentic-planning-bootstrap new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: User request: Haiku is a weak model and should escalate beyond capability depending on delegation posture\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Focused pytest and make check passed.\nChanged surfaces: src/agentic_workspace/cli.py; tests/test_workspace_cli.py; scripts/model_cli_harness/run_model_cli_harness.py; tests/test_model_cli_harness.py; tools/model-cli-harness/suites/copilot-workflow-smoke.json; .agentic-workspace/docs/capability-aware-execution.md; .agentic-workspace/docs/delegation-posture-contract.md; .agentic-workspace/docs/capability-contract.json\nDurable residue: none (none)\nMemory learning: none\nFollow-up: none"
+  }
+}

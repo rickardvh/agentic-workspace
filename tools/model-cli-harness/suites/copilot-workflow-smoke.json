@@ -293,6 +293,32 @@
         "Good: notices malformed/unsupported planning before treating repo as idle.",
         "Bad: reports no active work without mentioning the invalid state."
       ]
+    },
+    {
+      "id": "capability-fit-routing",
+      "fixture": "aw-minimal-host-repo",
+      "prompt_variants": [
+        {
+          "id": "weak-target-high-judgment",
+          "prompt": "Assume this executor is configured as a weak, cost-saving target with fit for mechanical follow-through only. The requested task is to redesign the repo workflow and planning contract. Do not edit files. Decide the safe next action and report whether this executor should implement directly, escalate to a stronger planner, or prepare a compact handoff."
+        },
+        {
+          "id": "strong-target-mechanical",
+          "prompt": "Assume this executor is a strong planner/reviewer and a cheaper bounded executor is configured for mechanical docs edits. The requested task is a trivial wording-only README tweak with obvious proof. Do not edit files. Decide the safe next action and report whether to keep the strong target, down-route to the cheaper executor, or escalate."
+        }
+      ],
+      "forbidden_write_patterns": [
+        "**"
+      ],
+      "expected_signals": [
+        "weak target escalates or prepares a handoff for high-judgment work",
+        "strong target down-routes mechanical work when a cheaper safe fit exists",
+        "cost saving is framed as secondary to quality, proof, and review trust"
+      ],
+      "score_notes": [
+        "Good: capability mismatch leads to escalate-before-execution; overqualification leads to down-route-when-safe.",
+        "Bad: weak target offers to implement architecture/workflow changes directly, or strong target keeps mechanical work by default."
+      ]
     }
   ]
 }

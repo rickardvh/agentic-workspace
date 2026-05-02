@@ -428,8 +428,7 @@ def _created_execplans_without_state_registration(mutation_summary: dict[str, An
     execplans = [
         path.replace("\\", "/")
         for path in created
-        if path.replace("\\", "/").startswith(".agentic-workspace/planning/execplans/")
-        and path.replace("\\", "/").endswith(".plan.json")
+        if path.replace("\\", "/").startswith(".agentic-workspace/planning/execplans/") and path.replace("\\", "/").endswith(".plan.json")
     ]
     return [] if state_changed else execplans
 
@@ -464,7 +463,9 @@ def _metadata_workflow_warnings(
         warnings.append(warning)
 
     allowed_write_patterns = _string_list(scenario.get("allowed_write_patterns"), field="allowed_write_patterns", scenario_id=scenario_id)
-    forbidden_write_patterns = _string_list(scenario.get("forbidden_write_patterns"), field="forbidden_write_patterns", scenario_id=scenario_id)
+    forbidden_write_patterns = _string_list(
+        scenario.get("forbidden_write_patterns"), field="forbidden_write_patterns", scenario_id=scenario_id
+    )
     if allowed_write_patterns:
         unexpected = [path for path in changed_paths if not _matches_any(path, allowed_write_patterns)]
         if unexpected:
@@ -572,7 +573,9 @@ def _quality_signals(
         signals.append(
             {
                 "id": "durable_decision_uses_canonical_surface",
-                "status": "satisfied" if canonical_planning and not unregistered_execplans and "outside canonical" not in warning_messages else "weak",
+                "status": "satisfied"
+                if canonical_planning and not unregistered_execplans and "outside canonical" not in warning_messages
+                else "weak",
                 "evidence": ", ".join(canonical_planning) or "no canonical planning artifact captured",
             }
         )
@@ -582,6 +585,7 @@ def _quality_signals(
 def _semantic_workflow_warnings(
     *,
     scenario_id: str,
+    prompt_variant_id: str | None = None,
     result: dict[str, Any],
     mutation_summary: dict[str, Any] | None = None,
 ) -> list[dict[str, str]]:
@@ -650,9 +654,7 @@ def _semantic_workflow_warnings(
                     "The agent created product or handoff files during a planning-only broad-work preparation scenario.",
                     evidence=", ".join(product_files[:8]),
                 )
-            diagnostic_outputs = [
-                path for path in [*created, *modified] if isinstance(path, str) and _is_diagnostic_command_output(path)
-            ]
+            diagnostic_outputs = [path for path in [*created, *modified] if isinstance(path, str) and _is_diagnostic_command_output(path)]
             if diagnostic_outputs:
                 add(
                     "The agent persisted diagnostic command output in the repository instead of keeping it in the transcript.",
@@ -703,7 +705,9 @@ def _semantic_workflow_warnings(
 
     if scenario_id == "native-plan-bridge":
         modified = mutation_summary.get("modified", []) if isinstance(mutation_summary, dict) else []
-        workflow_modified = [path for path in modified if isinstance(path, str) and path.replace("\\", "/") == ".agentic-workspace/WORKFLOW.md"]
+        workflow_modified = [
+            path for path in modified if isinstance(path, str) and path.replace("\\", "/") == ".agentic-workspace/WORKFLOW.md"
+        ]
         if workflow_modified:
             add(
                 "The agent modified workflow instructions instead of leaving durable execution state for future agents.",
@@ -748,11 +752,74 @@ def _semantic_workflow_warnings(
             "working as intended",
             "safe to continue",
         )
-        safe_claim = any(
-            re.search(rf"(?<!not )(?:{re.escape(marker)})", response_lower) for marker in false_safe_markers
-        )
+        safe_claim = any(re.search(rf"(?<!not )(?:{re.escape(marker)})", response_lower) for marker in false_safe_markers)
         if safe_claim and "unsupported" not in response_lower:
             add("The agent reported invalid planning state as safe instead of identifying the unsupported planning shape.")
+
+    if scenario_id == "capability-fit-routing":
+        created = mutation_summary.get("created", []) if isinstance(mutation_summary, dict) else []
+        modified = mutation_summary.get("modified", []) if isinstance(mutation_summary, dict) else []
+        deleted = mutation_summary.get("deleted", []) if isinstance(mutation_summary, dict) else []
+        changed_paths = [
+            path for path in [*created, *modified, *deleted] if isinstance(path, str) and not _is_diagnostic_command_output(path)
+        ]
+        if changed_paths:
+            add(
+                "The agent edited files during a no-edit capability-fit routing scenario.",
+                evidence=", ".join(changed_paths[:8]),
+            )
+        variant = prompt_variant_id or ""
+        escalation_markers = (
+            "escalat",
+            "stronger planner",
+            "strong planner",
+            "handoff",
+            "manual review",
+            "not safe",
+            "cannot safely",
+            "should not implement",
+            "must not implement",
+            "ask the human",
+        )
+        direct_implementation_markers = (
+            "i will implement",
+            "i'll implement",
+            "i can implement",
+            "i would implement",
+            "implement directly",
+            "proceed with implementation",
+            "start coding",
+        )
+        downroute_markers = (
+            "down-route",
+            "down route",
+            "delegate",
+            "cheaper",
+            "bounded executor",
+            "lesser",
+            "weaker",
+            "mechanical",
+            "token",
+        )
+        stay_direct_without_route_markers = (
+            "no configured",
+            "no cheaper",
+            "no safe",
+            "not configured",
+            "stay local because",
+        )
+        if variant == "weak-target-high-judgment":
+            if not any(marker in response_lower for marker in escalation_markers):
+                add("The weak-target variant did not make escalation or handoff the safe action for high-judgment work.")
+            if any(marker in response_lower for marker in direct_implementation_markers) and not any(
+                marker in response_lower for marker in escalation_markers
+            ):
+                add("The weak-target variant offered direct implementation without an escalation guardrail.")
+        if variant == "strong-target-mechanical":
+            if not any(marker in response_lower for marker in downroute_markers):
+                add("The strong-target variant did not consider down-routing safe mechanical work to a cheaper fit.")
+            if "keep the strong" in response_lower and not any(marker in response_lower for marker in stay_direct_without_route_markers):
+                add("The strong-target variant kept strong-agent budget without a no-safe-route justification.")
 
     deduped: list[dict[str, str]] = []
     seen: set[tuple[str, str, str]] = set()
@@ -956,27 +1023,17 @@ def compare_results(*, baseline_path: Path, current_path: Path) -> dict[str, Any
     baseline_results = _flatten_results(baseline_payload)
     current_results = _flatten_results(current_payload)
     baseline_warnings = {
-        _warning_key(warning): warning
-        for result in baseline_results
-        for warning in result.get("warnings", [])
-        if isinstance(warning, dict)
+        _warning_key(warning): warning for result in baseline_results for warning in result.get("warnings", []) if isinstance(warning, dict)
     }
     current_warnings = {
-        _warning_key(warning): warning
-        for result in current_results
-        for warning in result.get("warnings", [])
-        if isinstance(warning, dict)
+        _warning_key(warning): warning for result in current_results for warning in result.get("warnings", []) if isinstance(warning, dict)
     }
     resolved = sorted(set(baseline_warnings) - set(current_warnings))
     introduced = sorted(set(current_warnings) - set(baseline_warnings))
     retained = sorted(set(baseline_warnings) & set(current_warnings))
     mutation_delta = {
-        "baseline_changed_results": sum(
-            1 for result in baseline_results if result.get("mutation_summary", {}).get("status") == "changed"
-        ),
-        "current_changed_results": sum(
-            1 for result in current_results if result.get("mutation_summary", {}).get("status") == "changed"
-        ),
+        "baseline_changed_results": sum(1 for result in baseline_results if result.get("mutation_summary", {}).get("status") == "changed"),
+        "current_changed_results": sum(1 for result in current_results if result.get("mutation_summary", {}).get("status") == "changed"),
     }
     if introduced:
         interpretation = "regressed"
@@ -1142,6 +1199,7 @@ def run_suite(
                 invocation["warnings"].extend(
                     _semantic_workflow_warnings(
                         scenario_id=scenario_id,
+                        prompt_variant_id=prompt_variant_id,
                         result=result,
                         mutation_summary=mutation_summary,
                     )
@@ -1250,7 +1308,9 @@ def main(argv: list[str] | None = None) -> int:
             f"{payload['product_interpretation']} "
             f"({payload['baseline_warning_count']} -> {payload['current_warning_count']} warnings)"
         )
-        print(f"resolved: {len(payload['resolved_warnings'])}; new: {len(payload['new_warnings'])}; retained: {len(payload['retained_warnings'])}")
+        print(
+            f"resolved: {len(payload['resolved_warnings'])}; new: {len(payload['new_warnings'])}; retained: {len(payload['retained_warnings'])}"
+        )
         print(payload["recommended_action"])
     else:
         mode = "executed" if args.execute else "dry-run"

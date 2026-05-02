@@ -15,6 +15,7 @@ Use it when you want the repo to make delegation preference queryable without tu
 - Prefer direct execution when the task is cheap and self-sufficient.
 - Prefer a planner/implementer/validator split when a compact handoff or bounded execplan reduces cost or risk.
 - Escalate to a stronger planner when the current path is no longer safe or the task shape would otherwise force re-derivation.
+- Down-route to a cheaper bounded executor when a strong target would be overqualified for mechanical work and proof remains clear.
 - Do not silently widen the requested outcome.
 
 ## Canonical Shape
@@ -73,6 +74,23 @@ When bounded work already has a checked-in execplan, let the handoff carry one c
 - `why`: one sentence explaining why the posture fits the slice
 
 Keep this posture advisory. The runtime or local layer may resolve it against configured target profiles, but the checked-in plan must not hard-bind one vendor, machine, or exact target by default.
+
+## Capability Mismatch
+
+Target strength is a fit signal, not a status ranking.
+
+- If a weak target is below the recommended strength for boundary-shaping or reasoning-heavy work, it should escalate before execution.
+- If a strong target is above the recommended strength for mechanical-follow-through work, it should down-route when a cheaper configured target fits and validation remains narrow.
+- If no safe up-route or down-route exists, stay with the current executor and make the reason visible.
+
+Delegation posture controls how this happens:
+
+- `off`: do not force delegation; stay direct only if the current executor can satisfy the task.
+- `manual`: prepare a compact handoff and stop.
+- `suggest`: recommend the better-fit target or stronger planner, but do not execute automatically.
+- `auto`: route automatically only inside local safety and target-profile limits.
+
+Saving tokens is a valid goal only after task fit, proof expectations, and review trust remain safe.
 
 ## Relationship To Other Docs
 

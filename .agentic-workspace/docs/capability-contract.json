@@ -40,5 +40,10 @@
     "local_optimization": "allowed inside stated outcome and constraints",
     "goal_substitution": "forbidden; escalate explicitly",
     "scope_expansion": "requires blocked path or safety violation"
+  },
+  "capability_fit_rules": {
+    "weak_target_mismatch": "weak targets below the recommended strength for boundary-shaping or reasoning-heavy work escalate before execution",
+    "strong_target_overqualified": "strong targets above the recommended strength for mechanical-follow-through work down-route when a cheaper configured target fits and proof remains clear",
+    "quality_over_cost": "token saving is valid only when capability fit, proof, and review trust remain safe"
   }
 }

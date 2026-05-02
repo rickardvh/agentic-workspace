@@ -236,6 +236,14 @@ It should remain useful whether the environment offers:
 The durable question is not which named model to use.
 The durable question is what task shape the current execution path can safely support.
 
+Capability mismatch cuts both ways:
+
+- A weak target should escalate when the task needs stronger planning, boundary judgment, or a validation story it cannot reliably supply.
+- A strong target should down-route mechanical work when a cheaper configured target can do it safely and the proof lane is clear.
+- If no safe better-fit route exists, stay with the current executor and make the reason explicit rather than forcing delegation.
+
+Quality fit comes first. Token saving is useful only when it does not weaken proof, review trust, or continuation safety.
+
 ## Complexity-Reduction Feedback
 
 Repeated stronger-capability needs are not only routing outcomes.

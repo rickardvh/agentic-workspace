@@ -729,6 +729,93 @@ def test_model_cli_harness_scores_false_safe_invalid_recovery_as_semantic_failur
     assert any("reported invalid planning state as safe" in warning["message"] for warning in warnings)
 
 
+def test_model_cli_harness_scores_weak_target_direct_implementation_as_capability_failure() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="capability-fit-routing",
+        prompt_variant_id="weak-target-high-judgment",
+        result={
+            "stdout": json.dumps({"response": "I can implement directly. I will implement the workflow redesign now."}),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("did not make escalation or handoff" in message for message in messages)
+    assert any("offered direct implementation" in message for message in messages)
+
+
+def test_model_cli_harness_accepts_weak_target_escalation() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="capability-fit-routing",
+        prompt_variant_id="weak-target-high-judgment",
+        result={
+            "stdout": json.dumps(
+                {
+                    "response": (
+                        "This executor should not implement directly. The safe action is to escalate "
+                        "to a stronger planner or prepare a compact handoff."
+                    )
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert warnings == []
+
+
+def test_model_cli_harness_scores_strong_target_retaining_mechanical_work() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="capability-fit-routing",
+        prompt_variant_id="strong-target-mechanical",
+        result={"stdout": json.dumps({"response": "Keep the strong target and make the edit directly."}), "stderr": ""},
+        mutation_summary={"status": "clean"},
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("did not consider down-routing" in message for message in messages)
+    assert any("without a no-safe-route justification" in message for message in messages)
+
+
+def test_model_cli_harness_accepts_strong_target_downrouting() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="capability-fit-routing",
+        prompt_variant_id="strong-target-mechanical",
+        result={
+            "stdout": json.dumps(
+                {"response": "Down-route this mechanical docs tweak to the cheaper bounded executor; proof stays obvious."}
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert warnings == []
+
+
+def test_model_cli_harness_scores_capability_fit_scenario_mutations() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="capability-fit-routing",
+        prompt_variant_id="weak-target-high-judgment",
+        result={"stdout": json.dumps({"response": "Escalate to a stronger planner."}), "stderr": ""},
+        mutation_summary={"status": "changed", "modified": ["README.md"]},
+    )
+
+    assert any("edited files during a no-edit capability-fit" in warning["message"] for warning in warnings)
+
+
 def test_model_cli_harness_does_not_score_negated_safe_invalid_recovery_as_false_safe() -> None:
     harness = _load_harness()
 
