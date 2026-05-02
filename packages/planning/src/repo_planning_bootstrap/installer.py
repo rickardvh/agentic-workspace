@@ -1559,6 +1559,17 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
     warnings.extend(_unsupported_planning_state_activation_shape_warnings(target_root=target_root, state=state))
     warnings.extend(_planning_state_v1_warnings(target_root=target_root, state=state))
     warnings.extend(_completed_execplan_warnings(completed_execplans))
+    warnings.extend(
+        _unregistered_execplan_warnings(
+            target_root=target_root,
+            state=state,
+            plan_files=plan_files,
+            active_items=active_items,
+            queued_items=queued_items,
+            roadmap_lanes=roadmap_lanes,
+            roadmap_candidates=roadmap_candidates,
+        )
+    )
     warnings.extend(_execplan_next_action_warnings(target_root=target_root, plan_files=plan_files))
     drift = _detect_payload_drift(target_root)
     warnings.extend(drift)
@@ -3937,6 +3948,114 @@ def _unsupported_planning_state_activation_shape_warnings(
                 }
             )
     return warnings
+
+
+def _unregistered_execplan_warnings(
+    *,
+    target_root: Path,
+    state: dict[str, Any] | None,
+    plan_files: list[Path],
+    active_items: list[dict[str, Any]],
+    queued_items: list[dict[str, Any]],
+    roadmap_lanes: list[dict[str, Any]],
+    roadmap_candidates: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    registered_refs = _registered_execplan_refs(
+        target_root=target_root,
+        state=state,
+        planning_items=[*active_items, *queued_items, *roadmap_lanes, *roadmap_candidates],
+    )
+    warnings: list[dict[str, str]] = []
+    for path in sorted(plan_files):
+        if path.name in {"README.md", "TEMPLATE.md", "TEMPLATE.plan.json"}:
+            continue
+        relative = path.relative_to(target_root).as_posix()
+        if _execplan_equivalent_refs(relative) & registered_refs:
+            continue
+        warnings.append(
+            {
+                "warning_class": "execplan_unregistered",
+                "path": relative,
+                "message": (
+                    "Live execplan file is not registered in planning state or TODO linkage; agents may miss it and "
+                    "`summary` cannot treat it as reliable continuation state."
+                ),
+                "suggested_fix": (
+                    "Register the plan with `agentic-planning-bootstrap new-plan --id <id> --title <title> --target . "
+                    "--activate --format json`, migrate an existing state row to point at this file, or archive it if it is closed."
+                ),
+            }
+        )
+    return warnings
+
+
+def _registered_execplan_refs(
+    *,
+    target_root: Path,
+    state: dict[str, Any] | None,
+    planning_items: list[dict[str, Any]],
+) -> set[str]:
+    refs: set[str] = set()
+
+    def add_ref(raw: object) -> None:
+        if not isinstance(raw, str) or not raw.strip():
+            return
+        normalized = _normalize_execplan_ref(target_root=target_root, raw=raw)
+        if normalized:
+            refs.update(_execplan_equivalent_refs(normalized))
+
+    for item in planning_items:
+        for key in ("surface", "path"):
+            add_ref(item.get(key))
+        raw_refs = item.get("refs", [])
+        if isinstance(raw_refs, list):
+            for ref in raw_refs:
+                add_ref(ref)
+
+    if isinstance(state, dict):
+        for section_name in ("active", "queued"):
+            section = state.get(section_name)
+            if not isinstance(section, dict):
+                continue
+            raw_execplans = section.get("execplans", [])
+            if not isinstance(raw_execplans, list):
+                continue
+            for raw in raw_execplans:
+                if isinstance(raw, str):
+                    add_ref(raw)
+                elif isinstance(raw, dict):
+                    add_ref(raw.get("surface"))
+                    add_ref(raw.get("path"))
+
+    return refs
+
+
+def _normalize_execplan_ref(*, target_root: Path, raw: str) -> str:
+    value = raw.strip().replace("\\", "/")
+    match = re.search(r"\.agentic-workspace/planning/execplans/[A-Za-z0-9._/\-]+\.(?:md|plan\.json)", value)
+    if match:
+        value = match.group(0)
+    elif value.endswith((".md", ".plan.json")) and "/" not in value:
+        value = f".agentic-workspace/planning/execplans/{value}"
+    elif Path(value).is_absolute():
+        try:
+            value = Path(value).resolve().relative_to(target_root.resolve()).as_posix()
+        except ValueError:
+            return ""
+    if not value.startswith(".agentic-workspace/planning/execplans/"):
+        return ""
+    if "/archive/" in value:
+        return ""
+    return value
+
+
+def _execplan_equivalent_refs(relative_path: str) -> set[str]:
+    refs = {relative_path}
+    if relative_path.endswith(".plan.json"):
+        refs.add(relative_path[: -len(".plan.json")] + ".md")
+    elif relative_path.endswith(".md"):
+        refs.add(relative_path[: -len(".md")] + ".plan.json")
+    return refs
 
 
 def _planning_handoff_schema() -> dict[str, Any]:

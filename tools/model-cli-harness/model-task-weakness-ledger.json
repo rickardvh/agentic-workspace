@@ -44,7 +44,29 @@
       "product_owner": "Memory workflow and harness maintainers",
       "next_probe": "Run memory-consult-before-edit and memory-learning-capture across available adapters.",
       "priority": "medium"
+    },
+    {
+      "id": "unregistered-live-execplan-silent-summary",
+      "area": "planning",
+      "scenario": "planning-artifact-integrity",
+      "models": [
+        "claude-haiku-4.5"
+      ],
+      "status": "fixed-monitoring",
+      "failure_classes": [
+        "created canonical execplan without state registration",
+        "summary reported no warning for orphan live execplan",
+        "harness missed summary command evidence in full Copilot transcript",
+        "model created freehand workspace docs during planning-only handoff"
+      ],
+      "evidence_refs": [
+        "scratch/model-cli-harness/20260502T185547Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260502T190739Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
+        "tools/model-cli-harness/suites/copilot-workflow-smoke.json::planning-artifact-integrity"
+      ],
+      "product_owner": "Planning summary and model CLI harness maintainers",
+      "next_probe": "Run planning-artifact-integrity after summary health changes and confirm the model registers state.toml or sees execplan_unregistered.",
+      "priority": "high"
     }
   ]
 }
-

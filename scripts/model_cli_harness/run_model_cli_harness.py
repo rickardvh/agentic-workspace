@@ -350,6 +350,15 @@ def _response_text(result: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
+def _full_response_text(result: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for key in ("final_message", "stdout", "stderr"):
+        value = result.get(key)
+        if isinstance(value, str) and value.strip():
+            parts.append(value)
+    return "\n".join(parts)
+
+
 def _last_copilot_transcript_answer(text: str) -> str:
     matches = list(re.finditer(r"^### .+ Copilot\s*$", text, flags=re.MULTILINE))
     if not matches:
@@ -398,6 +407,33 @@ def _matches_any(path: str, patterns: list[str]) -> bool:
     return any(fnmatch.fnmatch(normalized, pattern.replace("\\", "/")) for pattern in patterns)
 
 
+def _contains_forbidden_phrase(text: str, phrase: str) -> bool:
+    lowered_phrase = phrase.lower()
+    if lowered_phrase.startswith("/"):
+        return re.search(rf"(?<![\w.-]){re.escape(lowered_phrase)}(?![\w.-])", text) is not None
+    return lowered_phrase in text
+
+
+def _is_diagnostic_command_output(path: str) -> bool:
+    name = Path(path.replace("\\", "/")).name.lower()
+    return bool(re.fullmatch(r"summary(?:[_-]full|[_-]?\d*)?\.json", name))
+
+
+def _created_execplans_without_state_registration(mutation_summary: dict[str, Any] | None) -> list[str]:
+    if not isinstance(mutation_summary, dict):
+        return []
+    created = [path for path in mutation_summary.get("created", []) if isinstance(path, str)]
+    changed = _changed_paths(mutation_summary)
+    state_changed = ".agentic-workspace/planning/state.toml" in changed
+    execplans = [
+        path.replace("\\", "/")
+        for path in created
+        if path.replace("\\", "/").startswith(".agentic-workspace/planning/execplans/")
+        and path.replace("\\", "/").endswith(".plan.json")
+    ]
+    return [] if state_changed else execplans
+
+
 def _string_list(value: Any, *, field: str, scenario_id: str) -> list[str]:
     if value is None:
         return []
@@ -415,7 +451,7 @@ def _metadata_workflow_warnings(
 ) -> list[dict[str, str]]:
     scenario_id = str(scenario.get("id", "<unknown>"))
     changed_paths = _changed_paths(mutation_summary)
-    response_lower = _response_text(result).lower()
+    response_lower = _full_response_text(result).lower()
     warnings: list[dict[str, str]] = []
 
     def add(message: str, *, evidence: str = "") -> None:
@@ -450,7 +486,7 @@ def _metadata_workflow_warnings(
         field="forbidden_response_phrases",
         scenario_id=scenario_id,
     ):
-        if forbidden.lower() in response_lower:
+        if _contains_forbidden_phrase(response_lower, forbidden):
             add("The agent reported a forbidden response phrase for this scenario.", evidence=forbidden)
     for pattern in _string_list(
         scenario.get("required_artifact_patterns"),
@@ -499,6 +535,8 @@ def _quality_signals(
             }
         )
     if scenario_id == "broad-work-decomposition":
+        diagnostic_outputs = [path for path in non_planning_changes if _is_diagnostic_command_output(path)]
+        product_or_handoff_changes = [path for path in non_planning_changes if path not in diagnostic_outputs]
         signals.append(
             {
                 "id": "broad_task_created_durable_planning",
@@ -509,15 +547,32 @@ def _quality_signals(
         signals.append(
             {
                 "id": "planning_only_avoided_product_scaffold",
-                "status": "satisfied" if not non_planning_changes else "weak",
-                "evidence": ", ".join(non_planning_changes) or "only planning paths changed",
+                "status": "satisfied" if not product_or_handoff_changes else "weak",
+                "evidence": ", ".join(product_or_handoff_changes) or "no product or handoff files changed",
             }
         )
+        if diagnostic_outputs:
+            signals.append(
+                {
+                    "id": "diagnostic_output_not_persisted",
+                    "status": "weak",
+                    "evidence": ", ".join(diagnostic_outputs),
+                }
+            )
+        else:
+            signals.append(
+                {
+                    "id": "diagnostic_output_not_persisted",
+                    "status": "satisfied",
+                    "evidence": "no summary output files changed",
+                }
+            )
     if scenario_id in {"planning-artifact-integrity", "native-plan-bridge"}:
+        unregistered_execplans = _created_execplans_without_state_registration(mutation_summary)
         signals.append(
             {
                 "id": "durable_decision_uses_canonical_surface",
-                "status": "satisfied" if canonical_planning and "outside canonical" not in warning_messages else "weak",
+                "status": "satisfied" if canonical_planning and not unregistered_execplans and "outside canonical" not in warning_messages else "weak",
                 "evidence": ", ".join(canonical_planning) or "no canonical planning artifact captured",
             }
         )
@@ -534,6 +589,7 @@ def _semantic_workflow_warnings(
         return []
     response = _response_text(result)
     response_lower = response.lower()
+    full_response_lower = _full_response_text(result).lower()
     warnings: list[dict[str, str]] = []
 
     def add(message: str, *, evidence: str = "") -> None:
@@ -573,6 +629,12 @@ def _semantic_workflow_warnings(
                 "The agent created likely planning artifacts outside canonical Agentic Workspace planning surfaces.",
                 evidence=", ".join(misplaced),
             )
+        unregistered_execplans = _created_execplans_without_state_registration(mutation_summary)
+        if unregistered_execplans:
+            add(
+                "The agent created canonical execplan files without registering them in planning state.",
+                evidence=", ".join(unregistered_execplans[:8]),
+            )
         if scenario_id == "broad-work-decomposition":
             modified = mutation_summary.get("modified", []) if isinstance(mutation_summary, dict) else []
             product_files = [
@@ -580,12 +642,21 @@ def _semantic_workflow_warnings(
                 for path in [*created, *modified]
                 if isinstance(path, str)
                 and not path.replace("\\", "/").startswith(".agentic-workspace/planning/")
+                and not _is_diagnostic_command_output(path)
                 and path.replace("\\", "/") not in {"TODO.md", "ROADMAP.md"}
             ]
             if product_files:
                 add(
                     "The agent created product or handoff files during a planning-only broad-work preparation scenario.",
                     evidence=", ".join(product_files[:8]),
+                )
+            diagnostic_outputs = [
+                path for path in [*created, *modified] if isinstance(path, str) and _is_diagnostic_command_output(path)
+            ]
+            if diagnostic_outputs:
+                add(
+                    "The agent persisted diagnostic command output in the repository instead of keeping it in the transcript.",
+                    evidence=", ".join(diagnostic_outputs[:8]),
                 )
             canonical_planning_created = [
                 path
@@ -611,7 +682,7 @@ def _semantic_workflow_warnings(
             )
         ):
             add("The agent claimed planning summary inspection was unavailable instead of running Agentic Workspace summary.")
-        if scenario_id == "planning-artifact-integrity" and "agentic-workspace summary" not in response_lower:
+        if scenario_id == "planning-artifact-integrity" and "agentic-workspace summary" not in full_response_lower:
             add("The agent did not report running `agentic-workspace summary` after creating planning state.")
 
     if scenario_id == "direct-task-minimal-overhead":
@@ -708,7 +779,8 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
     stderr = result.get("stderr")
     stdout_text = stdout if isinstance(stdout, str) else ""
     stderr_text = stderr if isinstance(stderr, str) else ""
-    combined_text = f"{stdout_text}\n{stderr_text}"
+    final_message_text = result.get("final_message") if isinstance(result.get("final_message"), str) else ""
+    combined_text = f"{stdout_text}\n{stderr_text}\n{final_message_text}"
     if isinstance(returncode, int) and returncode != 0:
         warnings.append(
             {
@@ -749,6 +821,21 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
             {
                 "warning_class": "model_cli_provider_error",
                 "message": "The model CLI reported provider or API errors during execution.",
+            }
+        )
+    if "Permission denied and could not request permission from user" in combined_text:
+        warnings.append(
+            {
+                "warning_class": "model_cli_permission_denied",
+                "message": "The model CLI attempted an operation outside its granted permissions.",
+            }
+        )
+    if re.search(r"\b[A-Za-z]:\\temp\\", combined_text, flags=re.IGNORECASE):
+        warnings.append(
+            {
+                "warning_class": "model_cli_external_output_attempt",
+                "message": "The model CLI attempted to write temporary output outside the copied scenario repository.",
+                "paths": "drive-root-temp",
             }
         )
     if mutation_summary and mutation_summary.get("status") == "changed":
@@ -817,6 +904,8 @@ def _classify_suite_findings(results: list[dict[str, Any]]) -> dict[str, Any]:
     for result in results:
         for warning in result.get("warnings", []):
             if not isinstance(warning, dict):
+                continue
+            if warning.get("warning_class") == "model_cli_fixture_mutation":
                 continue
             occurrences.setdefault(_warning_key(warning), []).append(
                 {

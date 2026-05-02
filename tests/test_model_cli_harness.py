@@ -288,6 +288,29 @@ def test_model_cli_harness_warns_on_runtime_failures_and_mutations(tmp_path: Pat
     }.issubset({warning["warning_class"] for warning in warnings})
 
 
+def test_model_cli_harness_warns_on_permission_denied_external_output_attempt(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._execution_warnings(
+        result={
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "",
+            "final_message": (
+                "Permission denied and could not request permission from user while writing " + "C:" + "\\temp\\handoff_report.txt."
+            ),
+        },
+        repo_path=repo,
+        mutation_summary={"status": "clean"},
+    )
+
+    classes = {warning["warning_class"] for warning in warnings}
+    assert "model_cli_permission_denied" in classes
+    assert "model_cli_external_output_attempt" in classes
+
+
 def test_model_cli_harness_skips_semantic_scoring_when_model_did_not_answer() -> None:
     harness = _load_harness()
 
@@ -344,6 +367,49 @@ def test_model_cli_harness_scores_misplaced_planning_artifacts_as_semantic_failu
     messages = [warning["message"] for warning in warnings]
     assert any("outside canonical Agentic Workspace planning surfaces" in message for message in messages)
     assert any("summary inspection was unavailable" in message for message in messages)
+
+
+def test_model_cli_harness_scores_unregistered_execplan_as_semantic_failure() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="planning-artifact-integrity",
+        result={"stdout": json.dumps({"response": "Created a clean execplan and summary has zero warnings."}), "stderr": ""},
+        mutation_summary={
+            "status": "changed",
+            "created": [".agentic-workspace/planning/execplans/ecommerce.plan.json"],
+        },
+    )
+
+    assert any("without registering them in planning state" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_counts_summary_command_from_full_transcript() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="planning-artifact-integrity",
+        result={
+            "final_message": (
+                "### Copilot\n"
+                "Running validation.\n\n"
+                "```powershell\nagentic-workspace summary --target . --format json\n```\n\n"
+                "### Copilot\n"
+                "Created durable planning state. Warnings: 0."
+            ),
+            "stdout": "",
+            "stderr": "",
+        },
+        mutation_summary={
+            "status": "changed",
+            "created": [
+                ".agentic-workspace/planning/execplans/ecommerce.plan.json",
+                ".agentic-workspace/planning/state.toml",
+            ],
+        },
+    )
+
+    assert not any("did not report running `agentic-workspace summary`" in warning["message"] for warning in warnings)
 
 
 def test_model_cli_harness_scores_broad_prep_product_files_as_semantic_failure() -> None:
@@ -422,6 +488,78 @@ def test_model_cli_harness_metadata_scoring_warns_on_write_and_response_rules(tm
     assert any("required artifact pattern" in message for message in messages)
 
 
+def test_model_cli_harness_metadata_scoring_uses_full_transcript_for_required_commands(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    plan = repo / ".agentic-workspace" / "planning" / "execplans" / "ecommerce.plan.json"
+    plan.parent.mkdir(parents=True)
+    plan.write_text("{}", encoding="utf-8")
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "planning-artifact-integrity",
+            "allowed_write_patterns": [".agentic-workspace/planning/**"],
+            "required_command_mentions": ["agentic-workspace summary"],
+            "required_artifact_patterns": [".agentic-workspace/planning/execplans/*.plan.json"],
+        },
+        result={
+            "final_message": "Final answer: durable planning created.",
+            "stdout": "tool command: agentic-workspace summary --target . --format json",
+            "stderr": "",
+        },
+        mutation_summary={
+            "status": "changed",
+            "created": [
+                ".agentic-workspace/planning/execplans/ecommerce.plan.json",
+                ".agentic-workspace/docs/system-intent-contract.md",
+            ],
+        },
+        repo_path=repo,
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("outside the scenario's allowed write patterns" in message for message in messages)
+    assert not any("required command" in message for message in messages)
+
+
+def test_model_cli_harness_forbidden_slash_phrase_does_not_match_planning_paths(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "broad-work-decomposition",
+            "forbidden_response_phrases": ["/plan"],
+        },
+        result={
+            "stdout": json.dumps({"response": "Created .agentic-workspace/planning/execplans/ecommerce.plan.json."}),
+            "stderr": "",
+        },
+        mutation_summary={"status": "changed", "created": [".agentic-workspace/planning/execplans/ecommerce.plan.json"]},
+        repo_path=repo,
+    )
+
+    assert warnings == []
+
+
+def test_model_cli_harness_scores_persisted_summary_outputs_as_diagnostic_residue() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="broad-work-decomposition",
+        result={"stdout": json.dumps({"response": "Created canonical planning and verified summary."}), "stderr": ""},
+        mutation_summary={
+            "status": "changed",
+            "created": [".agentic-workspace/planning/execplans/ecommerce.plan.json", "summary.json", "summary_full.json"],
+        },
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("persisted diagnostic command output" in message for message in messages)
+    assert not any("product or handoff files" in message for message in messages)
+
+
 def test_model_cli_harness_quality_signals_capture_proportionality() -> None:
     harness = _load_harness()
 
@@ -451,6 +589,25 @@ def test_model_cli_harness_quality_signals_capture_proportionality() -> None:
     ]
     assert any(signal["id"] == "broad_task_created_durable_planning" and signal["status"] == "satisfied" for signal in broad)
     assert any(signal["id"] == "planning_only_avoided_product_scaffold" and signal["status"] == "weak" for signal in broad)
+
+
+def test_model_cli_harness_quality_signals_separate_diagnostic_residue() -> None:
+    harness = _load_harness()
+
+    signals = harness._quality_signals(
+        scenario_id="broad-work-decomposition",
+        mutation_summary={
+            "status": "changed",
+            "created": [
+                ".agentic-workspace/planning/execplans/ecommerce.plan.json",
+                "summary.json",
+            ],
+        },
+        warnings=[],
+    )
+
+    assert any(signal["id"] == "planning_only_avoided_product_scaffold" and signal["status"] == "satisfied" for signal in signals)
+    assert any(signal["id"] == "diagnostic_output_not_persisted" and signal["status"] == "weak" for signal in signals)
 
 
 def test_model_cli_harness_scores_inaccessible_workflow_as_semantic_failure() -> None:
@@ -854,6 +1011,28 @@ def test_model_cli_harness_classifies_repeated_findings_across_prompt_variants()
 
     finding = classification["findings"][0]
     assert "repeated_across_prompts" in finding["classification"]
+
+
+def test_model_cli_harness_ignores_expected_fixture_mutation_in_finding_classification() -> None:
+    harness = _load_harness()
+
+    classification = harness._classify_suite_findings(
+        [
+            {
+                "scenario_id": "direct-task-minimal-overhead",
+                "prompt_variant_id": "default",
+                "adapter_id": "copilot",
+                "model": "claude-haiku-4.5",
+                "warnings": [
+                    {"warning_class": "model_cli_fixture_mutation", "message": "changed"},
+                    {"warning_class": "model_cli_permission_denied", "message": "denied"},
+                ],
+            }
+        ]
+    )
+
+    assert classification["finding_count"] == 1
+    assert "model_cli_permission_denied" in classification["findings"][0]["warning_key"]
 
 
 def test_model_cli_harness_compares_before_after_runs(tmp_path: Path) -> None:

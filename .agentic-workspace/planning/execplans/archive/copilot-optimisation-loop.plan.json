@@ -1,0 +1,253 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Copilot Optimisation Loop",
+  "goal": [
+    "Run several Copilot-focused model CLI harness optimisation loops, fix actionable product or harness findings, and route remaining findings into issues or the weakness ledger."
+  ],
+  "non_goals": [
+    "Do not run a full cross-model benchmark.",
+    "Do not make external model calls part of ordinary validation.",
+    "Do not change shipped host-repo runtime behavior unless a Copilot finding clearly requires it."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Use the updated harness to run real Copilot scenarios, inspect the outputs dynamically, implement clear optimisations, rerun focused probes, and preserve unresolved findings.",
+      "constraints": "Keep scope bounded to model CLI harness, Copilot evaluation fixtures/scenarios/docs, weakness ledger, and any small workflow affordance directly justified by a finding.",
+      "latitude": "Choose scenarios dynamically, ask Copilot follow-up questions when useful, and fix harness/product ambiguity when evidence supports it.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "copilot-optimisation-loop",
+      "status": "completed",
+      "next_step": "Run Copilot harness scenarios, inspect warning output and transcripts, and implement the first actionable optimisation.",
+      "proof": "Focused harness tests plus make check; executed Copilot runs are dogfooding evidence, not deterministic pass/fail validation."
+    },
+    "scope": {
+      "touched": [
+        "scripts/model_cli_harness/run_model_cli_harness.py",
+        "tools/model-cli-harness/",
+        "docs/maintainer/model-cli-dogfooding-harness.md",
+        "tests/test_model_cli_harness.py",
+        ".agentic-workspace/planning/execplans/copilot-optimisation-loop.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "User request: run more optimisation loops focused on Copilot",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "uv run pytest tests/test_model_cli_harness.py and make check passed.",
+    "validation still needed": "none for this slice",
+    "next likely slice": "monitor future Copilot runs through the weakness ledger"
+  },
+  "intent_interpretation": {
+    "literal request": "Copilot Optimisation Loop",
+    "inferred intended outcome": "User request: run more optimisation loops focused on Copilot",
+    "chosen concrete what": "Run Copilot on startup, broad prep, planning integrity, native-plan bridge, and Memory scenarios; fix repeated or high-confidence weaknesses; rerun targeted probes.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "scripts/model_cli_harness/, tools/model-cli-harness/, docs/maintainer/model-cli-dogfooding-harness.md, tests/test_model_cli_harness.py, and this execplan. Small package workflow/docs changes only if directly justified by the Copilot findings.",
+    "max changed files": "About 12 files before asking.",
+    "required validation commands": "uv run pytest tests/test_model_cli_harness.py; make check",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "User request: run more optimisation loops focused on Copilot",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "User request: run more optimisation loops focused on Copilot",
+      "label": "User request: run more optimisation loops focused on Copilot",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "copilot-optimisation-loop",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed Copilot optimisation loop."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "scripts/model_cli_harness/run_model_cli_harness.py",
+    "tools/model-cli-harness/",
+    "docs/maintainer/model-cli-dogfooding-harness.md",
+    "tests/test_model_cli_harness.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_model_cli_harness.py",
+    "make check"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "At least two executed Copilot scenario loops are inspected.",
+    "Actionable package or harness findings are fixed immediately.",
+    "Remaining non-immediate findings are routed into GitHub issues or the weakness ledger.",
+    "Focused tests and make check pass before push."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap new-plan",
+    "what happened": "Ran Copilot-focused model CLI optimisation loops, fixed package and harness findings, and recorded fixed-monitoring evidence in the weakness ledger.",
+    "scope touched": "planning summary health, model CLI harness scoring, Copilot workflow smoke suite, weakness ledger, and focused tests.",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; scripts/model_cli_harness/run_model_cli_harness.py; tests/test_model_cli_harness.py; tools/model-cli-harness/",
+    "validations run": "uv run pytest tests/test_model_cli_harness.py; make check",
+    "result for continuation": "no immediate continuation needed; monitor fixed weaknesses in future model CLI runs.",
+    "next step": "Archive this completed plan."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "respected",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_model_cli_harness.py and make check passed.",
+    "proof achieved now": "focused harness tests and full repository check passed.",
+    "evidence for \"proof achieved\" state": "make check completed successfully after formatting and absolute-path guard fixes."
+  },
+  "intent_satisfaction": {
+    "original intent": "User request: run more optimisation loops focused on Copilot",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Ran multiple Copilot planning and memory optimisation loops; fixed planning summary orphan execplan detection and harness scoring false positives; make check passed.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Copilot model CLI optimisation loop completed with package summary and harness scoring improvements.",
+    "validation confirmed": "uv run pytest tests/test_model_cli_harness.py; make check",
+    "follow-on routed to": "tools/model-cli-harness/model-task-weakness-ledger.json",
+    "post-work posterity capture": "Fixed-monitoring entry records unregistered execplan, transcript command evidence, and freehand workspace docs findings.",
+    "knowledge promoted (Memory/Docs/Config)": "weakness ledger",
+    "resume from": "future model CLI harness runs"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Requested Copilot-focused optimisation loop is complete and remaining findings are captured in the weakness ledger.",
+    "evidence carried forward": "uv run pytest tests/test_model_cli_harness.py; make check; Copilot planning-artifact-integrity rerun produced no actionable findings beyond expected fixture mutation after evaluator tightening.",
+    "reopen trigger": "Reopen if future Copilot runs again create unregistered execplans, freehand workspace docs, or summary command evidence is mis-scored."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Discard per-run transcript detail; scratch harness outputs remain local dogfooding evidence.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "tools/model-cli-harness/model-task-weakness-ledger.json",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "weakness ledger",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-02: Scaffolded by agentic-planning-bootstrap new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: User request: run more optimisation loops focused on Copilot\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest tests/test_model_cli_harness.py and make check passed.\nChanged surfaces: packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; scripts/model_cli_harness/run_model_cli_harness.py; tests/test_model_cli_harness.py; tools/model-cli-harness/\nDurable residue: none (none)\nMemory learning: none\nFollow-up: tools/model-cli-harness/model-task-weakness-ledger.json"
+  }
+}

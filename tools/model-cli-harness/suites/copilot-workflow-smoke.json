@@ -193,6 +193,9 @@
       "id": "planning-artifact-integrity",
       "fixture": "aw-minimal-host-repo",
       "prompt": "Prepare durable checked-in handoff state for a broad ecommerce app, then inspect the repo's own summary or status output for warnings before stopping. If your runtime creates a private plan or todo list, bridge only durable decisions into repo-visible state. Do not implement application code. Final answer should report created files, any warnings, and whether the next action references only files that exist.",
+      "allowed_write_patterns": [
+        ".agentic-workspace/planning/**"
+      ],
       "expected_signals": [
         "uses package lifecycle commands or schema-backed templates for planning mutations",
         "runs agentic-workspace summary after the mutation",

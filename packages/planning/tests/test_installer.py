@@ -2286,6 +2286,69 @@ def test_planning_summary_warns_for_noncanonical_records_directory(tmp_path: Pat
     assert summary["planning_surface_health"]["status"] == "not-clean"
 
 
+def test_planning_summary_warns_for_unregistered_live_execplan(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/execplans/orphan-lane.plan.json",
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "active_milestone": {
+                    "status": "active",
+                },
+            },
+            indent=2,
+        ),
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    warnings = summary["planning_surface_health"]["warnings"]
+    warning = next(warning for warning in warnings if warning["warning_class"] == "execplan_unregistered")
+    assert warning["path"] == ".agentic-workspace/planning/execplans/orphan-lane.plan.json"
+    assert "new-plan" in warning["suggested_fix"]
+    assert summary["planning_surface_health"]["status"] == "not-clean"
+
+
+def test_planning_summary_treats_markdown_and_canonical_execplan_siblings_as_registered(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/plan-alpha.md", why_now = "legacy markdown linkage remains accepted." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.md", _minimal_execplan())
+    _write(
+        tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json",
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "active_milestone": {
+                    "status": "active",
+                },
+            },
+            indent=2,
+        ),
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    warnings = summary["planning_surface_health"]["warnings"]
+    assert not any(warning["warning_class"] == "execplan_unregistered" for warning in warnings)
+
+
 def test_planning_cli_create_review_writes_valid_review_record(tmp_path: Path, capsys) -> None:
     result = planning_cli.main(
         [
