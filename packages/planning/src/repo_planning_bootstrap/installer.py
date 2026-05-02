@@ -5,6 +5,7 @@ import importlib.util
 import json
 import re
 import shutil
+import subprocess
 import tomllib
 from dataclasses import dataclass, field
 from datetime import date
@@ -1561,7 +1562,6 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
     warnings.extend(_execplan_next_action_warnings(target_root=target_root, plan_files=plan_files))
     drift = _detect_payload_drift(target_root)
     warnings.extend(drift)
-    planning_surface_health = _planning_surface_health(warnings)
 
     active_contract = _active_intent_contract(
         target_root=target_root,
@@ -1578,6 +1578,8 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
         active_contract=active_contract,
         resumable_contract=resumable_contract,
     )
+    warnings.extend(_prep_only_changed_path_warnings(target_root=target_root, planning_record=planning_record))
+    planning_surface_health = _planning_surface_health(warnings)
     follow_through_contract = _active_follow_through_contract(
         target_root=target_root,
         planning_record=planning_record,
@@ -2380,6 +2382,17 @@ def _execution_readiness_payload(
         "planning_only_rule": (
             "When asked to prepare, plan, decompose, hand off, or not implement yet, do not create product source, package, schema, or app files."
         ),
+        "prep_only_route": {
+            "use_when": "Asked to prepare broad work for later continuation, without implementation.",
+            "required_action": "Create or continue canonical checked-in Planning state, verify with summary, then stop; do not stop at a proposal or start implementation.",
+            "preferred_command": "agentic-planning-bootstrap new-plan --id <id> --title <title> --activate --prep-only",
+            "after_write": "agentic-workspace summary --target . --format json",
+            "do_not_do": [
+                "do not ask for confirmation instead of leaving durable state when the user already asked you to prepare the repo",
+                "do not create README, HANDOFF, SLICES, package, dependency, source, public, database, schema, or app scaffold files",
+                "do not route durable state to .agentic-workspace/planning/records/",
+            ],
+        },
     }
     if active_execplans:
         return {
@@ -2719,12 +2732,27 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         "no active planning record" if todo.get("active_count", 0) == 0 and execplans.get("active_count", 0) == 0 else None
     )
     broad_work_planning_guard = dict(execution_readiness.get("broad_work_planning_guard", {}))
+    prep_only_route = broad_work_planning_guard.get("prep_only_route", {})
+    compact_prep_only_route = {}
+    if isinstance(prep_only_route, dict):
+        compact_prep_only_route = {
+            "required_action": "Create Planning state, verify, then stop; do not stop at a proposal.",
+            "do_not_do": [
+                "no README/HANDOFF/SLICES/package/src/public",
+                "no .agentic-workspace/planning/records/",
+            ],
+        }
+    if broad_work_planning_guard:
+        broad_work_planning_guard["applies_to"] = "high-assurance/broad work"
+        broad_work_planning_guard["durable_state_rule"] = "For repo-visible durable state, use checked-in planning, not root PLAN.md."
+        broad_work_planning_guard["planning_only_rule"] = (
+            "When preparing/planning only, do not create product source/package/schema/app files."
+        )
     compact_broad_work_guard = {
         key: broad_work_planning_guard[key]
         for key in (
             "status",
             "applies_to",
-            "required_before_implementation",
             "new_plan_command",
             "durable_state_rule",
             "canonical_durable_state_surfaces",
@@ -2732,6 +2760,8 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         )
         if key in broad_work_planning_guard
     }
+    if compact_prep_only_route:
+        compact_broad_work_guard["prep_only_route"] = compact_prep_only_route
 
     compact_summary: dict[str, Any] = {
         "kind": summary.get("kind", "planning-summary/v1"),
@@ -2814,6 +2844,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "layer_scaffold",
                 "architecture_decision_promotion",
                 "threat_failure_aids",
+                "prep_only_contract",
                 "required_continuation",
                 "tool_verification",
                 "continuation_owner",
@@ -3337,6 +3368,66 @@ def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
             ],
         },
     }
+
+
+def _prep_only_changed_path_warnings(*, target_root: Path, planning_record: dict[str, Any]) -> list[dict[str, str]]:
+    prep_only_contract = planning_record.get("prep_only_contract", {})
+    if not isinstance(prep_only_contract, dict) or prep_only_contract.get("is_prep_only") is not True:
+        return []
+    changed_paths = _git_status_changed_paths(target_root)
+    if not changed_paths:
+        return []
+    violating_paths = [
+        path
+        for path in changed_paths
+        if not path.startswith(".agentic-workspace/planning/")
+        and path not in {"TODO.md", "ROADMAP.md"}
+        and path != ".agentic-workspace/planning/state.toml"
+    ]
+    if not violating_paths:
+        return []
+    return [
+        {
+            "warning_class": "prep_only_scope_violation",
+            "path": ", ".join(violating_paths[:8]),
+            "message": (
+                "Active prep-only planning mode is present, but git status shows changed files outside canonical Planning surfaces."
+            ),
+            "suggested_fix": (
+                "Stop implementation work, move any durable handoff into Planning, and revert or explicitly justify "
+                "non-planning file changes before closeout."
+            ),
+        }
+    ]
+
+
+def _git_status_changed_paths(target_root: Path) -> list[str]:
+    if not (target_root / ".git").exists():
+        return []
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(target_root), "status", "--short", "--untracked-files=all"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if completed.returncode != 0:
+        return []
+    paths: list[str] = []
+    for line in completed.stdout.splitlines():
+        if len(line) < 4:
+            continue
+        raw_path = line[3:].strip()
+        if " -> " in raw_path:
+            raw_path = raw_path.split(" -> ", 1)[1].strip()
+        normalized = raw_path.replace("\\", "/")
+        if normalized:
+            paths.append(normalized)
+    return paths
 
 
 def _completed_execplan_warnings(completed_execplans: list[dict[str, Any]]) -> list[dict[str, str]]:
@@ -5743,6 +5834,7 @@ def _canonical_planning_record(
     architecture_decision_promotion: dict[str, Any] = {}
     threat_failure_aids: list[Any] = []
     review_residue: list[dict[str, Any]] = []
+    prep_only_contract: dict[str, Any] = {}
     if plan_path is not None:
         proof_report = _execplan_proof_report(plan_path)
         intent_satisfaction = _execplan_intent_satisfaction(plan_path)
@@ -5764,6 +5856,7 @@ def _canonical_planning_record(
         layer_scaffold = _execplan_raw_dict(plan_path, "layer_scaffold")
         architecture_decision_promotion = _execplan_raw_dict(plan_path, "architecture_decision_promotion")
         threat_failure_aids = _execplan_raw_list(plan_path, "threat_failure_aids")
+        prep_only_contract = _execplan_prep_only_contract(plan_path)
         review_residue = _review_residue_from_references(
             target_root=target_root,
             references=list(active_contract.get("references", [])),
@@ -5808,6 +5901,7 @@ def _canonical_planning_record(
         "layer_scaffold": layer_scaffold,
         "architecture_decision_promotion": architecture_decision_promotion,
         "threat_failure_aids": threat_failure_aids,
+        "prep_only_contract": prep_only_contract,
         "tool_verification": dict(resumable_contract.get("tool_verification", {})),
         "escalate_when": str(resumable_contract.get("escalate_when", "")).strip(),
         "continuation_owner": continuation_owner,
@@ -6866,6 +6960,7 @@ def create_execplan_scaffold(
     target: str | Path | None = None,
     activate: bool = False,
     queue: bool = False,
+    prep_only: bool = False,
     overwrite: bool = False,
     dry_run: bool = False,
 ) -> InstallResult:
@@ -6900,6 +6995,8 @@ def create_execplan_scaffold(
     plan_record["drift_log"] = [f"{date.today().isoformat()}: Scaffolded by agentic-planning-bootstrap new-plan."]
     if source_text:
         plan_record["references"] = [{"kind": "source", "target": source_text, "label": source_text, "role": "intake", "locator": ""}]
+    if prep_only:
+        _apply_prep_only_execplan_defaults(plan_record)
 
     try:
         findings = _json_schema_findings(payload=plan_record, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
@@ -6956,12 +7053,95 @@ def create_execplan_scaffold(
         return result
 
     _write_execplan_record(record_path=record_path, record=plan_record)
-    result.add("created" if not overwrite else "updated", record_path, "schema-valid execplan scaffold")
+    detail = "schema-valid prep-only execplan scaffold" if prep_only else "schema-valid execplan scaffold"
+    result.add("created" if not overwrite else "updated", record_path, detail)
     if activate or queue:
         _write_state_to_toml(target_root, updated_state)
         result.add("updated", state_path, f"registered '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
     result.add("next", state_path, "run `agentic-workspace summary --target . --format json`")
+    if prep_only:
+        result.add(
+            "next",
+            state_path,
+            "after summary verification, stop; do not create README, package, source, public, schema, database, or app scaffold files",
+        )
     return result
+
+
+def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
+    next_action = "Run agentic-workspace summary --target . --format json, confirm the planning state is clean, then stop without product scaffolding."
+    done_when = "Canonical Planning state exists, summary verifies it, and no product source, package, dependency, README, handoff, or app scaffold files were created."
+    plan_record["goal"] = [
+        "Prepare durable checked-in Planning state for later continuation without implementing or scaffolding the product."
+    ]
+    plan_record["non_goals"] = [
+        "Do not create README, HANDOFF, SLICES, package, dependency, source, public, database, schema, or app scaffold files.",
+        "Do not start implementation; this slice ends after Planning state and summary verification.",
+    ]
+    plan_record["immediate_next_action"] = [next_action]
+    plan_record["completion_criteria"] = [done_when]
+    plan_record["validation_commands"] = ["agentic-workspace summary --target . --format json"]
+    plan_record["touched_paths"] = [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/",
+        ".agentic-workspace/planning/decompositions/",
+    ]
+    execution = plan_record.setdefault("machine_readable_contract", {}).setdefault("execution", {})
+    execution["next_step"] = next_action
+    execution["proof"] = "Summary verification only; product validation belongs to later implementation slices."
+    scope = plan_record.setdefault("machine_readable_contract", {}).setdefault("scope", {})
+    scope["touched"] = list(plan_record["touched_paths"])
+    scope["invariants"] = [
+        "This is planning-only preparation.",
+        "Do not create product or handoff files outside canonical Planning surfaces.",
+    ]
+    planning_mode = plan_record.setdefault("machine_readable_contract", {}).setdefault("planning_mode", {})
+    planning_mode["prep_only"] = True
+    planning_mode["halt_after_summary"] = True
+    planning_mode["halt_instruction"] = (
+        "HALT: prep-only mode active. Create Planning state, run agentic-workspace summary --target . --format json, "
+        "then stop. Do not create product files, scaffolds, or documentation."
+    )
+    planning_mode["forbidden_outputs"] = [
+        "README",
+        "HANDOFF",
+        "SLICES",
+        "package",
+        "dependency",
+        "src",
+        "public",
+        "database",
+        "schema",
+        "app scaffold",
+    ]
+    plan_record["control_gates"] = [
+        {
+            "id": "prep-only-halt",
+            "owner_role": "implementation",
+            "required_for": ["before any product or handoff file creation"],
+            "status": "pending",
+            "evidence": ["agentic-workspace summary --target . --format json"],
+            "blocking": True,
+            "next_action": planning_mode["halt_instruction"],
+        }
+    ]
+    plan_record["execution_bounds"] = {
+        "allowed paths": ".agentic-workspace/planning/state.toml, .agentic-workspace/planning/execplans/, and .agentic-workspace/planning/decompositions/ only.",
+        "max changed files": "Planning records only; stop if implementation scaffolding seems necessary.",
+        "required validation commands": "agentic-workspace summary --target . --format json",
+        "ask-before-refactor threshold": "Any product, dependency, documentation, schema, database, source, public, or app scaffold file.",
+        "stop before touching": "README, HANDOFF, SLICES, package files, dependency manifests, src/, public/, database files, schema files, or app code.",
+    }
+    plan_record["stop_conditions"] = {
+        "stop when": "Summary verifies the canonical Planning state.",
+        "escalate when boundary reached": "A useful next step would create product or handoff files outside canonical Planning surfaces.",
+        "escalate on scope drift": "The work turns into implementation or product setup.",
+        "escalate on proof failure": "Summary cannot verify clean Planning state.",
+    }
+    plan_record["execution_run"]["what happened"] = "prep-only scaffold created; implementation has not started"
+    plan_record["execution_run"]["scope touched"] = "canonical Planning surfaces only"
+    plan_record["execution_run"]["changed surfaces"] = "planning state and execplan scaffold"
+    plan_record["execution_run"]["next step"] = next_action
 
 
 def _render_inactive_execplan_residue(*, plan_path: Path, target_root: Path) -> str:
@@ -9616,6 +9796,25 @@ def _execplan_context_budget(path: Path) -> dict[str, str]:
         return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Context Budget"))
+
+
+def _execplan_prep_only_contract(path: Path) -> dict[str, Any]:
+    record = _load_execplan_record(path) or {}
+    machine_contract = record.get("machine_readable_contract", {})
+    if not isinstance(machine_contract, dict):
+        return {}
+    planning_mode = machine_contract.get("planning_mode", {})
+    if not isinstance(planning_mode, dict) or planning_mode.get("prep_only") is not True:
+        return {}
+    forbidden = planning_mode.get("forbidden_outputs", [])
+    if not isinstance(forbidden, list):
+        forbidden = []
+    return {
+        "is_prep_only": True,
+        "halt_after_summary": planning_mode.get("halt_after_summary") is True,
+        "halt_instruction": str(planning_mode.get("halt_instruction", "")).strip(),
+        "forbidden_outputs": [str(item).strip() for item in forbidden if str(item).strip()],
+    }
 
 
 def _execplan_raw_dict(path: Path, key: str) -> dict[str, Any]:

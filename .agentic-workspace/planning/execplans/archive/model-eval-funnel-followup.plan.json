@@ -1,0 +1,232 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Model Evaluation Funnel Follow-Up",
+  "goal": [
+    "Address remaining model-evaluation findings by strengthening the package route for durable state and planning-only broad preparation."
+  ],
+  "non_goals": [
+    "Do not redesign the full Planning workflow or add host-specific CI/PR policy.",
+    "Do not treat evaluator scoring alone as the product fix."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Make agents more likely to create canonical durable planning state for broad preparation instead of proposal-only answers, WORKFLOW.md edits, root handoff files, or product scaffolds.",
+      "constraints": "Keep changes bounded to startup/planning routing surfaces, generated fixtures, evaluator scoring, and this execplan.",
+      "latitude": "Tighten CLI payloads, workflow wording, planning projections, tests, and model-evaluation scenarios.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "model-eval-funnel-followup",
+      "status": "active",
+      "next_step": "Tighten planning-only and durable-state bridge routes, then validate with focused tests, make check, and targeted dynamic evaluations.",
+      "proof": "Focused tests, make check, and refreshed dynamic evaluation of the affected scenarios."
+    },
+    "scope": {
+      "touched": [
+        "AGENTS.md",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md",
+        "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/scripts/check/check_planning_surfaces.py",
+        "tools/model-cli-harness/fixtures/",
+        "tools/model-cli-harness/suites/",
+        "tests/",
+        ".agentic-workspace/planning/execplans/model-eval-funnel-followup.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan.",
+        "Keep host repo agent instructions as a thin managed fence.",
+        "Planning-only preparation must route to canonical planning/decomposition state and must not authorize product scaffolding."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Improve package robustness when weaker external agents are asked to prepare broad work without explicit package steering.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Address your findings from the evaluation",
+    "inferred intended outcome": "Implement the remaining package-side fixes from dynamic model evaluation, especially durable-state routing and planning-only broad prep.",
+    "chosen concrete what": "Strengthen CLI/workflow guidance and evaluator coverage for canonical prep-only routes.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Startup pointer/config payloads, planning installer/checker, model CLI harness suite/tests, root AGENTS.md, and this execplan.",
+    "max changed files": "About 20 files; stop before touching generated package internals unrelated to startup/planning routing.",
+    "required validation commands": "uv run pytest focused tests for planning help/summary/checker/model harness; make check; targeted model CLI scenarios if tool availability permits.",
+    "ask-before-refactor threshold": "Ask before adding a new major command surface or changing planning schema compatibility.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Model Evaluation Funnel Follow-Up.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "model-eval-funnel-followup",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Tighten planning-only and durable-state bridge routes, then validate with focused tests, make check, and targeted dynamic evaluations."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "AGENTS.md",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/config.py",
+    "src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md",
+    "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/scripts/check/check_planning_surfaces.py",
+    "tools/model-cli-harness/fixtures/",
+    "tools/model-cli-harness/suites/",
+    "tests/"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_model_cli_harness.py packages/planning/tests/test_check_planning_surfaces.py packages/planning/tests/test_installer.py",
+    "make check",
+    "targeted model CLI harness scenarios for broad-work-decomposition and native-plan-bridge"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Model Evaluation Funnel Follow-Up is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap new-plan",
+    "what happened": "Strengthened prep-only and durable-state routing, added a prep-only scaffold mode, projected prep-only halt state in summary, detected non-planning drift under active prep-only plans, and tightened dynamic model evaluation scoring.",
+    "scope touched": "startup workflow payloads, planning CLI/installer/checker, model CLI harness, tests, root AGENTS.md, and this execplan",
+    "changed surfaces": "AGENTS.md, .agentic-workspace/WORKFLOW.md, src/agentic_workspace/cli.py, planning package CLI/installer/checker/tests, model CLI harness tests/fixtures",
+    "validations run": "Focused pytest for planning CLI/help/harness; make check passed after rerun; dynamic broad-work evaluations for Codex Spark, Copilot Haiku, and Gemini Flash.",
+    "result for continuation": "No immediate continuation required; #684 and #685 were closed with evidence.",
+    "next step": "Archive this completed execplan."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used checked-in planning, package commands, dogfooding evaluation, and issue closeout",
+    "misinterpretation risk": "Residual weak-agent obedience risk remains, but package summary and harness now detect the drift.",
+    "follow-on decision": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest focused planning/harness tests; make check; dynamic model CLI broad-work evaluations.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "make check passed. Dynamic evaluation: Codex Spark and Gemini Flash stayed within Planning surfaces; Copilot/Haiku still edited README.md, now detected by harness and by prep_only_scope_violation when summary is rerun."
+  },
+  "intent_satisfaction": {
+    "original intent": "Address model-evaluation findings around durable planning routes and planning-only broad prep.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Implemented package guidance, structured --prep-only scaffolding, summary projection/detection, evaluator scoring, tests, and issue closeout.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Prep-only planning handoff is now CLI-addressable, machine-readable, summary-visible, and checked against non-planning drift.",
+    "validation confirmed": "make check passed and targeted model CLI evaluation was rerun.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "Issues #684 and #685 were updated and closed.",
+    "knowledge promoted (Memory/Docs/Config)": "workflow payloads, planning CLI output, and tests",
+    "resume from": "archive evidence only"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "complete",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The package cannot force an external agent to obey prose, but it now provides a structured prep-only command, machine-readable halt state, summary drift detection, and harness scoring for the observed failure.",
+    "evidence carried forward": "make check passed; dynamic evaluation transcripts under scratch/model-cli-harness; GitHub issues #684 and #685 closed.",
+    "reopen trigger": "A future evaluation shows prep-only drift that is not visible in summary, proof, report, or harness scoring."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Copilot/Haiku interpreted prep-only broad work as project setup even after reading workflow prose.",
+      "The harness missed modified README.md as a prep-only semantic failure."
+    ],
+    "signals fixed": [
+      "Added --prep-only scaffold mode with halt contract.",
+      "Projected prep_only_contract in summary.",
+      "Added prep_only_scope_violation for non-planning git changes under an active prep-only plan.",
+      "Updated harness scoring to include modified non-planning files."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-02: Scaffolded by agentic-planning-bootstrap new-plan.",
+    "2026-05-02: Completed prep-only routing and evaluation follow-up; ready to archive."
+  ]
+}

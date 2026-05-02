@@ -533,6 +533,13 @@ def _freehand_planning_artifact_warnings(*, repo_root: Path) -> list[PlanningWar
     candidates: list[Path] = []
     if planning_root.exists():
         candidates.extend(path for path in planning_root.glob("*") if path.is_file())
+        candidates.extend(
+            path
+            for path in planning_root.rglob("*")
+            if path.is_file()
+            and path.suffix.lower() in {".json", ".md"}
+            and not any(prefix in path.parents for prefix in canonical_prefixes)
+        )
     for pattern in ("*PLAN.md", "*Plan.md", "*plan.md", "*PLANNING.md", "*planning.md", "*HANDOFF.md", "*handoff.md"):
         candidates.extend(path for path in repo_root.glob(pattern) if path.is_file())
 

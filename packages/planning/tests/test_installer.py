@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import tomllib
 from pathlib import Path
 
@@ -2100,6 +2101,71 @@ def test_planning_cli_new_plan_creates_valid_active_scaffold(tmp_path: Path, cap
     assert summary["execplans"]["active_execplans"][0]["path"].endswith("plan-alpha.plan.json")
 
 
+def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    install_bootstrap(target=tmp_path)
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "baseline", "-q"],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    assert (
+        planning_cli.main(
+            [
+                "new-plan",
+                "--id",
+                "Shop Prep",
+                "--title",
+                "Shop Prep",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--prep-only",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "shop-prep.plan.json"
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+
+    assert any("--format json" in action["detail"] for action in payload["actions"] if action["kind"] == "next")
+    assert any("after summary verification, stop" in action["detail"] for action in payload["actions"] if action["kind"] == "next")
+    assert record["immediate_next_action"] == [
+        "Run agentic-workspace summary --target . --format json, confirm the planning state is clean, then stop without product scaffolding."
+    ]
+    assert record["machine_readable_contract"]["planning_mode"]["prep_only"] is True
+    assert record["machine_readable_contract"]["planning_mode"]["halt_after_summary"] is True
+    assert "HALT: prep-only mode active" in record["machine_readable_contract"]["planning_mode"]["halt_instruction"]
+    assert "src" in record["machine_readable_contract"]["planning_mode"]["forbidden_outputs"]
+    assert record["control_gates"][0]["id"] == "prep-only-halt"
+    assert record["control_gates"][0]["blocking"] is True
+    assert record["execution_bounds"]["stop before touching"].startswith("README, HANDOFF, SLICES")
+    assert "src/" in record["execution_bounds"]["stop before touching"]
+    assert record["touched_paths"] == [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/",
+        ".agentic-workspace/planning/decompositions/",
+    ]
+    assert not installer_mod.planning_record_schema_findings(record_path)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    prep_only_contract = summary["planning_record"]["prep_only_contract"]
+    assert prep_only_contract["is_prep_only"] is True
+    assert prep_only_contract["halt_after_summary"] is True
+    assert "HALT: prep-only mode active" in prep_only_contract["halt_instruction"]
+    assert "src" in prep_only_contract["forbidden_outputs"]
+
+    (tmp_path / "README.md").write_text("# Drift\n", encoding="utf-8")
+    summary_with_drift = planning_summary(target=tmp_path, profile="compact")
+    assert summary_with_drift["planning_surface_health"]["status"] == "not-clean"
+    assert any(warning["warning_class"] == "prep_only_scope_violation" for warning in summary_with_drift["warnings"])
+
+
 def test_planning_cli_new_plan_refuses_duplicate_without_overwrite(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     args = [
@@ -2202,6 +2268,21 @@ def test_planning_summary_warns_for_freehand_planning_artifacts(tmp_path: Path) 
     warnings = summary["planning_surface_health"]["warnings"]
     warning = next(warning for warning in warnings if warning["warning_class"] == "planning_artifact_freehand")
     assert "new-plan" in warning["suggested_fix"]
+    assert summary["planning_surface_health"]["status"] == "not-clean"
+
+
+def test_planning_summary_warns_for_noncanonical_records_directory(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/records/ecommerce-plan.json",
+        json.dumps({"goal": ["Prepare ecommerce app."], "milestones": ["foundation"]}, indent=2),
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    warnings = summary["planning_surface_health"]["warnings"]
+    warning = next(warning for warning in warnings if warning["warning_class"] == "planning_artifact_freehand")
+    assert ".agentic-workspace/planning/decompositions" in warning["message"]
     assert summary["planning_surface_health"]["status"] == "not-clean"
 
 

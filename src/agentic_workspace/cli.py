@@ -1292,7 +1292,11 @@ def _workspace_self_adaptation_guardrail_payload() -> dict[str, Any]:
 def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
     target_arg = f" --target {target}" if target else " --target ."
     new_plan_command = f"agentic-planning-bootstrap new-plan --id <id> --title <title>{target_arg} --activate --format json"
+    prep_only_new_plan_command = (
+        f"agentic-planning-bootstrap new-plan --id <id> --title <title>{target_arg} --activate --prep-only --format json"
+    )
     promote_command = f"agentic-planning-bootstrap promote-to-plan <item-id>{target_arg} --format json"
+    summary_command = f"agentic-workspace summary{target_arg} --format json"
     return {
         "kind": "agentic-workspace/planning-help/v1",
         "summary": "Planning files are checked-in execution authority, but their outer structure is package-owned.",
@@ -1335,7 +1339,18 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
                 "When the user asks to prepare, plan, decompose, hand off, or explicitly says not to implement yet, "
                 "do not create product source, package, dependency, schema, or app scaffold files unless explicitly requested."
             ),
-            "after_write": f"agentic-workspace summary{target_arg} --format json",
+            "prep_only_route": {
+                "use_when": "The user asks to prepare broad work so a later agent can continue, and does not ask to implement.",
+                "required_action": "Create or continue canonical checked-in Planning state, verify with summary, then stop; do not stop at a proposal or start implementation.",
+                "preferred_command": prep_only_new_plan_command,
+                "after_write": summary_command,
+                "do_not_do": [
+                    "do not ask for confirmation instead of leaving durable state when the user already asked you to prepare the repo",
+                    "do not create README, HANDOFF, SLICES, package, dependency, source, public, database, schema, or app scaffold files",
+                    "do not route durable state to .agentic-workspace/planning/records/",
+                ],
+            },
+            "after_write": summary_command,
         },
         "rules": [
             "Use CLI first for orientation and proof selection.",
@@ -1348,6 +1363,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             ),
             "Do not create root PLAN.md, DOC_CLEANUP_PLAN.md, or similar freehand durable-state files unless repo config explicitly routes there.",
             "For planning-only preparation, keep writes to planning/decomposition surfaces and do not scaffold product files before implementation is requested.",
+            "If the user asks to prepare broad work for later continuation, create canonical Planning state, verify it, and stop; a proposal-only answer is not a durable handoff.",
             "Do not invent the outer structure of planning-execplan/v1.",
             "Edit intent, scope, proof, and closeout content inside schema-backed checked-in records.",
             "After any planning mutation, run agentic-workspace summary --format json or the planning surface checker.",
@@ -1394,6 +1410,9 @@ def _print_planning_help(payload: dict[str, Any]) -> None:
         print("Durable repo-visible state bridge:")
         print(f"- Preferred: {durable_bridge.get('preferred_command', '')}")
         print(f"- After write: {durable_bridge.get('after_write', '')}")
+        prep_route = durable_bridge.get("prep_only_route", {})
+        if isinstance(prep_route, dict) and prep_route:
+            print(f"- Prep-only: {prep_route.get('required_action', '')}")
         for blocked in durable_bridge.get("must_not_create", []):
             print(f"- Do not create: {blocked}")
     print("")

@@ -7592,6 +7592,9 @@ candidates = []
     assert ".agentic-workspace/planning/execplans/<id>.plan.json" in guard["canonical_durable_state_surfaces"]
     assert "new-plan" in guard["new_plan_command"]
     assert "do not create product" in guard["planning_only_rule"]
+    assert "do not stop at a proposal" in guard["prep_only_route"]["required_action"]
+    assert any("planning/records" in item for item in guard["prep_only_route"]["do_not_do"])
+    assert any("HANDOFF" in item and "package" in item for item in guard["prep_only_route"]["do_not_do"])
     assert summary["execution_readiness"]["direct_work_allowed"] is True
 
 
@@ -7911,10 +7914,17 @@ def test_planning_help_command_returns_lifecycle_guidance(capsys) -> None:
     assert payload["kind"] == "agentic-workspace/planning-help/v1"
     assert any("new-plan" in command for command in payload["lifecycle_commands"])
     assert "new-plan" in payload["durable_state_bridge"]["preferred_command"]
+    assert "--prep-only" in payload["durable_state_bridge"]["prep_only_route"]["preferred_command"]
     assert "PLAN.md" in payload["durable_state_bridge"]["must_not_create"]
     assert "do not create product source" in payload["durable_state_bridge"]["planning_only_rule"]
+    prep_route = payload["durable_state_bridge"]["prep_only_route"]
+    assert "Create or continue canonical checked-in Planning state" in prep_route["required_action"]
+    assert "then stop" in prep_route["required_action"]
+    assert any("planning/records" in item for item in prep_route["do_not_do"])
+    assert any("HANDOFF" in item and "package" in item for item in prep_route["do_not_do"])
     assert any("Do not invent" in rule for rule in payload["rules"])
     assert any("WORKFLOW.md as task state" in rule for rule in payload["rules"])
+    assert any("verify it, and stop" in rule for rule in payload["rules"])
     assert payload["runtime_native_bridge"]["status"] == "allowed-as-local-aid"
     assert "not repo-shared execution authority" in payload["runtime_native_bridge"]["rule"]
     assert "do not invent reset flags" in payload["unsafe_state_recovery"]["manual_fallback"]
@@ -7926,6 +7936,7 @@ def test_planning_help_text_is_actionable(capsys) -> None:
 
     assert "Planning lifecycle" in output
     assert "Durable repo-visible state bridge" in output
+    assert "Prep-only" in output
     assert "agentic-planning-bootstrap new-plan" in output
     assert "planning-execplan/v1" in output
     assert "Runtime-native planning bridge" in output

@@ -1439,3 +1439,17 @@ def test_checker_warns_for_freehand_planning_artifacts(tmp_path: Path) -> None:
     freehand = [warning for warning in warnings if warning.warning_class == "planning_artifact_freehand"]
     assert len(freehand) == 2
     assert all("durable_state_bridge" in warning.message for warning in freehand)
+
+
+def test_checker_warns_for_noncanonical_planning_records_directory(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_records_artifacts")
+    _write(
+        tmp_path / ".agentic-workspace/planning/records/ecommerce-plan.json",
+        json.dumps({"goal": ["Prepare ecommerce app."], "milestones": ["foundation"]}, indent=2),
+    )
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+
+    freehand = [warning for warning in warnings if warning.warning_class == "planning_artifact_freehand"]
+    assert len(freehand) == 1
+    assert ".agentic-workspace/planning/decompositions" in freehand[0].message

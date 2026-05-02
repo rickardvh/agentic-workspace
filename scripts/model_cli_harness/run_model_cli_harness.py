@@ -388,9 +388,10 @@ def _semantic_workflow_warnings(
                 evidence=", ".join(misplaced),
             )
         if scenario_id == "broad-work-decomposition":
+            modified = mutation_summary.get("modified", []) if isinstance(mutation_summary, dict) else []
             product_files = [
                 path
-                for path in created
+                for path in [*created, *modified]
                 if isinstance(path, str)
                 and not path.replace("\\", "/").startswith(".agentic-workspace/planning/")
                 and path.replace("\\", "/") not in {"TODO.md", "ROADMAP.md"}

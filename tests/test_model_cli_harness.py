@@ -312,10 +312,12 @@ def test_model_cli_harness_scores_broad_prep_product_files_as_semantic_failure()
                 "ecommerce-app/README.md",
                 "ecommerce-app/docs/slice-1-handoff.md",
             ],
+            "modified": ["README.md"],
         },
     )
 
     assert any("planning-only broad-work preparation" in warning["message"] for warning in warnings)
+    assert any("README.md" in warning.get("evidence", "") for warning in warnings)
 
 
 def test_model_cli_harness_scores_broad_prep_proposal_only() -> None:

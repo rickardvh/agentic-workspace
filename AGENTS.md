@@ -8,5 +8,5 @@ Authority marker:
 - refresh_command: null
 
 <!-- agentic-workspace:workflow:start -->
-Start with `.agentic-workspace/WORKFLOW.md`; it routes work through CLI-first startup guidance before implementation.
+Start with `.agentic-workspace/WORKFLOW.md` before non-trivial edits; it routes startup, scope, proof, and durable repo-visible state.
 <!-- agentic-workspace:workflow:end -->
