@@ -258,6 +258,125 @@ def _copy_transcript(stdout: str, transcript_path: Path) -> None:
     transcript_path.write_text(stdout, encoding="utf-8")
 
 
+def _response_text(result: dict[str, Any]) -> str:
+    stdout = result.get("stdout")
+    stderr = result.get("stderr")
+    parts: list[str] = []
+    if isinstance(stdout, str):
+        stripped = stdout.strip()
+        if stripped.startswith("{"):
+            try:
+                payload = json.loads(stripped)
+            except json.JSONDecodeError:
+                payload = None
+            if isinstance(payload, dict) and isinstance(payload.get("response"), str):
+                parts.append(payload["response"])
+        for line in stdout.splitlines():
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(event, dict):
+                data = event.get("data")
+                if isinstance(data, dict) and isinstance(data.get("content"), str):
+                    parts.append(data["content"])
+        if not parts:
+            parts.append(stdout)
+    if isinstance(stderr, str):
+        parts.append(stderr)
+    return "\n".join(parts)
+
+
+def _created_path_is_misplaced_planning_artifact(path: str) -> bool:
+    normalized = path.replace("\\", "/").strip()
+    if not normalized.endswith(".json"):
+        return False
+    canonical_prefix = ".agentic-workspace/planning/decompositions/"
+    if normalized.startswith(canonical_prefix) and normalized.endswith(".decomposition.json"):
+        return False
+    planning_markers = ("decomposition", "planning")
+    return (
+        normalized.startswith("planning/")
+        or normalized.startswith(".agentic-workspace/planning/")
+        and any(marker in normalized.lower() for marker in planning_markers)
+    )
+
+
+def _semantic_workflow_warnings(
+    *,
+    scenario_id: str,
+    result: dict[str, Any],
+    mutation_summary: dict[str, Any] | None = None,
+) -> list[dict[str, str]]:
+    response = _response_text(result)
+    response_lower = response.lower()
+    warnings: list[dict[str, str]] = []
+
+    def add(message: str, *, evidence: str = "") -> None:
+        warning: dict[str, str] = {
+            "warning_class": "model_cli_semantic_workflow_failure",
+            "message": message,
+        }
+        if evidence:
+            warning["evidence"] = evidence
+        warnings.append(warning)
+
+    if scenario_id == "startup-orientation":
+        if ".agentic-workspace/workflow.md" in response_lower and any(
+            fragment in response_lower
+            for fragment in (
+                "not accessible",
+                "cannot access",
+                "permission restrictions",
+                "no `.agentic-workspace`",
+                "no .agentic-workspace",
+            )
+        ):
+            add("The agent treated the workspace startup surface as unavailable instead of using the copied fixture surfaces.")
+
+    if scenario_id == "cli-discovery-before-planning":
+        runtime_native_markers = ("/plan", "shift+tab", "ctrl+x", "plan mode")
+        if any(marker in response_lower for marker in runtime_native_markers):
+            add("The agent reported runtime-native planning commands among verified Agentic Workspace CLI commands.")
+        if "agentic-workspace --help" not in response_lower and "agentic-workspace planning" not in response_lower:
+            add("The agent did not report verifying Agentic Workspace CLI help before naming planning commands.")
+
+    if scenario_id in {"planning-artifact-integrity", "broad-work-decomposition"}:
+        created = mutation_summary.get("created", []) if isinstance(mutation_summary, dict) else []
+        misplaced = [path for path in created if isinstance(path, str) and _created_path_is_misplaced_planning_artifact(path)]
+        if misplaced:
+            add(
+                "The agent created likely planning artifacts outside canonical Agentic Workspace planning surfaces.",
+                evidence=", ".join(misplaced),
+            )
+        if scenario_id == "planning-artifact-integrity" and any(
+            fragment in response_lower
+            for fragment in (
+                "no automatic summary warnings could be generated",
+                "no specific cli tool available",
+                "could not be generated or inspected",
+            )
+        ):
+            add("The agent claimed planning summary inspection was unavailable instead of running Agentic Workspace summary.")
+        if scenario_id == "planning-artifact-integrity" and "agentic-workspace summary" not in response_lower:
+            add("The agent did not report running `agentic-workspace summary` after creating planning state.")
+
+    if scenario_id == "invalid-planning-recovery":
+        if "agentic-workspace summary" not in response_lower and "planning_surface_health" not in response_lower:
+            add("The agent did not report using Agentic Workspace summary diagnostics before recommending recovery.")
+        if "execplans = []" in response_lower or "remove-item" in response_lower or "rm .agentic-workspace/planning" in response_lower:
+            add("The agent recommended manual planning-state clearing before using an explicit package recovery path.")
+
+    deduped: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for warning in warnings:
+        key = (warning["warning_class"], warning["message"], warning.get("evidence", ""))
+        if key not in seen:
+            deduped.append(warning)
+            seen.add(key)
+    return deduped
+
+
 def _is_relative_to(path: Path, parent: Path) -> bool:
     try:
         path.resolve().relative_to(parent.resolve())
@@ -502,6 +621,13 @@ def run_suite(
             invocation["transcript_path"] = str(paths.transcript_path)
             invocation["share_path"] = str(paths.share_path)
             invocation["warnings"] = _execution_warnings(result=result, repo_path=paths.repo_path, mutation_summary=mutation_summary)
+            invocation["warnings"].extend(
+                _semantic_workflow_warnings(
+                    scenario_id=scenario_id,
+                    result=result,
+                    mutation_summary=mutation_summary,
+                )
+            )
         else:
             invocation["result"] = {
                 "status": "dry-run",

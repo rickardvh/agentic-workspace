@@ -1345,6 +1345,7 @@ queued_items = []
 
     assert state_warnings
     assert "todo.active_items" in state_warnings[0].message
+    assert "Do not delete `state.toml`" in state_warnings[0].message
 
 
 def test_checker_validates_decomposition_and_warns_for_freehand_epic_md(tmp_path: Path) -> None:

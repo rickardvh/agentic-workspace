@@ -209,6 +209,98 @@ def test_model_cli_harness_warns_on_runtime_failures_and_mutations(tmp_path: Pat
     }.issubset({warning["warning_class"] for warning in warnings})
 
 
+def test_model_cli_harness_scores_runtime_native_planning_as_semantic_failure() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="cli-discovery-before-planning",
+        result={
+            "stdout": json.dumps(
+                {
+                    "response": "Verified /plan, /plan copy, Shift+Tab, and Ctrl+X. I would use /plan next.",
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert any(warning["warning_class"] == "model_cli_semantic_workflow_failure" for warning in warnings)
+    assert any("runtime-native planning commands" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_scores_misplaced_planning_artifacts_as_semantic_failure() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="planning-artifact-integrity",
+        result={
+            "stdout": json.dumps(
+                {
+                    "response": (
+                        "Created .agentic-workspace/planning/ecommerce-app-planning.json. No automatic summary warnings could be generated."
+                    ),
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={
+            "status": "changed",
+            "created": [".agentic-workspace/planning/ecommerce-app-planning.json"],
+        },
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("outside canonical Agentic Workspace planning surfaces" in message for message in messages)
+    assert any("summary inspection was unavailable" in message for message in messages)
+
+
+def test_model_cli_harness_scores_inaccessible_workflow_as_semantic_failure() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="startup-orientation",
+        result={
+            "stdout": json.dumps(
+                {
+                    "response": (
+                        "AGENTS.md points to .agentic-workspace/WORKFLOW.md, but it is not accessible "
+                        "and there is no .agentic-workspace folder."
+                    ),
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert any("startup surface as unavailable" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_scores_manual_invalid_planning_recovery_as_semantic_failure() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="invalid-planning-recovery",
+        result={
+            "stdout": json.dumps(
+                {
+                    "response": (
+                        "The state is not safe. Change .agentic-workspace/planning/state.toml "
+                        'from execplans = ["freehand-lane.plan.json"] to execplans = [].'
+                    ),
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("summary diagnostics" in message for message in messages)
+    assert any("manual planning-state clearing" in message for message in messages)
+
+
 def test_model_cli_harness_snapshot_diff_reports_fixture_mutations(tmp_path: Path) -> None:
     harness = _load_harness()
     repo = tmp_path / "repo"

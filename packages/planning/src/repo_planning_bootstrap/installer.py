@@ -3253,6 +3253,10 @@ def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
                     "Closed planning-state rows require maturity = closed, status = done or dismissed, "
                     "and explicit durable_residue, residue, or closure routing."
                 ),
+                "recovery_rule": (
+                    "When planning state is invalid, inspect summary warnings first and make the smallest "
+                    "schema-preserving correction; do not delete state.toml or execplans as the first move."
+                ),
             },
         }
     first_fix = next((item["suggested_fix"] for item in health_warnings if item["suggested_fix"]), "")
@@ -3274,6 +3278,16 @@ def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
                 "Closed planning-state rows require maturity = closed, status = done or dismissed, "
                 "and explicit durable_residue, residue, or closure routing."
             ),
+            "recovery_rule": (
+                "When planning state is invalid, inspect summary warnings first and make the smallest "
+                "schema-preserving correction; do not delete state.toml or execplans as the first move."
+            ),
+            "recovery_sequence": [
+                "Run `agentic-workspace summary --target . --format json --profile full` and read `planning_surface_health.warnings`.",
+                "Classify the warning as unsupported state shape, invalid plan content, missing file reference, or stale salvageable record.",
+                "Prefer package lifecycle commands when they apply; otherwise edit only the named warning path and preserve evidence.",
+                "Rerun `agentic-workspace summary --target . --format json` before continuing implementation.",
+            ],
         },
     }
 
@@ -3772,10 +3786,13 @@ def _unsupported_planning_state_activation_shape_warnings(
                     "path": state_path.as_posix(),
                     "message": (
                         f"`[{section_name}].{bucket_name}` contains string reference `{raw}`{exists_suffix}, "
-                        "but current planning state expects item objects in `todo.active_items` or `todo.queued_items`."
+                        "but current planning state expects item objects in `todo.active_items` or `todo.queued_items`. "
+                        "Do not delete `state.toml` as the first recovery step; preserve the evidence and make the "
+                        "smallest schema-preserving correction."
                     ),
                     "suggested_fix": (
-                        "Recover with `agentic-planning-bootstrap new-plan --id <id> --title <title> --activate`, "
+                        "Run `agentic-workspace summary --target . --format json` to inspect all warnings, then recover with "
+                        "`agentic-planning-bootstrap new-plan --id <id> --title <title> --activate`, "
                         'or migrate the reference to `{ id = "<id>", maturity = "active", status = "active", '
                         'surface = ".agentic-workspace/planning/execplans/<plan>.plan.json" }`.'
                     ),
@@ -8608,6 +8625,15 @@ def _warning_remediation(warning_class: str) -> str | None:
         "todo_missing_execplan_linkage": "Create or promote this item to a .agentic-workspace/planning/execplans plan and point Surface at it.",
         "todo_plan_required_hint": "This direct task has grown beyond direct-task shape; scaffold an execplan for it.",
         "todo_broken_surface_reference": "Repair Surface so it points at a live .agentic-workspace/planning/execplans path, or remove the stale item.",
+        "planning_state_unsupported_activation_shape": (
+            "Run `agentic-workspace summary --target . --format json --profile full`, then migrate string execplan references "
+            "to supported `todo.active_items` objects or create a replacement with `agentic-planning-bootstrap new-plan`; "
+            "do not delete state.toml as the first move."
+        ),
+        "planning_record_schema_drift": (
+            "Preserve the invalid record as evidence, scaffold a valid replacement with `agentic-planning-bootstrap new-plan` "
+            "or migrate the record to the current schema, then rerun `agentic-workspace summary --target . --format json`."
+        ),
         "execplan_structure_drift": (
             "Restore the current template sections, especially Intent Continuity, Required Continuation, "
             "Delegated Judgment, Active Milestone, and Execution Summary, so the plan matches the newer contract; "

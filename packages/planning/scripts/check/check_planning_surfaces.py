@@ -590,7 +590,9 @@ def _unsupported_state_activation_shape_warnings(state: dict[str, object] | None
                     (
                         f"`[{section_name}].{bucket_name}` contains string reference `{raw}`{exists_suffix}, "
                         "but current planning state expects item objects in `todo.active_items` or `todo.queued_items`. "
-                        "Recover with `agentic-planning-bootstrap new-plan --id <id> --title <title> --activate` "
+                        "Do not delete `state.toml` as the first recovery step; preserve the evidence and make the "
+                        "smallest schema-preserving correction. Recover with "
+                        "`agentic-planning-bootstrap new-plan --id <id> --title <title> --activate` "
                         "or migrate the reference to a supported item object."
                     ),
                 )
