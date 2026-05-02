@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
+import sys
 import tarfile
 import tempfile
 from pathlib import Path
@@ -64,6 +66,16 @@ def _installed_inventory(wheel_path: Path, tmpdir: str) -> set[str]:
     return {path.relative_to(installed_payload).as_posix() for path in installed_payload.rglob("*") if path.is_file()}
 
 
+def _raw_wheel_inventory(path: Path) -> set[str]:
+    with ZipFile(path) as wheel:
+        return {name for name in wheel.namelist() if not name.endswith("/")}
+
+
+def _raw_sdist_inventory(path: Path) -> set[str]:
+    with tarfile.open(path, "r:gz") as archive:
+        return {name for name in archive.getnames() if not name.endswith("/")}
+
+
 def test_workspace_artifacts_match_checked_in_payload_inventory() -> None:
     expected_inventory = _source_inventory()
 
@@ -78,3 +90,43 @@ def test_workspace_artifacts_match_checked_in_payload_inventory() -> None:
     assert wheel_inventory == expected_inventory
     assert sdist_inventory == expected_inventory
     assert installed_inventory == expected_inventory
+
+
+def test_workspace_artifacts_ship_generated_cli_package_import_dependency() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        wheel_path = _build_artifact(tmpdir, "wheel")
+        sdist_path = _build_artifact(tmpdir, "sdist")
+
+        wheel_inventory = _raw_wheel_inventory(wheel_path)
+        sdist_inventory = _raw_sdist_inventory(sdist_path)
+
+        assert "agentic_workspace/generated_cli_package/__init__.py" in wheel_inventory
+        assert any(name.endswith("/src/agentic_workspace/generated_cli_package/__init__.py") for name in sdist_inventory)
+
+
+def test_installed_workspace_wheel_imports_cli_module() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        wheel_path = _build_artifact(tmpdir, "wheel")
+        install_root = Path(tmpdir) / "installed"
+        subprocess.run(
+            ["uv", "pip", "install", "--no-deps", "--target", str(install_root), str(wheel_path)],
+            cwd=WORKSPACE_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import agentic_workspace.cli; from agentic_workspace.generated_cli_package import build_generated_parser",
+            ],
+            cwd=Path(tmpdir),
+            env={**os.environ, "PYTHONPATH": str(install_root)},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    assert result.returncode == 0, result.stderr

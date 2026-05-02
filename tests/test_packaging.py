@@ -11,22 +11,22 @@ from zipfile import ZipFile
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_root_wheel_excludes_generated_cli_package_metadata() -> None:
+def test_root_wheel_ships_generated_cli_package_import_dependency() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         wheel_path = _build_artifact("wheel", Path(tmpdir))
         inventory = _artifact_inventory(wheel_path)
 
     assert "agentic_workspace/generated_command_adapters.py" in inventory
-    assert not any("agentic_workspace/generated_cli_package/" in path for path in inventory)
+    assert "agentic_workspace/generated_cli_package/__init__.py" in inventory
 
 
-def test_root_sdist_excludes_generated_cli_package_metadata() -> None:
+def test_root_sdist_ships_generated_cli_package_import_dependency() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         sdist_path = _build_artifact("sdist", Path(tmpdir))
         inventory = _artifact_inventory(sdist_path)
 
     assert "src/agentic_workspace/generated_command_adapters.py" in inventory
-    assert not any("src/agentic_workspace/generated_cli_package/" in path for path in inventory)
+    assert "src/agentic_workspace/generated_cli_package/__init__.py" in inventory
 
 
 def _build_artifact(kind: str, output_dir: Path) -> Path:

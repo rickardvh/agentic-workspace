@@ -44,18 +44,12 @@ members = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agentic_workspace"]
-exclude = [
-  "src/agentic_workspace/generated_cli_package",
-]
 
 [tool.hatch.build.targets.sdist]
 include = [
   "/README.md",
   "/src/agentic_workspace",
   "/tests",
-]
-exclude = [
-  "/src/agentic_workspace/generated_cli_package",
 ]
 
 [tool.pytest.ini_options]
