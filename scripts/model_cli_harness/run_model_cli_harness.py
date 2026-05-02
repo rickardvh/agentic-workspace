@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import hashlib
 import json
 import os
@@ -57,9 +58,52 @@ def _render_prompt(template: str, *, replacements: dict[str, str]) -> str:
     return _replace_placeholders(template, replacements=replacements)
 
 
-def _scenario_paths(*, output_root: Path, suite_id: str, scenario_id: str, adapter_id: str, model: str) -> HarnessPaths:
+def _prompt_variants(scenario: dict[str, Any], *, requested: str | None = None) -> list[dict[str, str]]:
+    raw_variants = scenario.get("prompt_variants")
+    if raw_variants is None:
+        variants = [{"id": "default", "prompt": str(scenario.get("prompt", ""))}]
+    else:
+        if not isinstance(raw_variants, list) or not raw_variants:
+            raise ValueError(f"scenario '{scenario.get('id', '<unknown>')}' prompt_variants must be a non-empty list")
+        variants = []
+        for index, raw_variant in enumerate(raw_variants):
+            if isinstance(raw_variant, str):
+                variant_id = "default" if index == 0 else f"variant-{index + 1}"
+                variants.append({"id": variant_id, "prompt": raw_variant})
+                continue
+            if not isinstance(raw_variant, dict):
+                raise ValueError(f"scenario '{scenario.get('id', '<unknown>')}' prompt variant entries must be strings or objects")
+            variant_id = str(raw_variant.get("id") or f"variant-{index + 1}")
+            prompt_text = raw_variant.get("prompt", raw_variant.get("text"))
+            if not isinstance(prompt_text, str):
+                raise ValueError(f"scenario '{scenario.get('id', '<unknown>')}' prompt variant '{variant_id}' needs text")
+            variants.append({"id": variant_id, "prompt": prompt_text})
+    if requested is None:
+        return variants[:1]
+    if requested == "all":
+        return variants
+    selected = [variant for variant in variants if variant["id"] == requested]
+    if not selected:
+        available = ", ".join(variant["id"] for variant in variants)
+        raise ValueError(f"prompt variant '{requested}' is not defined; available variants: {available}")
+    return selected
+
+
+def _scenario_paths(
+    *,
+    output_root: Path,
+    suite_id: str,
+    scenario_id: str,
+    adapter_id: str,
+    model: str,
+    prompt_variant_id: str | None = None,
+) -> HarnessPaths:
     safe_model = model.replace("/", "_").replace(":", "_").replace(" ", "_")
-    run_root = output_root / f"{_now_id()}-{suite_id}-{scenario_id}-{adapter_id}-{safe_model}"
+    variant_suffix = ""
+    if prompt_variant_id and prompt_variant_id != "default":
+        safe_variant = prompt_variant_id.replace("/", "_").replace(":", "_").replace(" ", "_")
+        variant_suffix = f"-{safe_variant}"
+    run_root = output_root / f"{_now_id()}-{suite_id}-{scenario_id}{variant_suffix}-{adapter_id}-{safe_model}"
     fixture_root = run_root / "fixture"
     repo_path = run_root / "repo"
     transcript_path = run_root / "transcript.jsonl"
@@ -336,6 +380,148 @@ def _created_path_is_misplaced_planning_artifact(path: str) -> bool:
         and any(marker in normalized.lower() for marker in planning_markers)
         or any(marker in name for marker in planning_markers)
     )
+
+
+def _changed_paths(mutation_summary: dict[str, Any] | None) -> list[str]:
+    if not isinstance(mutation_summary, dict):
+        return []
+    paths: list[str] = []
+    for key in ("created", "modified", "deleted"):
+        values = mutation_summary.get(key, [])
+        if isinstance(values, list):
+            paths.extend(value.replace("\\", "/") for value in values if isinstance(value, str))
+    return sorted(dict.fromkeys(paths))
+
+
+def _matches_any(path: str, patterns: list[str]) -> bool:
+    normalized = path.replace("\\", "/")
+    return any(fnmatch.fnmatch(normalized, pattern.replace("\\", "/")) for pattern in patterns)
+
+
+def _string_list(value: Any, *, field: str, scenario_id: str) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ValueError(f"scenario '{scenario_id}' {field} must be a string list")
+    return value
+
+
+def _metadata_workflow_warnings(
+    *,
+    scenario: dict[str, Any],
+    result: dict[str, Any],
+    mutation_summary: dict[str, Any] | None,
+    repo_path: Path,
+) -> list[dict[str, str]]:
+    scenario_id = str(scenario.get("id", "<unknown>"))
+    changed_paths = _changed_paths(mutation_summary)
+    response_lower = _response_text(result).lower()
+    warnings: list[dict[str, str]] = []
+
+    def add(message: str, *, evidence: str = "") -> None:
+        warning: dict[str, str] = {
+            "warning_class": "model_cli_metadata_scoring_failure",
+            "message": message,
+        }
+        if evidence:
+            warning["evidence"] = evidence
+        warnings.append(warning)
+
+    allowed_write_patterns = _string_list(scenario.get("allowed_write_patterns"), field="allowed_write_patterns", scenario_id=scenario_id)
+    forbidden_write_patterns = _string_list(scenario.get("forbidden_write_patterns"), field="forbidden_write_patterns", scenario_id=scenario_id)
+    if allowed_write_patterns:
+        unexpected = [path for path in changed_paths if not _matches_any(path, allowed_write_patterns)]
+        if unexpected:
+            add("The agent changed files outside the scenario's allowed write patterns.", evidence=", ".join(unexpected[:12]))
+    if forbidden_write_patterns:
+        forbidden = [path for path in changed_paths if _matches_any(path, forbidden_write_patterns)]
+        if forbidden:
+            add("The agent changed files matching the scenario's forbidden write patterns.", evidence=", ".join(forbidden[:12]))
+
+    for required in _string_list(
+        scenario.get("required_command_mentions"),
+        field="required_command_mentions",
+        scenario_id=scenario_id,
+    ):
+        if required.lower() not in response_lower:
+            add("The agent did not report a required command or workflow surface.", evidence=required)
+    for forbidden in _string_list(
+        scenario.get("forbidden_response_phrases"),
+        field="forbidden_response_phrases",
+        scenario_id=scenario_id,
+    ):
+        if forbidden.lower() in response_lower:
+            add("The agent reported a forbidden response phrase for this scenario.", evidence=forbidden)
+    for pattern in _string_list(
+        scenario.get("required_artifact_patterns"),
+        field="required_artifact_patterns",
+        scenario_id=scenario_id,
+    ):
+        if not any(repo_path.glob(pattern)):
+            add("The scenario's required artifact pattern was not present after the run.", evidence=pattern)
+
+    deduped: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for warning in warnings:
+        key = (warning["warning_class"], warning["message"], warning.get("evidence", ""))
+        if key not in seen:
+            deduped.append(warning)
+            seen.add(key)
+    return deduped
+
+
+def _quality_signals(
+    *,
+    scenario_id: str,
+    mutation_summary: dict[str, Any] | None,
+    warnings: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    if not isinstance(mutation_summary, dict) or mutation_summary.get("status") == "not-run":
+        return []
+    changed_paths = _changed_paths(mutation_summary)
+    warning_messages = "\n".join(str(warning.get("message", "")) for warning in warnings).lower()
+    canonical_planning = [
+        path
+        for path in changed_paths
+        if path.startswith(".agentic-workspace/planning/execplans/")
+        or path.startswith(".agentic-workspace/planning/decompositions/")
+        or path == ".agentic-workspace/planning/state.toml"
+    ]
+    non_planning_changes = [path for path in changed_paths if not path.startswith(".agentic-workspace/planning/")]
+    signals: list[dict[str, str]] = []
+    if scenario_id == "direct-task-minimal-overhead":
+        direct_only = bool(changed_paths) and all(path == "README.md" for path in changed_paths)
+        signals.append(
+            {
+                "id": "direct_task_stayed_direct",
+                "status": "satisfied" if direct_only and "direct wording edit" not in warning_messages else "weak",
+                "evidence": ", ".join(changed_paths) or "no mutation captured",
+            }
+        )
+    if scenario_id == "broad-work-decomposition":
+        signals.append(
+            {
+                "id": "broad_task_created_durable_planning",
+                "status": "satisfied" if canonical_planning else "weak",
+                "evidence": ", ".join(canonical_planning) or "no canonical planning artifact captured",
+            }
+        )
+        signals.append(
+            {
+                "id": "planning_only_avoided_product_scaffold",
+                "status": "satisfied" if not non_planning_changes else "weak",
+                "evidence": ", ".join(non_planning_changes) or "only planning paths changed",
+            }
+        )
+    if scenario_id in {"planning-artifact-integrity", "native-plan-bridge"}:
+        signals.append(
+            {
+                "id": "durable_decision_uses_canonical_surface",
+                "status": "satisfied" if canonical_planning and "outside canonical" not in warning_messages else "weak",
+                "evidence": ", ".join(canonical_planning) or "no canonical planning artifact captured",
+            }
+        )
+    return signals
 
 
 def _semantic_workflow_warnings(
@@ -622,6 +808,114 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
     return deduped
 
 
+def _warning_key(warning: dict[str, Any]) -> str:
+    return "|".join(str(warning.get(key, "")) for key in ("warning_class", "message", "evidence", "paths"))
+
+
+def _classify_suite_findings(results: list[dict[str, Any]]) -> dict[str, Any]:
+    occurrences: dict[str, list[dict[str, str]]] = {}
+    for result in results:
+        for warning in result.get("warnings", []):
+            if not isinstance(warning, dict):
+                continue
+            occurrences.setdefault(_warning_key(warning), []).append(
+                {
+                    "scenario_id": str(result.get("scenario_id", "")),
+                    "prompt_variant_id": str(result.get("prompt_variant_id", "default")),
+                    "adapter_id": str(result.get("adapter_id", "")),
+                    "model": str(result.get("model", "")),
+                }
+            )
+    findings: list[dict[str, Any]] = []
+    for key, refs in sorted(occurrences.items()):
+        models = {ref["model"] for ref in refs if ref["model"]}
+        adapters = {ref["adapter_id"] for ref in refs if ref["adapter_id"]}
+        variants = {ref["prompt_variant_id"] for ref in refs if ref["prompt_variant_id"]}
+        classes = ["first_seen"]
+        if len(models) > 1 or len(adapters) > 1:
+            classes.append("repeated_across_models")
+        if len(variants) > 1:
+            classes.append("repeated_across_prompts")
+        if len(refs) == 1 and len(models) == 1:
+            classes.append("model_specific")
+        findings.append({"warning_key": key, "classification": classes, "evidence_refs": refs})
+    return {"finding_count": len(findings), "findings": findings}
+
+
+def _load_result_payload(path: Path) -> dict[str, Any]:
+    if path.is_dir():
+        run_json = path / "run.json"
+        if run_json.exists():
+            return _load_json(run_json)
+        summaries = sorted(path.glob("*-summary.json"))
+        if summaries:
+            return _load_json(summaries[-1])
+        raise FileNotFoundError(f"no run.json or summary JSON found under {path}")
+    return _load_json(path)
+
+
+def _flatten_results(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    results = payload.get("results")
+    if isinstance(results, list):
+        return [item for item in results if isinstance(item, dict)]
+    return [payload]
+
+
+def compare_results(*, baseline_path: Path, current_path: Path) -> dict[str, Any]:
+    baseline_payload = _load_result_payload(baseline_path)
+    current_payload = _load_result_payload(current_path)
+    baseline_results = _flatten_results(baseline_payload)
+    current_results = _flatten_results(current_payload)
+    baseline_warnings = {
+        _warning_key(warning): warning
+        for result in baseline_results
+        for warning in result.get("warnings", [])
+        if isinstance(warning, dict)
+    }
+    current_warnings = {
+        _warning_key(warning): warning
+        for result in current_results
+        for warning in result.get("warnings", [])
+        if isinstance(warning, dict)
+    }
+    resolved = sorted(set(baseline_warnings) - set(current_warnings))
+    introduced = sorted(set(current_warnings) - set(baseline_warnings))
+    retained = sorted(set(baseline_warnings) & set(current_warnings))
+    mutation_delta = {
+        "baseline_changed_results": sum(
+            1 for result in baseline_results if result.get("mutation_summary", {}).get("status") == "changed"
+        ),
+        "current_changed_results": sum(
+            1 for result in current_results if result.get("mutation_summary", {}).get("status") == "changed"
+        ),
+    }
+    if introduced:
+        interpretation = "regressed"
+    elif resolved:
+        interpretation = "improved"
+    elif retained:
+        interpretation = "unchanged-with-warnings"
+    else:
+        interpretation = "unchanged-clean"
+    return {
+        "schema": "agentic-workspace/model-cli-harness-comparison/v1",
+        "baseline": str(baseline_path),
+        "current": str(current_path),
+        "baseline_warning_count": len(baseline_warnings),
+        "current_warning_count": len(current_warnings),
+        "resolved_warnings": [baseline_warnings[key] for key in resolved],
+        "new_warnings": [current_warnings[key] for key in introduced],
+        "retained_warnings": [current_warnings[key] for key in retained],
+        "mutation_delta": mutation_delta,
+        "product_interpretation": interpretation,
+        "recommended_action": (
+            "Promote the fix if resolved warnings match the intended product change."
+            if interpretation == "improved"
+            else "Inspect new or retained warnings before claiming the optimisation worked."
+        ),
+    }
+
+
 def run_suite(
     *,
     suite_path: Path,
@@ -633,6 +927,7 @@ def run_suite(
     timeout_seconds: int | None,
     isolate_provider_home: bool = False,
     allow_environment_blocked: bool = False,
+    prompt_variant: str | None = None,
 ) -> dict[str, Any]:
     suite = _load_json(suite_path)
     suite_id = str(suite.get("id", suite_path.stem))
@@ -658,115 +953,132 @@ def run_suite(
         if not isinstance(scenario, dict):
             raise ValueError("scenario entries must be objects")
         scenario_id = str(scenario["id"])
-        paths = _scenario_paths(
-            output_root=output_root,
-            suite_id=suite_id,
-            scenario_id=scenario_id,
-            adapter_id=adapter_id,
-            model=resolved_model,
-        )
-        _prepare_fixture(suite_path=suite_path, scenario=scenario, paths=paths)
-        replacements = {
-            "repo": str(paths.repo_path),
-            "run_root": str(paths.run_root),
-            "share_path": str(paths.share_path),
-            "transcript_path": str(paths.transcript_path),
-            "model": resolved_model,
-            "source_root": str(REPO_ROOT),
-            "program_files": os.environ.get("ProgramFiles", ""),
-            "local_app_data": os.environ.get("LOCALAPPDATA", ""),
-        }
-        prompt = _render_prompt(str(scenario.get("prompt", "")), replacements=replacements)
-        replacements["prompt"] = prompt
-        command_template = adapter.get("command")
-        if not isinstance(command_template, list) or not all(isinstance(item, str) for item in command_template):
-            raise ValueError(f"adapter '{adapter_id}' must define command as a string list")
-        command = _render_list(command_template, replacements=replacements)
-        preflight = _adapter_preflight(adapter, command=command, replacements=replacements)
-        adapter_env = _adapter_environment(
-            adapter,
-            replacements=replacements,
-            isolate_provider_home=isolate_provider_home,
-        )
-        adapter_env = _prepend_env_path(adapter_env, preflight["path_prepend"])
-        adapter_env = _with_git_ceiling(adapter_env, run_root=paths.run_root)
-        provider_home_env = adapter.get("provider_home_env")
-        if isolate_provider_home and isinstance(provider_home_env, str) and provider_home_env in adapter_env:
-            Path(adapter_env[provider_home_env]).mkdir(parents=True, exist_ok=True)
+        for variant in _prompt_variants(scenario, requested=prompt_variant):
+            prompt_variant_id = variant["id"]
+            paths = _scenario_paths(
+                output_root=output_root,
+                suite_id=suite_id,
+                scenario_id=scenario_id,
+                adapter_id=adapter_id,
+                model=resolved_model,
+                prompt_variant_id=prompt_variant_id,
+            )
+            _prepare_fixture(suite_path=suite_path, scenario=scenario, paths=paths)
+            replacements = {
+                "repo": str(paths.repo_path),
+                "run_root": str(paths.run_root),
+                "share_path": str(paths.share_path),
+                "transcript_path": str(paths.transcript_path),
+                "model": resolved_model,
+                "source_root": str(REPO_ROOT),
+                "program_files": os.environ.get("ProgramFiles", ""),
+                "local_app_data": os.environ.get("LOCALAPPDATA", ""),
+            }
+            prompt = _render_prompt(variant["prompt"], replacements=replacements)
+            replacements["prompt"] = prompt
+            command_template = adapter.get("command")
+            if not isinstance(command_template, list) or not all(isinstance(item, str) for item in command_template):
+                raise ValueError(f"adapter '{adapter_id}' must define command as a string list")
+            command = _render_list(command_template, replacements=replacements)
+            preflight = _adapter_preflight(adapter, command=command, replacements=replacements)
+            adapter_env = _adapter_environment(
+                adapter,
+                replacements=replacements,
+                isolate_provider_home=isolate_provider_home,
+            )
+            adapter_env = _prepend_env_path(adapter_env, preflight["path_prepend"])
+            adapter_env = _with_git_ceiling(adapter_env, run_root=paths.run_root)
+            provider_home_env = adapter.get("provider_home_env")
+            if isolate_provider_home and isinstance(provider_home_env, str) and provider_home_env in adapter_env:
+                Path(adapter_env[provider_home_env]).mkdir(parents=True, exist_ok=True)
 
-        setup_results: list[dict[str, Any]] = []
-        setup_commands = scenario.get("setup_commands", [])
-        if setup_commands and not isinstance(setup_commands, list):
-            raise ValueError(f"scenario '{scenario_id}' setup_commands must be a list")
-        if execute:
-            for setup_command in setup_commands:
-                if not isinstance(setup_command, list) or not all(isinstance(item, str) for item in setup_command):
-                    raise ValueError(f"scenario '{scenario_id}' setup command must be a string list")
-                setup_results.append(
-                    _run_command(
-                        _render_list(setup_command, replacements=replacements),
-                        cwd=paths.repo_path,
-                        timeout_seconds=effective_timeout,
-                        env=adapter_env,
+            setup_results: list[dict[str, Any]] = []
+            setup_commands = scenario.get("setup_commands", [])
+            if setup_commands and not isinstance(setup_commands, list):
+                raise ValueError(f"scenario '{scenario_id}' setup_commands must be a list")
+            if execute:
+                for setup_command in setup_commands:
+                    if not isinstance(setup_command, list) or not all(isinstance(item, str) for item in setup_command):
+                        raise ValueError(f"scenario '{scenario_id}' setup command must be a string list")
+                    setup_results.append(
+                        _run_command(
+                            _render_list(setup_command, replacements=replacements),
+                            cwd=paths.repo_path,
+                            timeout_seconds=effective_timeout,
+                            env=adapter_env,
+                        )
+                    )
+            baseline_snapshot = _file_snapshot(paths.repo_path)
+
+            invocation: dict[str, Any] = {
+                "scenario_id": scenario_id,
+                "prompt_variant_id": prompt_variant_id,
+                "adapter_id": adapter_id,
+                "model": resolved_model,
+                "execute": execute,
+                "repo_path": str(paths.repo_path),
+                "run_root": str(paths.run_root),
+                "prompt": prompt,
+                "command": command,
+                "preflight": preflight,
+                "git_ceiling_directories": adapter_env.get("GIT_CEILING_DIRECTORIES", ""),
+                "isolate_provider_home": isolate_provider_home,
+                "setup_results": setup_results,
+                "expected_signals": scenario.get("expected_signals", []),
+                "score_notes": scenario.get("score_notes", []),
+            }
+            if execute and preflight["status"] == "environment-blocked" and not allow_environment_blocked:
+                invocation["result"] = {
+                    "status": "environment-blocked",
+                    "detail": "Adapter preflight failed; use --allow-environment-blocked to run anyway.",
+                }
+                invocation["warnings"] = [
+                    {
+                        "warning_class": "model_cli_environment_blocked",
+                        "message": "Adapter preflight failed before model execution.",
+                        "missing": ", ".join(item["name"] for item in preflight["missing"]),
+                    }
+                ]
+            elif execute:
+                result = _run_command(command, cwd=paths.repo_path, timeout_seconds=effective_timeout, env=adapter_env)
+                if paths.share_path.exists():
+                    result["final_message"] = paths.share_path.read_text(encoding="utf-8")
+                _copy_transcript(str(result.get("stdout", "")), paths.transcript_path)
+                mutation_summary = _snapshot_diff(baseline_snapshot, _file_snapshot(paths.repo_path))
+                invocation["result"] = result
+                invocation["mutation_summary"] = mutation_summary
+                invocation["transcript_path"] = str(paths.transcript_path)
+                invocation["share_path"] = str(paths.share_path)
+                invocation["warnings"] = _execution_warnings(result=result, repo_path=paths.repo_path, mutation_summary=mutation_summary)
+                invocation["warnings"].extend(
+                    _semantic_workflow_warnings(
+                        scenario_id=scenario_id,
+                        result=result,
+                        mutation_summary=mutation_summary,
                     )
                 )
-        baseline_snapshot = _file_snapshot(paths.repo_path)
-
-        invocation: dict[str, Any] = {
-            "scenario_id": scenario_id,
-            "adapter_id": adapter_id,
-            "model": resolved_model,
-            "execute": execute,
-            "repo_path": str(paths.repo_path),
-            "run_root": str(paths.run_root),
-            "prompt": prompt,
-            "command": command,
-            "preflight": preflight,
-            "git_ceiling_directories": adapter_env.get("GIT_CEILING_DIRECTORIES", ""),
-            "isolate_provider_home": isolate_provider_home,
-            "setup_results": setup_results,
-            "expected_signals": scenario.get("expected_signals", []),
-            "score_notes": scenario.get("score_notes", []),
-        }
-        if execute and preflight["status"] == "environment-blocked" and not allow_environment_blocked:
-            invocation["result"] = {
-                "status": "environment-blocked",
-                "detail": "Adapter preflight failed; use --allow-environment-blocked to run anyway.",
-            }
-            invocation["warnings"] = [
-                {
-                    "warning_class": "model_cli_environment_blocked",
-                    "message": "Adapter preflight failed before model execution.",
-                    "missing": ", ".join(item["name"] for item in preflight["missing"]),
-                }
-            ]
-        elif execute:
-            result = _run_command(command, cwd=paths.repo_path, timeout_seconds=effective_timeout, env=adapter_env)
-            if paths.share_path.exists():
-                result["final_message"] = paths.share_path.read_text(encoding="utf-8")
-            _copy_transcript(str(result.get("stdout", "")), paths.transcript_path)
-            mutation_summary = _snapshot_diff(baseline_snapshot, _file_snapshot(paths.repo_path))
-            invocation["result"] = result
-            invocation["mutation_summary"] = mutation_summary
-            invocation["transcript_path"] = str(paths.transcript_path)
-            invocation["share_path"] = str(paths.share_path)
-            invocation["warnings"] = _execution_warnings(result=result, repo_path=paths.repo_path, mutation_summary=mutation_summary)
-            invocation["warnings"].extend(
-                _semantic_workflow_warnings(
-                    scenario_id=scenario_id,
-                    result=result,
-                    mutation_summary=mutation_summary,
+                invocation["warnings"].extend(
+                    _metadata_workflow_warnings(
+                        scenario=scenario,
+                        result=result,
+                        mutation_summary=mutation_summary,
+                        repo_path=paths.repo_path,
+                    )
                 )
+            else:
+                invocation["result"] = {
+                    "status": "dry-run",
+                    "detail": "Use --execute to run the model CLI.",
+                }
+                invocation["mutation_summary"] = {"status": "not-run"}
+                invocation["warnings"] = []
+            invocation["quality_signals"] = _quality_signals(
+                scenario_id=scenario_id,
+                mutation_summary=invocation.get("mutation_summary"),
+                warnings=invocation["warnings"],
             )
-        else:
-            invocation["result"] = {
-                "status": "dry-run",
-                "detail": "Use --execute to run the model CLI.",
-            }
-            invocation["mutation_summary"] = {"status": "not-run"}
-            invocation["warnings"] = []
-        _write_json(paths.run_root / "run.json", invocation)
-        run_results.append(invocation)
+            _write_json(paths.run_root / "run.json", invocation)
+            run_results.append(invocation)
 
     payload = {
         "schema": "agentic-workspace/model-cli-harness-result/v1",
@@ -778,6 +1090,7 @@ def run_suite(
         "result_count": len(run_results),
         "results": run_results,
     }
+    payload["finding_classification"] = _classify_suite_findings(run_results)
     _write_json(output_root / f"{_now_id()}-{suite_id}-{adapter_id}-summary.json", payload)
     return payload
 
@@ -788,6 +1101,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--adapter", default="copilot")
     parser.add_argument("--model")
     parser.add_argument("--scenario")
+    parser.add_argument(
+        "--prompt-variant",
+        help="Run one prompt variant by id, or 'all'. Defaults to the scenario's first/default prompt.",
+    )
     parser.add_argument("--execute", action="store_true", help="Run the model CLI. Defaults to dry-run.")
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--timeout-seconds", type=int)
@@ -801,6 +1118,8 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run even when adapter preflight reports missing required local tools.",
     )
+    parser.add_argument("--compare-baseline", type=Path, help="Compare a baseline run JSON, run directory, or summary JSON.")
+    parser.add_argument("--compare-current", type=Path, help="Compare a current run JSON, run directory, or summary JSON.")
     parser.add_argument("--format", choices=["text", "json"], default="text")
     return parser
 
@@ -808,17 +1127,26 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        payload = run_suite(
-            suite_path=args.suite.resolve(),
-            adapter_id=args.adapter,
-            model=args.model,
-            scenario_filter=args.scenario,
-            execute=args.execute,
-            output_root=args.output_root.resolve(),
-            timeout_seconds=args.timeout_seconds,
-            isolate_provider_home=args.isolate_provider_home,
-            allow_environment_blocked=args.allow_environment_blocked,
-        )
+        if args.compare_baseline or args.compare_current:
+            if not args.compare_baseline or not args.compare_current:
+                raise ValueError("--compare-baseline and --compare-current must be provided together")
+            payload = compare_results(
+                baseline_path=args.compare_baseline.resolve(),
+                current_path=args.compare_current.resolve(),
+            )
+        else:
+            payload = run_suite(
+                suite_path=args.suite.resolve(),
+                adapter_id=args.adapter,
+                model=args.model,
+                scenario_filter=args.scenario,
+                execute=args.execute,
+                output_root=args.output_root.resolve(),
+                timeout_seconds=args.timeout_seconds,
+                isolate_provider_home=args.isolate_provider_home,
+                allow_environment_blocked=args.allow_environment_blocked,
+                prompt_variant=args.prompt_variant,
+            )
     except Exception as exc:  # noqa: BLE001
         if args.format == "json":
             print(json.dumps({"status": "error", "error": str(exc)}, indent=2))
@@ -827,11 +1155,20 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     if args.format == "json":
         print(json.dumps(payload, indent=2))
+    elif payload.get("schema") == "agentic-workspace/model-cli-harness-comparison/v1":
+        print(
+            "comparison: "
+            f"{payload['product_interpretation']} "
+            f"({payload['baseline_warning_count']} -> {payload['current_warning_count']} warnings)"
+        )
+        print(f"resolved: {len(payload['resolved_warnings'])}; new: {len(payload['new_warnings'])}; retained: {len(payload['retained_warnings'])}")
+        print(payload["recommended_action"])
     else:
         mode = "executed" if args.execute else "dry-run"
         print(f"{mode} {payload['result_count']} scenario(s) for {payload['adapter']}:{payload['model']}")
         for result in payload["results"]:
-            print(f"- {result['scenario_id']}: {result['run_root']}")
+            variant = result.get("prompt_variant_id", "default")
+            print(f"- {result['scenario_id']}[{variant}]: {result['run_root']}")
     return 0
 
 

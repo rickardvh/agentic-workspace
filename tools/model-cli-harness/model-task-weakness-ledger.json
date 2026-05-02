@@ -1,0 +1,50 @@
+{
+  "schema": "agentic-workspace/model-cli-harness-weakness-ledger/v1",
+  "purpose": "Compact maintainer ledger for repeated model-task workflow weaknesses found through the source-checkout-only harness.",
+  "updated_at": "2026-05-02",
+  "entries": [
+    {
+      "id": "prep-only-broad-work-product-scaffold",
+      "area": "planning",
+      "scenario": "broad-work-decomposition",
+      "models": [
+        "claude-haiku-4.5",
+        "gemini-3-flash-preview",
+        "gpt-5.3-codex-spark"
+      ],
+      "status": "monitoring",
+      "failure_classes": [
+        "product scaffold during preparation-only work",
+        "freehand planning artifacts",
+        "proposal-only durable handoff"
+      ],
+      "evidence_refs": [
+        "GitHub issues #690-#697",
+        "tools/model-cli-harness/suites/copilot-workflow-smoke.json::broad-work-decomposition"
+      ],
+      "product_owner": "Agentic Workspace planning and harness maintainers",
+      "next_probe": "Run broad-work-decomposition with --prompt-variant all after planning workflow wording or CLI affordance changes.",
+      "priority": "high"
+    },
+    {
+      "id": "memory-context-skipped-or-bulk-read",
+      "area": "memory",
+      "scenario": "memory-consult-before-edit",
+      "models": [],
+      "status": "new-probe",
+      "failure_classes": [
+        "skips Memory before context-sensitive edit",
+        "bulk-reads Memory instead of following the index",
+        "misses durable learning capture"
+      ],
+      "evidence_refs": [
+        "GitHub issue #696",
+        "tools/model-cli-harness/fixtures/aw-memory-host-repo"
+      ],
+      "product_owner": "Memory workflow and harness maintainers",
+      "next_probe": "Run memory-consult-before-edit and memory-learning-capture across available adapters.",
+      "priority": "medium"
+    }
+  ]
+}
+

@@ -99,6 +99,21 @@
       "id": "direct-task-minimal-overhead",
       "fixture": "aw-minimal-host-repo",
       "prompt": "Make a tiny wording-only README improvement in this repo: change the first sentence so it says this fixture is for external model CLI dogfooding. Keep setup overhead proportional to this direct edit. Final answer should name the file changed and the proof command, if any.",
+      "allowed_write_patterns": [
+        "README.md"
+      ],
+      "forbidden_write_patterns": [
+        ".agentic-workspace/planning/**",
+        "PLAN.md",
+        "*PLAN*.md",
+        "TODO.md",
+        "ROADMAP.md"
+      ],
+      "forbidden_response_phrases": [
+        "execplan",
+        "epic",
+        "lane"
+      ],
       "expected_signals": [
         "uses startup guidance lightly",
         "edits only README.md",
@@ -113,7 +128,42 @@
     {
       "id": "broad-work-decomposition",
       "fixture": "aw-minimal-host-repo",
-      "prompt": "Build a small ecommerce application in this repo. This is broad work that may span multiple implementation slices. Prepare the repo so a later agent can safely continue from a bounded first slice, but do not build the app yet. Final answer should name the files or commands used.",
+      "prompt_variants": [
+        {
+          "id": "prepare-ecommerce",
+          "prompt": "Build a small ecommerce application in this repo. This is broad work that may span multiple implementation slices. Prepare the repo so a later agent can safely continue from a bounded first slice, but do not build the app yet. Final answer should name the files or commands used."
+        },
+        {
+          "id": "future-agent-handoff",
+          "prompt": "I want a small ecommerce app here, but this session should only leave the repo ready for a future coding pass. Shape the durable continuation state for a bounded first slice without scaffolding the app itself. Final answer should name the repo-visible state you left behind."
+        }
+      ],
+      "allowed_write_patterns": [
+        ".agentic-workspace/planning/**"
+      ],
+      "forbidden_write_patterns": [
+        "README.md",
+        "HANDOFF.md",
+        "SLICES.md",
+        "PREPARATION.md",
+        "package.json",
+        "src/**",
+        "public/**",
+        "app/**",
+        "pages/**",
+        "summary.json"
+      ],
+      "required_command_mentions": [
+        "agentic-workspace summary"
+      ],
+      "forbidden_response_phrases": [
+        "/plan",
+        ".agentic-workspace/planning/records/",
+        "created app folders"
+      ],
+      "required_artifact_patterns": [
+        ".agentic-workspace/planning/execplans/*.plan.json"
+      ],
       "expected_signals": [
         "classifies work as lane/epic-shaped before implementation",
         "uses schema-backed planning or decomposition surfaces",
@@ -167,6 +217,64 @@
       "score_notes": [
         "Good: leverages native planning without confusing authority.",
         "Bad: fights native planning completely or treats native todos as durable workspace state."
+      ]
+    },
+    {
+      "id": "memory-consult-before-edit",
+      "fixture": "aw-memory-host-repo",
+      "prompt_variants": [
+        {
+          "id": "packaging-note",
+          "prompt": "Update the developer notes so the test command is easier for a new contributor to find. Keep the edit small and use the repo's own instructions to orient first. Final answer should name what context you consulted and the file changed."
+        },
+        {
+          "id": "trap-aware",
+          "prompt": "Make a tiny docs edit that clarifies how maintainers should run tests. Avoid rediscovering repo-specific traps by using the repo's startup guidance. Final answer should mention the context source used."
+        }
+      ],
+      "allowed_write_patterns": [
+        "README.md"
+      ],
+      "required_command_mentions": [
+        ".agentic-workspace/memory/repo/index.md"
+      ],
+      "forbidden_response_phrases": [
+        "read every memory note",
+        "bulk read memory"
+      ],
+      "expected_signals": [
+        "uses Memory routing or the Memory index before editing",
+        "consults the narrow packaging/testing note rather than bulk-reading all notes",
+        "keeps the edit bounded to README.md"
+      ],
+      "score_notes": [
+        "Good: cites the Memory index and specific repo note before the small README edit.",
+        "Bad: ignores Memory, bulk-reads unrelated notes, or invents test commands."
+      ]
+    },
+    {
+      "id": "memory-learning-capture",
+      "fixture": "aw-memory-host-repo",
+      "prompt": "While working, you noticed that agents repeatedly forget the repo uses `uv run pytest` rather than plain `pytest`. Decide whether this should become durable repo knowledge, and leave only the smallest appropriate repo-visible capture. Do not change product code.",
+      "allowed_write_patterns": [
+        ".agentic-workspace/memory/**"
+      ],
+      "forbidden_write_patterns": [
+        "src/**",
+        "package.json",
+        "README.md"
+      ],
+      "required_command_mentions": [
+        ".agentic-workspace/memory"
+      ],
+      "expected_signals": [
+        "routes repeated friction into Memory or explains why existing Memory already covers it",
+        "keeps capture compact and repo-visible",
+        "does not change unrelated product files"
+      ],
+      "score_notes": [
+        "Good: updates or references the specific durable Memory note.",
+        "Bad: leaves the learning only in final chat or changes product code."
       ]
     },
     {

@@ -75,6 +75,56 @@ def test_model_cli_harness_dry_run_copies_fixture_and_renders_command(tmp_path: 
     assert (Path(result["run_root"]) / "run.json").exists()
 
 
+def test_model_cli_harness_runs_all_prompt_variants(tmp_path: Path) -> None:
+    fixture = tmp_path / "fixtures" / "repo"
+    fixture.mkdir(parents=True)
+    (fixture / "README.md").write_text("fixture\n", encoding="utf-8")
+    suite = tmp_path / "suites" / "suite.json"
+    suite.parent.mkdir()
+    suite.write_text(
+        json.dumps(
+            {
+                "schema": "agentic-workspace/model-cli-harness-suite/v1",
+                "id": "unit",
+                "adapters": {
+                    "fake": {
+                        "default_model": "fake-model",
+                        "command": ["fake-cli", "-p", "{prompt}", "--repo", "{repo}"],
+                    }
+                },
+                "scenarios": [
+                    {
+                        "id": "variant-scenario",
+                        "fixture": "repo",
+                        "prompt_variants": [
+                            {"id": "one", "prompt": "Use {repo} variant one."},
+                            {"id": "two", "prompt": "Use {repo} variant two."},
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    harness = _load_harness()
+    payload = harness.run_suite(
+        suite_path=suite,
+        adapter_id="fake",
+        model=None,
+        scenario_filter="variant-scenario",
+        execute=False,
+        output_root=tmp_path / "out",
+        timeout_seconds=None,
+        prompt_variant="all",
+    )
+
+    assert payload["result_count"] == 2
+    assert [result["prompt_variant_id"] for result in payload["results"]] == ["one", "two"]
+    assert "variant one" in payload["results"][0]["prompt"]
+    assert "variant two" in payload["results"][1]["prompt"]
+
+
 def test_model_cli_harness_rejects_unknown_scenario(tmp_path: Path) -> None:
     suite = tmp_path / "suite.json"
     suite.write_text(
@@ -342,6 +392,65 @@ def test_model_cli_harness_scores_broad_prep_proposal_only() -> None:
     messages = [warning["message"] for warning in warnings]
     assert any("proposal instead of creating durable repo-visible planning state" in message for message in messages)
     assert any("non-canonical `.agentic-workspace/planning/records/`" in message for message in messages)
+
+
+def test_model_cli_harness_metadata_scoring_warns_on_write_and_response_rules(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".agentic-workspace").mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "broad-work-decomposition",
+            "allowed_write_patterns": [".agentic-workspace/planning/**"],
+            "forbidden_write_patterns": ["README.md", "src/**"],
+            "required_command_mentions": ["agentic-workspace summary"],
+            "forbidden_response_phrases": ["/plan"],
+            "required_artifact_patterns": [".agentic-workspace/planning/execplans/*.plan.json"],
+        },
+        result={"stdout": json.dumps({"response": "I used /plan and created source."}), "stderr": ""},
+        mutation_summary={"status": "changed", "created": ["src/app.ts"], "modified": ["README.md"]},
+        repo_path=repo,
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("outside the scenario's allowed write patterns" in message for message in messages)
+    assert any("forbidden write patterns" in message for message in messages)
+    assert any("required command" in message for message in messages)
+    assert any("forbidden response phrase" in message for message in messages)
+    assert any("required artifact pattern" in message for message in messages)
+
+
+def test_model_cli_harness_quality_signals_capture_proportionality() -> None:
+    harness = _load_harness()
+
+    direct = harness._quality_signals(
+        scenario_id="direct-task-minimal-overhead",
+        mutation_summary={"status": "changed", "modified": ["README.md"]},
+        warnings=[],
+    )
+    broad = harness._quality_signals(
+        scenario_id="broad-work-decomposition",
+        mutation_summary={
+            "status": "changed",
+            "created": [
+                ".agentic-workspace/planning/execplans/ecommerce.plan.json",
+                "src/app.ts",
+            ],
+        },
+        warnings=[],
+    )
+
+    assert direct == [
+        {
+            "id": "direct_task_stayed_direct",
+            "status": "satisfied",
+            "evidence": "README.md",
+        }
+    ]
+    assert any(signal["id"] == "broad_task_created_durable_planning" and signal["status"] == "satisfied" for signal in broad)
+    assert any(signal["id"] == "planning_only_avoided_product_scaffold" and signal["status"] == "weak" for signal in broad)
 
 
 def test_model_cli_harness_scores_inaccessible_workflow_as_semantic_failure() -> None:
@@ -719,3 +828,74 @@ def test_model_cli_harness_can_isolate_provider_home(tmp_path: Path) -> None:
     result = payload["results"][0]
     assert result["isolate_provider_home"] is True
     assert (Path(result["run_root"]) / "fake-home").exists()
+
+
+def test_model_cli_harness_classifies_repeated_findings_across_prompt_variants() -> None:
+    harness = _load_harness()
+
+    classification = harness._classify_suite_findings(
+        [
+            {
+                "scenario_id": "broad-work-decomposition",
+                "prompt_variant_id": "one",
+                "adapter_id": "codex",
+                "model": "gpt-5.3-codex-spark",
+                "warnings": [{"warning_class": "x", "message": "same"}],
+            },
+            {
+                "scenario_id": "broad-work-decomposition",
+                "prompt_variant_id": "two",
+                "adapter_id": "codex",
+                "model": "gpt-5.3-codex-spark",
+                "warnings": [{"warning_class": "x", "message": "same"}],
+            },
+        ]
+    )
+
+    finding = classification["findings"][0]
+    assert "repeated_across_prompts" in finding["classification"]
+
+
+def test_model_cli_harness_compares_before_after_runs(tmp_path: Path) -> None:
+    harness = _load_harness()
+    baseline = tmp_path / "baseline.json"
+    current = tmp_path / "current.json"
+    baseline.write_text(
+        json.dumps(
+            {
+                "results": [
+                    {
+                        "warnings": [
+                            {"warning_class": "model_cli_semantic_workflow_failure", "message": "old problem"},
+                            {"warning_class": "model_cli_semantic_workflow_failure", "message": "still here"},
+                        ],
+                        "mutation_summary": {"status": "changed"},
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    current.write_text(
+        json.dumps(
+            {
+                "results": [
+                    {
+                        "warnings": [
+                            {"warning_class": "model_cli_semantic_workflow_failure", "message": "still here"},
+                            {"warning_class": "model_cli_metadata_scoring_failure", "message": "new problem"},
+                        ],
+                        "mutation_summary": {"status": "clean"},
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    comparison = harness.compare_results(baseline_path=baseline, current_path=current)
+
+    assert comparison["product_interpretation"] == "regressed"
+    assert [warning["message"] for warning in comparison["resolved_warnings"]] == ["old problem"]
+    assert [warning["message"] for warning in comparison["new_warnings"]] == ["new problem"]
+    assert comparison["mutation_delta"] == {"baseline_changed_results": 1, "current_changed_results": 0}

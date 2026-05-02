@@ -33,6 +33,15 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
 
 The runner defaults to dry-run. It copies the scenario fixture into `scratch/model-cli-harness`, renders the prompt, writes `run.json`, and prints the exact CLI command it would execute. Add `--execute` only when you intentionally want to spend model calls and allow the configured CLI to operate in the copied fixture.
 
+Scenarios may define `prompt_variants` for non-deterministic probing. By default the runner uses the first/default prompt. Use `--prompt-variant all` to run every variant, or `--prompt-variant <id>` for a single one:
+
+```powershell
+uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+  --adapter codex `
+  --scenario broad-work-decomposition `
+  --prompt-variant all
+```
+
 Before execution, the runner evaluates adapter prerequisites such as the CLI executable and declared shell/tool dependencies. If a blocking prerequisite is missing, the scenario result is `environment-blocked` and the model is not called. Use `--allow-environment-blocked` only when deliberately collecting partial evidence from a degraded runtime.
 
 ```powershell
@@ -62,8 +71,16 @@ Suites live under `tools/model-cli-harness/suites/`. Each suite defines:
 - `required_executables` and `required_shells`: optional preflight requirements. Entries may be strings or objects with `name`, `candidate_paths`, and `add_parent_to_path`.
 - `block_on_preflight_failure`: whether missing requirements should prevent model execution.
 - `provider_home_env` and `provider_home_path`: optional state-isolation hook used by `--isolate-provider-home`.
-- `scenarios`: disposable fixture name, human prompt, expected signals, and scoring notes.
+- `scenarios`: disposable fixture name, human prompt or `prompt_variants`, expected signals, scoring notes, and optional metadata scoring.
 - `fixtures`: copied repos under `tools/model-cli-harness/fixtures/`.
+
+Scenario metadata can express common scoring without adding Python branches:
+
+- `allowed_write_patterns`: changed paths must match one of these glob patterns.
+- `forbidden_write_patterns`: changed paths must not match these glob patterns.
+- `required_command_mentions`: final/transcript text must mention these commands or routed files.
+- `forbidden_response_phrases`: final/transcript text must not contain these phrases.
+- `required_artifact_patterns`: paths that must exist in the copied fixture after an executed run.
 
 To add another model CLI, add an adapter entry with a command list. Do not hard-code CLI behavior in the runner unless it is common to all adapters.
 
@@ -77,6 +94,8 @@ The current suite evaluates these semi-realistic workflow pressure points. The p
 - `cli-discovery-before-planning`: whether an agent verifies actual Agentic Workspace commands instead of hallucinating lifecycle commands or mixing in runtime-native plan commands.
 - `planning-artifact-integrity`: whether a created planning artifact lands on canonical schema-backed surfaces and is checked with `summary`.
 - `native-plan-bridge`: whether an agent can use native/private planning while bridging durable decisions into repo-visible Agentic Workspace state.
+- `memory-consult-before-edit`: whether an agent consults the Memory index and a narrow durable note before a context-sensitive edit.
+- `memory-learning-capture`: whether repeated friction becomes compact durable Memory instead of staying in chat.
 - `invalid-planning-recovery`: whether an agent diagnoses unsafe planning state and chooses non-destructive recovery.
 
 Use these as optimisation probes rather than regular regression tests. A good run matrix samples a few scenarios across weaker, cheaper, and stronger agents, then turns repeated weak points into package changes, clearer CLI output, docs, fixtures, or new scorer warnings. Do not expect a single deterministic pass/fail result to settle a workflow question.
@@ -92,6 +111,19 @@ Use these as optimisation probes rather than regular regression tests. A good ru
 
 This loop is intentionally exploratory. The harness provides isolation, comparable transcripts, and first-pass semantic warnings; the maintainer still acts dynamically as the human evaluator.
 
+Use comparison mode after product or harness changes to check whether a targeted weakness improved:
+
+```powershell
+uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+  --compare-baseline scratch/model-cli-harness/baseline/run.json `
+  --compare-current scratch/model-cli-harness/current/run.json `
+  --format json
+```
+
+The comparison report lists resolved, retained, and new warnings, mutation deltas, a compact product interpretation, and the recommended next action. Treat it as a review aid, not a benchmark verdict.
+
+`tools/model-cli-harness/model-task-weakness-ledger.json` is the source-checkout-only ledger for repeated weak points. Keep entries compact: area, scenario, models, status, failure classes, evidence references, owner, next probe, and priority. Promote only recurring or high-consequence findings; dismiss one-off provider/runtime failures as acceptable variance or fixture artifacts when the evidence supports that.
+
 ## What To Score
 
 Inspect `run.json`, the CLI transcript, the copied repo diff, and package diagnostics. Useful signals:
@@ -104,6 +136,7 @@ Inspect `run.json`, the CLI transcript, the copied repo diff, and package diagno
 - closeout: did it route residue and report uncertainty honestly?
 - proportionality: did direct work stay direct while lane/epic-shaped work got durable planning?
 - native-plan bridge: did private runtime planning remain private while durable decisions reached checked-in workspace state?
+- Memory routing: did the agent use the index and the narrow note, and did repeated learning become compact durable context?
 
 Treat one-off capability failures cautiously. Give more weight to repeated ambiguity, discovery-cost, proof-selection, and handoff failures across weaker or cheaper models.
 

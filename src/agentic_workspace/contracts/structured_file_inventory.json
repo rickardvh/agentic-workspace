@@ -438,6 +438,18 @@
       "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
     },
     {
+      "pattern": "tools/model-cli-harness/model-task-weakness-ledger.json",
+      "format": "json",
+      "owner": "model-cli-harness",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "scripts/model_cli_harness/run_model_cli_harness.py plus maintainer review",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Model task weakness ledger records recurring external-model workflow weaknesses found through maintainer-run dogfooding.",
+      "storage_class": "diagnostic-fixture",
+      "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
+    },
+    {
       "pattern": "tools/model-cli-harness/fixtures/**/*.json",
       "format": "json",
       "owner": "model-cli-harness",
