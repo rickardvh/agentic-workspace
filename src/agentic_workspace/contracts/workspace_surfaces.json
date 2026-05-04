@@ -33,6 +33,18 @@
     "delegation_targets.<target>.confidence",
     "delegation_targets.<target>.task_fit",
     "delegation_targets.<target>.capability_classes",
-    "delegation_targets.<target>.execution_methods"
+    "delegation_targets.<target>.execution_methods",
+    "delegation_targets.<target>.model_family",
+    "delegation_targets.<target>.provider",
+    "delegation_targets.<target>.context_capacity",
+    "delegation_targets.<target>.reasoning_profile",
+    "delegation_targets.<target>.cost_class",
+    "delegation_targets.<target>.latency_class",
+    "delegation_targets.<target>.safe_task_classes",
+    "delegation_targets.<target>.forbidden_task_classes",
+    "delegation_targets.<target>.escalation_target",
+    "delegation_targets.<target>.confidence_source",
+    "delegation_targets.<target>.last_evaluation",
+    "delegation_targets.<target>.human_control_modes"
   ]
 }

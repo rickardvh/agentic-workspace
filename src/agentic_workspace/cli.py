@@ -42,7 +42,11 @@ from agentic_workspace.config import (
     SUPPORTED_CAPABILITY_LOCATIONS,
     SUPPORTED_DELEGATION_CONTROL_MODES,
     SUPPORTED_DELEGATION_OUTCOMES,
+    SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES,
+    SUPPORTED_DELEGATION_TARGET_COST_CLASSES,
     SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS,
+    SUPPORTED_DELEGATION_TARGET_LATENCY_CLASSES,
+    SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES,
     SUPPORTED_DELEGATION_TARGET_STRENGTHS,
     SUPPORTED_HANDOFF_SUFFICIENCY,
     SUPPORTED_IMPROVEMENT_LATITUDES,
@@ -8312,6 +8316,7 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
             "posture": {},
             "reason": "No task text or changed paths were provided, so execution posture cannot infer task capability safely.",
         }
+    issue_refs = re.findall(r"#\d+", task_text or "")
     judgment_terms = (
         "architecture",
         "contract",
@@ -8326,10 +8331,61 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
         "policy",
     )
     mechanical_terms = ("format", "typo", "docs", "documentation", "generated", "snapshot", "fixture", "lint", "mechanical")
-    if any(term in combined for term in judgment_terms):
+    high_risk_terms = ("schema", "contract", "config", "workflow", "planning", "delegation", "assurance", "policy")
+    risk_flags = sorted({term for term in high_risk_terms if term in combined})
+    if len(changed_paths) >= 6:
+        risk_flags.append("many changed paths")
+    if len(set(path.split("/")[0] for path in changed_paths if path)) >= 3:
+        risk_flags.append("cross-surface breadth")
+    if len(issue_refs) > 1 or "epic" in combined:
+        work_shape = "epic" if "epic" in combined else "lane"
+    elif "lane" in combined or len(changed_paths) >= 4:
+        work_shape = "lane"
+    elif changed_paths or task_text:
+        work_shape = "bounded"
+    else:
+        work_shape = "direct"
+
+    def enrich(posture: dict[str, Any], *, reason: str) -> dict[str, Any]:
+        execution_class = posture["execution class"]
+        if execution_class in ("boundary-shaping", "reasoning-heavy") or risk_flags or work_shape in ("lane", "epic"):
+            proof_burden = "high"
+        elif execution_class == "mechanical-follow-through":
+            proof_burden = "obvious"
+        else:
+            proof_burden = "non-obvious"
+        inspection_evidence = [
+            "changed paths",
+            "task text",
+            "runtime_resolution",
+            "proof route",
+        ]
+        if work_shape in ("lane", "epic"):
+            inspection_evidence.append("active planning state")
+        enriched_posture = {
+            **posture,
+            "work shape": work_shape,
+            "proof burden": proof_burden,
+            "risk flags": risk_flags,
+            "inspection evidence required": inspection_evidence,
+            "classification authority": "structural task/path signals",
+            "self-assessment authority": "advisory-only",
+        }
         return {
             "status": "inferred",
-            "posture": {
+            "posture": enriched_posture,
+            "work_shape": work_shape,
+            "proof_burden": proof_burden,
+            "risk_flags": risk_flags,
+            "inspection_evidence_required": inspection_evidence,
+            "classification_authority": "structural task/path signals",
+            "self_assessment_authority": "advisory-only",
+            "reason": reason,
+        }
+
+    if any(term in combined for term in judgment_terms):
+        return enrich(
+            {
                 "execution class": "boundary-shaping",
                 "recommended strength": "strong",
                 "preferred location": "either",
@@ -8337,12 +8393,11 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
                 "strong external reasoning": "allowed",
                 "why": "The task touches workflow, config, schema, or orchestration behavior where quality-sensitive judgment matters.",
             },
-            "reason": "judgment-heavy terms were present in the task or changed paths",
-        }
+            reason="judgment-heavy terms were present in the task or changed paths",
+        )
     if any(term in combined for term in mechanical_terms):
-        return {
-            "status": "inferred",
-            "posture": {
+        return enrich(
+            {
                 "execution class": "mechanical-follow-through",
                 "recommended strength": "weak",
                 "preferred location": "either",
@@ -8350,11 +8405,10 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
                 "strong external reasoning": "avoid",
                 "why": "The task appears bounded and mechanical enough for a cheaper executor when proof remains unchanged.",
             },
-            "reason": "mechanical or documentation terms were present in the task or changed paths",
-        }
-    return {
-        "status": "inferred",
-        "posture": {
+            reason="mechanical or documentation terms were present in the task or changed paths",
+        )
+    return enrich(
+        {
             "execution class": "mixed",
             "recommended strength": "medium",
             "preferred location": "either",
@@ -8362,8 +8416,8 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
             "strong external reasoning": "allowed",
             "why": "The task has enough context for a mixed local posture but not enough to justify automatic escalation.",
         },
-        "reason": "defaulted to mixed posture from available task context",
-    }
+        reason="defaulted to mixed posture from available task context",
+    )
 
 
 def _delegation_control_payload(local_override: MixedAgentLocalOverride) -> dict[str, Any]:
@@ -8431,25 +8485,34 @@ def _execution_posture_payload(
         quality_tradeoff = "Manual handoff is the safer path when automated execution authority is absent or unclear."
         token_tradeoff = "Manual handoff may save tokens later, but the immediate value is preserving judgment quality and control."
     ready_handoff = None
-    if recommendation in ("stronger-reasoning", "external-delegation", "manual-handoff") and delegation_control["effective_mode"] in (
-        "manual",
-        "suggest",
-    ):
-        ready_handoff = {
-            "kind": "agentic-workspace/delegation-handoff-prompt/v1",
-            "mode": delegation_control["effective_mode"],
-            "target": target["name"] if target else None,
-            "prompt": (
-                "Use the active task, changed paths, proof expectations, and hard constraints to answer one bounded "
-                "question. Improve quality where judgment matters; do not trade away proof or scope control for token savings."
-            ),
-        }
+    handoff_guardrail_active = (
+        runtime_resolution["weak_target_guardrail"]["status"] == "active"
+        or runtime_resolution["downrouting_guardrail"]["status"] == "active"
+    )
+    if (
+        recommendation in ("stronger-reasoning", "external-delegation", "manual-handoff") or handoff_guardrail_active
+    ) and delegation_control["effective_mode"] in ("manual", "suggest"):
+        packet_type = "manual_human_clarification"
+        if runtime_resolution["weak_target_guardrail"]["status"] == "active":
+            packet_type = "weak_target_escalation"
+        elif runtime_resolution["downrouting_guardrail"]["status"] == "active":
+            packet_type = "strong_target_downrouting"
+        elif recommendation == "manual-handoff" and not target:
+            packet_type = "no_safe_route"
+        ready_handoff = _ready_capability_handoff_packet(
+            packet_type=packet_type,
+            mode=delegation_control["effective_mode"],
+            target=target["name"] if target else None,
+            posture=posture,
+            runtime_resolution=runtime_resolution,
+        )
     return {
         "kind": "agentic-workspace/execution-posture/v1",
         "capability_posture": posture,
         "runtime_resolution": runtime_resolution,
         "delegation_control": delegation_control,
         "selected_target": target,
+        "capability_handoff_packets": _capability_handoff_packet_templates(),
         "recommended_action": recommendation,
         "quality_tradeoff": quality_tradeoff,
         "token_tradeoff": token_tradeoff,
@@ -11369,6 +11432,10 @@ def _defaults_payload() -> dict[str, Any]:
                 "supported_target_locations": list(SUPPORTED_CAPABILITY_LOCATIONS),
                 "supported_capability_classes": list(SUPPORTED_CAPABILITY_EXECUTION_CLASSES),
                 "supported_target_execution_methods": list(SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS),
+                "supported_target_context_capacities": list(SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES),
+                "supported_target_reasoning_profiles": list(SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES),
+                "supported_target_cost_classes": list(SUPPORTED_DELEGATION_TARGET_COST_CLASSES),
+                "supported_target_latency_classes": list(SUPPORTED_DELEGATION_TARGET_LATENCY_CLASSES),
                 "supported_delegation_modes": list(SUPPORTED_DELEGATION_CONTROL_MODES),
                 "intended_scope": [
                     "machine-specific capability posture",
@@ -11512,6 +11579,10 @@ def _defaults_payload() -> dict[str, Any]:
                     "preferred location",
                     "delegation friendly",
                     "strong external reasoning",
+                    "work shape",
+                    "proof burden",
+                    "risk flags",
+                    "inspection evidence required",
                 ],
                 "resolution_algorithm": [
                     "weak target below recommended_strength on boundary-shaping or reasoning-heavy work -> escalate-before-execution; never treat the weak target as the executor of record",
@@ -11523,7 +11594,9 @@ def _defaults_payload() -> dict[str, Any]:
                     "no posture → stay-local with confidence derived from cheap_bounded_executor_available",
                 ],
                 "confidence_levels": ["high", "medium", "low"],
+                "self_assessment": _self_assessment_authority_payload(),
             },
+            "capability_handoff_packets": _capability_handoff_packet_templates(),
             "strong_handoff_packet": {
                 "rule": (
                     "Use the strong_handoff_packet template when manual-handoff is the runtime recommendation "
@@ -11588,6 +11661,12 @@ def _defaults_payload() -> dict[str, Any]:
                 "preferred location",
                 "delegation friendly",
                 "strong external reasoning",
+                "work shape",
+                "proof burden",
+                "risk flags",
+                "inspection evidence required",
+                "classification authority",
+                "self-assessment authority",
                 "why",
             ],
         },
@@ -13867,6 +13946,17 @@ def _capability_resolution_for_profile(
     capability_mismatch = False
     required_action = "execute-with-normal-proof"
     overqualified_for_task = False
+    hard_forbidden = False
+
+    if execution_class and execution_class in profile.forbidden_task_classes:
+        hard_forbidden = True
+        capability_mismatch = True
+        score -= 5
+        required_action = "escalate-before-execution"
+        reasons.append("target forbids this execution class")
+    elif execution_class and execution_class in profile.safe_task_classes:
+        score += 2
+        reasons.append("target explicitly marks this execution class as safe")
 
     if recommended_strength:
         profile_rank = _strength_rank(profile.strength)
@@ -13889,7 +13979,12 @@ def _capability_resolution_for_profile(
             overqualified_for_task = True
             score += 1
             reasons.append("target strength exceeds the recommended strength")
-            if profile.strength == "strong" and recommended_strength == "weak" and execution_class == "mechanical-follow-through":
+            if (
+                not hard_forbidden
+                and profile.strength == "strong"
+                and recommended_strength == "weak"
+                and execution_class == "mechanical-follow-through"
+            ):
                 required_action = "delegate-down-when-safe"
                 reasons.append("strong target should down-route mechanical work when a cheaper fit is available")
 
@@ -13909,6 +14004,26 @@ def _capability_resolution_for_profile(
         elif profile.capability_classes:
             score -= 1
             reasons.append("target does not advertise the required capability class")
+
+    if profile.reasoning_profile != "unknown" and recommended_strength:
+        reasoning_rank = {"weak": 1, "balanced": 2, "strong": 3}
+        required_rank = {"weak": 1, "medium": 2, "strong": 3}.get(recommended_strength, 0)
+        profile_reasoning_rank = reasoning_rank.get(profile.reasoning_profile, 0)
+        if profile_reasoning_rank and required_rank and profile_reasoning_rank < required_rank:
+            capability_mismatch = True
+            score -= 2
+            reasons.append("target reasoning profile is below the recommended strength")
+            if recommended_strength == "strong":
+                required_action = "escalate-before-execution"
+        elif profile_reasoning_rank and required_rank and profile_reasoning_rank > required_rank:
+            score += 1
+            reasons.append("target reasoning profile exceeds the recommended strength")
+
+    if profile.context_capacity == "small" and str(capability_posture.get("work shape", "")).strip() in ("lane", "epic"):
+        capability_mismatch = True
+        score -= 2
+        reasons.append("target context capacity is too small for lane or epic shaped work")
+        required_action = "escalate-before-execution"
 
     if delegation_friendly == "yes":
         if "internal" in profile.execution_methods or "cli" in profile.execution_methods or "api" in profile.execution_methods:
@@ -14049,6 +14164,18 @@ def _runtime_resolution_payload(
                 "strength": profile.strength,
                 "location": profile.location,
                 "execution_methods": list(profile.execution_methods),
+                "model_family": profile.model_family,
+                "provider": profile.provider,
+                "context_capacity": profile.context_capacity,
+                "reasoning_profile": profile.reasoning_profile,
+                "cost_class": profile.cost_class,
+                "latency_class": profile.latency_class,
+                "safe_task_classes": list(profile.safe_task_classes),
+                "forbidden_task_classes": list(profile.forbidden_task_classes),
+                "escalation_target": profile.escalation_target,
+                "confidence_source": profile.confidence_source,
+                "last_evaluation": profile.last_evaluation,
+                "human_control_modes": list(profile.human_control_modes),
                 "recommendation": rec["status"],
                 "score": rec["score"],
                 "reasons": rec["reasons"],
@@ -14185,6 +14312,7 @@ def _runtime_resolution_payload(
         "guidance": _RUNTIME_RESOLUTION_GUIDANCE[recommendation],
         "posture_source": "provided" if posture else "none",
         "resolution_categories": list(_RUNTIME_RESOLUTION_CATEGORIES),
+        "self_assessment": _self_assessment_authority_payload(),
         "weak_target_guardrail": _weak_target_guardrail_payload(
             local_override=local_override,
             weak_target_mismatches=weak_target_mismatches,
@@ -14194,6 +14322,29 @@ def _runtime_resolution_payload(
             overqualified_strong_targets=overqualified_strong_targets,
             cheaper_fit_targets=cheaper_fit_targets,
         ),
+    }
+
+
+def _self_assessment_authority_payload() -> dict[str, Any]:
+    return {
+        "authority": "advisory-only",
+        "rule": (
+            "A model's self-confidence or self-described capability may explain a route, but structural task signals, "
+            "local target limits, proof burden, and human control remain higher authority."
+        ),
+        "may_influence": [
+            "handoff detail",
+            "review burden",
+            "suggested confidence tuning",
+            "whether to ask for stronger planning when structural signals are inconclusive",
+        ],
+        "cannot_override": [
+            "forbidden_task_classes",
+            "capability_mismatch",
+            "proof_burden=high",
+            "required_action=escalate-before-execution",
+            "delegation.mode human control",
+        ],
     }
 
 
@@ -14277,6 +14428,85 @@ def _downrouting_guardrail_payload(
     }
 
 
+def _capability_handoff_packet_templates() -> dict[str, Any]:
+    common_required = [
+        "task_shape: direct, bounded, lane, or epic",
+        "route_reason: why this target or escalation route fits better than direct execution",
+        "inspected_context: exact files, commands, or planning state already inspected",
+        "allowed_write_scope: paths or surfaces the receiver may edit",
+        "proof_expectations: commands or checks that must remain true",
+        "stop_conditions: when the receiver must stop instead of guessing",
+        "return_contract: what evidence or answer the receiver must return",
+    ]
+    return {
+        "rule": (
+            "Use capability handoff packets when runtime_resolution exposes escalation, down-routing, or no-safe-route. "
+            "Packets preserve quality first and token savings only when proof and scope remain safe."
+        ),
+        "common_required_fields": common_required,
+        "packet_types": {
+            "weak_target_escalation": {
+                "use_when": "A weak or underfit target encounters boundary-shaping, reasoning-heavy, high-proof, or forbidden work.",
+                "receiver": "strong planner, human, or configured escalation target",
+                "must_not": "execute the overmatched target as executor of record",
+            },
+            "strong_target_downrouting": {
+                "use_when": "A strong target is overqualified for mechanical-follow-through work and a cheaper configured target fits.",
+                "receiver": "cheaper bounded executor with strong target retained as planner/reviewer fallback",
+                "must_not": "down-route when proof is unclear or the task has unresolved judgment.",
+            },
+            "manual_human_clarification": {
+                "use_when": "The next decision depends on human intent, ownership boundary, or acceptable autonomy.",
+                "receiver": "human",
+                "must_not": "substitute an agent-preferred outcome for the requested outcome.",
+            },
+            "strong_reviewer_fallback": {
+                "use_when": "Implementation can proceed cheaply, but review or proof interpretation needs stronger reasoning.",
+                "receiver": "strong reviewer",
+                "must_not": "expand implementation scope during review without returning a new route decision.",
+            },
+            "no_safe_route": {
+                "use_when": "No configured target can satisfy capability, proof, and human-control requirements.",
+                "receiver": "current executor closeout or human triage",
+                "must_not": "force delegation merely because a target exists.",
+            },
+        },
+    }
+
+
+def _ready_capability_handoff_packet(
+    *,
+    packet_type: str,
+    mode: str,
+    target: str | None,
+    posture: dict[str, Any],
+    runtime_resolution: dict[str, Any],
+) -> dict[str, Any]:
+    templates = _capability_handoff_packet_templates()
+    packet_template = templates["packet_types"].get(packet_type, {})
+    return {
+        "kind": "agentic-workspace/capability-handoff-packet/v1",
+        "packet_type": packet_type,
+        "mode": mode,
+        "target": target,
+        "template": packet_template,
+        "task_shape": posture.get("work_shape") or posture.get("posture", {}).get("work shape"),
+        "route_reason": runtime_resolution.get("guidance"),
+        "inspected_context": posture.get("inspection_evidence_required", []),
+        "proof_expectations": posture.get("proof_burden"),
+        "allowed_write_scope": "Use the active plan or implementer-context path boundaries; do not infer broader ownership.",
+        "stop_conditions": [
+            "capability mismatch remains unresolved",
+            "proof burden is high and no stronger reviewer or proof route is available",
+            "human-control mode does not permit execution",
+            "the receiver would need to widen the requested outcome",
+        ],
+        "prompt": (
+            "Answer or execute only the bounded packet. Preserve scope, proof, and human-control limits; quality fit outranks token saving."
+        ),
+    }
+
+
 def _strong_handoff_packet_template() -> dict[str, Any]:
     """Template for a compact bounded escalation packet for strong general-purpose reasoning."""
     return {
@@ -14344,6 +14574,18 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "task_fit": list(profile.task_fit),
                 "capability_classes": list(profile.capability_classes),
                 "execution_methods": list(profile.execution_methods),
+                "model_family": profile.model_family,
+                "provider": profile.provider,
+                "context_capacity": profile.context_capacity,
+                "reasoning_profile": profile.reasoning_profile,
+                "cost_class": profile.cost_class,
+                "latency_class": profile.latency_class,
+                "safe_task_classes": list(profile.safe_task_classes),
+                "forbidden_task_classes": list(profile.forbidden_task_classes),
+                "escalation_target": profile.escalation_target,
+                "confidence_source": profile.confidence_source,
+                "last_evaluation": profile.last_evaluation,
+                "human_control_modes": list(profile.human_control_modes),
                 "advisory": advisory,
                 "outcome_evidence": outcome_evidence,
                 "closeout_gate": _delegation_target_closeout_gate(
@@ -14386,11 +14628,28 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "delegation_targets.<target>.task_fit",
                 "delegation_targets.<target>.capability_classes",
                 "delegation_targets.<target>.execution_methods",
+                "delegation_targets.<target>.model_family",
+                "delegation_targets.<target>.provider",
+                "delegation_targets.<target>.context_capacity",
+                "delegation_targets.<target>.reasoning_profile",
+                "delegation_targets.<target>.cost_class",
+                "delegation_targets.<target>.latency_class",
+                "delegation_targets.<target>.safe_task_classes",
+                "delegation_targets.<target>.forbidden_task_classes",
+                "delegation_targets.<target>.escalation_target",
+                "delegation_targets.<target>.confidence_source",
+                "delegation_targets.<target>.last_evaluation",
+                "delegation_targets.<target>.human_control_modes",
             ],
             "supported_strengths": list(SUPPORTED_DELEGATION_TARGET_STRENGTHS),
             "supported_locations": list(SUPPORTED_CAPABILITY_LOCATIONS),
             "supported_capability_classes": list(SUPPORTED_CAPABILITY_EXECUTION_CLASSES),
             "supported_execution_methods": list(SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS),
+            "supported_context_capacities": list(SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES),
+            "supported_reasoning_profiles": list(SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES),
+            "supported_cost_classes": list(SUPPORTED_DELEGATION_TARGET_COST_CLASSES),
+            "supported_latency_classes": list(SUPPORTED_DELEGATION_TARGET_LATENCY_CLASSES),
+            "supported_human_control_modes": list(SUPPORTED_DELEGATION_CONTROL_MODES),
             "profiles": profile_payloads,
             "outcome_artifact": {
                 "path": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),

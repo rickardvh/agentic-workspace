@@ -42,6 +42,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.runtime_resolution` | object | yes |  | Compact stay-local, stronger-reasoning, external-delegation, or manual-handoff recommendation. |  |  |
 | `execution_posture.delegation_control` | object | yes |  | Local human-control mode and whether automatic delegation is permitted. |  |  |
 | `execution_posture.selected_target` | object \| null | yes |  | Suggested local delegation target when one matches the inferred posture. |  |  |
+| `execution_posture.capability_handoff_packets` | object | yes |  | Capability-aware handoff packet templates for escalation, down-routing, human clarification, review fallback, and no-safe-route cases. |  |  |
 | `execution_posture.recommended_action` | string | yes |  | Recommended execution category for the implementer. |  |  |
 | `execution_posture.quality_tradeoff` | string | yes |  | Why the recommendation preserves or improves implementation quality. |  |  |
 | `execution_posture.token_tradeoff` | string | yes |  | When token saving is acceptable or should be deferred. |  |  |

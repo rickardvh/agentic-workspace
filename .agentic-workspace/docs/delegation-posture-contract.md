@@ -71,9 +71,19 @@ When bounded work already has a checked-in execplan, let the handoff carry one c
 - `preferred location`: `local`, `external`, or `either`
 - `delegation friendly`: `yes`, `no`, or another short advisory cue
 - `strong external reasoning`: `avoid`, `allowed`, or `preferred`
+- `work shape`: `direct`, `bounded`, `lane`, or `epic`
+- `proof burden`: `obvious`, `non-obvious`, or `high`
+- `risk flags`: compact structural reasons that raise proof or review burden
+- `inspection evidence required`: context the agent must inspect before choosing a target
+- `classification authority`: the structural signal source used for routing
+- `self-assessment authority`: always advisory-only
 - `why`: one sentence explaining why the posture fits the slice
 
 Keep this posture advisory. The runtime or local layer may resolve it against configured target profiles, but the checked-in plan must not hard-bind one vendor, machine, or exact target by default.
+
+Model self-confidence is not a routing authority. It may influence handoff detail, review burden, and local confidence tuning, but it cannot override forbidden task classes, capability mismatch, high proof burden, escalation requirements, or human-control mode.
+
+Local target profiles may optionally describe model-level fit with `model_family`, `provider`, `context_capacity`, `reasoning_profile`, `cost_class`, `latency_class`, `safe_task_classes`, `forbidden_task_classes`, `escalation_target`, `confidence_source`, `last_evaluation`, and `human_control_modes`. These fields belong in `.agentic-workspace/config.local.toml`; they are local advisory evidence, not shared repo policy.
 
 ## Capability Mismatch
 
@@ -91,6 +101,18 @@ Delegation posture controls how this happens:
 - `auto`: route automatically only inside local safety and target-profile limits.
 
 Saving tokens is a valid goal only after task fit, proof expectations, and review trust remain safe.
+
+## Capability Handoff Packets
+
+Use capability-aware handoff packets when the runtime route is no longer simple direct execution:
+
+- `weak_target_escalation`: an underfit target must stop and hand off to a stronger planner, human, or configured escalation target.
+- `strong_target_downrouting`: a strong target should hand mechanical work to a cheaper bounded executor when proof remains clear.
+- `manual_human_clarification`: the next decision depends on human intent, ownership boundary, or acceptable autonomy.
+- `strong_reviewer_fallback`: cheap implementation may proceed, but review or proof interpretation needs stronger reasoning.
+- `no_safe_route`: no configured target satisfies capability, proof, and human-control requirements.
+
+Each packet must carry task shape, route reason, inspected context, allowed write scope, proof expectations, stop conditions, and the return contract. The receiver should not need chat history to understand what it owns.
 
 ## Relationship To Other Docs
 

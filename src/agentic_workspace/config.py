@@ -120,6 +120,30 @@ SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS = (
     "api",
     "manual",
 )
+SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES = (
+    "small",
+    "medium",
+    "large",
+    "unknown",
+)
+SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES = (
+    "weak",
+    "balanced",
+    "strong",
+    "unknown",
+)
+SUPPORTED_DELEGATION_TARGET_COST_CLASSES = (
+    "cheap",
+    "standard",
+    "premium",
+    "unknown",
+)
+SUPPORTED_DELEGATION_TARGET_LATENCY_CLASSES = (
+    "fast",
+    "standard",
+    "slow",
+    "unknown",
+)
 SUPPORTED_DELEGATION_CONTROL_MODES = (
     "off",
     "manual",
@@ -194,6 +218,18 @@ class DelegationTargetProfile:
     confidence: float | None
     task_fit: tuple[str, ...]
     capability_classes: tuple[str, ...]
+    model_family: str | None
+    provider: str | None
+    context_capacity: str
+    reasoning_profile: str
+    cost_class: str
+    latency_class: str
+    safe_task_classes: tuple[str, ...]
+    forbidden_task_classes: tuple[str, ...]
+    escalation_target: str | None
+    confidence_source: str | None
+    last_evaluation: str | None
+    human_control_modes: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -390,6 +426,32 @@ def require_optional_string_list(
         if item not in items:
             items.append(item)
     return tuple(items)
+
+
+def require_optional_string(*, payload: dict[str, Any], key: str, config_path: Path) -> str | None:
+    if key not in payload:
+        return None
+    value = payload[key]
+    if not isinstance(value, str) or not value.strip():
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be a non-empty string when present.")
+    return value.strip()
+
+
+def require_optional_enum(
+    *,
+    payload: dict[str, Any],
+    key: str,
+    config_path: Path,
+    allowed: tuple[str, ...],
+    default: str,
+) -> str:
+    if key not in payload:
+        return default
+    value = payload[key]
+    if not isinstance(value, str) or value not in allowed:
+        allowed_text = ", ".join(allowed)
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be one of: {allowed_text}.")
+    return value
 
 
 def validate_agent_instructions_filename(filename: str) -> str:
@@ -714,9 +776,27 @@ def load_delegation_target_profiles(
         target_path = Path(f"{config_path.as_posix()} delegation_targets.{target_name}")
         if not isinstance(raw_profile, dict):
             raise WorkspaceUsageError(f"{target_path.as_posix()} must be a table.")
-        unknown_fields = sorted(
-            set(raw_profile) - {"strength", "location", "confidence", "task_fit", "capability_classes", "execution_methods"}
-        )
+        supported_fields = {
+            "strength",
+            "location",
+            "confidence",
+            "task_fit",
+            "capability_classes",
+            "execution_methods",
+            "model_family",
+            "provider",
+            "context_capacity",
+            "reasoning_profile",
+            "cost_class",
+            "latency_class",
+            "safe_task_classes",
+            "forbidden_task_classes",
+            "escalation_target",
+            "confidence_source",
+            "last_evaluation",
+            "human_control_modes",
+        }
+        unknown_fields = sorted(set(raw_profile) - supported_fields)
         if unknown_fields:
             unknown_text = ", ".join(unknown_fields)
             warnings.append(f"{target_path.as_posix()} contains unsupported field(s): {unknown_text}.")
@@ -758,6 +838,57 @@ def load_delegation_target_profiles(
                     key="capability_classes",
                     config_path=target_path,
                     allowed=SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
+                ),
+                model_family=require_optional_string(payload=raw_profile, key="model_family", config_path=target_path),
+                provider=require_optional_string(payload=raw_profile, key="provider", config_path=target_path),
+                context_capacity=require_optional_enum(
+                    payload=raw_profile,
+                    key="context_capacity",
+                    config_path=target_path,
+                    allowed=SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES,
+                    default="unknown",
+                ),
+                reasoning_profile=require_optional_enum(
+                    payload=raw_profile,
+                    key="reasoning_profile",
+                    config_path=target_path,
+                    allowed=SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES,
+                    default="unknown",
+                ),
+                cost_class=require_optional_enum(
+                    payload=raw_profile,
+                    key="cost_class",
+                    config_path=target_path,
+                    allowed=SUPPORTED_DELEGATION_TARGET_COST_CLASSES,
+                    default="unknown",
+                ),
+                latency_class=require_optional_enum(
+                    payload=raw_profile,
+                    key="latency_class",
+                    config_path=target_path,
+                    allowed=SUPPORTED_DELEGATION_TARGET_LATENCY_CLASSES,
+                    default="unknown",
+                ),
+                safe_task_classes=require_optional_string_list(
+                    payload=raw_profile,
+                    key="safe_task_classes",
+                    config_path=target_path,
+                    allowed=SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
+                ),
+                forbidden_task_classes=require_optional_string_list(
+                    payload=raw_profile,
+                    key="forbidden_task_classes",
+                    config_path=target_path,
+                    allowed=SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
+                ),
+                escalation_target=require_optional_string(payload=raw_profile, key="escalation_target", config_path=target_path),
+                confidence_source=require_optional_string(payload=raw_profile, key="confidence_source", config_path=target_path),
+                last_evaluation=require_optional_string(payload=raw_profile, key="last_evaluation", config_path=target_path),
+                human_control_modes=require_optional_string_list(
+                    payload=raw_profile,
+                    key="human_control_modes",
+                    config_path=target_path,
+                    allowed=SUPPORTED_DELEGATION_CONTROL_MODES,
                 ),
             )
         )

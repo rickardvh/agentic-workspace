@@ -244,6 +244,21 @@ Capability mismatch cuts both ways:
 
 Quality fit comes first. Token saving is useful only when it does not weaken proof, review trust, or continuation safety.
 
+Runtime classification should expose the basis for that decision before target choice:
+
+- task shape: direct, bounded, lane, or epic
+- proof burden: obvious, non-obvious, or high
+- risk flags from structural task or path signals
+- inspection evidence required before execution
+- classification authority
+- self-assessment authority
+
+Self-assessment authority is always advisory-only. A model may report confidence or uncertainty, but that signal cannot override structural task classification, forbidden task classes, proof burden, escalation requirements, or human-control mode.
+
+Local target metadata may describe provider, model family, context capacity, reasoning profile, cost, latency, safe task classes, forbidden task classes, escalation route, and evaluation provenance. Keep that metadata in local config so it can improve routing without turning shared repo config into a scheduler.
+
+When classification and local target metadata disagree, use a capability handoff packet rather than guessing. The packet should preserve inspected context, allowed scope, proof expectations, stop conditions, and the return contract.
+
 ## Complexity-Reduction Feedback
 
 Repeated stronger-capability needs are not only routing outcomes.

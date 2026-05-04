@@ -174,6 +174,114 @@
                 "description": "One locally available way to reach this target."
               },
               "description": "Human-owned execution boundary for this target. Automatic use still requires delegation.mode = \"auto\" and local safety permission."
+            },
+            "model_family": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional opaque model or family identifier for this local target. This is local descriptive metadata, not package-owned vendor policy."
+            },
+            "provider": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional provider or runtime name for this local target."
+            },
+            "context_capacity": {
+              "type": "string",
+              "enum": [
+                "small",
+                "medium",
+                "large",
+                "unknown"
+              ],
+              "default": "unknown",
+              "description": "Advisory context capacity class. Use this to avoid handing broad or context-heavy tasks to constrained targets."
+            },
+            "reasoning_profile": {
+              "type": "string",
+              "enum": [
+                "weak",
+                "balanced",
+                "strong",
+                "unknown"
+              ],
+              "default": "unknown",
+              "description": "Advisory reasoning profile for the target. Structural task classification still outranks this self-description."
+            },
+            "cost_class": {
+              "type": "string",
+              "enum": [
+                "cheap",
+                "standard",
+                "premium",
+                "unknown"
+              ],
+              "default": "unknown",
+              "description": "Advisory relative cost class used for down-routing only when quality and proof remain safe."
+            },
+            "latency_class": {
+              "type": "string",
+              "enum": [
+                "fast",
+                "standard",
+                "slow",
+                "unknown"
+              ],
+              "default": "unknown",
+              "description": "Advisory relative latency class for local routing tradeoffs."
+            },
+            "safe_task_classes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "boundary-shaping",
+                  "reasoning-heavy",
+                  "mixed",
+                  "mechanical-follow-through"
+                ]
+              },
+              "description": "Capability classes this target is explicitly considered safe for when proof remains appropriate."
+            },
+            "forbidden_task_classes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "boundary-shaping",
+                  "reasoning-heavy",
+                  "mixed",
+                  "mechanical-follow-through"
+                ]
+              },
+              "description": "Capability classes this target must not execute directly, regardless of model confidence."
+            },
+            "escalation_target": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional configured target name or route to prefer when this target is overmatched."
+            },
+            "confidence_source": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional source for the confidence estimate, such as human-declared, evaluation-derived, or agent-managed."
+            },
+            "last_evaluation": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional local note or date for the last capability evaluation used to tune this profile."
+            },
+            "human_control_modes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "off",
+                  "manual",
+                  "suggest",
+                  "auto"
+                ]
+              },
+              "description": "Delegation modes in which this target may be considered. This keeps human control explicit."
             }
           },
           "additionalProperties": false,

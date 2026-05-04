@@ -556,6 +556,18 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "delegation_targets.<target>.task_fit",
         "delegation_targets.<target>.capability_classes",
         "delegation_targets.<target>.execution_methods",
+        "delegation_targets.<target>.model_family",
+        "delegation_targets.<target>.provider",
+        "delegation_targets.<target>.context_capacity",
+        "delegation_targets.<target>.reasoning_profile",
+        "delegation_targets.<target>.cost_class",
+        "delegation_targets.<target>.latency_class",
+        "delegation_targets.<target>.safe_task_classes",
+        "delegation_targets.<target>.forbidden_task_classes",
+        "delegation_targets.<target>.escalation_target",
+        "delegation_targets.<target>.confidence_source",
+        "delegation_targets.<target>.last_evaluation",
+        "delegation_targets.<target>.human_control_modes",
     ]
     assert payload["mixed_agent"]["local_override"]["supported_target_strengths"] == ["strong", "medium", "weak"]
     assert payload["mixed_agent"]["local_override"]["supported_target_locations"] == ["local", "external", "either"]
@@ -571,6 +583,15 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "api",
         "manual",
     ]
+    assert payload["mixed_agent"]["local_override"]["supported_target_context_capacities"] == ["small", "medium", "large", "unknown"]
+    assert payload["mixed_agent"]["local_override"]["supported_target_reasoning_profiles"] == [
+        "weak",
+        "balanced",
+        "strong",
+        "unknown",
+    ]
+    assert payload["mixed_agent"]["local_override"]["supported_target_cost_classes"] == ["cheap", "standard", "premium", "unknown"]
+    assert payload["mixed_agent"]["local_override"]["supported_target_latency_classes"] == ["fast", "standard", "slow", "unknown"]
     assert payload["mixed_agent"]["local_override"]["supported_delegation_modes"] == ["off", "manual", "suggest", "auto"]
     delegation_control = payload["mixed_agent"]["delegation_control"]
     assert delegation_control["field"] == "delegation.mode"
@@ -673,6 +694,12 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "preferred location",
         "delegation friendly",
         "strong external reasoning",
+        "work shape",
+        "proof burden",
+        "risk flags",
+        "inspection evidence required",
+        "classification authority",
+        "self-assessment authority",
         "why",
     ]
     assert payload["config"]["path"] == ".agentic-workspace/config.toml"
@@ -2311,7 +2338,19 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
         'strength = "strong"\n'
         'location = "local"\n'
         "confidence = 0.92\n"
+        'model_family = "gpt-5.5"\n'
+        'provider = "openai"\n'
+        'context_capacity = "large"\n'
+        'reasoning_profile = "strong"\n'
+        'cost_class = "premium"\n'
+        'latency_class = "slow"\n'
         'capability_classes = ["boundary-shaping", "reasoning-heavy"]\n'
+        'safe_task_classes = ["boundary-shaping", "reasoning-heavy"]\n'
+        'forbidden_task_classes = ["mechanical-follow-through"]\n'
+        'escalation_target = "human"\n'
+        'confidence_source = "local-evaluation"\n'
+        'last_evaluation = "2026-05-04"\n'
+        'human_control_modes = ["manual", "suggest"]\n'
         'execution_methods = ["internal", "api"]\n',
         encoding="utf-8",
     )
@@ -2336,7 +2375,19 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
     assert "target strength is weak" in fast_docs["closeout_gate"]["reasons"]
     planner = next(item for item in targets["profiles"] if item["name"] == "primary_planner")
     assert planner["location"] == "local"
+    assert planner["model_family"] == "gpt-5.5"
+    assert planner["provider"] == "openai"
+    assert planner["context_capacity"] == "large"
+    assert planner["reasoning_profile"] == "strong"
+    assert planner["cost_class"] == "premium"
+    assert planner["latency_class"] == "slow"
     assert planner["capability_classes"] == ["boundary-shaping", "reasoning-heavy"]
+    assert planner["safe_task_classes"] == ["boundary-shaping", "reasoning-heavy"]
+    assert planner["forbidden_task_classes"] == ["mechanical-follow-through"]
+    assert planner["escalation_target"] == "human"
+    assert planner["confidence_source"] == "local-evaluation"
+    assert planner["last_evaluation"] == "2026-05-04"
+    assert planner["human_control_modes"] == ["manual", "suggest"]
     assert planner["execution_methods"] == ["internal", "api"]
     assert planner["advisory"] == {
         "handoff_detail": "compact",
@@ -2348,6 +2399,29 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
     assert posture_effect["status"] == "configured"
     assert posture_effect["configured_profiles"] == ["fast_docs", "primary_planner"]
     assert posture_effect["proof_burden"].startswith("lower-trust profiles require")
+
+
+def test_config_command_rejects_invalid_local_target_reasoning_profile(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation_targets.worker]",
+                'strength = "weak"',
+                'execution_methods = ["cli"]',
+                'reasoning_profile = "omniscient"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--target", str(target), "--format", "json"])
+    assert "reasoning_profile must be one of" in capsys.readouterr().err
 
 
 def test_config_command_reports_local_delegation_control_mode(tmp_path: Path, capsys) -> None:
@@ -2420,6 +2494,12 @@ def test_defaults_command_reports_runtime_resolution_policy(capsys) -> None:
     assert any("weak target below recommended_strength" in item for item in rr["resolution_algorithm"])
     assert any("strong target above recommended_strength" in item for item in rr["resolution_algorithm"])
     assert rr["confidence_levels"] == ["high", "medium", "low"]
+    assert rr["self_assessment"]["authority"] == "advisory-only"
+    assert "required_action=escalate-before-execution" in rr["self_assessment"]["cannot_override"]
+    packets = payload["mixed_agent"]["capability_handoff_packets"]
+    assert "weak_target_escalation" in packets["packet_types"]
+    assert "strong_target_downrouting" in packets["packet_types"]
+    assert "no_safe_route" in packets["packet_types"]
 
 
 def test_defaults_command_reports_strong_handoff_packet_template(capsys) -> None:
@@ -2575,6 +2655,8 @@ def test_runtime_resolution_marks_weak_target_escalation_for_boundary_work(tmp_p
     assert rr["weak_target_guardrail"]["effective_mode"] == "suggest"
     assert "do not execute the weak target automatically" in rr["weak_target_guardrail"]["mode_action"]
     assert rr["weak_target_guardrail"]["mismatched_targets"][0]["name"] == "haiku"
+    assert rr["self_assessment"]["authority"] == "advisory-only"
+    assert "capability_mismatch" in rr["self_assessment"]["cannot_override"]
 
 
 def test_runtime_resolution_marks_strong_target_downrouting_for_mechanical_work(tmp_path: Path, capsys) -> None:
@@ -2621,6 +2703,39 @@ def test_runtime_resolution_marks_strong_target_downrouting_for_mechanical_work(
     assert rr["downrouting_guardrail"]["status"] == "active"
     assert rr["downrouting_guardrail"]["cheaper_fit_targets"][0]["name"] == "haiku"
     assert "cheaper bounded executor" in rr["downrouting_guardrail"]["mode_action"]
+
+
+def test_runtime_resolution_respects_forbidden_task_classes(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation_targets.fast_worker]",
+                'strength = "strong"',
+                'execution_methods = ["cli"]',
+                'capability_classes = ["mechanical-follow-through"]',
+                'forbidden_task_classes = ["mechanical-follow-through"]',
+                'reasoning_profile = "strong"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = cli._load_workspace_config(target_root=target)
+    rr = cli._runtime_resolution_payload(
+        config=config,
+        capability_posture={"execution class": "mechanical-follow-through", "recommended strength": "weak"},
+    )
+
+    worker = rr["profile_recommendations"][0]
+    assert worker["recommendation"] == "poor-fit"
+    assert worker["capability_mismatch"] is True
+    assert worker["required_action"] == "escalate-before-execution"
+    assert "target forbids this execution class" in worker["reasons"]
 
 
 def test_config_command_runtime_resolution_recommends_manual_handoff_when_strong_external_preferred_and_no_external_targets(
@@ -7022,11 +7137,20 @@ def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: 
     payload = json.loads(capsys.readouterr().out)
     posture = payload["execution_posture"]
     assert posture["capability_posture"]["posture"]["execution class"] == "boundary-shaping"
+    assert posture["capability_posture"]["work_shape"] == "bounded"
+    assert posture["capability_posture"]["proof_burden"] == "high"
+    assert "schema" in posture["capability_posture"]["risk_flags"]
+    assert "proof route" in posture["capability_posture"]["inspection_evidence_required"]
+    assert posture["capability_posture"]["self_assessment_authority"] == "advisory-only"
     assert posture["runtime_resolution"]["recommendation"] == "stronger-reasoning"
+    assert posture["runtime_resolution"]["self_assessment"]["authority"] == "advisory-only"
     assert posture["delegation_control"]["effective_mode"] == "manual"
     assert posture["delegation_control"]["execution_permitted"] is False
     assert posture["selected_target"]["name"] == "planner"
+    assert posture["capability_handoff_packets"]["packet_types"]["manual_human_clarification"]
+    assert posture["ready_handoff"]["kind"] == "agentic-workspace/capability-handoff-packet/v1"
     assert posture["ready_handoff"]["mode"] == "manual"
+    assert posture["ready_handoff"]["packet_type"] == "manual_human_clarification"
     assert "quality" in posture["ready_handoff"]["prompt"]
 
 

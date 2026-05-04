@@ -169,6 +169,7 @@
         "runtime_resolution",
         "delegation_control",
         "selected_target",
+        "capability_handoff_packets",
         "recommended_action",
         "quality_tradeoff",
         "token_tradeoff",
@@ -198,6 +199,10 @@
             "null"
           ],
           "description": "Suggested local delegation target when one matches the inferred posture."
+        },
+        "capability_handoff_packets": {
+          "type": "object",
+          "description": "Capability-aware handoff packet templates for escalation, down-routing, human clarification, review fallback, and no-safe-route cases."
         },
         "recommended_action": {
           "type": "string",
