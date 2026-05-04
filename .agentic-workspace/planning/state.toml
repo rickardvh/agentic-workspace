@@ -7,25 +7,9 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "planned-lanes-698-712", title = "Implement planned roadmap lanes #698-#712", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/planned-lanes-698-712.plan.json", why_now = "Roadmap lanes planning-contract-navigation-trust and capability-aware-delegation", owner_role = "implementation", handoff_ready = true, refs = ["Roadmap lanes planning-contract-navigation-trust and capability-aware-delegation"] },
-]
+active_items = []
 queued_items = []
 
 [roadmap]
-lanes = [
-  { id = "planning-contract-navigation-trust", title = "Planning contract navigation and weak-agent trust review", maturity = "shaped", status = "next", priority = "P0", issues = ["#698", "#699", "#700", "#701", "#702", "#703"], outcome = "Make planning ownership, cold-start routes, execplan role boundaries, implementer-context contracts, and contract-doc links easier to trust without manual reconciliation.", reason = "Older review and bug issues show weak-agent navigation and trust gaps across planning state ownership, canonical plan shape, docs links, execplan schema flexibility, execplan role load, and implementer-context subobjects.", promotion_signal = "Promote the next candidate when addressing older docs/planning trust work.", suggested_first_slice = "#698 clarify planning-managed state file versus repo-owned planning content." },
-  { id = "capability-aware-delegation", title = "Capability-aware delegation and model self-assessment guardrails", maturity = "shaped", status = "next", priority = "P1", issues = ["#704", "#709", "#710", "#711", "#712"], outcome = "Externalize task difficulty, target fit, self-assessment authority, and escalation/down-routing so weak targets do not execute beyond fit and strong targets do not retain safe mechanical work by default.", reason = "Model self-confidence is unreliable, especially for weak targets; routing needs structural workflow signals and local model metadata.", promotion_signal = "Promote the next candidate when continuing delegation posture work.", suggested_first_slice = "#709 expand model-CLI evaluations for capability routing and self-assessment failures." },
-]
-candidates = [
-  { id = "planning-state-ownership-content-authority", maturity = "candidate", status = "next", priority = "P0.1", issues = ["#698"], summary = "#698 Clarify planning-managed state file versus repo-owned active planning content so agents can answer edit, lifecycle, and uninstall/upgrade authority questions consistently." },
-  { id = "workspace-contract-doc-link-hygiene", maturity = "candidate", priority = "P0.2", issues = ["#699"], summary = "#699 Fix stale or incorrectly relative links in workspace contract docs, especially links inside .agentic-workspace/docs and template references." },
-  { id = "cold-start-canonical-plan-shape", maturity = "candidate", priority = "P0.3", issues = ["#700"], summary = "#700 Reconcile cold-start execplan wording with the current machine-first .plan.json plus compact CLI summary model." },
-  { id = "execplan-schema-weak-agent-reliability-review", maturity = "candidate", priority = "P0.4", issues = ["#701"], summary = "#701 Review whether loose execplan string-map sections should become stronger schemas, checker warnings, generated closeout aids, or template-only guidance." },
-  { id = "execplan-role-load-review", maturity = "candidate", priority = "P0.5", issues = ["#702"], summary = "#702 Clarify which execplan fields are owner state, worker-facing input, and closeout/archive residue so weak agents consume smaller projections when appropriate." },
-  { id = "implementer-context-subobject-contract-review", maturity = "candidate", priority = "P0.6", issues = ["#703"], summary = "#703 Review whether implementer-context subobjects need stronger field-level contracts for delegation trust." },
-  { id = "capability-routing-model-cli-evaluations", maturity = "candidate", status = "next", priority = "P1.5", issues = ["#709"], summary = "#709 Expand model-CLI evaluations for capability routing and self-assessment failures. Run after initial routing surfaces exist, then use evaluations to file/fix optimization findings." },
-  { id = "ordered-batch-promotion-guidance", maturity = "candidate", priority = "P1.6", issues = ["#710"], summary = "#710 Summary promotion guidance should support explicit ordered batches so agents do not infer the route manually when a human asks for several queued slices." },
-  { id = "new-plan-scaffold-placeholder-reduction", maturity = "candidate", priority = "P1.7", issues = ["#711"], summary = "#711 new-plan scaffold should reduce placeholder tightening before implementation by accepting or deriving richer execution bounds and proof fields." },
-  { id = "archive-roadmap-owned-continuation", maturity = "candidate", priority = "P1.8", issues = ["#712"], summary = "#712 archive-plan should distinguish roadmap-owned continuation from new derived continuation so closeout does not create duplicate promotion pressure." },
-]
+lanes = []
+candidates = []

@@ -16,9 +16,9 @@
     },
     "execution": {
       "milestone": "planned-lanes-698-712",
-      "status": "active",
-      "next_step": "Implement #698-#703 first, then #709-#712, logging package use and workflow gaps.",
-      "proof": "Targeted tests for touched surfaces; make check."
+      "status": "completed",
+      "next_step": "Archive this plan and remove completed roadmap residue.",
+      "proof": "Targeted tests passed; make check passed on 2026-05-04."
     },
     "scope": {
       "touched": [
@@ -54,9 +54,9 @@
     "what this slice enabled": "none yet",
     "intentionally deferred": "none",
     "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "proof achieved now": "make check passed after both implementation commits.",
+    "validation still needed": "none for this plan",
+    "next likely slice": "none"
   },
   "intent_interpretation": {
     "literal request": "Implement all planned lanes, and keep logging for reference.",
@@ -110,14 +110,14 @@
   ],
   "active_milestone": {
     "id": "planned-lanes-698-712",
-    "status": "active",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Implement #698-#703 first, then #709-#712, logging package use and workflow gaps."
+    "Archive this completed plan and remove completed roadmap residue."
   ],
   "blockers": [
     "None."
@@ -143,43 +143,43 @@
     "make check passes."
   ],
   "execution_run": {
-    "run status": "not-run-yet",
-    "executor": "",
+    "run status": "completed",
+    "executor": "Codex",
     "handoff source": "agentic-planning-bootstrap new-plan",
-    "what happened": "execution has not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet; execution has not changed files",
-    "validations run": "pending",
-    "result for continuation": "continue from this scaffolded execplan",
-    "next step": "Fill in execution bounds, touched paths, and validation before implementation starts."
+    "what happened": "Implemented planning contract navigation/trust issues #698-#703 and capability-routing/planning-helper issues #709-#712.",
+    "scope touched": "contract docs, implementer-context schema/reference docs, planning package summary/archive/new-plan behavior, model CLI harness scenarios, and tests.",
+    "changed surfaces": ".agentic-workspace docs and planning state; src/agentic_workspace/contracts/schemas/implementer_context.schema.json; docs/reference/implementer-context.md; packages/planning/src/repo_planning_bootstrap/installer.py; scripts/model_cli_harness/run_model_cli_harness.py; related tests and harness suite.",
+    "validations run": "make check; targeted pytest and ruff for changed planning/model-cli/schema surfaces.",
+    "result for continuation": "close",
+    "next step": "Archive this plan and close the implemented issues."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "pending",
-    "follow-on decision": "pending"
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "used package startup, summary, implement context, proof selection, planning checks, and archive helper",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
   },
   "proof_report": {
-    "validation proof": "pending",
-    "proof achieved now": "pending",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "make check",
+    "proof achieved now": "make check passed on 2026-05-04 after commits 03d78456 and ced9cb69 were pushed.",
+    "evidence for \"proof achieved\" state": "workspace tests, memory tests, planning tests, lint, typecheck, format-check, package verifies, maintainer surfaces, structured file inventory, agent aid manifests, and absolute-path checks all passed."
   },
   "intent_satisfaction": {
     "original intent": "Roadmap lanes planning-contract-navigation-trust and capability-aware-delegation",
-    "was original intent fully satisfied?": "pending",
-    "evidence of intent satisfaction": "",
-    "unsolved intent passed to": "none yet"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Issues #698-#703 and #709-#712 were implemented, tested, committed, and pushed in commits 03d78456 and ced9cb69.",
+    "unsolved intent passed to": "none"
   },
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "Closed the planned planning-contract navigation/trust lane and capability-routing follow-up lane.",
+    "validation confirmed": "make check passed",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "Workflow log preserved under .agentic-workspace/planning/reviews/planned-lanes-698-712-workflow-log-2026-05-04.md.",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": "no active continuation for this plan"
   },
   "durable_residue": {
     "status": "none",
@@ -190,12 +190,12 @@
     "retention after promotion": "retain"
   },
   "closure_check": {
-    "slice status": "pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
-    "why this decision is honest": "",
-    "evidence carried forward": "",
-    "reopen trigger": ""
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Both planned lanes and their child issues were implemented and validated; no required continuation remains.",
+    "evidence carried forward": "Commits 03d78456 and ced9cb69 plus make check proof.",
+    "reopen trigger": "Open a new issue if later dogfooding finds a fresh workflow or capability-routing gap."
   },
   "improvement_signal_review": {
     "status": "pending",
@@ -210,7 +210,13 @@
   "closeout_distillation": {
     "buckets": {
       "discard": [],
-      "continuation": [],
+      "continuation": [
+        {
+          "summary": "none",
+          "owner": "none",
+          "source": "closeout"
+        }
+      ],
       "memory": [],
       "config_check": [],
       "docs": [],
