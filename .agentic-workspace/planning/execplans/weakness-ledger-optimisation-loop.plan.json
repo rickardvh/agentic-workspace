@@ -1,0 +1,287 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Weakness Ledger Optimisation Loop",
+  "goal": [
+    "Run the weakness-ledger tracks in priority order, starting with high-priority broad-work decomposition and planning artifact integrity.",
+    "Use dynamic model-CLI evaluations to surface concrete agent ergonomics or workflow failures, then fix package, harness, docs, or prompt surfaces where the fix is bounded.",
+    "Continue until the ledger no longer contains major unaddressed weakness signals from the current evaluation loop, or route any remaining major weakness into explicit follow-up."
+  ],
+  "non_goals": [
+    "Do not implement deferred GitHub issues #595, #627, or #661.",
+    "Do not redesign the model CLI harness architecture unless repeated evaluations prove the current shape cannot express the needed probe.",
+    "Do not turn adaptive dogfooding into a deterministic formal benchmark."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "The high-priority model weakness tracks are reprobed, concrete product/harness fixes are applied, and the ledger reflects no major unaddressed weakness from this loop.",
+      "constraints": "Run high-priority tracks first; keep #595/#627/#661 deferred; use qualitative judgement rather than mechanical scoring as the primary optimisation signal.",
+      "latitude": "Tune harness scenario prompts/scoring, compact workflow/doc surfaces, update ledger statuses, and create follow-up issues for real bugs or substantial product gaps.",
+      "escalation": "Escalate if the right fix requires broad workflow policy, external CI/review enforcement, generated CLI relocation, or unrelated backlog work."
+    },
+    "execution": {
+      "milestone": "weakness-ledger-optimisation-loop",
+      "status": "active",
+      "next_step": "Run broad-work-decomposition with all prompt variants across available adapters, inspect failures, and patch bounded causes before moving to planning-artifact-integrity.",
+      "proof": "Focused harness probes, focused tests, planning surface checks, and make check before closeout."
+    },
+    "scope": {
+      "touched": [
+        "scripts/model_cli_harness/**",
+        "tools/model-cli-harness/**",
+        "docs/**",
+        "README.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/weakness-ledger-optimisation-loop.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "User request: run priority weakness-ledger tracks until no major weaknesses remain",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Keep running the tracks in priority order and fixing surfaced issues until no major weaknesses remain.",
+    "inferred intended outcome": "Use the model weakness ledger as an adaptive optimisation loop, not a static report, and keep patching the surfaces that make agents misuse the package.",
+    "chosen concrete what": "Run high-priority broad-work and planning-artifact probes first, then medium-priority Memory probes if the high-priority tracks are no longer exposing major issues.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "scripts/model_cli_harness/**, tools/model-cli-harness/**, docs/**, README.md, package workflow/startup text if directly implicated, this execplan, and planning state.",
+    "max changed files": "About 20; stop and reassess before broad docs, generated output, or workflow architecture rewrites.",
+    "required validation commands": "focused model CLI harness probes for the touched tracks; uv run pytest tests/test_model_cli_harness.py -q; uv run python scripts/check/check_planning_surfaces.py; make check before closeout.",
+    "ask-before-refactor threshold": "Ask before changing generated CLI layout, external CI/review enforcement, or replacing the evaluation harness design.",
+    "stop before touching": "Deferred issues #595/#627/#661, generated/python relocation, broad large-file remediation, or unrelated historical audit candidates."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Active loop order: broad-work decomposition, planning artifact integrity, then Memory routing if high-priority tracks are quiet.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Run priority weakness-ledger tracks and fix surfaced issues until no major weakness remains.",
+    "hard constraints": "Keep #595/#627/#661 deferred; use package planning; do not mistake clean deterministic metrics for adequate qualitative evaluation.",
+    "agent may decide locally": "Which scenario evidence is significant, which bounded fixes to apply, whether to downgrade ledger priority/status, and which findings deserve issues.",
+    "escalate when": "The correct fix requires broad host-repo policy, external enforcement, or work explicitly deferred by the user."
+  },
+  "adaptive_assurance": {
+    "level": "medium",
+    "reason": "The lane changes agent-facing workflow/evaluation surfaces and may alter how future agents interpret broad work. It is not safety-critical, but regressions can degrade package dogfooding.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "requirement_refs",
+      "audit_refs",
+      "acceptance_refs"
+    ],
+    "proof_profiles": [
+      "model-cli-harness-focused",
+      "planning-surface-check",
+      "repo-check"
+    ],
+    "required_gates": [
+      "high-priority ledger tracks reprobed",
+      "major surfaced issues fixed or routed",
+      "make check passes"
+    ]
+  },
+  "traceability_refs": {
+    "requirement_refs": [
+      "User request: weakness-ledger optimisation loop"
+    ],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [
+      "tools/model-cli-harness/model-task-weakness-ledger.json",
+      "tools/model-cli-harness/suites/copilot-workflow-smoke.json",
+      "scripts/model_cli_harness/run_model_cli_harness.py"
+    ],
+    "risk_refs": [
+      "prep-only broad work product scaffolding",
+      "planning artifact integrity false negatives",
+      "Memory routing regressions"
+    ],
+    "security_refs": [],
+    "audit_refs": [
+      "to be filled with scratch/model-cli-harness run directories"
+    ],
+    "acceptance_refs": [
+      "uv run pytest tests/test_model_cli_harness.py -q",
+      "uv run python scripts/check/check_planning_surfaces.py",
+      "make check"
+    ],
+    "decision_refs": [
+      "Use qualitative judgement from model transcripts as the primary optimisation signal."
+    ]
+  },
+  "control_gates": [],
+  "implementation_blockers": [],
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "User request: run priority weakness-ledger tracks until no major weaknesses remain",
+      "label": "User request: run priority weakness-ledger tracks until no major weaknesses remain",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "weakness-ledger-optimisation-loop",
+    "status": "active",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run broad-work-decomposition with all prompt variants across available adapters, inspect failures, and patch bounded causes before moving to planning-artifact-integrity."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "scripts/model_cli_harness/**",
+    "tools/model-cli-harness/**",
+    "docs/**",
+    "README.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/weakness-ledger-optimisation-loop.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+    ,
+    "High-priority tracks must be run before medium-priority Memory probes.",
+    "Evaluation remains adaptive dogfooding, not a formal benchmark."
+  ],
+  "validation_commands": [
+    "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario broad-work-decomposition --prompt-variant all --execute --postmortem-feedback",
+    "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario planning-artifact-integrity --execute --postmortem-feedback",
+    "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario memory-consult-before-edit --prompt-variant all --execute --postmortem-feedback",
+    "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario memory-learning-capture --execute --postmortem-feedback",
+    "uv run pytest tests/test_model_cli_harness.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "make check"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "High-priority broad-work and planning-artifact-integrity tracks have fresh evaluation evidence.",
+    "Major surfaced failures are fixed directly or routed to explicit follow-up issues if too large for this lane.",
+    "The ledger statuses/priorities reflect current evidence rather than stale historical failures.",
+    "Planning state and repo checks pass.",
+    "The active execplan is closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "not-run-yet",
+    "executor": "",
+    "handoff source": "agentic-planning-bootstrap new-plan",
+    "what happened": "execution has not started",
+    "scope touched": "none yet",
+    "changed surfaces": "none yet; execution has not changed files",
+    "validations run": "pending",
+    "result for continuation": "continue from this scaffolded execplan",
+    "next step": "Run broad-work-decomposition with all prompt variants across available adapters."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "pending"
+  },
+  "proof_report": {
+    "validation proof": "pending",
+    "proof achieved now": "pending",
+    "evidence for \"proof achieved\" state": ""
+  },
+  "intent_satisfaction": {
+    "original intent": "User request: run priority weakness-ledger tracks until no major weaknesses remain",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-04: Scaffolded by agentic-planning-bootstrap new-plan."
+  ]
+}
