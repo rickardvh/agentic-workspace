@@ -80,6 +80,7 @@ Scenario metadata can express common scoring without adding Python branches:
 - `forbidden_write_patterns`: changed paths must not match these glob patterns.
 - `required_command_mentions`: final/transcript text must mention these commands or routed files.
 - `required_executed_commands`: structured command transcripts must show that these commands actually ran; use this when a quoted command in docs or config is not enough.
+- `forbidden_executed_commands`: structured command transcripts must not include these commands; use this for avoidable raw reads when a compact CLI surface should answer the question.
 - `forbidden_response_phrases`: final/transcript text must not contain these phrases.
 - `required_artifact_patterns`: paths that must exist in the copied fixture after an executed run.
 
@@ -126,6 +127,19 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
 ```
 
 The comparison report lists resolved, retained, and new warnings, mutation deltas, a compact product interpretation, and the recommended next action. Treat it as a review aid, not a benchmark verdict.
+
+Use postmortem feedback during real optimisation loops when a run exposes ambiguous routing, excess file reads, surprising confidence, or high token use. The follow-up prompt asks the same agent why it chose its workflow and commands, what was ambiguous or too verbose, what package surface would have made the next step obvious, and what would reduce token usage without reducing safety or proof quality:
+
+```powershell
+uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+  --adapter copilot `
+  --model claude-haiku-4.5 `
+  --scenario startup-orientation `
+  --execute `
+  --postmortem-feedback
+```
+
+Treat the answer as evidence, not as ground truth. Separate provider/model limitations from package and harness improvements, and promote only feedback that explains observed behavior or suggests a compact, safer next-step surface.
 
 `tools/model-cli-harness/model-task-weakness-ledger.json` is the source-checkout-only ledger for repeated weak points. Keep entries compact: area, scenario, models, status, failure classes, evidence references, owner, next probe, and priority. Promote only recurring or high-consequence findings; dismiss one-off provider/runtime failures as acceptable variance or fixture artifacts when the evidence supports that.
 

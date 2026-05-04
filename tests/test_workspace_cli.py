@@ -511,7 +511,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     ]
     assert ".agentic-workspace/bootstrap-handoff.md" in payload["recovery"]["handoff_surfaces"]
     assert ".agentic-workspace/bootstrap-handoff.json" in payload["recovery"]["handoff_surfaces"]
-    assert payload["recovery"]["effective_output_posture"]["command"] == "agentic-workspace config --target ./repo --format json"
+    assert (
+        payload["recovery"]["effective_output_posture"]["command"]
+        == "agentic-workspace config --target ./repo --profile compact --format json"
+    )
     assert payload["recovery"]["effective_output_posture"]["field"] == "workspace.optimization_bias"
     assert payload["completion"]["rule"] == (
         "When a completed slice came from state.toml, clear the matched queue residue in the same pass."
@@ -703,7 +706,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "why",
     ]
     assert payload["config"]["path"] == ".agentic-workspace/config.toml"
-    assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
+    assert payload["config"]["command"] == "agentic-workspace config --target ./repo --profile compact --format json"
     assert "workspace.default_preset" in payload["config"]["supported_fields"]
     assert "workspace.improvement_latitude" in payload["config"]["supported_fields"]
     assert "workspace.optimization_bias" in payload["config"]["supported_fields"]
@@ -787,7 +790,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
             "When startup, first-contact routing, or recovery is unclear, prefer "
             "`agentic-workspace preflight --format json`, "
             "`agentic-workspace defaults --section startup --format json`, "
-            "`agentic-workspace config --target ./repo --format json`, and "
+            "`agentic-workspace config --target ./repo --profile compact --format json`, and "
             "`agentic-workspace summary --format json` before broader "
             "prose or repo-local workaround guidance."
         ),
@@ -855,7 +858,9 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Combined install:" in text
     assert "Recovery:" in text
     assert "docs/environment-recovery-contract.md" in text
-    assert "effective output posture: agentic-workspace config --target ./repo --format json -> workspace.optimization_bias" in text
+    assert (
+        "effective output posture: agentic-workspace config --target ./repo --profile compact --format json -> workspace.optimization_bias"
+    ) in text
     assert "Completion:" in text
     assert "Config:" in text
     assert "Workflow artifact adapters:" in text
@@ -877,7 +882,7 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
     assert "Ordinary path:" in text
     assert "agentic-workspace start --format json" in text
     assert "agentic-workspace preflight --format json" in text
-    assert "agentic-workspace config --target ./repo --format json" in text
+    assert "agentic-workspace config --target ./repo --profile compact --format json" in text
     assert "agentic-workspace summary --format json" in text
     assert "agentic-workspace proof --changed <paths> --format json" in text
     assert "agentic-workspace defaults --section install_profiles --format json" in text
@@ -893,7 +898,7 @@ def test_external_agent_handoff_text_demotes_broad_routing_until_compact_startup
 
     start_index = text.index("agentic-workspace start --format json")
     preflight_index = text.index("agentic-workspace preflight --format json")
-    config_index = text.index("agentic-workspace config --target ./repo --format json")
+    config_index = text.index("agentic-workspace config --target ./repo --profile compact --format json")
     summary_index = text.index("agentic-workspace summary --format json")
 
     assert start_index < preflight_index
@@ -1046,7 +1051,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
             ],
             "discovery": [
                 "agentic-workspace defaults --section agent_aid_storage --format json",
-                "agentic-workspace config --target ./repo --format json",
+                "agentic-workspace config --target ./repo --profile compact --format json",
                 "agentic-workspace report --target ./repo --section agent_aids --format json",
             ],
         },
@@ -4193,7 +4198,7 @@ def test_install_real_init_generates_llms_with_compact_startup_path_first(tmp_pa
     llms_text = (target / "llms.txt").read_text(encoding="utf-8")
     start_index = llms_text.index("agentic-workspace start --format json")
     preflight_index = llms_text.index("agentic-workspace preflight --format json")
-    config_index = llms_text.index("agentic-workspace config --target ./repo --format json")
+    config_index = llms_text.index("agentic-workspace config --target ./repo --profile compact --format json")
     summary_index = llms_text.index("agentic-workspace summary --format json")
     proof_index = llms_text.index("agentic-workspace proof --changed <paths> --format json")
     raw_index = llms_text.index("Open raw planning or contract files only when compact commands point there.")
@@ -4303,7 +4308,9 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["execution_shape"]["task_shape"]["id"] == "direct-or-no-active-plan"
     assert payload["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
     assert payload["execution_shape"]["recommendation"]["id"] == "stay-direct"
-    assert payload["execution_shape"]["recommendation"]["consult"] == ["agentic-workspace config --target ./repo --format json"]
+    assert payload["execution_shape"]["recommendation"]["consult"] == [
+        "agentic-workspace config --target ./repo --profile compact --format json"
+    ]
     assert payload["next_action"]["summary"] == "No immediate action"
     assert not any(
         item["surface"] == ".agentic-workspace/docs/capability-aware-execution.md" for item in payload["discovery"]["memory_candidates"]
@@ -6448,7 +6455,7 @@ def test_default_command_outputs_stay_router_sized(tmp_path: Path, capsys) -> No
     assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
     status_payload = json.loads(capsys.readouterr().out)
     assert "mixed_agent" not in status_payload["config"]
-    assert status_payload["config"]["detail_command"] == "agentic-workspace config --target ./repo --format json"
+    assert status_payload["config"]["detail_command"] == "agentic-workspace config --target ./repo --profile compact --format json"
     assert status_payload["deeper_detail"]["report_command"] == "agentic-workspace report --target ./repo --profile full --format json"
 
 
@@ -7077,7 +7084,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert "available_tiers" not in payload["feature_tier"]
     assert payload["immediate_next_allowed_action"]["read_first"] == [
         "uv run agentic-workspace defaults --section startup --format json",
-        "uv run agentic-workspace config --target ./repo --format json",
+        "uv run agentic-workspace config --target ./repo --profile compact --format json",
         "uv run agentic-workspace summary --format json",
     ]
     assert payload["immediate_next_allowed_action"]["action"] == "follow-startup-router"

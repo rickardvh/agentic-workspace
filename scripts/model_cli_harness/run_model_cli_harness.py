@@ -423,6 +423,13 @@ def _contains_required_signal(text: str, required: str) -> bool:
     return lowered_required in text or _normalized_signal_text(lowered_required) in _normalized_signal_text(text)
 
 
+def _normalized_command_text(text: str) -> str:
+    normalized = text.lower().replace("\\", "/")
+    while "//" in normalized:
+        normalized = normalized.replace("//", "/")
+    return normalized
+
+
 def _provider_did_not_run(result: dict[str, Any]) -> bool:
     returncode = result.get("returncode")
     stdout = str(result.get("stdout") or "").strip()
@@ -500,14 +507,21 @@ def _metadata_workflow_warnings(
     ):
         if not _contains_required_signal(response_lower, required):
             add("The agent did not report a required command or workflow surface.", evidence=required)
-    executed_command_text = _executed_command_text(result).lower()
+    executed_command_text = _normalized_command_text(_executed_command_text(result))
     for required in _string_list(
         scenario.get("required_executed_commands"),
         field="required_executed_commands",
         scenario_id=scenario_id,
     ):
-        if required.lower() not in executed_command_text:
+        if _normalized_command_text(required) not in executed_command_text:
             add("The agent did not execute a required command.", evidence=required)
+    for forbidden in _string_list(
+        scenario.get("forbidden_executed_commands"),
+        field="forbidden_executed_commands",
+        scenario_id=scenario_id,
+    ):
+        if _normalized_command_text(forbidden) in executed_command_text:
+            add("The agent executed a command this scenario marks as avoidable or forbidden.", evidence=forbidden)
     for forbidden in _string_list(
         scenario.get("forbidden_response_phrases"),
         field="forbidden_response_phrases",
@@ -666,6 +680,38 @@ def _quality_signals(
             }
         )
     return signals
+
+
+def _postmortem_feedback_prompt(*, scenario: dict[str, Any], invocation: dict[str, Any]) -> str:
+    result = invocation.get("result", {})
+    if not isinstance(result, dict):
+        result = {}
+    mutation_summary = invocation.get("mutation_summary", {})
+    warnings = invocation.get("warnings", [])
+    final_message = _response_text(result)[-1200:]
+    warning_text = json.dumps(warnings, ensure_ascii=False)[:1500]
+    mutation_text = json.dumps(mutation_summary, ensure_ascii=False)[:1000]
+    questions = scenario.get("postmortem_feedback_questions")
+    if not isinstance(questions, list) or not questions:
+        questions = [
+            "Why did you choose the workflow and commands you used?",
+            "What was ambiguous, missing, or more verbose than necessary?",
+            "What package output, instruction, or command would have made the correct next step more obvious?",
+            "What would have reduced token usage without reducing safety or proof quality?",
+        ]
+    question_lines = "\n".join(f"- {question}" for question in questions if str(question).strip())
+    return (
+        "You just completed a disposable Agentic Workspace evaluation scenario. "
+        "Do not edit files. Give a compact post-mortem for improving the package and harness.\n\n"
+        f"Scenario: {invocation.get('scenario_id', '')} / {invocation.get('prompt_variant_id', '')}\n"
+        f"Original prompt:\n{invocation.get('prompt', '')}\n\n"
+        f"Mutation summary:\n{mutation_text}\n\n"
+        f"Warnings:\n{warning_text}\n\n"
+        f"Your prior final/output excerpt:\n{final_message}\n\n"
+        "Answer these questions:\n"
+        f"{question_lines}\n\n"
+        "Keep the answer under 250 words. Separate model/provider limitations from product or harness improvements."
+    )
 
 
 def _semantic_workflow_warnings(
@@ -1229,6 +1275,7 @@ def run_suite(
     isolate_provider_home: bool = False,
     allow_environment_blocked: bool = False,
     prompt_variant: str | None = None,
+    postmortem_feedback: bool = False,
 ) -> dict[str, Any]:
     suite = _load_json(suite_path)
     suite_id = str(suite.get("id", suite_path.stem))
@@ -1367,6 +1414,29 @@ def run_suite(
                         repo_path=paths.repo_path,
                     )
                 )
+                if postmortem_feedback:
+                    postmortem_prompt = _postmortem_feedback_prompt(scenario=scenario, invocation=invocation)
+                    postmortem_replacements = {
+                        **replacements,
+                        "prompt": postmortem_prompt,
+                        "share_path": str(paths.run_root / "postmortem.md"),
+                    }
+                    postmortem_command = _render_list(command_template, replacements=postmortem_replacements)
+                    postmortem_result = _run_command(
+                        postmortem_command,
+                        cwd=paths.repo_path,
+                        timeout_seconds=effective_timeout,
+                        env=adapter_env,
+                    )
+                    postmortem_share = paths.run_root / "postmortem.md"
+                    if postmortem_share.exists():
+                        postmortem_result["final_message"] = postmortem_share.read_text(encoding="utf-8")
+                    invocation["postmortem_feedback"] = {
+                        "prompt": postmortem_prompt,
+                        "command": postmortem_command,
+                        "result": postmortem_result,
+                        "share_path": str(postmortem_share),
+                    }
             else:
                 invocation["result"] = {
                     "status": "dry-run",
@@ -1420,6 +1490,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run even when adapter preflight reports missing required local tools.",
     )
+    parser.add_argument(
+        "--postmortem-feedback",
+        action="store_true",
+        help="After an executed scenario, ask the agent for compact feedback on its workflow choices and package ergonomics.",
+    )
     parser.add_argument("--compare-baseline", type=Path, help="Compare a baseline run JSON, run directory, or summary JSON.")
     parser.add_argument("--compare-current", type=Path, help="Compare a current run JSON, run directory, or summary JSON.")
     parser.add_argument("--format", choices=["text", "json"], default="text")
@@ -1448,6 +1523,7 @@ def main(argv: list[str] | None = None) -> int:
                 isolate_provider_home=args.isolate_provider_home,
                 allow_environment_blocked=args.allow_environment_blocked,
                 prompt_variant=args.prompt_variant,
+                postmortem_feedback=args.postmortem_feedback,
             )
     except Exception as exc:  # noqa: BLE001
         if args.format == "json":

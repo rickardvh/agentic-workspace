@@ -473,10 +473,19 @@ def test_model_cli_harness_metadata_scoring_warns_on_write_and_response_rules(tm
             "forbidden_write_patterns": ["README.md", "src/**"],
             "required_command_mentions": ["agentic-workspace summary"],
             "required_executed_commands": ["agentic-workspace config"],
+            "forbidden_executed_commands": [".agentic-workspace/config.toml"],
             "forbidden_response_phrases": ["/plan"],
             "required_artifact_patterns": [".agentic-workspace/planning/execplans/*.plan.json"],
         },
-        result={"stdout": json.dumps({"response": "I used /plan and created source."}), "stderr": ""},
+        result={
+            "stdout": "\n".join(
+                [
+                    json.dumps({"response": "I used /plan and created source."}),
+                    json.dumps({"command": "Get-Content -Path .agentic-workspace\\config.toml"}),
+                ]
+            ),
+            "stderr": "",
+        },
         mutation_summary={"status": "changed", "created": ["src/app.ts"], "modified": ["README.md"]},
         repo_path=repo,
     )
@@ -486,6 +495,7 @@ def test_model_cli_harness_metadata_scoring_warns_on_write_and_response_rules(tm
     assert any("forbidden write patterns" in message for message in messages)
     assert any("required command" in message for message in messages)
     assert any("did not execute a required command" in message for message in messages)
+    assert any("avoidable or forbidden" in message for message in messages)
     assert any("forbidden response phrase" in message for message in messages)
     assert any("required artifact pattern" in message for message in messages)
 
@@ -758,6 +768,50 @@ def test_model_cli_harness_quality_signals_separate_diagnostic_residue() -> None
 
     assert any(signal["id"] == "planning_only_avoided_product_scaffold" and signal["status"] == "satisfied" for signal in signals)
     assert any(signal["id"] == "diagnostic_output_not_persisted" and signal["status"] == "weak" for signal in signals)
+
+
+def test_model_cli_harness_postmortem_prompt_keeps_feedback_compact_and_actionable() -> None:
+    harness = _load_harness()
+
+    prompt = harness._postmortem_feedback_prompt(
+        scenario={"id": "startup-orientation"},
+        invocation={
+            "scenario_id": "startup-orientation",
+            "prompt_variant_id": "default",
+            "prompt": "Please inspect the repo and tell me the next step.",
+            "mutation_summary": {"status": "clean"},
+            "warnings": [{"warning_class": "model_cli_semantic_workflow_failure", "message": "Too much raw reading."}],
+            "result": {"final_message": "I read many files and then ran summary."},
+        },
+    )
+
+    assert "Why did you choose the workflow and commands you used?" in prompt
+    assert "What was ambiguous, missing, or more verbose than necessary?" in prompt
+    assert "What would have reduced token usage without reducing safety or proof quality?" in prompt
+    assert "Separate model/provider limitations from product or harness improvements." in prompt
+    assert "Keep the answer under 250 words." in prompt
+    assert len(prompt) < 5000
+
+
+def test_model_cli_harness_parser_accepts_postmortem_feedback_flag() -> None:
+    harness = _load_harness()
+
+    args = harness.build_parser().parse_args(["--adapter", "codex", "--execute", "--postmortem-feedback"])
+
+    assert args.adapter == "codex"
+    assert args.execute is True
+    assert args.postmortem_feedback is True
+
+
+def test_model_cli_harness_fixtures_do_not_route_to_removed_planning_command() -> None:
+    fixture_root = REPO_ROOT / "tools" / "model-cli-harness" / "fixtures"
+    offenders = [
+        path
+        for path in fixture_root.rglob("*")
+        if path.is_file() and "agentic-workspace planning" in path.read_text(encoding="utf-8", errors="ignore")
+    ]
+
+    assert offenders == []
 
 
 def test_model_cli_harness_scores_config_sensitive_answers_without_config_surface() -> None:

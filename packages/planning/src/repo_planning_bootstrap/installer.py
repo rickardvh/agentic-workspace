@@ -2736,19 +2736,34 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
     }
 
 
+def _payload_has_nonzero_number(value: Any) -> bool:
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, dict):
+        return any(_payload_has_nonzero_number(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_payload_has_nonzero_number(item) for item in value)
+    return False
+
+
 def _compact_projection(
     payload: dict[str, Any],
     *,
     fields: tuple[str, ...],
     idle_unavailable_reason: str | None = None,
 ) -> dict[str, Any]:
+    if payload.get("status") != "present" and idle_unavailable_reason:
+        return {
+            "status": payload.get("status", "unavailable"),
+            "reason": idle_unavailable_reason,
+            "reason_code": "idle-no-active-planning-record",
+        }
     projected: dict[str, Any] = {}
     for key in ("status", "reason", "view_role", "view", "view_of"):
         if key in payload:
             projected[key] = payload[key]
-    if payload.get("status") != "present" and idle_unavailable_reason:
-        projected["reason"] = idle_unavailable_reason
-        projected["reason_code"] = "idle-no-active-planning-record"
     if payload.get("status") == "present":
         for field in fields:
             if field in payload:
@@ -2787,9 +2802,51 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         intent_validation_contract["landed_open_issue_reconciliation"] = _compact_landed_open_issue_reconciliation(
             intent_validation_contract["landed_open_issue_reconciliation"]
         )
+    intent_attention_count = int(intent_validation_contract.get("counts", {}).get("attention_count", 0) or 0)
+    intent_detail_keys = (
+        "external_work_reconciliation",
+        "current_external_work",
+        "historical_audit_references",
+        "closeout_reconciliation",
+        "landed_open_issue_reconciliation",
+    )
+    has_intent_detail_evidence = any(_payload_has_nonzero_number(intent_validation_contract.get(key)) for key in intent_detail_keys)
+    if intent_validation_contract.get("status") == "present" and intent_attention_count == 0 and not has_intent_detail_evidence:
+        intent_validation_contract = {
+            "status": "present",
+            "counts": {
+                "attention_count": 0,
+                "tracked_external_open_count": intent_validation_contract.get("counts", {}).get("tracked_external_open_count", 0),
+                "untracked_external_open_count": intent_validation_contract.get("counts", {}).get("untracked_external_open_count", 0),
+                "lower_trust_closeout_count": intent_validation_contract.get("counts", {}).get("lower_trust_closeout_count", 0),
+            },
+            "recommended_next_action": intent_validation_contract.get(
+                "recommended_next_action",
+                "No dangling larger intent or lower-trust closeout signals detected.",
+            ),
+            "detail": "Use `agentic-workspace summary --format json --profile full` for reconciliation detail.",
+        }
     finished_work_inspection_contract = dict(summary.get("finished_work_inspection_contract", {}))
     if "derived_follow_up_candidates" in finished_work_inspection_contract:
         finished_work_inspection_contract = _compact_finished_work_inspection(finished_work_inspection_contract)
+    finished_attention_count = int(finished_work_inspection_contract.get("counts", {}).get("attention_count", 0) or 0)
+    has_finished_detail_evidence = _payload_has_nonzero_number(finished_work_inspection_contract.get("counts", {})) or bool(
+        finished_work_inspection_contract.get("inspections")
+    )
+    if finished_work_inspection_contract.get("status") == "present" and finished_attention_count == 0 and not has_finished_detail_evidence:
+        finished_work_inspection_contract = {
+            "status": "present",
+            "counts": {
+                "attention_count": 0,
+                "archived_closeout_count": finished_work_inspection_contract.get("counts", {}).get("archived_closeout_count", 0),
+                "partial_count": finished_work_inspection_contract.get("counts", {}).get("partial_count", 0),
+            },
+            "recommended_next_action": finished_work_inspection_contract.get(
+                "recommended_next_action",
+                "No suspicious finished-work signals detected.",
+            ),
+            "detail": "Use `agentic-workspace summary --format json --profile full` for finished-work inspection detail.",
+        }
     system_intent = dict(summary.get("system_intent", {}))
     idle_unavailable_reason = (
         "no active planning record" if todo.get("active_count", 0) == 0 and execplans.get("active_count", 0) == 0 else None
@@ -2826,6 +2883,46 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     if compact_prep_only_route:
         compact_broad_work_guard["prep_only_route"] = compact_prep_only_route
 
+    if machine_first_planning.get("status") == "no-active-execplan":
+        compact_machine_first_planning = {
+            "status": "no-active-execplan",
+            "active_canonical_count": machine_first_planning.get("active_canonical_count", 0),
+            "active_markdown_fallback_count": machine_first_planning.get("active_markdown_fallback_count", 0),
+        }
+    else:
+        compact_machine_first_planning = {
+            "status": machine_first_planning.get("status", "unknown"),
+            "canonical_record_extension": machine_first_planning.get("canonical_record_extension", ".plan.json"),
+            "human_view_extension": machine_first_planning.get("human_view_extension", ".md"),
+            "active_canonical_count": machine_first_planning.get("active_canonical_count", 0),
+            "active_markdown_fallback_count": machine_first_planning.get("active_markdown_fallback_count", 0),
+            "rule": machine_first_planning.get("rule", ""),
+        }
+    if decomposition.get("status") in {None, "none"} and int(decomposition.get("record_count", 0) or 0) == 0:
+        compact_decomposition = {
+            "status": "none",
+            "record_count": 0,
+            "ready_lane_count": 0,
+            "recommended_next_action": decomposition.get("recommended_next_action", ""),
+        }
+    else:
+        compact_decomposition = {
+            "status": decomposition.get("status", "none"),
+            "record_count": decomposition.get("record_count", 0),
+            "records": decomposition.get("records", []),
+            "ready_lane_count": decomposition.get("ready_lane_count", 0),
+            "active_execplan_refs": decomposition.get("active_execplan_refs", []),
+            "recommended_next_action": decomposition.get("recommended_next_action", ""),
+            "rule": decomposition.get("rule", ""),
+        }
+    autopilot_loop = dict(summary.get("autopilot_loop", {}))
+    if autopilot_loop.get("status") == "satisfied" and int(autopilot_loop.get("roadmap_lane_count", 0) or 0) == 0:
+        autopilot_loop = {
+            "status": "satisfied",
+            "route_source": autopilot_loop.get("route_source", "quiet"),
+            "recommended_next_action": autopilot_loop.get("recommended_next_action", ""),
+        }
+
     compact_execution_readiness = {
         "status": execution_readiness.get("status", "unknown"),
         "broad_work_allowed": bool(execution_readiness.get("broad_work_allowed", False)),
@@ -2859,32 +2956,16 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "completed_count": execplans.get("completed_count", 0),
             "archived_count": execplans.get("archived_count", 0),
         },
-        "machine_first_planning": {
-            "status": machine_first_planning.get("status", "unknown"),
-            "canonical_record_extension": machine_first_planning.get("canonical_record_extension", ".plan.json"),
-            "human_view_extension": machine_first_planning.get("human_view_extension", ".md"),
-            "active_canonical_count": machine_first_planning.get("active_canonical_count", 0),
-            "active_markdown_fallback_count": machine_first_planning.get("active_markdown_fallback_count", 0),
-            "rule": machine_first_planning.get("rule", ""),
-        },
-        "decomposition": {
-            "status": decomposition.get("status", "none"),
-            "record_count": decomposition.get("record_count", 0),
-            "records": decomposition.get("records", []),
-            "ready_lane_count": decomposition.get("ready_lane_count", 0),
-            "active_execplan_refs": decomposition.get("active_execplan_refs", []),
-            "recommended_next_action": decomposition.get("recommended_next_action", ""),
-            "rule": decomposition.get("rule", ""),
-        },
+        "machine_first_planning": compact_machine_first_planning,
+        "decomposition": compact_decomposition,
         "work_maturity": _compact_work_maturity_projection(work_maturity),
         "execution_readiness": compact_execution_readiness,
-        "autopilot_loop": dict(summary.get("autopilot_loop", {})),
+        "autopilot_loop": autopilot_loop,
         "planning_surface_health": {
             "status": planning_surface_health.get("status", "unknown"),
             "warning_count": planning_surface_health.get("warning_count", 0),
             "recommended_next_action": planning_surface_health.get("recommended_next_action", ""),
             "warnings": planning_surface_health.get("warnings", []),
-            "authoring_affordances": planning_surface_health.get("authoring_affordances", {}),
         },
         "projection_state": {
             "status": "idle" if idle_unavailable_reason else "active-or-needs-review",
@@ -3058,6 +3139,8 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "unsafe_to_continue_reason",
             "",
         )
+    if planning_surface_health.get("recovery_required") or int(planning_surface_health.get("warning_count", 0) or 0) > 0:
+        compact_summary["planning_surface_health"]["authoring_affordances"] = planning_surface_health.get("authoring_affordances", {})
     return compact_summary
 
 
