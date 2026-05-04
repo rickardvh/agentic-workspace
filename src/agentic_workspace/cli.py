@@ -1375,9 +1375,14 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
                 "required_action": "Create or continue canonical checked-in Planning state, verify with summary, then stop; do not stop at a proposal or start implementation.",
                 "preferred_command": prep_only_new_plan_command,
                 "after_write": summary_command,
+                "allowed_after_new_plan": [
+                    "tighten content fields inside the created execplan",
+                    "for epic-shaped work, add a schema-backed decomposition under .agentic-workspace/planning/decompositions/",
+                    "keep the execplan registered in .agentic-workspace/planning/state.toml",
+                ],
                 "do_not_do": [
                     "do not ask for confirmation instead of leaving durable state when the user already asked you to prepare the repo",
-                    "do not create README, HANDOFF, SLICES, package, dependency, source, public, database, schema, or app scaffold files",
+                    "do not create README, PLANNING_STATE, HANDOFF, SLICES, package, dependency, source, public, database, schema, or app scaffold files",
                     "do not route durable state to .agentic-workspace/planning/records/",
                 ],
             },
@@ -1396,6 +1401,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             ),
             "Do not create root PLAN.md, DOC_CLEANUP_PLAN.md, or similar freehand durable-state files unless repo config explicitly routes there.",
             "For planning-only preparation, keep writes to planning/decomposition surfaces and do not scaffold product files before implementation is requested.",
+            "For prep-only broad work, use new-plan --prep-only when available; after that, enrich only canonical planning/decomposition content and keep state.toml registration intact.",
             "If the user asks to prepare broad work for later continuation, create canonical Planning state, verify it, and stop; a proposal-only answer is not a durable handoff.",
             "Do not invent the outer structure of planning-execplan/v1.",
             "Edit intent, scope, proof, and closeout content inside schema-backed checked-in records.",

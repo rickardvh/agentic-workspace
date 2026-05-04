@@ -12,7 +12,7 @@
         "gemini-3-flash-preview",
         "gpt-5.3-codex-spark"
       ],
-      "status": "monitoring",
+      "status": "fixed-monitoring",
       "failure_classes": [
         "product scaffold during preparation-only work",
         "freehand planning artifacts",
@@ -22,10 +22,14 @@
         "GitHub issues #690-#697",
         "tools/model-cli-harness/suites/copilot-workflow-smoke.json::broad-work-decomposition",
         "scratch/model-cli-harness/20260504T195812Z-copilot-workflow-smoke-broad-work-decomposition-prepare-ecommerce-copilot-claude-haiku-4.5",
-        "scratch/model-cli-harness/20260504T200109Z-copilot-workflow-smoke-broad-work-decomposition-future-agent-handoff-copilot-claude-haiku-4.5"
+        "scratch/model-cli-harness/20260504T200109Z-copilot-workflow-smoke-broad-work-decomposition-future-agent-handoff-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260504T204914Z-copilot-workflow-smoke-broad-work-decomposition-prepare-ecommerce-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260504T205323Z-copilot-workflow-smoke-broad-work-decomposition-future-agent-handoff-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260504T210450Z-copilot-workflow-smoke-broad-work-decomposition-prepare-ecommerce-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260504T210811Z-copilot-workflow-smoke-broad-work-decomposition-future-agent-handoff-copilot-claude-haiku-4.5"
       ],
       "product_owner": "Agentic Workspace planning and harness maintainers",
-      "next_probe": "Run broad-work-decomposition with --prompt-variant all after planning workflow wording or CLI affordance changes.",
+      "next_probe": "Run broad-work-decomposition with --prompt-variant all after planning workflow wording, prep-only scaffold, or CLI affordance changes; latest Copilot rerun had no semantic warnings beyond expected fixture mutation.",
       "priority": "high"
     },
     {

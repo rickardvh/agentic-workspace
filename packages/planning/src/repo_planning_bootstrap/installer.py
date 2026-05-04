@@ -2404,9 +2404,14 @@ def _execution_readiness_payload(
             "required_action": "Create or continue canonical checked-in Planning state, verify with summary, then stop; do not stop at a proposal or start implementation.",
             "preferred_command": "agentic-planning-bootstrap new-plan --id <id> --title <title> --activate --prep-only",
             "after_write": "agentic-workspace summary --target . --format json",
+            "allowed_after_new_plan": [
+                "tighten content fields inside the created execplan",
+                "for epic-shaped work, add a schema-backed decomposition under .agentic-workspace/planning/decompositions/",
+                "keep the execplan registered in .agentic-workspace/planning/state.toml",
+            ],
             "do_not_do": [
                 "do not ask for confirmation instead of leaving durable state when the user already asked you to prepare the repo",
-                "do not create README, HANDOFF, SLICES, package, dependency, source, public, database, schema, or app scaffold files",
+                "do not create README, PLANNING_STATE, HANDOFF, SLICES, package, dependency, source, public, database, schema, or app scaffold files",
                 "do not route durable state to .agentic-workspace/planning/records/",
             ],
         },
@@ -7366,8 +7371,8 @@ def create_execplan_scaffold(
 def _new_plan_tightening_checklist(*, prep_only: bool) -> str:
     if prep_only:
         return (
-            "before implementation, verify this remains prep-only: keep write scope under canonical Planning surfaces, "
-            "run summary, and stop without product files"
+            "prep-only route: enrich only canonical planning/decomposition content if needed, keep state.toml registration, "
+            "run summary, then stop without README, PLANNING_STATE, product files, or handoff docs"
         )
     return (
         "before implementation, tighten scaffold fields: goal, non_goals, intent_continuity, execution_bounds, "
@@ -7382,7 +7387,7 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
         "Prepare durable checked-in Planning state for later continuation without implementing or scaffolding the product."
     ]
     plan_record["non_goals"] = [
-        "Do not create README, HANDOFF, SLICES, package, dependency, source, public, database, schema, or app scaffold files.",
+        "Do not create README, PLANNING_STATE, HANDOFF, SLICES, package, dependency, source, public, database, schema, or app scaffold files.",
         "Do not start implementation; this slice ends after Planning state and summary verification.",
     ]
     plan_record["immediate_next_action"] = [next_action]
@@ -7407,10 +7412,16 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
     planning_mode["halt_after_summary"] = True
     planning_mode["halt_instruction"] = (
         "HALT: prep-only mode active. Create Planning state, run agentic-workspace summary --target . --format json, "
-        "then stop. Do not create product files, scaffolds, or documentation."
+        "then stop. You may enrich only this execplan and schema-backed decompositions; do not create product files, scaffolds, README, PLANNING_STATE, or handoff documentation."
     )
+    planning_mode["allowed_outputs"] = [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/<id>.plan.json",
+        ".agentic-workspace/planning/decompositions/<id>.decomposition.json",
+    ]
     planning_mode["forbidden_outputs"] = [
         "README",
+        "PLANNING_STATE",
         "HANDOFF",
         "SLICES",
         "package",
@@ -7437,7 +7448,7 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
         "max changed files": "Planning records only; stop if implementation scaffolding seems necessary.",
         "required validation commands": "agentic-workspace summary --target . --format json",
         "ask-before-refactor threshold": "Any product, dependency, documentation, schema, database, source, public, or app scaffold file.",
-        "stop before touching": "README, HANDOFF, SLICES, package files, dependency manifests, src/, public/, database files, schema files, or app code.",
+        "stop before touching": "README, PLANNING_STATE, HANDOFF, SLICES, package files, dependency manifests, src/, public/, database files, schema files, or app code.",
     }
     plan_record["stop_conditions"] = {
         "stop when": "Summary verifies the canonical Planning state.",

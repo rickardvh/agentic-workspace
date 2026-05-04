@@ -2149,7 +2149,7 @@ def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: P
     record = json.loads(record_path.read_text(encoding="utf-8"))
 
     assert any("--format json" in action["detail"] for action in payload["actions"] if action["kind"] == "next")
-    assert any("prep-only" in action["detail"] and "stop without product files" in action["detail"] for action in payload["actions"])
+    assert any("prep-only route" in action["detail"] and "PLANNING_STATE" in action["detail"] for action in payload["actions"])
     assert any("after summary verification, stop" in action["detail"] for action in payload["actions"] if action["kind"] == "next")
     assert record["immediate_next_action"] == [
         "Run agentic-workspace summary --target . --format json, confirm the planning state is clean, then stop without product scaffolding."
@@ -2157,10 +2157,13 @@ def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: P
     assert record["machine_readable_contract"]["planning_mode"]["prep_only"] is True
     assert record["machine_readable_contract"]["planning_mode"]["halt_after_summary"] is True
     assert "HALT: prep-only mode active" in record["machine_readable_contract"]["planning_mode"]["halt_instruction"]
+    assert "PLANNING_STATE" in record["machine_readable_contract"]["planning_mode"]["halt_instruction"]
+    assert ".agentic-workspace/planning/state.toml" in record["machine_readable_contract"]["planning_mode"]["allowed_outputs"]
+    assert "PLANNING_STATE" in record["machine_readable_contract"]["planning_mode"]["forbidden_outputs"]
     assert "src" in record["machine_readable_contract"]["planning_mode"]["forbidden_outputs"]
     assert record["control_gates"][0]["id"] == "prep-only-halt"
     assert record["control_gates"][0]["blocking"] is True
-    assert record["execution_bounds"]["stop before touching"].startswith("README, HANDOFF, SLICES")
+    assert record["execution_bounds"]["stop before touching"].startswith("README, PLANNING_STATE, HANDOFF, SLICES")
     assert "src/" in record["execution_bounds"]["stop before touching"]
     assert record["touched_paths"] == [
         ".agentic-workspace/planning/state.toml",

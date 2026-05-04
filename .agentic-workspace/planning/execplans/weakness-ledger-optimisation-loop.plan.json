@@ -49,12 +49,12 @@
     "activation trigger": "none"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
+    "what this slice enabled": "Iteration 1 tightened prep-only broad-work guidance and scaffold output so Copilot used registered canonical Planning state without root handoff or product files.",
     "intentionally deferred": "none",
     "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "proof achieved now": "broad-work-decomposition Copilot rerun had no semantic warnings beyond expected fixture mutation",
+    "validation still needed": "planning-artifact-integrity and Memory tracks still need fresh probes",
+    "next likely slice": "run planning-artifact-integrity next because broad-work is fixed-monitoring"
   },
   "intent_interpretation": {
     "literal request": "Keep running the tracks in priority order and fixing surfaced issues until no major weaknesses remain.",
@@ -213,9 +213,9 @@
     "what happened": "execution has not started",
     "scope touched": "none yet",
     "changed surfaces": "none yet; execution has not changed files",
-    "validations run": "pending",
-    "result for continuation": "continue from this scaffolded execplan",
-    "next step": "Run broad-work-decomposition with all prompt variants across available adapters."
+    "validations run": "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario broad-work-decomposition --prompt-variant all --execute --postmortem-feedback --format json; uv run pytest packages/planning/tests/test_installer.py::test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces -q; uv run pytest tests/test_workspace_cli.py::test_summary_surfaces_broad_work_planning_guard_for_narrow_direct_state tests/test_workspace_cli.py::test_planning_help_command_returns_lifecycle_guidance tests/test_workspace_cli.py::test_planning_help_text_is_actionable -q; uv run pytest tests/test_model_cli_harness.py -q; uv run python scripts/check/check_planning_surfaces.py; make maintainer-surfaces; uv run ruff check src tests packages/planning",
+    "result for continuation": "Broad-work decomposition is fixed-monitoring for Copilot after the latest rerun; continue with planning-artifact-integrity.",
+    "next step": "Run planning-artifact-integrity with postmortem feedback and patch surfaced issues."
   },
   "finished_run_review": {
     "review status": "pending",
@@ -265,11 +265,18 @@
     "status": "pending",
     "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
     "source": "operating_posture",
-    "signals found": [],
-    "signals fixed": [],
+    "signals found": [
+      "Copilot still created root README/PLANNING_STATE handoff files and unregistered execplans before prep-only guidance was tightened.",
+      "The prep-only scaffold was generic enough that the agent felt compelled to enrich or supplement it manually."
+    ],
+    "signals fixed": [
+      "Shipped workflow payload and harness fixtures now say prep-only output is registered Planning state, not root handoff docs.",
+      "Planning help and new-plan --prep-only output now state allowed post-new-plan edits and forbid PLANNING_STATE.",
+      "Latest broad-work rerun created only canonical planning/state files and no product or root handoff files."
+    ],
     "signals routed": [],
     "signals dismissed": [],
-    "next owner": ""
+    "next owner": "current execplan; next track is planning-artifact-integrity"
   },
   "closeout_distillation": {
     "buckets": {
@@ -282,6 +289,7 @@
     }
   },
   "drift_log": [
-    "2026-05-04: Scaffolded by agentic-planning-bootstrap new-plan."
+    "2026-05-04: Scaffolded by agentic-planning-bootstrap new-plan.",
+    "2026-05-04: Iteration 1 broad-work probes exposed root handoff docs and unregistered execplans; patched prep-only guidance/scaffold output and reran successfully for Copilot."
   ]
 }
