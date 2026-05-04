@@ -20,9 +20,9 @@
     },
     "execution": {
       "milestone": "weakness-ledger-optimisation-loop",
-      "status": "active",
-      "next_step": "Run broad-work-decomposition with all prompt variants across available adapters, inspect failures, and patch bounded causes before moving to planning-artifact-integrity.",
-      "proof": "Focused harness probes, focused tests, planning surface checks, and make check before closeout."
+      "status": "completed",
+      "next_step": "Archive this execplan and keep monitoring fixed tracks after future workflow, Memory, or harness changes.",
+      "proof": "Focused harness probes, focused tests, planning surface checks, and make check passed."
     },
     "scope": {
       "touched": [
@@ -166,7 +166,7 @@
   ],
   "active_milestone": {
     "id": "weakness-ledger-optimisation-loop",
-    "status": "active",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
     "ready": "ready",
     "blocked": "none",
@@ -187,8 +187,7 @@
     ".agentic-workspace/planning/execplans/weakness-ledger-optimisation-loop.plan.json"
   ],
   "invariants": [
-    "Preserve the planning contract and keep the work bounded to this plan."
-    ,
+    "Preserve the planning contract and keep the work bounded to this plan.",
     "High-priority tracks must be run before medium-priority Memory probes.",
     "Evaluation remains adaptive dogfooding, not a formal benchmark."
   ],
@@ -212,7 +211,7 @@
     "The active execplan is closed out honestly."
   ],
   "execution_run": {
-    "run status": "not-run-yet",
+    "run status": "completed",
     "executor": "",
     "handoff source": "agentic-planning-bootstrap new-plan",
     "what happened": "Ran high-priority planning probes and medium-priority Memory probes, patched bounded failures, and reran to clean semantic results for Copilot.",
@@ -220,35 +219,35 @@
     "changed surfaces": ".agentic-workspace/WORKFLOW.md; src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md; src/agentic_workspace/cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; scripts/model_cli_harness/run_model_cli_harness.py; tests/test_model_cli_harness.py; tests/test_workspace_cli.py; tools/model-cli-harness/**; this execplan",
     "validations run": "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario broad-work-decomposition --prompt-variant all --execute --postmortem-feedback --format json; uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario planning-artifact-integrity --execute --postmortem-feedback --format json; uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario memory-consult-before-edit --prompt-variant all --execute --postmortem-feedback --format json; uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario memory-learning-capture --execute --postmortem-feedback --format json; uv run pytest packages/planning/tests/test_installer.py::test_planning_summary_does_not_treat_json_template_as_active_execplan tests/test_model_cli_harness.py tests/test_workspace_cli.py::test_planning_help_command_returns_lifecycle_guidance tests/test_workspace_cli.py::test_planning_help_text_is_actionable -q; uv run python scripts/check/check_planning_surfaces.py; uv run ruff check src tests packages/planning scripts/model_cli_harness",
     "result for continuation": "High- and medium-priority weakness tracks are fixed-monitoring for Copilot after the latest reruns.",
-    "next step": "Commit and push iteration 3, then run final validation/closeout."
+    "next step": "Archive this execplan and push closeout state."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "pending",
-    "follow-on decision": "pending"
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
   },
   "proof_report": {
-    "validation proof": "pending",
-    "proof achieved now": "pending",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "make check; planning surface check; focused model CLI harness reruns recorded in the weakness ledger",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "make check passed and all current weakness-ledger tracks have fresh Copilot evidence without major semantic warnings"
   },
   "intent_satisfaction": {
     "original intent": "User request: run priority weakness-ledger tracks until no major weaknesses remain",
-    "was original intent fully satisfied?": "pending",
-    "evidence of intent satisfaction": "",
-    "unsolved intent passed to": "none yet"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Weakness ledger tracks broad-work-decomposition, planning-artifact-integrity, memory-consult-before-edit, and memory-learning-capture all have fresh Copilot reruns with no major semantic warnings beyond expected fixture mutation; #733 was created and fixed for postmortem token friction; make check passed.",
+    "unsolved intent passed to": "none"
   },
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "Weakness ledger optimisation loop completed for current priority tracks.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "monitor fixed tracks after future workflow, Memory, or harness changes",
+    "post-work posterity capture": "weakness ledger and archived execplan",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": "tools/model-cli-harness/model-task-weakness-ledger.json"
   },
   "durable_residue": {
     "status": "none",
@@ -259,12 +258,12 @@
     "retention after promotion": "retain"
   },
   "closure_check": {
-    "slice status": "pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
-    "why this decision is honest": "",
-    "evidence carried forward": "",
-    "reopen trigger": ""
+    "slice status": "complete",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The current priority queue has no remaining major unaddressed weakness signals; remaining deferred issues #595, #627, and #661 stay deferred by user instruction.",
+    "evidence carried forward": "make check; planning surface check; focused model CLI harness reruns recorded in tools/model-cli-harness/model-task-weakness-ledger.json",
+    "reopen trigger": "A future model CLI evaluation reproduces a major workflow misuse not captured by the current ledger statuses."
   },
   "improvement_signal_review": {
     "status": "pending",
@@ -293,8 +292,20 @@
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "monitor fixed tracks after future workflow, Memory, or harness changes",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
       "memory": [],
       "config_check": [],
       "docs": [],
@@ -306,5 +317,20 @@
     "2026-05-04: Iteration 1 broad-work probes exposed root handoff docs and unregistered execplans; patched prep-only guidance/scaffold output and reran successfully for Copilot.",
     "2026-05-04: Iteration 2 planning-artifact probes exposed side-doc creation, dangling/future references, template deletion, and summary template misclassification; patched guidance, harness scoring, fixture templates, and summary filtering, then reran successfully for Copilot.",
     "2026-05-04: Iteration 3 Memory probes were clean for Copilot; created and implemented #733 after postmortem feedback runs exposed unnecessary repo inspection and token use."
-  ]
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: User request: run priority weakness-ledger tracks until no major weaknesses remain\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: make check; planning surface check; focused model CLI harness reruns recorded in the weakness ledger\nChanged surfaces: .agentic-workspace/WORKFLOW.md; src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md; src/agentic_workspace/cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; scripts/model_cli_harness/run_model_cli_harness.py; tests/test_model_cli_harness.py; tests/test_workspace_cli.py; tools/model-cli-harness/**; this execplan\nDurable residue: none (none)\nMemory learning: none\nFollow-up: monitor fixed tracks after future workflow, Memory, or harness changes"
+  }
 }

@@ -12,9 +12,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "weakness-ledger-optimisation-loop", title = "Weakness Ledger Optimisation Loop", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/weakness-ledger-optimisation-loop.plan.json", why_now = "User request: run priority weakness-ledger tracks until no major weaknesses remain", owner_role = "implementation", handoff_ready = true, refs = ["User request: run priority weakness-ledger tracks until no major weaknesses remain"] },
-]
+active_items = []
 queued_items = []
 
 [roadmap]
