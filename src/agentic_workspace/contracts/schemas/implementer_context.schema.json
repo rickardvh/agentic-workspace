@@ -77,7 +77,7 @@
       "description": "Authority markers relevant to the implementation scope."
     },
     "proof": {
-      "type": "object",
+      "$ref": "#/$defs/proof_selection",
       "description": "Selected proof lane and validation commands for the changed paths."
     },
     "required_validation_commands": {
@@ -182,15 +182,15 @@
           "description": "Discriminator for the execution posture payload."
         },
         "capability_posture": {
-          "type": "object",
+          "$ref": "#/$defs/capability_posture",
           "description": "Task capability posture inferred from changed paths and optional task text."
         },
         "runtime_resolution": {
-          "type": "object",
+          "$ref": "#/$defs/runtime_resolution",
           "description": "Compact stay-local, stronger-reasoning, external-delegation, or manual-handoff recommendation."
         },
         "delegation_control": {
-          "type": "object",
+          "$ref": "#/$defs/delegation_control",
           "description": "Local human-control mode and whether automatic delegation is permitted."
         },
         "selected_target": {
@@ -201,7 +201,7 @@
           "description": "Suggested local delegation target when one matches the inferred posture."
         },
         "capability_handoff_packets": {
-          "type": "object",
+          "$ref": "#/$defs/capability_handoff_packets",
           "description": "Capability-aware handoff packet templates for escalation, down-routing, human clarification, review fallback, and no-safe-route cases."
         },
         "recommended_action": {
@@ -217,9 +217,13 @@
           "description": "When token saving is acceptable or should be deferred."
         },
         "ready_handoff": {
-          "type": [
-            "object",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/capability_handoff_packet"
+            },
+            {
+              "type": "null"
+            }
           ],
           "description": "Prompt or handoff packet to use when local mode allows manual or suggested delegation."
         },
@@ -276,6 +280,529 @@
   },
   "additionalProperties": false,
   "$defs": {
+    "proof_selection": {
+      "type": "object",
+      "required": [
+        "kind",
+        "changed_paths",
+        "selected_lanes",
+        "required_commands",
+        "optional_commands",
+        "validation_plan",
+        "broaden_when",
+        "escalate_when"
+      ],
+      "properties": {
+        "kind": {
+          "const": "proof-selection/v1",
+          "description": "Discriminator for changed-path proof selection."
+        },
+        "changed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Changed path used for proof selection."
+          },
+          "description": "Paths used to select validation lanes."
+        },
+        "selected_lanes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "required_commands"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Proof lane identifier."
+              },
+              "when": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Condition that activates this proof lane."
+                },
+                "description": "Path or task conditions that activate this lane."
+              },
+              "required_commands": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Required validation command for this lane."
+                },
+                "description": "Commands required by this lane."
+              },
+              "recovery_signal": {
+                "type": "string",
+                "description": "What to inspect or route when this proof lane is insufficient."
+              }
+            },
+            "additionalProperties": true,
+            "description": "Selected proof lane."
+          },
+          "description": "Proof lanes selected by changed paths."
+        },
+        "required_commands": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Required command selected from proof lanes."
+          },
+          "description": "Flattened required validation commands."
+        },
+        "optional_commands": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Optional command that can strengthen proof."
+          },
+          "description": "Optional validation or orientation commands."
+        },
+        "validation_plan": {
+          "$ref": "#/$defs/validation_plan",
+          "description": "Executable validation plan derived from selected lanes."
+        },
+        "broaden_when": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Condition that requires broader proof."
+          },
+          "description": "Signals that narrow proof is no longer enough."
+        },
+        "escalate_when": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Condition that requires escalation or stronger review."
+          },
+          "description": "Signals that the implementer should not guess."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Changed-path proof selection and validation plan."
+    },
+    "validation_plan": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "primary_next_action",
+        "required",
+        "optional",
+        "next_proof"
+      ],
+      "properties": {
+        "kind": {
+          "const": "validation-plan/v1",
+          "description": "Discriminator for validation plan details."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether validation is ready to inspect or run."
+        },
+        "primary_next_action": {
+          "type": "object",
+          "description": "First validation action to take."
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "Required validation step."
+          },
+          "description": "Ordered required validation steps."
+        },
+        "optional": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "Optional validation step."
+          },
+          "description": "Ordered optional validation steps."
+        },
+        "next_proof": {
+          "type": "string",
+          "description": "How to proceed after the current validation step."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Validation steps selected from proof lanes."
+    },
+    "capability_posture": {
+      "type": "object",
+      "required": [
+        "status",
+        "posture",
+        "work_shape",
+        "proof_burden",
+        "risk_flags",
+        "inspection_evidence_required",
+        "classification_authority",
+        "self_assessment_authority"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Whether capability posture was inferred, configured, or unavailable."
+        },
+        "posture": {
+          "type": "object",
+          "description": "Human-readable posture details used for review."
+        },
+        "work_shape": {
+          "type": "string",
+          "description": "Inferred work shape such as direct, bounded, lane, or epic."
+        },
+        "proof_burden": {
+          "type": "string",
+          "description": "Expected proof burden for this task."
+        },
+        "risk_flags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Risk flag that affects capability routing."
+          },
+          "description": "Risk signals inferred from paths or task text."
+        },
+        "inspection_evidence_required": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Evidence an implementer should inspect before execution."
+          },
+          "description": "Context required before trusting the posture."
+        },
+        "classification_authority": {
+          "type": "string",
+          "description": "Authority used to classify task capability needs."
+        },
+        "self_assessment_authority": {
+          "type": "string",
+          "description": "Authority level of a model's own confidence or self-assessment."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Task capability classification for changed-path implementation."
+    },
+    "runtime_resolution": {
+      "type": "object",
+      "required": [
+        "recommendation",
+        "confidence",
+        "reasons",
+        "profile_recommendations",
+        "guidance",
+        "posture_source",
+        "resolution_categories",
+        "self_assessment"
+      ],
+      "properties": {
+        "recommendation": {
+          "type": "string",
+          "description": "Recommended execution route."
+        },
+        "confidence": {
+          "type": "string",
+          "description": "Confidence in the route recommendation."
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Reason for the route recommendation."
+          },
+          "description": "Why this route was selected."
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": [
+              "object",
+              "string"
+            ],
+            "description": "Alternative execution route."
+          },
+          "description": "Other viable routes when present."
+        },
+        "profile_recommendations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "recommendation",
+              "score",
+              "reasons",
+              "required_action"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Configured target name."
+              },
+              "recommendation": {
+                "type": "string",
+                "description": "Fit recommendation for this target."
+              },
+              "score": {
+                "type": "number",
+                "description": "Relative fit score for this target."
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Reason for this target recommendation."
+                },
+                "description": "Why the target fits or does not fit."
+              },
+              "required_action": {
+                "type": "string",
+                "description": "Action required before or during execution with this target."
+              }
+            },
+            "additionalProperties": true,
+            "description": "Configured target fit recommendation."
+          },
+          "description": "Fit analysis for configured delegation targets."
+        },
+        "guidance": {
+          "type": "string",
+          "description": "Compact route guidance for the current executor."
+        },
+        "posture_source": {
+          "type": "string",
+          "description": "Source of the posture used for route selection."
+        },
+        "resolution_categories": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Available route category."
+          },
+          "description": "Route categories this resolver can emit."
+        },
+        "self_assessment": {
+          "type": "object",
+          "required": [
+            "authority",
+            "rule",
+            "may_influence",
+            "cannot_override"
+          ],
+          "properties": {
+            "authority": {
+              "type": "string",
+              "description": "Authority level for model self-assessment."
+            },
+            "rule": {
+              "type": "string",
+              "description": "Rule describing how self-assessment may be used."
+            },
+            "may_influence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Decision self-assessment may influence."
+              },
+              "description": "Allowed uses of self-assessment."
+            },
+            "cannot_override": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Higher-authority signal self-assessment cannot override."
+              },
+              "description": "Signals self-assessment cannot override."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Authority boundary for model self-assessment."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Capability-aware route resolution for the current task."
+    },
+    "delegation_control": {
+      "type": "object",
+      "required": [
+        "configured_mode",
+        "effective_mode",
+        "supported_modes",
+        "source",
+        "execution_permitted",
+        "safe_to_auto_run_commands",
+        "human_control"
+      ],
+      "properties": {
+        "configured_mode": {
+          "type": "string",
+          "description": "Delegation mode from local configuration or defaults."
+        },
+        "effective_mode": {
+          "type": "string",
+          "description": "Delegation mode after runtime constraints are applied."
+        },
+        "supported_modes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Supported delegation mode."
+          },
+          "description": "Modes this package understands."
+        },
+        "source": {
+          "type": "string",
+          "description": "Where the effective delegation mode came from."
+        },
+        "execution_permitted": {
+          "type": "boolean",
+          "description": "Whether the package may execute delegation automatically."
+        },
+        "safe_to_auto_run_commands": {
+          "type": "boolean",
+          "description": "Whether auto mode may run command-based delegation."
+        },
+        "disabled_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Reason delegation execution is disabled, when known."
+        },
+        "human_control": {
+          "type": "object",
+          "required": [
+            "rule",
+            "next_action"
+          ],
+          "properties": {
+            "rule": {
+              "type": "string",
+              "description": "Human-control rule for local delegation."
+            },
+            "next_action": {
+              "type": "string",
+              "description": "Allowed next action under the current mode."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Human-control boundary for delegation."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Local delegation control and human-autonomy boundary."
+    },
+    "capability_handoff_packets": {
+      "type": "object",
+      "required": [
+        "rule",
+        "common_required_fields",
+        "packet_types"
+      ],
+      "properties": {
+        "rule": {
+          "type": "string",
+          "description": "Rule for when to use capability handoff packets."
+        },
+        "common_required_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Field every handoff packet should include."
+          },
+          "description": "Common fields for prepared delegation packets."
+        },
+        "packet_types": {
+          "type": "object",
+          "description": "Named handoff packet templates."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Reusable packet templates for capability-aware handoff."
+    },
+    "capability_handoff_packet": {
+      "type": "object",
+      "required": [
+        "kind",
+        "packet_type",
+        "mode",
+        "task_shape",
+        "route_reason",
+        "inspected_context",
+        "proof_expectations",
+        "allowed_write_scope",
+        "stop_conditions",
+        "prompt"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/capability-handoff-packet/v1",
+          "description": "Discriminator for prepared capability handoff packets."
+        },
+        "packet_type": {
+          "type": "string",
+          "description": "Handoff packet category."
+        },
+        "mode": {
+          "type": "string",
+          "description": "Delegation mode that produced the packet."
+        },
+        "target": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Recommended receiver target when one is selected."
+        },
+        "template": {
+          "type": "object",
+          "description": "Template that shaped the packet."
+        },
+        "task_shape": {
+          "type": "string",
+          "description": "Task shape being delegated or escalated."
+        },
+        "route_reason": {
+          "type": "string",
+          "description": "Why this route fits the task."
+        },
+        "inspected_context": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Context already inspected before handoff."
+          },
+          "description": "Context the receiver may rely on."
+        },
+        "proof_expectations": {
+          "type": "string",
+          "description": "Proof burden or commands expected from the receiver."
+        },
+        "allowed_write_scope": {
+          "type": "string",
+          "description": "Write boundaries for the receiver."
+        },
+        "stop_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Condition that requires stopping instead of guessing."
+          },
+          "description": "Receiver stop conditions."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Ready prompt for the receiver."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Prepared packet for escalation, down-routing, or human clarification."
+    },
     "authority_marker": {
       "type": "object",
       "required": [

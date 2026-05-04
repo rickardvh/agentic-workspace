@@ -7,7 +7,9 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = []
+active_items = [
+  { id = "planned-lanes-698-712", title = "Implement planned roadmap lanes #698-#712", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/planned-lanes-698-712.plan.json", why_now = "Roadmap lanes planning-contract-navigation-trust and capability-aware-delegation", owner_role = "implementation", handoff_ready = true, refs = ["Roadmap lanes planning-contract-navigation-trust and capability-aware-delegation"] },
+]
 queued_items = []
 
 [roadmap]

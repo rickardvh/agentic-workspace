@@ -18,6 +18,18 @@ Use `archive-plan --apply-cleanup` only when you want the helper to also remove 
 
 This planning system is for execution. It is not intended to become a generic tracker, backlog database, or Jira replacement.
 
+## Source And Projection Roles
+
+Keep the three planning roles separate:
+
+- `.agentic-workspace/planning/state.toml` is the planning-managed state file containing repo-owned active queue and roadmap content. It answers what is active, queued, deferred, and worth promoting.
+- `.agentic-workspace/planning/execplans/*.plan.json` are canonical slice records. They carry the bounded goal, next action, proof, escalation boundaries, and closeout state for active planned work.
+- CLI outputs such as `summary`, `report`, `start`, `implement --changed`, and compact contract projections are worker-facing views. They should be the first surface a weaker or task-focused implementer consumes.
+
+Do not make a worker infer the whole workflow from raw execplan detail when a compact projection answers the question. Use raw plans for authoring and maintenance; use compact CLI views for startup, handoff, proof selection, and bounded implementation.
+
+Flexible fields such as maps and notes are escape hatches for slice-specific residue, not permission to freehand a different planning concept. If a worker needs new standing structure to complete a class of work, route that as a planning contract improvement instead of hiding it in one plan.
+
 ## Layout
 
 - Keep active plans at the top level of `.agentic-workspace/planning/execplans/`.

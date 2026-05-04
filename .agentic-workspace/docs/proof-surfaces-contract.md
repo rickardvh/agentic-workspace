@@ -53,7 +53,7 @@ agentic-workspace proof --target ./repo --route workspace_proof --format json
 agentic-workspace proof --target ./repo --current --format json
 ```
 
-Those forms return the compact contract answer profile from [`.agentic-workspace/docs/compact-contract-profile.md`](.agentic-workspace/docs/compact-contract-profile.md) instead of the full proof surface.
+Those forms return the compact contract answer profile from [compact-contract-profile.md](compact-contract-profile.md) instead of the full proof surface.
 
 ## Default Routes
 
@@ -77,7 +77,7 @@ Those forms return the compact contract answer profile from [`.agentic-workspace
 
 ## Relationship To Other Docs
 
-- Use [`.agentic-workspace/docs/compact-contract-profile.md`](.agentic-workspace/docs/compact-contract-profile.md) when you want the one-answer query shape instead of the full proof object.
+- Use [compact-contract-profile.md](compact-contract-profile.md) when you want the one-answer query shape instead of the full proof object.
 - Use [`.agentic-workspace/docs/reporting-contract.md`](reporting-contract.md) for the compact front-door route to combined workspace state.
 - Use [`.agentic-workspace/docs/lifecycle-and-config-contract.md`](lifecycle-and-config-contract.md) when the repo is already in a broken or ambiguous state and you need a recovery sequence.
-- Use [`.agentic-workspace/docs/generated-surface-trust.md`](.agentic-workspace/docs/generated-surface-trust.md) when the trust question is specifically about generated mirrors and their canonical sources.
+- Use [generated-surface-trust.md](generated-surface-trust.md) when the trust question is specifically about generated mirrors and their canonical sources.

@@ -23,7 +23,21 @@ Cheap implementer context for a bounded changed-path scope.
 | `package_boundary.package_root` | string | no |  | Package root text value used by this contract. |  |  |
 | `path_boundaries` | array of ref `#/$defs/path_boundary` | yes |  | Path-specific ownership and locality constraints for the changed paths. |  |  |
 | `authority_markers` | array of ref `#/$defs/authority_marker` | yes |  | Authority markers relevant to the implementation scope. |  |  |
-| `proof` | object | yes |  | Selected proof lane and validation commands for the changed paths. |  |  |
+| `proof` | ref `#/$defs/proof_selection` | yes |  | Selected proof lane and validation commands for the changed paths. |  |  |
+| `proof.kind` | const `"proof-selection/v1"` | yes |  | Discriminator for changed-path proof selection. |  |  |
+| `proof.changed_paths` | array of string | yes |  | Paths used to select validation lanes. |  |  |
+| `proof.selected_lanes` | array of object | yes |  | Proof lanes selected by changed paths. |  |  |
+| `proof.required_commands` | array of string | yes |  | Flattened required validation commands. |  |  |
+| `proof.optional_commands` | array of string | yes |  | Optional validation or orientation commands. |  |  |
+| `proof.validation_plan` | ref `#/$defs/validation_plan` | yes |  | Executable validation plan derived from selected lanes. |  |  |
+| `proof.validation_plan.kind` | const `"validation-plan/v1"` | yes |  | Discriminator for validation plan details. |  |  |
+| `proof.validation_plan.status` | string | yes |  | Whether validation is ready to inspect or run. |  |  |
+| `proof.validation_plan.primary_next_action` | object | yes |  | First validation action to take. |  |  |
+| `proof.validation_plan.required` | array of object | yes |  | Ordered required validation steps. |  |  |
+| `proof.validation_plan.optional` | array of object | yes |  | Ordered optional validation steps. |  |  |
+| `proof.validation_plan.next_proof` | string | yes |  | How to proceed after the current validation step. |  |  |
+| `proof.broaden_when` | array of string | yes |  | Signals that narrow proof is no longer enough. |  |  |
+| `proof.escalate_when` | array of string | yes |  | Signals that the implementer should not guess. |  |  |
 | `required_validation_commands` | array of string | yes |  | Commands that must pass before claiming implementation complete. |  |  |
 | `orientation` | object | yes |  | Minimum workspace orientation guidance for the implementer. |  |  |
 | `orientation.status` | string | yes |  | Whether the implementer context is based on changed paths or an unknown scope. |  |  |
@@ -38,15 +52,49 @@ Cheap implementer context for a bounded changed-path scope.
 | `inference_limits.when_uncertain` | string | yes |  | Routing instruction when changed-path context is insufficient. |  |  |
 | `execution_posture` | object | yes |  | Actionable local execution posture for orchestration before implementation. |  |  |
 | `execution_posture.kind` | const `"agentic-workspace/execution-posture/v1"` | yes |  | Discriminator for the execution posture payload. |  |  |
-| `execution_posture.capability_posture` | object | yes |  | Task capability posture inferred from changed paths and optional task text. |  |  |
-| `execution_posture.runtime_resolution` | object | yes |  | Compact stay-local, stronger-reasoning, external-delegation, or manual-handoff recommendation. |  |  |
-| `execution_posture.delegation_control` | object | yes |  | Local human-control mode and whether automatic delegation is permitted. |  |  |
+| `execution_posture.capability_posture` | ref `#/$defs/capability_posture` | yes |  | Task capability posture inferred from changed paths and optional task text. |  |  |
+| `execution_posture.capability_posture.status` | string | yes |  | Whether capability posture was inferred, configured, or unavailable. |  |  |
+| `execution_posture.capability_posture.posture` | object | yes |  | Human-readable posture details used for review. |  |  |
+| `execution_posture.capability_posture.work_shape` | string | yes |  | Inferred work shape such as direct, bounded, lane, or epic. |  |  |
+| `execution_posture.capability_posture.proof_burden` | string | yes |  | Expected proof burden for this task. |  |  |
+| `execution_posture.capability_posture.risk_flags` | array of string | yes |  | Risk signals inferred from paths or task text. |  |  |
+| `execution_posture.capability_posture.inspection_evidence_required` | array of string | yes |  | Context required before trusting the posture. |  |  |
+| `execution_posture.capability_posture.classification_authority` | string | yes |  | Authority used to classify task capability needs. |  |  |
+| `execution_posture.capability_posture.self_assessment_authority` | string | yes |  | Authority level of a model's own confidence or self-assessment. |  |  |
+| `execution_posture.runtime_resolution` | ref `#/$defs/runtime_resolution` | yes |  | Compact stay-local, stronger-reasoning, external-delegation, or manual-handoff recommendation. |  |  |
+| `execution_posture.runtime_resolution.recommendation` | string | yes |  | Recommended execution route. |  |  |
+| `execution_posture.runtime_resolution.confidence` | string | yes |  | Confidence in the route recommendation. |  |  |
+| `execution_posture.runtime_resolution.reasons` | array of string | yes |  | Why this route was selected. |  |  |
+| `execution_posture.runtime_resolution.alternatives` | array of object \| string | no |  | Other viable routes when present. |  |  |
+| `execution_posture.runtime_resolution.profile_recommendations` | array of object | yes |  | Fit analysis for configured delegation targets. |  |  |
+| `execution_posture.runtime_resolution.guidance` | string | yes |  | Compact route guidance for the current executor. |  |  |
+| `execution_posture.runtime_resolution.posture_source` | string | yes |  | Source of the posture used for route selection. |  |  |
+| `execution_posture.runtime_resolution.resolution_categories` | array of string | yes |  | Route categories this resolver can emit. |  |  |
+| `execution_posture.runtime_resolution.self_assessment` | object | yes |  | Authority boundary for model self-assessment. |  |  |
+| `execution_posture.runtime_resolution.self_assessment.authority` | string | yes |  | Authority level for model self-assessment. |  |  |
+| `execution_posture.runtime_resolution.self_assessment.rule` | string | yes |  | Rule describing how self-assessment may be used. |  |  |
+| `execution_posture.runtime_resolution.self_assessment.may_influence` | array of string | yes |  | Allowed uses of self-assessment. |  |  |
+| `execution_posture.runtime_resolution.self_assessment.cannot_override` | array of string | yes |  | Signals self-assessment cannot override. |  |  |
+| `execution_posture.delegation_control` | ref `#/$defs/delegation_control` | yes |  | Local human-control mode and whether automatic delegation is permitted. |  |  |
+| `execution_posture.delegation_control.configured_mode` | string | yes |  | Delegation mode from local configuration or defaults. |  |  |
+| `execution_posture.delegation_control.effective_mode` | string | yes |  | Delegation mode after runtime constraints are applied. |  |  |
+| `execution_posture.delegation_control.supported_modes` | array of string | yes |  | Modes this package understands. |  |  |
+| `execution_posture.delegation_control.source` | string | yes |  | Where the effective delegation mode came from. |  |  |
+| `execution_posture.delegation_control.execution_permitted` | boolean | yes |  | Whether the package may execute delegation automatically. |  |  |
+| `execution_posture.delegation_control.safe_to_auto_run_commands` | boolean | yes |  | Whether auto mode may run command-based delegation. |  |  |
+| `execution_posture.delegation_control.disabled_reason` | string \| null | no |  | Reason delegation execution is disabled, when known. |  |  |
+| `execution_posture.delegation_control.human_control` | object | yes |  | Human-control boundary for delegation. |  |  |
+| `execution_posture.delegation_control.human_control.rule` | string | yes |  | Human-control rule for local delegation. |  |  |
+| `execution_posture.delegation_control.human_control.next_action` | string | yes |  | Allowed next action under the current mode. |  |  |
 | `execution_posture.selected_target` | object \| null | yes |  | Suggested local delegation target when one matches the inferred posture. |  |  |
-| `execution_posture.capability_handoff_packets` | object | yes |  | Capability-aware handoff packet templates for escalation, down-routing, human clarification, review fallback, and no-safe-route cases. |  |  |
+| `execution_posture.capability_handoff_packets` | ref `#/$defs/capability_handoff_packets` | yes |  | Capability-aware handoff packet templates for escalation, down-routing, human clarification, review fallback, and no-safe-route cases. |  |  |
+| `execution_posture.capability_handoff_packets.rule` | string | yes |  | Rule for when to use capability handoff packets. |  |  |
+| `execution_posture.capability_handoff_packets.common_required_fields` | array of string | yes |  | Common fields for prepared delegation packets. |  |  |
+| `execution_posture.capability_handoff_packets.packet_types` | object | yes |  | Named handoff packet templates. |  |  |
 | `execution_posture.recommended_action` | string | yes |  | Recommended execution category for the implementer. |  |  |
 | `execution_posture.quality_tradeoff` | string | yes |  | Why the recommendation preserves or improves implementation quality. |  |  |
 | `execution_posture.token_tradeoff` | string | yes |  | When token saving is acceptable or should be deferred. |  |  |
-| `execution_posture.ready_handoff` | object \| null | yes |  | Prompt or handoff packet to use when local mode allows manual or suggested delegation. |  |  |
+| `execution_posture.ready_handoff` | anyOf | yes |  | Prompt or handoff packet to use when local mode allows manual or suggested delegation. |  |  |
 | `execution_posture.inference_limits` | array of string | yes |  | Limits that prevent the posture recommendation from becoming hidden execution authority. |  |  |
 | `handoff_requirements` | object | yes |  | Information that must be preserved before pausing or handing off work. |  |  |
 | `handoff_requirements.before_handoff` | array of string | yes |  | Ordered before handoff entries used by this contract. |  |  |

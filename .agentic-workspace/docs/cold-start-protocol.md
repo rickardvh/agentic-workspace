@@ -35,7 +35,10 @@ To support this protocol, the repository maintains the following machine-readabl
 
 - **`.agentic-workspace/config.toml`**: Authoritative entrypoint and capability posture.
 - **`.agentic-workspace/planning/agent-manifest.json`**: Role-based mapping of documentation to agentic intents.
-- **`.agentic-workspace/planning/state.toml` / `.agentic-workspace/planning/execplans/*.md`**: Contract-shaped execution surfaces with stable headings for summary extraction.
+- **`agentic-workspace summary --format json`**: First compact view over active work, roadmap promotion signals, canonical plan references, proof expectations, and continuation state.
+- **`.agentic-workspace/planning/state.toml`**: Planning-managed state file containing repo-owned active items and roadmap content. Open it only when the compact summary points there or you are maintaining planning state directly.
+- **`.agentic-workspace/planning/execplans/*.plan.json`**: Canonical active execplan records for planned lanes or bounded work.
+- **`.agentic-workspace/planning/execplans/*.md`**: Human-readable compatibility views or fallback prose when no machine-first plan sidecar is present.
 
 ## 4. When to Diverge
 

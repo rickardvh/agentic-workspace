@@ -21,7 +21,7 @@
     ],
     "surface_roles": [
       "`AGENTS.md` is the canonical ordinary repo startup entrypoint.",
-      "`.agentic-workspace/planning/state.toml` is the package-owned active queue and candidate-lane state after the compact summary has shown raw detail is needed.",
+      "`.agentic-workspace/planning/state.toml` is the planning-managed state file containing repo-owned active queue and candidate-lane content after the compact summary has shown raw detail is needed.",
       "`.agentic-workspace/docs/routing-contract.md` is the authoritative routing home.",
       "`llms.txt` is the agent entrypoint router.",
       "`tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` are generated static routing adapters, not doctrine or state owners.",
@@ -192,10 +192,10 @@
     }
   },
   "invariants": [
-    ".agentic-workspace/planning/state.toml owns active queue state and lightweight direct tasks.",
+    ".agentic-workspace/planning/state.toml is the planning-managed state file containing repo-owned active queue content and lightweight direct tasks.",
     "Active execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work.",
-    ".agentic-workspace/planning/state.toml also owns inactive long-horizon candidate lanes and promotion signals.",
-    "Package-owned planning state belongs under `.agentic-workspace/planning/` and should be summarized before root queue files are read.",
+    ".agentic-workspace/planning/state.toml also contains repo-owned inactive long-horizon candidate lanes and promotion signals under the Planning module lifecycle.",
+    "Planning-managed state belongs under `.agentic-workspace/planning/` and should be summarized before raw queue files are read.",
     "Checked-in memory, when installed, owns durable routed knowledge rather than active planning state.",
     "Planning should remain useful without memory being installed.",
     "Direct execution is a valid success mode for small local work.",

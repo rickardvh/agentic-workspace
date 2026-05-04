@@ -47,7 +47,7 @@ When the question is who should own a vague prompt after one repo-context clarif
 agentic-workspace defaults --section prompt_routing --format json
 ```
 
-Those forms return the compact contract answer profile from [`.agentic-workspace/docs/compact-contract-profile.md`](.agentic-workspace/docs/compact-contract-profile.md) instead of the full ownership object.
+Those forms return the compact contract answer profile from [compact-contract-profile.md](compact-contract-profile.md) instead of the full ownership object.
 
 ## Main Authority Surfaces
 
@@ -55,8 +55,8 @@ Those forms return the compact contract answer profile from [`.agentic-workspace
 | --- | --- | --- | --- |
 | Repo startup instructions | `AGENTS.md` | repo | `repo_owned` |
 | Package-managed memory home | `.agentic-workspace/memory/` | memory | `module_managed` |
-| Active execution state | `.agentic-workspace/planning/state.toml` (`todo.active_items`) | planning | `module_managed` |
-| Long-horizon candidate queue | `.agentic-workspace/planning/state.toml` (`roadmap`) | planning | `module_managed` |
+| Active execution state | `.agentic-workspace/planning/state.toml` (`todo.active_items`) | planning | `module_managed` surface with repo-owned planning content |
+| Long-horizon candidate queue | `.agentic-workspace/planning/state.toml` (`roadmap`) | planning | `module_managed` surface with repo-owned planning content |
 | Design constraints for product-shape changes | `docs/design-principles.md` | repo | `repo_owned` |
 | Shared workflow contract | `.agentic-workspace/WORKFLOW.md` | workspace | `module_managed` |
 | Ownership ledger | `.agentic-workspace/OWNERSHIP.toml` | workspace | `module_managed` |
@@ -76,6 +76,16 @@ Do not treat them as settled repo-owned authority surfaces merely because they a
   - The file stays repo-owned; only the fenced block is managed.
 - `module_managed`
   - Upgrade-replaceable content owned by one installed module under `.agentic-workspace/`.
+
+## Planning State Vocabulary
+
+Use this wording when explaining `.agentic-workspace/planning/state.toml`:
+
+- the file is a planning-managed state surface
+- the schema, lifecycle, install path, and upgrade compatibility belong to the Planning module
+- the active items, candidate lanes, issue references, priorities, and continuation decisions inside it are repo-owned planning content
+
+That distinction matters during edits, upgrade, uninstall, and review. Agents may maintain the repo-owned planning content when the workflow routes them there, but they should not treat the surface shape or lifecycle as freeform repo prose.
 
 ## Boundaries
 
@@ -100,7 +110,7 @@ Use that review when the task is boundary work, low-residue install/uninstall wo
 
 ## Relationship To Other Docs
 
-- Use [`.agentic-workspace/docs/compact-contract-profile.md`](.agentic-workspace/docs/compact-contract-profile.md) when you want a one-answer ownership lookup instead of the full ledger report.
-- Use [`.agentic-workspace/docs/proof-surfaces-contract.md`](.agentic-workspace/docs/proof-surfaces-contract.md) when the question is which proof lane establishes trust.
-- Use [`.agentic-workspace/docs/generated-surface-trust.md`](.agentic-workspace/docs/generated-surface-trust.md) when the question is whether a generated mirror is stale or hand-edited.
-- Use [`.agentic-workspace/docs/compatibility-policy.md`](.agentic-workspace/docs/compatibility-policy.md) when the question is whether a surface is stable, mutable, or generated.
+- Use [compact-contract-profile.md](compact-contract-profile.md) when you want a one-answer ownership lookup instead of the full ledger report.
+- Use [proof-surfaces-contract.md](proof-surfaces-contract.md) when the question is which proof lane establishes trust.
+- Use [generated-surface-trust.md](generated-surface-trust.md) when the question is whether a generated mirror is stale or hand-edited.
+- Use [compatibility-policy.md](compatibility-policy.md) when the question is whether a surface is stable, mutable, or generated.

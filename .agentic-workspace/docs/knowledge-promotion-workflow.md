@@ -23,7 +23,7 @@ Route knowledge to the strongest home based on its class:
 ## Workflow Steps
 
 ### 1. Capture (During Task)
-Record new insights in the `Iterative Follow-Through` or `Discovered implications` section of the active [execplan](TEMPLATE.md).
+Record new insights in the `Iterative Follow-Through` or `Discovered implications` field of the active execplan. Use `.agentic-workspace/planning/execplans/TEMPLATE.plan.json` as the machine-first template when creating a new plan.
 
 ### 2. Verify (Task Closure)
 During the "Proof Report" phase, evaluate which captured insights meet the promotion thresholds.
