@@ -384,6 +384,38 @@ def test_model_cli_harness_scores_unregistered_execplan_as_semantic_failure() ->
     assert any("without registering them in planning state" in warning["message"] for warning in warnings)
 
 
+def test_model_cli_harness_scores_unsupported_planning_promotion_command() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="planning-artifact-integrity",
+        result={"stdout": json.dumps({"response": "Next run agentic-planning-bootstrap promote-lane --id checkout."}), "stderr": ""},
+        mutation_summary={"status": "changed", "created": [".agentic-workspace/planning/decompositions/ecommerce.json"]},
+    )
+
+    assert any("unsupported planning lifecycle command" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_scores_false_valid_missing_execplan_refs(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="planning-artifact-integrity",
+        result={
+            "cwd": str(repo),
+            "stdout": json.dumps(
+                {"response": ("All referenced paths are valid. Next action uses .agentic-workspace/planning/execplans/checkout.plan.json.")}
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "changed", "created": [".agentic-workspace/planning/decompositions/ecommerce.json"]},
+    )
+
+    assert any("missing execplan files" in warning["message"] for warning in warnings)
+
+
 def test_model_cli_harness_counts_summary_command_from_full_transcript() -> None:
     harness = _load_harness()
 
@@ -532,6 +564,28 @@ def test_model_cli_harness_metadata_scoring_uses_full_transcript_for_required_co
     messages = [warning["message"] for warning in warnings]
     assert any("outside the scenario's allowed write patterns" in message for message in messages)
     assert not any("required command" in message for message in messages)
+
+
+def test_model_cli_harness_forbidden_response_phrases_ignore_tool_echo(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "broad-work-decomposition",
+            "forbidden_response_phrases": [".agentic-workspace/planning/records/"],
+        },
+        result={
+            "final_message": "Created canonical Planning state and verified summary.",
+            "stdout": "WORKFLOW.md says: Do not route durable Planning state to .agentic-workspace/planning/records/.",
+            "stderr": "",
+        },
+        mutation_summary={"status": "changed", "created": [".agentic-workspace/planning/state.toml"]},
+        repo_path=repo,
+    )
+
+    assert not any("forbidden response phrase" in warning["message"] for warning in warnings)
 
 
 def test_model_cli_harness_metadata_scoring_distinguishes_command_mentions_from_execution(tmp_path: Path) -> None:

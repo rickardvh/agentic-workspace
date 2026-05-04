@@ -1,7 +1,7 @@
 {
   "schema": "agentic-workspace/model-cli-harness-weakness-ledger/v1",
   "purpose": "Compact maintainer ledger for repeated model-task workflow weaknesses found through the source-checkout-only harness.",
-  "updated_at": "2026-05-02",
+  "updated_at": "2026-05-04",
   "entries": [
     {
       "id": "prep-only-broad-work-product-scaffold",
@@ -20,7 +20,9 @@
       ],
       "evidence_refs": [
         "GitHub issues #690-#697",
-        "tools/model-cli-harness/suites/copilot-workflow-smoke.json::broad-work-decomposition"
+        "tools/model-cli-harness/suites/copilot-workflow-smoke.json::broad-work-decomposition",
+        "scratch/model-cli-harness/20260504T195812Z-copilot-workflow-smoke-broad-work-decomposition-prepare-ecommerce-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260504T200109Z-copilot-workflow-smoke-broad-work-decomposition-future-agent-handoff-copilot-claude-haiku-4.5"
       ],
       "product_owner": "Agentic Workspace planning and harness maintainers",
       "next_probe": "Run broad-work-decomposition with --prompt-variant all after planning workflow wording or CLI affordance changes.",
@@ -30,8 +32,10 @@
       "id": "memory-context-skipped-or-bulk-read",
       "area": "memory",
       "scenario": "memory-consult-before-edit",
-      "models": [],
-      "status": "new-probe",
+      "models": [
+        "claude-haiku-4.5"
+      ],
+      "status": "monitoring",
       "failure_classes": [
         "skips Memory before context-sensitive edit",
         "bulk-reads Memory instead of following the index",
@@ -39,7 +43,10 @@
       ],
       "evidence_refs": [
         "GitHub issue #696",
-        "tools/model-cli-harness/fixtures/aw-memory-host-repo"
+        "tools/model-cli-harness/fixtures/aw-memory-host-repo",
+        "scratch/model-cli-harness/20260504T200346Z-copilot-workflow-smoke-memory-consult-before-edit-packaging-note-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260504T200424Z-copilot-workflow-smoke-memory-consult-before-edit-trap-aware-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260504T200513Z-copilot-workflow-smoke-memory-learning-capture-copilot-claude-haiku-4.5"
       ],
       "product_owner": "Memory workflow and harness maintainers",
       "next_probe": "Run memory-consult-before-edit and memory-learning-capture across available adapters.",
@@ -62,7 +69,9 @@
       "evidence_refs": [
         "scratch/model-cli-harness/20260502T185547Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
         "scratch/model-cli-harness/20260502T190739Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
-        "tools/model-cli-harness/suites/copilot-workflow-smoke.json::planning-artifact-integrity"
+        "tools/model-cli-harness/suites/copilot-workflow-smoke.json::planning-artifact-integrity",
+        "scratch/model-cli-harness/20260504T195505Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260504T200807Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5"
       ],
       "product_owner": "Planning summary and model CLI harness maintainers",
       "next_probe": "Run planning-artifact-integrity after summary health changes and confirm the model registers state.toml or sees execplan_unregistered.",

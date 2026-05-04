@@ -1,0 +1,367 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Evaluation and Docs Roadmap Follow-through",
+  "goal": [
+    "Implement the non-deferred evaluation and documentation roadmap issues: #729, #730, #731, and #732.",
+    "Run the affected model-CLI evaluation scenarios and convert concrete friction into package or documentation fixes.",
+    "Compress repeated documentation without flattening the abstraction ladder."
+  ],
+  "non_goals": [
+    "Do not implement deferred issues #595, #627, or #661.",
+    "Do not relocate generated Python adapters under generated/python in this slice.",
+    "Do not do broad large-file remediation or unrelated adaptive-assurance dogfooding."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "The active evaluation tracks have current probes/fixes, documentation repetition is reduced, and deferred issues remain explicitly out of scope.",
+      "constraints": "Use checked-in planning as execution authority; keep tracker issues as intake references; preserve compact CLI-first workflow surfaces.",
+      "latitude": "Tune model-harness scenarios, compact workflow/help/docs surfaces, and documentation structure where evidence shows agent confusion or repeated prose.",
+      "escalation": "Escalate before changing generated CLI layout, broad file architecture, external CI policy, or deferred issue scope."
+    },
+    "execution": {
+      "milestone": "eval-docs-roadmap-729-732",
+      "status": "completed",
+      "next_step": "Archive this execplan, close GitHub #729-#732, commit, and push.",
+      "proof": "Harness scenario runs for #730/#731/#732 where available plus docs/package checks and make check before closeout."
+    },
+    "scope": {
+      "touched": [
+        "tools/model-cli-harness/**",
+        "scripts/model_cli_harness/**",
+        "docs/**",
+        "README.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/eval-docs-roadmap-729-732.plan.json"
+      ],
+      "invariants": [
+        "Planning state remains schema-valid and summary-visible.",
+        "Evaluation scenarios stay adaptive dogfooding aids, not formal pass/fail benchmarks.",
+        "Docs preserve a navigable abstraction ladder with local summaries and canonical detail owners."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Agents should have obvious, compact next steps for broad-work preparation, Memory routing, planning artifact integrity, and documentation navigation.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "More precise docs ownership, focused evaluation evidence for Memory/broad-work/planning integrity, and sharper model-harness scoring for observed Copilot failure modes.",
+    "intentionally deferred": "#595, #627, and #661 by user instruction.",
+    "discovered implications": "Planning artifact integrity failures can appear as confident false-valid path claims or nonexistent lifecycle commands, not just fixture mutation.",
+    "proof achieved now": "Focused harness tests, full pytest suite, ruff, maintainer surfaces, planning doctor, planning surface check, and make check passed.",
+    "validation still needed": "none for this bounded slice",
+    "next likely slice": "none for #729/#730/#731/#732 unless reopened"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement the rest after deferring #595, #627, and #661.",
+    "inferred intended outcome": "Finish the four active issues produced by the evaluation-ledger/doc-feedback lane and leave the three deferred items unimplemented.",
+    "chosen concrete what": "Run and improve the relevant harness/docs surfaces in one bounded follow-through lane.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "tools/model-cli-harness/**, scripts/model_cli_harness/**, docs/**, README.md, package workflow/docs surfaces directly tied to these issues, and this plan/state.",
+    "max changed files": "About 20; stop and reassess before a broad docs or harness rewrite.",
+    "required validation commands": "uv run agentic-workspace summary --target . --format json; uv run python scripts/check/check_planning_surfaces.py; focused model harness scenarios as practical; make check.",
+    "ask-before-refactor threshold": "Ask before moving generated Python adapters, reshaping all docs, or replacing the evaluation harness architecture.",
+    "stop before touching": "Deferred issues #595/#627/#661, generated/python relocation, unrelated large-file cleanup, or external CI/review-template policy."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Active slice covers #729/#730/#731/#732 only; #595/#627/#661 are deferred.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #729, #730, #731, and #732.",
+    "hard constraints": "Keep #595, #627, and #661 deferred; use the package workflow; preserve adaptive evaluation as qualitative dogfooding.",
+    "agent may decide locally": "Which repeated docs to compress, which harness prompts to tune, and whether new dogfooding findings deserve issues.",
+    "escalate when": "A fix requires broad architecture movement, deferred issue work, or a policy decision about humans/review/CI."
+  },
+  "adaptive_assurance": {
+    "level": "medium",
+    "reason": "This touches workflow and docs surfaces that steer future agents, plus evaluation harness behavior. It is not safety-critical, but regressions could degrade package dogfooding.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "requirement_refs",
+      "audit_refs",
+      "acceptance_refs"
+    ],
+    "proof_profiles": [
+      "planning-surface-check",
+      "model-cli-harness-focused",
+      "repo-check"
+    ],
+    "required_gates": [
+      "summary clean enough to expose active plan",
+      "focused evaluation scenarios exercised or explicitly recorded as unavailable",
+      "make check passes"
+    ]
+  },
+  "traceability_refs": {
+    "requirement_refs": [
+      "GitHub #729",
+      "GitHub #730",
+      "GitHub #731",
+      "GitHub #732"
+    ],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [
+      "scripts/model_cli_harness/run_model_cli_harness.py",
+      "tools/model-cli-harness/model-task-weakness-ledger.json",
+      "docs/index.md"
+    ],
+    "risk_refs": [
+      "planning artifact integrity false negatives",
+      "broad-work final-answer false positives from tool echo",
+      "Memory routing evidence drift"
+    ],
+    "security_refs": [],
+    "audit_refs": [
+      "scratch/model-cli-harness/20260504T195505Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
+      "scratch/model-cli-harness/20260504T200807Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
+      "scratch/model-cli-harness/20260504T195812Z-copilot-workflow-smoke-broad-work-decomposition-prepare-ecommerce-copilot-claude-haiku-4.5",
+      "scratch/model-cli-harness/20260504T200109Z-copilot-workflow-smoke-broad-work-decomposition-future-agent-handoff-copilot-claude-haiku-4.5",
+      "scratch/model-cli-harness/20260504T200346Z-copilot-workflow-smoke-memory-consult-before-edit-packaging-note-copilot-claude-haiku-4.5",
+      "scratch/model-cli-harness/20260504T200424Z-copilot-workflow-smoke-memory-consult-before-edit-trap-aware-copilot-claude-haiku-4.5",
+      "scratch/model-cli-harness/20260504T200513Z-copilot-workflow-smoke-memory-learning-capture-copilot-claude-haiku-4.5"
+    ],
+    "acceptance_refs": [
+      "uv run pytest tests/test_model_cli_harness.py -q",
+      "uv run pytest tests -q",
+      "uv run ruff check src tests",
+      "make maintainer-surfaces",
+      "uv run agentic-workspace doctor --target . --modules planning --format json",
+      "make check"
+    ],
+    "decision_refs": [
+      "#595, #627, and #661 remain deferred by user instruction."
+    ]
+  },
+  "control_gates": [],
+  "implementation_blockers": [],
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/729",
+      "label": "#729 docs compression",
+      "role": "closure",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/730",
+      "label": "#730 broad-work decomposition",
+      "role": "closure",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/731",
+      "label": "#731 Memory routing ergonomics",
+      "role": "closure",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/732",
+      "label": "#732 planning artifact integrity",
+      "role": "closure",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "eval-docs-roadmap-729-732",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect the model CLI harness scenarios and documentation repetition hotspots, then implement bounded fixes issue by issue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "tools/model-cli-harness/**",
+    "scripts/model_cli_harness/**",
+    "docs/**",
+    "README.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/eval-docs-roadmap-729-732.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan.",
+    "Do not implement deferred issues #595, #627, or #661."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario planning-artifact-integrity --execute",
+    "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario broad-work-decomposition --prompt-variant all --execute",
+    "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario memory-consult-before-edit --execute",
+    "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario memory-learning-capture --execute",
+    "make check"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "#729 docs repetition is compressed with clear canonical owners.",
+    "#730/#731/#732 focused evaluation scenarios are run and resulting product fixes are implemented or routed.",
+    "Deferred issues #595/#627/#661 remain visibly deferred.",
+    "Planning state and repo checks pass.",
+    "GitHub issues #729/#730/#731/#732 are closed after validation."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "codex",
+    "handoff source": "agentic-planning-bootstrap new-plan",
+    "what happened": "Implemented #729 by adding a canonical documentation-owner map and compressing README learn-more repetition; implemented #730/#732 by tightening model CLI harness scoring for final-answer-only forbidden phrases, unsupported planning promotion commands, and false valid-path claims; implemented #731 by running Memory routing and capture probes and recording evidence.",
+    "scope touched": "model CLI harness scorer/tests/ledger, README and docs navigation/status, planning state and this execplan.",
+    "changed surfaces": "scripts/model_cli_harness/run_model_cli_harness.py; tests/test_model_cli_harness.py; tools/model-cli-harness/model-task-weakness-ledger.json; README.md; docs/index.md; docs/documentation-status.md; planning state.",
+    "validations run": "uv run pytest tests/test_model_cli_harness.py -q; uv run pytest tests -q; uv run ruff check src tests; make maintainer-surfaces; uv run agentic-workspace doctor --target . --modules planning --format json; make check; focused Copilot harness probes for #730/#731/#732.",
+    "result for continuation": "no required continuation for #729/#730/#731/#732; #595/#627/#661 remain deferred by user.",
+    "next step": "Archive this execplan, close GitHub #729-#732, commit, and push."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; deferred #595/#627/#661 were not implemented",
+    "proof status": "passed",
+    "intent served": "yes; the four non-deferred issues were implemented or evidenced, and the harness now catches the observed planning/path false negatives",
+    "config compliance": "yes; package workflow and planning state were used and kept summary-clean",
+    "misinterpretation risk": "reduced; docs have clearer canonical owners and harness scoring separates final-answer violations from echoed workflow text",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "Focused harness tests passed, full test suite passed, ruff passed, planning doctor was healthy, maintainer surfaces refreshed cleanly, and make check passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub #729 #730 #731 #732",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Issues #729-#732 were implemented: docs owner map/link compression landed, harness scoring was tightened with tests, and focused Copilot evaluation evidence was recorded in the ledger.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Evaluation and docs follow-through implemented for #729, #730, #731, and #732.",
+    "validation confirmed": "passed",
+    "follow-on routed to": "#595/#627/#661 stay deferred in planning state.",
+    "post-work posterity capture": "this execplan and model-task weakness ledger",
+    "knowledge promoted (Memory/Docs/Config)": "docs/index.md canonical owner map; documentation-status role update; README link compression",
+    "resume from": "no active continuation required"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The promoted lane scope is complete; #595, #627, and #661 remain explicitly deferred by user instruction.",
+    "evidence carried forward": "make check passed; planning surface check passed; focused model CLI harness tests passed; Copilot evaluation scratch runs recorded in the ledger.",
+    "reopen trigger": "Reopen if #729-#732 are reopened or if the ledger shows the same unscored planning-artifact failures after these harness changes."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Harness false-positive: forbidden response phrases were detected from echoed workflow text rather than the final answer.",
+      "Harness false-negative: planning artifact integrity accepted unsupported `promote-lane` recommendations and false valid-path claims."
+    ],
+    "signals fixed": [
+      "Final-answer-only forbidden phrase scoring for response phrases.",
+      "Semantic warnings for unsupported `agentic-planning-bootstrap promote-lane` recommendations.",
+      "Semantic warnings for missing execplan refs when the agent claims referenced planning paths are valid."
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "Copilot postmortem feedback was noisy in one run; not routed as a package issue because the workflow already treats model feedback as advisory evidence."
+    ],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Scratch model CLI run transcripts are evidence only; do not make them ordinary docs.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#595, #627, and #661 remain deferred by user instruction.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "docs/index.md now owns the canonical documentation-owner map.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "docs/index.md canonical owner map; documentation-status role update; README link compression",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-04: Scaffolded by agentic-planning-bootstrap new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: GitHub #729 #730 #731 #732\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: passed\nChanged surfaces: scripts/model_cli_harness/run_model_cli_harness.py; tests/test_model_cli_harness.py; tools/model-cli-harness/model-task-weakness-ledger.json; README.md; docs/index.md; docs/documentation-status.md; planning state.\nDurable residue: none (none)\nMemory learning: none\nFollow-up: #595/#627/#661 stay deferred in planning state."
+  }
+}

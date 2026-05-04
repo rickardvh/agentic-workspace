@@ -456,6 +456,27 @@ def _created_execplans_without_state_registration(mutation_summary: dict[str, An
     return [] if state_changed else execplans
 
 
+def _mentioned_workspace_paths(text: str) -> list[str]:
+    matches = re.findall(r"\.agentic-workspace/[A-Za-z0-9_./*-]+", text.replace("\\", "/"))
+    normalized: list[str] = []
+    for match in matches:
+        path = match.rstrip(".,;:)'\"`]")
+        if "*" in path:
+            continue
+        normalized.append(path)
+    return sorted(dict.fromkeys(normalized))
+
+
+def _missing_mentioned_paths(*, text: str, repo_path: Path, prefix: str | None = None) -> list[str]:
+    missing: list[str] = []
+    for mentioned in _mentioned_workspace_paths(text):
+        if prefix and not mentioned.startswith(prefix):
+            continue
+        if not (repo_path / mentioned).exists():
+            missing.append(mentioned)
+    return missing
+
+
 def _string_list(value: Any, *, field: str, scenario_id: str) -> list[str]:
     if value is None:
         return []
@@ -473,7 +494,8 @@ def _metadata_workflow_warnings(
 ) -> list[dict[str, str]]:
     scenario_id = str(scenario.get("id", "<unknown>"))
     changed_paths = _changed_paths(mutation_summary)
-    response_lower = _full_response_text(result).lower()
+    final_response_lower = _response_text(result).lower()
+    full_response_lower = _full_response_text(result).lower()
     warnings: list[dict[str, str]] = []
     if _provider_did_not_run(result):
         return warnings
@@ -505,7 +527,7 @@ def _metadata_workflow_warnings(
         field="required_command_mentions",
         scenario_id=scenario_id,
     ):
-        if not _contains_required_signal(response_lower, required):
+        if not _contains_required_signal(full_response_lower, required):
             add("The agent did not report a required command or workflow surface.", evidence=required)
     executed_command_text = _normalized_command_text(_executed_command_text(result))
     for required in _string_list(
@@ -527,7 +549,7 @@ def _metadata_workflow_warnings(
         field="forbidden_response_phrases",
         scenario_id=scenario_id,
     ):
-        if _contains_forbidden_phrase(response_lower, forbidden):
+        if _contains_forbidden_phrase(final_response_lower, forbidden):
             add("The agent reported a forbidden response phrase for this scenario.", evidence=forbidden)
     for pattern in _string_list(
         scenario.get("required_artifact_patterns"),
@@ -771,6 +793,26 @@ def _semantic_workflow_warnings(
                 "The agent created canonical execplan files without registering them in planning state.",
                 evidence=", ".join(unregistered_execplans[:8]),
             )
+        if "agentic-planning-bootstrap promote-lane" in response_lower:
+            add("The agent recommended unsupported planning lifecycle command `agentic-planning-bootstrap promote-lane`.")
+        if scenario_id == "planning-artifact-integrity":
+            missing_planning_refs = _missing_mentioned_paths(
+                text=response,
+                repo_path=Path(result.get("cwd") or "."),
+                prefix=".agentic-workspace/planning/execplans/",
+            )
+            if missing_planning_refs and any(
+                marker in response_lower
+                for marker in (
+                    "all referenced paths are valid",
+                    "references only files that exist",
+                    "next action references only files that exist",
+                )
+            ):
+                add(
+                    "The agent claimed next-action planning references were valid while naming missing execplan files.",
+                    evidence=", ".join(missing_planning_refs[:8]),
+                )
         if scenario_id == "broad-work-decomposition":
             modified = mutation_summary.get("modified", []) if isinstance(mutation_summary, dict) else []
             product_files = [

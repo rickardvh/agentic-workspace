@@ -92,14 +92,11 @@ For agent maintainers, the primary operating path is `AGENTS.md`, the active exe
 ## Learn More
 
 - Documentation map: [`docs/index.md`](docs/index.md)
-- Package overview: [`docs/package/overview.md`](docs/package/overview.md)
-- Lifecycle and context commands: [`docs/package/lifecycle.md`](docs/package/lifecycle.md)
-- Command map: [`docs/package/commands.md`](docs/package/commands.md)
-- Installed surfaces: [`docs/package/installed-surfaces.md`](docs/package/installed-surfaces.md)
+- Package overview and adoption boundary: [`docs/package/overview.md`](docs/package/overview.md)
 - Choosing an install shape: [`docs/which-package.md`](docs/which-package.md)
+- CLI, installed surfaces, modules, and contracts: [`docs/package/`](docs/package/overview.md)
 - Architecture and ownership boundaries: [`docs/architecture.md`](docs/architecture.md)
-- Documentation freshness and roles: [`docs/documentation-status.md`](docs/documentation-status.md)
-- Maturity model: [`docs/maturity-model.md`](docs/maturity-model.md)
+- Documentation roles and maturity: [`docs/documentation-status.md`](docs/documentation-status.md), [`docs/maturity-model.md`](docs/maturity-model.md)
 - Memory module: [`packages/memory/README.md`](packages/memory/README.md)
 - Planning module: [`packages/planning/README.md`](packages/planning/README.md)
 - Maintainer workflow: [`docs/maintainer/contributor-playbook.md`](docs/maintainer/contributor-playbook.md)

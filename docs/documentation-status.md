@@ -8,7 +8,7 @@ Refresh route: update this index when a public doc changes role, starts owning c
 | Doc | Audience | Authority class | Currentness status | Owns current capability or vision | Refresh route |
 | --- | --- | --- | --- | --- | --- |
 | [`README.md`](../README.md) | external adopters and evaluators | public entrypoint | current | stable product positioning and install starting point | Review on public positioning or preset policy changes; keep detailed status in secondary docs. |
-| [`docs/index.md`](index.md) | external adopters, evaluators, and agents | documentation map | current | primary navigation hierarchy for shipped package docs | Review when the documentation hierarchy changes. |
+| [`docs/index.md`](index.md) | external adopters, evaluators, and agents | documentation and owner map | current | primary navigation hierarchy and canonical owner map for repeated shipped-package concepts | Review when the documentation hierarchy changes or a repeated concept changes owner. |
 | [`docs/package/overview.md`](package/overview.md) | adopters and evaluators | shipped package explanation | current | root package, presets, runtime model, and first-party parts | Review when package footprint, presets, or first-contact behavior changes. |
 | [`docs/package/lifecycle.md`](package/lifecycle.md) | adopters and agent operators | shipped package explanation | current | lifecycle and context command model | Review when root CLI command roles or audiences change. |
 | [`docs/package/commands.md`](package/commands.md) | adopters and agent operators | shipped package explanation | current | human map of the shipped root CLI surface | Review when root CLI command roles or audiences change. |
