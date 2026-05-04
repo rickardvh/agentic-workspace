@@ -22,6 +22,18 @@ Do not use a lane for:
 - broad product-management bookkeeping
 - durable technical memory
 
+## Sequential Execution
+
+When a user asks to implement several ordered lanes, keep the lane boundary intact:
+
+1. Inspect the ordered candidate lanes from `agentic-workspace summary --format json`.
+2. Promote the next lane only.
+3. Create one or more execplans scoped to that lane.
+4. Implement, prove, close, and archive the lane-scoped slice or slices.
+5. Return to the roadmap for the next lane.
+
+Do not create one combined execplan for unrelated lanes. A lane is the broader intent owner; execplans are bounded implementation slices under one lane.
+
 ## Shape
 
 Keep candidate lanes under `roadmap.lanes` in `.agentic-workspace/planning/state.toml`.
@@ -65,6 +77,7 @@ Use either `Why now` or `Why later` as the compact reason field.
 - Keep active execution detail and near-term same-thread queue items in `todo.active_items` and execplans, not here.
 - Keep durable background knowledge in canonical docs or memory, not here.
 - Prefer one lane per broader intended outcome rather than many tiny backlog bullets.
+- Preserve sequential lane execution for ordered roadmap work; "first four lanes" means repeat the lane workflow four times, not one four-lane execplan.
 
 ## Machine-Readable Projection
 

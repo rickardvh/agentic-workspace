@@ -10,11 +10,25 @@ This page is a human navigation map for the shipped `agentic-workspace` command 
 | `agentic-workspace start --target ./repo --format json` | begin ordinary work from compact startup context |
 | `agentic-workspace summary --target ./repo --format json` | inspect active planning, handoff, and continuation state |
 | `agentic-workspace preflight --target ./repo --format json` | bundle startup defaults, config, and active state for takeover |
+| `agentic-workspace implement --target ./repo --changed <paths> --format json` | inspect bounded changed-path context, path authority, projection shape, and proof routes before editing |
 | `agentic-workspace proof --target ./repo --changed <paths> --format json` | choose validation and proof routes for changed paths |
 | `agentic-workspace report --target ./repo --format json` | inspect combined module health, warnings, and next actions |
+| `agentic-workspace planning --target ./repo --format json` | inspect planning lifecycle guidance before creating or mutating checked-in planning state |
 | `agentic-workspace doctor --target ./repo --format json` | diagnose missing, stale, or conflicting installed surfaces |
 
-## Lifecycle Mutation Commands
+## Planning Lifecycle Commands
+
+| Command | Use when |
+| --- | --- |
+| `agentic-planning-bootstrap new-plan --id <id> --title <title> --target ./repo --activate --format json` | create and register a schema-backed execplan scaffold for active planned work |
+| `agentic-planning-bootstrap promote-to-plan <item-id> --target ./repo --format json` | promote one selected planning item or lane into active checked-in execution state |
+| `agentic-planning-bootstrap archive-plan <plan> --target ./repo --format json` | archive a completed plan after proof, intent satisfaction, closeout, and residue routing are explicit |
+
+`new-plan` creates a valid scaffold, not a finished implementation contract. Tighten goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and assurance before implementation.
+
+For ordered roadmap lanes, promote and complete one lane at a time. A lane may need multiple execplans, but one execplan should not span unrelated lanes.
+
+## Workspace Lifecycle Mutation Commands
 
 | Command | Use when |
 | --- | --- |

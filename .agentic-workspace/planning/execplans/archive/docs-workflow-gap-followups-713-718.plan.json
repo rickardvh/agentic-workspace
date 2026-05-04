@@ -1,0 +1,268 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Docs Workflow Gap Followups #713-#718",
+  "goal": [
+    "Implement documentation follow-ups #713-#718 from the workflow documentation review: align startup guidance, expose planning lifecycle commands, fix the stale routing reference, document sequential lane execution, document post-new-plan tightening, and clarify implement --changed projection inspection."
+  ],
+  "non_goals": [
+    "Do not redesign the planning model beyond the documented gaps.",
+    "Do not add a workflow-log contract; the maintainer marked that as a one-off request.",
+    "Do not introduce multi-lane umbrella execplans; preserve lane boundaries."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Close #713-#718 with bounded documentation and guidance updates.",
+      "constraints": "Keep scope bounded to docs and command guidance for the reviewed gaps; preserve sequential lane execution as the intended model.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "docs-workflow-gap-followups-713-718",
+      "status": "done",
+      "next_step": "Archive this completed execplan.",
+      "proof": "Focused workspace CLI tests, lint, planning doctor, maintainer surfaces, root CLI authority check, and make check passed."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/WORKFLOW.md",
+        ".agentic-workspace/docs/cold-start-protocol.md",
+        ".agentic-workspace/docs/orchestrator-workflow-contract.md",
+        ".agentic-workspace/docs/candidate-lanes-contract.md",
+        ".agentic-workspace/planning/execplans/README.md",
+        "docs/package/commands.md",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "One roadmap lane is the broader planning owner; one or more execplans may implement slices under that lane.",
+        "Do not document or emit guidance that encourages unrelated lanes to share one umbrella execplan.",
+        "The compact CLI route remains primary for ordinary startup."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make the docs and CLI guidance steer agents into the intended planning workflow without broad rereading or multi-lane batching.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes",
+    "validation still needed": "none",
+    "next likely slice": "none"
+  },
+  "intent_interpretation": {
+    "literal request": "Create issues for the adjusted documentation gaps, then ingest and implement them.",
+    "inferred intended outcome": "Turn the reviewed documentation gaps into tracked issues and land a bounded documentation correction pass.",
+    "chosen concrete what": "Update startup, command-map, candidate-lane, execplan, and implementer-context guidance, plus any matching summary/planning CLI text.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/WORKFLOW.md; .agentic-workspace/docs/*.md; .agentic-workspace/planning/execplans/README.md; docs/package/commands.md; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; this execplan/state for closeout",
+    "max changed files": "Around 10 files.",
+    "required validation commands": "rg checks for stale references and multi-lane umbrella wording; uv run pytest tests/test_workspace_cli.py -q; make check if code or generated guidance changes.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, issues #713-#718, the startup/routing docs, candidate-lane and execplan docs, command map, and CLI summary/planning guidance.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Implement docs #713-#718 with sequential lane execution as the main correction; verify stale refs and CLI guidance.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Close documentation issues #713-#718.",
+    "hard constraints": "Do not add workflow-log docs; do not endorse multi-lane umbrella execplans; keep changes documentation/guidance scoped.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "#713-#718",
+      "label": "Workflow documentation gap follow-ups",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "docs-workflow-gap-followups-713-718",
+    "status": "done",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed execplan."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/WORKFLOW.md",
+    ".agentic-workspace/docs/cold-start-protocol.md",
+    ".agentic-workspace/docs/orchestrator-workflow-contract.md",
+    ".agentic-workspace/docs/candidate-lanes-contract.md",
+    ".agentic-workspace/planning/execplans/README.md",
+    "docs/package/commands.md",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Sequential roadmap lane execution is the default.",
+    "Execplans implement bounded slices under one lane; they do not aggregate unrelated lanes.",
+    "Compact CLI output remains the first-choice orientation surface."
+  ],
+  "validation_commands": [
+    "rg -n \"planning-routing-contract|umbrella execplan|combined.*lane|all planned lanes\" .agentic-workspace docs src tests",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "make check"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Issues #713-#718 are addressed in docs and matching CLI guidance.",
+    "Stale planning-routing reference is removed or replaced.",
+    "Startup guidance has one dominant compact CLI-first path.",
+    "Planning lifecycle commands are discoverable from the command map.",
+    "Sequential lane execution is documented; multi-lane umbrella execplans are discouraged.",
+    "Post-new-plan tightening is documented.",
+    "`implement --changed` projection inspection use is documented."
+  ],
+  "execution_run": {
+    "run status": "complete",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap new-plan",
+    "what happened": "Created issues #713-#718, aligned startup docs around preflight-first compact startup, exposed planning lifecycle commands and post-new-plan tightening, fixed the stale routing reference, documented sequential lane execution, and clarified implement --changed projection inspection.",
+    "scope touched": "startup/routing docs, candidate-lane and execplan docs, command map, planning help payload, implementer-context inference guidance, and focused tests",
+    "changed surfaces": ".agentic-workspace docs, docs/package/commands.md, src/agentic_workspace/cli.py, tests/test_workspace_cli.py, and planning closeout state",
+    "validations run": "rg stale-reference and lane wording checks; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json; make maintainer-surfaces; uv run agentic-workspace defaults --section root_cli_authority --format json; make check",
+    "result for continuation": "No required continuation remains for #713-#718.",
+    "next step": "Archive this completed execplan."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used package startup, implementer context, planning summary, and checked-in execplan before implementation",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "proof_report": {
+    "validation proof": "Focused tests, lint, planning doctor, maintainer-surface rendering, root CLI authority inspection, and full make check passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json; make maintainer-surfaces; uv run agentic-workspace defaults --section root_cli_authority --format json; make check"
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub issues #713-#718",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Issues #713-#718 addressed through docs, planning-help payload, implementer-context guidance, and focused tests; make check passed.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Documentation and planning-help guidance now align around compact startup, planning lifecycle discoverability, sequential lane execution, scaffold tightening, and implement --changed projection inspection.",
+    "validation confirmed": "make check passed after focused proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "evidence_only in this archived plan",
+    "knowledge promoted (Memory/Docs/Config)": "canonical docs and CLI planning-help payload",
+    "resume from": "no required continuation"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The requested documentation gaps were tracked, implemented, validated, and require no follow-on.",
+    "evidence carried forward": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json; make maintainer-surfaces; uv run agentic-workspace defaults --section root_cli_authority --format json; make check",
+    "reopen trigger": "Reopen if agents still receive conflicting startup guidance, planning lifecycle commands are undiscoverable, or ordered roadmap lanes are again implemented through a multi-lane umbrella plan."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Active plan summary caught next-action projection drift and a slash phrase that looked like a missing file reference."
+    ],
+    "signals fixed": [
+      "Adjusted the active execplan before implementation; no durable follow-up needed."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "canonical docs and CLI planning-help payload",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-04: Scaffolded by agentic-planning-bootstrap new-plan.",
+    "2026-05-04: Planning summary caught scaffold drift before docs implementation; fixed the plan and continued.",
+    "2026-05-04: Implemented docs and CLI planning-help updates for #713-#718; make check passed."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: GitHub issues #713-#718\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Focused tests, lint, planning doctor, maintainer-surface rendering, root CLI authority inspection, and full make check passed.\nChanged surfaces: .agentic-workspace docs, docs/package/commands.md, src/agentic_workspace/cli.py, tests/test_workspace_cli.py, and planning closeout state\nDurable residue: none (none)\nMemory learning: none\nFollow-up: none"
+  }
+}

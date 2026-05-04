@@ -8136,6 +8136,10 @@ def test_planning_help_command_returns_lifecycle_guidance(capsys) -> None:
 
     assert payload["kind"] == "agentic-workspace/planning-help/v1"
     assert any("new-plan" in command for command in payload["lifecycle_commands"])
+    assert "schema-valid scaffold" in payload["post_new_plan_tightening"]["rule"]
+    assert "execution_bounds" in payload["post_new_plan_tightening"]["tighten_before_implementation"]
+    assert "one lane at a time" in payload["sequential_lane_execution"]["rule"]
+    assert "unrelated lanes" in payload["sequential_lane_execution"]["do_not"]
     assert "new-plan" in payload["durable_state_bridge"]["preferred_command"]
     assert "--prep-only" in payload["durable_state_bridge"]["prep_only_route"]["preferred_command"]
     assert "PLAN.md" in payload["durable_state_bridge"]["must_not_create"]
@@ -8146,6 +8150,8 @@ def test_planning_help_command_returns_lifecycle_guidance(capsys) -> None:
     assert any("planning/records" in item for item in prep_route["do_not_do"])
     assert any("HANDOFF" in item and "package" in item for item in prep_route["do_not_do"])
     assert any("Do not invent" in rule for rule in payload["rules"])
+    assert any("tighten scaffold" in rule for rule in payload["rules"])
+    assert any("one lane at a time" in rule for rule in payload["rules"])
     assert any("WORKFLOW.md as task state" in rule for rule in payload["rules"])
     assert any("verify it, and stop" in rule for rule in payload["rules"])
     assert payload["runtime_native_bridge"]["status"] == "allowed-as-local-aid"
@@ -8161,6 +8167,8 @@ def test_planning_help_text_is_actionable(capsys) -> None:
     assert "Durable repo-visible state bridge" in output
     assert "Prep-only" in output
     assert "agentic-planning-bootstrap new-plan" in output
+    assert "After new-plan" in output
+    assert "Ordered lanes" in output
     assert "planning-execplan/v1" in output
     assert "Runtime-native planning bridge" in output
     assert "Unsafe-state recovery" in output

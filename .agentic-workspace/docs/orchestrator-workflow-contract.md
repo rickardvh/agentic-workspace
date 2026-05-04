@@ -13,11 +13,13 @@ Use it when work is broad enough to benefit from stronger planning first and a b
 ## Read First
 
 1. `AGENTS.md`
-2. `.agentic-workspace/planning/state.toml`
-3. the active execplan
+2. `agentic-workspace preflight --target . --format json`
+3. `agentic-workspace summary --target . --format json`
 4. `agentic-workspace config --target . --format json`
 5. `agentic-workspace defaults --section relay --format json`
 6. `agentic-planning-bootstrap handoff --format json`
+
+Open `.agentic-workspace/planning/state.toml` or the active execplan only when these compact outputs point there, or when the orchestrator is maintaining the checked-in planning record directly.
 
 ## Workflow
 

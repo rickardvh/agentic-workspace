@@ -1314,6 +1314,30 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             promote_command,
             f"agentic-planning-bootstrap archive-plan <plan>{target_arg} --format json",
         ],
+        "post_new_plan_tightening": {
+            "rule": "new-plan creates a schema-valid scaffold, not an implementation-ready contract.",
+            "tighten_before_implementation": [
+                "goal",
+                "non_goals",
+                "intent_continuity",
+                "execution_bounds",
+                "touched_paths",
+                "validation_commands",
+                "completion_criteria",
+                "adaptive_assurance when risk or scope requires it",
+            ],
+            "after_write": summary_command,
+        },
+        "sequential_lane_execution": {
+            "rule": "For ordered roadmap lanes, promote and complete one lane at a time.",
+            "do": [
+                "inspect ordered lanes from summary",
+                "promote the next lane",
+                "create one or more execplans scoped to that lane",
+                "implement, prove, close, and archive the lane slice before returning for the next lane",
+            ],
+            "do_not": "Do not create one combined execplan for unrelated lanes.",
+        },
         "durable_state_bridge": {
             "use_when": [
                 "the user asks to leave repo-visible state for future agents",
@@ -1359,6 +1383,8 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         "rules": [
             "Use CLI first for orientation and proof selection.",
             "Use package lifecycle commands for planning mutations when available.",
+            "After new-plan, tighten scaffold fields before implementation.",
+            "For ordered roadmap lanes, execute one lane at a time; a lane may use multiple execplans, but an execplan should not span unrelated lanes.",
             "Prefer checked-in Agentic Workspace plans as the shared authority for required planning.",
             (
                 "If an agent runtime is hardwired to use native plans or todos, treat them as private working memory "
@@ -1408,6 +1434,12 @@ def _print_planning_help(payload: dict[str, Any]) -> None:
     print("Planning lifecycle:")
     for command in payload["lifecycle_commands"]:
         print(f"- {command}")
+    tightening = payload.get("post_new_plan_tightening", {})
+    if isinstance(tightening, dict) and tightening:
+        print(f"- After new-plan: {tightening.get('rule', '')}")
+    sequential_lanes = payload.get("sequential_lane_execution", {})
+    if isinstance(sequential_lanes, dict) and sequential_lanes:
+        print(f"- Ordered lanes: {sequential_lanes.get('rule', '')}")
     durable_bridge = payload.get("durable_state_bridge", {})
     if isinstance(durable_bridge, dict) and durable_bridge:
         print("")
@@ -8198,13 +8230,14 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         "inference_limits": {
             "rule": (
                 "implement --changed derives bounded context from changed paths, config, active planning, and package metadata; "
-                "it does not know unstated intent."
+                "it can be used to inspect the live projection shape before contract, schema, or docs changes, but it does not know unstated intent."
             ),
             "can_infer": [
                 "path-owned proof lanes",
                 "configured workflow obligations visible from the target",
                 "active planning assurance when Planning exposes it",
                 "path boundary and generated-surface warnings",
+                "current implementer-context projection keys for the selected changed paths",
             ],
             "cannot_infer": [
                 "whether the human intended a larger lane than the changed paths imply",

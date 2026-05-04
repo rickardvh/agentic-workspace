@@ -7,7 +7,7 @@ Use raw `TODO.md` and execplan prose after that only when the compact summary is
 Use raw `.agentic-workspace/planning/state.toml` when you need direct maintenance access to canonical machine-readable planning state.
 Use `.agentic-workspace/planning/execplans/*.plan.json` as the canonical execplan state when a machine-first plan sidecar is present; the adjacent `.md` file is the derived human view.
 Use `.agentic-workspace/docs/candidate-lanes-contract.md` for the native `roadmap` lane shape in `.agentic-workspace/planning/state.toml` when grouped deferred work needs more structure than a flat candidate bullet.
-Use `docs/planning-routing-contract.md` when deciding whether newly discovered work belongs in `roadmap`, `todo.active_items`, `.agentic-workspace/planning/execplans/`, or `.agentic-workspace/planning/reviews/`.
+Use `.agentic-workspace/docs/routing-contract.md` when deciding whether newly discovered work belongs in `roadmap`, `todo.active_items`, `.agentic-workspace/planning/execplans/`, or `.agentic-workspace/planning/reviews/`.
 Use `agentic-workspace doctor --target ./repo --format json` for advisory shape and drift warnings across `todo.active_items`, active execplans, and `roadmap`.
 Use `promote-to-plan` and `archive-plan` as thin file-native helpers around the same checked-in contract.
 Use `docs/environment-recovery-contract.md` for task-local recovery and environment assumptions.
@@ -15,6 +15,8 @@ Use `.agentic-workspace/docs/system-intent-contract.md` for the durable larger-i
 Use `docs/intent-contract.md` and `docs/resumable-execution-contract.md` for the compact planning summary contracts.
 Use `docs/execution-summary-contract.md` for the compact outcome shape that completed slices should leave behind before archive.
 Use `archive-plan --apply-cleanup` only when you want the helper to also remove completed active-item references and compress matching roadmap residue for the same archived thread.
+
+After `agentic-planning-bootstrap new-plan`, treat the result as a valid scaffold, not an implementation-ready plan. Before editing product or package files, tighten the concrete goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and `adaptive_assurance` when risk or scope requires it.
 
 This planning system is for execution. It is not intended to become a generic tracker, backlog database, or Jira replacement.
 
@@ -43,6 +45,7 @@ Flexible fields such as maps and notes are escape hatches for slice-specific res
 - Do not treat `todo.active_items`, `roadmap`, or active execplans as long-form completion logs; once a plan is complete, archive it and remove the completed-work detail from forward-looking planning surfaces.
 - When a completed slice came from `todo.active_items` or `roadmap`, remove or archive the matched queue residue in the same pass rather than leaving stale completed candidates behind.
 - Do not confuse slice completion with lane completion; a slice can ship while the larger intent remains open, and archive should wait until the lane-level proof is explicit.
+- Do not combine unrelated roadmap lanes into one umbrella execplan. Promote and complete ordered lanes sequentially; use multiple execplans under one lane only when that lane itself needs multiple bounded slices.
 - Do not add sections such as `Added In This Pass`, `Completed Work`, or similar retrospective logs to `todo.active_items`; completed detail belongs in archived execplans, workflow-change notes, or git history.
 - Treat active plan state as branch-local and low half-life: archive, replace, or prune it rather than mutating it forever.
 
