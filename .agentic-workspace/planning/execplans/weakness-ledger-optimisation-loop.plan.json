@@ -49,12 +49,12 @@
     "activation trigger": "none"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "Iteration 1 tightened prep-only broad-work guidance and scaffold output; iteration 2 fixed planning-artifact integrity so Copilot no longer deletes templates or creates side docs.",
+    "what this slice enabled": "Iterations 1-2 fixed high-priority planning tracks; iteration 3 confirmed Memory consult/capture behavior and tightened postmortem feedback token discipline.",
     "intentionally deferred": "none",
     "discovered implications": "none yet",
-    "proof achieved now": "broad-work-decomposition and planning-artifact-integrity Copilot reruns had no semantic warnings beyond expected fixture mutation",
-    "validation still needed": "Memory tracks still need fresh probes",
-    "next likely slice": "run memory-consult-before-edit and memory-learning-capture because high-priority planning tracks are fixed-monitoring"
+    "proof achieved now": "broad-work-decomposition, planning-artifact-integrity, memory-consult-before-edit, and memory-learning-capture Copilot reruns had no semantic warnings beyond expected fixture mutation",
+    "validation still needed": "final focused tests and make check before closing the optimisation loop",
+    "next likely slice": "run final validation and close out if no new major weaknesses appear"
   },
   "intent_interpretation": {
     "literal request": "Keep running the tracks in priority order and fixing surfaced issues until no major weaknesses remain.",
@@ -133,7 +133,10 @@
     "audit_refs": [
       "scratch/model-cli-harness/20260504T210450Z-copilot-workflow-smoke-broad-work-decomposition-prepare-ecommerce-copilot-claude-haiku-4.5",
       "scratch/model-cli-harness/20260504T210811Z-copilot-workflow-smoke-broad-work-decomposition-future-agent-handoff-copilot-claude-haiku-4.5",
-      "scratch/model-cli-harness/20260504T214245Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5"
+      "scratch/model-cli-harness/20260504T214245Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
+      "scratch/model-cli-harness/20260504T215023Z-copilot-workflow-smoke-memory-consult-before-edit-packaging-note-copilot-claude-haiku-4.5",
+      "scratch/model-cli-harness/20260504T215100Z-copilot-workflow-smoke-memory-consult-before-edit-trap-aware-copilot-claude-haiku-4.5",
+      "scratch/model-cli-harness/20260504T215023Z-copilot-workflow-smoke-memory-learning-capture-copilot-claude-haiku-4.5"
     ],
     "acceptance_refs": [
       "uv run pytest tests/test_model_cli_harness.py -q",
@@ -212,12 +215,12 @@
     "run status": "not-run-yet",
     "executor": "",
     "handoff source": "agentic-planning-bootstrap new-plan",
-    "what happened": "Ran high-priority broad-work and planning-artifact integrity probes, patched bounded failures, and reran both to clean semantic results for Copilot.",
-    "scope touched": "workflow guidance, planning help output, planning fixture templates, summary template filtering, model CLI harness scoring, tests, weakness ledger, and this execplan",
+    "what happened": "Ran high-priority planning probes and medium-priority Memory probes, patched bounded failures, and reran to clean semantic results for Copilot.",
+    "scope touched": "workflow guidance, planning help output, planning fixture templates, summary template filtering, model CLI harness scoring/postmortem prompt, tests, weakness ledger, and this execplan",
     "changed surfaces": ".agentic-workspace/WORKFLOW.md; src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md; src/agentic_workspace/cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; scripts/model_cli_harness/run_model_cli_harness.py; tests/test_model_cli_harness.py; tests/test_workspace_cli.py; tools/model-cli-harness/**; this execplan",
-    "validations run": "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario broad-work-decomposition --prompt-variant all --execute --postmortem-feedback --format json; uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario planning-artifact-integrity --execute --postmortem-feedback --format json; uv run pytest packages/planning/tests/test_installer.py::test_planning_summary_does_not_treat_json_template_as_active_execplan tests/test_model_cli_harness.py tests/test_workspace_cli.py::test_planning_help_command_returns_lifecycle_guidance tests/test_workspace_cli.py::test_planning_help_text_is_actionable -q; uv run python scripts/check/check_planning_surfaces.py; uv run ruff check src tests packages/planning scripts/model_cli_harness",
-    "result for continuation": "High-priority planning tracks are fixed-monitoring for Copilot after the latest reruns.",
-    "next step": "Commit and push iteration 2, then run the medium-priority Memory tracks."
+    "validations run": "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario broad-work-decomposition --prompt-variant all --execute --postmortem-feedback --format json; uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario planning-artifact-integrity --execute --postmortem-feedback --format json; uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario memory-consult-before-edit --prompt-variant all --execute --postmortem-feedback --format json; uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario memory-learning-capture --execute --postmortem-feedback --format json; uv run pytest packages/planning/tests/test_installer.py::test_planning_summary_does_not_treat_json_template_as_active_execplan tests/test_model_cli_harness.py tests/test_workspace_cli.py::test_planning_help_command_returns_lifecycle_guidance tests/test_workspace_cli.py::test_planning_help_text_is_actionable -q; uv run python scripts/check/check_planning_surfaces.py; uv run ruff check src tests packages/planning scripts/model_cli_harness",
+    "result for continuation": "High- and medium-priority weakness tracks are fixed-monitoring for Copilot after the latest reruns.",
+    "next step": "Commit and push iteration 3, then run final validation/closeout."
   },
   "finished_run_review": {
     "review status": "pending",
@@ -270,18 +273,23 @@
     "signals found": [
       "Copilot still created root README/PLANNING_STATE handoff files and unregistered execplans before prep-only guidance was tightened.",
       "The prep-only scaffold was generic enough that the agent felt compelled to enrich or supplement it manually.",
-      "Copilot created a freehand workspace architecture doc and later deleted shipped templates because summary misclassified TEMPLATE.plan.json as active work."
+      "Copilot created a freehand workspace architecture doc and later deleted shipped templates because summary misclassified TEMPLATE.plan.json as active work.",
+      "Postmortem feedback passes spent tokens inspecting disposable fixtures and returned generic fixture advice even when supplied evidence was enough."
     ],
     "signals fixed": [
       "Shipped workflow payload and harness fixtures now say prep-only output is registered Planning state, not root handoff docs.",
       "Planning help and new-plan --prep-only output now state allowed post-new-plan edits and forbid PLANNING_STATE.",
       "Latest broad-work rerun created only canonical planning/state files and no product or root handoff files.",
       "Planning help and WORKFLOW now keep broad handoff assumptions inside planning/decomposition records and distinguish future owner surfaces from existing next-action files.",
-      "Planning summary now excludes TEMPLATE.plan.json from active execplan projection, and the harness scores planning-only architecture/handoff side docs plus template deletion."
+      "Planning summary now excludes TEMPLATE.plan.json from active execplan projection, and the harness scores planning-only architecture/handoff side docs plus template deletion.",
+      "Memory probes show Copilot/Haiku uses the narrow testing-and-packaging Memory note before README edits and avoids duplicate durable capture.",
+      "Postmortem feedback prompt now says not to inspect the repo, run commands, or read files, and to answer only from supplied evidence."
     ],
-    "signals routed": [],
+    "signals routed": [
+      "GitHub #733 created for the postmortem feedback token-use finding and implemented in this iteration."
+    ],
     "signals dismissed": [],
-    "next owner": "current execplan; next track is Memory routing"
+    "next owner": "current execplan; next step is final validation and closeout"
   },
   "closeout_distillation": {
     "buckets": {
@@ -296,6 +304,7 @@
   "drift_log": [
     "2026-05-04: Scaffolded by agentic-planning-bootstrap new-plan.",
     "2026-05-04: Iteration 1 broad-work probes exposed root handoff docs and unregistered execplans; patched prep-only guidance/scaffold output and reran successfully for Copilot.",
-    "2026-05-04: Iteration 2 planning-artifact probes exposed side-doc creation, dangling/future references, template deletion, and summary template misclassification; patched guidance, harness scoring, fixture templates, and summary filtering, then reran successfully for Copilot."
+    "2026-05-04: Iteration 2 planning-artifact probes exposed side-doc creation, dangling/future references, template deletion, and summary template misclassification; patched guidance, harness scoring, fixture templates, and summary filtering, then reran successfully for Copilot.",
+    "2026-05-04: Iteration 3 Memory probes were clean for Copilot; created and implemented #733 after postmortem feedback runs exposed unnecessary repo inspection and token use."
   ]
 }

@@ -739,7 +739,9 @@ def _postmortem_feedback_prompt(*, scenario: dict[str, Any], invocation: dict[st
     question_lines = "\n".join(f"- {question}" for question in questions if str(question).strip())
     return (
         "You just completed a disposable Agentic Workspace evaluation scenario. "
-        "Do not edit files. Give a compact post-mortem for improving the package and harness.\n\n"
+        "Do not inspect the repo, run commands, read files, or edit files. "
+        "Use only the supplied prompt, mutation summary, warnings, and prior-output excerpt. "
+        "Give a compact post-mortem for improving the package and harness.\n\n"
         f"Scenario: {invocation.get('scenario_id', '')} / {invocation.get('prompt_variant_id', '')}\n"
         f"Original prompt:\n{invocation.get('prompt', '')}\n\n"
         f"Mutation summary:\n{mutation_text}\n\n"
@@ -747,7 +749,8 @@ def _postmortem_feedback_prompt(*, scenario: dict[str, Any], invocation: dict[st
         f"Your prior final/output excerpt:\n{final_message}\n\n"
         "Answer these questions:\n"
         f"{question_lines}\n\n"
-        "Keep the answer under 250 words. Separate model/provider limitations from product or harness improvements."
+        "Keep the answer under 250 words. Separate model/provider limitations from product or harness improvements. "
+        "If the supplied evidence is insufficient, say what evidence is missing instead of inspecting the repository."
     )
 
 

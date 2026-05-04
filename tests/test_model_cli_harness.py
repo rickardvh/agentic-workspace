@@ -875,9 +875,12 @@ def test_model_cli_harness_postmortem_prompt_keeps_feedback_compact_and_actionab
     )
 
     assert "Why did you choose the workflow and commands you used?" in prompt
+    assert "Do not inspect the repo, run commands, read files, or edit files." in prompt
+    assert "Use only the supplied prompt, mutation summary, warnings, and prior-output excerpt." in prompt
     assert "What was ambiguous, missing, or more verbose than necessary?" in prompt
     assert "What would have reduced token usage without reducing safety or proof quality?" in prompt
     assert "Separate model/provider limitations from product or harness improvements." in prompt
+    assert "say what evidence is missing instead of inspecting the repository" in prompt
     assert "Keep the answer under 250 words." in prompt
     assert len(prompt) < 5000
 
