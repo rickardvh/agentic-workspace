@@ -66,6 +66,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `system_intent_mirror` | object | no |  | Compiled system-intent mirror status and source metadata. |  |  |
 | `workflow_obligations` | object | yes |  | Repo-configured workflow obligations surfaced for report consumers. |  |  |
 | `product_managed_enclave` | object | yes |  | Product-managed workspace enclave boundaries and ownership signals. |  |  |
+| `ownership_diagnostics` | object | yes |  | Diagnostics for drift between authority ledgers, startup adapters, config policy, and workflow surfaces. |  |  |
 | `surface_value_guardrail` | object | yes |  | Durable-surface review guardrail for avoiding unnecessary new surfaces. |  |  |
 | `effective_authority` | object | yes |  | Resolved authority hierarchy for workspace, module, and repo-owned surfaces. |  |  |
 | `operational_compression` | object | yes |  | Compression signals that keep ordinary agent startup and reporting cheap. |  |  |

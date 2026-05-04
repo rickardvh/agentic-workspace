@@ -85,6 +85,14 @@ authority = "primary"
 summary = "Repo-level startup instructions and local operating constraints."
 
 [[authority_surfaces]]
+concern = "workspace-policy"
+surface = ".agentic-workspace/config.toml"
+owner = "repo"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Repo-owned workspace policy, workflow obligations, and structured operating settings."
+
+[[authority_surfaces]]
 concern = "compact-planning-state"
 surface = ".agentic-workspace/planning/state.toml"
 owner = "planning"
@@ -155,6 +163,22 @@ owner = "workspace"
 ownership = "managed_fence"
 authority = "fenced"
 summary = "Managed pointer block inside the repo-owned AGENTS file."
+
+[[subsystems]]
+id = "workspace-cli-runtime"
+paths = ["src/agentic_workspace/cli.py", "src/agentic_workspace/generated_cli_package/**"]
+owns = ["workspace command routing", "compact report assembly", "runtime adapter dispatch"]
+does_not_own = ["planning package state semantics", "memory note policy", "generated command package source contracts"]
+proof = ["uv run pytest tests/test_workspace_cli.py -q"]
+escalate_when = ["change widens public command contract", "change requires planning or memory package semantics"]
+
+[[subsystems]]
+id = "model-cli-harness"
+paths = ["tools/model-cli-harness/**", "scripts/model_cli_harness/**", "tests/test_model_cli_harness.py"]
+owns = ["model CLI dogfooding scenarios", "adaptive model-run evaluation records", "harness scorer guardrails"]
+does_not_own = ["formal benchmark policy", "provider authentication", "package runtime command semantics"]
+proof = ["uv run pytest tests/test_model_cli_harness.py -q"]
+escalate_when = ["scenario changes become formal benchmark policy", "provider instability is misclassified as product behavior"]
 
 [notes]
 purpose = "This file defines the workspace ownership ledger and authority map. Installers should converge on this ledger instead of maintaining duplicated managed-path heuristics."

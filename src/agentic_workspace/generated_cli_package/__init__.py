@@ -141,6 +141,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Output format.",
             "name": "format"
+          },
+          {
+            "choices": [
+              "compact",
+              "full"
+            ],
+            "default": "full",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Select compact agent-facing config or full resolved config detail.",
+            "name": "profile"
           }
         ]
       },
@@ -1583,6 +1595,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Output format.",
           "name": "format"
+        },
+        {
+          "choices": [
+            "compact",
+            "full"
+          ],
+          "default": "full",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Select compact agent-facing config or full resolved config detail.",
+          "name": "profile"
         }
       ]
     },

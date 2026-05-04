@@ -1,3 +1,8 @@
+# Agentic Workspace managed config.
+# Edit this file directly only when changing repo-owned policy.
+# Reference: .agentic-workspace/docs/workspace-config-contract.md
+# Check resolved config: uv run agentic-workspace config --target . --profile compact --format json
+
 schema_version = 1
 
 [workspace]
@@ -79,7 +84,7 @@ stage = "pre-work"
 scope_tags = ["workspace", "startup", "routing", "planning"]
 commands = [
   "uv run agentic-workspace defaults --section startup --format json",
-  "uv run agentic-workspace config --target . --format json",
+  "uv run agentic-workspace config --target . --profile compact --format json",
   "uv run agentic-workspace summary --format json",
 ]
 review_hint = "Open raw planning state, an active execplan, or deeper routing docs only when the compact answers point there."

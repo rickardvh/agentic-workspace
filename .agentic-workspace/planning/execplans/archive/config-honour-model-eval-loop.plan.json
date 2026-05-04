@@ -1,0 +1,377 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Config Honour Model Evaluation Loop",
+  "goal": [
+    "Run dynamic model CLI evaluation and optimisation loops across Copilot/Claude Haiku, Gemini 3 Flash, and Codex Spark to make repo and local configuration effects visible, well-defined, and followed by agents."
+  ],
+  "non_goals": [
+    "Do not convert this into a formal benchmark; keep it an adaptive optimisation loop.",
+    "Do not hard-code one vendor model's quirks as universal workflow unless repeated evidence supports it.",
+    "Do not expose private local-only configuration as shared repo authority."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Improve package/harness behavior so agents notice and respect `.agentic-workspace/config.toml` and `.agentic-workspace/config.local.toml` settings during realistic work.",
+      "constraints": "Keep changes bounded to model CLI harness scenarios/scoring, config-facing command/report guidance, docs/contracts, and focused tests.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "config-honour-model-eval-loop",
+      "status": "complete",
+      "next_step": "Archive this lane and close implemented issues after final closeout trust check, commit, and push.",
+      "proof": "Executed real harness runs across Copilot/Claude Haiku, Gemini 3 Flash, and Codex Spark; fixed repeated ambiguity; reran focused tests and make check."
+    },
+    "scope": {
+      "touched": [
+        "tools/model-cli-harness/",
+        "scripts/model_cli_harness/",
+        "docs/maintainer/model-cli-dogfooding-harness.md",
+        ".agentic-workspace/OWNERSHIP.toml",
+        ".agentic-workspace/docs/ownership-authority-contract.md",
+        ".agentic-workspace/docs/workspace-config-contract.md",
+        ".agentic-workspace/docs/lifecycle-and-config-contract.md",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/",
+        "tests/"
+      ],
+      "invariants": [
+        "Configuration fields must have inspectable effects in CLI/report/implementer-context surfaces.",
+        "Repo config is shared authority; local config is local-advisory and must not become shared repo policy.",
+        "Quality fit outranks token saving; token saving is useful only when configuration and proof remain safe.",
+        "Model CLI prompts should stay realistic and should not explicitly tell agents to use Agentic Workspace."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make Agentic Workspace configuration a reliable, visible operating substrate for agents across tools and capability levels.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Config is now visible through compact CLI output, seeded during init, referenced at point of edit, and exercised by dynamic model CLI probes; host-repo subsystem ownership can now route path-specific proof hints.",
+    "intentionally deferred": "Mixed-agent workflow evaluation remains out of scope for this lane.",
+    "discovered implications": "Mechanical scoring is useful only as a guardrail; the optimisation loop should emphasize adaptive scenarios, runner judgment, and model self-explanation to expose new gaps.",
+    "proof achieved now": "passed",
+    "validation still needed": "none for this slice after final closeout trust check",
+    "next likely slice": "future optimisation loops can add more dynamic scenarios and mixed-agent workflows when requested"
+  },
+  "intent_interpretation": {
+    "literal request": "Run extensive evaluation+optimisation loops on all three target models with the goal of making sure that agents honour settings in config.toml and config.local.toml.",
+    "inferred intended outcome": "Use real model behavior to find where configuration has weak or invisible workflow effects, then tighten product/harness guidance and rerun.",
+    "chosen concrete what": "Add or refine config-focused model CLI scenarios, run Copilot/Haiku, Gemini 3 Flash, and Codex Spark, implement product or harness fixes for repeated ambiguity, and close with evidence.",
+    "interpretation distance": "medium",
+    "review guidance": "Check whether changes make configuration effects more visible and actionable without making local config shared authority."
+  },
+  "execution_bounds": {
+    "allowed paths": "tools/model-cli-harness/**; scripts/model_cli_harness/**; docs/maintainer/model-cli-dogfooding-harness.md; .agentic-workspace/docs/*config*.md; .agentic-workspace/docs/delegation-posture-contract.md; src/agentic_workspace/cli.py; tests/**; this execplan/state for closeout",
+    "max changed files": "Around 15 files.",
+    "required validation commands": "targeted model CLI harness tests; selected real harness executions for copilot, gemini, and codex; make check before commit.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated package modules, unrelated docs hierarchy cleanup, external provider credentials, or shared config values not needed by this lane."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, config command output, config docs, model CLI harness docs/scripts/suite/fixtures, run outputs, and narrow CLI/report surfaces that expose config effects.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Run config-focused model CLI probes, tighten repeated ambiguity, rerun targeted probes, then prove with harness tests and make check.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Config-honouring model evaluation and optimisation loop.",
+    "hard constraints": "Use real model evidence; keep local config local-advisory; do not take control away from humans unless config says auto; quality fit outranks token saving.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "user request 2026-05-04 config honour model evaluation loop",
+      "label": "config honour model evaluation loop",
+      "role": "intake",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#719",
+      "label": "Seed schema-valid workspace config during install/init",
+      "role": "source_intent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#720",
+      "label": "Make workspace config schema and reference discoverable at point of edit",
+      "role": "source_intent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#721",
+      "label": "Add standard managed-file edit warnings and CLI mutation routes",
+      "role": "source_intent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#722",
+      "label": "Use ownership ledgers to diagnose separation-of-concerns drift",
+      "role": "source_intent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#723",
+      "label": "Report ambiguous or conflicting authority claims from ownership ledgers",
+      "role": "source_intent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#724",
+      "label": "Provide compact config output for weak model CLI tools",
+      "role": "source_intent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#725",
+      "label": "Keep model harness closeout config checks compact and scorer-aware",
+      "role": "source_intent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#726",
+      "label": "Classify model provider/runtime instability separately from product findings",
+      "role": "source_intent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#727",
+      "label": "Add optional host-repo sub-ownership for decomposition and concern-boundary reasoning",
+      "role": "source_intent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#728",
+      "label": "Avoid stdout truncation in TypeScript runtime adapter",
+      "role": "source_intent",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "config-honour-model-eval-loop",
+    "status": "done",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run final closeout trust and summary checks, then archive the plan, commit, push, and close implemented issues."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "tools/model-cli-harness/",
+    "scripts/model_cli_harness/",
+    "docs/maintainer/model-cli-dogfooding-harness.md",
+    ".agentic-workspace/docs/workspace-config-contract.md",
+    ".agentic-workspace/docs/lifecycle-and-config-contract.md",
+    ".agentic-workspace/docs/delegation-posture-contract.md",
+    "src/agentic_workspace/cli.py",
+    "tests/"
+  ],
+  "invariants": [
+    "Config effects must be queryable from compact CLI/report surfaces.",
+    "Local config may influence local runtime posture but must remain non-authoritative for shared repo state.",
+    "Model evaluations should stress realistic human prompts without explicit Agentic Workspace steering.",
+    "Fix repeated product ambiguity immediately; route one-off provider/model weakness as evidence only unless high consequence."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_model_cli_harness.py tests/test_workspace_cli.py -q",
+    "selected real harness runs for copilot, gemini, and codex adapters",
+    "make check"
+  ],
+  "required_tools": [
+    "uv",
+    "copilot",
+    "gemini",
+    "codex",
+    "pwsh"
+  ],
+  "completion_criteria": [
+    "Config-focused scenarios or scoring exist for shared config and local config behavior.",
+    "All three target adapters have real evaluation evidence unless a provider/runtime blocks execution.",
+    "Repeated ambiguity is fixed in product/harness/docs/tests.",
+    "Reruns show improvement or remaining risk is explicitly routed.",
+    "make check passes."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "codex",
+    "handoff source": "agentic-planning-bootstrap new-plan",
+    "what happened": "Ingested #719-#728, added compact config output and init seeding, made config references visible at edit points, added managed-state warnings, added ownership diagnostics and optional subsystem ownership, tightened model CLI harness scenarios/scoring, fixed generated TypeScript stdout truncation, and reran dynamic model probes.",
+    "scope touched": "workspace CLI/config/report/proof/ownership surfaces, generated command packages, planning installer/checks, model CLI harness fixtures/scenarios/scorer, schema docs, and closeout planning state.",
+    "changed surfaces": "src/agentic_workspace/cli.py; contracts and generated CLI packages; .agentic-workspace config/ownership/docs/state; model CLI harness scripts/fixtures/suites/docs; planning installer/check tests.",
+    "validations run": "Focused subsystem tests passed; contract tooling passed; structured file inventory passed; schema reference annotation check passed; generated command package checks passed including Docker conformance; package planning tests/lint passed; make check passed.",
+    "result for continuation": "no required continuation for this slice",
+    "next step": "Archive this execplan, commit, push, and close #719-#728 except unrelated older backlog."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; #727 was a related new issue ingested between loops and implemented as a lightweight first slice",
+    "proof status": "passed",
+    "intent served": "yes; config effects are more visible and dynamic evaluations exercised all three target adapters",
+    "config compliance": "improved; config.local remains local-advisory while repo config has compact query and seeded reference support",
+    "misinterpretation risk": "reduced; dynamic evaluation guidance now emphasizes judged behavior over mechanical benchmark scoring",
+    "follow-on decision": "close lane"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "make check passed; targeted tests for workspace CLI, model CLI harness, contract tooling, structured file inventory, schema references, generated command packages, and planning package passed; real Copilot, Codex Spark, and Gemini runs were reviewed with provider/runtime instability separated from product findings.",
+    "proof_execution_evidence": [
+      {
+        "command": "uv run pytest tests/test_workspace_cli.py::test_ownership_path_selector_includes_host_repo_subsystems tests/test_workspace_cli.py::test_proof_changed_paths_include_subsystem_proof_hints tests/test_workspace_cli.py::test_ownership_command_reports_authority_map -q",
+        "status": "passed",
+        "evidence_ref": "3 passed"
+      },
+      {
+        "command": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+        "status": "passed",
+        "evidence_ref": "[ok] contract tooling"
+      },
+      {
+        "command": "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+        "status": "passed",
+        "evidence_ref": "Structured file inventory check passed."
+      },
+      {
+        "command": "uv run python scripts/generate/generate_schema_reference.py --check --check-annotations",
+        "status": "passed",
+        "evidence_ref": "[ok] schema reference docs"
+      },
+      {
+        "command": "make check",
+        "status": "passed",
+        "evidence_ref": "full maintainer check passed before closeout"
+      }
+    ]
+  },
+  "intent_satisfaction": {
+    "original intent": "user request: extensive eval+optimisation loops for config.toml and config.local.toml",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The lane ran dynamic optimisation loops across Copilot/Haiku, Codex Spark, and Gemini; repeated config visibility and closeout scoring issues were fixed; new related issues #719-#728 were ingested and implemented.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Config-aware workflow and model CLI evaluation surfaces are stronger: compact config output, init config seeding, point-of-edit references, ownership diagnostics, subsystem proof hints, harness dynamic scenarios, provider/runtime classification, and generated TypeScript stdout safety.",
+    "validation confirmed": "passed",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "this execplan and issue comments",
+    "knowledge promoted (Memory/Docs/Config)": "workspace config docs, ownership authority docs, generated schema reference, and repo/payload ownership ledgers",
+    "resume from": "no active continuation required"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "done",
+    "larger-intent status": "satisfied for this lane",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The user requested config-honouring optimisation loops and new related issues between loops; all issues created for this slice were implemented, dynamic model evidence was reviewed, provider/runtime noise was separated, and full proof passed.",
+    "evidence carried forward": "This execplan, generated schema reference, ownership subsystem contract, model CLI harness scenarios, and GitHub issue closeout comments.",
+    "reopen trigger": "Future real model runs show agents still cannot discover or honor config/local config settings despite compact config and subsystem projections."
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Weak models need compact config output rather than full raw config reports.",
+      "Closeout scoring must avoid treating provider/runtime failures as product regressions.",
+      "Ownership ledgers need host-repo subsystem hints for path-scoped proof and escalation.",
+      "Generated TypeScript CLI adapter can truncate stdout if it writes asynchronously and exits immediately.",
+      "Optimisation loops should privilege dynamic scenario judgment over deterministic metric scoring."
+    ],
+    "signals fixed": [
+      "#719",
+      "#720",
+      "#721",
+      "#722",
+      "#723",
+      "#724",
+      "#725",
+      "#726",
+      "#727",
+      "#728"
+    ],
+    "signals routed": [],
+    "signals dismissed": [
+      "Gemini provider capacity and AttachConsole stderr were classified as environment/provider instability, not product findings."
+    ],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Raw model run transcripts and provider noise remain harness evidence, not durable docs.",
+          "owner": "archive",
+          "source": "execution_run"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "Compact config output and config edit references now expose shared/local configuration effects to weak model tools.",
+          "owner": ".agentic-workspace/config.toml and src/agentic_workspace/cli.py",
+          "source": "#719-#724"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "Ownership docs now describe optional [[subsystems]] boundaries and proof hints.",
+          "owner": ".agentic-workspace/docs/ownership-authority-contract.md",
+          "source": "#727"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-04: Scaffolded by agentic-planning-bootstrap new-plan.",
+    "2026-05-04: Ingested and implemented #719-#728 while running dynamic config-honouring model optimisation loops.",
+    "2026-05-04: User clarified that deterministic metrics are not the main optimisation loop; retained scorer guardrails but treated judged dynamic behavior as primary evidence."
+  ]
+}

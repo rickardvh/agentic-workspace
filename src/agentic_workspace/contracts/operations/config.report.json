@@ -17,6 +17,11 @@
       "name": "format",
       "source": "cli-option",
       "required": false
+    },
+    {
+      "name": "profile",
+      "source": "cli-option",
+      "required": false
     }
   ],
   "output": {

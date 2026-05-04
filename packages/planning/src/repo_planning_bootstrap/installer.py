@@ -47,6 +47,12 @@ FINISHED_WORK_EVIDENCE_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-finished-w
 SOURCE_PLANNING_CHECKER_SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "check" / "check_planning_surfaces.py"
 PLANNING_STATE_KIND = "agentic-planning-state"
 PLANNING_STATE_SCHEMA_VERSION = "planning-state/v1"
+MANAGED_STATE_HEADER_LINES = (
+    "# Agentic Workspace managed state.",
+    "# Do not edit by hand when the CLI is available.",
+    "# Inspect: uv run agentic-workspace summary --format json",
+    "# Mutate through the package command named by that output.",
+)
 PLANNING_STATE_MATURITIES = {"idea", "candidate", "shaped", "ready", "active", "closed"}
 PLANNING_STATE_STATUSES = {"deferred", "next", "active", "blocked", "done", "dismissed"}
 PLANNING_STATE_ROLE_FIELDS = (
@@ -10848,7 +10854,7 @@ def _state_to_toml_lines(state: dict[str, Any]) -> list[str]:
             return f"{{ {item_str} }}"
         return json.dumps(item)
 
-    lines = []
+    lines = [*MANAGED_STATE_HEADER_LINES, ""]
     for key in ("kind", "schema_version"):
         if key in state:
             lines.append(f"{key} = {json.dumps(state[key])}")

@@ -127,6 +127,18 @@ export const generatedCommandPackage = {
             ],
             "help": "Output format.",
             "name": "format"
+          },
+          {
+            "choices": [
+              "compact",
+              "full"
+            ],
+            "default": "full",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Select compact agent-facing config or full resolved config detail.",
+            "name": "profile"
           }
         ]
       },

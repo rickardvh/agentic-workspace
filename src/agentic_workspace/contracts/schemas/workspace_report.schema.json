@@ -27,6 +27,7 @@
     "agent_configuration_queries",
     "workflow_obligations",
     "product_managed_enclave",
+    "ownership_diagnostics",
     "surface_value_guardrail",
     "effective_authority",
     "maintenance_pressure",
@@ -183,6 +184,10 @@
     "product_managed_enclave": {
       "type": "object",
       "description": "Product-managed workspace enclave boundaries and ownership signals."
+    },
+    "ownership_diagnostics": {
+      "type": "object",
+      "description": "Diagnostics for drift between authority ledgers, startup adapters, config policy, and workflow surfaces."
     },
     "surface_value_guardrail": {
       "type": "object",

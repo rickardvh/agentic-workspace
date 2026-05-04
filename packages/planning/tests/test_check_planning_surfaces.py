@@ -1226,6 +1226,10 @@ def test_config_workflow_obligations_are_validated_in_config_not_entrypoint(tmp_
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write_startup_surfaces(tmp_path)
     _write(
+        tmp_path / "AGENTS.md",
+        _baseline_agents() + '\n\n[workflow_obligations.adapter_surface_refresh]\nsummary = "wrong surface"\n',
+    )
+    _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         """
 schema_version = 1

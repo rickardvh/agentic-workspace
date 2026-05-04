@@ -539,6 +539,17 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert any(action.kind in {"copied", "created", "updated"} for action in result.actions)
 
 
+def test_install_bootstrap_state_toml_includes_managed_state_header(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    assert state_text.startswith("# Agentic Workspace managed state.\n")
+    assert "# Do not edit by hand when the CLI is available." in state_text
+    assert "# Inspect: uv run agentic-workspace summary --format json" in state_text
+    assert "# Mutate through the package command named by that output." in state_text
+    assert 'kind = "agentic-planning-state"' in state_text
+
+
 def test_install_bootstrap_include_optional_copies_optional_payload_and_skills(tmp_path: Path) -> None:
     result = install_bootstrap(target=tmp_path, include_optional=True)
 
@@ -967,7 +978,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "agentic-workspace summary --format json" in bootstrap_agents_text
     assert "agentic-workspace defaults --section startup --format json" in bootstrap_agents_text
     assert (
-        "Use `agentic-workspace config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter."
+        "Use `agentic-workspace config --target . --profile compact --format json` when the configured entrypoint, posture, or workflow obligations matter."
         in bootstrap_agents_text
     )
     assert "Read package-local `AGENTS.md` only for the package being edited." in bootstrap_agents_text

@@ -472,6 +472,7 @@ def test_model_cli_harness_metadata_scoring_warns_on_write_and_response_rules(tm
             "allowed_write_patterns": [".agentic-workspace/planning/**"],
             "forbidden_write_patterns": ["README.md", "src/**"],
             "required_command_mentions": ["agentic-workspace summary"],
+            "required_executed_commands": ["agentic-workspace config"],
             "forbidden_response_phrases": ["/plan"],
             "required_artifact_patterns": [".agentic-workspace/planning/execplans/*.plan.json"],
         },
@@ -484,6 +485,7 @@ def test_model_cli_harness_metadata_scoring_warns_on_write_and_response_rules(tm
     assert any("outside the scenario's allowed write patterns" in message for message in messages)
     assert any("forbidden write patterns" in message for message in messages)
     assert any("required command" in message for message in messages)
+    assert any("did not execute a required command" in message for message in messages)
     assert any("forbidden response phrase" in message for message in messages)
     assert any("required artifact pattern" in message for message in messages)
 
@@ -520,6 +522,154 @@ def test_model_cli_harness_metadata_scoring_uses_full_transcript_for_required_co
     messages = [warning["message"] for warning in warnings]
     assert any("outside the scenario's allowed write patterns" in message for message in messages)
     assert not any("required command" in message for message in messages)
+
+
+def test_model_cli_harness_metadata_scoring_distinguishes_command_mentions_from_execution(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "config-closeout-obligation",
+            "required_command_mentions": ["agentic-workspace config"],
+            "required_executed_commands": ["agentic-workspace config"],
+        },
+        result={
+            "stdout": json.dumps({"response": 'The config file says commands = ["agentic-workspace config --target . --format json"].'}),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+        repo_path=repo,
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert not any("required command or workflow surface" in message for message in messages)
+    assert any("did not execute a required command" in message for message in messages)
+
+    executed = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "config-closeout-obligation",
+            "required_executed_commands": ["agentic-workspace config"],
+        },
+        result={
+            "stdout": json.dumps(
+                {
+                    "type": "item.completed",
+                    "item": {"type": "command_execution", "command": "agentic-workspace config --target . --format json"},
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+        repo_path=repo,
+    )
+
+    assert executed == []
+
+
+def test_model_cli_harness_counts_copilot_powershell_markdown_as_executed_command(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "config-closeout-obligation",
+            "required_executed_commands": ["agentic-workspace config"],
+        },
+        result={
+            "final_message": """
+### ✅ `powershell`
+
+**Check effective agentic-workspace configuration**
+
+```json
+{
+  "command": "cd './repo' && agentic-workspace config --target . --format json",
+  "description": "Check effective agentic-workspace configuration"
+}
+```
+""",
+            "stdout": "",
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+        repo_path=repo,
+    )
+
+    assert warnings == []
+
+
+def test_model_cli_harness_counts_gemini_shell_stats_with_command_response_as_executed(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "config-closeout-obligation",
+            "required_executed_commands": ["agentic-workspace config"],
+        },
+        result={
+            "stdout": json.dumps(
+                {
+                    "response": "I inspected the repository configuration via `agentic-workspace config --target . --profile compact --format json`.",
+                    "stats": {"tools": {"byName": {"run_shell_command": {"count": 1}}}},
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+        repo_path=repo,
+    )
+
+    assert warnings == []
+
+
+def test_model_cli_harness_required_mentions_allow_field_name_prose(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "local-delegation-posture",
+            "required_command_mentions": ["delegation.mode", "safe_to_auto_run_commands"],
+        },
+        result={
+            "final_message": "The relevant settings are delegation mode = auto and safe to auto run commands = false.",
+            "stdout": "",
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+        repo_path=repo,
+    )
+
+    assert warnings == []
+
+
+def test_model_cli_harness_skips_metadata_scoring_when_provider_did_not_run(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "config-closeout-obligation",
+            "required_command_mentions": ["agentic-workspace config", "workflow_obligations"],
+            "required_executed_commands": ["agentic-workspace config"],
+        },
+        result={
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "ModelNotFoundError: Requested entity was not found.",
+        },
+        mutation_summary={"status": "clean"},
+        repo_path=repo,
+    )
+
+    assert warnings == []
 
 
 def test_model_cli_harness_forbidden_slash_phrase_does_not_match_planning_paths(tmp_path: Path) -> None:
@@ -608,6 +758,48 @@ def test_model_cli_harness_quality_signals_separate_diagnostic_residue() -> None
 
     assert any(signal["id"] == "planning_only_avoided_product_scaffold" and signal["status"] == "satisfied" for signal in signals)
     assert any(signal["id"] == "diagnostic_output_not_persisted" and signal["status"] == "weak" for signal in signals)
+
+
+def test_model_cli_harness_scores_config_sensitive_answers_without_config_surface() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="local-delegation-posture",
+        result={
+            "stdout": json.dumps(
+                {
+                    "response": ("Based on general best practices, I would automatically delegate this to a cheaper worker."),
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("without reporting use of the effective config surface" in message for message in messages)
+    assert any("local config as the authority" in message for message in messages)
+    assert any("despite local safety controls" in message for message in messages)
+
+
+def test_model_cli_harness_config_fixture_scenarios_are_registered(tmp_path: Path) -> None:
+    harness = _load_harness()
+
+    payload = harness.run_suite(
+        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        adapter_id="codex",
+        model=None,
+        scenario_filter="config-closeout-obligation",
+        execute=False,
+        output_root=tmp_path / "out",
+        timeout_seconds=None,
+    )
+
+    result = payload["results"][0]
+    repo = Path(result["repo_path"])
+    assert (repo / ".agentic-workspace/config.toml").exists()
+    assert (repo / ".agentic-workspace/config.local.toml").exists()
+    assert result["result"]["status"] == "dry-run"
 
 
 def test_model_cli_harness_scores_inaccessible_workflow_as_semantic_failure() -> None:
@@ -1162,6 +1354,30 @@ def test_model_cli_harness_ignores_expected_fixture_mutation_in_finding_classifi
 
     assert classification["finding_count"] == 1
     assert "model_cli_permission_denied" in classification["findings"][0]["warning_key"]
+
+
+def test_model_cli_harness_classifies_provider_runtime_noise_separately() -> None:
+    harness = _load_harness()
+
+    classification = harness._classify_suite_findings(
+        [
+            {
+                "scenario_id": "config-closeout-obligation",
+                "prompt_variant_id": "default",
+                "adapter_id": "gemini",
+                "model": "gemini-3-flash-preview",
+                "warnings": [
+                    {"warning_class": "model_cli_provider_error", "message": "provider error"},
+                    {"warning_class": "model_cli_runtime_stderr", "message": "terminal warning"},
+                ],
+            }
+        ]
+    )
+
+    assert classification["finding_count"] == 2
+    for finding in classification["findings"]:
+        assert "environment_or_provider" in finding["classification"]
+        assert "first_seen" not in finding["classification"]
 
 
 def test_model_cli_harness_compares_before_after_runs(tmp_path: Path) -> None:

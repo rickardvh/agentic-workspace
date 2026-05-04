@@ -1,3 +1,8 @@
+# Agentic Workspace managed state.
+# Do not edit by hand when the CLI is available.
+# Inspect: uv run agentic-workspace summary --format json
+# Mutate through the package command named by that output.
+
 kind = "agentic-planning-state"
 schema_version = "planning-state/v1"
 

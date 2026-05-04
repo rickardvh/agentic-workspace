@@ -6,6 +6,7 @@
 // DO NOT EDIT DIRECTLY.
 
 import { spawnSync } from 'node:child_process';
+import { writeSync } from 'node:fs';
 
 const supportedCommands = new Set(["config", "defaults", "doctor", "implement", "modules", "ownership", "preflight", "proof", "reconcile", "report", "setup", "skills", "start", "status", "summary"]);
 const argv = process.argv.slice(2);
@@ -23,11 +24,11 @@ if (!supportedCommands.has(command)) {
 }
 
 const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME || "python -m agentic_workspace.cli";
-const result = spawnSync(runtimeCommand, argv, { encoding: 'utf8', shell: true });
+const result = spawnSync(runtimeCommand, argv, { encoding: 'utf8', shell: true, maxBuffer: 16 * 1024 * 1024 });
 if (result.error) {
   console.error(`Adapter runtime handoff failed: ${result.error.message}`);
   process.exit(1);
 }
-if (result.stdout) process.stdout.write(result.stdout);
-if (result.stderr) process.stderr.write(result.stderr);
+if (result.stdout) writeSync(1, result.stdout);
+if (result.stderr) writeSync(2, result.stderr);
 process.exit(result.status ?? 1);

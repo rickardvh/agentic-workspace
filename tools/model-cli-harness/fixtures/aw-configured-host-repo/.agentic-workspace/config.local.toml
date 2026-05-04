@@ -1,0 +1,27 @@
+schema_version = 1
+
+[workspace]
+cli_invoke = "agentic-workspace"
+
+[runtime]
+supports_internal_delegation = true
+strong_planner_available = false
+cheap_bounded_executor_available = true
+
+[handoff]
+prefer_internal_delegation_when_available = false
+
+[safety]
+safe_to_auto_run_commands = false
+requires_human_verification_on_pr = true
+
+[delegation]
+mode = "auto"
+
+[delegation_targets.cheap_docs_worker]
+strength = "weak"
+location = "local"
+confidence = 0.62
+task_fit = ["mechanical docs edits", "narrow validation", "fixture maintenance under explicit scope"]
+capability_classes = ["mechanical-follow-through"]
+execution_methods = ["cli"]

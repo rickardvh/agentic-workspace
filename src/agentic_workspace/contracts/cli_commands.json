@@ -252,6 +252,18 @@
             "--target"
           ],
           "help": "Optional repository path used to resolve repo-owned config."
+        },
+        {
+          "name": "profile",
+          "flags": [
+            "--profile"
+          ],
+          "choices": [
+            "compact",
+            "full"
+          ],
+          "default": "full",
+          "help": "Select compact agent-facing config or full resolved config detail."
         }
       ],
       "role": "core_context_router",

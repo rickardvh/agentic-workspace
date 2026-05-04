@@ -154,6 +154,9 @@ PLACEHOLDER_RE = re.compile(r"<[A-Z][A-Z0-9_]+>")
 MODULE_COMMAND_ARGS = {command_name: tuple(args) for command_name, args in _MODULE_REGISTRY_MANIFEST["module_command_args"].items()}
 MIXED_AGENT_LOCAL_OVERRIDE_FIELDS = tuple(_WORKSPACE_SURFACES_MANIFEST["mixed_agent_local_override_fields"])
 WORKSPACE_PAYLOAD_FILES = tuple(Path(relative) for relative in _WORKSPACE_SURFACES_MANIFEST["payload_files"])
+WORKSPACE_CONFIG_CONTRACT_DOC = ".agentic-workspace/docs/workspace-config-contract.md"
+WORKSPACE_CONFIG_SOURCE_SCHEMA = "src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
+WORKSPACE_CONFIG_REFERENCE_DOC = "docs/reference/workspace-config.md"
 SYSTEM_INTENT_MIRROR_KIND = str(_WORKSPACE_SURFACES_MANIFEST["system_intent_mirror_kind"])
 WORKSPACE_AGENTS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["default_agents_path"])
 WORKSPACE_HANDOFF_SURFACES = tuple(Path(relative) for relative in _WORKSPACE_SURFACES_MANIFEST["handoff_surfaces"])
@@ -2182,6 +2185,7 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 _emit_config(
                     format_name=args.format,
+                    profile=getattr(args, "profile", "full"),
                     config=config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors))),
                 )
             return 0
@@ -3611,11 +3615,66 @@ def _remove_legacy_local_only_gitignore(*, repo_root: Path, dry_run: bool) -> di
     }
 
 
+def _managed_workspace_config_header(*, cli_invoke: str) -> str:
+    return "\n".join(
+        [
+            "# Agentic Workspace managed config.",
+            "# Edit this file directly only when changing repo-owned policy.",
+            f"# Reference: {WORKSPACE_CONFIG_CONTRACT_DOC}",
+            f"# Check resolved config: {cli_invoke} config --target . --profile compact --format json",
+        ]
+    )
+
+
+def _seeded_workspace_config_text(*, config: WorkspaceConfig, resolved_preset: str | None) -> str:
+    default_preset = resolved_preset or config.default_preset
+    lines = [
+        _managed_workspace_config_header(cli_invoke=config.cli_invoke),
+        "",
+        "schema_version = 1",
+        "",
+        "[workspace]",
+        f"default_preset = {json.dumps(default_preset)}",
+        f"agent_instructions_file = {json.dumps(config.agent_instructions_file)}",
+        f"workflow_artifact_profile = {json.dumps(config.workflow_artifact_profile)}",
+    ]
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _seed_workspace_config_action(
+    *,
+    target_root: Path,
+    resolved_preset: str | None,
+    dry_run: bool,
+    command_name: str,
+    local_only_repo_root: Path | None,
+    config: WorkspaceConfig,
+) -> dict[str, str] | None:
+    if command_name != "init" or local_only_repo_root is not None:
+        return None
+    config_path = target_root / WORKSPACE_CONFIG_PATH
+    if config_path.exists():
+        return {
+            "kind": "current",
+            "path": WORKSPACE_CONFIG_PATH.as_posix(),
+            "detail": "workspace config already present; preserved repo-owned policy",
+        }
+    if not dry_run:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(_seeded_workspace_config_text(config=config, resolved_preset=resolved_preset), encoding="utf-8")
+    return {
+        "kind": "would create" if dry_run else "created",
+        "path": WORKSPACE_CONFIG_PATH.as_posix(),
+        "detail": "seed schema-valid workspace config with managed config header and repo-local reference",
+    }
+
+
 def _workspace_init_or_upgrade_report(
     *,
     target_root: Path,
     local_only_repo_root: Path | None,
     selected_modules: list[str],
+    resolved_preset: str | None,
     descriptors: dict[str, ModuleDescriptor],
     dry_run: bool,
     inspection_mode: str,
@@ -3630,6 +3689,17 @@ def _workspace_init_or_upgrade_report(
         agent_instructions_file=config.agent_instructions_file,
         workflow_artifact_profile=config.workflow_artifact_profile,
     )
+
+    config_action = _seed_workspace_config_action(
+        target_root=target_root,
+        resolved_preset=resolved_preset,
+        dry_run=dry_run,
+        command_name=command_name,
+        local_only_repo_root=local_only_repo_root,
+        config=config,
+    )
+    if config_action is not None:
+        actions.append(config_action)
 
     for relative in WORKSPACE_PAYLOAD_FILES:
         destination = target_root / relative
@@ -4178,6 +4248,7 @@ def _run_init(
             target_root=target_root,
             local_only_repo_root=local_only_repo_root,
             selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
             descriptors=descriptors,
             dry_run=dry_run,
             inspection_mode=inspection.mode,
@@ -4185,6 +4256,12 @@ def _run_init(
             config=config,
         )
     )
+    effective_config = config
+    if not dry_run:
+        effective_config = config_lib.load_workspace_config(
+            target_root=target_root,
+            valid_presets=set(_preset_modules(descriptors)),
+        )
     summary = _build_init_summary(
         target_root=target_root,
         selected_modules=selected_modules,
@@ -4192,7 +4269,7 @@ def _run_init(
         descriptors=descriptors,
         inspection=inspection,
         reports=reports,
-        config=config,
+        config=effective_config,
     )
     summary["non_interactive"] = non_interactive
     prompt_text = _build_handoff_prompt(summary)
@@ -4209,7 +4286,7 @@ def _run_init(
         "dry_run": dry_run,
         "non_interactive": non_interactive,
         "module_reports": reports,
-        "config": _config_payload(config=config),
+        "config": _config_payload(config=effective_config),
     }
     should_include_prompt = print_prompt or prompt_path is not None or summary["prompt_requirement"] != "none"
     if should_include_prompt:
@@ -4472,6 +4549,7 @@ def _run_lifecycle_command(
                 target_root=target_root,
                 local_only_repo_root=None,
                 selected_modules=selected_modules,
+                resolved_preset=resolved_preset,
                 descriptors=descriptors,
                 dry_run=dry_run,
                 inspection_mode="upgrade",
@@ -5439,6 +5517,7 @@ def _run_report_command(
         external_work_delta=external_work_delta,
         cli_invoke=config.cli_invoke,
     )
+    ownership_payload = _ownership_payload(target_root=target_root, descriptors=descriptors)
     payload = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -5487,8 +5566,9 @@ def _run_report_command(
         ),
         "product_managed_enclave": _product_managed_enclave_payload(
             target_root=target_root,
-            ownership_payload=_ownership_payload(target_root=target_root, descriptors=descriptors),
+            ownership_payload=ownership_payload,
         ),
+        "ownership_diagnostics": ownership_payload["diagnostics"],
         "surface_value_guardrail": surface_value_guardrail,
         "effective_authority": _effective_authority_payload(
             target_root=target_root,
@@ -12377,6 +12457,7 @@ def _run_config_report_adapter(args: argparse.Namespace) -> int:
     _validate_target_root(command_name="config", target_root=target_root)
     _emit_config(
         format_name=args.format,
+        profile=getattr(args, "profile", "full"),
         config=config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors))),
     )
     return 0
@@ -12974,6 +13055,28 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
             _select(str(cli_authority_lane))
 
     selected_lanes = [_lane(lane_id) for lane_id in selected_ids]
+    subsystem_matches = _subsystem_matches_for_changed_paths(target_root=target_root, changed_paths=changed_paths)
+    subsystem_lanes: list[dict[str, Any]] = []
+    for subsystem in subsystem_matches["matched_subsystems"]:
+        proof_commands = [str(command) for command in subsystem.get("proof", []) if str(command).strip()]
+        if not proof_commands:
+            continue
+        subsystem_lanes.append(
+            {
+                "id": f"subsystem:{subsystem['id']}",
+                "when": "changed path matches host-repo subsystem ownership",
+                "enough_proof": proof_commands,
+                "recovery_signal": "missing or failing subsystem proof should block closeout for changes in this subsystem",
+                "subsystem": {
+                    "id": subsystem["id"],
+                    "matched_paths": subsystem.get("matched_paths", []),
+                    "owns": subsystem.get("owns", []),
+                    "does_not_own": subsystem.get("does_not_own", []),
+                    "escalate_when": subsystem.get("escalate_when", []),
+                },
+            }
+        )
+    selected_lanes.extend(subsystem_lanes)
     planning_assurance = _active_planning_assurance_for_proof(target_root=target_root)
     configured_profiles = {profile.id: profile for profile in (config.assurance.proof_profiles if config is not None else ())}
     concern_lanes: list[dict[str, Any]] = []
@@ -13033,6 +13136,7 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
                 "recovery_signal": lane.get("recovery_signal", ""),
                 **({"proof_profile": lane["proof_profile"]} if lane.get("proof_profile") else {}),
                 **({"review_aids": lane["review_aids"]} if lane.get("review_aids") else {}),
+                **({"subsystem": lane["subsystem"]} if lane.get("subsystem") else {}),
             }
             for lane in selected_lanes
         ],
@@ -13046,6 +13150,8 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
         "broaden_when": broaden_when,
         "escalate_when": escalate_when,
     }
+    if subsystem_matches["matched_subsystems"]:
+        proof_selection["subsystem_ownership"] = subsystem_matches
     if planning_assurance.get("status") == "present":
         gate_states = [
             _assurance_item_state(
@@ -13335,69 +13441,214 @@ def _normalize_repo_path(path_text: str) -> str:
     return Path(path_text).as_posix().rstrip("/")
 
 
+def _normalized_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _normalise_subsystems(raw_subsystems: Any) -> list[dict[str, Any]]:
+    if not isinstance(raw_subsystems, list):
+        return []
+    subsystems: list[dict[str, Any]] = []
+    for raw in raw_subsystems:
+        if not isinstance(raw, dict):
+            continue
+        subsystem_id = str(raw.get("id", "")).strip()
+        paths = [_normalize_repo_path(path) for path in _normalized_list(raw.get("paths"))]
+        if not subsystem_id or not paths:
+            continue
+        subsystems.append(
+            {
+                "id": subsystem_id,
+                "paths": paths,
+                "owns": _normalized_list(raw.get("owns")),
+                "does_not_own": _normalized_list(raw.get("does_not_own")),
+                "proof": _normalized_list(raw.get("proof")),
+                "escalate_when": _normalized_list(raw.get("escalate_when")),
+                **({"summary": str(raw["summary"]).strip()} if str(raw.get("summary", "")).strip() else {}),
+            }
+        )
+    return subsystems
+
+
+def _load_ownership_subsystems(*, target_root: Path | None) -> list[dict[str, Any]]:
+    if target_root is None:
+        return []
+    ledger_path = target_root / _defaults_payload()["ownership_mapping"]["ledger"]
+    if not ledger_path.exists():
+        return []
+    try:
+        payload = config_lib.load_toml_payload(path=ledger_path, surface_name=ledger_path.as_posix())
+    except WorkspaceUsageError:
+        return []
+    return _normalise_subsystems(payload.get("subsystems"))
+
+
+def _path_matches_subsystem_pattern(*, path: str, pattern: str) -> bool:
+    normalized_path = _normalize_repo_path(path)
+    normalized_pattern = _normalize_repo_path(pattern)
+    if normalized_pattern.endswith("/**"):
+        prefix = normalized_pattern[:-3].rstrip("/")
+        return normalized_path == prefix or normalized_path.startswith(f"{prefix}/")
+    if normalized_pattern.endswith("/"):
+        prefix = normalized_pattern.rstrip("/")
+        return normalized_path == prefix or normalized_path.startswith(f"{prefix}/")
+    return normalized_path == normalized_pattern or fnmatch.fnmatch(normalized_path, normalized_pattern)
+
+
+def _subsystem_match_specificity(pattern: str) -> int:
+    normalized = _normalize_repo_path(pattern)
+    return len(normalized.replace("*", ""))
+
+
+def _matching_subsystems_for_path(*, subsystems: list[dict[str, Any]], repo_path: str) -> list[dict[str, Any]]:
+    matches: list[dict[str, Any]] = []
+    for subsystem in subsystems:
+        matched_patterns = [
+            pattern for pattern in subsystem.get("paths", []) if _path_matches_subsystem_pattern(path=repo_path, pattern=str(pattern))
+        ]
+        if not matched_patterns:
+            continue
+        best_pattern = max(matched_patterns, key=_subsystem_match_specificity)
+        matches.append(
+            {
+                **subsystem,
+                "matched_patterns": matched_patterns,
+                "match_specificity": _subsystem_match_specificity(best_pattern),
+            }
+        )
+    matches.sort(key=lambda entry: (-int(entry.get("match_specificity", 0)), str(entry.get("id", ""))))
+    return matches
+
+
+def _subsystem_matches_for_changed_paths(*, target_root: Path | None, changed_paths: list[str]) -> dict[str, Any]:
+    subsystems = _load_ownership_subsystems(target_root=target_root)
+    by_id: dict[str, dict[str, Any]] = {}
+    for changed_path in changed_paths:
+        for subsystem in _matching_subsystems_for_path(subsystems=subsystems, repo_path=changed_path):
+            entry = by_id.setdefault(
+                str(subsystem["id"]),
+                {
+                    "id": subsystem["id"],
+                    "paths": subsystem.get("paths", []),
+                    "owns": subsystem.get("owns", []),
+                    "does_not_own": subsystem.get("does_not_own", []),
+                    "proof": subsystem.get("proof", []),
+                    "escalate_when": subsystem.get("escalate_when", []),
+                    "matched_paths": [],
+                    "matched_patterns": [],
+                    "overlap_rank": len(by_id) + 1,
+                },
+            )
+            if changed_path not in entry["matched_paths"]:
+                entry["matched_paths"].append(changed_path)
+            for pattern in subsystem.get("matched_patterns", []):
+                if pattern not in entry["matched_patterns"]:
+                    entry["matched_patterns"].append(pattern)
+    return {
+        "kind": "agentic-workspace/subsystem-ownership-selection/v1",
+        "status": "matched" if by_id else ("no-subsystems-declared" if not subsystems else "no-match"),
+        "subsystem_count": len(subsystems),
+        "matched_count": len(by_id),
+        "matched_subsystems": list(by_id.values()),
+        "rule": "Optional host-repo subsystem ownership comes from .agentic-workspace/OWNERSHIP.toml [[subsystems]] entries and supplies path-scope, proof, and escalation hints.",
+    }
+
+
 def _ownership_answer_for_path(payload: dict[str, Any], *, repo_path: str) -> tuple[dict[str, Any], bool]:
     normalized = _normalize_repo_path(repo_path)
+    subsystem_matches = _matching_subsystems_for_path(subsystems=payload.get("subsystems", []), repo_path=normalized)
+    subsystem_projection = [
+        {
+            "id": subsystem.get("id"),
+            "paths": subsystem.get("paths", []),
+            "matched_patterns": subsystem.get("matched_patterns", []),
+            "owns": subsystem.get("owns", []),
+            "does_not_own": subsystem.get("does_not_own", []),
+            "proof": subsystem.get("proof", []),
+            "escalate_when": subsystem.get("escalate_when", []),
+            "overlap_rank": index,
+        }
+        for index, subsystem in enumerate(subsystem_matches, start=1)
+    ]
+
+    def with_subsystems(answer: dict[str, Any]) -> dict[str, Any]:
+        if subsystem_projection:
+            answer["subsystems"] = subsystem_projection
+            answer["primary_subsystem"] = subsystem_projection[0]
+            answer["subsystem_overlap_count"] = len(subsystem_projection)
+        return answer
+
     for entry in payload["authority_surfaces"]:
         surface = str(entry.get("surface", "")).rstrip("/")
         if surface == normalized:
             return (
-                {
-                    "path": normalized,
-                    "owner": entry.get("owner"),
-                    "ownership": entry.get("ownership"),
-                    "authority": entry.get("authority"),
-                    "surface": entry.get("surface"),
-                    "summary": entry.get("summary"),
-                    "matched_by": "authority_surface",
-                },
+                with_subsystems(
+                    {
+                        "path": normalized,
+                        "owner": entry.get("owner"),
+                        "ownership": entry.get("ownership"),
+                        "authority": entry.get("authority"),
+                        "surface": entry.get("surface"),
+                        "summary": entry.get("summary"),
+                        "matched_by": "authority_surface",
+                    }
+                ),
                 True,
             )
     for entry in payload["module_roots"]:
         root_path = str(entry.get("path", "")).rstrip("/")
         if normalized == root_path or normalized.startswith(f"{root_path}/"):
             return (
-                {
-                    "path": normalized,
-                    "owner": entry.get("module"),
-                    "ownership": entry.get("ownership"),
-                    "authority": "module_root",
-                    "surface": entry.get("path"),
-                    "uninstall_policy": entry.get("uninstall_policy"),
-                    "matched_by": "module_root",
-                },
+                with_subsystems(
+                    {
+                        "path": normalized,
+                        "owner": entry.get("module"),
+                        "ownership": entry.get("ownership"),
+                        "authority": "module_root",
+                        "surface": entry.get("path"),
+                        "uninstall_policy": entry.get("uninstall_policy"),
+                        "matched_by": "module_root",
+                    }
+                ),
                 True,
             )
     for entry in payload["managed_surfaces"]:
         surface = str(entry.get("path", ""))
         if fnmatch.fnmatch(normalized, surface):
             return (
-                {
-                    "path": normalized,
-                    "owner": entry.get("module"),
-                    "ownership": entry.get("ownership"),
-                    "authority": entry.get("kind"),
-                    "surface": entry.get("path"),
-                    "uninstall_policy": entry.get("uninstall_policy"),
-                    "matched_by": "managed_surface",
-                },
+                with_subsystems(
+                    {
+                        "path": normalized,
+                        "owner": entry.get("module"),
+                        "ownership": entry.get("ownership"),
+                        "authority": entry.get("kind"),
+                        "surface": entry.get("path"),
+                        "uninstall_policy": entry.get("uninstall_policy"),
+                        "matched_by": "managed_surface",
+                    }
+                ),
                 True,
             )
     for entry in payload["fences"]:
         file_path = str(entry.get("file", "")).rstrip("/")
         if normalized == file_path:
             return (
-                {
-                    "path": normalized,
-                    "owner": entry.get("module"),
-                    "ownership": entry.get("ownership"),
-                    "authority": "managed_fence",
-                    "surface": entry.get("file"),
-                    "fence": entry.get("name"),
-                    "matched_by": "fence_file",
-                },
+                with_subsystems(
+                    {
+                        "path": normalized,
+                        "owner": entry.get("module"),
+                        "ownership": entry.get("ownership"),
+                        "authority": "managed_fence",
+                        "surface": entry.get("file"),
+                        "fence": entry.get("name"),
+                        "matched_by": "fence_file",
+                    }
+                ),
                 True,
             )
-    return ({"path": normalized}, False)
+    return (with_subsystems({"path": normalized, "matched_by": "subsystem"}), bool(subsystem_projection))
 
 
 def _ownership_boundary_review(
@@ -13527,6 +13778,157 @@ def _ownership_boundary_review(
     }
 
 
+def _ownership_diagnostics(
+    *,
+    target_root: Path,
+    authority_surfaces: list[dict[str, Any]],
+) -> dict[str, Any]:
+    def owner_for(concern: str, fallback: str) -> str:
+        for entry in authority_surfaces:
+            if str(entry.get("concern", "")) == concern:
+                surface = str(entry.get("surface", "")).strip()
+                owner = str(entry.get("owner", "")).strip()
+                return f"{surface} ({owner})" if owner else surface
+        return fallback
+
+    def surface_owner(surface: str) -> dict[str, Any] | None:
+        normalized = surface.rstrip("/")
+        for entry in authority_surfaces:
+            if str(entry.get("surface", "")).rstrip("/") == normalized:
+                return entry
+        return None
+
+    def read_text(relative: str) -> str:
+        path = target_root / relative
+        if not path.exists() or not path.is_file():
+            return ""
+        try:
+            return path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            return ""
+
+    def without_workspace_fence(text: str) -> str:
+        updated, _changed = _remove_fenced_block(
+            text=text,
+            start_marker=WORKSPACE_WORKFLOW_MARKER_START,
+            end_marker=WORKSPACE_WORKFLOW_MARKER_END,
+        )
+        return updated
+
+    def add(
+        *,
+        finding_id: str,
+        concern: str,
+        status: str,
+        suspected_surface: str | None = None,
+        claimed_by: list[str] | None = None,
+        expected_primary_owner: str,
+        suggested_route: str,
+        evidence: str,
+        severity: str = "advisory",
+    ) -> None:
+        finding: dict[str, Any] = {
+            "id": finding_id,
+            "concern": concern,
+            "status": status,
+            "severity": severity,
+            "expected_primary_owner": expected_primary_owner,
+            "suggested_route": suggested_route,
+            "evidence": evidence,
+        }
+        if suspected_surface:
+            finding["suspected_drift_surface"] = suspected_surface
+        if claimed_by:
+            finding["claimed_by"] = claimed_by
+        findings.append(finding)
+
+    findings: list[dict[str, Any]] = []
+    agents_text = without_workspace_fence(read_text("AGENTS.md"))
+    config_text = read_text(WORKSPACE_CONFIG_PATH.as_posix())
+    workflow_text = read_text(WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix())
+    workspace_workflow_text = read_text(".agentic-workspace/WORKFLOW.md")
+    llms_text = read_text("llms.txt")
+
+    active_state_markers = ("current task", "active task", "active execplan", "handoff", "next lane", "validation run")
+    if any(marker in agents_text.lower() for marker in active_state_markers):
+        add(
+            finding_id="startup-adapter-active-state",
+            concern="active execution state",
+            status="suspected-drift",
+            suspected_surface="AGENTS.md",
+            expected_primary_owner=owner_for("compact-planning-state", ".agentic-workspace/planning/state.toml + execplans"),
+            suggested_route="Move durable current-work and handoff detail into planning state, summary, or an execplan; keep AGENTS.md as an adapter.",
+            evidence="startup adapter contains active-state or handoff language outside the managed workspace fence",
+        )
+
+    config_active_markers = ("current_task", "active_task", "active_execplan", "handoff", "next_action", "validation_run")
+    if any(marker in config_text.lower() for marker in config_active_markers):
+        add(
+            finding_id="config-active-state",
+            concern="active execution state",
+            status="suspected-drift",
+            suspected_surface=WORKSPACE_CONFIG_PATH.as_posix(),
+            expected_primary_owner=owner_for("compact-planning-state", ".agentic-workspace/planning/state.toml + execplans"),
+            suggested_route="Keep config for repo-owned policy; move current execution state or handoff details into Planning.",
+            evidence="workspace config contains active-task or handoff-shaped keys",
+        )
+
+    policy_knobs = ("improvement_latitude", "optimization_bias", "safe_to_auto_run_commands", "[workflow_obligations.")
+    if any(marker in workspace_workflow_text.lower() for marker in policy_knobs):
+        add(
+            finding_id="workflow-policy-knob",
+            concern="repo-owned policy",
+            status="suspected-drift",
+            suspected_surface=".agentic-workspace/WORKFLOW.md",
+            expected_primary_owner=owner_for("workspace-policy", WORKSPACE_CONFIG_PATH.as_posix()),
+            suggested_route="Move repo-specific policy knobs into .agentic-workspace/config.toml; keep WORKFLOW.md as router guidance.",
+            evidence="managed workflow router contains config-policy-shaped keys",
+        )
+
+    authoritative_claims: list[str] = []
+    for surface, text in (
+        ("AGENTS.md", agents_text),
+        ("llms.txt", llms_text),
+        (".agentic-workspace/WORKFLOW.md", workspace_workflow_text),
+        (WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(), workflow_text),
+    ):
+        lowered = text.lower()
+        if "canonical source" in lowered or "authoritative source" in lowered or "source of truth" in lowered:
+            authoritative_claims.append(surface)
+    if len(authoritative_claims) >= 2:
+        add(
+            finding_id="startup-authority-ambiguous",
+            concern="startup routing",
+            status="ambiguous-owner",
+            claimed_by=authoritative_claims,
+            expected_primary_owner="AGENTS.md as repo startup adapter; structured authority comes from config, ownership, start, and module reports",
+            suggested_route="Keep startup files as adapters and move policy/state to the declared owner surface.",
+            evidence="multiple startup or generated workflow surfaces claim canonical authority",
+            severity="warning",
+        )
+
+    if (target_root / WORKSPACE_CONFIG_PATH).exists() and surface_owner(WORKSPACE_CONFIG_PATH.as_posix()) is None:
+        add(
+            finding_id="workspace-policy-missing-owner",
+            concern="repo-owned policy",
+            status="missing-owner",
+            suspected_surface=WORKSPACE_CONFIG_PATH.as_posix(),
+            expected_primary_owner=WORKSPACE_CONFIG_PATH.as_posix(),
+            suggested_route="Declare workspace-policy ownership in .agentic-workspace/OWNERSHIP.toml so agents can route config edits correctly.",
+            evidence="config.toml exists but the ownership ledger has no authority surface for it",
+            severity="warning",
+        )
+
+    return {
+        "kind": "agentic-workspace/ownership-diagnostics/v1",
+        "status": "attention-needed" if findings else "clean",
+        "finding_count": len(findings),
+        "findings": findings,
+        "rule": "Ledger-driven diagnostics flag likely separation-of-concerns drift and ambiguous authority; findings are advisory unless another invariant marks them invalid.",
+        "detail_command": "agentic-workspace ownership --target ./repo --format json",
+    }
+
+
 def _select_ownership_payload(
     payload: dict[str, Any],
     *,
@@ -13651,6 +14053,10 @@ def _emit_ownership(
     print("Authority surfaces:")
     for entry in payload["authority_surfaces"]:
         print(f"- {entry['concern']}: {entry['surface']} ({entry['owner']}, {entry['ownership']}, authority={entry['authority']})")
+    if payload["subsystems"]:
+        print("Subsystems:")
+        for entry in payload["subsystems"]:
+            print(f"- {entry['id']}: {', '.join(entry.get('paths', []))}")
     print("Boundary review:")
     for entry in payload["boundary_review"]["repo_owned"]["authority_surfaces"]:
         print(f"- repo-owned: {entry['surface']} ({entry['owner']}, {entry['ownership']})")
@@ -13663,6 +14069,11 @@ def _emit_ownership(
     hook = payload["boundary_review"]["smallest_explicit_repo_hook"]
     if hook is not None:
         print(f"Smallest explicit repo hook: {hook['surface']} ({hook['owner']}, {hook['ownership']})")
+    diagnostics = payload["diagnostics"]
+    print(f"Ownership diagnostics: {diagnostics['status']} ({diagnostics['finding_count']} findings)")
+    for finding in diagnostics["findings"]:
+        surface = finding.get("suspected_drift_surface") or ", ".join(finding.get("claimed_by", []))
+        print(f"- {finding['concern']}: {finding['status']} at {surface}")
     if payload["warnings"]:
         print("Warnings:")
         for warning in payload["warnings"]:
@@ -13678,6 +14089,7 @@ def _ownership_payload(*, target_root: Path, descriptors: dict[str, ModuleDescri
     managed_surfaces: list[dict[str, Any]] = []
     fences: list[dict[str, Any]] = []
     authority_surfaces: list[dict[str, Any]] = []
+    subsystems: list[dict[str, Any]] = []
 
     if not ledger_path.exists():
         warnings.append(f"{defaults['ledger']}: ownership ledger missing")
@@ -13688,6 +14100,7 @@ def _ownership_payload(*, target_root: Path, descriptors: dict[str, ModuleDescri
         managed_surfaces = [entry for entry in (payload.get("managed_surfaces") or []) if isinstance(entry, dict)]
         fences = [entry for entry in (payload.get("fences") or []) if isinstance(entry, dict)]
         authority_surfaces = [entry for entry in (payload.get("authority_surfaces") or []) if isinstance(entry, dict)]
+        subsystems = _normalise_subsystems(payload.get("subsystems"))
         if not authority_surfaces:
             warnings.append(f"{defaults['ledger']}: authority_surfaces entries missing")
 
@@ -13706,10 +14119,15 @@ def _ownership_payload(*, target_root: Path, descriptors: dict[str, ModuleDescri
         "managed_surfaces": managed_surfaces,
         "fences": fences,
         "authority_surfaces": authority_surfaces,
+        "subsystems": subsystems,
         "boundary_review": _ownership_boundary_review(
             module_roots=module_roots,
             managed_surfaces=managed_surfaces,
             fences=fences,
+            authority_surfaces=authority_surfaces,
+        ),
+        "diagnostics": _ownership_diagnostics(
+            target_root=target_root,
             authority_surfaces=authority_surfaces,
         ),
         "warnings": warnings,
@@ -14765,6 +15183,16 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "config_path": config.path.as_posix() if config.path is not None else WORKSPACE_CONFIG_PATH.as_posix(),
         "exists": config.exists,
         "schema_version": config.schema_version,
+        "edit_reference": {
+            "kind": "agentic-workspace/managed-config-reference/v1",
+            "owner": "repo-owned policy",
+            "direct_edit_rule": "Edit directly only when changing repo-owned policy; use the config command for the resolved view.",
+            "reference_doc": WORKSPACE_CONFIG_CONTRACT_DOC,
+            "generated_reference_doc": WORKSPACE_CONFIG_REFERENCE_DOC,
+            "source_schema": WORKSPACE_CONFIG_SOURCE_SCHEMA,
+            "check_command": f"{config.cli_invoke} config --target . --profile compact --format json",
+            "managed_header": _managed_workspace_config_header(cli_invoke=config.cli_invoke).splitlines(),
+        },
         "warnings": list(config.warnings),
         "config_enforcement": _config_enforcement_payload(config=config),
         "workspace": {
@@ -14833,14 +15261,91 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     }
 
 
-def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
-    payload = _config_payload(config=config)
+def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    workspace = payload["workspace"]
+    mixed_agent = payload["mixed_agent"]
+    local_override = mixed_agent["local_override"]
+    effective_posture = mixed_agent["effective_posture"]
+    runtime_resolution = mixed_agent["runtime_resolution"]
+    assurance = payload["assurance"]
+    compact_obligations = [
+        {
+            "id": obligation["id"],
+            "stage": obligation["stage"],
+            "scope_tags": obligation["scope_tags"],
+            "commands": obligation["commands"],
+        }
+        for obligation in workspace["workflow_obligations"]
+    ]
+    return {
+        "kind": "agentic-workspace/config-compact/v1",
+        "profile": "compact",
+        "target": payload["target"],
+        "config_path": payload["config_path"],
+        "exists": payload["exists"],
+        "schema_version": payload["schema_version"],
+        "warnings": payload["warnings"],
+        "edit_reference": payload["edit_reference"],
+        "workspace": {
+            "default_preset": workspace["default_preset"],
+            "agent_instructions_file": workspace["agent_instructions_file"],
+            "workflow_artifact_profile": workspace["workflow_artifact_profile"],
+            "improvement_latitude": workspace["improvement_latitude"],
+            "optimization_bias": workspace["optimization_bias"],
+            "cli_invoke": workspace["cli_invoke"],
+            "workflow_obligations": compact_obligations,
+            "system_intent_sources": workspace["system_intent"]["sources"],
+        },
+        "assurance": {
+            "default_level": assurance["default_level"],
+            "strict_closeout": assurance["strict_closeout"],
+            "agent_may_escalate": assurance["agent_may_escalate"],
+            "agent_may_deescalate": assurance["agent_may_deescalate"],
+            "configured_proof_profile_count": len(assurance["proof_profiles"]),
+        },
+        "local_runtime": {
+            "local_override_path": local_override["path"],
+            "local_override_status": local_override["status"],
+            "supports_internal_delegation": effective_posture["supports_internal_delegation"],
+            "strong_planner_available": effective_posture["strong_planner_available"],
+            "cheap_bounded_executor_available": effective_posture["cheap_bounded_executor_available"],
+            "delegation_mode": effective_posture["delegation_mode"],
+            "safe_to_auto_run_commands": effective_posture["safe_to_auto_run_commands"],
+            "prefer_internal_delegation_when_available": effective_posture["prefer_internal_delegation_when_available"],
+            "requires_human_verification_on_pr": effective_posture["requires_human_verification_on_pr"],
+            "runtime_resolution": {
+                "recommendation": runtime_resolution["recommendation"],
+                "confidence": runtime_resolution["confidence"],
+                "reasons": runtime_resolution["reasons"],
+            },
+        },
+        "full_profile_command": f"{workspace['cli_invoke']} config --target . --profile full --format json",
+    }
+
+
+def _emit_config(*, format_name: str, config: WorkspaceConfig, profile: str = "full") -> None:
+    full_payload = _config_payload(config=config)
+    payload = _compact_config_payload(full_payload) if profile == "compact" else full_payload
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
+        return
+    if profile == "compact":
+        print(f"Target: {payload['target']}")
+        print(f"Config path: {payload['config_path']}")
+        print(f"Exists: {payload['exists']}")
+        print(f"Improvement latitude: {payload['workspace']['improvement_latitude']}")
+        print(f"Optimization bias: {payload['workspace']['optimization_bias']}")
+        print(f"Workflow obligations: {len(payload['workspace']['workflow_obligations'])} configured")
+        print(f"Delegation mode: {payload['local_runtime']['delegation_mode']['value']}")
+        print(f"Safe to auto-run commands: {payload['local_runtime']['safe_to_auto_run_commands']['value']}")
+        print(f"Full profile: {payload['full_profile_command']}")
         return
     print(f"Target: {payload['target']}")
     print(f"Config path: {payload['config_path']}")
     print(f"Exists: {payload['exists']}")
+    print(f"Reference: {payload['edit_reference']['reference_doc']}")
+    print(f"Schema: {payload['edit_reference']['source_schema']}")
+    print(f"Check command: {payload['edit_reference']['check_command']}")
     if payload["warnings"]:
         print("Warnings:")
         for warning in payload["warnings"]:

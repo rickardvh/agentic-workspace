@@ -303,6 +303,18 @@
                 ],
                 "default": "text",
                 "help": "Output format."
+              },
+              {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "compact",
+                  "full"
+                ],
+                "default": "full",
+                "help": "Select compact agent-facing config or full resolved config detail."
               }
             ]
           },

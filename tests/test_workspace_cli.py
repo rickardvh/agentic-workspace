@@ -944,6 +944,11 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     _assert_invoked_cli_identity(payload, target_relation="outside-target")
     _assert_cli_compatibility(payload, status="no-expectation")
     assert payload["exists"] is False
+    assert payload["edit_reference"]["reference_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
+    assert payload["edit_reference"]["generated_reference_doc"] == "docs/reference/workspace-config.md"
+    assert payload["edit_reference"]["source_schema"] == "src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
+    assert "# Agentic Workspace managed config." in payload["edit_reference"]["managed_header"]
+    assert payload["edit_reference"]["check_command"] == "agentic-workspace config --target . --profile compact --format json"
     assert payload["workspace"]["default_preset"] == "full"
     assert payload["workspace"]["agent_instructions_file"] == "AGENTS.md"
     assert payload["workspace"]["agent_instructions_file_source"] == "product-default"
@@ -1103,6 +1108,56 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
         "cheap switching across agents and subscriptions",
         "persisted shared knowledge beats rediscovery",
     ]
+
+
+def test_config_command_reports_compact_profile_for_agent_startup(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[workspace]
+improvement_latitude = "proactive"
+optimization_bias = "agent-efficiency"
+
+[workflow_obligations.closeout_proof]
+summary = "Run closeout proof before reporting done."
+stage = "closeout"
+scope_tags = ["closeout"]
+commands = ["make check"]
+""".strip(),
+        encoding="utf-8",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/config.local.toml",
+        """
+schema_version = 1
+
+[delegation]
+mode = "suggest"
+
+[safety]
+safe_to_auto_run_commands = false
+""".strip(),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(tmp_path), "--profile", "compact", "--format", "json"]) == 0
+
+    output = capsys.readouterr().out
+    payload = json.loads(output)
+    assert payload["kind"] == "agentic-workspace/config-compact/v1"
+    assert payload["profile"] == "compact"
+    assert "mixed_agent" not in payload
+    assert payload["workspace"]["improvement_latitude"] == "proactive"
+    assert payload["workspace"]["optimization_bias"] == "agent-efficiency"
+    assert payload["workspace"]["workflow_obligations"][0]["id"] == "closeout_proof"
+    assert payload["local_runtime"]["delegation_mode"] == {"value": "suggest", "source": "local-override"}
+    assert payload["local_runtime"]["safe_to_auto_run_commands"] == {"value": False, "source": "local-override"}
+    assert payload["edit_reference"]["check_command"] == "agentic-workspace config --target . --profile compact --format json"
+    assert payload["full_profile_command"] == "agentic-workspace config --target . --profile full --format json"
+    assert len(output) < 10000
 
 
 def test_config_command_accepts_reporting_improvement_latitude_mode(tmp_path: Path, capsys) -> None:
@@ -2135,6 +2190,77 @@ def test_ownership_real_init_does_not_settle_repo_root_memory_as_repo_owned_cont
     assert payload["boundary_review"]["smallest_explicit_repo_hook"]["surface"] == "AGENTS.md#agentic-workspace:workflow"
 
 
+def test_ownership_diagnostics_report_startup_adapter_drift_and_ambiguity(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
+    capsys.readouterr()
+    agents_path = target / "AGENTS.md"
+    agents_path.write_text(
+        agents_path.read_text(encoding="utf-8")
+        + "\n\nAuthoritative source of truth for this sprint.\nCurrent task handoff: continue the checkout redesign.\n",
+        encoding="utf-8",
+    )
+    _write(target / "llms.txt", "Authoritative source of truth for external agents.\n", encoding="utf-8")
+
+    assert cli.main(["ownership", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    diagnostics = payload["diagnostics"]
+    assert diagnostics["status"] == "attention-needed"
+    findings = {finding["id"]: finding for finding in diagnostics["findings"]}
+    assert findings["startup-adapter-active-state"]["concern"] == "active execution state"
+    assert findings["startup-adapter-active-state"]["suspected_drift_surface"] == "AGENTS.md"
+    assert findings["startup-authority-ambiguous"]["status"] == "ambiguous-owner"
+    assert set(findings["startup-authority-ambiguous"]["claimed_by"]) >= {"AGENTS.md", "llms.txt"}
+
+
+def test_report_surfaces_config_ownership_drift_diagnostic(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[workspace]\ndefault_preset = "planning"\ncurrent_task = "handoff detail"\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "ownership_diagnostics", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    findings = {finding["id"]: finding for finding in payload["answer"]["findings"]}
+    assert findings["config-active-state"]["concern"] == "active execution state"
+    assert findings["config-active-state"]["suspected_drift_surface"] == ".agentic-workspace/config.toml"
+
+
+def test_ownership_diagnostics_report_missing_config_owner(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / ".agentic-workspace" / "config.toml", "schema_version = 1\n", encoding="utf-8")
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        "schema_version = 1\n\n"
+        "[[authority_surfaces]]\n"
+        'concern = "startup-instructions"\n'
+        'surface = "AGENTS.md"\n'
+        'owner = "repo"\n'
+        'ownership = "repo_owned"\n'
+        'authority = "primary"\n'
+        'summary = "startup"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, []))
+
+    assert cli.main(["ownership", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    findings = {finding["id"]: finding for finding in payload["diagnostics"]["findings"]}
+    assert findings["workspace-policy-missing-owner"]["status"] == "missing-owner"
+    assert findings["workspace-policy-missing-owner"]["expected_primary_owner"] == ".agentic-workspace/config.toml"
+
+
 def test_ownership_concern_selector_returns_compact_contract_answer(tmp_path: Path, monkeypatch, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace").mkdir()
@@ -2197,6 +2323,94 @@ def test_ownership_path_selector_returns_compact_contract_answer(tmp_path: Path,
     assert payload["matched"] is True
     assert payload["answer"]["owner"] == "planning"
     assert payload["answer"]["matched_by"] == "module_root"
+
+
+def test_ownership_path_selector_includes_host_repo_subsystems(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace" / "OWNERSHIP.toml").write_text(
+        "schema_version = 1\n\n"
+        "[[authority_surfaces]]\n"
+        'concern = "startup-instructions"\n'
+        'surface = "AGENTS.md"\n'
+        'owner = "repo"\n'
+        'ownership = "repo_owned"\n'
+        'authority = "primary"\n'
+        'summary = "startup"\n\n'
+        "[[subsystems]]\n"
+        'id = "payments"\n'
+        'paths = ["src/payments/**"]\n'
+        'owns = ["payment orchestration"]\n'
+        'does_not_own = ["catalog pricing"]\n'
+        'proof = ["npm test -- payments"]\n'
+        'escalate_when = ["payment provider contract changes"]\n\n'
+        "[[subsystems]]\n"
+        'id = "payments-api"\n'
+        'paths = ["src/payments/api/**"]\n'
+        'owns = ["payment API handlers"]\n'
+        'proof = ["npm test -- payments-api"]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, []))
+
+    assert cli.main(["ownership", "--target", str(tmp_path), "--path", "src/payments/api/refund.ts", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["matched"] is True
+    answer = payload["answer"]
+    assert answer["matched_by"] == "subsystem"
+    assert answer["primary_subsystem"]["id"] == "payments-api"
+    assert answer["subsystem_overlap_count"] == 2
+    assert answer["subsystems"][1]["id"] == "payments"
+    assert answer["subsystems"][1]["does_not_own"] == ["catalog pricing"]
+
+
+def test_proof_changed_paths_include_subsystem_proof_hints(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace" / "OWNERSHIP.toml").write_text(
+        "schema_version = 1\n\n"
+        "[[authority_surfaces]]\n"
+        'concern = "startup-instructions"\n'
+        'surface = "AGENTS.md"\n'
+        'owner = "repo"\n'
+        'ownership = "repo_owned"\n'
+        'authority = "primary"\n'
+        'summary = "startup"\n\n'
+        "[[subsystems]]\n"
+        'id = "workspace-cli"\n'
+        'paths = ["src/agentic_workspace/cli.py"]\n'
+        'owns = ["workspace command routing"]\n'
+        'does_not_own = ["planning state semantics"]\n'
+        'proof = ["uv run pytest tests/test_workspace_cli.py -q"]\n'
+        'escalate_when = ["public command contract changes"]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, []))
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/cli.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["selector"] == {"changed": ["src/agentic_workspace/cli.py"]}
+    answer = payload["answer"]
+    assert "uv run pytest tests/test_workspace_cli.py -q" in answer["required_commands"]
+    subsystem_lanes = [lane for lane in answer["selected_lanes"] if lane["id"] == "subsystem:workspace-cli"]
+    assert subsystem_lanes
+    assert subsystem_lanes[0]["subsystem"]["does_not_own"] == ["planning state semantics"]
+    assert answer["subsystem_ownership"]["matched_subsystems"][0]["matched_paths"] == ["src/agentic_workspace/cli.py"]
 
 
 def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> None:
@@ -3336,6 +3550,57 @@ def test_init_dispatches_to_full_preset_by_default(monkeypatch, tmp_path: Path, 
     ]
 
 
+def test_init_seeds_schema_valid_workspace_config(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--preset", "planning", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    config_text = config_path.read_text(encoding="utf-8")
+    assert config_text.startswith("# Agentic Workspace managed config.\n")
+    assert "# Edit this file directly only when changing repo-owned policy." in config_text
+    assert "# Reference: .agentic-workspace/docs/workspace-config-contract.md" in config_text
+    assert "# Check resolved config: agentic-workspace config --target . --profile compact --format json" in config_text
+    assert 'default_preset = "planning"' in config_text
+    assert payload["config"]["exists"] is True
+    assert payload["config"]["edit_reference"]["reference_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
+    assert ".agentic-workspace/config.toml" in payload["created"]
+
+
+def test_init_dry_run_reports_workspace_config_seed_without_writing(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--preset", "planning", "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert not (tmp_path / ".agentic-workspace" / "config.toml").exists()
+    assert payload["config"]["exists"] is False
+    assert ".agentic-workspace/config.toml" in payload["created"]
+
+
+def test_init_preserves_existing_workspace_config(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    existing_config = 'schema_version = 1\n\n[workspace]\noptimization_bias = "human-legibility"\n'
+    _write(config_path, existing_config, encoding="utf-8")
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--preset", "planning", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert config_path.read_text(encoding="utf-8") == existing_config
+    workspace_report = next(report for report in payload["module_reports"] if report["module"] == "workspace")
+    config_action = next(action for action in workspace_report["actions"] if action["path"] == ".agentic-workspace/config.toml")
+    assert config_action["kind"] == "current"
+    assert "preserved repo-owned policy" in config_action["detail"]
+
+
 def test_init_uses_default_preset_from_repo_config(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
@@ -4055,9 +4320,9 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert stronger_home["decision_test"]["promote_to_config_when"][0].startswith("the standing guidance should be machine-readable")
     assert all("current_owner" in example for example in stronger_home["examples"])
     assert "checked-in policy" in payload["standing_intent"]["effective_view"]["conflict_rule"]
-    assert payload["standing_intent"]["effective_view"]["in_force_count"] == 2
+    assert payload["standing_intent"]["effective_view"]["in_force_count"] == 3
     standing_classes = {item["class"]: item for item in payload["standing_intent"]["effective_view"]["items"]}
-    assert standing_classes["config_policy"]["status"] == "default-only"
+    assert standing_classes["config_policy"]["status"] == "present"
     assert standing_classes["repo_doctrine"]["status"] == "present"
     assert standing_classes["durable_understanding"]["status"] == "present"
     assert standing_classes["active_directional_intent"]["status"] == "absent"
@@ -7038,6 +7303,7 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
         "uv run pytest tests -q",
         "uv run ruff check src tests",
         "agentic-workspace defaults --section root_cli_authority --format json",
+        "uv run pytest tests/test_workspace_cli.py -q",
     ]
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
     assert payload["orientation"]["status"] == "changed-path-context"
@@ -7921,10 +8187,14 @@ def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
-    assert [lane["id"] for lane in answer["selected_lanes"]] == ["workspace_cli", "cli_authority"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == [
+        "workspace_cli",
+        "cli_authority",
+        "subsystem:workspace-cli-runtime",
+    ]
     authority_review = answer["cli_authority_review"]
     assert authority_review["status"] == "review-ready"
-    assert answer["escalate_when"][0] != "changed paths span multiple validation lanes; run all selected commands or split the work"
+    assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
     root_cli = authority_review["classifications"][0]
     assert root_cli["role"] == "hand-owned-executable"
     assert root_cli["direct_edit_allowed"] is True
@@ -7936,6 +8206,7 @@ def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
     assert "normal interface authoring belongs in command contracts" in review["rule"]
     assert "runtime primitive implementation and live workspace inspection" in review["allowed_direct_cli_work"]
     assert "route interface or generated-surface changes back" in review["recovery_signal"]
+    assert answer["subsystem_ownership"]["matched_subsystems"][0]["id"] == "workspace-cli-runtime"
 
 
 def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> None:
@@ -7955,7 +8226,12 @@ def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> No
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
-    assert [lane["id"] for lane in answer["selected_lanes"]] == ["contract_tooling", "workspace_cli", "cli_authority"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == [
+        "contract_tooling",
+        "workspace_cli",
+        "cli_authority",
+        "subsystem:workspace-cli-runtime",
+    ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
     assert "uv run pytest tests -q" in answer["required_commands"]
 
@@ -7977,7 +8253,12 @@ def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
-    assert [lane["id"] for lane in answer["selected_lanes"]] == ["planning_package", "workspace_cli", "cli_authority"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == [
+        "planning_package",
+        "workspace_cli",
+        "cli_authority",
+        "subsystem:workspace-cli-runtime",
+    ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
     package_step = answer["validation_plan"]["required"][0]
     assert package_step["command"] == "cd packages/planning && uv run pytest tests/test_installer.py"

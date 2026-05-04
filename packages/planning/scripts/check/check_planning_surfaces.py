@@ -2501,7 +2501,16 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
 
     if config_path.exists():
         config_text = "\n".join(_read_lines(config_path)).lower()
-        if "[workflow_obligations." not in config_text:
+        startup_policy_text = "\n".join(
+            [
+                *(_read_lines(repo_root / "AGENTS.md")),
+                *(_read_lines(repo_root / "llms.txt")),
+            ]
+        ).lower()
+        startup_declares_workflow_obligation = (
+            "[workflow_obligations." in startup_policy_text or "workflow_obligations." in startup_policy_text
+        )
+        if startup_declares_workflow_obligation and "[workflow_obligations." not in config_text:
             warnings.append(
                 PlanningWarning(
                     WARNING_WORKFLOW_POLICY_DRIFT,

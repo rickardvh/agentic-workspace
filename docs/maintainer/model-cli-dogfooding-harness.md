@@ -18,7 +18,7 @@ The Gemini adapter defaults to Gemini 3 Flash:
 ```powershell
 uv run python scripts/model_cli_harness/run_model_cli_harness.py `
   --adapter gemini `
-  --model gemini-3-flash `
+  --model gemini-3-flash-preview `
   --scenario startup-orientation
 ```
 
@@ -79,6 +79,7 @@ Scenario metadata can express common scoring without adding Python branches:
 - `allowed_write_patterns`: changed paths must match one of these glob patterns.
 - `forbidden_write_patterns`: changed paths must not match these glob patterns.
 - `required_command_mentions`: final/transcript text must mention these commands or routed files.
+- `required_executed_commands`: structured command transcripts must show that these commands actually ran; use this when a quoted command in docs or config is not enough.
 - `forbidden_response_phrases`: final/transcript text must not contain these phrases.
 - `required_artifact_patterns`: paths that must exist in the copied fixture after an executed run.
 
@@ -97,6 +98,10 @@ The current suite evaluates these semi-realistic workflow pressure points. The p
 - `memory-consult-before-edit`: whether an agent consults the Memory index and a narrow durable note before a context-sensitive edit.
 - `memory-learning-capture`: whether repeated friction becomes compact durable Memory instead of staying in chat.
 - `invalid-planning-recovery`: whether an agent diagnoses unsafe planning state and chooses non-destructive recovery.
+- `capability-fit-routing`: whether agents route work according to capability fit, proof risk, and cost only when quality is not compromised.
+- `config-closeout-obligation`: whether a direct edit still honours repo-configured workflow obligations, improvement latitude, and output posture at closeout.
+- `local-delegation-posture`: whether agents distinguish checked-in repo policy from local-only delegation controls and avoid auto-delegation when local safety disables it.
+- `config-output-posture`: whether agents use config to shape reporting style without turning output posture into execution-method authority.
 
 Use these as optimisation probes rather than regular regression tests. A good run matrix samples a few scenarios across weaker, cheaper, and stronger agents, then turns repeated weak points into package changes, clearer CLI output, docs, fixtures, or new scorer warnings. Do not expect a single deterministic pass/fail result to settle a workflow question.
 
@@ -134,6 +139,8 @@ Inspect `run.json`, the CLI transcript, the copied repo diff, and package diagno
 - state safety: did it notice unsupported `state.toml` activation shapes?
 - proof: did it select a narrow proof command instead of guessing?
 - closeout: did it route residue and report uncertainty honestly?
+- config: did it inspect the effective config surface when repo/local settings could affect closeout, delegation, proof, or reporting?
+- local posture: did it treat `.agentic-workspace/config.local.toml` as local runtime posture, not checked-in repo policy?
 - proportionality: did direct work stay direct while lane/epic-shaped work got durable planning?
 - native-plan bridge: did private runtime planning remain private while durable decisions reached checked-in workspace state?
 - Memory routing: did the agent use the index and the narrow note, and did repeated learning become compact durable context?

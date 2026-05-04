@@ -1,0 +1,20 @@
+# Agentic Workspace managed config.
+# Edit this file directly only when changing repo-owned policy.
+# Reference: .agentic-workspace/docs/workspace-config-contract.md
+# Check resolved config: agentic-workspace config --target . --profile compact --format json
+
+schema_version = 1
+
+[workspace]
+default_preset = "full"
+agent_instructions_file = "AGENTS.md"
+workflow_artifact_profile = "repo-owned"
+improvement_latitude = "reporting"
+optimization_bias = "agent-efficiency"
+
+[workflow_obligations.config_closeout]
+summary = "Before claiming completion, report which repo or local config settings affected the work."
+stage = "before-claiming-completion"
+scope_tags = ["config", "closeout", "delegation", "proof"]
+commands = ["agentic-workspace config --target . --profile compact --format json"]
+review_hint = "Do not claim config compliance from memory or generic assumptions; inspect the effective config surface when settings may affect the task."

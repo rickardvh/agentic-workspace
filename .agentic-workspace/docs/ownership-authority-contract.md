@@ -32,6 +32,7 @@ That command is the workspace-level query surface for:
 - module-managed roots
 - managed fences
 - the main authority surfaces by concern
+- optional host-repo subsystem boundaries, when declared in the ownership ledger
 - the current boundary review that separates package-owned state, repo-owned state, and the smallest explicit repo hook
 
 When the question is already narrow, prefer the compact selector path:
@@ -48,6 +49,32 @@ agentic-workspace defaults --section prompt_routing --format json
 ```
 
 Those forms return the compact contract answer profile from [compact-contract-profile.md](compact-contract-profile.md) instead of the full ownership object.
+
+## Optional Host-Repo Subsystems
+
+Repos may declare lightweight subsystem boundaries in `.agentic-workspace/OWNERSHIP.toml` using `[[subsystems]]`.
+These are not package/module ownership and they do not replace `authority_surfaces`.
+They help agents answer narrower questions:
+
+- which subsystem does this path belong to?
+- what concerns does that subsystem own or explicitly not own?
+- which proof commands are relevant for changes in this subsystem?
+- when should a change be split, escalated, or reviewed more carefully?
+
+Example:
+
+```toml
+[[subsystems]]
+id = "payments"
+paths = ["src/payments/**"]
+owns = ["payment orchestration"]
+does_not_own = ["catalog pricing"]
+proof = ["npm test -- payments"]
+escalate_when = ["payment provider contract changes"]
+```
+
+`agentic-workspace ownership --path <repo-path> --format json` includes matching subsystems, ordered by the most specific path match.
+`agentic-workspace proof --changed <repo-paths> --format json` adds matching subsystem proof as host-repo validation hints alongside the package-selected proof lanes.
 
 ## Main Authority Surfaces
 

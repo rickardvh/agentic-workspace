@@ -1,0 +1,253 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ownership Ledger",
+  "description": "Optional repo-local ownership ledger for Agentic Workspace managed surfaces, authority surfaces, and host-repo subsystem boundaries.",
+  "type": "object",
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "required": ["schema_version"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "description": "Version of the ownership ledger structure consumed by Agentic Workspace.",
+      "default": 1
+    },
+    "workspace": {
+      "type": "object",
+      "description": "Workspace-level ownership metadata for the managed root and related manifest paths.",
+      "additionalProperties": true
+    },
+    "ownership_classes": {
+      "type": "object",
+      "description": "Named ownership classes used by managed surface and authority entries.",
+      "additionalProperties": {
+        "type": "object",
+        "description": "Human-readable explanation of an ownership class.",
+        "additionalProperties": true
+      }
+    },
+    "module_roots": {
+      "type": "array",
+      "description": "Package-managed root paths owned by installed Agentic Workspace modules.",
+      "items": {
+        "$ref": "#/$defs/module_root"
+      },
+      "default": []
+    },
+    "managed_surfaces": {
+      "type": "array",
+      "description": "Package-managed files, globs, or directories that lifecycle checks can reason about.",
+      "items": {
+        "$ref": "#/$defs/managed_surface"
+      },
+      "default": []
+    },
+    "fences": {
+      "type": "array",
+      "description": "Explicit managed regions embedded inside repo-owned files.",
+      "items": {
+        "$ref": "#/$defs/fence"
+      },
+      "default": []
+    },
+    "authority_surfaces": {
+      "type": "array",
+      "description": "Concern-to-surface authority declarations used to route edits, diagnostics, and compact ownership answers.",
+      "items": {
+        "$ref": "#/$defs/authority_surface"
+      },
+      "default": []
+    },
+    "subsystems": {
+      "type": "array",
+      "description": "Optional host-repo subsystem ownership declarations used for path-specific scope, proof, and escalation hints.",
+      "items": {
+        "$ref": "#/$defs/subsystem"
+      },
+      "default": []
+    },
+    "notes": {
+      "type": "object",
+      "description": "Human-readable ledger notes; these are not used as routing authority.",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "module_root": {
+      "type": "object",
+      "description": "A package-managed module root under the workspace managed area.",
+      "required": ["module", "path", "ownership"],
+      "additionalProperties": true,
+      "properties": {
+        "module": {
+          "type": "string",
+          "description": "Module that owns the root path."
+        },
+        "path": {
+          "type": "string",
+          "description": "Repo-relative root path owned by the module."
+        },
+        "ownership": {
+          "type": "string",
+          "description": "Ownership class for the root path."
+        },
+        "uninstall_policy": {
+          "type": "string",
+          "description": "Lifecycle rule to apply when removing the module."
+        }
+      }
+    },
+    "managed_surface": {
+      "type": "object",
+      "description": "A package-managed path, glob, or file that lifecycle checks can inspect.",
+      "required": ["module", "path", "ownership"],
+      "additionalProperties": true,
+      "properties": {
+        "module": {
+          "type": "string",
+          "description": "Module that owns the managed surface."
+        },
+        "path": {
+          "type": "string",
+          "description": "Repo-relative path or glob for the managed surface."
+        },
+        "kind": {
+          "type": "string",
+          "description": "Surface role, such as workflow contract or module root."
+        },
+        "ownership": {
+          "type": "string",
+          "description": "Ownership class for the managed surface."
+        },
+        "uninstall_policy": {
+          "type": "string",
+          "description": "Lifecycle rule to apply when removing the surface."
+        }
+      }
+    },
+    "fence": {
+      "type": "object",
+      "description": "A managed marker-delimited block inside a repo-owned file.",
+      "required": ["name", "module", "file", "start", "end", "ownership"],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Stable identifier for the managed fence."
+        },
+        "module": {
+          "type": "string",
+          "description": "Module that owns the fenced block."
+        },
+        "file": {
+          "type": "string",
+          "description": "Repo-relative file containing the fenced block."
+        },
+        "start": {
+          "type": "string",
+          "description": "Start marker used to locate the managed block."
+        },
+        "end": {
+          "type": "string",
+          "description": "End marker used to locate the managed block."
+        },
+        "ownership": {
+          "type": "string",
+          "description": "Ownership class for the fenced block."
+        },
+        "uninstall_policy": {
+          "type": "string",
+          "description": "Lifecycle rule to apply when removing the fence."
+        }
+      }
+    },
+    "authority_surface": {
+      "type": "object",
+      "description": "A declaration that one surface is authoritative for a named concern.",
+      "required": ["concern", "surface", "owner", "ownership", "authority"],
+      "additionalProperties": true,
+      "properties": {
+        "concern": {
+          "type": "string",
+          "description": "Concern or routing question this surface owns."
+        },
+        "surface": {
+          "type": "string",
+          "description": "Repo-relative path or fenced path that carries authority for the concern."
+        },
+        "owner": {
+          "type": "string",
+          "description": "Owner of the authority surface."
+        },
+        "ownership": {
+          "type": "string",
+          "description": "Ownership class for the authority surface."
+        },
+        "authority": {
+          "type": "string",
+          "description": "Authority level, such as primary, candidate, or fenced."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Short explanation of what the surface decides."
+        }
+      }
+    },
+    "subsystem": {
+      "type": "object",
+      "description": "A host-repo subsystem boundary that helps agents reason about scope, proof, and escalation for matching paths.",
+      "required": ["id", "paths"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable subsystem identifier used in ownership and proof projections."
+        },
+        "paths": {
+          "type": "array",
+          "description": "Repo-relative paths or globs owned by the subsystem.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "summary": {
+          "type": "string",
+          "description": "Short human-readable subsystem summary."
+        },
+        "owns": {
+          "type": "array",
+          "description": "Concerns the subsystem is expected to own.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "does_not_own": {
+          "type": "array",
+          "description": "Adjacent concerns that should trigger caution or escalation instead of silent scope expansion.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "proof": {
+          "type": "array",
+          "description": "Repo-native validation commands that provide proof for changes in this subsystem.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "escalate_when": {
+          "type": "array",
+          "description": "Conditions that should cause an agent to ask for review, split work, or move to a stronger planning path.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      }
+    }
+  }
+}

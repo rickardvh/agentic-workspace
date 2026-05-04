@@ -646,6 +646,7 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     package_root = Path(__file__).resolve().parents[1] / "generated" / "typescript" / "workspace-cli"
     package_json = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
     source_text = (package_root / "src" / "commandPackage.ts").read_text(encoding="utf-8")
+    cli_text = (package_root / "src" / "cli.mjs").read_text(encoding="utf-8")
     test_text = (package_root / "test" / "command-package.test.mjs").read_text(encoding="utf-8")
 
     assert package_json["name"] == "@agentic-workspace/workspace-cli"
@@ -678,6 +679,9 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert "status.report.cli" in source_text
     assert "doctor.report.cli" in source_text
     assert "DO NOT EDIT DIRECTLY" in source_text
+    assert "maxBuffer: 16 * 1024 * 1024" in cli_text
+    assert "writeSync(1, result.stdout)" in cli_text
+    assert "writeSync(2, result.stderr)" in cli_text
     assert "generated package metadata exposes expected commands" in test_text
     assert "generated runnable adapter delegates supported command to runtime process" in test_text
 

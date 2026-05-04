@@ -414,6 +414,22 @@ def _contains_forbidden_phrase(text: str, phrase: str) -> bool:
     return lowered_phrase in text
 
 
+def _normalized_signal_text(text: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[._-]+", " ", text.lower())).strip()
+
+
+def _contains_required_signal(text: str, required: str) -> bool:
+    lowered_required = required.lower()
+    return lowered_required in text or _normalized_signal_text(lowered_required) in _normalized_signal_text(text)
+
+
+def _provider_did_not_run(result: dict[str, Any]) -> bool:
+    returncode = result.get("returncode")
+    stdout = str(result.get("stdout") or "").strip()
+    final_message = str(result.get("final_message") or "").strip()
+    return isinstance(returncode, int) and returncode != 0 and not stdout and not final_message
+
+
 def _is_diagnostic_command_output(path: str) -> bool:
     name = Path(path.replace("\\", "/")).name.lower()
     return bool(re.fullmatch(r"summary(?:[_-]full|[_-]?\d*)?\.json", name))
@@ -452,6 +468,8 @@ def _metadata_workflow_warnings(
     changed_paths = _changed_paths(mutation_summary)
     response_lower = _full_response_text(result).lower()
     warnings: list[dict[str, str]] = []
+    if _provider_did_not_run(result):
+        return warnings
 
     def add(message: str, *, evidence: str = "") -> None:
         warning: dict[str, str] = {
@@ -480,8 +498,16 @@ def _metadata_workflow_warnings(
         field="required_command_mentions",
         scenario_id=scenario_id,
     ):
-        if required.lower() not in response_lower:
+        if not _contains_required_signal(response_lower, required):
             add("The agent did not report a required command or workflow surface.", evidence=required)
+    executed_command_text = _executed_command_text(result).lower()
+    for required in _string_list(
+        scenario.get("required_executed_commands"),
+        field="required_executed_commands",
+        scenario_id=scenario_id,
+    ):
+        if required.lower() not in executed_command_text:
+            add("The agent did not execute a required command.", evidence=required)
     for forbidden in _string_list(
         scenario.get("forbidden_response_phrases"),
         field="forbidden_response_phrases",
@@ -505,6 +531,66 @@ def _metadata_workflow_warnings(
             deduped.append(warning)
             seen.add(key)
     return deduped
+
+
+def _executed_command_text(result: dict[str, Any]) -> str:
+    command_fragments: list[str] = []
+    for source in (result.get("stdout"), result.get("stderr"), result.get("final_message")):
+        if not isinstance(source, str):
+            continue
+        command_fragments.extend(_copilot_markdown_shell_commands(source))
+        for line in source.splitlines():
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(event, dict):
+                command = event.get("command")
+                if isinstance(command, str):
+                    command_fragments.append(command)
+                item = event.get("item")
+                if isinstance(item, dict):
+                    item_command = item.get("command")
+                    if isinstance(item_command, str):
+                        command_fragments.append(item_command)
+        try:
+            payload = json.loads(source)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            response = payload.get("response")
+            stats = payload.get("stats")
+            if isinstance(stats, dict):
+                tools = stats.get("tools")
+                if isinstance(tools, dict):
+                    by_name = tools.get("byName")
+                    if isinstance(by_name, dict):
+                        command_fragments.extend(str(name) for name in by_name)
+                        if "run_shell_command" in by_name and isinstance(response, str):
+                            command_fragments.append(response)
+    return "\n".join(command_fragments)
+
+
+def _copilot_markdown_shell_commands(text: str) -> list[str]:
+    commands: list[str] = []
+    tool_block_pattern = re.compile(
+        r"^###\s+[^\n]*`(?P<tool>powershell|shell|bash|cmd)`\s*$"
+        r"(?P<body>.*?)(?=^---\s*$|^###\s+|\Z)",
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    for match in tool_block_pattern.finditer(text):
+        body = match.group("body")
+        args_match = re.search(r"```json\s*(?P<payload>\{.*?\})\s*```", body, flags=re.DOTALL)
+        if not args_match:
+            continue
+        try:
+            payload = json.loads(args_match.group("payload"))
+        except json.JSONDecodeError:
+            continue
+        command = payload.get("command")
+        if isinstance(command, str) and command.strip():
+            commands.append(command)
+    return commands
 
 
 def _quality_signals(
@@ -850,6 +936,39 @@ def _semantic_workflow_warnings(
             if "everything is fine" in response_lower and not any(marker in response_lower for marker in ("lower trust", "low trust", "not trust")):
                 add("The post-run review variant accepted weak-agent confidence without trust qualification.")
 
+    if scenario_id in {"config-closeout-obligation", "local-delegation-posture", "config-output-posture"}:
+        if "agentic-workspace config" not in full_response_lower and ".agentic-workspace/config" not in full_response_lower:
+            add("The agent answered a config-sensitive scenario without reporting use of the effective config surface.")
+        generic_config_markers = (
+            "based on general best practices",
+            "assuming default",
+            "i assume",
+            "should probably",
+            "without seeing",
+        )
+        if any(marker in response_lower for marker in generic_config_markers) and "agentic-workspace config" not in full_response_lower:
+            add("The agent relied on generic assumptions where repo/local config should provide the answer.")
+        if scenario_id == "config-closeout-obligation":
+            created = mutation_summary.get("created", []) if isinstance(mutation_summary, dict) else []
+            planning_created = [
+                path for path in created if isinstance(path, str) and path.replace("\\", "/").startswith(".agentic-workspace/planning/")
+            ]
+            if planning_created:
+                add(
+                    "The agent created planning artifacts for a direct config-closeout wording edit.",
+                    evidence=", ".join(planning_created[:8]),
+                )
+        if scenario_id == "local-delegation-posture":
+            if "config.local" not in full_response_lower and "local-override" not in full_response_lower:
+                add("The agent did not identify local config as the authority for delegation posture.")
+            if any(marker in response_lower for marker in ("auto-delegate", "automatically delegate", "spawn", "hand off now")) and not any(
+                marker in response_lower for marker in ("not permitted", "disabled", "manual", "suggest", "human", "safe_to_auto_run_commands")
+            ):
+                add("The agent treated delegation as executable despite local safety controls.")
+        if scenario_id == "config-output-posture":
+            if "execution method" in response_lower and "must not" not in response_lower and "does not" not in response_lower:
+                add("The agent blurred output-posture settings into execution-method control.")
+
     deduped: list[dict[str, str]] = []
     seen: set[tuple[str, str, str]] = set()
     for warning in warnings:
@@ -995,6 +1114,13 @@ def _warning_key(warning: dict[str, Any]) -> str:
     return "|".join(str(warning.get(key, "")) for key in ("warning_class", "message", "evidence", "paths"))
 
 
+def _finding_base_classes(warning_key: str) -> list[str]:
+    warning_class = warning_key.split("|", 1)[0]
+    if warning_class in {"model_cli_provider_error", "model_cli_runtime_stderr"}:
+        return ["environment_or_provider"]
+    return ["first_seen"]
+
+
 def _classify_suite_findings(results: list[dict[str, Any]]) -> dict[str, Any]:
     occurrences: dict[str, list[dict[str, str]]] = {}
     for result in results:
@@ -1016,7 +1142,7 @@ def _classify_suite_findings(results: list[dict[str, Any]]) -> dict[str, Any]:
         models = {ref["model"] for ref in refs if ref["model"]}
         adapters = {ref["adapter_id"] for ref in refs if ref["adapter_id"]}
         variants = {ref["prompt_variant_id"] for ref in refs if ref["prompt_variant_id"]}
-        classes = ["first_seen"]
+        classes = _finding_base_classes(key)
         if len(models) > 1 or len(adapters) > 1:
             classes.append("repeated_across_models")
         if len(variants) > 1:
