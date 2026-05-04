@@ -1532,6 +1532,8 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
         # Collect unique execplan stems, preferring .plan.json over .md
         seen_stems: set[str] = set()
         for path in sorted(execplan_dir.glob("*.plan.json")):
+            if path.name == "TEMPLATE.plan.json":
+                continue
             stem = path.name[: -len(".plan.json")]
             seen_stems.add(stem)
             plan_files.append(path)

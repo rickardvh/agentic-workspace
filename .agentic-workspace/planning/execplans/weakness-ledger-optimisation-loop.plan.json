@@ -49,12 +49,12 @@
     "activation trigger": "none"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "Iteration 1 tightened prep-only broad-work guidance and scaffold output so Copilot used registered canonical Planning state without root handoff or product files.",
+    "what this slice enabled": "Iteration 1 tightened prep-only broad-work guidance and scaffold output; iteration 2 fixed planning-artifact integrity so Copilot no longer deletes templates or creates side docs.",
     "intentionally deferred": "none",
     "discovered implications": "none yet",
-    "proof achieved now": "broad-work-decomposition Copilot rerun had no semantic warnings beyond expected fixture mutation",
-    "validation still needed": "planning-artifact-integrity and Memory tracks still need fresh probes",
-    "next likely slice": "run planning-artifact-integrity next because broad-work is fixed-monitoring"
+    "proof achieved now": "broad-work-decomposition and planning-artifact-integrity Copilot reruns had no semantic warnings beyond expected fixture mutation",
+    "validation still needed": "Memory tracks still need fresh probes",
+    "next likely slice": "run memory-consult-before-edit and memory-learning-capture because high-priority planning tracks are fixed-monitoring"
   },
   "intent_interpretation": {
     "literal request": "Keep running the tracks in priority order and fixing surfaced issues until no major weaknesses remain.",
@@ -131,7 +131,9 @@
     ],
     "security_refs": [],
     "audit_refs": [
-      "to be filled with scratch/model-cli-harness run directories"
+      "scratch/model-cli-harness/20260504T210450Z-copilot-workflow-smoke-broad-work-decomposition-prepare-ecommerce-copilot-claude-haiku-4.5",
+      "scratch/model-cli-harness/20260504T210811Z-copilot-workflow-smoke-broad-work-decomposition-future-agent-handoff-copilot-claude-haiku-4.5",
+      "scratch/model-cli-harness/20260504T214245Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5"
     ],
     "acceptance_refs": [
       "uv run pytest tests/test_model_cli_harness.py -q",
@@ -210,12 +212,12 @@
     "run status": "not-run-yet",
     "executor": "",
     "handoff source": "agentic-planning-bootstrap new-plan",
-    "what happened": "execution has not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet; execution has not changed files",
-    "validations run": "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario broad-work-decomposition --prompt-variant all --execute --postmortem-feedback --format json; uv run pytest packages/planning/tests/test_installer.py::test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces -q; uv run pytest tests/test_workspace_cli.py::test_summary_surfaces_broad_work_planning_guard_for_narrow_direct_state tests/test_workspace_cli.py::test_planning_help_command_returns_lifecycle_guidance tests/test_workspace_cli.py::test_planning_help_text_is_actionable -q; uv run pytest tests/test_model_cli_harness.py -q; uv run python scripts/check/check_planning_surfaces.py; make maintainer-surfaces; uv run ruff check src tests packages/planning",
-    "result for continuation": "Broad-work decomposition is fixed-monitoring for Copilot after the latest rerun; continue with planning-artifact-integrity.",
-    "next step": "Run planning-artifact-integrity with postmortem feedback and patch surfaced issues."
+    "what happened": "Ran high-priority broad-work and planning-artifact integrity probes, patched bounded failures, and reran both to clean semantic results for Copilot.",
+    "scope touched": "workflow guidance, planning help output, planning fixture templates, summary template filtering, model CLI harness scoring, tests, weakness ledger, and this execplan",
+    "changed surfaces": ".agentic-workspace/WORKFLOW.md; src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md; src/agentic_workspace/cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; scripts/model_cli_harness/run_model_cli_harness.py; tests/test_model_cli_harness.py; tests/test_workspace_cli.py; tools/model-cli-harness/**; this execplan",
+    "validations run": "uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario broad-work-decomposition --prompt-variant all --execute --postmortem-feedback --format json; uv run python scripts/model_cli_harness/run_model_cli_harness.py --scenario planning-artifact-integrity --execute --postmortem-feedback --format json; uv run pytest packages/planning/tests/test_installer.py::test_planning_summary_does_not_treat_json_template_as_active_execplan tests/test_model_cli_harness.py tests/test_workspace_cli.py::test_planning_help_command_returns_lifecycle_guidance tests/test_workspace_cli.py::test_planning_help_text_is_actionable -q; uv run python scripts/check/check_planning_surfaces.py; uv run ruff check src tests packages/planning scripts/model_cli_harness",
+    "result for continuation": "High-priority planning tracks are fixed-monitoring for Copilot after the latest reruns.",
+    "next step": "Commit and push iteration 2, then run the medium-priority Memory tracks."
   },
   "finished_run_review": {
     "review status": "pending",
@@ -267,16 +269,19 @@
     "source": "operating_posture",
     "signals found": [
       "Copilot still created root README/PLANNING_STATE handoff files and unregistered execplans before prep-only guidance was tightened.",
-      "The prep-only scaffold was generic enough that the agent felt compelled to enrich or supplement it manually."
+      "The prep-only scaffold was generic enough that the agent felt compelled to enrich or supplement it manually.",
+      "Copilot created a freehand workspace architecture doc and later deleted shipped templates because summary misclassified TEMPLATE.plan.json as active work."
     ],
     "signals fixed": [
       "Shipped workflow payload and harness fixtures now say prep-only output is registered Planning state, not root handoff docs.",
       "Planning help and new-plan --prep-only output now state allowed post-new-plan edits and forbid PLANNING_STATE.",
-      "Latest broad-work rerun created only canonical planning/state files and no product or root handoff files."
+      "Latest broad-work rerun created only canonical planning/state files and no product or root handoff files.",
+      "Planning help and WORKFLOW now keep broad handoff assumptions inside planning/decomposition records and distinguish future owner surfaces from existing next-action files.",
+      "Planning summary now excludes TEMPLATE.plan.json from active execplan projection, and the harness scores planning-only architecture/handoff side docs plus template deletion."
     ],
     "signals routed": [],
     "signals dismissed": [],
-    "next owner": "current execplan; next track is planning-artifact-integrity"
+    "next owner": "current execplan; next track is Memory routing"
   },
   "closeout_distillation": {
     "buckets": {
@@ -290,6 +295,7 @@
   },
   "drift_log": [
     "2026-05-04: Scaffolded by agentic-planning-bootstrap new-plan.",
-    "2026-05-04: Iteration 1 broad-work probes exposed root handoff docs and unregistered execplans; patched prep-only guidance/scaffold output and reran successfully for Copilot."
+    "2026-05-04: Iteration 1 broad-work probes exposed root handoff docs and unregistered execplans; patched prep-only guidance/scaffold output and reran successfully for Copilot.",
+    "2026-05-04: Iteration 2 planning-artifact probes exposed side-doc creation, dangling/future references, template deletion, and summary template misclassification; patched guidance, harness scoring, fixture templates, and summary filtering, then reran successfully for Copilot."
   ]
 }

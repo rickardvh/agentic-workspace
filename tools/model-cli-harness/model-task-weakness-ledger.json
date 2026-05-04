@@ -68,17 +68,23 @@
         "created canonical execplan without state registration",
         "summary reported no warning for orphan live execplan",
         "harness missed summary command evidence in full Copilot transcript",
-        "model created freehand workspace docs during planning-only handoff"
+        "model created freehand workspace docs during planning-only handoff",
+        "summary treated shipped templates as active live execplans"
       ],
       "evidence_refs": [
         "scratch/model-cli-harness/20260502T185547Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
         "scratch/model-cli-harness/20260502T190739Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
         "tools/model-cli-harness/suites/copilot-workflow-smoke.json::planning-artifact-integrity",
         "scratch/model-cli-harness/20260504T195505Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
-        "scratch/model-cli-harness/20260504T200807Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5"
+        "scratch/model-cli-harness/20260504T200807Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260504T211336Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260504T211927Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260504T212457Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260504T213547Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5",
+        "scratch/model-cli-harness/20260504T214245Z-copilot-workflow-smoke-planning-artifact-integrity-copilot-claude-haiku-4.5"
       ],
       "product_owner": "Planning summary and model CLI harness maintainers",
-      "next_probe": "Run planning-artifact-integrity after summary health changes and confirm the model registers state.toml or sees execplan_unregistered.",
+      "next_probe": "Run planning-artifact-integrity after summary/template or planning-only guidance changes; latest Copilot rerun created canonical state/decomposition/execplan with no semantic warnings beyond expected fixture mutation.",
       "priority": "high"
     }
   ]

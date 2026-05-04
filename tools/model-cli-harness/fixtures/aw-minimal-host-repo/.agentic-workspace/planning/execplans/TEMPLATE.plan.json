@@ -1,0 +1,23 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Plan Title",
+  "goal": [
+    "Describe the bounded implementation outcome."
+  ],
+  "non_goals": [
+    "Describe what this plan deliberately excludes."
+  ],
+  "active_milestone": {
+    "id": "plan-id",
+    "status": "active",
+    "scope": "Bounded scope for the active slice.",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "validation_commands": [
+    "agentic-workspace summary --target . --format json"
+  ],
+  "completion_criteria": [
+    "The bounded slice has durable state, proof expectations, and a clear next action."
+  ]
+}

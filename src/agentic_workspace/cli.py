@@ -1358,6 +1358,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "must_not_create": [
                 "PLAN.md",
                 "DOC_CLEANUP_PLAN.md",
+                "ARCHITECTURE.md or ADR files during planning-only handoff unless explicitly requested",
                 "planning/*.json outside .agentic-workspace/planning/decompositions/",
                 ".agentic-workspace/WORKFLOW.md task notes",
             ],
@@ -1368,7 +1369,11 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             ],
             "planning_only_rule": (
                 "When the user asks to prepare, plan, decompose, hand off, or explicitly says not to implement yet, "
-                "do not create product source, package, dependency, schema, or app scaffold files unless explicitly requested."
+                "do not create product source, package, dependency, schema, app scaffold files, or separate architecture docs unless explicitly requested."
+            ),
+            "reference_validity_rule": (
+                "Candidate lane owner_surface values may describe proposed future execplans. Do not report them as existing "
+                "next-action files until the files exist and are registered; create/register the execplan or label the reference as proposed/future."
             ),
             "prep_only_route": {
                 "use_when": "The user asks to prepare broad work so a later agent can continue, and does not ask to implement.",
@@ -1382,7 +1387,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
                 ],
                 "do_not_do": [
                     "do not ask for confirmation instead of leaving durable state when the user already asked you to prepare the repo",
-                    "do not create README, PLANNING_STATE, HANDOFF, SLICES, package, dependency, source, public, database, schema, or app scaffold files",
+                    "do not create README, PLANNING_STATE, HANDOFF, SLICES, ARCHITECTURE, ADR, package, dependency, source, public, database, schema, or app scaffold files",
                     "do not route durable state to .agentic-workspace/planning/records/",
                 ],
             },
@@ -1401,10 +1406,13 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             ),
             "Do not create root PLAN.md, DOC_CLEANUP_PLAN.md, or similar freehand durable-state files unless repo config explicitly routes there.",
             "For planning-only preparation, keep writes to planning/decomposition surfaces and do not scaffold product files before implementation is requested.",
+            "For broad handoff prep, keep architecture assumptions, blockers, and candidate lane notes inside the execplan or decomposition unless the user explicitly asks for separate docs.",
             "For prep-only broad work, use new-plan --prep-only when available; after that, enrich only canonical planning/decomposition content and keep state.toml registration intact.",
+            "Do not claim candidate lane owner_surface paths are valid next-action files until those files actually exist and are registered.",
             "If the user asks to prepare broad work for later continuation, create canonical Planning state, verify it, and stop; a proposal-only answer is not a durable handoff.",
             "Do not invent the outer structure of planning-execplan/v1.",
             "Edit intent, scope, proof, and closeout content inside schema-backed checked-in records.",
+            "Copy TEMPLATE.* files to new task-specific filenames; never move, rename, delete, or repurpose templates as live planning records.",
             "After any planning mutation, run agentic-workspace summary --format json or the planning surface checker.",
         ],
         "runtime_native_bridge": {
@@ -1455,6 +1463,8 @@ def _print_planning_help(payload: dict[str, Any]) -> None:
         print("Durable repo-visible state bridge:")
         print(f"- Preferred: {durable_bridge.get('preferred_command', '')}")
         print(f"- After write: {durable_bridge.get('after_write', '')}")
+        if durable_bridge.get("reference_validity_rule"):
+            print(f"- Reference validity: {durable_bridge.get('reference_validity_rule', '')}")
         prep_route = durable_bridge.get("prep_only_route", {})
         if isinstance(prep_route, dict) and prep_route:
             print(f"- Prep-only: {prep_route.get('required_action', '')}")

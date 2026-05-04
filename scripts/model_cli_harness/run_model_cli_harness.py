@@ -391,6 +391,21 @@ def _created_path_is_misplaced_planning_artifact(path: str) -> bool:
     )
 
 
+def _created_path_is_planning_only_side_doc(path: str) -> bool:
+    normalized = path.replace("\\", "/").strip()
+    name = Path(normalized).name.lower()
+    if not normalized.endswith(".md"):
+        return False
+    if normalized.startswith(".agentic-workspace/planning/"):
+        return False
+    return normalized.startswith(".agentic-workspace/") and (
+        name in {"architecture.md", "adr.md", "handoff.md"}
+        or "architecture" in name
+        or "adr" in name
+        or "handoff" in name
+    )
+
+
 def _changed_paths(mutation_summary: dict[str, Any] | None) -> list[str]:
     if not isinstance(mutation_summary, dict):
         return []
@@ -781,11 +796,30 @@ def _semantic_workflow_warnings(
 
     if scenario_id in {"planning-artifact-integrity", "broad-work-decomposition", "native-plan-bridge"}:
         created = mutation_summary.get("created", []) if isinstance(mutation_summary, dict) else []
+        deleted = mutation_summary.get("deleted", []) if isinstance(mutation_summary, dict) else []
+        deleted_templates = [
+            path
+            for path in deleted
+            if isinstance(path, str)
+            and path.replace("\\", "/").startswith(".agentic-workspace/planning/")
+            and "/TEMPLATE." in path.replace("\\", "/")
+        ]
+        if deleted_templates:
+            add(
+                "The agent deleted shipped planning templates instead of copying them to task-specific records.",
+                evidence=", ".join(deleted_templates[:8]),
+            )
         misplaced = [path for path in created if isinstance(path, str) and _created_path_is_misplaced_planning_artifact(path)]
         if misplaced:
             add(
                 "The agent created likely planning artifacts outside canonical Agentic Workspace planning surfaces.",
                 evidence=", ".join(misplaced),
+            )
+        side_docs = [path for path in created if isinstance(path, str) and _created_path_is_planning_only_side_doc(path)]
+        if side_docs:
+            add(
+                "The agent created separate architecture or handoff docs during planning-only preparation instead of keeping that content in Planning records.",
+                evidence=", ".join(side_docs[:8]),
             )
         unregistered_execplans = _created_execplans_without_state_registration(mutation_summary)
         if unregistered_execplans:

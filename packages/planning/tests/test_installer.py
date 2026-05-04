@@ -1650,6 +1650,35 @@ execplans = []
     assert any(action.kind == "created" and action.path == record_path for action in result.actions)
 
 
+def test_planning_summary_does_not_treat_json_template_as_active_execplan(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "title": "Template",
+                "goal": ["Template scaffold."],
+                "non_goals": [],
+                "active_milestone": {
+                    "id": "template",
+                    "status": "active",
+                    "scope": "Template only.",
+                    "ready": "ready",
+                    "blocked": "none",
+                },
+                "validation_commands": [],
+                "completion_criteria": [],
+            }
+        ),
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    assert summary["execplans"]["active_count"] == 0
+    assert summary["execplans"]["active_execplans"] == []
+    assert summary["work_maturity"]["active_execplans"] == []
+
+
 def test_promote_todo_item_to_execplan_supports_roadmap_lane_state(tmp_path: Path) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",

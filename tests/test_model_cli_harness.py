@@ -774,6 +774,41 @@ def test_model_cli_harness_scores_persisted_summary_outputs_as_diagnostic_residu
     assert not any("product or handoff files" in message for message in messages)
 
 
+def test_model_cli_harness_scores_deleted_planning_templates() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="planning-artifact-integrity",
+        result={"stdout": json.dumps({"response": "Created a checked-in plan from the template."}), "stderr": ""},
+        mutation_summary={
+            "status": "changed",
+            "created": [".agentic-workspace/planning/execplans/ecommerce.plan.json"],
+            "deleted": [".agentic-workspace/planning/execplans/TEMPLATE.plan.json"],
+        },
+    )
+
+    assert any("deleted shipped planning templates" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_scores_planning_only_side_docs() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="planning-artifact-integrity",
+        result={"stdout": json.dumps({"response": "Created a checked-in plan and architecture handoff."}), "stderr": ""},
+        mutation_summary={
+            "status": "changed",
+            "created": [
+                ".agentic-workspace/planning/execplans/ecommerce.plan.json",
+                ".agentic-workspace/planning/state.toml",
+                ".agentic-workspace/ARCHITECTURE.md",
+            ],
+        },
+    )
+
+    assert any("separate architecture or handoff docs" in warning["message"] for warning in warnings)
+
+
 def test_model_cli_harness_quality_signals_capture_proportionality() -> None:
     harness = _load_harness()
 

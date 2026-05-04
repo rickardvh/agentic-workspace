@@ -8437,10 +8437,13 @@ def test_planning_help_command_returns_lifecycle_guidance(capsys) -> None:
     assert "then stop" in prep_route["required_action"]
     assert any("planning/records" in item for item in prep_route["do_not_do"])
     assert any("HANDOFF" in item and "package" in item for item in prep_route["do_not_do"])
+    assert "reference_validity_rule" in payload["durable_state_bridge"]
+    assert "proposed/future" in payload["durable_state_bridge"]["reference_validity_rule"]
     assert any("Do not invent" in rule for rule in payload["rules"])
     assert any("tighten scaffold" in rule for rule in payload["rules"])
     assert any("one lane at a time" in rule for rule in payload["rules"])
     assert any("WORKFLOW.md as task state" in rule for rule in payload["rules"])
+    assert any("architecture assumptions" in rule for rule in payload["rules"])
     assert any("verify it, and stop" in rule for rule in payload["rules"])
     assert payload["runtime_native_bridge"]["status"] == "allowed-as-local-aid"
     assert "not repo-shared execution authority" in payload["runtime_native_bridge"]["rule"]
@@ -8454,6 +8457,7 @@ def test_planning_help_text_is_actionable(capsys) -> None:
     assert "Planning lifecycle" in output
     assert "Durable repo-visible state bridge" in output
     assert "Prep-only" in output
+    assert "Reference validity" in output
     assert "agentic-planning-bootstrap new-plan" in output
     assert "After new-plan" in output
     assert "Ordered lanes" in output
