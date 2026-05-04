@@ -11,5 +11,13 @@ active_items = []
 queued_items = []
 
 [roadmap]
-lanes = []
-candidates = []
+lanes = [
+  { id = "capability-aware-delegation", title = "Capability-aware delegation and model self-assessment guardrails", maturity = "shaped", status = "next", priority = "P1", issues = ["#704", "#705", "#706", "#707", "#708", "#709"], outcome = "Externalize task difficulty, target fit, self-assessment authority, and escalation/down-routing so weak targets do not execute beyond fit and strong targets do not retain safe mechanical work by default.", reason = "Model self-confidence is unreliable, especially for weak targets; routing needs structural workflow signals and local model metadata.", promotion_signal = "Promote the next candidate when continuing delegation posture work.", suggested_first_slice = "#706 task difficulty and proof-burden signals before target choice." },
+]
+candidates = [
+  { id = "task-difficulty-proof-burden-signals", maturity = "candidate", status = "next", priority = "P1.1", issues = ["#706"], summary = "#706 Emit task difficulty and proof-burden signals before target choice. Foundation slice: produce structural work-shape, risk, proof, and recommended-strength signals before any target chooses to implement." },
+  { id = "delegation-target-capability-metadata", maturity = "candidate", priority = "P1.2", issues = ["#705"], summary = "#705 Enrich local delegation target metadata for capability fit. Builds on #706 so target profiles can be matched against structural task signals." },
+  { id = "self-confidence-advisory-routing", maturity = "candidate", priority = "P1.3", issues = ["#707"], summary = "#707 Treat model self-confidence as advisory-only routing evidence. Depends on #706/#705 so confidence can be explicitly lower authority than task shape and target fit." },
+  { id = "capability-routing-handoff-packets", maturity = "candidate", priority = "P1.4", issues = ["#708"], summary = "#708 Add capability-aware escalation and down-routing handoff packets. Depends on routing fields being stable enough to generate compact packets." },
+  { id = "capability-routing-model-cli-evaluations", maturity = "candidate", priority = "P1.5", issues = ["#709"], summary = "#709 Expand model-CLI evaluations for capability routing and self-assessment failures. Run after initial routing surfaces exist, then use evaluations to file/fix optimization findings." },
+]
