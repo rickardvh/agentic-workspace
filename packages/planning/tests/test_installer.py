@@ -2093,6 +2093,10 @@ def test_planning_cli_new_plan_creates_valid_active_scaffold(tmp_path: Path, cap
     payload = json.loads(capsys.readouterr().out)
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
     assert any(action["kind"] == "created" and action["path"].endswith("plan-alpha.plan.json") for action in payload["actions"])
+    assert any(
+        action["kind"] == "next" and "tighten scaffold fields" in action["detail"] and "adaptive_assurance" in action["detail"]
+        for action in payload["actions"]
+    )
     assert record_path.exists()
     assert not installer_mod.planning_record_schema_findings(record_path)
 
@@ -2134,6 +2138,7 @@ def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: P
     record = json.loads(record_path.read_text(encoding="utf-8"))
 
     assert any("--format json" in action["detail"] for action in payload["actions"] if action["kind"] == "next")
+    assert any("prep-only" in action["detail"] and "stop without product files" in action["detail"] for action in payload["actions"])
     assert any("after summary verification, stop" in action["detail"] for action in payload["actions"] if action["kind"] == "next")
     assert record["immediate_next_action"] == [
         "Run agentic-workspace summary --target . --format json, confirm the planning state is clean, then stop without product scaffolding."
@@ -2186,6 +2191,77 @@ def test_planning_cli_new_plan_refuses_duplicate_without_overwrite(tmp_path: Pat
     payload = json.loads(capsys.readouterr().out)
 
     assert any(action["kind"] == "manual review" and "already exists" in action["detail"] for action in payload["actions"])
+
+
+def test_planning_summary_exposes_ordered_roadmap_batch_guidance(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "first-lane", title = "First lane", priority = "P0", issues = ["#1"], outcome = "First.", reason = "Needed first.", promotion_signal = "Start here.", suggested_first_slice = "Do first slice." },
+  { id = "second-lane", title = "Second lane", priority = "P1", issues = ["#2"], outcome = "Second.", reason = "Needed second.", promotion_signal = "After first.", suggested_first_slice = "Do second slice." },
+]
+candidates = []
+""",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    batch = summary["execution_readiness"]["ordered_batch"]
+
+    assert summary["execution_readiness"]["status"] == "roadmap-needs-promotion"
+    assert batch["status"] == "present"
+    assert [item["id"] for item in batch["items"]] == ["first-lane", "second-lane"]
+    assert batch["first_promotion_command"].endswith("promote-to-plan first-lane --target . --format json")
+    assert summary["execution_readiness"]["recommendation"]["ordered_batch"]["items"][0]["issues"] == ["#1"]
+
+
+def test_finished_work_inspection_treats_state_roadmap_owner_as_routed_continuation(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "capability-routing", title = "Capability routing", priority = "P0", issues = [], outcome = "Continue capability routing.", reason = "Parent continuation.", promotion_signal = "Continue when ready.", suggested_first_slice = "Next routing slice." },
+]
+candidates = []
+""",
+    )
+    archive_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "partial.plan.json"
+    _write_execplan_record(archive_path, item_id="partial", status="completed")
+    record = json.loads(archive_path.read_text(encoding="utf-8"))
+    record["intent_satisfaction"] = {
+        "original intent": "Improve capability routing.",
+        "was original intent fully satisfied?": "no",
+        "evidence of intent satisfaction": "one bounded slice landed.",
+        "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane capability-routing",
+    }
+    record["closure_check"] = {
+        "slice status": "bounded slice complete",
+        "larger-intent status": "open",
+        "closure decision": "archive-but-keep-lane-open",
+        "why this decision is honest": "the parent remains open and is already routed to roadmap.",
+        "evidence carried forward": ".agentic-workspace/planning/state.toml roadmap lane capability-routing",
+        "reopen trigger": "promote capability-routing",
+    }
+    installer_mod._write_execplan_record(record_path=archive_path, record=record)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    inspection = summary["finished_work_inspection_contract"]
+
+    assert inspection["derived_follow_up_candidates"] == []
+    assert inspection["counts"]["routed_continuation_count"] == 1
+    assert inspection["inspections"][0]["classification"] == "routed_partial"
 
 
 def test_planning_summary_projects_decomposition_records(tmp_path: Path) -> None:

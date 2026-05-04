@@ -770,6 +770,21 @@ def test_model_cli_harness_accepts_weak_target_escalation() -> None:
     assert warnings == []
 
 
+def test_model_cli_harness_scores_weak_ambiguous_without_inspection() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="capability-fit-routing",
+        prompt_variant_id="weak-target-ambiguous-inspection",
+        result={"stdout": json.dumps({"response": "I can implement this improvement directly now."}), "stderr": ""},
+        mutation_summary={"status": "clean"},
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("did not require inspection" in message for message in messages)
+    assert any("did not preserve escalation" in message for message in messages)
+
+
 def test_model_cli_harness_scores_strong_target_retaining_mechanical_work() -> None:
     harness = _load_harness()
 
@@ -801,6 +816,33 @@ def test_model_cli_harness_accepts_strong_target_downrouting() -> None:
     )
 
     assert warnings == []
+
+
+def test_model_cli_harness_scores_unclear_proof_downrouting_without_guardrails() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="capability-fit-routing",
+        prompt_variant_id="strong-target-mechanical-unclear-proof",
+        result={"stdout": json.dumps({"response": "Down-route this to the cheaper executor."}), "stderr": ""},
+        mutation_summary={"status": "clean"},
+    )
+
+    assert any("proof/source-authority inspection" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_scores_post_run_self_review_without_evidence() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="capability-fit-routing",
+        prompt_variant_id="post-run-self-review",
+        result={"stdout": json.dumps({"response": "Everything is fine."}), "stderr": ""},
+        mutation_summary={"status": "clean"},
+    )
+
+    assert any("rationale, evidence, or prevention" in warning["message"] for warning in warnings)
+    assert any("without trust qualification" in warning["message"] for warning in warnings)
 
 
 def test_model_cli_harness_scores_capability_fit_scenario_mutations() -> None:

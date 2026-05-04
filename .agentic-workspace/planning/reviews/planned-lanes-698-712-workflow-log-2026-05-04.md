@@ -24,3 +24,10 @@ This log records how Agentic Workspace was used while implementing the current p
 - Updated installed contract docs to use current `.plan.json` terminology, fixed stale relative links, and added explicit vocabulary for a planning-managed state file containing repo-owned planning content.
 - Added worker-facing role guidance to the execplans README: raw plans are authoring surfaces, while `summary`, `report`, `start`, and `implement --changed` are first-choice projections for weak or bounded implementers.
 - Tightened `implementer_context.schema.json` by requiring minimum structure for proof selection, validation plans, capability posture, runtime resolution, delegation control, handoff packets, and ready handoff payloads.
+
+## Lane #709-#712: Capability Routing And Planning Helpers
+
+- Updated planning summary readiness so roadmap-backed work exposes an ordered batch with promotion commands. This is meant to support requests like "implement all planned lanes" without forcing agents to infer order from raw `state.toml`.
+- Updated `new-plan` output to include a post-create tightening checklist. The command still creates a valid scaffold, but now tells the agent which fields must be made concrete before implementation.
+- Updated finished-work inspection so an archived partial closeout that explicitly routes continuation to a roadmap/state owner is treated as already routed rather than as a fresh derived follow-up candidate.
+- Expanded model-CLI harness capability-fit scenarios beyond the two original cases: weak ambiguous work now must inspect/escalate, strong mechanical work with unclear proof must inspect proof/source authority first, and post-run self-review must ask for rationale, evidence, trust impact, and prevention.

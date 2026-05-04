@@ -2405,6 +2405,7 @@ def _execution_readiness_payload(
             ],
         },
     }
+    ordered_batch = _roadmap_ordered_batch_guidance(roadmap_lanes=roadmap_lanes, roadmap_candidates=roadmap_candidates)
     if active_execplans:
         return {
             "status": "planning-backed",
@@ -2475,7 +2476,9 @@ def _execution_readiness_payload(
                     "Run `agentic-planning-bootstrap promote-to-plan <roadmap-id> --target . --format json` "
                     "for the selected lane, then continue from the compact planning contract."
                 ),
+                "ordered_batch": ordered_batch,
             },
+            "ordered_batch": ordered_batch,
             "broad_work_planning_guard": {**broad_work_planning_guard, "status": "required-for-broad-work"},
             "rule": "Roadmap candidates are not execution authority; broad planned work must be promoted before implementation.",
         }
@@ -2495,6 +2498,49 @@ def _execution_readiness_payload(
             "Direct execution is acceptable for narrow work; broad planned work needs checked-in planning first. "
             "When current external and roadmap work are quiet, historical archive-derived candidates remain audit evidence rather than current execution pressure."
         ),
+    }
+
+
+def _roadmap_ordered_batch_guidance(*, roadmap_lanes: list[dict[str, Any]], roadmap_candidates: list[dict[str, str]]) -> dict[str, Any]:
+    items: list[dict[str, Any]] = []
+    for index, lane in enumerate(roadmap_lanes, start=1):
+        lane_id = str(lane.get("id", "")).strip()
+        title = str(lane.get("title", "")).strip()
+        issues = lane.get("issues", [])
+        items.append(
+            {
+                "order": index,
+                "id": lane_id,
+                "title": title,
+                "priority": str(lane.get("priority", "")).strip(),
+                "issues": [str(issue).strip() for issue in issues if str(issue).strip()] if isinstance(issues, list) else [],
+                "suggested_first_slice": str(lane.get("suggested_first_slice", "")).strip(),
+                "promotion_command": (
+                    f"agentic-planning-bootstrap promote-to-plan {lane_id} --target . --format json"
+                    if lane_id
+                    else "agentic-planning-bootstrap new-plan --id <id> --title <title> --target . --activate --format json"
+                ),
+            }
+        )
+    if not items:
+        for index, candidate in enumerate(roadmap_candidates, start=1):
+            summary = str(candidate.get("summary", "")).strip()
+            items.append(
+                {
+                    "order": index,
+                    "id": "",
+                    "title": summary,
+                    "priority": str(candidate.get("priority", "")).strip(),
+                    "issues": sorted(_issue_refs_from_text(summary)),
+                    "suggested_first_slice": "",
+                    "promotion_command": "agentic-planning-bootstrap new-plan --id <id> --title <title> --target . --activate --format json",
+                }
+            )
+    return {
+        "status": "present" if items else "absent",
+        "rule": "When the user asks for an ordered batch or all planned lanes, promote and implement candidates in this listed order instead of picking an unrelated issue.",
+        "items": items,
+        "first_promotion_command": items[0]["promotion_command"] if items else "",
     }
 
 
@@ -2774,6 +2820,19 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     if compact_prep_only_route:
         compact_broad_work_guard["prep_only_route"] = compact_prep_only_route
 
+    compact_execution_readiness = {
+        "status": execution_readiness.get("status", "unknown"),
+        "broad_work_allowed": bool(execution_readiness.get("broad_work_allowed", False)),
+        "direct_work_allowed": bool(execution_readiness.get("direct_work_allowed", True)),
+        "derived_follow_up_candidate_count": execution_readiness.get("derived_follow_up_candidate_count", 0),
+        "recommendation": execution_readiness.get("recommendation", {}),
+        "broad_work_planning_guard": compact_broad_work_guard,
+        "rule": execution_readiness.get("rule", ""),
+    }
+    ordered_batch = execution_readiness.get("ordered_batch")
+    if isinstance(ordered_batch, dict) and ordered_batch.get("status") == "present":
+        compact_execution_readiness["ordered_batch"] = ordered_batch
+
     compact_summary: dict[str, Any] = {
         "kind": summary.get("kind", "planning-summary/v1"),
         "profile": "compact",
@@ -2812,15 +2871,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "rule": decomposition.get("rule", ""),
         },
         "work_maturity": _compact_work_maturity_projection(work_maturity),
-        "execution_readiness": {
-            "status": execution_readiness.get("status", "unknown"),
-            "broad_work_allowed": bool(execution_readiness.get("broad_work_allowed", False)),
-            "direct_work_allowed": bool(execution_readiness.get("direct_work_allowed", True)),
-            "derived_follow_up_candidate_count": execution_readiness.get("derived_follow_up_candidate_count", 0),
-            "recommendation": execution_readiness.get("recommendation", {}),
-            "broad_work_planning_guard": compact_broad_work_guard,
-            "rule": execution_readiness.get("rule", ""),
-        },
+        "execution_readiness": compact_execution_readiness,
         "autopilot_loop": dict(summary.get("autopilot_loop", {})),
         "planning_surface_health": {
             "status": planning_surface_health.get("status", "unknown"),
@@ -2970,7 +3021,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         ),
         "finished_work_inspection_contract": _compact_projection(
             finished_work_inspection_contract,
-            fields=("counts", "derived_follow_up_candidates", "detail", "recommended_next_action"),
+            fields=("counts", "inspections", "derived_follow_up_candidates", "detail", "recommended_next_action"),
         ),
         "current_execution_pressure": _compact_current_execution_pressure(summary),
         "historical_audit_pressure": _compact_historical_audit_pressure(
@@ -5108,8 +5159,7 @@ def _finished_work_continuation_routed_by_roadmap(*, target_root: Path, candidat
     if not isinstance(reference_roles, dict):
         return []
     non_closure_refs = set(reference_roles.get("non_closure_refs", []) or [])
-    if not non_closure_refs:
-        return []
+    intent_tokens = set(_continuation_owner_label_tokens(unsolved_intent))
 
     state = _read_state_from_toml(target_root)
     if not isinstance(state, dict):
@@ -5125,7 +5175,9 @@ def _finished_work_continuation_routed_by_roadmap(*, target_root: Path, candidat
             if not isinstance(raw_item, dict):
                 continue
             item_refs = _planning_item_issue_refs(raw_item)
-            if not (item_refs & non_closure_refs):
+            item_text = _planning_item_identity_text(raw_item)
+            token_match = bool(intent_tokens) and all(token in item_text for token in intent_tokens)
+            if not (item_refs & non_closure_refs) and not token_match:
                 continue
             item_type = str(raw_item.get("type", "")).strip() or "item"
             item_id = str(raw_item.get("id", "")).strip() or str(raw_item.get("title", "")).strip() or "unnamed"
@@ -5139,11 +5191,44 @@ def _finished_work_continuation_routed_by_roadmap(*, target_root: Path, candidat
             if not isinstance(raw_item, dict):
                 continue
             item_refs = _planning_item_issue_refs(raw_item)
-            if not (item_refs & non_closure_refs):
+            item_text = _planning_item_identity_text(raw_item)
+            token_match = bool(intent_tokens) and all(token in item_text for token in intent_tokens)
+            if not (item_refs & non_closure_refs) and not token_match:
                 continue
             item_id = str(raw_item.get("id", "")).strip() or str(raw_item.get("title", "")).strip() or "unnamed"
             routed_by.append(f".agentic-workspace/planning/state.toml roadmap {collection_name[:-1]} {item_id}")
     return sorted(set(routed_by))
+
+
+def _planning_item_identity_text(item: dict[str, Any]) -> str:
+    fields = (
+        "id",
+        "title",
+        "summary",
+        "reason",
+        "why_now",
+        "outcome",
+        "promotion_signal",
+        "suggested_first_slice",
+        "surface",
+    )
+    values = [str(item.get(field, "")).strip().lower() for field in fields if str(item.get(field, "")).strip()]
+    issues = item.get("issues", [])
+    if isinstance(issues, list):
+        values.extend(str(issue).strip().lower() for issue in issues if str(issue).strip())
+    refs = item.get("refs", [])
+    if isinstance(refs, list):
+        values.extend(str(ref).strip().lower() for ref in refs if str(ref).strip())
+    return " ".join(values)
+
+
+def _continuation_owner_label_tokens(unsolved_intent: str) -> list[str]:
+    match = re.search(r"\b(?:roadmap|work_items?|todo)(?:\s+(?:lane|candidate|item|summary|entry))?\s+([a-z0-9._# -]+)$", unsolved_intent)
+    if match:
+        tokens = _label_tokens(match.group(1))
+        if tokens:
+            return tokens
+    return _label_tokens(unsolved_intent)
 
 
 def _planning_item_issue_refs(
@@ -7169,6 +7254,7 @@ def create_execplan_scaffold(
         if activate or queue:
             result.add("would update", state_path, f"register '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
         result.add("next", target_root / PLANNING_STATE_PATH, "run `agentic-workspace summary --target . --format json`")
+        result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
         return result
 
     _write_execplan_record(record_path=record_path, record=plan_record)
@@ -7178,6 +7264,7 @@ def create_execplan_scaffold(
         _write_state_to_toml(target_root, updated_state)
         result.add("updated", state_path, f"registered '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
     result.add("next", state_path, "run `agentic-workspace summary --target . --format json`")
+    result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
     if prep_only:
         result.add(
             "next",
@@ -7185,6 +7272,18 @@ def create_execplan_scaffold(
             "after summary verification, stop; do not create README, package, source, public, schema, database, or app scaffold files",
         )
     return result
+
+
+def _new_plan_tightening_checklist(*, prep_only: bool) -> str:
+    if prep_only:
+        return (
+            "before implementation, verify this remains prep-only: keep write scope under canonical Planning surfaces, "
+            "run summary, and stop without product files"
+        )
+    return (
+        "before implementation, tighten scaffold fields: goal, non_goals, intent_continuity, execution_bounds, "
+        "touched_paths, validation_commands, completion_criteria, and adaptive_assurance when risk or scope requires it"
+    )
 
 
 def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:

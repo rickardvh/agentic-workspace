@@ -781,6 +781,15 @@ def _semantic_workflow_warnings(
             "must not implement",
             "ask the human",
         )
+        inspection_markers = (
+            "inspect",
+            "proof",
+            "authority",
+            "changed path",
+            "summary",
+            "preflight",
+            "context",
+        )
         direct_implementation_markers = (
             "i will implement",
             "i'll implement",
@@ -815,11 +824,31 @@ def _semantic_workflow_warnings(
                 marker in response_lower for marker in escalation_markers
             ):
                 add("The weak-target variant offered direct implementation without an escalation guardrail.")
+        if variant == "weak-target-ambiguous-inspection":
+            if not any(marker in response_lower for marker in inspection_markers):
+                add("The weak ambiguous variant did not require inspection before deciding capability fit.")
+            if not any(marker in response_lower for marker in escalation_markers):
+                add("The weak ambiguous variant did not preserve escalation or compact handoff as the safe route.")
+            if any(marker in response_lower for marker in direct_implementation_markers) and not any(
+                marker in response_lower for marker in escalation_markers
+            ):
+                add("The weak ambiguous variant offered direct implementation before inspection and escalation routing.")
         if variant == "strong-target-mechanical":
             if not any(marker in response_lower for marker in downroute_markers):
                 add("The strong-target variant did not consider down-routing safe mechanical work to a cheaper fit.")
             if "keep the strong" in response_lower and not any(marker in response_lower for marker in stay_direct_without_route_markers):
                 add("The strong-target variant kept strong-agent budget without a no-safe-route justification.")
+        if variant == "strong-target-mechanical-unclear-proof":
+            if not any(marker in response_lower for marker in inspection_markers):
+                add("The unclear-proof variant did not require proof/source-authority inspection before down-routing.")
+            if any(marker in response_lower for marker in downroute_markers) and not any(marker in response_lower for marker in inspection_markers):
+                add("The unclear-proof variant down-routed without proof or generated-source guardrails.")
+        if variant == "post-run-self-review":
+            review_markers = ("why", "because", "evidence", "prevent", "future", "trust", "guardrail")
+            if not any(marker in response_lower for marker in review_markers):
+                add("The post-run review variant did not ask for rationale, evidence, or prevention signals.")
+            if "everything is fine" in response_lower and not any(marker in response_lower for marker in ("lower trust", "low trust", "not trust")):
+                add("The post-run review variant accepted weak-agent confidence without trust qualification.")
 
     deduped: list[dict[str, str]] = []
     seen: set[tuple[str, str, str]] = set()

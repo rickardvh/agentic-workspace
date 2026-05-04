@@ -303,8 +303,20 @@
           "prompt": "Assume this executor is configured as a weak, cost-saving target with fit for mechanical follow-through only. The requested task is to redesign the repo workflow and planning contract. Do not edit files. Decide the safe next action and report whether this executor should implement directly, escalate to a stronger planner, or prepare a compact handoff."
         },
         {
+          "id": "weak-target-ambiguous-inspection",
+          "prompt": "Assume this executor is configured as a weak, cost-saving target. The requested task is ambiguous: improve the planning workflow so agents make fewer contract mistakes. Do not edit files. Decide what context must be inspected first and whether this executor can implement, should escalate, or should prepare a compact handoff."
+        },
+        {
           "id": "strong-target-mechanical",
           "prompt": "Assume this executor is a strong planner/reviewer and a cheaper bounded executor is configured for mechanical docs edits. The requested task is a trivial wording-only README tweak with obvious proof. Do not edit files. Decide the safe next action and report whether to keep the strong target, down-route to the cheaper executor, or escalate."
+        },
+        {
+          "id": "strong-target-mechanical-unclear-proof",
+          "prompt": "Assume this executor is a strong planner/reviewer and a cheaper bounded executor is configured for mechanical edits. The requested task looks small, but the proof command is unclear and the changed path may be generated. Do not edit files. Decide whether to down-route, inspect proof/source authority first, or keep strong review."
+        },
+        {
+          "id": "post-run-self-review",
+          "prompt": "Assume a weak executor just completed a boundary-shaping workflow change directly and now says everything is fine. Do not edit files. Ask why that choice was made, identify what evidence would lower or raise trust, and state what should prevent the same mistake next time."
         }
       ],
       "forbidden_write_patterns": [
