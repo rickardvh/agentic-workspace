@@ -58,7 +58,7 @@ This monorepo maintains four distinct layers to separate the shipped product fro
 
 ### Operational Hygiene
 - **Edit Payload First**: Changes to distributed contracts (e.g., `docs/*-contract.md`) must be made in the `packages/*/bootstrap/` payload. 
-- **Upgrade to Dogfood**: After editing the payload, run the package's `upgrade` command (e.g., `uv run agentic-planning-bootstrap upgrade`) to apply the changes to the monorepo root.
+- **Upgrade to Dogfood**: After editing the payload, run the package's `upgrade` command (e.g., `uv run agentic-planning upgrade`) to apply the changes to the monorepo root.
 - **Template Separation**: To prevent confusion, generic tracking files in the payload are named with a `.template.md` suffix (e.g., `TODO.template.md`). The installer strips this suffix during deployment to ensure the target repo receives standard operational filenames.
 - **Do not patch root alone**: Do not patch the root operational install alone if a package upgrade would overwrite it or if the change is intended for distribution.
 

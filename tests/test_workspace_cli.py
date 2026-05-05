@@ -456,7 +456,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["relay"]["rule"] == (
         "Use a strong planner to normalize the vague prompt, then hand the compact contract to a bounded executor without prescribing the execution method."
     )
-    assert payload["relay"]["handoff_command"] == "agentic-planning-bootstrap handoff --format json"
+    assert payload["relay"]["handoff_command"] == "agentic-planning handoff --format json"
     assert payload["relay"]["execution_methods"][1]["id"] == "external cli or api"
     assert payload["relay"]["planner_role"]["summary"] == (
         "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract."
@@ -3178,10 +3178,14 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
 
     payload = json.loads(capsys.readouterr().out)
     skill_ids = {entry["id"] for entry in payload["skills"]}
+    assert "workspace-startup" in skill_ids
     assert "planning-autopilot" in skill_ids
     assert "memory-router" in skill_ids
     assert "planning-reporting" in skill_ids
     assert all(entry["registration"] == "explicit" for entry in payload["skills"])
+    workspace_startup = next(entry for entry in payload["skills"] if entry["id"] == "workspace-startup")
+    assert workspace_startup["source_kind"] == "installed-workspace-skills"
+    assert "workspace startup" in workspace_startup["activation_hints"]["phrases"]
     autopilot = next(entry for entry in payload["skills"] if entry["id"] == "planning-autopilot")
     assert "run autopilot" in autopilot["activation_hints"]["phrases"]
 
@@ -4391,8 +4395,8 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert {report["module"] for report in payload["module_reports"]} == {"planning", "memory"}
     planning_report = next(report for report in payload["module_reports"] if report["module"] == "planning")
     memory_report = next(report for report in payload["module_reports"] if report["module"] == "memory")
-    assert planning_report["schema"]["command"] == "agentic-planning-bootstrap report --format json"
-    assert memory_report["schema"]["command"] == "agentic-memory-bootstrap report --target ./repo --format json"
+    assert planning_report["schema"]["command"] == "agentic-planning report --format json"
+    assert memory_report["schema"]["command"] == "agentic-memory report --target ./repo --format json"
     assert payload["config"]["mixed_agent"]["status"] == "reporting-only"
     operational_compression = payload["operational_compression"]
     assert operational_compression["kind"] == "workspace-operational-compression/v1"
@@ -6387,7 +6391,7 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
     assert execution_shape["default_posture"]["handoff_preference"] == "prefer-internal-when-safe"
     assert execution_shape["capability_posture"]["execution class"] == "boundary-shaping"
     assert execution_shape["recommendation"]["id"] == "planner-first-then-bounded-executor"
-    assert execution_shape["recommendation"]["consult"] == ["agentic-planning-bootstrap handoff --format json"]
+    assert execution_shape["recommendation"]["consult"] == ["agentic-planning handoff --format json"]
     assert execution_shape["recommendation"]["best_target_fits"] == []
     assert execution_shape["current_slice"]["task_id"] == "execution-shape-slice"
     assert execution_shape["resolved_targets"] == []
@@ -6727,6 +6731,12 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     (tmp_path / ".agentic-workspace").mkdir(parents=True)
     _write((tmp_path / ".agentic-workspace" / "WORKFLOW.md"), "# Workflow\n")
     _write((tmp_path / ".agentic-workspace" / "OWNERSHIP.toml"), "schema_version = 1\n")
+    _write((tmp_path / ".agentic-workspace" / "docs" / "module-map.md"), "# Installed Module Map\n")
+    _write(
+        (tmp_path / ".agentic-workspace" / "skills" / "REGISTRY.json"),
+        '{"schema_version":"skill-registry.v1","owner":"agentic-workspace","source_kind":"installed-workspace-skills","skills":[]}\n',
+    )
+    _write((tmp_path / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md"), "# Workspace Startup\n")
     _write((tmp_path / ".agentic-workspace" / "system-intent" / "WORKFLOW.md"), "# System Intent Workflow\n")
     _write(
         (tmp_path / "AGENTS.md"),
@@ -7166,8 +7176,8 @@ def test_memory_consult_uses_local_cli_invoke_for_memory_helpers(tmp_path: Path,
 
     payload = json.loads(capsys.readouterr().out)
     memory_consult = payload["answer"]
-    assert memory_consult["capture_helper"].startswith("uv run agentic-memory-bootstrap capture-note")
-    assert memory_consult["promotion_pressure"]["command"].startswith("uv run agentic-memory-bootstrap promotion-report")
+    assert memory_consult["capture_helper"].startswith("uv run agentic-memory capture-note")
+    assert memory_consult["promotion_pressure"]["command"].startswith("uv run agentic-memory promotion-report")
 
 
 def test_repo_config_cli_invoke_is_ignored_as_machine_local_policy(tmp_path: Path, capsys) -> None:
@@ -8458,7 +8468,7 @@ def test_planning_help_text_is_actionable(capsys) -> None:
     assert "Durable repo-visible state bridge" in output
     assert "Prep-only" in output
     assert "Reference validity" in output
-    assert "agentic-planning-bootstrap new-plan" in output
+    assert "agentic-planning new-plan" in output
     assert "After new-plan" in output
     assert "Ordered lanes" in output
     assert "planning-execplan/v1" in output

@@ -28,13 +28,13 @@ If you need to check current-memory note shape and staleness specifically:
 Use these when you want signals about whether the memory system is saving tokens or creating noise:
 
 - Routing health and working-set pressure:
-  - `uv run agentic-memory-bootstrap route-report --target . --format json`
+  - `uv run agentic-memory route-report --target . --format json`
 - Promotion / elimination candidates (notes that should shrink, move to docs, or be replaced by tests/scripts):
-  - `uv run agentic-memory-bootstrap promotion-report --target . --format json`
+  - `uv run agentic-memory promotion-report --target . --format json`
 
 If you need "what should I load for this task" without guessing:
 
-- `uv run agentic-memory-bootstrap route --target . --format json`
+- `uv run agentic-memory route --target . --format json`
 
 ## Cleanup signals
 

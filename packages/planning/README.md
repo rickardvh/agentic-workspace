@@ -1,6 +1,6 @@
-# agentic-planning-bootstrap
+# Agentic Planning
 
-Agentic Planning is a checked-in planning-for-execution contract, currently distributed as the `agentic-planning-bootstrap` package and CLI.
+Agentic Planning is a checked-in planning-for-execution contract, currently distributed through the `agentic-planning-bootstrap` package. The preferred CLI command is `agentic-planning`; `agentic-planning-bootstrap` remains a compatibility alias for existing installs.
 
 ## Why
 
@@ -27,7 +27,7 @@ Do not use it for:
 - subsystem documentation or runbooks
 - a full project-management or ticketing system
 
-If your main problem is shared repo memory rather than active work steering, start with `agentic-memory-bootstrap` instead.
+If your main problem is shared repo memory rather than active work steering, start with `agentic-memory` instead.
 
 Current maturity in this repo: beta.
 
@@ -75,7 +75,7 @@ The ordinary model is direct first, planned when useful:
 Bundled skills:
 
 - The package ships planning skills under `skills/`, but new default installs do not copy them into target repositories.
-- Use `agentic-planning-bootstrap list-files --format json` to discover bundled skills and optional payload surfaces when a repo chooses to enable richer planning workflows.
+- Use `agentic-planning list-files --format json` to discover bundled skills and optional payload surfaces when a repo chooses to enable richer planning workflows.
 - Pass `--include-optional` to `install`, `adopt`, or `upgrade` to copy optional review/intake surfaces, machine capability data, and bundled skills into a repo that intentionally wants the richer workflow.
 
 ## Quick Start
@@ -182,14 +182,14 @@ Generated mirrors inherit stability from their canonical source relationships, n
 `.agentic-workspace/docs/routing-contract.md` defines the hierarchy and routing rules between `.agentic-workspace/planning/state.toml`, execplans, and reviews.
 Advanced capability fit, orchestration, standing-intent, reporting, and context-budget behavior is exposed by compact CLI report sections and optional skills rather than shipped target-repo prose docs.
 
-For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. The `machine_first_planning` summary block reports whether active execplans are being read from canonical `.plan.json` sidecars or from Markdown compatibility fallback. `active_contract`, `resumable_contract`, `follow_through_contract`, `context_budget_contract`, `hierarchy_contract`, and `handoff_contract` remain thinner views over that record. `system_intent_alignment` records which higher-level intent materially shapes the slice, how it biases the slice shape, and what lane-level validation question remains. `context_budget_contract` now also carries the explicit pre-work retrieval prompt so ordinary work can ask what durable understanding should be recovered before execution and which area it concerns, while leaving Memory optional rather than required.
+For active planning, `agentic-planning summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. The `machine_first_planning` summary block reports whether active execplans are being read from canonical `.plan.json` sidecars or from Markdown compatibility fallback. `active_contract`, `resumable_contract`, `follow_through_contract`, `context_budget_contract`, `hierarchy_contract`, and `handoff_contract` remain thinner views over that record. `system_intent_alignment` records which higher-level intent materially shapes the slice, how it biases the slice shape, and what lane-level validation question remains. `context_budget_contract` now also carries the explicit pre-work retrieval prompt so ordinary work can ask what durable understanding should be recovered before execution and which area it concerns, while leaving Memory optional rather than required.
 When an execplan has a sibling `.plan.json` file, that sidecar is the canonical execplan artifact and the `.md` file is treated as a derived human-readable view.
-For delegated execution, `agentic-planning-bootstrap handoff --format json` is the compact worker handoff derived from that same active planning state. It now carries intent interpretation, execution bounds, stop conditions, and explicit return-with residue fields for a bounded execution run plus finished-run review, including a compact `changed surfaces` answer for what actually changed.
+For delegated execution, `agentic-planning handoff --format json` is the compact worker handoff derived from that same active planning state. It now carries intent interpretation, execution bounds, stop conditions, and explicit return-with residue fields for a bounded execution run plus finished-run review, including a compact `changed surfaces` answer for what actually changed.
 For cheap delegated-work inspection, `intent_interpretation_contract`, `execution_run_contract`, `finished_run_review_contract`, `intent_validation_contract`, and `finished_work_inspection_contract` remain thin projections over the same active plan and surrounding planning state instead of becoming a second orchestration ledger. `execution_run_contract` keeps intended scope (`scope_touched`) separate from actual changed surfaces (`changed_surfaces`) so returned-run review does not depend on broad diff reconstruction.
 
 `intent_validation_contract` keeps checked-in planning primary while allowing optional reconciliation against ignored `.agentic-workspace/local/cache/external-intent-evidence.json` or legacy `.agentic-workspace/planning/external-intent-evidence.json` when a repo also tracks work elsewhere. Its `external_work_reconciliation` field is the compact first answer for evidence freshness, current external work state, closeout reconciliation, and landed-open checks. Offline planning remains valid when external evidence is absent.
 `finished_work_inspection_contract` keeps archived execplan residue primary while allowing provider-agnostic external evidence items with `reopens` refs to lower trust when source-owned work reopens an older closeout. Legacy `.agentic-workspace/planning/finished-work-evidence.json` remains a compatibility input, but stale copied title/status values should not override source-owned external evidence.
-For compact module-state reporting without opening raw planning files first, use `agentic-planning-bootstrap report --format json`. It stays derived from the same canonical planning state and does not create a second state store.
+For compact module-state reporting without opening raw planning files first, use `agentic-planning report --format json`. It stays derived from the same canonical planning state and does not create a second state store.
 Use `hierarchy_contract` when you need the larger-picture restart answer cheaply: active chunk, parent lane, next likely chunk, continuation owner, and proof state.
 
 Use a direct task in `.agentic-workspace/planning/state.toml` when the work is small enough to finish in one coherent pass and does not need milestone sequencing, blocker tracking, or a wider validation story.
@@ -218,7 +218,7 @@ Direct execution is an explicit success mode for small local work. The goal is n
 
 When delegation is useful, keep it capability-aware and optional. If available, a stronger model may draft a compact execplan or handoff for a smaller implementation model, but only when that is likely to save tokens overall without lowering quality. Do not assume subagents or multi-model workflows exist; the contract should still work for a single agent operating alone.
 Use the capability-aware execution contract to describe that recommendation in task-shape terms instead of vendor-specific model names, and prefer silent task shaping over repeated instructions to switch executors manually.
-Use the orchestrator workflow contract plus `agentic-planning-bootstrap handoff --format json` when the goal is to reuse the same checked-in handoff across internal delegation, local CLI/API execution, or another vendor executor.
+Use the orchestrator workflow contract plus `agentic-planning handoff --format json` when the goal is to reuse the same checked-in handoff across internal delegation, local CLI/API execution, or another vendor executor.
 
 If stronger capability keeps seeming necessary for the same class of work, treat that as a product signal for cheaper future execution. The next step is often better decomposition, clearer validation, or tighter guidance rather than accepting stronger execution as the permanent answer.
 
@@ -277,7 +277,7 @@ Keep this README as the package entrypoint. Use the installed contracts for deep
 - `.agentic-workspace/docs/execution-flow-contract.md`: active state, execplans, handoff, restart, and closeout.
 - `.agentic-workspace/docs/routing-contract.md`: hierarchy between state, execplans, and reviews.
 
-Optional packaged affordances remain discoverable through `agentic-planning-bootstrap list-files --format json` when a repo needs review promotion, upstream-task intake, machine-readable capability data, or bundled planning skills.
+Optional packaged affordances remain discoverable through `agentic-planning list-files --format json` when a repo needs review promotion, upstream-task intake, machine-readable capability data, or bundled planning skills.
 Use `--include-optional` with `install`, `adopt`, or `upgrade` only when the repo intentionally wants those richer workflow surfaces copied into its checkout.
 Package maintainers can use `extraction-candidates.json` to review which planning-adjacent capabilities should stay internal, remain optional extensions, or wait for future extraction evidence.
 
@@ -345,26 +345,26 @@ This package can work alongside Agentic Memory, but does not require it: plannin
 
 ## Commands
 
-- `agentic-planning-bootstrap install --target <repo>`
-- `agentic-planning-bootstrap adopt --target <repo>`
-- `agentic-planning-bootstrap upgrade --target <repo>`
-- `agentic-planning-bootstrap uninstall --target <repo>`
-- `agentic-planning-bootstrap doctor --target <repo>`
-- `agentic-planning-bootstrap status --target <repo>`
-- `agentic-planning-bootstrap summary --target <repo> --format json`
-- `agentic-planning-bootstrap promote-to-plan <todo-id> --target <repo>`
-- `agentic-planning-bootstrap archive-plan <plan> --target <repo>`
-- `agentic-planning-bootstrap archive-plan <plan> --target <repo> --apply-cleanup`
-- `agentic-planning-bootstrap list-files`
-- `agentic-planning-bootstrap verify-payload`
-- `agentic-planning-bootstrap prompt install --target <repo>`
+- `agentic-planning install --target <repo>`
+- `agentic-planning adopt --target <repo>`
+- `agentic-planning upgrade --target <repo>`
+- `agentic-planning uninstall --target <repo>`
+- `agentic-planning doctor --target <repo>`
+- `agentic-planning status --target <repo>`
+- `agentic-planning summary --target <repo> --format json`
+- `agentic-planning promote-to-plan <todo-id> --target <repo>`
+- `agentic-planning archive-plan <plan> --target <repo>`
+- `agentic-planning archive-plan <plan> --target <repo> --apply-cleanup`
+- `agentic-planning list-files`
+- `agentic-planning verify-payload`
+- `agentic-planning prompt install --target <repo>`
 - `python scripts/check/check_maintainer_surfaces.py`
 - `make maintainer-surfaces`
 - `make planning-surfaces`
 - `make planning-surfaces-strict`
 - `make render-agent-docs`
 
-`archive-plan --apply-cleanup` is intentionally narrow. It may remove completed active-queue items that still point at the archived plan and compress stale roadmap residue tied to that same thread, but it does not invent hidden state or perform broad automatic rewrites. Archive output is compact inactive-plan residue rather than a full forever-growing copy of the active execplan.
+`archive-plan` is the compatibility command name for plan closeout. The normal path distills closeout, routes future-relevant residue to its real owner, and removes the completed execplan from Planning. Use `--retain-archive` only for legacy audit/compatibility cases. `archive-plan --apply-cleanup` is intentionally narrow: it may remove completed active-queue items that still point at the closed plan and compress stale roadmap residue tied to that same thread, but it does not invent hidden state or perform broad automatic rewrites.
 
 `upgrade` is intentionally conservative: it refreshes package-managed helper surfaces, re-renders generated planning docs, removes stale generated queue views from older installs, and leaves repo-owned surfaces like `AGENTS.md` unchanged when they already exist.
 When older active execplans were written against a previous template, the upgrade path is to reconcile those plans to the current contract shape, not to expect `upgrade` to rewrite them automatically.
@@ -407,3 +407,4 @@ make check-planning
 ```
 
 Package checks run against the shared root workspace environment; the package directory is not a separate operational planning install in this monorepo.
+

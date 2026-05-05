@@ -22,14 +22,14 @@ The worker may be:
 3. the active execplan
 4. `agentic-workspace config --target . --format json`
 5. `agentic-workspace defaults --section relay --format json`
-6. `agentic-planning-bootstrap handoff --format json`
+6. `agentic-planning handoff --format json`
 
 ## Workflow
 
 1. Confirm the task is planning-backed and bounded enough for delegation.
 2. Inspect the effective mixed-agent posture from local config.
 3. If delegation is not supported or not worthwhile, stay direct.
-4. If delegation is worthwhile, derive the worker handoff from `agentic-planning-bootstrap handoff --format json`.
+4. If delegation is worthwhile, derive the worker handoff from `agentic-planning handoff --format json`.
 5. Choose any execution method that preserves that contract:
    - internal delegation when the environment supports it and prefers it
    - external CLI or API handoff when another executor is cheaper or more available

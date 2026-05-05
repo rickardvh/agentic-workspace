@@ -50,10 +50,20 @@ from repo_memory_bootstrap.installer import (
 )
 
 
+def _program_name() -> str:
+    invoked = sys.argv[0].replace("\\", "/").rsplit("/", 1)[-1]
+    if invoked in {"agentic-memory", "agentic-memory-bootstrap"}:
+        return invoked
+    return "agentic-memory"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="agentic-memory-bootstrap",
-        description="Install and upgrade a repository memory and lightweight coordination bootstrap.",
+        prog=_program_name(),
+        description=(
+            "Install, route, inspect, and maintain checked-in repository Memory. "
+            "`agentic-memory-bootstrap` remains a compatibility alias for this command."
+        ),
     )
     parser.add_argument(
         "--version",
@@ -959,7 +969,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             "Do not ask the user to install or clone anything locally first. "
             f"Use the checked-in `memory-upgrade` skill under `{_managed_skills_path(target)}/`. "
             "It should use the recorded upgrade source automatically, run the packaged upgrade flow for this "
-            "repo, prefer the installed `agentic-memory-bootstrap` CLI when available, otherwise fall back to "
+            "repo, prefer the installed `agentic-memory` CLI when available, otherwise fall back to "
             f"`{upgrade_runner} upgrade --target <repo>`, and report any conservative manual-review items."
         )
     if command == "uninstall":
@@ -973,21 +983,21 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
 
 def _uvx_git_runner_command() -> str:
     source = resolve_upgrade_source(None)
-    return f"uvx --from {source['source_ref']} agentic-memory-bootstrap"
+    return f"uvx --from {source['source_ref']} agentic-memory"
 
 
 def _pipx_git_runner_command() -> str:
     source = resolve_upgrade_source(None)
-    return f"pipx run --spec {source['source_ref']} agentic-memory-bootstrap"
+    return f"pipx run --spec {source['source_ref']} agentic-memory"
 
 
 def _preferred_git_runner_command(source: dict[str, str | int | Path | None]) -> str:
     source_ref = str(source["source_ref"])
     if shutil.which("uvx"):
-        return f"uvx --from {source_ref} agentic-memory-bootstrap"
+        return f"uvx --from {source_ref} agentic-memory"
     if shutil.which("pipx"):
-        return f"pipx run --spec {source_ref} agentic-memory-bootstrap"
-    return f"uvx --from {source_ref} agentic-memory-bootstrap"
+        return f"pipx run --spec {source_ref} agentic-memory"
+    return f"uvx --from {source_ref} agentic-memory"
 
 
 def _upgrade_runner_command(target: str | None) -> str:
@@ -1018,7 +1028,7 @@ def _managed_skills_path(target: str | None) -> str:
 
 def _runner_command_for_local_source(source_ref: str) -> str:
     if shutil.which("uvx"):
-        return f"uvx --from {source_ref} agentic-memory-bootstrap"
+        return f"uvx --from {source_ref} agentic-memory"
     if shutil.which("pipx"):
-        return f"pipx run --spec {source_ref} agentic-memory-bootstrap"
-    return f"uvx --from {source_ref} agentic-memory-bootstrap"
+        return f"pipx run --spec {source_ref} agentic-memory"
+    return f"uvx --from {source_ref} agentic-memory"

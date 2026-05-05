@@ -22,8 +22,8 @@ It helps the agent load memory selectively instead of scanning the whole reposit
    - commands being changed
    - interface, runtime, retrieval, testing, or architecture surfaces
 3. Use the repo's routing help first:
-   - run `agentic-memory-bootstrap route --files <paths...>` when file paths are known
-   - run `agentic-memory-bootstrap route --surface <surface...>` when the work is easier to describe by surface
+   - run `agentic-memory route --files <paths...>` when file paths are known
+   - run `agentic-memory route --surface <surface...>` when the work is easier to describe by surface
    - when `.agentic-workspace/memory/repo/manifest.toml` exists, trust its note records first and use `.agentic-workspace/memory/repo/index.md` as the compact fallback routing layer
    - treat `.agentic-workspace/memory/WORKFLOW.md` as reference policy only when the task touches the memory contract or policy boundary
 4. Load only the suggested notes that are relevant to the actual task.

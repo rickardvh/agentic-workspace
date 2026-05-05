@@ -73,7 +73,7 @@ Agents should follow these patterns for "Habitual Pull":
 
 ### 1. Automatic Routing (Preferred)
 
-Use `agentic-memory-bootstrap route --files <paths>` or `agentic-memory-bootstrap route --surface <terms>`.
+Use `agentic-memory route --files <paths>` or `agentic-memory route --surface <terms>`.
 This uses the manifest and `.agentic-workspace/memory/repo/index.md` to find the smallest set of relevant notes.
 
 ### 2. Keyword Search (Fallback)
@@ -89,3 +89,4 @@ Use `agentic-memory-bootstrap sync-memory --files <paths>` to see which notes mi
 - **No Overlap**: One fact has one primary home.
 - **Residue Only**: Memory stores what is expensive to rediscover. If it's in the code or canonical docs, don't duplicate it in memory.
 - **Weak Authority for Current**: Notes in `.agentic-workspace/memory/repo/current/` are for orientation and continuation, not durable facts.
+

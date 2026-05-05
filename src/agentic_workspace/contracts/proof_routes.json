@@ -9,7 +9,8 @@
     "planning_surfaces": "agentic-workspace doctor --target ./repo --modules planning --format json",
     "maintainer_surfaces": "make maintainer-surfaces",
     "source_payload_install": "uv run pytest tests/test_source_payload_operational_install.py",
-    "planning_payload": "uv run agentic-planning-bootstrap upgrade --target .",
-    "memory_payload": "uv run agentic-memory-bootstrap upgrade --target ."
+    "planning_payload": "uv run agentic-planning upgrade --target .",
+    "memory_payload": "uv run agentic-memory upgrade --target ."
   }
 }
+

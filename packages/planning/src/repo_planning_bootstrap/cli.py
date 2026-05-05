@@ -44,12 +44,19 @@ from repo_planning_bootstrap.installer import (
 )
 
 
+def _program_name() -> str:
+    invoked = sys.argv[0].replace("\\", "/").rsplit("/", 1)[-1]
+    if invoked in {"agentic-planning", "agentic-planning-bootstrap"}:
+        return invoked
+    return "agentic-planning"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="agentic-planning-bootstrap",
+        prog=_program_name(),
         description=(
-            "Install and maintain checked-in planning surfaces. Despite the historical 'bootstrap' name, "
-            "this CLI also owns ongoing planning lifecycle commands such as new-plan, promote-to-plan, and archive-plan."
+            "Install, inspect, and maintain checked-in Planning surfaces. "
+            "`agentic-planning-bootstrap` remains a compatibility alias for this command."
         ),
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -145,7 +152,10 @@ def build_parser() -> argparse.ArgumentParser:
     promote_parser.add_argument("--dry-run", action="store_true")
     promote_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    archive_parser = subparsers.add_parser("archive-plan", help="Archive a completed execplan or parent lane closeout.")
+    archive_parser = subparsers.add_parser(
+        "archive-plan",
+        help="Close a completed execplan or parent lane after distillation; archive retention is legacy/audit-only.",
+    )
     archive_parser.add_argument("plan", nargs="?")
     archive_parser.add_argument("--target")
     archive_parser.add_argument("--dry-run", action="store_true")
@@ -360,9 +370,9 @@ def main(argv: list[str] | None = None) -> int:
                         "optional_files": list_optional_payload_files(),
                         "bundled_skill_files": list_bundled_skill_files(),
                         "optional_enable_commands": [
-                            "agentic-planning-bootstrap install --include-optional",
-                            "agentic-planning-bootstrap adopt --include-optional",
-                            "agentic-planning-bootstrap upgrade --include-optional",
+                            "agentic-planning install --include-optional",
+                            "agentic-planning adopt --include-optional",
+                            "agentic-planning upgrade --include-optional",
                         ],
                     },
                     indent=2,

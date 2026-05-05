@@ -53,7 +53,7 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
     execution_run = (
         "- Run status: completed\n"
         "- Executor: bounded external executor\n"
-        "- Handoff source: agentic-planning-bootstrap handoff --format json\n"
+        "- Handoff source: agentic-planning handoff --format json\n"
         "- What happened: implemented the bounded checker update and returned compact residue.\n"
         "- Scope touched: scripts/check/check_planning_surfaces.py\n"
         "- Changed surfaces: scripts/check/check_planning_surfaces.py\n"
@@ -63,7 +63,7 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
         if status in {"completed", "done", "closed"}
         else "- Run status: not-run-yet\n"
         "- Executor: pending\n"
-        "- Handoff source: agentic-planning-bootstrap handoff --format json\n"
+        "- Handoff source: agentic-planning handoff --format json\n"
         "- What happened: pending delegated execution.\n"
         "- Scope touched: scripts/check/check_planning_surfaces.py\n"
         "- Changed surfaces: none yet; execution has not changed files.\n"

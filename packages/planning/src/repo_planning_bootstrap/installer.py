@@ -1827,19 +1827,19 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                 "Inspect finished-work signals before treating previously closed work as settled.",
             )
         )
-        commands.append("Inspect the finished_work_inspection contract in agentic-planning-bootstrap report --format json")
+        commands.append("Inspect the finished_work_inspection contract in agentic-planning report --format json")
     elif intent_validation_contract.get("status") == "present" and intent_validation_contract.get("counts", {}).get("attention_count", 0):
         next_action = str(
             intent_validation_contract.get("recommended_next_action", "Review intent-validation signals before treating planning as quiet.")
         )
-        commands.append("Inspect the intent_validation contract in agentic-planning-bootstrap report --format json")
+        commands.append("Inspect the intent_validation contract in agentic-planning report --format json")
     elif summary["todo"]["active_count"]:
         first_item = summary["todo"]["active_items"][0]
         next_action = f"Continue active TODO item {first_item.get('id', '')}: {first_item.get('surface', '')}".strip(": ")
     elif isinstance(work_maturity, dict) and work_maturity.get("ready_slices"):
         first_ready = work_maturity["ready_slices"][0]
         next_action = f"Promote ready slice {first_ready.get('id', '')} from explicit maturity state.".strip()
-        commands.append("Inspect work_maturity in agentic-planning-bootstrap report --format json")
+        commands.append("Inspect work_maturity in agentic-planning report --format json")
     elif summary["roadmap"]["candidate_count"]:
         next_action = "Promote the highest-priority roadmap candidate when the next bounded slice is ready."
         commands.append("Inspect roadmap lanes in .agentic-workspace/planning/state.toml")
@@ -1855,7 +1855,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
         "schema": {
             "schema_version": "module-report-schema/v1",
             "module": "planning",
-            "command": "agentic-planning-bootstrap report --format json",
+            "command": "agentic-planning report --format json",
             "canonical_docs": [
                 ".agentic-workspace/docs/reporting-contract.md",
                 ".agentic-workspace/docs/system-intent-contract.md",
@@ -1913,20 +1913,20 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "helpers": [
                 {
                     "artifact": "execplan",
-                    "command": "agentic-planning-bootstrap promote-to-plan <todo-or-roadmap-id> --target ./repo --format json",
+                    "command": "agentic-planning promote-to-plan <todo-or-roadmap-id> --target ./repo --format json",
                     "writes": [
                         ".agentic-workspace/planning/state.toml",
                         ".agentic-workspace/planning/execplans/<slug>.plan.json",
                     ],
-                    "proof": "agentic-planning-bootstrap doctor --target ./repo --format json",
+                    "proof": "agentic-planning doctor --target ./repo --format json",
                 },
                 {
                     "artifact": "review_record",
-                    "command": "agentic-planning-bootstrap create-review <slug> --title <title> --target ./repo --format json",
+                    "command": "agentic-planning create-review <slug> --title <title> --target ./repo --format json",
                     "writes": [
                         ".agentic-workspace/planning/reviews/<slug>.review.json",
                     ],
-                    "proof": "agentic-planning-bootstrap doctor --target ./repo --format json",
+                    "proof": "agentic-planning doctor --target ./repo --format json",
                 },
             ],
         },
@@ -2016,7 +2016,7 @@ def planning_reconcile(*, target: str | Path | None = None) -> dict[str, Any]:
         "kind": "planning-reconcile/v1",
         "schema": {
             "schema_version": "planning-reconcile-schema/v1",
-            "command": "agentic-planning-bootstrap reconcile --format json",
+            "command": "agentic-planning reconcile --format json",
             "provider_rule": (
                 "Core reconciliation consumes provider-agnostic external work evidence; host-specific trackers belong in optional adapters."
             ),
@@ -2032,7 +2032,7 @@ def planning_reconcile(*, target: str | Path | None = None) -> dict[str, Any]:
                 {
                     "path": str(plan.get("path", "")),
                     "status": str(plan.get("status", "")),
-                    "recommended_action": "archive with agentic-planning-bootstrap archive-plan",
+                    "recommended_action": "archive with agentic-planning archive-plan",
                 }
                 for plan in completed_execplans
             ],
@@ -2387,8 +2387,8 @@ def _execution_readiness_payload(
         "applies_to": "broad/high-assurance/multi-surface work",
         "required_before_implementation": "Create or continue one checked-in execplan before edits.",
         "direct_work_exception": "Narrow direct tasks may proceed without an execplan until they widen into sequencing, proof, or handoff risk.",
-        "promotion_command": "agentic-planning-bootstrap promote-to-plan <item-id>",
-        "new_plan_command": "agentic-planning-bootstrap new-plan --id <id> --title <title> --activate",
+        "promotion_command": "agentic-planning promote-to-plan <item-id>",
+        "new_plan_command": "agentic-planning new-plan --id <id> --title <title> --activate",
         "durable_state_rule": (
             "For repo-visible durable state, handoff, continuation, or future-agent plans, use checked-in planning, not root PLAN.md."
         ),
@@ -2408,7 +2408,7 @@ def _execution_readiness_payload(
         "prep_only_route": {
             "use_when": "Asked to prepare broad work for later continuation, without implementation.",
             "required_action": "Create or continue canonical checked-in Planning state, verify with summary, then stop; do not stop at a proposal or start implementation.",
-            "preferred_command": "agentic-planning-bootstrap new-plan --id <id> --title <title> --activate --prep-only",
+            "preferred_command": "agentic-planning new-plan --id <id> --title <title> --activate --prep-only",
             "after_write": "agentic-workspace summary --target . --format json",
             "allowed_after_new_plan": [
                 "tighten content fields inside the created execplan",
@@ -2449,7 +2449,7 @@ def _execution_readiness_payload(
                 "id": "promote-active-item-before-broad-work",
                 "summary": "Promote or tighten the active TODO item before treating it as broad planned execution.",
                 "next_step": (
-                    "Run `agentic-planning-bootstrap promote-to-plan <item-id> --target . --format json` "
+                    "Run `agentic-planning promote-to-plan <item-id> --target . --format json` "
                     "when the active item needs milestone sequencing, proof scope, or handoff continuity."
                 ),
             },
@@ -2490,7 +2490,7 @@ def _execution_readiness_payload(
                 "id": "promote-before-broad-work",
                 "summary": "Promote a roadmap candidate into an active planning record before broad or autopilot implementation.",
                 "next_step": (
-                    "Run `agentic-planning-bootstrap promote-to-plan <roadmap-id> --target . --format json` "
+                    "Run `agentic-planning promote-to-plan <roadmap-id> --target . --format json` "
                     "for the selected lane, then continue from the compact planning contract."
                 ),
                 "ordered_batch": ordered_batch,
@@ -2533,9 +2533,9 @@ def _roadmap_ordered_batch_guidance(*, roadmap_lanes: list[dict[str, Any]], road
                 "issues": [str(issue).strip() for issue in issues if str(issue).strip()] if isinstance(issues, list) else [],
                 "suggested_first_slice": str(lane.get("suggested_first_slice", "")).strip(),
                 "promotion_command": (
-                    f"agentic-planning-bootstrap promote-to-plan {lane_id} --target . --format json"
+                    f"agentic-planning promote-to-plan {lane_id} --target . --format json"
                     if lane_id
-                    else "agentic-planning-bootstrap new-plan --id <id> --title <title> --target . --activate --format json"
+                    else "agentic-planning new-plan --id <id> --title <title> --target . --activate --format json"
                 ),
             }
         )
@@ -2550,7 +2550,7 @@ def _roadmap_ordered_batch_guidance(*, roadmap_lanes: list[dict[str, Any]], road
                     "priority": str(candidate.get("priority", "")).strip(),
                     "issues": sorted(_issue_refs_from_text(summary)),
                     "suggested_first_slice": "",
-                    "promotion_command": "agentic-planning-bootstrap new-plan --id <id> --title <title> --target . --activate --format json",
+                    "promotion_command": "agentic-planning new-plan --id <id> --title <title> --target . --activate --format json",
                 }
             )
     return {
@@ -3596,7 +3596,7 @@ def _completed_execplan_warnings(completed_execplans: list[dict[str, Any]]) -> l
                 "path": path,
                 "message": (
                     "Completed execplan remains in the live execplans directory; "
-                    "archive it with `agentic-planning-bootstrap archive-plan` or return it to active status."
+                    "archive it with `agentic-planning archive-plan` or return it to active status."
                 ),
             }
         )
@@ -4087,7 +4087,7 @@ def _unsupported_planning_state_activation_shape_warnings(
                     ),
                     "suggested_fix": (
                         "Run `agentic-workspace summary --target . --format json` to inspect all warnings, then recover with "
-                        "`agentic-planning-bootstrap new-plan --id <id> --title <title> --activate`, "
+                        "`agentic-planning new-plan --id <id> --title <title> --activate`, "
                         'or migrate the reference to `{ id = "<id>", maturity = "active", status = "active", '
                         'surface = ".agentic-workspace/planning/execplans/<plan>.plan.json" }`.'
                     ),
@@ -4127,7 +4127,7 @@ def _unregistered_execplan_warnings(
                     "`summary` cannot treat it as reliable continuation state."
                 ),
                 "suggested_fix": (
-                    "Register the plan with `agentic-planning-bootstrap new-plan --id <id> --title <title> --target . "
+                    "Register the plan with `agentic-planning new-plan --id <id> --title <title> --target . "
                     "--activate --format json`, migrate an existing state row to point at this file, or archive it if it is closed."
                 ),
             }
@@ -4208,7 +4208,7 @@ def _planning_handoff_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-handoff-schema/v1",
         "canonical_doc": ".agentic-workspace/docs/execution-flow-contract.md",
-        "command": "agentic-planning-bootstrap handoff --format json",
+        "command": "agentic-planning handoff --format json",
         "shared_fields": [
             "kind",
             "schema",
@@ -7018,7 +7018,7 @@ def _system_intent_contract_payload() -> dict[str, Any]:
             "ask_first": [
                 "agentic-workspace defaults --section system_intent --format json",
                 "agentic-workspace summary --format json",
-                "agentic-planning-bootstrap report --format json",
+                "agentic-planning report --format json",
             ],
             "must_answer": [
                 "what larger outcome this slice serves",
@@ -7290,8 +7290,8 @@ def create_execplan_scaffold(
         next_action="Fill in execution bounds, touched paths, and validation before implementation starts.",
         done_when=f"{plan_title} is implemented, validated, and closed out honestly.",
     )
-    plan_record["execution_run"]["handoff source"] = "agentic-planning-bootstrap new-plan"
-    plan_record["drift_log"] = [f"{date.today().isoformat()}: Scaffolded by agentic-planning-bootstrap new-plan."]
+    plan_record["execution_run"]["handoff source"] = "agentic-planning new-plan"
+    plan_record["drift_log"] = [f"{date.today().isoformat()}: Scaffolded by agentic-planning new-plan."]
     if source_text:
         plan_record["references"] = [{"kind": "source", "target": source_text, "label": source_text, "role": "intake", "locator": ""}]
     if prep_only:
@@ -7872,7 +7872,7 @@ def _add_closeout_distillation_actions(
         slug = _slugify(str(record.get("title", "")).strip() or plan_path.stem)
         summary = learned or next((item["summary"] for item in buckets["memory"] if item.get("summary")), "closeout learning")
         command = (
-            f"agentic-memory-bootstrap capture-note {slug} --target . --summary "
+            f"agentic-memory capture-note {slug} --target . --summary "
             f"{json.dumps(summary)} --surface {plan_path.relative_to(target_root).as_posix()} --format json"
         )
         result.add("memory candidate", target_root / (owner or ".agentic-workspace/memory/repo/index.md"), command)
@@ -8212,7 +8212,7 @@ def archive_parent_lane_closeout(
             },
             "execution_run": {
                 "run status": "completed",
-                "executor": "agentic-planning-bootstrap archive-plan --parent-lane-closeout",
+                "executor": "agentic-planning archive-plan --parent-lane-closeout",
                 "handoff source": "structured planning state",
                 "what happened": "created a schema-valid parent lane closeout from structured state fields.",
                 "scope touched": PLANNING_STATE_PATH.as_posix(),
@@ -9099,7 +9099,7 @@ def _lifecycle_next_safe_command(result: InstallResult) -> str:
     operation = _lifecycle_operation_name(result.message)
     if operation == "unknown":
         return "Review actions and rerun the same command without --dry-run only if the plan matches intent."
-    return f"agentic-planning-bootstrap {operation} --target {result.target_root}"
+    return f"agentic-planning {operation} --target {result.target_root}"
 
 
 def format_summary_json(summary: dict[str, Any]) -> str:
@@ -9288,11 +9288,11 @@ def _warning_remediation(warning_class: str) -> str | None:
         "todo_broken_surface_reference": "Repair Surface so it points at a live .agentic-workspace/planning/execplans path, or remove the stale item.",
         "planning_state_unsupported_activation_shape": (
             "Run `agentic-workspace summary --target . --format json --profile full`, then migrate string execplan references "
-            "to supported `todo.active_items` objects or create a replacement with `agentic-planning-bootstrap new-plan`; "
+            "to supported `todo.active_items` objects or create a replacement with `agentic-planning new-plan`; "
             "do not delete state.toml as the first move."
         ),
         "planning_record_schema_drift": (
-            "Preserve the invalid record as evidence, scaffold a valid replacement with `agentic-planning-bootstrap new-plan` "
+            "Preserve the invalid record as evidence, scaffold a valid replacement with `agentic-planning new-plan` "
             "or migrate the record to the current schema, then rerun `agentic-workspace summary --target . --format json`."
         ),
         "execplan_structure_drift": (
@@ -9323,7 +9323,7 @@ def _warning_remediation(warning_class: str) -> str | None:
             "Refresh .agentic-workspace/planning/UPGRADE-SOURCE.toml after intentionally upgrading the bootstrap source."
         ),
         "archive_accumulation_drift": (
-            "Archive completed live execplans with `agentic-planning-bootstrap archive-plan <plan> --target .`, "
+            "Archive completed live execplans with `agentic-planning archive-plan <plan> --target .`, "
             "or return the plan to active status if it still owns future execution."
         ),
         "closed_work_history_residue": (
@@ -9336,7 +9336,7 @@ def _warning_remediation(warning_class: str) -> str | None:
             "`TEMPLATE.decomposition.json`, then rerun `agentic-workspace summary --target . --format json`."
         ),
         "planning_artifact_freehand": (
-            "Replace the freehand artifact with `agentic-planning-bootstrap new-plan --id <id> --title <title> --target . "
+            "Replace the freehand artifact with `agentic-planning new-plan --id <id> --title <title> --target . "
             "--activate --format json` or a schema-backed decomposition record, then rerun `agentic-workspace summary --target . --format json`."
         ),
         "startup_policy_drift": "Restore the minimal startup order in AGENTS, quickstart, and manifest.",
@@ -10014,7 +10014,7 @@ def _build_execplan_record_from_todo_item(
         "execution_run": {
             "run status": "not-run-yet",
             "executor": "",
-            "handoff source": "agentic-planning-bootstrap promote-to-plan",
+            "handoff source": "agentic-planning promote-to-plan",
             "what happened": "execution has not started",
             "scope touched": "none yet",
             "changed surfaces": "none yet; execution has not changed files",

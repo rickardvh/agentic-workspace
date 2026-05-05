@@ -146,9 +146,9 @@ Use the machine-readable report as the default combined-state inspection path wh
 Use `agentic-workspace defaults --section intent --format json` when the question is confirmed versus interpreted intent; keep report for combined workspace state.
 Use `agentic-workspace defaults --section clarification --format json` when the question is how to ask the smallest useful follow-up.
 Use `agentic-workspace defaults --section prompt_routing --format json` when the question is which proof lane or owner should absorb a vague prompt.
-Use `agentic-workspace defaults --section relay --format json` when the question is how a strong planner should hand a compact contract to a bounded executor, and `agentic-planning-bootstrap handoff --format json` when the active delegated slice itself needs to be handed off.
+Use `agentic-workspace defaults --section relay --format json` when the question is how a strong planner should hand a compact contract to a bounded executor, and `agentic-planning handoff --format json` when the active delegated slice itself needs to be handed off.
 Use `agentic-workspace config --target ./repo --format json` when the question is posture alone; keep `execution_shape` for the combined current-slice recommendation.
-Use `agentic-memory-bootstrap report --target ./repo --format json` when the question is whether Memory now has a compact ordinary-work pull path; its `habitual_pull` object exposes the baseline bundle, owner boundary, and current proof signals without opening raw memory notes first.
+Use `agentic-memory report --target ./repo --format json` when the question is whether Memory now has a compact ordinary-work pull path; its `habitual_pull` object exposes the baseline bundle, owner boundary, and current proof signals without opening raw memory notes first.
 Use `agentic-workspace defaults --section improvement_latitude --format json` when the question is how much evidence-backed repo-friction reduction is welcome by default.
 Use `agentic-workspace defaults --section optimization_bias --format json` when the question is how shared report density and residue style should lean by default.
 Use the `repo_friction.reporting_destinations` field when the question is where reporting-only findings may surface without creating implicit active work.
@@ -178,7 +178,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Keep repo-friction policy and evidence as shared workspace-level concerns rather than introducing a new core module for them.
 - Keep reporting-only repo-friction follow-through bounded to report output, review output, or already-owned planning residue instead of auto-promoting it into active work.
 - Keep module reports compact and derived.
-- Prefer `agentic-planning-bootstrap report --format json` and `agentic-memory-bootstrap report --format json` when the question is module state alone rather than combined workspace state.
+- Prefer `agentic-planning report --format json` and `agentic-memory report --format json` when the question is module state alone rather than combined workspace state.
 - Keep concern-shaped subobjects narrow enough that one question does not force unrelated contract domains to load.
 - Keep discovery read-only until a setup promotion explicitly decides to seed.
 - Keep `agentic-workspace summary --format json` as the planning-side companion surface rather than stretching the workspace report into a second planning schema.
@@ -197,3 +197,4 @@ Use [`docs/maintainer/lazy-discovery-measurements.md`](../../docs/maintainer/laz
 
 Use `agentic-workspace setup --target ./repo --format json` when the report has already identified a bounded follow-through path and you want the public setup surface rather than the broader combined report.
 Use [`.agentic-workspace/docs/standing-intent-contract.md`](standing-intent-contract.md) for the standing-intent classes and owner mapping behind the effective report view.
+

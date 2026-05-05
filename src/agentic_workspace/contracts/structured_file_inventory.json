@@ -385,6 +385,30 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": ".agentic-workspace/skills/REGISTRY.json",
+      "format": "json",
+      "owner": "workspace-skills",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic-workspace skills discovery",
+      "editable_by_agents": false,
+      "generated": false,
+      "notes": "Workspace skill registry is consumed by skill discovery for first-contact routing, proof, closeout, and module-boundary guidance.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
+      "pattern": "src/agentic_workspace/_payload/.agentic-workspace/skills/REGISTRY.json",
+      "format": "json",
+      "owner": "workspace-skills",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic-workspace skills discovery",
+      "editable_by_agents": false,
+      "generated": false,
+      "notes": "Source payload workspace skill registry is consumed by install/upgrade and skill discovery.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
       "pattern": "tools/agent-manifest.json",
       "format": "json",
       "owner": "planning-payload",

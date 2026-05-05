@@ -22,7 +22,7 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
    - or repo changes discovered from version control
 3. Use the repo's routing help first:
    - run `agentic-memory-bootstrap sync-memory --files <paths...>` when available
-   - run `agentic-memory-bootstrap route --files <paths...>` when useful for note selection
+   - run `agentic-memory route --files <paths...>` when useful for note selection
    - when `.agentic-workspace/memory/repo/manifest.toml` exists, prefer manifest-triggered note matches as the first stale-memory candidates
    - treat `.agentic-workspace/memory/WORKFLOW.md` as reference policy only when the task touches the memory contract or policy boundary
 4. Load only the affected notes.
@@ -37,7 +37,7 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
 8. If active state changed, keep it in planning/status or local-only scratch. If routing calibration changed, update `.agentic-workspace/memory/repo/current/routing-feedback.md`.
 9. If the repeated procedure is repository-specific, create a new sibling skill under `.agentic-workspace/memory/repo/skills/` instead of expanding this shared core skill.
 10. Run the memory freshness audit when available.
-11. If a note is acting as an improvement signal, run `agentic-memory-bootstrap promotion-report --notes <note>` and prefer the smallest justified post-remediation memory shape: keep the note only if it still saves rediscovery cost, otherwise shrink it to a stub or remove it.
+11. If a note is acting as an improvement signal, run `agentic-memory promotion-report --notes <note>` and prefer the smallest justified post-remediation memory shape: keep the note only if it still saves rediscovery cost, otherwise shrink it to a stub or remove it.
 
 ## Decision rules
 

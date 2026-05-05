@@ -308,8 +308,8 @@ def _schema_record_warnings(
         if expected_kind == "planning-execplan/v1" and location == "<root>" and error.validator == "additionalProperties":
             message = (
                 f"{message}. This is not a valid Agentic Workspace execplan; create the outer structure with "
-                "`agentic-planning-bootstrap new-plan --id <id> --title <title>` or promote an existing item with "
-                "`agentic-planning-bootstrap promote-to-plan <item-id>`."
+                "`agentic-planning new-plan --id <id> --title <title>` or promote an existing item with "
+                "`agentic-planning promote-to-plan <item-id>`."
             )
         warnings.append(
             PlanningWarning(
@@ -343,8 +343,8 @@ def _foreign_pm_shape_warnings(record_path: Path) -> list[PlanningWarning]:
             (
                 "This is not a valid Agentic Workspace execplan shape; "
                 + "; ".join(parts)
-                + ". Recover with `agentic-planning-bootstrap new-plan --id <id> --title <title>` "
-                "or `agentic-planning-bootstrap promote-to-plan <item-id>` before implementation."
+                + ". Recover with `agentic-planning new-plan --id <id> --title <title>` "
+                "or `agentic-planning promote-to-plan <item-id>` before implementation."
             ),
         )
     ]
@@ -562,7 +562,7 @@ def _freehand_planning_artifact_warnings(*, repo_root: Path) -> list[PlanningWar
                 (
                     "This looks like freehand planning or handoff state outside the canonical planning surfaces. "
                     "Use `agentic-workspace planning --format json` and its `durable_state_bridge` route; prefer "
-                    "`agentic-planning-bootstrap new-plan --id <id> --title <title> --target . --activate --format json` "
+                    "`agentic-planning new-plan --id <id> --title <title> --target . --activate --format json` "
                     "or `.agentic-workspace/planning/decompositions/*.decomposition.json` for epic shaping."
                 ),
             )
@@ -669,7 +669,7 @@ def _unsupported_state_activation_shape_warnings(state: dict[str, object] | None
                         "but current planning state expects item objects in `todo.active_items` or `todo.queued_items`. "
                         "Do not delete `state.toml` as the first recovery step; preserve the evidence and make the "
                         "smallest schema-preserving correction. Recover with "
-                        "`agentic-planning-bootstrap new-plan --id <id> --title <title> --activate` "
+                        "`agentic-planning new-plan --id <id> --title <title> --activate` "
                         "or migrate the reference to a supported item object."
                     ),
                 )

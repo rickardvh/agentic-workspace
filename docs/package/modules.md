@@ -6,7 +6,7 @@
 
 | Profile | Modules | Checked-in footprint |
 | --- | --- | --- |
-| routing-only | none | root config, startup, ownership, and report routing surfaces |
+| routing-only | none | root config, startup, ownership, workspace skills, module map, and report routing surfaces |
 | memory | Memory | durable repo knowledge surfaces |
 | planning | Planning | active execution state and execplan surfaces |
 | full | Planning and Memory | both active work state and durable repo knowledge |
@@ -29,6 +29,8 @@ Planning is not a ticketing system, backlog manager, durable knowledge base, or 
 
 Package reference: [Planning README](../../packages/planning/README.md).
 
+Preferred command name: `agentic-planning`. `agentic-planning-bootstrap` remains a compatibility alias.
+
 ## Memory
 
 Memory owns durable repo knowledge that is expensive to rediscover. Use it when agents repeatedly relearn the same boundaries, runbooks, invariants, or subsystem orientation.
@@ -45,6 +47,8 @@ Memory is good for:
 Memory is not active task state, execution history, issue triage, or a replacement for canonical docs.
 
 Package reference: [Memory README](../../packages/memory/README.md).
+
+Preferred command name: `agentic-memory`. `agentic-memory-bootstrap` remains a compatibility alias.
 
 ## Command Generation
 

@@ -1,6 +1,6 @@
-# agentic-memory-bootstrap
+# Agentic Memory
 
-Agentic Memory is a checked-in repo-memory contract for anti-rediscovery knowledge: durable, shared technical context that is expensive to reconstruct across agents, contributors, sessions, and branches. The `agentic-memory-bootstrap` package and CLI install and maintain that contract inside a repository.
+Agentic Memory is a checked-in repo-memory contract for anti-rediscovery knowledge: durable, shared technical context that is expensive to reconstruct across agents, contributors, sessions, and branches. The `agentic-memory-bootstrap` package installs and maintains that contract inside a repository. The preferred CLI command is `agentic-memory`; `agentic-memory-bootstrap` remains a compatibility alias for existing installs.
 
 ## At A Glance
 
@@ -23,7 +23,7 @@ Do not use it for:
 - issue triage or bug history
 - broad canonical product documentation
 
-If what you need is active work steering rather than durable repo memory, start with `agentic-planning-bootstrap` instead.
+If what you need is active work steering rather than durable repo memory, start with `agentic-planning` instead.
 
 Current maturity in this repo: beta.
 
@@ -111,7 +111,7 @@ Some AI agents, such as GitHub Copilot, have their own built-in memory, but that
 - **Captures anti-rediscovery knowledge that no single session owns.** Invariants, authority boundaries, recurring traps, and operator procedures accumulate across many sessions and many contributors. No individual agent memory is the right home for team-wide lessons.
 - **Stays auditable and reviewable.** Checked-in notes go through normal code review and version history, making it visible when knowledge changes and why.
 
-`agentic-memory-bootstrap` installs a small `.agentic-workspace/memory/repo/` tree that agents load selectively on each task start, giving them the smallest useful slice of durable context without bulk-reading the codebase.
+`agentic-memory` installs a small `.agentic-workspace/memory/repo/` tree that agents load selectively on each task start, giving them the smallest useful slice of durable context without bulk-reading the codebase.
 
 For many users the simplest mental model is: planning tells an agent what matters now; memory tells an agent what is expensive to forget.
 When both modules are installed, the combined install should be cheaper than either one alone: planning borrows durable context from memory, and completed planning work promotes durable residue back into memory or canonical docs instead of re-explaining it forever.
@@ -249,7 +249,7 @@ Typical lifecycle for a fresh bootstrap:
 2. If legacy current-memory files already exist, migrate durable facts to memory/docs, active state to planning/status, and transient context to local-only scratch before deleting them.
 3. Run `bootstrap-cleanup` when bootstrap lifecycle work is complete.
 
-After the agent finishes install or adopt lifecycle work, run `agentic-memory-bootstrap bootstrap-cleanup --target ./repo`, or let the agent run it, to remove the temporary `.agentic-workspace/memory/bootstrap/` workspace.
+After the agent finishes install or adopt lifecycle work, run `agentic-memory bootstrap-cleanup --target ./repo`, or let the agent run it, to remove the temporary `.agentic-workspace/memory/bootstrap/` workspace.
 
 If you omit the placeholder flags such as `--project-name` or `--project-purpose`, your `AGENTS.md` will contain unfilled placeholders. Run `doctor` after install to identify them.
 
@@ -272,12 +272,12 @@ Then run:
 
 ```bash
 # First-time install
-agentic-memory-bootstrap doctor --target ./repo
-agentic-memory-bootstrap install --target ./repo
+agentic-memory doctor --target ./repo
+agentic-memory install --target ./repo
 
 # Conservative adoption into an existing repo
-agentic-memory-bootstrap doctor --target ./repo
-agentic-memory-bootstrap adopt --target ./repo
+agentic-memory doctor --target ./repo
+agentic-memory adopt --target ./repo
 ```
 
 If you are working from a local clone, replace the Git URL with `.`.
@@ -303,9 +303,9 @@ This is the preferred upgrade path for the primary agent-first workflow. The pro
 After installation, run:
 
 ```bash
-agentic-memory-bootstrap doctor --target ./repo
-agentic-memory-bootstrap upgrade --dry-run --target ./repo
-agentic-memory-bootstrap upgrade --target ./repo
+agentic-memory doctor --target ./repo
+agentic-memory upgrade --dry-run --target ./repo
+agentic-memory upgrade --target ./repo
 ```
 
 ## Uninstall

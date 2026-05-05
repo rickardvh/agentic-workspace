@@ -63,7 +63,7 @@ Agents have bounded initiative to:
 
 ### Orchestrator-Worker Handoff
 When a stronger planner delegates work to a smaller or separate executor:
-- **Contract Source**: Derive the handoff from `agentic-planning-bootstrap handoff --format json`.
+- **Contract Source**: Derive the handoff from `agentic-planning handoff --format json`.
 - **Agent-Agnostic**: The handoff should not prescribe a specific executor model or brand.
 - **Write Scope**: The worker's assigned scope must be explicit and narrow.
 - **Execution Bounds**: Keep allowed paths, max-changed-file guidance, required validation, and ask-before-refactor thresholds close to the active plan rather than in chat-only instructions.
@@ -138,6 +138,7 @@ The final state before archive must include:
 ## 5. Relationship to Tooling
 
 - `agentic-workspace summary --format json`: Compact machine-readable state recovery.
-- `agentic-planning-bootstrap handoff --format json`: Derived worker contract.
+- `agentic-planning handoff --format json`: Derived worker contract.
 - `agentic-workspace report --target ./repo --format json`: Combined workspace status.
 - `agentic-workspace doctor --target ./repo`: Run deep diagnostics and planning hygiene checks.
+

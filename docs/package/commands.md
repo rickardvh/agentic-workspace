@@ -20,13 +20,15 @@ This page is a human navigation map for the shipped `agentic-workspace` command 
 
 | Command | Use when |
 | --- | --- |
-| `agentic-planning-bootstrap new-plan --id <id> --title <title> --target ./repo --activate --format json` | create and register a schema-backed execplan scaffold for active planned work |
-| `agentic-planning-bootstrap promote-to-plan <item-id> --target ./repo --format json` | promote one selected planning item or lane into active checked-in execution state |
-| `agentic-planning-bootstrap archive-plan <plan> --target ./repo --format json` | archive a completed plan after proof, intent satisfaction, closeout, and residue routing are explicit |
+| `agentic-planning new-plan --id <id> --title <title> --target ./repo --activate --format json` | create and register a schema-backed execplan scaffold for active planned work |
+| `agentic-planning promote-to-plan <item-id> --target ./repo --format json` | promote one selected planning item or lane into active checked-in execution state |
+| `agentic-planning archive-plan <plan> --target ./repo --format json` | close a completed plan after proof, intent satisfaction, closeout, and residue routing are explicit |
 
 `new-plan` creates a valid scaffold, not a finished implementation contract. Tighten goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and assurance before implementation.
 
 For ordered roadmap lanes, promote and complete one lane at a time. A lane may need multiple execplans, but one execplan should not span unrelated lanes.
+
+`agentic-planning-bootstrap` remains a compatibility alias for existing installs and docs. Prefer `agentic-planning` in new workflow guidance.
 
 ## Workspace Lifecycle Mutation Commands
 
@@ -47,7 +49,7 @@ For ordered roadmap lanes, promote and complete one lane at a time. A lane may n
 | `config` | inspect resolved repo and local workspace posture |
 | `ownership` | answer which surface owns a path or concern |
 | `modules` | list available or installed modules |
-| `skills` | list registered package or repo skills |
+| `skills` | list registered workspace, package, or repo skills |
 | `status` | summarize installed module state |
 
 ## Advanced Diagnostics

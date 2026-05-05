@@ -528,7 +528,7 @@ def suggest_memory_note_capture(
             "reason": "memory manifest is missing or invalid",
             "owner_surface": MANIFEST_PATH.as_posix(),
             "recommended_action": "repair-memory-first",
-            "commands": ["agentic-memory-bootstrap doctor --target ./repo --format json"],
+            "commands": ["agentic-memory doctor --target ./repo --format json"],
         }
 
     candidates: list[dict[str, object]] = []
@@ -577,11 +577,11 @@ def suggest_memory_note_capture(
         reason = "an existing Memory note appears to own this durable learning"
     elif best and force_reason:
         recommended_action = "create-new-note-with-explicit-justification"
-        next_command = f"agentic-memory-bootstrap create-note {safe_slug} --target ./repo --summary <text> --format json"
+        next_command = f"agentic-memory create-note {safe_slug} --target ./repo --summary <text> --format json"
         reason = "an existing candidate exists, but --force-new-reason records why a separate note is justified"
     else:
         recommended_action = "create-new-note"
-        next_command = f"agentic-memory-bootstrap create-note {safe_slug} --target ./repo --summary <text> --format json"
+        next_command = f"agentic-memory create-note {safe_slug} --target ./repo --summary <text> --format json"
         reason = "no existing Memory note matched the capture request"
 
     return {
@@ -594,7 +594,7 @@ def suggest_memory_note_capture(
         "force_new_reason": force_reason,
         "candidate_count": len(candidates),
         "candidates": candidates[:5],
-        "commands": [next_command, "agentic-memory-bootstrap doctor --target ./repo --format json"],
+        "commands": [next_command, "agentic-memory doctor --target ./repo --format json"],
     }
 
 
@@ -1060,7 +1060,7 @@ def doctor_bootstrap(
             target_root / LEGACY_UPGRADE_SOURCE_PATH,
             (
                 "legacy managed layout detected; the next "
-                "`agentic-memory-bootstrap upgrade --target <repo>` will "
+                "`agentic-memory upgrade --target <repo>` will "
                 "migrate bootstrap-managed files into `.agentic-workspace/memory/` "
                 "automatically"
             ),
@@ -2947,7 +2947,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
             }
             for item in elimination_candidates[:5]
         ],
-        "command": "agentic-memory-bootstrap promotion-report --target ./repo --mode remediation --format json",
+        "command": "agentic-memory promotion-report --target ./repo --mode remediation --format json",
     }
     manual_review_total = sum(1 for action in significant_actions if action.kind in {"manual review", "missing"})
     warning_total = sum(1 for action in significant_actions if action.kind == "warning")
@@ -2963,46 +2963,46 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
         note = stale_notes[0]
         next_action_summary = f"Review stale memory note {note['path']} before trusting it again."
         next_action_commands = [
-            "agentic-memory-bootstrap report --target ./repo --format json",
-            "agentic-memory-bootstrap promotion-report --target ./repo --mode remediation",
+            "agentic-memory report --target ./repo --format json",
+            "agentic-memory promotion-report --target ./repo --mode remediation",
         ]
     elif manual_review_total or warning_total:
         first_finding = findings[0] if findings else None
         if isinstance(first_finding, dict):
             next_action_summary = str(first_finding.get("message", next_action_summary))
         next_action_commands = [
-            "agentic-memory-bootstrap doctor --target ./repo",
-            "agentic-memory-bootstrap promotion-report --target ./repo --mode remediation",
+            "agentic-memory doctor --target ./repo",
+            "agentic-memory promotion-report --target ./repo --mode remediation",
         ]
     elif recurring_friction["promotion_pressure_count"]:
         next_action_summary = "Recurring friction has repeated enough times that it should promote into stronger remediation instead of staying note-only evidence."
         next_action_commands = [
             "agentic-workspace report --target ./repo --format json",
-            "agentic-memory-bootstrap promotion-report --target ./repo --mode remediation",
+            "agentic-memory promotion-report --target ./repo --mode remediation",
         ]
     elif remediation_counts.get("candidate", 0):
         next_action_summary = "Review bounded promotion or elimination candidates before memory residue grows."
-        next_action_commands = ["agentic-memory-bootstrap promotion-report --target ./repo --mode remediation"]
+        next_action_commands = ["agentic-memory promotion-report --target ./repo --mode remediation"]
     elif questionable_notes:
         note = questionable_notes[0]
         next_action_summary = f"Ground questionable durable note {note['path']} with evidence anchors or demote it."
         next_action_commands = [
-            "agentic-memory-bootstrap report --target ./repo --format json",
-            "agentic-memory-bootstrap doctor --target ./repo",
+            "agentic-memory report --target ./repo --format json",
+            "agentic-memory doctor --target ./repo",
         ]
     elif usefulness_audit["status"] == "needs-more-proof":
         next_action_summary = str(usefulness_audit["summary"])
-        next_action_commands = ["agentic-memory-bootstrap route-report --target ./repo"]
+        next_action_commands = ["agentic-memory route-report --target ./repo"]
     elif route_snapshot.route_report_summary:
         next_action_summary = "Use the routing report when ordinary work should prove Memory is the cheapest relevant path."
-        next_action_commands = ["agentic-memory-bootstrap route-report --target ./repo"]
+        next_action_commands = ["agentic-memory route-report --target ./repo"]
 
     return {
         "kind": "memory-module-report/v1",
         "schema": {
             "schema_version": "module-report-schema/v1",
             "module": "memory",
-            "command": "agentic-memory-bootstrap report --target ./repo --format json",
+            "command": "agentic-memory report --target ./repo --format json",
             "canonical_docs": [
                 ".agentic-workspace/docs/reporting-contract.md",
                 "packages/memory/README.md",
@@ -3050,21 +3050,20 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
                 {
                     "artifact": "memory_capture_recommendation",
                     "command": (
-                        "agentic-memory-bootstrap capture-note <slug> --target ./repo --summary <text> "
-                        "--files <changed paths> --format json"
+                        "agentic-memory capture-note <slug> --target ./repo --summary <text> --files <changed paths> --format json"
                     ),
                     "writes": [],
-                    "proof": "agentic-memory-bootstrap doctor --target ./repo --format json",
+                    "proof": "agentic-memory doctor --target ./repo --format json",
                     "rule": "Run before create-note when durable learning might belong in an existing note.",
                 },
                 {
                     "artifact": "memory_note",
-                    "command": "agentic-memory-bootstrap create-note <slug> --target ./repo --summary <text> --format json",
+                    "command": "agentic-memory create-note <slug> --target ./repo --summary <text> --format json",
                     "writes": [
                         ".agentic-workspace/memory/repo/<folder>/<slug>.md",
                         MANIFEST_PATH.as_posix(),
                     ],
-                    "proof": "agentic-memory-bootstrap doctor --target ./repo --format json",
+                    "proof": "agentic-memory doctor --target ./repo --format json",
                 },
             ],
         },

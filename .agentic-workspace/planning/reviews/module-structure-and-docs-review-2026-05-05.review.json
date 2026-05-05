@@ -1,0 +1,185 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Workspace, Planning, and Memory structure and documentation review",
+  "goal": [
+    "Review whether the workspace, planning, and memory module structures and docs give agents a clear, low-prose operating path."
+  ],
+  "scope": [
+    "Root workspace package docs and installed `.agentic-workspace` surfaces",
+    "Planning package naming, docs, skills, and closeout surfaces",
+    "Memory package naming, docs, skills, and routing surfaces"
+  ],
+  "non_goals": [
+    "Implement fixes",
+    "Promote findings into active planning",
+    "Audit every generated schema page field-by-field"
+  ],
+  "review_mode": {
+    "mode": "skill-system",
+    "review question": "Do module docs, names, and skill surfaces make the correct workflow obvious without forcing agents through broad prose?",
+    "default finding cap": "3 findings; exceeded to capture cross-module naming and closeout drift separately",
+    "inputs inspected first": "`.agentic-workspace/WORKFLOW.md`, `agentic-workspace skills --target . --task ... --format json`, package READMEs, installed surface docs, module pyprojects, module CLIs"
+  },
+  "review_method": {
+    "commands used": "agentic-workspace summary; agentic-workspace skills; rg for bootstrap/skills/archive/doc surfaces; targeted Get-Content reads with line numbers",
+    "evidence sources": "Static inspection plus friction-confirmed context from recent agent confusion around bootstrap naming, planning creation, and archive/closeout behavior"
+  },
+  "references": [
+    {
+      "kind": "file",
+      "target": ".agentic-workspace/WORKFLOW.md",
+      "label": "Workspace workflow router",
+      "role": "evidence",
+      "locator": "lines 1-41"
+    },
+    {
+      "kind": "file",
+      "target": "src/agentic_workspace/cli.py",
+      "label": "Root skill catalog sources",
+      "role": "evidence",
+      "locator": "lines 15669-15705"
+    },
+    {
+      "kind": "file",
+      "target": "packages/planning/pyproject.toml",
+      "label": "Planning public package and script names",
+      "role": "evidence",
+      "locator": "lines 5-49"
+    },
+    {
+      "kind": "file",
+      "target": "packages/memory/pyproject.toml",
+      "label": "Memory public package and script names",
+      "role": "evidence",
+      "locator": "lines 5-41"
+    },
+    {
+      "kind": "file",
+      "target": ".agentic-workspace/planning/execplans/README.md",
+      "label": "Execplan archive guidance",
+      "role": "evidence",
+      "locator": "lines 35-49 and 217-239"
+    }
+  ],
+  "findings": [
+    {
+      "title": "The workspace layer has no first-party skill surface for its own ordinary workflow",
+      "summary": "The installed workspace first route is mandatory and CLI-first, but workspace-owned repeatable procedures are not exposed as skills. Skill discovery only knows planning, memory, repo-memory, and repo-tools registries.",
+      "evidence": "`.agentic-workspace/WORKFLOW.md` tells agents to use `skills` before prose and to use package skills when recommended. `src/agentic_workspace/cli.py` registers `.agentic-workspace/planning/skills`, `.agentic-workspace/memory/skills`, `.agentic-workspace/memory/repo/skills`, and `tools/skills`, but no `.agentic-workspace/skills` or root workspace skill package. `docs/package/modules.md` defines `routing-only` as having no modules, which also means no module-owned skill path.",
+      "risk if unchanged": "Agents in routing-only or first-contact workspace flows remain dependent on prose fallback for the highest-leverage orientation steps. This weakens the package's own skill-first and compact-output story.",
+      "suggested action": "Add a small workspace-owned core skill pack or equivalent agent-aid surface for startup orientation, config-obligation interpretation, proof/closeout routing, and lifecycle/update safety. Register it in `agentic-workspace skills` separately from Planning and Memory.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap or GitHub issue",
+      "promotion trigger": "When optimizing first-contact, routing-only, or cross-module workflow ergonomics",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "`-bootstrap` is still the public and internal identity for non-bootstrap lifecycle modules",
+      "summary": "Both module packages and public commands still use bootstrap naming even when the commands own ongoing lifecycle, reporting, planning mutation, and memory routing work.",
+      "evidence": "`packages/planning/pyproject.toml` publishes `agentic-planning-bootstrap`; its CLI help explicitly says the name is historical while it owns `new-plan`, `promote-to-plan`, and `archive-plan`. `packages/memory/pyproject.toml` publishes `agentic-memory-bootstrap`; its CLI includes route, report, sync, promotion, and create-note operations. `docs/planning-cli-naming.md` acknowledges the mismatch but leaves preferred names deferred.",
+      "risk if unchanged": "Agents keep inferring that the CLIs are install-only bootstrap tools or that ongoing workflow should be treated as bootstrap work. That has already produced real workflow confusion.",
+      "suggested action": "Introduce preferred aliases such as `agentic-planning` and `agentic-memory`, keep `*-bootstrap` as compatibility aliases, and update normal docs, WORKFLOW, command maps, and help to prefer the non-bootstrap names. Defer package/module renames until aliases prove stable.",
+      "confidence": "high",
+      "source": "friction-confirmed",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap or GitHub issue",
+      "promotion trigger": "Before the next public-facing docs or CLI ergonomics tranche",
+      "post-remediation note shape": "retain"
+    },
+    {
+      "title": "Planning closeout docs still teach archive as the normal completed-plan destination",
+      "summary": "The implementation now removes completed execplans after closeout distillation by default, but several docs and command names still center archive language.",
+      "evidence": "`.agentic-workspace/planning/execplans/README.md` says to move completed plans into `execplans/archive/` and says durable residue can use `evidence_only` when the archived plan is the right owner. `packages/planning/README.md` still lists `archive-plan` as the normal command and describes archive output as inactive residue, while the CLI now has `--retain-archive` as a legacy escape hatch.",
+      "risk if unchanged": "Agents can continue growing archive files or preserve plan history in Planning when the intended closeout behavior is distill, route durable learning to Memory/docs/contracts/checks/planning, then remove the completed execplan.",
+      "suggested action": "Rename or alias the normal operation as `close-plan` or `closeout-plan`, make archive retention explicitly legacy/audit-only in the first docs agents see, and update execplan README layout rules to match live-only Planning.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap or GitHub issue",
+      "promotion trigger": "Before further closeout or archive-retention work",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "The module docs have a good hierarchy in source docs, but the installed workspace still lacks a compact module-level abstraction ladder",
+      "summary": "Root docs now explain the product, packages, modules, installed surfaces, and generated references well. The installed `.agentic-workspace` layer still presents many deep contract docs and module roots without a tiny skill-backed or structured module map that answers what to open next.",
+      "evidence": "`docs/index.md`, `docs/package/overview.md`, `docs/package/modules.md`, and `docs/package/installed-surfaces.md` form a coherent source-doc hierarchy. In the installed repo, `.agentic-workspace/WORKFLOW.md` tells agents to open raw planning, memory, module, or workflow files only when compact output points there, while `.agentic-workspace/docs/` contains many contract pages and no root workspace skill to route the next step.",
+      "risk if unchanged": "The repo source docs are navigable for maintainers, but installed host-repo agents can still fall back to prose archaeology across `.agentic-workspace/docs`, Planning, and Memory when compact output is insufficient or missed.",
+      "suggested action": "Add a compact installed module map or workspace skill that exposes the abstraction ladder: workspace orchestration, Planning active execution, Memory durable knowledge, docs/contracts generated reference. Keep it as a router, not another manual.",
+      "confidence": "medium",
+      "source": "static-analysis",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap or GitHub issue",
+      "promotion trigger": "When improving installed-host ergonomics or reducing token use",
+      "post-remediation note shape": "delete"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote the workspace skill surface gap, bootstrap alias migration, and closeout/archive wording drift as implementation issues.",
+    "defer": "Defer a larger docs-IA rewrite; the source documentation hierarchy is already materially better than the installed workflow affordance gap.",
+    "dismiss": "Do not treat Memory's prose/skill structure as a primary bug; Memory has the clearest skill and routing model of the three modules."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "After promoted issues land or are explicitly deferred",
+    "proof surface": "Issue links plus updated command maps, module docs, skill registries, and closeout docs",
+    "source retention rule": "Store decision, confidence, source refs, and reopen/promote triggers; do not copy issue titles, current status snapshots, long command output, or source summaries unless the copied text is the judgment itself.",
+    "distillation path": "When decisions are promoted into issues, planning state, Memory, docs, contracts, or checks, keep this artifact as evidence/history and remove or summarize reconstructable source context at the next cleanup.",
+    "reconstructable refs": [
+      "review artifact path",
+      "source file line references",
+      "future issue ids"
+    ],
+    "fields intentionally omitted": [
+      "long command output",
+      "full skill listing",
+      "full bootstrap occurrence inventory"
+    ]
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace skills --target . --task \"review workspace planning memory module documentation and structure\" --format json",
+    "rg -n \"bootstrap|agentic-planning-bootstrap|agentic-memory-bootstrap|repo_planning_bootstrap|repo_memory_bootstrap|-bootstrap\" pyproject.toml packages src docs README.md .agentic-workspace",
+    "rg --files .agentic-workspace | rg \"SKILL.md|skills|WORKFLOW.md|docs|planning|memory\""
+  ],
+  "drift_log": [
+    "2026-05-05: Review created from requested structure/documentation review; no activation occurred."
+  ]
+}

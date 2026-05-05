@@ -14,6 +14,7 @@ The root package ships:
 - lifecycle commands for installing, adopting, upgrading, checking, and removing managed surfaces;
 - compact context commands such as `start`, `summary`, `preflight`, `report`, `proof`, `ownership`, and `config`;
 - first-party module composition for Planning and Memory;
+- package-managed workspace skills for first-contact startup, routing, proof, closeout, and module-boundary orientation;
 - machine-readable contracts under `src/agentic_workspace/contracts/`;
 - JSON schemata and generated reference docs for those contracts;
 - thin startup adapters such as `AGENTS.md` and `llms.txt` when installed into a host repository.
@@ -52,7 +53,7 @@ For exact startup and report payload shapes, see [Startup context](../reference/
 
 | Preset | Selected modules | Use when |
 | --- | --- | --- |
-| routing-only | none | the repo only needs compact entrypoint, config, and report routing surfaces |
+| routing-only | none | the repo only needs compact entrypoint, config, workspace skills, module-map, and report routing surfaces |
 | memory | Memory | durable repo knowledge should prevent repeated rediscovery |
 | planning | Planning | active execution state, proof expectations, handoff, or lane closeout must be recoverable |
 | full | Planning and Memory | both active execution state and durable repo knowledge are worth the shared footprint |

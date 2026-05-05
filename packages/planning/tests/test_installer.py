@@ -112,7 +112,7 @@ def _write_execplan_record(
         record["execution_run"] = {
             "run status": "completed",
             "executor": "bounded external executor",
-            "handoff source": "agentic-planning-bootstrap handoff --format json",
+            "handoff source": "agentic-planning handoff --format json",
             "what happened": "implemented the bounded checker update and returned compact residue.",
             "scope touched": "scripts/check/check_planning_surfaces.py",
             "changed surfaces": "scripts/check/check_planning_surfaces.py",
@@ -215,7 +215,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
     execution_run = (
         "- Run status: completed\n"
         "- Executor: bounded external executor\n"
-        "- Handoff source: agentic-planning-bootstrap handoff --format json\n"
+        "- Handoff source: agentic-planning handoff --format json\n"
         "- What happened: implemented the bounded checker update and returned compact residue.\n"
         "- Scope touched: scripts/check/check_planning_surfaces.py\n"
         "- Changed surfaces: scripts/check/check_planning_surfaces.py\n"
@@ -225,7 +225,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
         if status in {"completed", "done", "closed"}
         else "- Run status: not-run-yet\n"
         "- Executor: pending\n"
-        "- Handoff source: agentic-planning-bootstrap handoff --format json\n"
+        "- Handoff source: agentic-planning handoff --format json\n"
         "- What happened: pending delegated execution.\n"
         "- Scope touched: scripts/check/check_planning_surfaces.py\n"
         "- Changed surfaces: none yet; execution has not changed files.\n"
@@ -637,7 +637,7 @@ def test_install_dry_run_json_includes_compact_lifecycle_plan(tmp_path: Path, ca
     assert plan["summary"]["review_required_count"] >= 0
     assert plan["files"]["create"]
     assert plan["local_only_state"]["status"] == "not-authoritative"
-    assert plan["next_safe_command"].startswith("agentic-planning-bootstrap install --target ")
+    assert plan["next_safe_command"].startswith("agentic-planning install --target ")
 
 
 def test_install_include_optional_dry_run_json_includes_optional_payload(tmp_path: Path, capsys) -> None:
@@ -693,7 +693,7 @@ def test_bootstrap_upgrade_skill_uses_root_lifecycle_without_unshipped_helper_sc
         assert "agentic-workspace upgrade --target <repo> --dry-run --format json" in text
         assert "agentic-workspace upgrade --target <repo> --format json" in text
         assert "agentic-workspace doctor --target <repo> --format json" in text
-        assert "agentic-planning-bootstrap upgrade --target <repo>" in text
+        assert "agentic-planning upgrade --target <repo>" in text
         assert "package-local debugging" in text
         assert "scripts/render_agent_docs.py" not in text
         assert "scripts/check/check_maintainer_surfaces.py" not in text
@@ -878,7 +878,7 @@ def test_list_files_json_separates_default_optional_and_skill_payloads(capsys) -
     assert "planning-autopilot/SKILL.md" in payload["bundled_skill_files"]
     assert ".agentic-workspace/docs/capability-contract.json" in payload["files"]
     assert "skills/planning-autopilot/SKILL.md" not in payload["files"]
-    assert "agentic-planning-bootstrap install --include-optional" in payload["optional_enable_commands"]
+    assert "agentic-planning install --include-optional" in payload["optional_enable_commands"]
 
 
 def test_bootstrap_review_readme_includes_canonical_review_portfolio() -> None:
@@ -4239,7 +4239,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     )
     assert summary["execution_run_contract"]["status"] == "present"
     assert summary["execution_run_contract"]["run_status"] == "not-run-yet"
-    assert summary["execution_run_contract"]["handoff_source"] == "agentic-planning-bootstrap handoff --format json"
+    assert summary["execution_run_contract"]["handoff_source"] == "agentic-planning handoff --format json"
     assert summary["execution_run_contract"]["changed_surfaces"] == "none yet; execution has not changed files."
     assert summary["finished_run_review_contract"]["status"] == "present"
     assert summary["finished_run_review_contract"]["review_status"] == "pending"
@@ -4669,7 +4669,7 @@ def test_planning_report_derives_compact_module_state_from_summary(tmp_path: Pat
     report = planning_report(target=tmp_path)
 
     assert report["kind"] == "planning-module-report/v1"
-    assert report["schema"]["command"] == "agentic-planning-bootstrap report --format json"
+    assert report["schema"]["command"] == "agentic-planning report --format json"
     assert report["status"]["active_todo_count"] == 1
     assert report["status"]["active_execplan_count"] == 1
     assert report["status"]["roadmap_lane_count"] == 0

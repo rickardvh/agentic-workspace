@@ -1298,11 +1298,9 @@ def _workspace_self_adaptation_guardrail_payload() -> dict[str, Any]:
 
 def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
     target_arg = f" --target {target}" if target else " --target ."
-    new_plan_command = f"agentic-planning-bootstrap new-plan --id <id> --title <title>{target_arg} --activate --format json"
-    prep_only_new_plan_command = (
-        f"agentic-planning-bootstrap new-plan --id <id> --title <title>{target_arg} --activate --prep-only --format json"
-    )
-    promote_command = f"agentic-planning-bootstrap promote-to-plan <item-id>{target_arg} --format json"
+    new_plan_command = f"agentic-planning new-plan --id <id> --title <title>{target_arg} --activate --format json"
+    prep_only_new_plan_command = f"agentic-planning new-plan --id <id> --title <title>{target_arg} --activate --prep-only --format json"
+    promote_command = f"agentic-planning promote-to-plan <item-id>{target_arg} --format json"
     summary_command = f"agentic-workspace summary{target_arg} --format json"
     return {
         "kind": "agentic-workspace/planning-help/v1",
@@ -1315,7 +1313,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         "lifecycle_commands": [
             new_plan_command,
             promote_command,
-            f"agentic-planning-bootstrap archive-plan <plan>{target_arg} --format json",
+            f"agentic-planning archive-plan <plan>{target_arg} --format json",
         ],
         "post_new_plan_tightening": {
             "rule": "new-plan creates a schema-valid scaffold, not an implementation-ready contract.",
@@ -1428,7 +1426,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         "unsafe_state_recovery": {
             "inspect": f"agentic-workspace summary{target_arg} --format json",
             "doctor": f"agentic-workspace doctor{target_arg} --format json",
-            "preferred": f"agentic-planning-bootstrap archive-plan <plan>{target_arg} --format json",
+            "preferred": f"agentic-planning archive-plan <plan>{target_arg} --format json",
             "manual_fallback": (
                 "Make the smallest schema-preserving edit to .agentic-workspace/planning/state.toml or the active "
                 "plan, then rerun summary; do not invent reset flags."
@@ -5875,7 +5873,7 @@ def _memory_command_with_invoke(*, command: str, workspace_cli_invoke: str) -> s
     return _sibling_cli_command_with_invoke(
         command=command,
         workspace_cli_invoke=workspace_cli_invoke,
-        sibling_program="agentic-memory-bootstrap",
+        sibling_program="agentic-memory",
     )
 
 
@@ -5974,7 +5972,7 @@ def _memory_consult_payload(
         "route_matches": route_actions[:max_notes],
         "evidence": evidence if isinstance(evidence, dict) else {},
         "capture_helper": _memory_command_with_invoke(
-            command="agentic-memory-bootstrap capture-note <slug> --target ./repo --summary <text> --files <changed paths> --format json",
+            command="agentic-memory capture-note <slug> --target ./repo --summary <text> --files <changed paths> --format json",
             workspace_cli_invoke=cli_invoke,
         ),
         "promotion_pressure": _memory_payload_commands_with_invoke(value=promotion_pressure, workspace_cli_invoke=cli_invoke),
@@ -9417,7 +9415,7 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
                     "The effective posture reports both a strong planner and a cheap bounded executor.",
                     "The delegated worker handoff can stay canonical even if execution remains internal, external, or direct.",
                 ],
-                "consult": ["agentic-planning-bootstrap handoff --format json"],
+                "consult": ["agentic-planning handoff --format json"],
                 "allowed_execution_methods": handoff_contract.get("worker_contract", {}).get(
                     "allowed_execution_methods",
                     ["internal delegation", "external cli or api", "single-agent fallback"],
@@ -9764,7 +9762,7 @@ def _relay_contract_payload() -> dict[str, Any]:
         "selection_rule": (
             "Use the effective mixed-agent posture from agentic-workspace config, then keep the same handoff contract whether execution stays internal, external over cli or api, or direct."
         ),
-        "handoff_command": "agentic-planning-bootstrap handoff --format json",
+        "handoff_command": "agentic-planning handoff --format json",
         "planner_role": {
             "summary": "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract.",
             "does": [
@@ -11059,7 +11057,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "rule": "Choose the smallest workflow shape before implementation; when Planning is installed, broad work should become checked-in planning before edits.",
                 "planning_mutation_rule": (
                     "Use compact CLI for orientation and proof selection; use package lifecycle commands such as "
-                    "`agentic-planning-bootstrap new-plan`, `promote-to-plan`, and `archive-plan` for planning mutations when available; "
+                    "`agentic-planning new-plan`, `promote-to-plan`, and `archive-plan` for planning mutations when available; "
                     "edit checked-in planning records directly only for bounded content/fallback edits, then rerun summary."
                 ),
                 "levels": [
@@ -11920,8 +11918,8 @@ def _defaults_payload() -> dict[str, Any]:
                 "agentic-workspace config --target ./repo --profile compact --format json",
             ],
             "refresh_contract": [
-                "uv run agentic-planning-bootstrap upgrade --target .",
-                "uv run agentic-memory-bootstrap upgrade --target .",
+                "uv run agentic-planning upgrade --target .",
+                "uv run agentic-memory upgrade --target .",
             ],
             "handoff_surfaces": [
                 "llms.txt",
@@ -15668,6 +15666,15 @@ def _sync_update_policy_actions(
 
 def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:
     return (
+        SkillCatalogSource(
+            name="workspace-core",
+            registry_path=Path(".agentic-workspace/skills/REGISTRY.json"),
+            skills_root=Path(".agentic-workspace/skills"),
+            owner="agentic-workspace",
+            source_kind="installed-workspace-skills",
+            default_scope="bundled",
+            default_stability="package-managed",
+        ),
         SkillCatalogSource(
             name="planning-bundled",
             registry_path=Path(".agentic-workspace/planning/skills/REGISTRY.json"),

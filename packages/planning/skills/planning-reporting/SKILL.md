@@ -13,7 +13,7 @@ Use `agentic-workspace report --target <repo> --format json` first when the ques
 Prefer:
 
 ```bash
-agentic-planning-bootstrap summary --target <repo> --format json
+agentic-planning summary --target <repo> --format json
 ```
 
 This is the canonical compact inspection surface for active planning state. The `planning_record` payload carries the minimum facts needed for safe continuation, including next action and proof expectations.

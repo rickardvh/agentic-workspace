@@ -9,14 +9,14 @@ Use `.agentic-workspace/planning/execplans/*.plan.json` as the canonical execpla
 Use `.agentic-workspace/docs/candidate-lanes-contract.md` for the native `roadmap` lane shape in `.agentic-workspace/planning/state.toml` when grouped deferred work needs more structure than a flat candidate bullet.
 Use `.agentic-workspace/docs/routing-contract.md` when deciding whether newly discovered work belongs in `roadmap`, `todo.active_items`, `.agentic-workspace/planning/execplans/`, or `.agentic-workspace/planning/reviews/`.
 Use `agentic-workspace doctor --target ./repo --format json` for advisory shape and drift warnings across `todo.active_items`, active execplans, and `roadmap`.
-Use `promote-to-plan` and `archive-plan` as thin file-native helpers around the same checked-in contract.
+Use `promote-to-plan` and `archive-plan` as thin file-native helpers around the same checked-in contract. `archive-plan` is the compatibility command name for closeout: by default it distills reusable information and removes the completed execplan from Planning. Retaining an archive is legacy/audit-only.
 Use `docs/environment-recovery-contract.md` for task-local recovery and environment assumptions.
 Use `.agentic-workspace/docs/system-intent-contract.md` for the durable larger-intent and honest-reinterpretation rule.
 Use `docs/intent-contract.md` and `docs/resumable-execution-contract.md` for the compact planning summary contracts.
 Use `docs/execution-summary-contract.md` for the compact outcome shape that completed slices should leave behind before archive.
 Use `archive-plan --apply-cleanup` only when you want the helper to also remove completed active-item references and compress matching roadmap residue for the same archived thread.
 
-After `agentic-planning-bootstrap new-plan`, treat the result as a valid scaffold, not an implementation-ready plan. Before editing product or package files, tighten the concrete goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and `adaptive_assurance` when risk or scope requires it.
+After `agentic-planning new-plan`, treat the result as a valid scaffold, not an implementation-ready plan. Before editing product or package files, tighten the concrete goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and `adaptive_assurance` when risk or scope requires it.
 
 This planning system is for execution. It is not intended to become a generic tracker, backlog database, or Jira replacement.
 
@@ -36,13 +36,13 @@ Flexible fields such as maps and notes are escape hatches for slice-specific res
 
 - Keep active plans at the top level of `.agentic-workspace/planning/execplans/`.
 - Keep only active plans plus `README.md`, `TEMPLATE.md`, and `TEMPLATE.plan.json` at the top level.
-- Move completed plans into `.agentic-workspace/planning/execplans/archive/`.
+- Close completed plans with `agentic-planning archive-plan <plan> --target . --format json`; default closeout removes the completed execplan after distillation.
 - Mark the active milestone `Status` as `completed` before archiving a finished plan.
 - Before archive, fill `## Proof Report`, `## Intent Satisfaction`, `## Closure Check`, and `## Durable Residue` so proof, intent closure, and future-relevant residue routing are explicit.
 - Keep exactly one active milestone and one immediate next action by default.
 - Prefer feature-scoped plan files over growing broad shared hot files.
 - Skip `archive/` during normal startup unless the task explicitly needs historical plan context.
-- Do not treat `todo.active_items`, `roadmap`, or active execplans as long-form completion logs; once a plan is complete, archive it and remove the completed-work detail from forward-looking planning surfaces.
+- Do not treat `todo.active_items`, `roadmap`, or active execplans as long-form completion logs; once a plan is complete, close it and remove the completed-work detail from forward-looking planning surfaces.
 - When a completed slice came from `todo.active_items` or `roadmap`, remove or archive the matched queue residue in the same pass rather than leaving stale completed candidates behind.
 - Do not confuse slice completion with lane completion; a slice can ship while the larger intent remains open, and archive should wait until the lane-level proof is explicit.
 - Do not combine unrelated roadmap lanes into one umbrella execplan. Promote and complete ordered lanes sequentially; use multiple execplans under one lane only when that lane itself needs multiple bounded slices.
@@ -214,7 +214,7 @@ Closure checks belong under `## Closure Check` for completed or nearly-complete 
 - `Evidence carried forward`
 - `Reopen trigger`
 
-Prefer `agentic-planning-bootstrap archive-plan <plan> --prepare-closeout` before hand-editing closeout fields; it writes a valid closeout patch from the current record.
+Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields; it writes a valid closeout patch from the current record.
 When hand-editing, use the same terminal values archive validation accepts:
 
 - `Slice status`: one of `complete`, `completed`, or `bounded slice complete`
@@ -236,7 +236,7 @@ Durable residue routing belongs under `## Durable Residue` before archive:
 - `Promotion trigger`
 - `Retention after promotion`: one of `retain`, `shrink`, `stub`, or `delete`
 
-Use `none` when the slice created no future-relevant learning. Use `evidence_only` when the archived plan is the right owner because the residue is only proof/history. If the residue should affect future work, route it to Memory, docs, contracts, checks, or Planning; do not leave that motivation owned only by the archive.
+Use `none` when the slice created no future-relevant learning. Use `evidence_only` only when retained archive/audit evidence is intentionally the right owner because the residue is only proof/history. If the residue should affect future work, route it to Memory, docs, contracts, checks, or Planning; do not leave that motivation owned only by a retained archive.
 
 ## Meaning Boundary
 
@@ -313,7 +313,7 @@ Closure discipline should stay cheap and explicit:
 - prefer a narrow search or checker over broad rereads
 - if required follow-on remains, route it into checked-in planning instead of leaving it implicit in chat or drift prose
 
-Keep the drift log decision-shaped and brief. Do not turn an active or completed execplan into a changelog when the same detail is already recoverable from archived plans and git.
+Keep the drift log decision-shaped and brief. Do not turn an active or completed execplan into a changelog when the same detail is already recoverable from git, issue evidence, Memory, docs, or intentionally retained audit archives.
 Execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work. `todo.active_items` should only expose that the work is active and point here.
 Environment-sensitive work should express recovery in the existing plan fields rather than inventing ad hoc restart sections or long troubleshooting prose.
 Use stable headings, explicit status markers, and compact bullets so active plans remain merge-friendly under concurrent edits.
@@ -325,4 +325,5 @@ Prefer refining the existing contract over inventing a second schema. If a propo
 
 Default to one active milestone at a time.
 Prefer updating an existing active plan over creating overlapping plan files for the same feature.
-Archive or collapse completed plans once they no longer affect future execution.
+Close and remove completed plans once they no longer affect future execution; retain archives only when audit or compatibility needs are explicit.
+

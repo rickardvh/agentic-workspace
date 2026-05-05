@@ -12,6 +12,8 @@ An installed host repository gets a small set of checked-in surfaces. Their purp
 | `.agentic-workspace/config.toml` | repo-owned config | selected modules, posture, workflow obligations, and repo-specific settings |
 | `.agentic-workspace/OWNERSHIP.toml` | repo-owned ledger | managed paths, fences, and authority metadata |
 | `.agentic-workspace/WORKFLOW.md` | product-managed workflow adapter | CLI-first bootstrap router and Markdown fallback for installed workspaces |
+| `.agentic-workspace/docs/module-map.md` | product-managed module router | compact abstraction ladder for Workspace, Planning, Memory, and generated references |
+| `.agentic-workspace/skills/` | product-managed workspace skills | first-contact workflow skills for startup, routing, proof, closeout, and module boundaries |
 | `.agentic-workspace/local/` | local-only ignored area | machine-local overrides, caches, and non-shared runtime aids |
 
 The package keeps `AGENTS.md` thin. Durable rules and structured state live under `.agentic-workspace/` or in repo-owned docs, not in a growing startup manual.
@@ -67,7 +69,7 @@ The root workspace package, Planning package, Memory package, and command-genera
 
 | Area | Shipped or installed role | Hidden/source-checkout role |
 | --- | --- | --- |
-| root workspace package | root CLI, shared lifecycle orchestration, contracts, generated adapters, config/report/proof routing | contract tooling, generated-package development, maintainer checks |
+| root workspace package | root CLI, shared lifecycle orchestration, contracts, generated adapters, workspace skills, config/report/proof routing | contract tooling, generated-package development, maintainer checks |
 | Planning | active planning state, execplan templates, selected installed contract docs, planning schemas | package tests, payload verification, optional richer planning surfaces |
 | Memory | durable memory note skeleton, manifest, workflow, package-managed skills, note templates | memory package tests, payload verification, package-local bootstrap source |
 | command generation | none in ordinary host-repo operation | internal renderer and schema boundary for generated CLI packages |

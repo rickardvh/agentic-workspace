@@ -136,7 +136,7 @@ The default suite-oriented `make test`, `make test-workspace`, `make test-memory
 
 Final repo sync after package work:
 
-- After memory or planning package changes, refresh the root repo install to the latest checked-in version of both packages as a final compatibility test: `uv run agentic-planning-bootstrap upgrade --target .` and `uv run agentic-memory-bootstrap upgrade --target .`
+- After memory or planning package changes, refresh the root repo install to the latest checked-in version of both packages as a final compatibility test: `uv run agentic-planning upgrade --target .` and `uv run agentic-memory upgrade --target .`
 
 ## Common Routes
 
@@ -169,3 +169,4 @@ Use `docs/maintainer/installed-contract-design-checklist.md` when a package chan
 - Prefer explicit adapters, manifests, and generated artifacts over private cross-package assumptions.
 - Capture meaningful follow-up work through the planning helpers or the narrowest current planning surface instead of leaving it in chat-only residue.
 - For any changed operational surface, run an operational-affordance review from `docs/maintainer/operational-affordance-design.md`: name the one primary next action, demote irrelevant or deep actions, use resolved config/local invocation, keep raw files behind compact routing, and confirm weak agents can proceed without learning package internals while strong agents can still inspect or override safely.
+

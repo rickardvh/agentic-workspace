@@ -2312,7 +2312,7 @@ def test_memory_report_derives_compact_module_state(tmp_path: Path) -> None:
     report = installer.memory_report(target=target)
 
     assert report["kind"] == "memory-module-report/v1"
-    assert report["schema"]["command"] == "agentic-memory-bootstrap report --target ./repo --format json"
+    assert report["schema"]["command"] == "agentic-memory report --target ./repo --format json"
     assert report["status"]["note_count"] >= 1
     assert report["status"]["current_note_count"] >= 2
     assert "current_notes" in report["active"]
@@ -2699,7 +2699,7 @@ def test_cli_version_flag_prints_package_version(capsys) -> None:
         cli.main(["--version"])
 
     assert excinfo.value.code == 0
-    assert "agentic-memory-bootstrap" in capsys.readouterr().out
+    assert "agentic-memory" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize(
@@ -3208,7 +3208,7 @@ def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(
     prompt = cli._build_agent_prompt("install", target="./repo")
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
-    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap init --target ./repo" in prompt
+    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory init --target ./repo" in prompt
     assert "`install` skill at `./repo/.agentic-workspace/memory/bootstrap/skills`" in prompt
     assert "bootstrap-cleanup --target ./repo" in prompt
     assert ".agentic-workspace/memory/" in prompt
@@ -3222,7 +3222,7 @@ def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
     prompt = cli._build_agent_prompt("adopt", target="./repo")
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
-    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap adopt --target ./repo" in prompt
+    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory adopt --target ./repo" in prompt
     assert "`install` skill at `./repo/.agentic-workspace/memory/bootstrap/skills`" in prompt
     assert "`populate` from the same path" not in prompt
     assert "bootstrap-cleanup --target ./repo" in prompt
@@ -3235,7 +3235,7 @@ def test_build_populate_prompt_mentions_task_context_heuristic(monkeypatch) -> N
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
     prompt = cli._build_agent_prompt("populate", target="./repo")
 
-    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap current show --target ./repo" in prompt
+    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory current show --target ./repo" in prompt
     assert "migration residue" in prompt
     assert "active state into planning/status" in prompt
     assert "./repo" in prompt
@@ -3251,8 +3251,8 @@ def test_build_upgrade_prompt_mentions_local_bootstrap_skills(monkeypatch) -> No
     assert "./repo/.agentic-workspace/memory/skills/" in prompt
     assert "recorded upgrade source automatically" in prompt
     assert "packaged upgrade flow for this repo" in prompt
-    assert "prefer the installed `agentic-memory-bootstrap` CLI when available" in prompt
-    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap upgrade --target <repo>" in prompt
+    assert "prefer the installed `agentic-memory` CLI when available" in prompt
+    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory upgrade --target <repo>" in prompt
     assert "bootstrap-cleanup --target ./repo" not in prompt
     assert not prompt.startswith("Run `")
 
@@ -3273,7 +3273,7 @@ def test_build_upgrade_prompt_uses_local_source_when_recorded(monkeypatch, tmp_p
     assert "Use the checked-in `memory-upgrade` skill" in prompt
     assert "recorded upgrade source automatically" in prompt
     assert "packaged upgrade flow for this repo" in prompt
-    assert "uvx --from ./local/agentic-memory agentic-memory-bootstrap upgrade --target <repo>" in prompt
+    assert "uvx --from ./local/agentic-memory agentic-memory upgrade --target <repo>" in prompt
     assert MEMORY_GIT_SOURCE_REF not in prompt
 
 
@@ -3281,7 +3281,7 @@ def test_build_uninstall_prompt_mentions_bundled_skill(monkeypatch) -> None:
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
     prompt = cli._build_agent_prompt("uninstall", target="./repo")
 
-    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap uninstall --target ./repo" in prompt
+    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory uninstall --target ./repo" in prompt
     assert "bootstrap-uninstall" in prompt
 
 
@@ -3294,7 +3294,7 @@ def test_build_prompt_falls_back_to_pipx_when_uvx_is_missing(monkeypatch) -> Non
     assert "Use the checked-in `memory-upgrade` skill" in prompt
     assert "./repo/.agentic-workspace/memory/skills/" in prompt
     assert "recorded upgrade source automatically" in prompt
-    assert f"pipx run --spec {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap upgrade --target <repo>" in prompt
+    assert f"pipx run --spec {MEMORY_GIT_SOURCE_REF} agentic-memory upgrade --target <repo>" in prompt
     assert "uvx --from" not in prompt
 
 
@@ -3303,9 +3303,9 @@ def test_memory_upgrade_skill_includes_module_fallback() -> None:
         encoding="utf-8"
     )
 
-    assert "agentic-memory-bootstrap upgrade --target <repo>" in text
-    assert "uvx --from <recorded-source> agentic-memory-bootstrap upgrade --target <repo>" in text
-    assert "pipx run --spec <recorded-source> agentic-memory-bootstrap upgrade --target <repo>" in text
+    assert "agentic-memory upgrade --target <repo>" in text
+    assert "uvx --from <recorded-source> agentic-memory upgrade --target <repo>" in text
+    assert "pipx run --spec <recorded-source> agentic-memory upgrade --target <repo>" in text
     assert "prefer a runner command from the recorded source" in text
 
 

@@ -1,0 +1,30 @@
+{
+  "schema_version": "skill-registry.v1",
+  "owner": "agentic-workspace",
+  "source_kind": "installed-workspace-skills",
+  "skills": [
+    {
+      "id": "workspace-startup",
+      "path": "workspace-startup/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "orient through compact workspace commands before opening raw planning, memory, or docs surfaces",
+      "activation_hints": {
+        "verbs": ["start", "orient", "route", "preflight", "bootstrap", "closeout", "prove"],
+        "nouns": ["workspace", "startup", "workflow", "config", "proof", "closeout", "module map"],
+        "phrases": [
+          "workspace startup",
+          "orient in the workspace",
+          "route this task",
+          "what should I do first",
+          "proof and closeout"
+        ],
+        "when": [
+          "first contact with an installed workspace",
+          "task shape or proof route is unclear",
+          "agent is tempted to scan raw workspace docs"
+        ]
+      }
+    }
+  ]
+}
