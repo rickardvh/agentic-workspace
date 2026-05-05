@@ -141,6 +141,8 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
 
 Treat the answer as evidence, not as ground truth. Separate provider/model limitations from package and harness improvements, and promote only feedback that explains observed behavior or suggests a compact, safer next-step surface.
 
+Postmortem feedback must be isolated from the copied repo and tool access. Adapters can provide a separate `postmortem_command` and `{postmortem_cwd}` for this purpose. If an adapter cannot provide a true no-tool/no-repo reflection mode, mark `postmortem_feedback_supported` as `false`; the harness then records an unsupported postmortem status instead of launching a second tool-using coding session.
+
 `tools/model-cli-harness/model-task-weakness-ledger.json` is the source-checkout-only ledger for repeated weak points. Keep entries compact: area, scenario, models, status, failure classes, evidence references, owner, next probe, and priority. Promote only recurring or high-consequence findings; dismiss one-off provider/runtime failures as acceptable variance or fixture artifacts when the evidence supports that.
 
 ## What To Score
@@ -148,7 +150,7 @@ Treat the answer as evidence, not as ground truth. Separate provider/model limit
 Inspect `run.json`, the CLI transcript, the copied repo diff, and package diagnostics. Useful signals:
 
 - startup: did the agent read `AGENTS.md` and route to `.agentic-workspace/WORKFLOW.md` or CLI help?
-- CLI-first use: did it run `agentic-workspace summary`, `preflight`, `planning`, `start`, or equivalent before broad work?
+- CLI-first use: did it run `agentic-workspace implement --profile tiny --changed <paths>` for known-path work, `agentic-workspace start --profile tiny --task "<task>"` for ordinary first contact, or an equivalent compact route before broad work?
 - planning shape: did it use schema-backed records or invent PM-shaped artifacts?
 - state safety: did it notice unsupported `state.toml` activation shapes?
 - proof: did it select a narrow proof command instead of guessing?
@@ -171,4 +173,5 @@ Treat one-off capability failures cautiously. Give more weight to repeated ambig
 - The Gemini adapter runs `gemini --prompt` in headless mode and records JSON output. It uses `--approval-mode yolo` only when the operator explicitly passes `--execute`; dry-run remains the default.
 - The Codex adapter runs `codex exec --dangerously-bypass-approvals-and-sandbox` with a copied fixture as its working directory, writes the final message to the run-local share file, and captures JSONL events when available. The harness relies on copied disposable fixtures for isolation because the Codex sandbox can otherwise block the installed package CLI from running.
 - The runner emits warnings when transcripts report shell-runtime failures or modified files outside the copied fixture.
+- The runner classifies provider/runtime and adapter/tooling limits separately from product workflow failures. Examples include provider capacity errors, terminal noise, missing shell tools, permission-denied command execution, and adapters that cannot execute `agentic-workspace` commands through their tool layer.
 - Normal tests should validate command rendering and fixture isolation, not run external models.

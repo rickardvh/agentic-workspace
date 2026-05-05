@@ -8,6 +8,7 @@ Keep this file thin. Treat it as the repo-owned startup adapter over the structu
 
 ## Startup
 
+- Use `agentic-workspace implement --profile tiny --changed <paths> --format json` first when changed paths are already known.
 - Use `agentic-workspace start --profile tiny --task "<task>" --format json` for ordinary compact startup context.
 - Use `agentic-workspace preflight --format json` when you need bundled takeover or recovery context.
 - Use `agentic-workspace defaults --section startup --format json` when startup order or first-contact routing is the question.
