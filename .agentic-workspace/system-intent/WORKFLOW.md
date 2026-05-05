@@ -8,7 +8,8 @@ This surface tells agents how to refresh the workspace-owned mirrored system-int
 
 - Repo-owned source declaration: `.agentic-workspace/config.toml [system_intent]`
 - Workspace-owned interpreted mirror: `.agentic-workspace/system-intent/intent.toml`
-- Workspace-owned scoped intent store: `.agentic-workspace/system-intent/subsystems.toml`
+- Subsystem registry and path/proof authority: `.agentic-workspace/OWNERSHIP.toml [[subsystems]]`
+- Workspace-owned scoped intent store for those subsystem ids: `.agentic-workspace/system-intent/subsystems.toml`
 
 ## Rules
 
@@ -19,6 +20,7 @@ This surface tells agents how to refresh the workspace-owned mirrored system-int
 - Update source metadata through `agentic-workspace system-intent --target ./repo --sync --format json` before refining the interpreted fields.
 - Keep the mirror easy for humans to inspect and patch directly.
 - Keep subsystem intent scoped. Use it for durable component or concern direction, not active task state.
+- Do not create subsystem ids in `subsystems.toml`; add or adjust the subsystem in `OWNERSHIP.toml` first, then attach intent to that id.
 - Treat task intent as closable work. Promote from task intent only when the task reveals reusable durable direction.
 
 ## What To Extract

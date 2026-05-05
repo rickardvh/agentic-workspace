@@ -1969,13 +1969,68 @@ def test_system_intent_rejects_invalid_subsystem_intent_lifecycle(tmp_path: Path
     assert "status must be one of" in capsys.readouterr().err
 
 
+def test_system_intent_rejects_subsystem_intent_ids_missing_from_ownership(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+schema_version = 1
+
+[[subsystems]]
+id = "planning"
+paths = [".agentic-workspace/planning/**"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "system-intent" / "subsystems.toml",
+        """
+schema_version = 1
+kind = "agentic-workspace/subsystem-intent-set/v1"
+
+[[subsystems]]
+id = "invented"
+scope = "not in ownership"
+status = "active"
+summary = "This should not create a second subsystem taxonomy."
+decision_tests = ["Is this valid?"]
+confidence = "low"
+needs_review = true
+source_records = [{ source_type = "test", ref = "test", summary = "unknown id" }]
+""",
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main(["system-intent", "--target", str(tmp_path), "--format", "json"])
+    assert exc_info.value.code == 2
+    error = capsys.readouterr().err
+    assert "is not declared in .agentic-workspace/OWNERSHIP.toml [[subsystems]]" in error
+    assert "planning" in error
+
+
 def test_start_surfaces_compact_durable_intent_for_task(capsys) -> None:
     assert cli.main(["start", "--target", ".", "--task", "planning closeout should preserve durable intent", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
     assert payload["durable_intent"]["subsystem_intent"]["surface"] == ".agentic-workspace/system-intent/subsystems.toml"
+    assert payload["durable_intent"]["subsystem_intent"]["ownership_registry"]["status"] == "present"
     assert any(match["id"] == "planning" for match in payload["durable_intent"]["subsystem_intent"]["matches"])
+
+
+def test_start_matches_subsystem_intent_through_ownership_paths(capsys) -> None:
+    assert (
+        cli.main(["start", "--target", ".", "--changed", "packages/planning/src/repo_planning_bootstrap/installer.py", "--format", "json"])
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    matches = payload["durable_intent"]["subsystem_intent"]["matches"]
+    planning_match = next(match for match in matches if match["id"] == "planning")
+    assert planning_match["match_source"] == "ownership-path"
 
 
 def test_preflight_surfaces_compact_durable_intent_for_task(capsys) -> None:

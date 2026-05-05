@@ -10,7 +10,8 @@ Instead:
 
 - repo-owned intent sources are declared in `.agentic-workspace/config.toml [system_intent]`
 - workspace stores the consumed compiled declaration in `.agentic-workspace/system-intent/intent.toml`
-- workspace stores scoped subsystem intent in `.agentic-workspace/system-intent/subsystems.toml`
+- `.agentic-workspace/OWNERSHIP.toml [[subsystems]]` is authoritative for which subsystems exist
+- workspace stores scoped subsystem intent for those ownership subsystem ids in `.agentic-workspace/system-intent/subsystems.toml`
 - `.agentic-workspace/system-intent/WORKFLOW.md` tells agents how to refresh source metadata and refine that declaration
 
 This keeps the consumed declaration inside the workspace home while leaving host-repo source authoring unconstrained.
@@ -31,7 +32,7 @@ Task intent is the bounded goal of current work. It can be implemented, validate
 
 System intent is durable repo-wide direction, purpose, constraint, or invariant. It is not active work by default; it is decision pressure that should remain inspectable, editable, provenance-backed, and allowed to change.
 
-Subsystem intent is durable direction for a component, module, concern, or owned surface. Use it when the direction is narrower than the whole system but broader than one task, such as Planning behavior, Memory hygiene, generated CLI portability, accessibility expectations, memory usage constraints, documentation philosophy, or auditability requirements.
+Subsystem intent is durable direction for a component, module, concern, or owned surface already declared in `.agentic-workspace/OWNERSHIP.toml [[subsystems]]`. Use it when the direction is narrower than the whole system but broader than one task, such as Planning behavior, Memory hygiene, generated CLI portability, accessibility expectations, memory usage constraints, documentation philosophy, or auditability requirements. Do not invent a separate subsystem taxonomy in `subsystems.toml`; it attaches intent to ownership subsystem ids.
 
 ## Durable Intent Lifecycle
 

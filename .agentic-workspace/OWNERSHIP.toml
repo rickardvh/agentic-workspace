@@ -165,6 +165,20 @@ authority = "fenced"
 summary = "Managed pointer block inside the repo-owned AGENTS file."
 
 [[subsystems]]
+id = "planning"
+paths = [".agentic-workspace/planning/**", "packages/planning/**"]
+owns = ["active execution state", "execplan scaffolds and closeout", "planning package workflow semantics"]
+does_not_own = ["durable memory note policy", "workspace command runtime internals"]
+escalate_when = ["change widens planning state semantics", "closeout or archive behavior changes"]
+
+[[subsystems]]
+id = "memory"
+paths = [".agentic-workspace/memory/**", "packages/memory/**"]
+owns = ["durable repo knowledge", "memory note routing", "memory package workflow semantics"]
+does_not_own = ["active execution planning", "workspace command runtime internals"]
+escalate_when = ["change widens what memory may store", "promotion policy changes"]
+
+[[subsystems]]
 id = "workspace-cli-runtime"
 paths = ["src/agentic_workspace/cli.py", "src/agentic_workspace/generated_cli_package/**"]
 owns = ["workspace command routing", "compact report assembly", "runtime adapter dispatch"]

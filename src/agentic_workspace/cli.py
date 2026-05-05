@@ -8268,14 +8268,18 @@ def _start_payload(*, target_root: Path, changed_paths: list[str], task_text: st
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
         payload["vague_outcome_orientation"] = vague_orientation
-    if task_text:
-        payload["durable_intent"] = _intent_decision_projection(
+    if task_text or changed_paths:
+        durable_intent = _intent_decision_projection(
             target_root=target_root,
             config=config,
             task_text=task_text,
             changed_paths=changed_paths,
             compact=True,
         )
+        subsystem_projection = durable_intent.get("subsystem_intent", {})
+        subsystem_matched_count = int(subsystem_projection.get("matched_count", 0) or 0) if isinstance(subsystem_projection, dict) else 0
+        if task_text or subsystem_matched_count:
+            payload["durable_intent"] = durable_intent
     cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
     if cli_compatibility["configured"]:
         payload["cli_compatibility"] = cli_compatibility
@@ -9303,12 +9307,20 @@ def _default_subsystem_intent_text() -> str:
 
 def _load_subsystem_intent(*, target_root: Path) -> dict[str, Any]:
     path = target_root / WORKSPACE_SUBSYSTEM_INTENT_PATH
+    ownership_ledger = target_root / _defaults_payload()["ownership_mapping"]["ledger"]
+    ownership_subsystems = _load_ownership_subsystems(target_root=target_root)
+    ownership_ids = {str(subsystem.get("id", "")).strip() for subsystem in ownership_subsystems if str(subsystem.get("id", "")).strip()}
     if not path.exists():
         return {
             "status": "missing",
             "path": WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix(),
             "kind": SUBSYSTEM_INTENT_KIND,
             "sync_command": "agentic-workspace system-intent --target ./repo --sync --format json",
+            "ownership_registry": {
+                "surface": ".agentic-workspace/OWNERSHIP.toml",
+                "status": "present" if ownership_ledger.exists() else "missing",
+                "subsystem_count": len(ownership_ids),
+            },
             "subsystems": [],
         }
     payload = config_lib.load_toml_payload(path=path, surface_name=WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix())
@@ -9322,6 +9334,12 @@ def _load_subsystem_intent(*, target_root: Path) -> dict[str, Any]:
         identifier = str(raw.get("id", "")).strip()
         if not identifier:
             raise WorkspaceUsageError(f"{WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix()} subsystem entries must set id.")
+        if ownership_ledger.exists() and identifier not in ownership_ids:
+            accepted = ", ".join(sorted(ownership_ids)) or "none"
+            raise WorkspaceUsageError(
+                f"{WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix()} subsystem {identifier} is not declared in "
+                f".agentic-workspace/OWNERSHIP.toml [[subsystems]]. Accepted subsystem ids: {accepted}."
+            )
         _validate_intent_lifecycle_fields(surface=f"{WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix()} subsystem {identifier}", item=raw)
         subsystems.append(
             {
@@ -9340,6 +9358,7 @@ def _load_subsystem_intent(*, target_root: Path) -> dict[str, Any]:
                 "last_reviewed_at": str(raw.get("last_reviewed_at", "")).strip(),
                 "interpretation_notes": str(raw.get("interpretation_notes", "")).strip(),
                 "source_records": _intent_source_records(raw.get("source_records", [])),
+                "ownership_ref": identifier,
             }
         )
     return {
@@ -9348,6 +9367,13 @@ def _load_subsystem_intent(*, target_root: Path) -> dict[str, Any]:
         "kind": str(payload.get("kind", SUBSYSTEM_INTENT_KIND)),
         "schema_version": int(payload.get("schema_version", 1)),
         "rule": str(payload.get("rule", "Subsystem intent is durable scoped decision pressure, not active task state by default.")),
+        "ownership_registry": {
+            "surface": ".agentic-workspace/OWNERSHIP.toml",
+            "status": "present" if ownership_ledger.exists() else "missing",
+            "subsystem_count": len(ownership_ids),
+            "known_ids": sorted(ownership_ids),
+            "rule": "OWNERSHIP.toml [[subsystems]] is authoritative for subsystem ids; subsystem intent attaches durable direction to those ids.",
+        },
         "subsystem_count": len(subsystems),
         "subsystems": subsystems,
     }
@@ -9367,6 +9393,17 @@ def _intent_decision_projection(
 ) -> dict[str, Any]:
     mirror = _load_system_intent_mirror(target_root=target_root, config=config)
     subsystem_intent = _load_subsystem_intent(target_root=target_root)
+    ownership_matches = _subsystem_matches_for_changed_paths(target_root=target_root, changed_paths=changed_paths or [])
+    ownership_matched_ids = {
+        str(subsystem.get("id", "")).strip()
+        for subsystem in ownership_matches.get("matched_subsystems", [])
+        if isinstance(subsystem, dict) and str(subsystem.get("id", "")).strip()
+    }
+    ownership_matches_by_id = {
+        str(subsystem.get("id", "")).strip(): subsystem
+        for subsystem in ownership_matches.get("matched_subsystems", [])
+        if isinstance(subsystem, dict) and str(subsystem.get("id", "")).strip()
+    }
     task_terms = _intent_terms(task_text or "")
     path_terms = _intent_terms(" ".join(changed_paths or []))
     query_terms = task_terms | path_terms
@@ -9383,15 +9420,28 @@ def _intent_decision_projection(
             ]
         )
         terms = _intent_terms(haystack)
-        if not query_terms or query_terms & terms:
+        identifier = str(subsystem.get("id", "")).strip()
+        if identifier in ownership_matched_ids or not query_terms or query_terms & terms:
+            ownership_match = ownership_matches_by_id.get(identifier, {})
             matched_subsystems.append(
                 {
-                    "id": subsystem.get("id", ""),
+                    "id": identifier,
                     "status": subsystem.get("status", ""),
                     "summary": subsystem.get("summary", ""),
                     "decision_tests": list(subsystem.get("decision_tests", []))[: 2 if compact else 4],
                     "confidence": subsystem.get("confidence", "low"),
                     "needs_review": subsystem.get("needs_review", True),
+                    "match_source": "ownership-path" if identifier in ownership_matched_ids else "task-or-path-text",
+                    **(
+                        {
+                            "ownership": {
+                                "matched_paths": ownership_match.get("matched_paths", []),
+                                "matched_patterns": ownership_match.get("matched_patterns", []),
+                            }
+                        }
+                        if ownership_match
+                        else {}
+                    ),
                 }
             )
     system_tests = mirror.get("decision_tests", []) if mirror.get("status") == "present" else []
@@ -9447,11 +9497,13 @@ def _intent_decision_projection(
                 "status": projection["subsystem_intent"]["status"],
                 "surface": projection["subsystem_intent"]["surface"],
                 "matched_count": projection["subsystem_intent"]["matched_count"],
+                "ownership_registry": subsystem_intent.get("ownership_registry", {}),
                 "matches": [
                     {
                         "id": match.get("id", ""),
                         "decision_tests": list(match.get("decision_tests", []))[:1],
                         "needs_review": match.get("needs_review", True),
+                        "match_source": match.get("match_source", ""),
                     }
                     for match in projection["subsystem_intent"]["matches"][:2]
                     if isinstance(match, dict)
@@ -10082,6 +10134,7 @@ def _durable_intent_payload() -> dict[str, Any]:
                 "id": "subsystem",
                 "role": "durable direction for a component, module, concern, or owned surface",
                 "surface": WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix(),
+                "registry": ".agentic-workspace/OWNERSHIP.toml [[subsystems]]",
                 "closure": "not closed by one task; revised, superseded, or retired over time",
             },
             {
@@ -10101,7 +10154,8 @@ def _durable_intent_payload() -> dict[str, Any]:
         ],
         "promotion_rule": (
             "Promotion from task evidence creates reviewable durable intent proposals with evidence and confidence; "
-            "agents must not silently make inferred intent authoritative."
+            "agents must not silently make inferred intent authoritative. Subsystem intent ids must already exist in "
+            ".agentic-workspace/OWNERSHIP.toml [[subsystems]]."
         ),
         "record_fields": [
             "id",
