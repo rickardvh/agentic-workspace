@@ -166,7 +166,7 @@ WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
 WORKSPACE_POINTER_BLOCK = (
     f"{WORKSPACE_WORKFLOW_MARKER_START}\n"
-    'For non-trivial requests, first run `agentic-workspace start --profile tiny --task "<task>" --format json` using the user\'s request as `<task>`; follow `immediate_next_allowed_action` and `skill_routing` before opening raw `.agentic-workspace` files. Use `preflight` for takeover or recovery. If unavailable, read `.agentic-workspace/WORKFLOW.md`.\n'
+    'For non-trivial requests with known changed paths, first run `agentic-workspace implement --profile tiny --changed <paths> --format json`; otherwise run `agentic-workspace start --profile tiny --task "<task>" --format json` using the user\'s request as `<task>`. Follow `immediate_next_allowed_action` and `skill_routing` before opening raw `.agentic-workspace` files. Use `preflight` for takeover or recovery. If unavailable, read `.agentic-workspace/WORKFLOW.md`.\n'
     f"{WORKSPACE_WORKFLOW_MARKER_END}"
 )
 MEMORY_WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"

@@ -1,11 +1,13 @@
 # Agentic Workspace Workflow
 
-Start from structured local evidence before changing files:
+Use this compact fallback only when CLI or JSON surfaces are unavailable.
 
-1. Run `agentic-workspace preflight --target . --task "<current user request>" --format json` for startup, current work state, and task-specific skill routing.
-2. Run `agentic-workspace config --target . --profile compact --format json` when repo operating settings, local runtime posture, reporting style, workflow obligations, delegation, or closeout trust can affect the task. Do not read raw config files unless compact output lacks a field needed for the current decision.
-3. For direct wording edits, keep overhead minimal and do not create Planning state.
-4. For bounded, lane, or epic-shaped work, use the Planning surfaces routed by summary before implementation.
-5. Before closeout, report which configured settings affected your action, proof, delegation decision, or final response.
+1. Read the repo startup file and this file.
+2. Decide whether the work is direct, bounded, lane, or epic.
+3. If changed paths are already known and CLI is available, prefer `agentic-workspace implement --profile tiny --changed <paths> --format json` for the smallest implementer context.
+4. If the request is startup-only, orientation-only, or asks you not to implement yet without asking for durable handoff, stay read-only: report the command you would have run, the work shape, and the next safe action. Do not create planning files.
+5. For direct or bounded work, proceed with the smallest local reasoning and validation that fits the change; create Planning state only when restart cost or durable handoff is actually part of the request.
+6. For lane or epic work, use package-owned scaffolds first; edit checked-in planning files directly only as bounded fallback.
+7. Run the narrowest validation that proves the changed surface.
 
-This file routes startup only. Durable task state belongs in Planning, Memory, issue, proof, or report surfaces routed by the CLI.
+This file is startup/router guidance, not task state. Do not edit it to record task-specific plans, progress, decisions, or handoff notes.

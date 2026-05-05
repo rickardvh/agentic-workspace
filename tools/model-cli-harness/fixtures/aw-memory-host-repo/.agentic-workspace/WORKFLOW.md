@@ -1,9 +1,13 @@
 # Agentic Workspace Workflow
 
-Use CLI-first orientation before implementation:
+Use this compact fallback only when CLI or JSON surfaces are unavailable.
 
-1. Run `agentic-workspace preflight --target . --task "<current user request>" --format json` for startup, active state, and task-specific skill routing.
-2. If the task mentions repo-specific context, repeated traps, remembered constraints, or durable technical knowledge, open `.agentic-workspace/memory/repo/index.md` and then only the narrow note it routes you to.
-3. If a repeated mistake is worth preserving for future agents, update the smallest relevant Memory note or explain that the existing note already covers it.
+1. Read the repo startup file and this file.
+2. Decide whether the work is direct, bounded, lane, or epic.
+3. If changed paths are already known and CLI is available, prefer `agentic-workspace implement --profile tiny --changed <paths> --format json` for the smallest implementer context.
+4. If the request is startup-only, orientation-only, or asks you not to implement yet without asking for durable handoff, stay read-only: report the command you would have run, the work shape, and the next safe action. Do not create planning files.
+5. For direct or bounded work, proceed with the smallest local reasoning and validation that fits the change; create Planning state only when restart cost or durable handoff is actually part of the request.
+6. For lane or epic work, use package-owned scaffolds first; edit checked-in planning files directly only as bounded fallback.
+7. Run the narrowest validation that proves the changed surface.
 
 This file is startup/router guidance, not task state. Do not edit it to record task-specific plans, progress, decisions, or handoff notes.

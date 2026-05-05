@@ -467,6 +467,17 @@ def _provider_did_not_run(result: dict[str, Any]) -> bool:
     return isinstance(returncode, int) and returncode != 0 and not stdout and not final_message
 
 
+def _agentic_workspace_tooling_unavailable(result: dict[str, Any]) -> bool:
+    combined = _full_response_text(result)
+    if "agentic-workspace" not in combined:
+        return False
+    return (
+        "Permission denied and could not request permission from user" in combined
+        or 'Tool "run_shell_command" not found' in combined
+        or "Tool \"run_shell_command\" not found" in combined
+    )
+
+
 def _is_diagnostic_command_output(path: str) -> bool:
     name = Path(path.replace("\\", "/")).name.lower()
     return bool(re.fullmatch(r"summary(?:[_-]full|[_-]?\d*)?\.json", name))
@@ -529,6 +540,7 @@ def _metadata_workflow_warnings(
     warnings: list[dict[str, str]] = []
     if _provider_did_not_run(result):
         return warnings
+    adapter_could_not_execute_workspace_command = _agentic_workspace_tooling_unavailable(result)
 
     def add(message: str, *, evidence: str = "") -> None:
         warning: dict[str, str] = {
@@ -566,6 +578,8 @@ def _metadata_workflow_warnings(
         scenario_id=scenario_id,
     ):
         if _normalized_command_text(required) not in executed_command_text:
+            if adapter_could_not_execute_workspace_command and "agentic-workspace" in required:
+                continue
             add("The agent did not execute a required command.", evidence=required)
     for forbidden in _string_list(
         scenario.get("forbidden_executed_commands"),
@@ -759,9 +773,9 @@ def _postmortem_feedback_prompt(*, scenario: dict[str, Any], invocation: dict[st
         mutation_text = ", ".join(mutation_bits)
     else:
         mutation_text = "status=unknown"
-    original_prompt = str(invocation.get("prompt", ""))
-    if len(original_prompt) > 650:
-        original_prompt = original_prompt[:650].rstrip() + "..."
+    original_prompt = str(invocation.get("prompt", "")).split("\n\nRepository startup instruction", maxsplit=1)[0]
+    if len(original_prompt) > 350:
+        original_prompt = original_prompt[:350].rstrip() + "..."
     questions = scenario.get("postmortem_feedback_questions")
     if not isinstance(questions, list) or not questions:
         questions = [
@@ -772,17 +786,18 @@ def _postmortem_feedback_prompt(*, scenario: dict[str, Any], invocation: dict[st
         ]
     question_lines = "\n".join(f"- {question}" for question in questions if str(question).strip())
     return (
-        "TASK: Answer the postmortem questions using the provided evidence. Do not ask for more evidence.\n"
-        "Do not inspect the repo, run commands, read files, or edit files.\n\n"
+        "TASK: Analyze a completed model-run transcript from the evidence below.\n"
+        "This is not a repository task. Do not run startup commands, inspect paths, read files, search, or edit.\n"
+        "If the evidence mentions commands or files, discuss those choices only; do not execute or inspect them.\n\n"
         "EVIDENCE BLOCK START\n"
         f"Scenario: {invocation.get('scenario_id', '')} / {invocation.get('prompt_variant_id', '')}\n"
         f"Warnings: {warning_text}\n"
         f"Mutation: {mutation_text}\n"
-        f"Prior output excerpt: {final_message or 'none'}\n"
-        f"Original prompt excerpt: {original_prompt or 'none'}\n"
+        f"Final answer excerpt: {final_message or 'none'}\n"
+        f"Scenario prompt excerpt: {original_prompt or 'none'}\n"
         "EVIDENCE BLOCK END\n\n"
-        "Use only the evidence block above. The evidence block is complete. "
-        "If a required field inside the block says missing, name that field.\n\n"
+        "Use only the evidence block above. The evidence block is complete for this analysis. "
+        "If a field says none or missing, name that field instead of looking elsewhere.\n\n"
         "Answer these questions:\n"
         f"{question_lines}\n\n"
         "Keep the answer under 200 words. Separate model/provider limitations from product or harness improvements."
@@ -1346,6 +1361,20 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
                 "message": "The model CLI attempted an operation outside its granted permissions.",
             }
         )
+        if "agentic-workspace" in combined_text:
+            warnings.append(
+                {
+                    "warning_class": "model_cli_adapter_tooling_limitation",
+                    "message": "The model CLI could not execute an Agentic Workspace command through its tool layer.",
+                }
+            )
+    if _agentic_workspace_tooling_unavailable(result):
+        warnings.append(
+            {
+                "warning_class": "model_cli_adapter_tooling_limitation",
+                "message": "The model CLI could not execute an Agentic Workspace command through its tool layer.",
+            }
+        )
     if re.search(r"\b[A-Za-z]:\\temp\\", combined_text, flags=re.IGNORECASE):
         warnings.append(
             {
@@ -1417,7 +1446,12 @@ def _warning_key(warning: dict[str, Any]) -> str:
 
 def _finding_base_classes(warning_key: str) -> list[str]:
     warning_class = warning_key.split("|", 1)[0]
-    if warning_class in {"model_cli_provider_error", "model_cli_runtime_stderr"}:
+    if warning_class in {
+        "model_cli_provider_error",
+        "model_cli_runtime_stderr",
+        "model_cli_adapter_tooling_limitation",
+        "model_cli_permission_denied",
+    }:
         return ["environment_or_provider"]
     return ["first_seen"]
 
@@ -1571,6 +1605,7 @@ def run_suite(
                 "repo": str(paths.repo_path),
                 "run_root": str(paths.run_root),
                 "share_path": str(paths.share_path),
+                "postmortem_cwd": str(paths.run_root / "postmortem-context"),
                 "transcript_path": str(paths.transcript_path),
                 "model": resolved_model,
                 "source_root": str(REPO_ROOT),
@@ -1672,29 +1707,47 @@ def run_suite(
                     )
                 )
                 if postmortem_feedback:
-                    postmortem_prompt = _postmortem_feedback_prompt(scenario=scenario, invocation=invocation)
-                    postmortem_replacements = {
-                        **replacements,
-                        "prompt": postmortem_prompt,
-                        "share_path": str(paths.run_root / "postmortem.md"),
-                    }
-                    postmortem_command = _render_list(command_template, replacements=postmortem_replacements)
-                    postmortem_result = _run_command(
-                        postmortem_command,
-                        cwd=paths.repo_path,
-                        timeout_seconds=effective_timeout,
-                        env=adapter_env,
-                    )
-                    postmortem_share = paths.run_root / "postmortem.md"
-                    if postmortem_share.exists():
-                        postmortem_result["final_message"] = postmortem_share.read_text(encoding="utf-8")
-                    invocation["postmortem_feedback"] = {
-                        "prompt": postmortem_prompt,
-                        "command": postmortem_command,
-                        "result": postmortem_result,
-                        "warnings": _postmortem_feedback_warnings(result=postmortem_result),
-                        "share_path": str(postmortem_share),
-                    }
+                    if adapter.get("postmortem_feedback_supported") is False:
+                        invocation["postmortem_feedback"] = {
+                            "status": "unsupported",
+                            "reason": "adapter does not expose a no-tool/no-repo reflection mode",
+                            "warnings": [
+                                {
+                                    "warning_class": "model_cli_postmortem_feedback_unsupported",
+                                    "message": "Postmortem feedback was skipped because this adapter cannot isolate reflection from repo/tool access.",
+                                }
+                            ],
+                        }
+                    else:
+                        postmortem_prompt = _postmortem_feedback_prompt(scenario=scenario, invocation=invocation)
+                        postmortem_cwd = paths.run_root / "postmortem-context"
+                        postmortem_cwd.mkdir(parents=True, exist_ok=True)
+                        postmortem_replacements = {
+                            **replacements,
+                            "prompt": postmortem_prompt,
+                            "share_path": str(paths.run_root / "postmortem.md"),
+                            "postmortem_cwd": str(postmortem_cwd),
+                        }
+                        postmortem_template = adapter.get("postmortem_command", command_template)
+                        if not isinstance(postmortem_template, list) or not all(isinstance(item, str) for item in postmortem_template):
+                            raise ValueError(f"adapter '{adapter_id}' postmortem_command must be a string list")
+                        postmortem_command = _render_list(postmortem_template, replacements=postmortem_replacements)
+                        postmortem_result = _run_command(
+                            postmortem_command,
+                            cwd=postmortem_cwd,
+                            timeout_seconds=effective_timeout,
+                            env=adapter_env,
+                        )
+                        postmortem_share = paths.run_root / "postmortem.md"
+                        if postmortem_share.exists():
+                            postmortem_result["final_message"] = postmortem_share.read_text(encoding="utf-8")
+                        invocation["postmortem_feedback"] = {
+                            "prompt": postmortem_prompt,
+                            "command": postmortem_command,
+                            "result": postmortem_result,
+                            "warnings": _postmortem_feedback_warnings(result=postmortem_result),
+                            "share_path": str(postmortem_share),
+                        }
             else:
                 invocation["result"] = {
                     "status": "dry-run",

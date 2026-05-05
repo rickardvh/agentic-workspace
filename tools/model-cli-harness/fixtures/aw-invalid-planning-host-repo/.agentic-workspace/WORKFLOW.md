@@ -1,13 +1,13 @@
 # Agentic Workspace Workflow
 
-Use CLI-first orientation before implementation:
+Use this compact fallback only when CLI or JSON surfaces are unavailable.
 
-1. Run `agentic-workspace preflight --target . --task "<current user request>" --format json` for startup, active state, and task-specific skill routing.
-2. If the task is broad, use preflight or `agentic-workspace summary --target . --format json` to choose between direct work, decomposition, or an execplan.
-3. If the request asks for repo-visible durable state, handoff, continuation, or a plan for future agents, create or continue canonical checked-in Planning state before product files.
-4. For planning mutations, prefer package lifecycle commands such as `agentic-planning new-plan`, `promote-to-plan`, and `archive-plan`; if a lifecycle command is unavailable, copy a shipped schema-backed template exactly and edit only content fields.
-5. Verify Planning state with `agentic-workspace summary --target . --format json` before stopping or implementing.
+1. Read the repo startup file and this file.
+2. Decide whether the work is direct, bounded, lane, or epic.
+3. If changed paths are already known and CLI is available, prefer `agentic-workspace implement --profile tiny --changed <paths> --format json` for the smallest implementer context.
+4. If the request is startup-only, orientation-only, or asks you not to implement yet without asking for durable handoff, stay read-only: report the command you would have run, the work shape, and the next safe action. Do not create planning files.
+5. For direct or bounded work, proceed with the smallest local reasoning and validation that fits the change; create Planning state only when restart cost or durable handoff is actually part of the request.
+6. For lane or epic work, use package-owned scaffolds first; edit checked-in planning files directly only as bounded fallback.
+7. Run the narrowest validation that proves the changed surface.
 
-This file is startup/router guidance, not task state. Do not edit it to record task-specific plans, progress, decisions, or handoff notes; durable work state belongs in planning, decomposition, execplan, Memory, issue, or other repo-configured execution surfaces routed by the CLI.
-
-Do not invent the outer structure of planning records. Do not create root `PLAN.md`, `DOC_CLEANUP_PLAN.md`, `PLANNING_STATE.md`, or similar freehand handoff files unless repo config explicitly routes there. When the user asks to prepare, plan, decompose, hand off, or says not to implement yet, keep writes to planning/decomposition surfaces; do not create product source, package, dependency, schema, or app scaffold files unless explicitly requested. For prep-only broad work, the finished output is registered Planning state plus summary verification; use `agentic-planning-bootstrap new-plan --id <id> --title <title> --activate --prep-only` when available. After `new-plan --prep-only`, you may tighten content fields inside the created execplan and, for epic-shaped work, add a schema-backed decomposition under `.agentic-workspace/planning/decompositions/`; do not add README, PLANNING_STATE, HANDOFF, SLICES, ARCHITECTURE, ADR, package, dependency, source, public, database, schema, or app scaffold files. Put architecture assumptions, blockers, and candidate lane notes inside the execplan or decomposition record unless the user explicitly asks for separate docs. Candidate lane `owner_surface` values may name future files; they are not valid next-action references until the execplan exists, so create/register that execplan or report the reference as proposed/future. A live execplan is not durable handoff unless it is registered in `.agentic-workspace/planning/state.toml`; if you create an execplan by fallback template copy, register it or use `new-plan`. Copy `TEMPLATE.*` files to a new task-specific filename; never move, rename, delete, or repurpose templates as live records. Do not ask for confirmation instead of leaving durable state when the user already asked you to prepare the repo. Do not route durable Planning state to `.agentic-workspace/planning/records/`; canonical records live under `execplans/` or `decompositions/`.
+This file is startup/router guidance, not task state. Do not edit it to record task-specific plans, progress, decisions, or handoff notes.

@@ -120,6 +120,137 @@ def test_model_cli_harness_can_inject_repo_startup_instructions(tmp_path: Path) 
     assert 'start --profile tiny --task "<task>"' in prompt
 
 
+def test_model_cli_harness_uses_postmortem_command_without_repo_context(tmp_path: Path, monkeypatch) -> None:
+    fixture = tmp_path / "fixtures" / "repo"
+    fixture.mkdir(parents=True)
+    (fixture / "README.md").write_text("fixture\n", encoding="utf-8")
+    suite = tmp_path / "suites" / "suite.json"
+    suite.parent.mkdir()
+    suite.write_text(
+        json.dumps(
+            {
+                "schema": "agentic-workspace/model-cli-harness-suite/v1",
+                "id": "unit",
+                "adapters": {
+                    "fake": {
+                        "default_model": "fake-model",
+                        "block_on_preflight_failure": False,
+                        "command": ["fake-cli", "--repo", "{repo}", "--share", "{share_path}", "-p", "{prompt}"],
+                        "postmortem_command": [
+                            "fake-cli",
+                            "--cwd",
+                            "{postmortem_cwd}",
+                            "--share",
+                            "{share_path}",
+                            "-p",
+                            "{prompt}",
+                        ],
+                    }
+                },
+                "scenarios": [{"id": "orientation", "fixture": "repo", "prompt": "Orient."}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    harness = _load_harness()
+
+    def fake_run_command(command, *, cwd, timeout_seconds, env=None):  # noqa: ANN001
+        assert cwd.exists()
+        share_path = Path(command[command.index("--share") + 1])
+        share_path.write_text("final\n", encoding="utf-8")
+        return {"returncode": 0, "stdout": "ok", "stderr": "", "command": command, "cwd": str(cwd)}
+
+    monkeypatch.setattr(harness, "_run_command", fake_run_command)
+
+    payload = harness.run_suite(
+        suite_path=suite,
+        adapter_id="fake",
+        model=None,
+        scenario_filter="orientation",
+        execute=True,
+        output_root=tmp_path / "out",
+        timeout_seconds=None,
+        postmortem_feedback=True,
+    )
+
+    result = payload["results"][0]
+    postmortem = result["postmortem_feedback"]
+    assert "--repo" not in postmortem["command"]
+    assert result["repo_path"] not in postmortem["command"]
+    assert postmortem["result"]["cwd"].endswith("postmortem-context")
+
+
+def test_copilot_postmortem_feedback_is_marked_unsupported() -> None:
+    suite = json.loads((REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json").read_text(encoding="utf-8"))
+
+    adapter = suite["adapters"]["copilot"]
+    command = adapter["postmortem_command"]
+    assert adapter["postmortem_feedback_supported"] is False
+    assert "--available-tools=" in command
+    assert "--no-custom-instructions" in command
+    assert "--add-dir" not in command
+
+
+def test_model_cli_harness_fixtures_use_current_workflow_fallback() -> None:
+    workflows = sorted((REPO_ROOT / "tools" / "model-cli-harness" / "fixtures").glob("*/.agentic-workspace/WORKFLOW.md"))
+    assert workflows
+    for workflow in workflows:
+        text = workflow.read_text(encoding="utf-8")
+        assert "startup-only, orientation-only" in text
+        assert "Do not create planning files." in text
+
+
+def test_model_cli_harness_can_mark_postmortem_feedback_unsupported(tmp_path: Path, monkeypatch) -> None:
+    fixture = tmp_path / "fixtures" / "repo"
+    fixture.mkdir(parents=True)
+    (fixture / "README.md").write_text("fixture\n", encoding="utf-8")
+    suite = tmp_path / "suites" / "suite.json"
+    suite.parent.mkdir()
+    suite.write_text(
+        json.dumps(
+            {
+                "schema": "agentic-workspace/model-cli-harness-suite/v1",
+                "id": "unit",
+                "adapters": {
+                    "fake": {
+                        "default_model": "fake-model",
+                        "block_on_preflight_failure": False,
+                        "postmortem_feedback_supported": False,
+                        "command": ["fake-cli", "--share", "{share_path}", "-p", "{prompt}"],
+                    }
+                },
+                "scenarios": [{"id": "orientation", "fixture": "repo", "prompt": "Orient."}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    harness = _load_harness()
+
+    def fake_run_command(command, *, cwd, timeout_seconds, env=None):  # noqa: ANN001
+        share_path = Path(command[command.index("--share") + 1])
+        share_path.write_text("final\n", encoding="utf-8")
+        return {"returncode": 0, "stdout": "ok", "stderr": "", "command": command, "cwd": str(cwd)}
+
+    monkeypatch.setattr(harness, "_run_command", fake_run_command)
+
+    payload = harness.run_suite(
+        suite_path=suite,
+        adapter_id="fake",
+        model=None,
+        scenario_filter="orientation",
+        execute=True,
+        output_root=tmp_path / "out",
+        timeout_seconds=None,
+        postmortem_feedback=True,
+    )
+
+    postmortem = payload["results"][0]["postmortem_feedback"]
+    assert postmortem["status"] == "unsupported"
+    assert postmortem["warnings"][0]["warning_class"] == "model_cli_postmortem_feedback_unsupported"
+
+
 def test_model_cli_harness_runs_all_prompt_variants(tmp_path: Path) -> None:
     fixture = tmp_path / "fixtures" / "repo"
     fixture.mkdir(parents=True)
@@ -357,6 +488,45 @@ def test_model_cli_harness_warns_on_permission_denied_external_output_attempt(tm
     assert "model_cli_external_output_attempt" in classes
 
 
+def test_model_cli_harness_marks_agentic_workspace_permission_denied_as_adapter_limitation(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._execution_warnings(
+        result={
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "",
+            "final_message": "agentic-workspace start --profile tiny: Permission denied and could not request permission from user",
+        },
+        repo_path=repo,
+        mutation_summary={"status": "clean"},
+    )
+
+    classes = {warning["warning_class"] for warning in warnings}
+    assert "model_cli_permission_denied" in classes
+    assert "model_cli_adapter_tooling_limitation" in classes
+
+
+def test_model_cli_harness_marks_missing_shell_tool_as_adapter_limitation(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._execution_warnings(
+        result={
+            "returncode": 0,
+            "stdout": "I would run `agentic-workspace start --profile tiny --format json`.",
+            "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
+        },
+        repo_path=repo,
+        mutation_summary={"status": "clean"},
+    )
+
+    assert "model_cli_adapter_tooling_limitation" in {warning["warning_class"] for warning in warnings}
+
+
 def test_model_cli_harness_skips_semantic_scoring_when_model_did_not_answer() -> None:
     harness = _load_harness()
 
@@ -576,6 +746,27 @@ def test_model_cli_harness_metadata_scoring_warns_on_write_and_response_rules(tm
     assert any("avoidable or forbidden" in message for message in messages)
     assert any("forbidden response phrase" in message for message in messages)
     assert any("required artifact pattern" in message for message in messages)
+
+
+def test_model_cli_harness_does_not_score_missing_workspace_execution_when_tool_unavailable(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "startup-orientation",
+            "required_executed_commands": ["agentic-workspace start --profile tiny"],
+        },
+        result={
+            "stdout": "I attempted `agentic-workspace start --profile tiny --format json`.",
+            "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
+        },
+        mutation_summary={"status": "clean"},
+        repo_path=repo,
+    )
+
+    assert warnings == []
 
 
 def test_model_cli_harness_metadata_scoring_uses_full_transcript_for_required_commands(tmp_path: Path) -> None:
@@ -921,20 +1112,20 @@ def test_model_cli_harness_postmortem_prompt_keeps_feedback_compact_and_actionab
     )
 
     assert "Why did you choose the workflow and commands you used?" in prompt
-    assert "Do not inspect the repo, run commands, read files, or edit files." in prompt
-    assert prompt.startswith("TASK: Answer the postmortem questions using the provided evidence.")
-    assert "Do not ask for more evidence." in prompt
+    assert "This is not a repository task." in prompt
+    assert "Do not run startup commands, inspect paths, read files, search, or edit." in prompt
+    assert prompt.startswith("TASK: Analyze a completed model-run transcript")
     assert "Use only the evidence block above." in prompt
-    assert "The evidence block is complete." in prompt
+    assert "The evidence block is complete for this analysis." in prompt
     assert "EVIDENCE BLOCK START" in prompt
     assert "EVIDENCE BLOCK END" in prompt
     assert "Warnings: Too much raw reading." in prompt
     assert "Mutation: status=clean" in prompt
-    assert prompt.index("Warnings:") < prompt.index("Original prompt excerpt:")
+    assert prompt.index("Warnings:") < prompt.index("Scenario prompt excerpt:")
     assert "What was ambiguous, missing, or more verbose than necessary?" in prompt
     assert "What would have reduced token usage without reducing safety or proof quality?" in prompt
     assert "Separate model/provider limitations from product or harness improvements." in prompt
-    assert "If a required field inside the block says missing, name that field." in prompt
+    assert "If a field says none or missing, name that field instead of looking elsewhere." in prompt
     assert "Keep the answer under 200 words." in prompt
     assert len(prompt) < 2200
 
@@ -1816,12 +2007,13 @@ def test_model_cli_harness_classifies_provider_runtime_noise_separately() -> Non
                 "warnings": [
                     {"warning_class": "model_cli_provider_error", "message": "provider error"},
                     {"warning_class": "model_cli_runtime_stderr", "message": "terminal warning"},
+                    {"warning_class": "model_cli_adapter_tooling_limitation", "message": "tooling limit"},
                 ],
             }
         ]
     )
 
-    assert classification["finding_count"] == 2
+    assert classification["finding_count"] == 3
     for finding in classification["findings"]:
         assert "environment_or_provider" in finding["classification"]
         assert "first_seen" not in finding["classification"]

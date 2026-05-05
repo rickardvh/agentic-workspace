@@ -21,6 +21,7 @@
       "provider_home_env": "COPILOT_HOME",
       "provider_home_path": "{run_root}/copilot-home",
       "inject_repo_startup_instructions": true,
+      "postmortem_feedback_supported": false,
       "command": [
         "copilot",
         "--model",
@@ -35,6 +36,27 @@
         "{run_root}/copilot-logs",
         "--add-dir",
         "{repo}",
+        "--output-format",
+        "json",
+        "--share",
+        "{share_path}",
+        "--silent",
+        "--no-color"
+      ],
+      "postmortem_command": [
+        "copilot",
+        "--model",
+        "{model}",
+        "-p",
+        "{prompt}",
+        "--allow-all",
+        "--no-ask-user",
+        "--disable-builtin-mcps",
+        "--no-remote",
+        "--available-tools=",
+        "--no-custom-instructions",
+        "--log-dir",
+        "{run_root}/copilot-postmortem-logs",
         "--output-format",
         "json",
         "--share",
@@ -60,6 +82,17 @@
         "{repo}",
         "--output-format",
         "json"
+      ],
+      "postmortem_command": [
+        "gemini",
+        "--model",
+        "{model}",
+        "--prompt",
+        "{prompt}",
+        "--approval-mode",
+        "yolo",
+        "--output-format",
+        "json"
       ]
     },
     "codex": {
@@ -67,6 +100,7 @@
       "timeout_seconds": 900,
       "block_on_preflight_failure": true,
       "inject_repo_startup_instructions": true,
+      "postmortem_feedback_supported": false,
       "command": [
         "codex",
         "exec",
@@ -74,6 +108,20 @@
         "{model}",
         "--cd",
         "{repo}",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--skip-git-repo-check",
+        "--output-last-message",
+        "{share_path}",
+        "--json",
+        "{prompt}"
+      ],
+      "postmortem_command": [
+        "codex",
+        "exec",
+        "--model",
+        "{model}",
+        "--cd",
+        "{postmortem_cwd}",
         "--dangerously-bypass-approvals-and-sandbox",
         "--skip-git-repo-check",
         "--output-last-message",

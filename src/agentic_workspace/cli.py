@@ -17443,8 +17443,8 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
 
         for label, terms, weight in (
             ("verb", skill.activation_hints.verbs, 2),
-            ("noun", skill.activation_hints.nouns, 2),
-            ("context", skill.activation_hints.when, 1),
+            ("noun", skill.activation_hints.nouns, 3),
+            ("context", skill.activation_hints.when, 2),
         ):
             matched = _matched_skill_terms(
                 terms=terms,
@@ -17513,12 +17513,31 @@ def _matched_skill_terms(
 
 
 def _skill_term_matches(*, term: str, task_text_lower: str, task_text_normalized: str, task_tokens: set[str]) -> bool:
-    normalised = " ".join(_skill_match_tokens(term))
+    term_tokens = _skill_match_tokens(term)
+    normalised = " ".join(term_tokens)
     if not normalised:
         return False
     if " " in normalised:
-        return normalised in task_text_lower or normalised in task_text_normalized
-    return normalised in task_tokens
+        return (
+            normalised in task_text_lower
+            or normalised in task_text_normalized
+            or all(_skill_token_matches(token=token, task_tokens=task_tokens) for token in term_tokens)
+        )
+    return _skill_token_matches(token=normalised, task_tokens=task_tokens)
+
+
+def _skill_token_matches(*, token: str, task_tokens: set[str]) -> bool:
+    if token in task_tokens:
+        return True
+    if token.endswith("s") and token[:-1] in task_tokens:
+        return True
+    if f"{token}s" in task_tokens:
+        return True
+    if token.endswith("e") and f"{token[:-1]}ion" in task_tokens:
+        return True
+    if token.endswith("ate") and f"{token[:-3]}ation" in task_tokens:
+        return True
+    return False
 
 
 def _summary_overlap_tokens(*, skill: RegisteredSkill, task_tokens: set[str]) -> list[str]:
