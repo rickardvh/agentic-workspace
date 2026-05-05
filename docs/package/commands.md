@@ -58,7 +58,7 @@ Use `agentic-planning` in workflow guidance and package-local Planning lifecycle
 
 | Command | Use when |
 | --- | --- |
-| `setup` | inspect bounded post-bootstrap setup findings |
+| `setup` | inspect bounded post-bootstrap setup findings and lived-in repo jumpstart candidates; see [Jumpstart contract](../jumpstart-contract.md) |
 | `reconcile` | compare planning state with optional external work evidence |
 | `external-intent refresh-github` | refresh optional GitHub issue evidence through the adapter |
 | `note-delegation-outcome` | record local-only delegation calibration data |

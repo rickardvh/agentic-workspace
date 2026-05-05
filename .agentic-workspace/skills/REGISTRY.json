@@ -77,6 +77,42 @@
           "broad work needs routing before planning"
         ]
       }
+    },
+    {
+      "id": "workspace-setup-jumpstart",
+      "path": "workspace-setup-jumpstart/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "route newly installed or adopted Agentic Workspace in a lived-in repo through bounded setup and jumpstart discovery before seeding durable surfaces",
+      "activation_hints": {
+        "verbs": ["setup", "jumpstart", "populate", "seed", "adopt", "install", "orient"],
+        "nouns": [
+          "lived-in repo",
+          "mature repo",
+          "post-bootstrap",
+          "setup findings",
+          "seed surfaces",
+          "durable surfaces",
+          "workspace surfaces",
+          "new repo adoption"
+        ],
+        "phrases": [
+          "setup jumpstart",
+          "mature repo jumpstart",
+          "lived-in repo",
+          "post-bootstrap setup",
+          "populate surfaces",
+          "seed surfaces",
+          "newly installed workspace",
+          "after install",
+          "new repo adoption"
+        ],
+        "when": [
+          "Agentic Workspace was newly installed or adopted in a lived-in repo",
+          "workspace surfaces need to be populated after init or install",
+          "mature repo discovery needs bounded pre-seed routing"
+        ]
+      }
     }
   ]
 }

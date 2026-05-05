@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -90,6 +91,14 @@ def test_workspace_artifacts_match_checked_in_payload_inventory() -> None:
     assert wheel_inventory == expected_inventory
     assert sdist_inventory == expected_inventory
     assert installed_inventory == expected_inventory
+
+
+def test_workspace_surface_manifest_payload_entries_exist_in_source_payload() -> None:
+    manifest = json.loads((WORKSPACE_ROOT / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json").read_text())
+
+    missing = [path for path in manifest["payload_files"] if not (PAYLOAD_ROOT / path).is_file()]
+
+    assert missing == []
 
 
 def test_workspace_artifacts_ship_generated_cli_package_import_dependency() -> None:

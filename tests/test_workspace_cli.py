@@ -407,6 +407,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
     assert payload["lifecycle"]["canonical_bootstrap_handoff_record"] == ".agentic-workspace/bootstrap-handoff.json"
     assert payload["setup"]["canonical_doc"] == "docs/jumpstart-contract.md"
+    assert Path(payload["setup"]["canonical_doc"]).exists()
     assert payload["setup"]["command"] == "agentic-workspace setup --target ./repo --format json"
     assert payload["setup"]["rule"] == "Setup is a bounded post-bootstrap phase that stays separate from init."
     assert payload["setup"]["phase"] == "post-bootstrap"
@@ -415,6 +416,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "keep follow-through bounded and reviewable",
     ]
     assert payload["setup_findings_promotion"]["canonical_doc"] == "docs/setup-findings-contract.md"
+    assert Path(payload["setup_findings_promotion"]["canonical_doc"]).exists()
     assert payload["setup_findings_promotion"]["command"] == "agentic-workspace setup --target ./repo --format json"
     assert payload["setup_findings_promotion"]["artifact_path"] == "tools/setup-findings.json"
     assert payload["setup_findings_promotion"]["schema_path"] == "src/agentic_workspace/contracts/schemas/setup_findings.schema.json"
@@ -3379,6 +3381,7 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     payload = json.loads(capsys.readouterr().out)
     skill_ids = {entry["id"] for entry in payload["skills"]}
     assert "workspace-startup" in skill_ids
+    assert "workspace-setup-jumpstart" in skill_ids
     assert "planning-autopilot" in skill_ids
     assert "memory-router" in skill_ids
     assert "planning-reporting" in skill_ids
@@ -3386,6 +3389,10 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     workspace_startup = next(entry for entry in payload["skills"] if entry["id"] == "workspace-startup")
     assert workspace_startup["source_kind"] == "installed-workspace-skills"
     assert "workspace startup" in workspace_startup["activation_hints"]["phrases"]
+    setup_jumpstart = next(entry for entry in payload["skills"] if entry["id"] == "workspace-setup-jumpstart")
+    assert setup_jumpstart["source_kind"] == "installed-workspace-skills"
+    assert "lived-in repo" in setup_jumpstart["activation_hints"]["phrases"]
+    assert "mature repo" in setup_jumpstart["activation_hints"]["nouns"]
     autopilot = next(entry for entry in payload["skills"] if entry["id"] == "planning-autopilot")
     assert "run autopilot" in autopilot["activation_hints"]["phrases"]
 
@@ -3511,9 +3518,38 @@ def test_skills_command_recommends_planning_reporting_for_setup_task(tmp_path: P
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert [entry["id"] for entry in payload["recommendations"]] == ["planning-reporting"]
-    assert payload["recommendations"][0]["score"] == 10
-    assert "setup uses the compact planning reporting surface" in payload["recommendations"][0]["reasons"][0]
+    assert payload["recommendations"][0]["id"] == "workspace-setup-jumpstart"
+    assert payload["recommendations"][0]["score"] > 10
+    assert "workspace setup jumpstart route" in payload["recommendations"][0]["reasons"][0]
+
+
+def test_skills_command_recommends_setup_jumpstart_for_mature_repo_seeding(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "populate surfaces after newly installed workspace in a lived-in repo",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["recommendations"][0]["id"] == "workspace-setup-jumpstart"
+    assert payload["recommendations"][0]["source_kind"] == "installed-workspace-skills"
+    assert "pre-write and pre-seed discovery" in Path("docs/jumpstart-contract.md").read_text(encoding="utf-8")
 
 
 def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_path: Path, capsys) -> None:
@@ -7017,6 +7053,10 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     )
     _write((tmp_path / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md"), "# Workspace Startup\n")
     _write((tmp_path / ".agentic-workspace" / "skills" / "workspace-work-shape" / "SKILL.md"), "# Workspace Work Shape\n")
+    _write(
+        (tmp_path / ".agentic-workspace" / "skills" / "workspace-setup-jumpstart" / "SKILL.md"),
+        "# Workspace Setup Jumpstart\n",
+    )
     _write((tmp_path / ".agentic-workspace" / "system-intent" / "WORKFLOW.md"), "# System Intent Workflow\n")
     _write(
         (tmp_path / "AGENTS.md"),

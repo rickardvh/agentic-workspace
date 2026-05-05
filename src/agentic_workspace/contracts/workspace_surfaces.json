@@ -7,6 +7,7 @@
     ".agentic-workspace/skills/REGISTRY.json",
     ".agentic-workspace/skills/workspace-startup/SKILL.md",
     ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
     ".agentic-workspace/system-intent/WORKFLOW.md"
   ],
   "system_intent_mirror_kind": "agentic-workspace/system-intent/v1",

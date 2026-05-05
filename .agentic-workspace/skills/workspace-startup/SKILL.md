@@ -9,11 +9,12 @@ Use this skill when the task is about ordinary startup, task routing, config obl
 
 ## Route
 
-1. Run `agentic-workspace start --target . --format json` for ordinary first contact.
-2. Run `agentic-workspace preflight --target . --format json` for takeover, recovery, or uncertain state.
-3. Run `agentic-workspace summary --target . --format json` when active work, planning, handoff, or continuation matters.
-4. Run `agentic-workspace config --target . --profile compact --format json` when local posture, configured obligations, startup file, or CLI invocation matters.
-5. Run `agentic-workspace proof --target . --changed <paths> --format json` before claiming validation.
+1. Run `agentic-workspace start --profile tiny --target . --task "<task>" --format json` for ordinary first contact.
+2. If changed paths are already known, run `agentic-workspace implement --profile tiny --target . --changed <paths> --format json`.
+3. Run `agentic-workspace preflight --target . --format json` only for takeover, recovery, or uncertain state.
+4. Run `agentic-workspace summary --target . --format json` when active work, planning, handoff, or continuation matters.
+5. Run `agentic-workspace config --target . --profile compact --format json` when local posture, configured obligations, startup file, or CLI invocation matters.
+6. Run `agentic-workspace proof --profile tiny --target . --changed <paths> --format json` before claiming validation.
 
 Open raw `.agentic-workspace/` files only after a compact command points there.
 

@@ -16828,6 +16828,16 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
     task_text_normalized = " ".join(_skill_match_tokens(task_text))
     if "setup" in task_text_lower:
         for skill in skills:
+            if skill.skill_id == "workspace-setup-jumpstart":
+                return [
+                    SkillRecommendation(
+                        skill=skill,
+                        hint_score=18,
+                        score=18,
+                        reasons=("setup uses the workspace setup jumpstart route before any broader discovery",),
+                    )
+                ]
+        for skill in skills:
             if skill.skill_id == "planning-reporting":
                 return [
                     SkillRecommendation(
