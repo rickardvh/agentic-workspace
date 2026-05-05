@@ -7871,6 +7871,7 @@ def _run_preflight_command(
     target_root: Path,
     active_only: bool = False,
     task_text: str | None = None,
+    changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     """Get compact takeover-safe context: startup + config + active state.
 
@@ -7895,6 +7896,8 @@ def _run_preflight_command(
     workflow_obligations = _workflow_obligations_report_payload(
         config=config,
         active_planning_record=obligation_record,
+        task_text=task_text,
+        changed_paths=changed_paths,
     )
     closeout_obligations = _closeout_workflow_obligations_payload(workflow_obligations)
     durable_intent = _intent_decision_projection(
@@ -8323,7 +8326,7 @@ def _start_payload(
     descriptors = _module_operations()
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     installed_modules = [entry.name for entry in registry if entry.installed]
-    preflight = _run_preflight_command(target_root=target_root, task_text=task_text)
+    preflight = _run_preflight_command(target_root=target_root, task_text=task_text, changed_paths=changed_paths)
     active_state = preflight.get("active_planning_state", {})
     selected_modules = installed_modules or _preset_modules(descriptors).get(config.default_preset, [])
     if not installed_modules and isinstance(active_state, dict):
@@ -9554,33 +9557,101 @@ def _config_effect_audit_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     }
 
 
-def _scope_tags_for_current_work(*, active_planning_record: dict[str, Any] | None) -> list[str]:
+def _scope_tags_for_current_work(
+    *,
+    active_planning_record: dict[str, Any] | None,
+    task_text: str | None = None,
+    changed_paths: list[str] | None = None,
+) -> tuple[list[str], list[str]]:
     tags: set[str] = set()
+    sources: list[str] = []
     touched_scope = active_planning_record.get("touched_scope", []) if isinstance(active_planning_record, dict) else []
     if isinstance(touched_scope, list):
         for raw_item in touched_scope:
-            item = str(raw_item)
-            normalized = item.lower()
-            if any(token in normalized for token in ("src/agentic_workspace", ".agentic-workspace/docs", "readme.md")):
-                tags.add("workspace")
-            if any(token in normalized for token in (".agentic-workspace/planning", "packages/planning")):
-                tags.add("planning")
-            if any(token in normalized for token in (".agentic-workspace/memory", "packages/memory")):
-                tags.add("memory")
-            if any(token in normalized for token in ("agents.md", "llms.txt", "tools/agent_quickstart", "tools/agent_routing")):
-                tags.add("adapter-surfaces")
+            tags.update(_scope_tags_for_path(str(raw_item)))
+        if touched_scope:
+            sources.append("active planning touched_scope")
     if active_planning_record:
         tags.add("planning")
-    return sorted(tags)
+        sources.append("active planning presence")
+    normalized_task = " ".join((task_text or "").lower().split())
+    if normalized_task:
+        task_tags = _scope_tags_for_task_text(normalized_task)
+        if task_tags:
+            tags.update(task_tags)
+            sources.append("task text")
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    for path in normalized_paths:
+        tags.update(_scope_tags_for_path(path))
+    if normalized_paths:
+        sources.append("changed paths")
+    return sorted(tags), sources
+
+
+def _scope_tags_for_path(path: str) -> set[str]:
+    normalized = path.lower().replace("\\", "/")
+    tags: set[str] = set()
+    if any(token in normalized for token in ("src/agentic_workspace", ".agentic-workspace/docs", "readme.md")):
+        tags.add("workspace")
+    if any(token in normalized for token in (".agentic-workspace/planning", "packages/planning")):
+        tags.add("planning")
+    if any(token in normalized for token in (".agentic-workspace/memory", "packages/memory")):
+        tags.add("memory")
+    if any(token in normalized for token in ("agents.md", "llms.txt", "tools/agent_quickstart", "tools/agent_routing")):
+        tags.add("adapter-surfaces")
+    if "config.toml" in normalized or "workspace_config" in normalized:
+        tags.add("workspace")
+    if "system-intent" in normalized or "system_intent" in normalized:
+        tags.add("system-intent")
+    return tags
+
+
+def _scope_tags_for_task_text(normalized_task: str) -> set[str]:
+    tags: set[str] = set()
+    if any(
+        token in normalized_task
+        for token in (
+            "workspace",
+            "workflow",
+            "obligation",
+            "orchestrat",
+            "start",
+            "startup",
+            "preflight",
+            "config",
+            "ownership",
+            "implementation style",
+        )
+    ):
+        tags.add("workspace")
+    if any(token in normalized_task for token in ("agent instructions", "agents.md", "llms.txt", "adapter", "routing surface")):
+        tags.add("adapter-surfaces")
+    if any(token in normalized_task for token in ("planning", "plan", "execplan", "lane", "epic", "future work")):
+        tags.add("planning")
+    if any(token in normalized_task for token in ("memory", "durable knowledge", "rediscovery")):
+        tags.add("memory")
+    if any(token in normalized_task for token in ("dogfood", "self-improvement", "optimisation", "optimization")):
+        tags.update({"dogfooding", "self-improvement"})
+    if "system intent" in normalized_task or "subsystem intent" in normalized_task:
+        tags.add("system-intent")
+    if "package boundary" in normalized_task or "package boundaries" in normalized_task:
+        tags.add("package-boundaries")
+    return tags
 
 
 def _workflow_obligations_report_payload(
     *,
     config: WorkspaceConfig,
     active_planning_record: dict[str, Any] | None,
+    task_text: str | None = None,
+    changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     configured = _workflow_obligation_payloads(config)
-    current_tags = _scope_tags_for_current_work(active_planning_record=active_planning_record)
+    current_tags, scope_sources = _scope_tags_for_current_work(
+        active_planning_record=active_planning_record,
+        task_text=task_text,
+        changed_paths=changed_paths,
+    )
     matching: list[dict[str, Any]] = []
     relevant: list[dict[str, Any]] = []
     current_tag_set = set(current_tags)
@@ -9610,11 +9681,9 @@ def _workflow_obligations_report_payload(
         "configured_count": len(configured),
         "current_scope_tags": current_tags,
         "match_evidence": {
-            "observed_scope_source": (
-                "active planning record touched_scope plus active-planning presence"
-                if active_planning_record
-                else "no active planning record"
-            ),
+            "observed_scope_source": ", ".join(scope_sources)
+            if scope_sources
+            else "no active planning record, task text, or changed paths",
             "current_scope_tags": current_tags,
             "match_count": len(relevant),
             "matching": matching,
@@ -9667,7 +9736,7 @@ def _closeout_workflow_obligations_payload(workflow_obligations: dict[str, Any])
     return {
         "status": "present" if closeout_required else ("recommended" if closeout_recommended else "none-configured-for-current-work"),
         "rule": (
-            "Before claiming a lane or milestone is complete, run closeout obligations from repo config; "
+            "Before claiming work, a lane, or a milestone is complete, run closeout obligations from repo config; "
             "validation success alone is not a closeout."
         ),
         "primary_next_action": (
@@ -9678,7 +9747,7 @@ def _closeout_workflow_obligations_payload(workflow_obligations: dict[str, Any])
                 "command": primary_command,
                 "run": primary_command,
                 "risk": "may surface required closeout work but should not mutate repo state unless the command itself says so",
-                "required_inputs": ["active planning record", "validation results", "issue or lane scope"],
+                "required_inputs": ["task scope or active planning record", "changed paths or proof scope", "validation results"],
                 "next_proof": "record closeout evidence, route durable residue, then rerun summary/reconcile before issue closure",
             }
             if isinstance(primary_obligation, dict)

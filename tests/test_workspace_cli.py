@@ -7393,7 +7393,7 @@ def test_preflight_surfaces_closeout_workflow_obligations_for_active_scope(tmp_p
     assert primary["action"] == "run-closeout-obligation"
     assert primary["id"] == "dogfooding_lane_closeout"
     assert primary["command"] == "agentic-workspace skills --target . --task dogfooding --format json"
-    assert primary["required_inputs"] == ["active planning record", "validation results", "issue or lane scope"]
+    assert primary["required_inputs"] == ["task scope or active planning record", "changed paths or proof scope", "validation results"]
     assert "route durable residue" in primary["next_proof"]
     assert obligations[0]["id"] == "dogfooding_lane_closeout"
     assert obligations[0]["stage"] == "closeout"
@@ -7433,6 +7433,53 @@ def test_preflight_surfaces_closeout_workflow_obligations_as_standing_requiremen
     assert posture["optimization_bias"]["mode"] == "agent-efficiency"
     assert posture["closeout_nudge"]["field"] == "improvement_signal_review"
     assert posture["incidental_finding_policy"]["status"] == "required-reporting"
+
+
+def test_preflight_matches_planless_workflow_obligations_from_task_text(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n"
+        "[workflow_obligations.workspace_closeout]\n"
+        'summary = "Run workspace closeout checks."\n'
+        'stage = "closeout"\n'
+        'force = "required-before-closeout"\n'
+        'scope_tags = ["workspace"]\n'
+        'commands = ["agentic-workspace report --target . --section closeout_trust --format json"]\n'
+        'review_hint = "Workspace orchestration applies even without active Planning."\n\n'
+        "[workflow_obligations.dogfooding_closeout]\n"
+        'summary = "Route dogfooding residue."\n'
+        'stage = "closeout"\n'
+        'force = "required-before-closeout"\n'
+        'scope_tags = ["dogfooding"]\n'
+        'commands = ["agentic-workspace skills --target . --task dogfooding --format json"]\n'
+        'review_hint = "Do not bypass dogfooding just because no execplan exists."\n',
+    )
+
+    assert (
+        cli.main(
+            [
+                "preflight",
+                "--target",
+                str(target),
+                "--task",
+                "Fix workspace workflow obligations during dogfooding closeout without writing a plan",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    workflow = payload["workflow_obligations"]
+    assert workflow["match_evidence"]["observed_scope_source"] == "task text"
+    assert workflow["match_evidence"]["match_count"] == 2
+    assert workflow["current_scope_tags"] == ["dogfooding", "planning", "self-improvement", "workspace"]
+    assert {item["id"] for item in workflow["relevant_to_current_work"]} == {"workspace_closeout", "dogfooding_closeout"}
+    assert payload["closeout_obligations"]["status"] == "present"
 
 
 def test_preflight_active_only_includes_active_todo_without_execplan(tmp_path: Path, capsys) -> None:
