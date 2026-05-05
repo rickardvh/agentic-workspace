@@ -43,6 +43,7 @@ STARTER_TEMPLATE_FILES = (
 )
 BOOTSTRAP_WORKSPACE_FILES = (
     BOOTSTRAP_WORKSPACE_ROOT / "README.md",
+    BOOTSTRAP_WORKSPACE_ROOT / "skills/REGISTRY.json",
     BOOTSTRAP_WORKSPACE_ROOT / "skills/install/SKILL.md",
     BOOTSTRAP_WORKSPACE_ROOT / "skills/install/agents/openai.yaml",
     BOOTSTRAP_WORKSPACE_ROOT / "skills/cleanup/SKILL.md",

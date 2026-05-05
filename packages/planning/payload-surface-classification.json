@@ -329,11 +329,39 @@
       "rationale": "Tracker-agnostic intake can become a separate optional extension without weakening active planning."
     },
     {
+      "source_path": "packages/planning/skills/planning-decompose/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-decompose/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Decomposition steering is valuable for skill-aware agents facing epic-shaped work, while schema-backed decomposition files remain the core surface."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-new-plan-tighten/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-new-plan-tighten/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Execplan tightening guidance helps skill-aware agents avoid freehand plans, while the CLI scaffolds and schemas remain the core source of truth."
+    },
+    {
       "source_path": "packages/planning/skills/planning-orchestrator-workflow/SKILL.md",
       "installed_path": ".agentic-workspace/planning/skills/planning-orchestrator-workflow/SKILL.md",
       "classification": "config-enabled extension",
       "owner": "planning skills extension",
       "rationale": "Orchestrator workflow should be opt-in for repos and agents that actually delegate."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-assurance-delegation/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-assurance-delegation/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Assurance and delegation steering is useful where skills and delegation targets are configured, but core planning must still work without skill support."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-closeout-trust/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Closeout trust guidance helps skill-aware agents distill residue into Planning, Memory, docs, tests, or issues without making skills mandatory for archive."
     },
     {
       "source_path": "packages/planning/skills/planning-promote-review-findings/SKILL.md",

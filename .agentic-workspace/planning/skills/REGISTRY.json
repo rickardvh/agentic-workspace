@@ -61,6 +61,82 @@
       }
     },
     {
+      "id": "planning-decompose",
+      "path": "planning-decompose/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "decompose epic or lane shaped work into bounded schema-backed planning records before execplans",
+      "activation_hints": {
+        "verbs": ["decompose", "split", "triage", "break", "shape"],
+        "nouns": ["epic", "lane", "decomposition", "progressive maturity", "bounded tasks"],
+        "phrases": [
+          "decompose an epic",
+          "split into lanes",
+          "progressive maturity",
+          "before execplans",
+          "break down broad work"
+        ],
+        "when": ["epic-shaped work", "multi-lane work", "large work is not ready for an execplan"]
+      }
+    },
+    {
+      "id": "planning-new-plan-tighten",
+      "path": "planning-new-plan-tighten/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "create or tighten a schema-backed execplan scaffold before coding",
+      "activation_hints": {
+        "verbs": ["create", "tighten", "promote", "fill", "prepare"],
+        "nouns": ["execplan", "new plan", "plan scaffold", "execution bounds", "validation commands"],
+        "phrases": [
+          "tighten a new execplan",
+          "create a valid plan",
+          "before coding",
+          "fill execution bounds",
+          "promote to plan"
+        ],
+        "when": ["checked-in planning is required", "new-plan scaffold exists", "plan is too generic"]
+      }
+    },
+    {
+      "id": "planning-assurance-delegation",
+      "path": "planning-assurance-delegation/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "apply assurance and delegation posture before handing off or implementing planned work",
+      "activation_hints": {
+        "verbs": ["assess", "classify", "delegate", "escalate", "handoff"],
+        "nouns": ["assurance", "delegation posture", "risk", "human input", "strong planner", "weak implementer"],
+        "phrases": [
+          "assurance classification",
+          "delegation posture",
+          "escalate to planner",
+          "handoff to weaker implementer",
+          "human input needed"
+        ],
+        "when": ["risk or capability fit is unclear", "delegation may improve quality", "delegation may save tokens safely"]
+      }
+    },
+    {
+      "id": "planning-closeout-trust",
+      "path": "planning-closeout-trust/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "close out planned work with proof, intent satisfaction, trust, and residue distillation",
+      "activation_hints": {
+        "verbs": ["close", "archive", "distill", "finish", "validate"],
+        "nouns": ["closeout", "closeout trust", "residue", "proof", "intent satisfaction", "archive-plan"],
+        "phrases": [
+          "closeout trust",
+          "residue distillation",
+          "archive plan",
+          "after implementation",
+          "proof and intent satisfaction"
+        ],
+        "when": ["planned work is done", "before closing an issue", "completed work may leave reusable knowledge"]
+      }
+    },
+    {
       "id": "planning-promote-review-findings",
       "path": "planning-promote-review-findings/SKILL.md",
       "scope": "bundled",

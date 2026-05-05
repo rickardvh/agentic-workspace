@@ -3372,6 +3372,62 @@ def test_skills_command_recommends_review_skill_for_natural_review_request(tmp_p
     assert any("verb match" in reason or "phrase match" in reason for reason in payload["recommendations"][0]["reasons"])
 
 
+def test_skills_command_discovers_temporary_memory_bootstrap_skills(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target), "--preset", "memory", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "finish bootstrap installation review for memory",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    install_skill = next(entry for entry in payload["skills"] if entry["id"] == "install")
+
+    assert install_skill["source_kind"] == "temporary-memory-bootstrap-skills"
+    assert install_skill["scope"] == "temporary-bootstrap"
+    assert install_skill["path"] == ".agentic-workspace/memory/bootstrap/skills/install/SKILL.md"
+    assert payload["recommendations"][0]["id"] == "install"
+    assert not payload["warnings"]
+    assert any(source["name"] == "memory-bootstrap-temporary" and source["state"] == "registry" for source in payload["sources"])
+
+
+def test_skills_command_recommends_high_risk_workflow_decision_skills(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    cases = [
+        ("large vague feature request classify shape before implementation", "workspace-work-shape"),
+        ("decompose an epic into lanes before execplans", "planning-decompose"),
+        ("tighten a new execplan before coding", "planning-new-plan-tighten"),
+        ("assurance classification and delegation posture before implementation", "planning-assurance-delegation"),
+        ("closeout trust and residue distillation after implementation", "planning-closeout-trust"),
+    ]
+    for task, expected in cases:
+        assert cli.main(["skills", "--target", str(target), "--task", task, "--format", "json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["recommendations"], task
+        assert payload["recommendations"][0]["id"] == expected
+
+
 def test_skills_command_recommends_self_improvement_for_hyphenated_dogfooding_task(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -6737,6 +6793,7 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
         '{"schema_version":"skill-registry.v1","owner":"agentic-workspace","source_kind":"installed-workspace-skills","skills":[]}\n',
     )
     _write((tmp_path / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md"), "# Workspace Startup\n")
+    _write((tmp_path / ".agentic-workspace" / "skills" / "workspace-work-shape" / "SKILL.md"), "# Workspace Work Shape\n")
     _write((tmp_path / ".agentic-workspace" / "system-intent" / "WORKFLOW.md"), "# System Intent Workflow\n")
     _write(
         (tmp_path / "AGENTS.md"),

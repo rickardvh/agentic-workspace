@@ -15694,6 +15694,15 @@ def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:
             default_stability="package-managed",
         ),
         SkillCatalogSource(
+            name="memory-bootstrap-temporary",
+            registry_path=Path(".agentic-workspace/memory/bootstrap/skills/REGISTRY.json"),
+            skills_root=Path(".agentic-workspace/memory/bootstrap/skills"),
+            owner="agentic-memory",
+            source_kind="temporary-memory-bootstrap-skills",
+            default_scope="temporary-bootstrap",
+            default_stability="temporary-bootstrap-workspace",
+        ),
+        SkillCatalogSource(
             name="repo-memory",
             registry_path=Path(".agentic-workspace/memory/repo/skills/REGISTRY.json"),
             skills_root=Path(".agentic-workspace/memory/repo/skills"),
