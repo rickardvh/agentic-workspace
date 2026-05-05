@@ -7755,15 +7755,24 @@ def test_start_tiny_routes_prep_only_handoff_to_planning_bridge(tmp_path: Path, 
     payload = json.loads(capsys.readouterr().out)
     action = payload["immediate_next_allowed_action"]
     assert action["action"] == "create-prep-only-planning-state"
-    assert action["command"] == "agentic-workspace planning --format json"
-    assert action["next_proof"] == "agentic-workspace summary --format json"
+    assert action["command"].startswith("agentic-planning new-plan")
+    assert "--prep-only" in action["command"]
+    assert action["next_proof"] == "agentic-workspace summary --profile compact --format json"
+    assert action["read_first"] == []
     assert "do not create product source" in action["summary"]
     prep_only = payload["prep_only_handoff"]
-    assert prep_only["first_command"] == "agentic-workspace planning --format json"
-    assert prep_only["after_write"] == "agentic-workspace summary --format json"
+    assert prep_only["first_command"].startswith("agentic-planning new-plan")
+    assert prep_only["reference_command"] == "agentic-workspace planning --format json"
+    assert "--prep-only" in prep_only["preferred_mutation_command_template"]
+    assert prep_only["after_write"] == "agentic-workspace summary --profile compact --format json"
+    assert prep_only["stop_after_summary"] is True
+    assert "no" in prep_only["open_execplan_after_creation"]
+    assert "defer unless summary reports" in prep_only["manual_execplan_tightening"]
+    assert any("smallest schema-preserving" in item for item in prep_only["allowed_after_new_plan"])
     assert ".agentic-workspace/planning/execplans/" in prep_only["allowed_write_scope"]
     assert "tests or fixtures" in prep_only["forbidden_until_implementation_requested"]
-    assert len(json.dumps(payload, sort_keys=True)) < 7500
+    assert "manual JSON polishing or ad hoc validation loops" in prep_only["forbidden_until_implementation_requested"]
+    assert len(json.dumps(payload, sort_keys=True)) < 8200
 
 
 def test_start_tiny_routes_paraphrased_prep_only_handoff_to_planning_bridge(tmp_path: Path, capsys) -> None:
@@ -7779,6 +7788,39 @@ def test_start_tiny_routes_paraphrased_prep_only_handoff_to_planning_bridge(tmp_
     payload = json.loads(capsys.readouterr().out)
     assert payload["immediate_next_allowed_action"]["action"] == "create-prep-only-planning-state"
     assert payload["prep_only_handoff"]["status"] == "required"
+
+
+def test_start_tiny_routes_groundwork_without_implementation_to_prep_only(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    task = "Prepare groundwork for CSV row import support without implementing feature"
+    assert cli.main(["start", "--target", str(target), "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    action = payload["immediate_next_allowed_action"]
+    assert action["action"] == "create-prep-only-planning-state"
+    assert action["command"].startswith("agentic-planning new-plan")
+    assert action["read_first"] == []
+
+
+def test_start_tiny_routes_durable_plan_state_without_code_to_prep_only(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    task = "Prepare durable implementation plan/state for CSV row import feature with no code changes yet"
+    assert cli.main(["start", "--target", str(target), "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    action = payload["immediate_next_allowed_action"]
+    assert action["action"] == "create-prep-only-planning-state"
+    assert "--prep-only" in action["command"]
 
 
 def test_start_tiny_respects_ask_first_clarification_mode(tmp_path: Path, capsys) -> None:
@@ -9268,6 +9310,7 @@ def test_planning_help_command_returns_lifecycle_guidance(capsys) -> None:
     assert any("new-plan" in command for command in payload["lifecycle_commands"])
     assert "schema-valid scaffold" in payload["post_new_plan_tightening"]["rule"]
     assert "execution_bounds" in payload["post_new_plan_tightening"]["tighten_before_implementation"]
+    assert "--profile compact" in payload["post_new_plan_tightening"]["after_write"]
     assert "one lane at a time" in payload["sequential_lane_execution"]["rule"]
     assert "unrelated lanes" in payload["sequential_lane_execution"]["do_not"]
     assert "new-plan" in payload["durable_state_bridge"]["preferred_command"]
@@ -9277,12 +9320,16 @@ def test_planning_help_command_returns_lifecycle_guidance(capsys) -> None:
     prep_route = payload["durable_state_bridge"]["prep_only_route"]
     assert "Create or continue canonical checked-in Planning state" in prep_route["required_action"]
     assert "then stop" in prep_route["required_action"]
+    assert "new-plan --prep-only exits successfully" in prep_route["minimal_success_criteria"]
+    assert "Do not manually tighten" in prep_route["tightening_policy"]
+    assert any("summary reports a blocking Planning problem" in item for item in prep_route["allowed_after_new_plan"])
     assert any("planning/records" in item for item in prep_route["do_not_do"])
     assert any("HANDOFF" in item and "package" in item for item in prep_route["do_not_do"])
+    assert any("ad hoc shell snippets" in item for item in prep_route["do_not_do"])
     assert "reference_validity_rule" in payload["durable_state_bridge"]
     assert "proposed/future" in payload["durable_state_bridge"]["reference_validity_rule"]
     assert any("Do not invent" in rule for rule in payload["rules"])
-    assert any("tighten scaffold" in rule for rule in payload["rules"])
+    assert any("blocking Planning problem" in rule for rule in payload["rules"])
     assert any("one lane at a time" in rule for rule in payload["rules"])
     assert any("WORKFLOW.md as task state" in rule for rule in payload["rules"])
     assert any("architecture assumptions" in rule for rule in payload["rules"])

@@ -2441,16 +2441,28 @@ def _execution_readiness_payload(
             "use_when": "Asked to prepare broad work for later continuation, without implementation.",
             "required_action": "Create or continue canonical checked-in Planning state, verify with summary, then stop; do not stop at a proposal or start implementation.",
             "preferred_command": "agentic-planning new-plan --id <id> --title <title> --activate --prep-only",
-            "after_write": "agentic-workspace summary --target . --format json",
+            "after_write": "agentic-workspace summary --target . --profile compact --format json",
+            "minimal_success_criteria": [
+                "new-plan --prep-only exits successfully",
+                "agentic-workspace summary reports active Planning state",
+                "only canonical Planning surfaces changed",
+            ],
+            "tightening_policy": (
+                "Prep-only scaffolds are schema-valid. Do not manually tighten or revalidate generated JSON during "
+                "handoff prep unless summary reports a blocking Planning problem."
+            ),
             "allowed_after_new_plan": [
-                "tighten content fields inside the created execplan",
-                "for epic-shaped work, add a schema-backed decomposition under .agentic-workspace/planning/decompositions/",
+                "run agentic-workspace summary to verify the Planning state",
+                "only if summary reports a blocking Planning problem, make the smallest schema-preserving Planning edit and rerun summary",
+                "for epic-shaped work, defer schema-backed decomposition enrichment until an implementation or decomposition pass explicitly needs it",
                 "keep the execplan registered in .agentic-workspace/planning/state.toml",
             ],
             "do_not_do": [
                 "do not ask for confirmation instead of leaving durable state when the user already asked you to prepare the repo",
                 "do not create README, PLANNING_STATE, HANDOFF, SLICES, package, dependency, source, public, database, schema, or app scaffold files",
                 "do not route durable state to .agentic-workspace/planning/records/",
+                "do not open and manually rework the generated execplan just to improve wording during prep-only handoff",
+                "do not validate generated JSON with ad hoc shell snippets; use summary or package checks",
             ],
         },
     }
@@ -3184,6 +3196,45 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         )
     if planning_surface_health.get("recovery_required") or int(planning_surface_health.get("warning_count", 0) or 0) > 0:
         compact_summary["planning_surface_health"]["authoring_affordances"] = planning_surface_health.get("authoring_affordances", {})
+    prep_only_contract = compact_summary.get("planning_record", {}).get("prep_only_contract", {})
+    if (
+        isinstance(prep_only_contract, dict)
+        and prep_only_contract.get("is_prep_only") is True
+        and not planning_surface_health.get("recovery_required")
+        and int(planning_surface_health.get("warning_count", 0) or 0) == 0
+    ):
+        return {
+            "kind": compact_summary["kind"],
+            "profile": "compact",
+            "schema": {
+                "profile": "compact-prep-only",
+                "rule": "Minimal prep-only verification view; use full profile only when recovery or implementation is requested.",
+            },
+            "target_root": compact_summary["target_root"],
+            "todo": {
+                "active_count": compact_summary["todo"].get("active_count", 0),
+                "queued_count": compact_summary["todo"].get("queued_count", 0),
+            },
+            "execplans": {
+                "active_count": compact_summary["execplans"].get("active_count", 0),
+                "active_execplans": compact_summary["execplans"].get("active_execplans", []),
+            },
+            "planning_surface_health": compact_summary["planning_surface_health"],
+            "planning_record": {
+                key: compact_summary["planning_record"][key]
+                for key in ("task", "next_action", "proof_expectations", "prep_only_contract", "minimal_refs")
+                if key in compact_summary["planning_record"]
+            },
+            "current_execution_pressure": compact_summary["current_execution_pressure"],
+            "stop_now": {
+                "status": "required",
+                "reason": "Prep-only Planning state is active and compact summary is clean.",
+                "do_not_open_execplan": True,
+                "do_not_rerun_summary": True,
+            },
+            "warnings": [],
+            "warning_count": 0,
+        }
     return compact_summary
 
 
@@ -7394,7 +7445,7 @@ def create_execplan_scaffold(
         result.add("would create" if not record_path.exists() else "would update", record_path, "schema-valid execplan scaffold")
         if activate or queue:
             result.add("would update", state_path, f"register '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
-        result.add("next", target_root / PLANNING_STATE_PATH, "run `agentic-workspace summary --target . --format json`")
+        result.add("next", target_root / PLANNING_STATE_PATH, "run `agentic-workspace summary --target . --profile compact --format json`")
         result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
         return result
 
@@ -7404,7 +7455,7 @@ def create_execplan_scaffold(
     if activate or queue:
         _write_state_to_toml(target_root, updated_state)
         result.add("updated", state_path, f"registered '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
-    result.add("next", state_path, "run `agentic-workspace summary --target . --format json`")
+    result.add("next", state_path, "run `agentic-workspace summary --target . --profile compact --format json`")
     result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
     if prep_only:
         result.add(
@@ -7418,8 +7469,8 @@ def create_execplan_scaffold(
 def _new_plan_tightening_checklist(*, prep_only: bool) -> str:
     if prep_only:
         return (
-            "prep-only route: enrich only canonical planning/decomposition content if needed, keep state.toml registration, "
-            "run summary, then stop without README, PLANNING_STATE, product files, or handoff docs"
+            "prep-only route: run summary, then stop without manual JSON tightening, README, PLANNING_STATE, "
+            "product files, or handoff docs unless summary reports a blocking Planning problem"
         )
     return (
         "before implementation, tighten scaffold fields: goal, non_goals, intent_continuity, execution_bounds, "
@@ -7428,7 +7479,11 @@ def _new_plan_tightening_checklist(*, prep_only: bool) -> str:
 
 
 def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
-    next_action = "Run agentic-workspace summary --target . --format json, confirm the planning state is clean, then stop without product scaffolding."
+    # Prep-only records are stop/proof markers, not implementation contracts.
+    # Drop closeout-only prompts that have repeatedly tempted agents into
+    # polishing generated JSON during a handoff-only pass.
+    plan_record.pop("task_intent_promotion", None)
+    next_action = "Run agentic-workspace summary --target . --profile compact --format json, confirm the planning state is clean, then stop without product scaffolding."
     done_when = "Canonical Planning state exists, summary verifies it, and no product source, package, dependency, README, handoff, or app scaffold files were created."
     plan_record["goal"] = [
         "Prepare durable checked-in Planning state for later continuation without implementing or scaffolding the product."
@@ -7439,7 +7494,7 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
     ]
     plan_record["immediate_next_action"] = [next_action]
     plan_record["completion_criteria"] = [done_when]
-    plan_record["validation_commands"] = ["agentic-workspace summary --target . --format json"]
+    plan_record["validation_commands"] = ["agentic-workspace summary --target . --profile compact --format json"]
     plan_record["touched_paths"] = [
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans/",
@@ -7458,9 +7513,16 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
     planning_mode["prep_only"] = True
     planning_mode["halt_after_summary"] = True
     planning_mode["halt_instruction"] = (
-        "HALT: prep-only mode active. Create Planning state, run agentic-workspace summary --target . --format json, "
-        "then stop. You may enrich only this execplan and schema-backed decompositions; do not create product files, scaffolds, README, PLANNING_STATE, or handoff documentation."
+        "HALT: prep-only mode active. Create Planning state, run agentic-workspace summary --target . --profile compact --format json, "
+        "then stop. Do not manually tighten or revalidate generated JSON unless summary reports a blocking Planning problem. "
+        "Do not create product files, scaffolds, README, PLANNING_STATE, or handoff documentation."
     )
+    planning_mode["minimal_success_criteria"] = [
+        "prep-only execplan registered in Planning state",
+        "agentic-workspace summary --target . --profile compact --format json exits successfully",
+        "only canonical Planning surfaces changed",
+    ]
+    planning_mode["manual_tightening_policy"] = "defer during prep-only handoff unless summary reports a blocking Planning problem"
     planning_mode["allowed_outputs"] = [
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans/<id>.plan.json",
@@ -7485,7 +7547,7 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
             "owner_role": "implementation",
             "required_for": ["before any product or handoff file creation"],
             "status": "pending",
-            "evidence": ["agentic-workspace summary --target . --format json"],
+            "evidence": ["agentic-workspace summary --target . --profile compact --format json"],
             "blocking": True,
             "next_action": planning_mode["halt_instruction"],
         }
@@ -7493,9 +7555,10 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
     plan_record["execution_bounds"] = {
         "allowed paths": ".agentic-workspace/planning/state.toml, .agentic-workspace/planning/execplans/, and .agentic-workspace/planning/decompositions/ only.",
         "max changed files": "Planning records only; stop if implementation scaffolding seems necessary.",
-        "required validation commands": "agentic-workspace summary --target . --format json",
+        "required validation commands": "agentic-workspace summary --target . --profile compact --format json",
         "ask-before-refactor threshold": "Any product, dependency, documentation, schema, database, source, public, or app scaffold file.",
         "stop before touching": "README, PLANNING_STATE, HANDOFF, SLICES, package files, dependency manifests, src/, public/, database files, schema files, or app code.",
+        "manual JSON validation": "Do not run ad hoc JSON validation loops; use summary or package checks.",
     }
     plan_record["stop_conditions"] = {
         "stop when": "Summary verifies the canonical Planning state.",

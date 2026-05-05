@@ -60,7 +60,7 @@
         "pyproject.toml"
       ],
       "required_command_mentions": [
-        "agentic-workspace planning",
+        "agentic-planning new-plan",
         "agentic-workspace summary"
       ],
       "required_artifact_patterns": [

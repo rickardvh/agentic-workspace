@@ -1305,7 +1305,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
     new_plan_command = f"agentic-planning new-plan --id <id> --title <title>{target_arg} --activate --format json"
     prep_only_new_plan_command = f"agentic-planning new-plan --id <id> --title <title>{target_arg} --activate --prep-only --format json"
     promote_command = f"agentic-planning promote-to-plan <item-id>{target_arg} --format json"
-    summary_command = f"agentic-workspace summary{target_arg} --format json"
+    summary_command = f"agentic-workspace summary{target_arg} --profile compact --format json"
     return {
         "kind": "agentic-workspace/planning-help/v1",
         "summary": "Planning files are checked-in execution authority, but their outer structure is package-owned.",
@@ -1382,15 +1382,28 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
                 "required_action": "Create or continue canonical checked-in Planning state, verify with summary, then stop; do not stop at a proposal or start implementation.",
                 "preferred_command": prep_only_new_plan_command,
                 "after_write": summary_command,
+                "minimal_success_criteria": [
+                    "new-plan --prep-only exits successfully",
+                    "agentic-workspace summary reports the active Planning state",
+                    "only canonical Planning surfaces changed",
+                ],
+                "stop_after": "After new-plan --prep-only and summary verification, stop until implementation is explicitly requested.",
+                "tightening_policy": (
+                    "Prep-only scaffolds are already schema-valid. Do not manually tighten or revalidate generated JSON "
+                    "during handoff prep unless summary reports a blocking Planning problem."
+                ),
                 "allowed_after_new_plan": [
-                    "tighten content fields inside the created execplan",
-                    "for epic-shaped work, add a schema-backed decomposition under .agentic-workspace/planning/decompositions/",
+                    "run agentic-workspace summary to verify the Planning state",
+                    "only if summary reports a blocking Planning problem, make the smallest schema-preserving Planning edit and rerun summary",
+                    "for epic-shaped work, defer schema-backed decomposition enrichment until an implementation or decomposition pass explicitly needs it",
                     "keep the execplan registered in .agentic-workspace/planning/state.toml",
                 ],
                 "do_not_do": [
                     "do not ask for confirmation instead of leaving durable state when the user already asked you to prepare the repo",
                     "do not create README, PLANNING_STATE, HANDOFF, SLICES, ARCHITECTURE, ADR, package, dependency, source, public, database, schema, or app scaffold files",
                     "do not route durable state to .agentic-workspace/planning/records/",
+                    "do not open and manually rework the generated execplan just to improve wording during prep-only handoff",
+                    "do not validate generated JSON with ad hoc shell snippets; use summary or package checks",
                 ],
             },
             "after_write": summary_command,
@@ -1409,7 +1422,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "Do not create root PLAN.md, DOC_CLEANUP_PLAN.md, or similar freehand durable-state files unless repo config explicitly routes there.",
             "For planning-only preparation, keep writes to planning/decomposition surfaces and do not scaffold product files before implementation is requested.",
             "For broad handoff prep, keep architecture assumptions, blockers, and candidate lane notes inside the execplan or decomposition unless the user explicitly asks for separate docs.",
-            "For prep-only broad work, use new-plan --prep-only when available; after that, enrich only canonical planning/decomposition content and keep state.toml registration intact.",
+            "For prep-only broad work, use new-plan --prep-only when available; after that, run summary and stop unless summary reports a blocking Planning problem.",
             "Do not claim candidate lane owner_surface paths are valid next-action files until those files actually exist and are registered.",
             "If the user asks to prepare broad work for later continuation, create canonical Planning state, verify it, and stop; a proposal-only answer is not a durable handoff.",
             "Do not invent the outer structure of planning-execplan/v1.",
@@ -8414,12 +8427,19 @@ def _is_prep_only_handoff_task(task_text: str | None) -> bool:
             "later coding pass",
             "future coding pass",
             "durable state",
+            "durable implementation",
+            "plan/state",
             "repository state",
             "repo-visible state",
             "handoff",
             "continue later",
             "continuation",
             "prepare enough",
+            "groundwork",
+            "later pass",
+            "next pass",
+            "first slice",
+            "safe start",
             "prepare the repo",
             "prepare repository",
             "future",
@@ -8435,6 +8455,8 @@ def _is_prep_only_handoff_task(task_text: str | None) -> bool:
             "without implementing",
             "not implement",
             "no implementation",
+            "no code changes",
+            "no feature implementation",
             "do not build",
             "don't build",
             "do not scaffold",
@@ -8447,21 +8469,41 @@ def _is_prep_only_handoff_task(task_text: str | None) -> bool:
 
 def _prep_only_handoff_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     planning_command = _command_with_cli_invoke(command="agentic-workspace planning --format json", cli_invoke=config.cli_invoke)
-    summary_command = _command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=config.cli_invoke)
+    summary_command = _command_with_cli_invoke(
+        command="agentic-workspace summary --profile compact --format json", cli_invoke=config.cli_invoke
+    )
+    new_plan_template = _command_with_cli_invoke(
+        command="agentic-planning new-plan --id <id> --title <title> --target . --activate --prep-only --format json",
+        cli_invoke=config.cli_invoke,
+    )
     return {
         "kind": "agentic-workspace/prep-only-handoff-route/v1",
         "status": "required",
         "reason": "The task asks for durable continuation state before implementation.",
-        "first_command": planning_command,
+        "first_command": new_plan_template,
+        "reference_command": planning_command,
+        "preferred_mutation_command_template": new_plan_template,
         "after_write": summary_command,
         "required_action": (
-            "Use the planning durable_state_bridge/prep_only_route: create or continue canonical checked-in Planning "
-            "state, verify with summary, then stop."
+            "Create or continue canonical checked-in Planning state with new-plan --prep-only, verify with compact summary, then stop."
         ),
+        "minimal_success_criteria": [
+            "a prep-only execplan is registered in Planning state",
+            "summary verification exits successfully",
+            "no product, test, dependency, README feature, or handoff files were created",
+        ],
+        "stop_after_summary": True,
+        "open_execplan_after_creation": "no, unless compact summary reports a blocking Planning problem",
+        "manual_execplan_tightening": "defer unless summary reports a blocking Planning problem",
         "allowed_write_scope": [
             ".agentic-workspace/planning/state.toml",
             ".agentic-workspace/planning/execplans/",
             ".agentic-workspace/planning/decompositions/",
+        ],
+        "allowed_after_new_plan": [
+            "run the after_write summary command",
+            "make only the smallest schema-preserving Planning edit if summary reports a blocking problem",
+            "otherwise stop and report the canonical Planning state created",
         ],
         "forbidden_until_implementation_requested": [
             "product source files",
@@ -8469,6 +8511,7 @@ def _prep_only_handoff_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "README feature docs",
             "package/dependency/app scaffold files",
             "freehand PLAN/HANDOFF/ARCHITECTURE docs",
+            "manual JSON polishing or ad hoc validation loops",
         ],
     }
 
@@ -8614,7 +8657,7 @@ def _start_payload(
         payload["immediate_next_allowed_action"] = {
             "action": "create-prep-only-planning-state",
             "summary": (
-                "Prep-only durable handoff requested. Run the planning bridge, create or continue canonical Planning "
+                "Prep-only durable handoff requested. Run the prep-only new-plan command, create or continue canonical Planning "
                 "state, verify with summary, then stop; do not create product source, tests, fixtures, README feature "
                 "docs, dependencies, or app scaffolding until implementation is requested."
             ),
@@ -8623,8 +8666,8 @@ def _start_payload(
             "risk": "planning-only write routing",
             "required_inputs": ["target repo", "current task"],
             "next_proof": summary_command,
-            "read_first": [planning_command],
-            "open_execplan_only_when": "the planning bridge or summary routes you to a specific checked-in planning record",
+            "read_first": [],
+            "open_execplan_only_when": "compact summary reports a blocking Planning problem after the prep-only scaffold is created",
         }
     cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
     if cli_compatibility["configured"]:
