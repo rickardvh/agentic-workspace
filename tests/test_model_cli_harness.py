@@ -116,7 +116,7 @@ def test_model_cli_harness_can_inject_repo_startup_instructions(tmp_path: Path) 
 
     prompt = payload["results"][0]["prompt"]
     assert prompt.startswith("Do the task.\n\n")
-    assert "Repository startup instruction from AGENTS.md to apply before non-trivial edits:" in prompt
+    assert "Repository startup instruction from AGENTS.md to apply before non-trivial requests:" in prompt
     assert 'preflight --task "<task>"' in prompt
 
 
@@ -1295,6 +1295,92 @@ def test_model_cli_harness_scores_vague_outcome_solution_jump() -> None:
     assert any("did not restate the intended outcome" in message for message in messages)
     assert any("jumped to a solution" in message for message in messages)
     assert not any("local completion" in message for message in messages)
+
+
+def test_model_cli_harness_scores_vague_outcome_raw_reads_without_compact_startup() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="intent-satisfaction-review",
+        prompt_variant_id="vague-outcome-trust",
+        result={
+            "stdout": (
+                "Read .agentic-workspace/WORKFLOW.md\n"
+                "Read .agentic-workspace/planning/schemas/planning-review.schema.json\n"
+                "The intended outcome is handoff trust. Inspect planning-review.schema.json first. "
+                "Satisfaction evidence is structured review proof."
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("raw workspace files before using compact startup" in message for message in messages)
+
+
+def test_model_cli_harness_scores_vague_outcome_windows_raw_reads_without_compact_startup() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="intent-satisfaction-review",
+        prompt_variant_id="vague-outcome-trust",
+        result={
+            "stdout": (
+                "Read .agentic-workspace\\WORKFLOW.md\n"
+                "Read .agentic-workspace\\planning\\schemas\\planning-review.schema.json\n"
+                "The intended outcome is handoff trust. Inspect planning-review.schema.json first. "
+                "Satisfaction evidence is structured review proof."
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("raw workspace files before using compact startup" in message for message in messages)
+
+
+def test_model_cli_harness_scores_vague_outcome_raw_reads_before_later_compact_mention() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="intent-satisfaction-review",
+        prompt_variant_id="vague-outcome-trust",
+        result={
+            "stdout": (
+                "Read .agentic-workspace\\WORKFLOW.md\n"
+                "The intended outcome is handoff trust. Inspect planning first. "
+                "Satisfaction evidence is structured proof. Later, a next agent could run "
+                "agentic-workspace summary --target . --format json."
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("raw workspace files before using compact startup" in message for message in messages)
+
+
+def test_model_cli_harness_accepts_vague_outcome_raw_reads_after_compact_startup() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="intent-satisfaction-review",
+        prompt_variant_id="vague-outcome-trust",
+        result={
+            "stdout": (
+                'Ran agentic-workspace preflight --task "trust handoff" --format json. '
+                "The intended outcome is handoff trust. Inspect summary first, then planning only if routed. "
+                "Satisfaction evidence is a repo-visible closeout proof and follow-up route."
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert warnings == []
 
 
 def test_model_cli_harness_accepts_vague_outcome_resolution() -> None:

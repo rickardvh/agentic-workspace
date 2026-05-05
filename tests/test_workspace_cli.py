@@ -338,6 +338,11 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["startup"]["tiny_safe_model"]["entry_query"] == "agentic-workspace preflight --format json"
     assert payload["startup"]["tiny_safe_model"]["first_compact_queries"][0] == "agentic-workspace defaults --section startup --format json"
     assert payload["startup"]["tiny_safe_model"]["deeper_reads_become_valid_when"][0].startswith("the active summary points")
+    vague_route = payload["startup"]["vague_outcome_route"]
+    assert vague_route["status"] == "available"
+    assert vague_route["compact_commands"][0] == 'agentic-workspace preflight --target . --task "<task>" --format json'
+    assert "satisfaction evidence" in " ".join(vague_route["answer_contract"])
+    assert vague_route["raw_read_rule"].startswith("Open raw .agentic-workspace files only after compact output")
     work_gate = payload["startup"]["work_intent_gate"]
     assert work_gate["rule"].startswith("Choose the smallest workflow shape before implementation")
     assert [level["id"] for level in work_gate["levels"]] == ["direct", "bounded", "lane", "epic"]
@@ -6820,7 +6825,7 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
         (tmp_path / "AGENTS.md"),
         "# Agent Instructions\n\n"
         "<!-- agentic-workspace:workflow:start -->\n"
-        'For non-trivial requests, first run `agentic-workspace preflight --task "<task>" --format json` using the user\'s request as `<task>`; this read-only check does not need confirmation. If unavailable, read `.agentic-workspace/WORKFLOW.md`.\n'
+        'For non-trivial requests, first run `agentic-workspace preflight --task "<task>" --format json` using the user\'s request as `<task>`; use its `primary_next_action` and `skill_routing` before opening raw `.agentic-workspace` files. If unavailable, read `.agentic-workspace/WORKFLOW.md`.\n'
         "<!-- agentic-workspace:workflow:end -->\n\n"
         "Local repo instructions.\n",
         encoding="utf-8",
@@ -6963,6 +6968,7 @@ def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None
     assert startup["primary_next_action"]["next_proof"] == "select proof after changed paths are known"
     assert startup["work_intent_gate"]["levels"][2]["id"] == "lane"
     assert "checked-in planning" in startup["work_intent_gate"]["rule"]
+    assert "vague_outcome_orientation" not in startup
     assert startup["skill_routing"]["status"] == "advisory"
     configured_cli = payload["resolved_config"]["workspace_config"]["cli_invoke"]
     assert startup["skill_routing"]["query"] == f'{configured_cli} skills --target ./repo --task "<task>" --format json'
@@ -6987,6 +6993,29 @@ def test_preflight_command_with_target_argument(tmp_path: Path, capsys) -> None:
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "preflight-response/v1"
     assert target.as_posix() in payload["target"]
+
+
+def test_preflight_task_surfaces_vague_outcome_orientation(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "preflight",
+                "--task",
+                "I want this repo to feel more trustworthy when agents hand work back after a long task",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    orientation = payload["startup_guidance"]["vague_outcome_orientation"]
+    assert orientation["status"] == "applicable"
+    assert orientation["applies_to_current_task"] is True
+    assert orientation["first_surface"].startswith("startup_guidance.primary_next_action")
+    assert "agentic-workspace start" in orientation["compact_commands"][1]
+    assert "intended outcome" in orientation["answer_contract"][0]
 
 
 def test_preflight_command_emits_gate_token(capsys) -> None:
@@ -7189,6 +7218,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
         "refresh_command": None,
     }
     assert payload["immediate_next_allowed_action"]["summary"] == "run the compact startup path."
+    assert "vague_outcome_orientation" not in payload
     assert payload["skill_routing"]["status"] == "advisory"
     assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
     assert "planning-autopilot" not in {route["skill"] for route in payload["skill_routing"]["preferred_routes"]}
@@ -7223,6 +7253,33 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
             "requires_attention": False,
         }
     ]
+
+
+def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Agents keep making me repeat what I meant after they finish",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    orientation = payload["vague_outcome_orientation"]
+    assert orientation["status"] == "applicable"
+    assert orientation["raw_read_rule"].startswith("Open raw .agentic-workspace files only after compact output")
+    assert "skill_routing" in payload
 
 
 def test_start_task_includes_compact_skill_recommendations(tmp_path: Path, capsys) -> None:

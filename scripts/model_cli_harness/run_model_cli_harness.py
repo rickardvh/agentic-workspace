@@ -68,7 +68,7 @@ def _startup_instruction_prompt(*, repo_path: Path, prompt: str) -> str:
     compact_startup = " ".join(line.strip() for line in startup_text.splitlines() if line.strip())
     return (
         f"{prompt}\n\n"
-        "Repository startup instruction from AGENTS.md to apply before non-trivial edits: "
+        "Repository startup instruction from AGENTS.md to apply before non-trivial requests: "
         f"{compact_startup}\n"
     )
 
@@ -781,6 +781,7 @@ def _semantic_workflow_warnings(
     response = _response_text(result)
     response_lower = response.lower()
     full_response_lower = _full_response_text(result).lower()
+    full_response_path_normalized = full_response_lower.replace("\\", "/")
     warnings: list[dict[str, str]] = []
 
     def add(message: str, *, evidence: str = "") -> None:
@@ -1157,6 +1158,22 @@ def _semantic_workflow_warnings(
             outcome_markers = ("intended outcome", "intent", "goal", "trust", "rework", "handoff", "preserve")
             inspect_markers = ("inspect", "preflight", "summary", "report", "config", "planning", "memory", "closeout")
             satisfaction_markers = ("satisfied", "done when", "know", "evidence", "criteria", "proof", "measure")
+            compact_command_markers = (
+                "agentic-workspace preflight",
+                "agentic-workspace start",
+                "agentic-workspace defaults",
+                "agentic-workspace summary",
+                "agentic-workspace config",
+                "agentic-workspace skills",
+            )
+            raw_workspace_markers = (
+                ".agentic-workspace/workflow.md",
+                ".agentic-workspace/planning/schemas/",
+                ".agentic-workspace/planning/state.toml",
+                "planning-review.schema.json",
+                "planning-external-intent-evidence.schema.json",
+                "planning-finished-work-evidence.schema.json",
+            )
             solution_markers = (
                 "i will implement",
                 "i'll implement",
@@ -1173,6 +1190,18 @@ def _semantic_workflow_warnings(
                 add("The vague-outcome variant did not name the first repo-visible surface to inspect.")
             if not any(marker in response_lower for marker in satisfaction_markers):
                 add("The vague-outcome variant did not define how satisfaction would be judged.")
+            raw_marker_positions = [
+                full_response_path_normalized.find(marker)
+                for marker in raw_workspace_markers
+                if marker in full_response_path_normalized
+            ]
+            compact_marker_positions = [
+                full_response_lower.find(marker) for marker in compact_command_markers if marker in full_response_lower
+            ]
+            first_raw_marker = min(raw_marker_positions) if raw_marker_positions else None
+            first_compact_marker = min(compact_marker_positions) if compact_marker_positions else None
+            if first_raw_marker is not None and (first_compact_marker is None or first_raw_marker < first_compact_marker):
+                add("The vague-outcome variant inspected raw workspace files before using compact startup or summary surfaces.")
             if any(marker in response_lower for marker in solution_markers) and "rather than" not in response_lower and "not jump" not in response_lower:
                 add("The vague-outcome variant jumped to a solution without preserving intent separately.")
 

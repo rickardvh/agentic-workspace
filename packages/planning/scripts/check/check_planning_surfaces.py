@@ -1098,7 +1098,9 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     required_agents_fragments = (
         "<!-- agentic-workspace:workflow:start -->",
         "agentic-workspace preflight --task",
-        "read-only check does not need confirmation",
+        "primary_next_action",
+        "skill_routing",
+        "before opening raw `.agentic-workspace` files",
         ".agentic-workspace/workflow.md",
         "<!-- agentic-workspace:workflow:end -->",
     )

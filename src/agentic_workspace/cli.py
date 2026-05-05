@@ -7894,7 +7894,7 @@ def _run_preflight_command(
     # Get config
     config_payload = _config_payload(config=config)
 
-    return {
+    startup_guidance = {
         "kind": "preflight-response/v1",
         "mode": "full-takeover-context",
         "target": target_root.as_posix(),
@@ -7943,6 +7943,10 @@ def _run_preflight_command(
         "operating_posture": _operating_posture_payload(config=config, surface="preflight"),
         "active_planning_state": active_state,
     }
+    vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
+    if vague_orientation["applies_to_current_task"]:
+        startup_guidance["startup_guidance"]["vague_outcome_orientation"] = vague_orientation
+    return startup_guidance
 
 
 def _branch_workflow_posture_payload(*, target_root: Path) -> dict[str, Any]:
@@ -8249,6 +8253,9 @@ def _start_payload(*, target_root: Path, changed_paths: list[str], task_text: st
             cli_invoke=config.cli_invoke,
         ),
     }
+    vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
+    if vague_orientation["applies_to_current_task"]:
+        payload["vague_outcome_orientation"] = vague_orientation
     cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
     if cli_compatibility["configured"]:
         payload["cli_compatibility"] = cli_compatibility
@@ -10914,6 +10921,54 @@ def _task_skill_recommendations_payload(
     }
 
 
+def _vague_outcome_orientation_payload(*, task_text: str | None, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    task_lower = (task_text or "").lower()
+    markers = (
+        "feel more trustworthy",
+        "trustworthy",
+        "trust",
+        "repeat what i meant",
+        "what i meant",
+        "less rework",
+        "rework",
+        "handoff",
+        "hand work back",
+        "intended outcome",
+        "intent",
+        "vague outcome",
+        "satisfaction",
+        "satisfied",
+    )
+    applies = bool(task_lower and any(marker in task_lower for marker in markers))
+    return {
+        "status": "applicable" if applies else "available",
+        "applies_to_current_task": applies,
+        "rule": "For vague outcome prompts, resolve intent and satisfaction evidence from compact CLI output before raw workspace reads.",
+        "first_surface": "startup_guidance.primary_next_action from preflight or immediate_next_allowed_action from start",
+        "compact_commands": [
+            _command_with_cli_invoke(
+                command='agentic-workspace preflight --target . --task "<task>" --format json',
+                cli_invoke=cli_invoke,
+            ),
+            _command_with_cli_invoke(
+                command='agentic-workspace start --target . --task "<task>" --format json',
+                cli_invoke=cli_invoke,
+            ),
+            _command_with_cli_invoke(
+                command='agentic-workspace skills --target . --task "<task>" --format json',
+                cli_invoke=cli_invoke,
+            ),
+        ],
+        "answer_contract": [
+            "state the inferred intended outcome",
+            "name the first repo-visible surface or compact command to inspect",
+            "define satisfaction evidence before choosing an implementation",
+            "separate one possible solution from the intended outcome",
+        ],
+        "raw_read_rule": "Open raw .agentic-workspace files only after compact output points there or the CLI is unavailable.",
+    }
+
+
 def _defaults_payload() -> dict[str, Any]:
     compact_manifest = compact_contract_manifest()
     proof_manifest = proof_routes_manifest()
@@ -11123,6 +11178,7 @@ def _defaults_payload() -> dict[str, Any]:
                     "the task crosses a planning, memory, or lifecycle boundary that the small model cannot settle safely",
                 ],
             },
+            "vague_outcome_route": _vague_outcome_orientation_payload(task_text=None),
             "work_intent_gate": {
                 "rule": "Choose the smallest workflow shape before implementation; when Planning is installed, broad work should become checked-in planning before edits.",
                 "planning_mutation_rule": (
