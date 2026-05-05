@@ -41,6 +41,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `workflow_obligations.<^.+$>` | ref `#/$defs/workflow_obligation` | no |  | +$ referenced contract shape used by this contract. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
 | `workflow_obligations.<^.+$>.summary` | string | yes |  | Short explanation of the obligation. |  |  |
 | `workflow_obligations.<^.+$>.stage` | enum `"pre-work"`, `"before-claiming-completion"`, `"before-commit"`, `"review"`, `"closeout"` | yes |  | Workflow stage where this obligation matters. |  |  |
+| `workflow_obligations.<^.+$>.force` | enum `"informational"`, `"recommended"`, `"required-before-closeout"`, `"blocking"` | no | `"recommended"` | How strongly a matched obligation affects the next action or closeout gate. |  |  |
 | `workflow_obligations.<^.+$>.scope_tags` | array of string | yes |  | Tags used to match the obligation to touched work scopes. | `["contracts", "docs"]` |  |
 | `workflow_obligations.<^.+$>.commands` | array of string | yes |  | Commands to run or consider at the matching workflow stage. | `["make maintainer-surfaces"]` |  |
 | `workflow_obligations.<^.+$>.review_hint` | string | no |  | Short reminder to surface during review or closeout. |  |  |

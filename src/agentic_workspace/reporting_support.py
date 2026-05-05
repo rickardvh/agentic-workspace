@@ -255,6 +255,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         terminal_action = terminal_action if isinstance(terminal_action, dict) else {}
         durable_action = answer.get("durable_residue_action", {})
         durable_action = durable_action if isinstance(durable_action, dict) else {}
+        strict_gate = answer.get("strict_closeout_gate", {})
+        strict_gate = strict_gate if isinstance(strict_gate, dict) else {}
         detail_command = _command_with_cli_invoke(
             "agentic-workspace report --target ./repo --profile full --format json",
             cli_invoke=cli_invoke,
@@ -262,6 +264,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         return {
             "status": answer.get("status", ""),
             "trust": answer.get("trust", ""),
+            "strict_closeout_gate": strict_gate,
             "lower_trust_closeout_count": answer.get("lower_trust_closeout_count", 0),
             "summary": answer.get("summary", ""),
             "terminal_action": terminal_action,

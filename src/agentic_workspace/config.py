@@ -99,6 +99,12 @@ SUPPORTED_WORKFLOW_OBLIGATION_STAGES = (
     "review",
     "closeout",
 )
+SUPPORTED_WORKFLOW_OBLIGATION_FORCES = (
+    "informational",
+    "recommended",
+    "required-before-closeout",
+    "blocking",
+)
 SUPPORTED_DELEGATION_TARGET_STRENGTHS = (
     "strong",
     "medium",
@@ -262,6 +268,7 @@ class WorkflowObligation:
     name: str
     summary: str
     stage: str
+    force: str
     scope_tags: tuple[str, ...]
     commands: tuple[str, ...]
     review_hint: str | None
@@ -668,7 +675,7 @@ def load_workflow_obligations(
         obligation_path = Path(f"{config_path.as_posix()} workflow_obligations.{obligation_name}")
         if not isinstance(raw_obligation, dict):
             raise WorkspaceUsageError(f"{obligation_path.as_posix()} must be a table.")
-        unknown_fields = sorted(set(raw_obligation) - {"summary", "stage", "scope_tags", "commands", "review_hint"})
+        unknown_fields = sorted(set(raw_obligation) - {"summary", "stage", "force", "scope_tags", "commands", "review_hint"})
         if unknown_fields:
             unknown_text = ", ".join(unknown_fields)
             warnings.append(f"{obligation_path.as_posix()} contains unsupported field(s): {unknown_text}.")
@@ -679,6 +686,12 @@ def load_workflow_obligations(
         if not isinstance(stage, str) or stage not in SUPPORTED_WORKFLOW_OBLIGATION_STAGES:
             allowed_text = ", ".join(SUPPORTED_WORKFLOW_OBLIGATION_STAGES)
             raise WorkspaceUsageError(f"{obligation_path.as_posix()} stage must be one of: {allowed_text}.")
+        force = raw_obligation.get("force")
+        if force is None:
+            force = "required-before-closeout" if stage in {"before-claiming-completion", "closeout"} else "recommended"
+        if not isinstance(force, str) or force not in SUPPORTED_WORKFLOW_OBLIGATION_FORCES:
+            allowed_text = ", ".join(SUPPORTED_WORKFLOW_OBLIGATION_FORCES)
+            raise WorkspaceUsageError(f"{obligation_path.as_posix()} force must be one of: {allowed_text}.")
         scope_tags = require_optional_string_list(
             payload=raw_obligation,
             key="scope_tags",
@@ -701,6 +714,7 @@ def load_workflow_obligations(
                 name=obligation_name,
                 summary=summary.strip(),
                 stage=stage,
+                force=force,
                 scope_tags=scope_tags,
                 commands=commands,
                 review_hint=review_hint.strip() if isinstance(review_hint, str) else None,

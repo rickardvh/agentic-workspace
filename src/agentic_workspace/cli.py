@@ -54,6 +54,7 @@ from agentic_workspace.config import (
     SUPPORTED_OPTIMIZATION_BIASES,
     SUPPORTED_REVIEW_BURDENS,
     SUPPORTED_WORKFLOW_ARTIFACT_PROFILES,
+    SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
     SUPPORTED_WORKFLOW_OBLIGATION_STAGES,
     WORKSPACE_AGENT_AID_ROOT_PATH,
     WORKSPACE_AGENT_AID_SUBDIRS,
@@ -5534,7 +5535,12 @@ def _run_report_command(
     durable_intent = _intent_decision_projection(target_root=target_root, config=config, compact=True)
     branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
     local_memory = _local_memory_payload(config=config)
-    closeout_trust = _report_closeout_trust_payload(module_reports=module_reports, target_root=target_root, cli_invoke=config.cli_invoke)
+    closeout_trust = _report_closeout_trust_payload(
+        module_reports=module_reports,
+        target_root=target_root,
+        config=config,
+        cli_invoke=config.cli_invoke,
+    )
     surface_value_guardrail = _surface_value_guardrail_payload()
     external_work_delta = _external_work_delta_payload(target_root=target_root)
     external_work_reconciliation = _external_work_reconciliation_payload(
@@ -6742,8 +6748,41 @@ def _report_closeout_trust_payload(
     *,
     module_reports: list[dict[str, Any]],
     target_root: Path | None = None,
+    config: WorkspaceConfig | None = None,
     cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
+    strict_closeout = bool(config.assurance.strict_closeout) if config is not None else False
+
+    def strict_gate(*, trust: str, reason: str = "", active_planning_record: bool = False) -> dict[str, Any]:
+        if not strict_closeout:
+            status = "disabled"
+            blocking = False
+            summary = "Strict closeout is disabled in assurance config."
+        elif not active_planning_record and trust == "normal":
+            status = "not-applicable"
+            blocking = False
+            summary = "Strict closeout has no active planning record to gate; use normal direct-work proof and issue checks."
+        elif trust == "normal":
+            status = "allowed"
+            blocking = False
+            summary = "Strict closeout is satisfied by the available planning and closeout-trust evidence."
+        elif trust == "lower-trust":
+            status = "blocked"
+            blocking = True
+            summary = "Strict closeout blocks closure until lower-trust planning residue or package evidence is resolved."
+        else:
+            status = "requires-review"
+            blocking = True
+            summary = "Strict closeout requires review because closeout evidence is unavailable or incomplete."
+        return {
+            "status": status,
+            "strict_closeout": strict_closeout,
+            "blocking": blocking,
+            "reason": reason,
+            "summary": summary,
+            "source": "assurance.strict_closeout",
+        }
+
     def terminal_action(*, trust: str, recommended_next_action: str) -> dict[str, Any]:
         blocking = trust != "normal"
         return {
@@ -6799,9 +6838,11 @@ def _report_closeout_trust_payload(
         None,
     )
     if not isinstance(planning_report, dict):
+        gate = strict_gate(trust="unavailable", reason="planning module is not installed", active_planning_record=False)
         return {
             "status": "unavailable",
             "reason": "planning module is not installed",
+            "strict_closeout_gate": gate,
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report={}),
             "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report={}),
             "historical_review_artifacts": _historical_review_artifacts_policy(
@@ -6818,9 +6859,11 @@ def _report_closeout_trust_payload(
 
     intent_validation = planning_report.get("intent_validation", {})
     if not isinstance(intent_validation, dict):
+        gate = strict_gate(trust="unavailable", reason="planning intent validation is unavailable", active_planning_record=False)
         return {
             "status": "unavailable",
             "reason": "planning intent validation is unavailable",
+            "strict_closeout_gate": gate,
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
             "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report),
             "historical_review_artifacts": _historical_review_artifacts_policy(
@@ -6847,6 +6890,7 @@ def _report_closeout_trust_payload(
     ]
     sample_signals = [message for message in sample_signals if message][:3]
     package_workflow_evidence = _package_workflow_evidence_payload(planning_report=planning_report)
+    active_planning_record = package_workflow_evidence.get("status") == "present"
     package_absence_signals: list[str] = []
     if package_workflow_evidence.get("status") == "present" and package_workflow_evidence.get("trust") == "lower-trust":
         missing = ", ".join(str(item) for item in package_workflow_evidence.get("missing_expected_surfaces", []))
@@ -6871,6 +6915,11 @@ def _report_closeout_trust_payload(
     return {
         "status": "present",
         "trust": trust,
+        "strict_closeout_gate": strict_gate(
+            trust=trust,
+            reason="active planning record present" if active_planning_record else "no active planning record",
+            active_planning_record=active_planning_record,
+        ),
         "lower_trust_closeout_count": effective_lower_trust_count,
         "planning_residue_lower_trust_count": lower_trust_closeout_count,
         "package_evidence_lower_trust_count": len(package_absence_signals),
@@ -9203,6 +9252,7 @@ def _workflow_obligation_payloads(config: WorkspaceConfig) -> list[dict[str, Any
             "id": obligation.name,
             "summary": obligation.summary,
             "stage": obligation.stage,
+            "force": obligation.force,
             "scope_tags": list(obligation.scope_tags),
             "commands": list(obligation.commands),
             "review_hint": obligation.review_hint,
@@ -9269,9 +9319,9 @@ def _config_field_enforcement_entries() -> list[dict[str, Any]]:
         },
         {
             "field": "workflow_obligations.<name>.*",
-            "enforcement": "advisory",
+            "enforcement": "advisory-operational",
             "scope": "repo-config",
-            "used_by": ["report.workflow_obligations", "preflight.closeout_obligations"],
+            "used_by": ["report.workflow_obligations", "preflight.closeout_obligations", "closeout gate force"],
         },
         {
             "field": "assurance.*",
@@ -9484,20 +9534,7 @@ def _config_effect_audit_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     for effect in field_effects:
         effect_type = str(effect.get("effect_type", "unused"))
         counts[effect_type] = counts.get(effect_type, 0) + 1
-    warnings = [
-        {
-            "field": "workflow_obligations.<name>.*",
-            "risk": "obligation wording can look mandatory while the tool currently reports and matches it instead of enforcing it",
-            "actual_force": "advisory",
-            "recommended_followup": "add per-obligation force such as informational, recommended, required-before-closeout, or blocking",
-        },
-        {
-            "field": "assurance.strict_closeout",
-            "risk": "strict closeout sounds blocking, but force depends on active planning or closeout report usage",
-            "actual_force": "advisory-operational",
-            "recommended_followup": "make strict closeout gates explicit in closeout_trust and planning-backed report sections",
-        },
-    ]
+    warnings: list[dict[str, Any]] = []
     return {
         "kind": "workspace-config-effect-audit/v1",
         "status": "present",
@@ -9560,6 +9597,8 @@ def _workflow_obligations_report_payload(
                 "matched_scope_tags": matched_tags,
                 "non_match_reason": "" if matched else "no overlap with current_scope_tags",
                 "stage": obligation["stage"],
+                "force": obligation.get("force", "recommended"),
+                "gate_status": _workflow_obligation_gate_status(obligation=obligation, matched=matched),
             }
         )
     return {
@@ -9585,6 +9624,19 @@ def _workflow_obligations_report_payload(
     }
 
 
+def _workflow_obligation_gate_status(*, obligation: dict[str, Any], matched: bool) -> str:
+    force = str(obligation.get("force", "recommended"))
+    if force == "informational":
+        return "informational"
+    if force == "recommended":
+        return "recommended" if matched else "not-currently-relevant"
+    if force == "required-before-closeout":
+        return "required-before-closeout" if matched else "standing-closeout-requirement"
+    if force == "blocking":
+        return "blocking" if matched else "standing-blocking-requirement"
+    return "unknown"
+
+
 def _closeout_workflow_obligations_payload(workflow_obligations: dict[str, Any]) -> dict[str, Any]:
     relevant = workflow_obligations.get("relevant_to_current_work", [])
     if not isinstance(relevant, list):
@@ -9599,12 +9651,21 @@ def _closeout_workflow_obligations_payload(workflow_obligations: dict[str, Any])
     standing_closeout = [
         obligation for obligation in configured if isinstance(obligation, dict) and str(obligation.get("stage", "")) in closeout_stages
     ]
-    closeout_required = closeout_relevant or standing_closeout
-    primary_obligation = closeout_required[0] if closeout_required else None
+    closeout_required = [
+        obligation
+        for obligation in (closeout_relevant or standing_closeout)
+        if str(obligation.get("force", "recommended")) in {"required-before-closeout", "blocking"}
+    ]
+    closeout_recommended = [
+        obligation
+        for obligation in (closeout_relevant or standing_closeout)
+        if str(obligation.get("force", "recommended")) in {"informational", "recommended"}
+    ]
+    primary_obligation = closeout_required[0] if closeout_required else (closeout_recommended[0] if closeout_recommended else None)
     primary_commands = primary_obligation.get("commands", []) if isinstance(primary_obligation, dict) else []
     primary_command = str(primary_commands[0]) if isinstance(primary_commands, list) and primary_commands else ""
     return {
-        "status": "present" if closeout_required else "none-configured-for-current-work",
+        "status": "present" if closeout_required else ("recommended" if closeout_recommended else "none-configured-for-current-work"),
         "rule": (
             "Before claiming a lane or milestone is complete, run closeout obligations from repo config; "
             "validation success alone is not a closeout."
@@ -9624,9 +9685,13 @@ def _closeout_workflow_obligations_payload(workflow_obligations: dict[str, Any])
             else None
         ),
         "required_before_lane_closeout": closeout_required,
+        "recommended_before_lane_closeout": closeout_recommended,
+        "blocking_count": sum(1 for obligation in closeout_required if str(obligation.get("force", "")) == "blocking"),
         "recommended_next_action": (
             "Run the listed closeout obligation commands and record any friction as planning, memory, review, or issue follow-up."
             if closeout_required
+            else "Consider the listed closeout obligation commands before claiming completion."
+            if closeout_recommended
             else "No repo-custom closeout obligation is configured."
         ),
     }
@@ -11571,11 +11636,13 @@ def _agent_configuration_workflow_extensions_payload() -> dict[str, Any]:
         "fields": [
             {"field": "summary", "purpose": "bounded repo-local expectation worth surfacing into active work"},
             {"field": "stage", "purpose": "when the obligation matters"},
+            {"field": "force", "purpose": "whether the matched obligation is informational, recommended, required, or blocking"},
             {"field": "scope_tags", "purpose": "which slices or surfaces should consider the obligation relevant"},
             {"field": "commands", "purpose": "bounded commands or checks the repo expects before the stage completes"},
             {"field": "review_hint", "purpose": "compact reminder for review or closure surfaces"},
         ],
         "supported_stages": list(SUPPORTED_WORKFLOW_OBLIGATION_STAGES),
+        "supported_forces": list(SUPPORTED_WORKFLOW_OBLIGATION_FORCES),
         "consumption_rule": [
             "workspace owns declaration and reporting of repo-custom workflow obligations",
             "planning consumes only the obligations relevant to the current touched scope",
@@ -12564,6 +12631,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "system_intent.preferred_source",
                 "workflow_obligations.<name>.summary",
                 "workflow_obligations.<name>.stage",
+                "workflow_obligations.<name>.force",
                 "workflow_obligations.<name>.scope_tags",
                 "workflow_obligations.<name>.commands",
                 "workflow_obligations.<name>.review_hint",

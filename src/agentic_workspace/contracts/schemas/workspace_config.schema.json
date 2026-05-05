@@ -417,6 +417,16 @@
             "closeout"
           ]
         },
+        "force": {
+          "description": "How strongly a matched obligation affects the next action or closeout gate.",
+          "enum": [
+            "informational",
+            "recommended",
+            "required-before-closeout",
+            "blocking"
+          ],
+          "default": "recommended"
+        },
         "scope_tags": {
           "description": "Tags used to match the obligation to touched work scopes.",
           "type": "array",

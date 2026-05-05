@@ -1295,7 +1295,29 @@ def test_config_command_reports_workflow_obligations_from_repo_config(tmp_path: 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["workflow_obligations"][0]["id"] == "adapter_surface_refresh"
     assert payload["workspace"]["workflow_obligations"][0]["stage"] == "before-claiming-completion"
+    assert payload["workspace"]["workflow_obligations"][0]["force"] == "required-before-closeout"
     assert payload["workspace"]["workflow_obligations"][0]["commands"] == ["make maintainer-surfaces"]
+
+
+def test_config_command_accepts_explicit_workflow_obligation_force(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n"
+        "[workflow_obligations.inspect_before_review]\n"
+        'summary = "Inspect config effect before review."\n'
+        'stage = "review"\n'
+        'force = "blocking"\n'
+        'scope_tags = ["workspace"]\n'
+        'commands = ["agentic-workspace report --target . --section config_effect_audit --format json"]\n',
+    )
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    obligation = payload["workspace"]["workflow_obligations"][0]
+    assert obligation["id"] == "inspect_before_review"
+    assert obligation["force"] == "blocking"
 
 
 def test_config_command_reports_system_intent_source_declaration(tmp_path: Path, capsys) -> None:
@@ -4620,10 +4642,8 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert any(route["field"] == "workspace.optimization_bias" for route in payload["config_enforcement"]["weak_field_routes"])
     assert "config_effect_audit" in payload["schema"]["shared_fields"]
     assert payload["config_effect_audit"]["kind"] == "workspace-config-effect-audit/v1"
-    assert payload["config_effect_audit"]["field_count_by_effect"]["advisory"] >= 1
-    assert any(
-        warning["field"] == "workflow_obligations.<name>.*" for warning in payload["config_effect_audit"]["claimed_vs_actual_warnings"]
-    )
+    assert payload["config_effect_audit"]["field_count_by_effect"]["advisory-operational"] >= 3
+    assert payload["config_effect_audit"]["claimed_vs_actual_warnings"] == []
     assert payload["agent_configuration_system"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["agent_configuration_system"]["startup_entrypoint"] == "AGENTS.md"
     assert payload["agent_configuration_system"]["workflow_artifact_profile"] == "repo-owned"
@@ -4767,7 +4787,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert payload["report_profile"]["context_router"]["first_view"] == "start"
     assert payload["report_profile"]["config_enforcement"]["detail_section"] == "config_enforcement"
     assert payload["report_profile"]["config_effect_audit"]["detail_section"] == "config_effect_audit"
-    assert payload["report_profile"]["config_effect_audit"]["warning_count"] >= 1
+    assert payload["report_profile"]["config_effect_audit"]["warning_count"] == 0
     assert payload["report_profile"]["decision_grade_fields"][0] == "health"
     ordinary_path = payload["report_profile"]["ordinary_agent_path"]
     assert ordinary_path["entry_command"] == "agentic-workspace start --target ./repo --profile tiny --format json"
@@ -4849,6 +4869,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     closeout_payload = json.loads(capsys.readouterr().out)
     closeout_answer = closeout_payload["answer"]
     assert "historical_review_artifacts" not in closeout_answer
+    assert closeout_answer["strict_closeout_gate"]["status"] == "disabled"
     assert closeout_answer["terminal_action"]["blocking"] is False
     assert "what changes closure" not in json.dumps(closeout_answer).lower()
     assert closeout_answer["checks"]["package_workflow_evidence"]["status"] == "not-applicable"
@@ -4896,7 +4917,7 @@ def test_report_section_returns_config_effect_audit(tmp_path: Path, capsys) -> N
     assert answer["kind"] == "workspace-config-effect-audit/v1"
     assert answer["field_count_by_effect"]["local-advisory"] >= 1
     assert any(effect["field"] == "runtime|handoff|safety|delegation_targets" for effect in answer["agent_dependent_fields"])
-    assert any(warning["field"] == "assurance.strict_closeout" for warning in answer["claimed_vs_actual_warnings"])
+    assert answer["claimed_vs_actual_warnings"] == []
 
 
 def test_report_router_uses_resolved_cli_invoke_for_copyable_commands(tmp_path: Path, capsys) -> None:
@@ -5739,6 +5760,10 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     _init_git_repo(target)
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+    )
     plan = target / ".agentic-workspace" / "planning" / "execplans" / "package-use.plan.json"
     _write_json(
         plan,
@@ -5821,6 +5846,8 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["closeout_trust"]["strict_closeout_gate"]["status"] == "allowed"
+    assert payload["closeout_trust"]["strict_closeout_gate"]["blocking"] is False
     evidence = payload["closeout_trust"]["package_workflow_evidence"]
     assert evidence["status"] == "present"
     assert evidence["trust"] == "normal"
@@ -5862,6 +5889,10 @@ def test_report_closeout_trust_lowers_trust_when_active_plan_has_no_package_evid
     _init_git_repo(target)
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+    )
     plan = target / ".agentic-workspace" / "planning" / "execplans" / "bypassed-workflow.plan.json"
     _write_json(
         plan,
@@ -5946,6 +5977,8 @@ def test_report_closeout_trust_lowers_trust_when_active_plan_has_no_package_evid
     payload = json.loads(capsys.readouterr().out)
     closeout = payload["closeout_trust"]
     assert closeout["trust"] == "lower-trust"
+    assert closeout["strict_closeout_gate"]["status"] == "blocked"
+    assert closeout["strict_closeout_gate"]["blocking"] is True
     assert closeout["lower_trust_closeout_count"] == 1
     assert closeout["planning_residue_lower_trust_count"] == 0
     assert closeout["package_evidence_lower_trust_count"] == 1
@@ -7353,6 +7386,8 @@ def test_preflight_surfaces_closeout_workflow_obligations_for_active_scope(tmp_p
     assert payload["workflow_obligations"]["configured_count"] == 1
     assert payload["workflow_obligations"]["match_evidence"]["match_count"] == 1
     assert payload["workflow_obligations"]["match_evidence"]["matching"][0]["matched_scope_tags"] == ["planning"]
+    assert payload["workflow_obligations"]["match_evidence"]["matching"][0]["force"] == "required-before-closeout"
+    assert payload["workflow_obligations"]["match_evidence"]["matching"][0]["gate_status"] == "required-before-closeout"
     assert payload["closeout_obligations"]["status"] == "present"
     primary = payload["closeout_obligations"]["primary_next_action"]
     assert primary["action"] == "run-closeout-obligation"
@@ -7362,6 +7397,7 @@ def test_preflight_surfaces_closeout_workflow_obligations_for_active_scope(tmp_p
     assert "route durable residue" in primary["next_proof"]
     assert obligations[0]["id"] == "dogfooding_lane_closeout"
     assert obligations[0]["stage"] == "closeout"
+    assert obligations[0]["force"] == "required-before-closeout"
 
 
 def test_preflight_surfaces_closeout_workflow_obligations_as_standing_requirement(tmp_path: Path, capsys) -> None:
@@ -7390,6 +7426,7 @@ def test_preflight_surfaces_closeout_workflow_obligations_as_standing_requiremen
     assert payload["closeout_obligations"]["status"] == "present"
     assert payload["closeout_obligations"]["primary_next_action"]["id"] == "dogfooding_lane_closeout"
     assert obligations[0]["review_hint"] == "Surface actionable findings clearly."
+    assert obligations[0]["force"] == "required-before-closeout"
     posture = payload["operating_posture"]
     assert posture["improvement_latitude"]["mode"] == "proactive"
     assert posture["improvement_latitude"]["initiative_posture"] == "bounded-standalone-action-allowed"
