@@ -7052,6 +7052,27 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "system_intent_alignment" in summary["schema"]["view_fields"]["handoff_contract"]
 
 
+def test_planning_handoff_schema_names_required_worker_packet_fields(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+
+    handoff = planning_handoff(target=tmp_path)
+
+    assert handoff["handoff_contract"]["status"] == "unavailable"
+    assert handoff["schema"]["required_worker_packet_fields"] == [
+        "intent",
+        "constraints",
+        "read_first_refs",
+        "owned_scope",
+        "proof_expectations",
+        "stop_conditions",
+        "return_contract",
+        "target_posture",
+    ]
+    assert "bounded execplan" in handoff["schema"]["unavailable_fallback"]
+
+
 def test_planning_summary_exposes_ownership_review(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")

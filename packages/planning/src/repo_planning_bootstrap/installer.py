@@ -4228,6 +4228,20 @@ def _planning_handoff_schema() -> dict[str, Any]:
             "warnings",
             "warning_count",
         ],
+        "required_worker_packet_fields": [
+            "intent",
+            "constraints",
+            "read_first_refs",
+            "owned_scope",
+            "proof_expectations",
+            "stop_conditions",
+            "return_contract",
+            "target_posture",
+        ],
+        "unavailable_fallback": (
+            "If no active planning record exists, create or select a bounded execplan before delegating implementation; "
+            "do not invent a parallel handoff plan from chat alone."
+        ),
         "rules": [
             "derive delegated worker handoff from the active planning record instead of authoring a second durable plan",
             "treat runtime delegation method as tool-owned and agent-agnostic",

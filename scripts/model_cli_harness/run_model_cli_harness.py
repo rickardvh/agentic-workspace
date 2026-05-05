@@ -1124,6 +1124,23 @@ def _semantic_workflow_warnings(
                 add("The post-run review variant did not ask for rationale, evidence, or prevention signals.")
             if "everything is fine" in response_lower and not any(marker in response_lower for marker in ("lower trust", "low trust", "not trust")):
                 add("The post-run review variant accepted weak-agent confidence without trust qualification.")
+        if variant == "handoff-packet-contents":
+            packet_markers = (
+                "intent",
+                "constraint",
+                "read",
+                "scope",
+                "proof",
+                "stop",
+                "return",
+                "posture",
+            )
+            missing = [marker for marker in packet_markers if marker not in response_lower]
+            if missing:
+                add(
+                    "The handoff packet variant omitted key worker-packet fields.",
+                    evidence=", ".join(missing),
+                )
 
     if scenario_id in {"config-closeout-obligation", "local-delegation-posture", "config-output-posture"}:
         if "agentic-workspace config" not in full_response_lower and ".agentic-workspace/config" not in full_response_lower:

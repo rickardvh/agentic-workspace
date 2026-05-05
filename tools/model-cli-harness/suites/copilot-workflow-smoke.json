@@ -347,6 +347,10 @@
         {
           "id": "post-run-self-review",
           "prompt": "Assume a weak executor just completed a boundary-shaping workflow change directly and now says everything is fine. Do not edit files. Ask why that choice was made, identify what evidence would lower or raise trust, and state what should prevent the same mistake next time."
+        },
+        {
+          "id": "handoff-packet-contents",
+          "prompt": "A local delegation setting says this task should be handed to another executor. Do not edit files. Prepare the smallest useful handoff shape for the next executor and state what must come back before the work can be trusted."
         }
       ],
       "forbidden_write_patterns": [

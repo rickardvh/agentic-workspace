@@ -7991,6 +7991,17 @@ def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: 
     assert posture["delegation_decision"]["decision"] == "suggest-escalation"
     assert posture["delegation_decision"]["required_next_action"] == "prepare-handoff"
     assert posture["delegation_decision"]["handoff_command"] == "agentic-planning handoff --target . --format json"
+    assert posture["delegation_decision"]["handoff_surface"]["required_packet_fields"] == [
+        "intent",
+        "constraints",
+        "read_first_refs",
+        "owned_scope",
+        "proof_expectations",
+        "stop_conditions",
+        "return_contract",
+        "target_posture",
+    ]
+    assert "active execplan" in posture["delegation_decision"]["handoff_surface"]["fallback_when_unavailable"]
     assert payload["delegation_decision"] == posture["delegation_decision"]
 
 

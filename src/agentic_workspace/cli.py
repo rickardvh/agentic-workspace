@@ -8928,10 +8928,40 @@ def _delegation_next_action_decision(
         "mode_effect": mode_effect,
         "reason": reasons[0],
         "handoff_command": handoff_command,
+        "handoff_surface": _delegation_handoff_surface(command=handoff_command) if handoff_command else None,
         "manual_prompt": manual_prompt,
         "human_control_summary": (
             "Local posture may suggest delegation or clarification, but only auto mode may execute without a human handoff."
         ),
+    }
+
+
+def _delegation_handoff_surface(*, command: str | None) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/delegation-handoff-surface/v1",
+        "command": command,
+        "status": "available-when-active-planning-exists",
+        "fallback_when_unavailable": (
+            "Use the current start/implement payload plus checked-in planning refs; if no active execplan exists, "
+            "create or select the bounded planning slice before delegating implementation."
+        ),
+        "required_packet_fields": [
+            "intent",
+            "constraints",
+            "read_first_refs",
+            "owned_scope",
+            "proof_expectations",
+            "stop_conditions",
+            "return_contract",
+            "target_posture",
+        ],
+        "return_contract": [
+            "what changed",
+            "proof run and result",
+            "scope or stop-condition issues",
+            "residue to route into planning, memory, docs, or issues",
+        ],
+        "control": "Only delegation.mode=auto may execute without first surfacing this packet to the human or orchestrator.",
     }
 
 

@@ -1208,6 +1208,42 @@ def test_model_cli_harness_accepts_weak_target_escalation() -> None:
     assert warnings == []
 
 
+def test_model_cli_harness_scores_incomplete_handoff_packet() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="capability-fit-routing",
+        prompt_variant_id="handoff-packet-contents",
+        result={"stdout": json.dumps({"response": "I will tell the next executor to do the task and report back."}), "stderr": ""},
+        mutation_summary={"status": "clean"},
+    )
+
+    assert any("omitted key worker-packet fields" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_accepts_complete_handoff_packet() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="capability-fit-routing",
+        prompt_variant_id="handoff-packet-contents",
+        result={
+            "stdout": json.dumps(
+                {
+                    "response": (
+                        "Handoff: intent, constraints, read-first refs, owned scope, proof expectations, "
+                        "stop conditions, target posture, and return contract with proof result and residue."
+                    )
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert warnings == []
+
+
 def test_model_cli_harness_scores_weak_ambiguous_without_inspection() -> None:
     harness = _load_harness()
 
