@@ -5568,6 +5568,7 @@ def _run_report_command(
         ),
         "operating_posture": _operating_posture_payload(config=config, surface="report"),
         "config_enforcement": _config_enforcement_payload(config=config),
+        "config_effect_audit": _config_effect_audit_payload(config=config),
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
         "memory_consult": _memory_consult_payload(target_root=target_root, cli_invoke=config.cli_invoke),
@@ -9373,6 +9374,146 @@ def _config_enforcement_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "field_path": "mixed_agent.runtime_resolution",
             },
         ],
+    }
+
+
+def _config_effect_audit_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    entries = _config_field_enforcement_entries()
+    effect_classes = {
+        "hard": {
+            "force": "blocking",
+            "agent_dependency": "none-after-command-start",
+            "meaning": "invalid values stop command execution or validation",
+        },
+        "operational": {
+            "force": "tool-behavior",
+            "agent_dependency": "low",
+            "meaning": "validated values directly change package output, lifecycle behavior, or diagnostics",
+        },
+        "advisory-operational": {
+            "force": "structured-decision-or-diagnostic",
+            "agent_dependency": "medium",
+            "meaning": "values produce structured decisions or diagnostics, but action still depends on later tool use or agent uptake",
+        },
+        "advisory": {
+            "force": "guidance-only",
+            "agent_dependency": "high",
+            "meaning": "values shape compact guidance but do not execute work or block claims by themselves",
+        },
+        "local-advisory": {
+            "force": "machine-local-guidance",
+            "agent_dependency": "high",
+            "meaning": "machine-local posture shapes routing without becoming shared repo authority",
+        },
+        "unused": {
+            "force": "none-detected",
+            "agent_dependency": "not-applicable",
+            "meaning": "field is configured or known but no concrete tool output route is currently declared",
+        },
+    }
+
+    def field_effect(entry: dict[str, Any]) -> dict[str, Any]:
+        effect_type = str(entry.get("enforcement", "unused"))
+        used_by = [str(item) for item in _list_payload(entry.get("used_by"))]
+        field = str(entry.get("field", ""))
+        concrete_commands: list[str] = []
+        payload_fields: list[str] = []
+
+        def command(raw_command: str) -> str:
+            return _command_with_cli_invoke(command=raw_command, cli_invoke=config.cli_invoke) or raw_command
+
+        if field.startswith("workspace.improvement_latitude"):
+            concrete_commands = [command("agentic-workspace report --target ./repo --section repo_friction --format json")]
+            payload_fields = ["repo_friction.policy_mode", "operating_posture.improvement_latitude"]
+        elif field.startswith("workspace.optimization_bias"):
+            concrete_commands = [command("agentic-workspace report --target ./repo --section output_contract --format json")]
+            payload_fields = ["output_contract", "operating_posture.optimization_bias"]
+        elif field.startswith("workflow_obligations"):
+            concrete_commands = [
+                command("agentic-workspace report --target ./repo --section workflow_obligations --format json"),
+                command("agentic-workspace preflight --target ./repo --format json"),
+            ]
+            payload_fields = ["workflow_obligations", "closeout_obligations"]
+        elif field.startswith("assurance"):
+            concrete_commands = [
+                command("agentic-workspace config --target ./repo --profile compact --format json"),
+                command("agentic-workspace proof --target ./repo --changed <paths> --format json"),
+            ]
+            payload_fields = ["assurance", "proof", "closeout_trust"]
+        elif field.startswith("cli_compatibility"):
+            concrete_commands = [command("agentic-workspace config --target ./repo --profile compact --format json")]
+            payload_fields = ["cli_compatibility"]
+        elif field.startswith("runtime|handoff|safety|delegation_targets"):
+            concrete_commands = [
+                command('agentic-workspace start --target ./repo --profile tiny --task "<task>" --format json'),
+                command("agentic-workspace implement --target ./repo --profile tiny --changed <paths> --format json"),
+            ]
+            payload_fields = ["delegation_decision", "mixed_agent.runtime_resolution"]
+        elif field.startswith("local_memory"):
+            concrete_commands = [command("agentic-workspace report --target ./repo --section local_memory --format json")]
+            payload_fields = ["local_memory"]
+        elif field.startswith("workspace.cli_invoke"):
+            concrete_commands = [command("agentic-workspace config --target ./repo --profile compact --format json")]
+            payload_fields = ["copyable command strings"]
+        elif field.startswith("system_intent"):
+            concrete_commands = [command("agentic-workspace system-intent --target ./repo --format json")]
+            payload_fields = ["system_intent_mirror", "durable_intent"]
+        elif field.startswith("update.modules"):
+            concrete_commands = [
+                command("agentic-workspace status --target ./repo --format json"),
+                command("agentic-workspace upgrade --target ./repo --dry-run --format json"),
+            ]
+            payload_fields = ["update.modules", "module freshness"]
+        else:
+            concrete_commands = [command("agentic-workspace config --target ./repo --profile compact --format json")]
+            payload_fields = used_by
+
+        return {
+            "field": field,
+            "scope": str(entry.get("scope", "")),
+            "effect_type": effect_type,
+            "force": effect_classes.get(effect_type, effect_classes["unused"])["force"],
+            "agent_dependency": effect_classes.get(effect_type, effect_classes["unused"])["agent_dependency"],
+            "concrete_commands": concrete_commands,
+            "payload_fields": payload_fields,
+            "used_by": used_by,
+        }
+
+    field_effects = [field_effect(entry) for entry in entries]
+    counts: dict[str, int] = {key: 0 for key in effect_classes}
+    for effect in field_effects:
+        effect_type = str(effect.get("effect_type", "unused"))
+        counts[effect_type] = counts.get(effect_type, 0) + 1
+    warnings = [
+        {
+            "field": "workflow_obligations.<name>.*",
+            "risk": "obligation wording can look mandatory while the tool currently reports and matches it instead of enforcing it",
+            "actual_force": "advisory",
+            "recommended_followup": "add per-obligation force such as informational, recommended, required-before-closeout, or blocking",
+        },
+        {
+            "field": "assurance.strict_closeout",
+            "risk": "strict closeout sounds blocking, but force depends on active planning or closeout report usage",
+            "actual_force": "advisory-operational",
+            "recommended_followup": "make strict closeout gates explicit in closeout_trust and planning-backed report sections",
+        },
+    ]
+    return {
+        "kind": "workspace-config-effect-audit/v1",
+        "status": "present",
+        "rule": "Config settings must state whether they block, change tool behavior, shape diagnostics, or only advise agents.",
+        "config_exists": config.exists,
+        "local_override_applied": config.local_override.applied,
+        "effect_classes": effect_classes,
+        "field_count_by_effect": counts,
+        "field_effects": field_effects,
+        "agent_dependent_fields": [effect for effect in field_effects if str(effect.get("agent_dependency")) in {"medium", "high"}],
+        "claimed_vs_actual_warnings": warnings,
+        "unused_fields": [effect for effect in field_effects if effect.get("effect_type") == "unused"],
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section config_effect_audit --format json",
+            cli_invoke=config.cli_invoke,
+        ),
     }
 
 
@@ -16262,6 +16403,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         },
         "warnings": list(config.warnings),
         "config_enforcement": _config_enforcement_payload(config=config),
+        "config_effect_audit": _config_effect_audit_payload(config=config),
         "workspace": {
             "default_preset": config.default_preset,
             "agent_instructions_file": config.agent_instructions_file,
@@ -16353,6 +16495,13 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "schema_version": payload["schema_version"],
         "warnings": payload["warnings"],
         "edit_reference": payload["edit_reference"],
+        "config_effect_audit": {
+            "status": payload["config_effect_audit"]["status"],
+            "field_count_by_effect": payload["config_effect_audit"]["field_count_by_effect"],
+            "agent_dependent_field_count": len(payload["config_effect_audit"]["agent_dependent_fields"]),
+            "warning_count": len(payload["config_effect_audit"]["claimed_vs_actual_warnings"]),
+            "detail_command": payload["config_effect_audit"]["detail_command"],
+        },
         "workspace": {
             "default_preset": workspace["default_preset"],
             "agent_instructions_file": workspace["agent_instructions_file"],

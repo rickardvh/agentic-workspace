@@ -19,6 +19,7 @@
     "output_contract",
     "operating_posture",
     "config_enforcement",
+    "config_effect_audit",
     "branch_workflow_posture",
     "local_memory",
     "memory_consult",
@@ -149,6 +150,10 @@
     "config_enforcement": {
       "type": "object",
       "description": "How repo config expectations are applied and reported."
+    },
+    "config_effect_audit": {
+      "type": "object",
+      "description": "Audit of each config setting's concrete force, affected output routes, and agent dependency."
     },
     "branch_workflow_posture": {
       "type": "object",

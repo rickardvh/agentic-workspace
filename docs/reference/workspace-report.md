@@ -57,6 +57,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `output_contract` | object | yes |  | Output contract details used by this contract. |  |  |
 | `operating_posture` | object | yes |  | Current operating posture for agent work in this repository. |  |  |
 | `config_enforcement` | object | yes |  | How repo config expectations are applied and reported. |  |  |
+| `config_effect_audit` | object | yes |  | Audit of each config setting's concrete force, affected output routes, and agent dependency. |  |  |
 | `branch_workflow_posture` | object | yes |  | Branch and worktree posture relevant to safe continuation. |  |  |
 | `local_memory` | object | yes |  | Machine-local memory configuration and advisory state. |  |  |
 | `memory_consult` | object | yes |  | Recommended checked-in Memory lookup route for the current report. |  |  |

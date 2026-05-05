@@ -15,6 +15,7 @@
     "output_contract",
     "operating_posture",
     "config_enforcement",
+    "config_effect_audit",
     "branch_workflow_posture",
     "local_memory",
     "memory_consult",
@@ -56,6 +57,7 @@
     "surface one default execution-shaping answer when planning state and local posture together make it cheap to do so",
     "surface compact provider-agnostic external-work deltas when prior evidence is available",
     "surface one provider-agnostic external-work reconciliation answer before provider-specific details",
+    "make each config setting's actual force inspectable instead of relying on setting names alone",
     "let optimization bias change rendering density, not canonical truth or execution method",
     "route improvement signals through one intake model before promoting them to work, memory, docs, checks, or dismissal"
   ]

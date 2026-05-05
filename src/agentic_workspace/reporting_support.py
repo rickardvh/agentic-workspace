@@ -362,6 +362,7 @@ def report_router_payload(
     profile_payload = _compact_report_profile(profile_payload)
     profile_payload["ordinary_agent_path"] = _ordinary_agent_path_payload(payload=payload, findings=findings, cli_invoke=cli_invoke)
     profile_payload["config_enforcement"] = _report_router_config_enforcement(payload.get("config_enforcement", {}))
+    profile_payload["config_effect_audit"] = _report_router_config_effect_audit(payload.get("config_effect_audit", {}))
     full_feature_tier = dict(payload.get("feature_tier", {})) if isinstance(payload.get("feature_tier"), dict) else {}
     advanced_policy = (
         dict(full_feature_tier.get("advanced_policy", {})) if isinstance(full_feature_tier.get("advanced_policy"), dict) else {}
@@ -586,6 +587,25 @@ def _report_router_config_enforcement(value: Any) -> dict[str, Any]:
     }
 
 
+def _report_router_config_effect_audit(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    warnings = value.get("claimed_vs_actual_warnings", [])
+    if not isinstance(warnings, list):
+        warnings = []
+    agent_dependent = value.get("agent_dependent_fields", [])
+    if not isinstance(agent_dependent, list):
+        agent_dependent = []
+    return {
+        "kind": value.get("kind", "workspace-config-effect-audit/v1"),
+        "status": value.get("status", "unknown"),
+        "field_count_by_effect": value.get("field_count_by_effect", {}),
+        "agent_dependent_field_count": len(agent_dependent),
+        "warning_count": len(warnings),
+        "detail_section": "config_effect_audit",
+    }
+
+
 def _report_router_external_work_reconciliation(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {"status": "unavailable"}
@@ -807,6 +827,7 @@ def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_C
         "operating_posture": "effective improvement and output posture for bounded action, incidental findings, and compact residue",
         "config": "resolved workspace config and local posture",
         "config_enforcement": "config fields classified by actual enforcement strength and operational routes",
+        "config_effect_audit": "audit of actual config force, affected outputs, and agent-dependent settings",
         "registry": "module registry and lifecycle metadata",
     }
     findings = [finding for finding in payload.get("findings", []) if isinstance(finding, dict)]
@@ -834,6 +855,7 @@ def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_C
         "operating_posture": "inspect at startup, recovery, or closeout when improvement posture should affect behavior without adding obligations",
         "config": "deep detail; inspect only when resolved config, posture, or obligations matter",
         "config_enforcement": "inspect when deciding whether a config field is hard, operational, advisory, or local-only",
+        "config_effect_audit": "inspect when verifying whether settings have concrete behavior or only advise agents",
         "registry": "deep detail; inspect only when module metadata or lifecycle registration matters",
     }
     if current_status in {"absent", "direct-or-no-active-plan"}:

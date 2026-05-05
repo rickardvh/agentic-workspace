@@ -992,6 +992,12 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["workflow_obligations"] == []
     assert payload["config_enforcement"]["field_count_by_class"]["hard"] >= 1
     assert any(field["field"] == "workspace.improvement_latitude" for field in payload["config_enforcement"]["fields"])
+    assert payload["config_effect_audit"]["status"] == "present"
+    assert payload["config_effect_audit"]["field_count_by_effect"]["operational"] >= 1
+    assert payload["config_effect_audit"]["field_count_by_effect"]["unused"] == 0
+    assert payload["config_effect_audit"]["detail_command"].endswith(
+        "agentic-workspace report --target ./repo --section config_effect_audit --format json"
+    )
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
     assert {item["freshness"]["status"] for item in payload["update"]["modules"]} == {"unknown"}
@@ -4612,6 +4618,12 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert operating_posture["closeout_nudge"]["field"] == "improvement_signal_review"
     assert payload["config_enforcement"]["status"] == "present"
     assert any(route["field"] == "workspace.optimization_bias" for route in payload["config_enforcement"]["weak_field_routes"])
+    assert "config_effect_audit" in payload["schema"]["shared_fields"]
+    assert payload["config_effect_audit"]["kind"] == "workspace-config-effect-audit/v1"
+    assert payload["config_effect_audit"]["field_count_by_effect"]["advisory"] >= 1
+    assert any(
+        warning["field"] == "workflow_obligations.<name>.*" for warning in payload["config_effect_audit"]["claimed_vs_actual_warnings"]
+    )
     assert payload["agent_configuration_system"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["agent_configuration_system"]["startup_entrypoint"] == "AGENTS.md"
     assert payload["agent_configuration_system"]["workflow_artifact_profile"] == "repo-owned"
@@ -4754,6 +4766,8 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert payload["report_profile"]["full_profile"] == "full"
     assert payload["report_profile"]["context_router"]["first_view"] == "start"
     assert payload["report_profile"]["config_enforcement"]["detail_section"] == "config_enforcement"
+    assert payload["report_profile"]["config_effect_audit"]["detail_section"] == "config_effect_audit"
+    assert payload["report_profile"]["config_effect_audit"]["warning_count"] >= 1
     assert payload["report_profile"]["decision_grade_fields"][0] == "health"
     ordinary_path = payload["report_profile"]["ordinary_agent_path"]
     assert ordinary_path["entry_command"] == "agentic-workspace start --target ./repo --profile tiny --format json"
@@ -4775,6 +4789,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert len(payload) <= guard["max_top_level_fields"]
     assert payload["report_profile"]["feature_tier"]["active"]["id"] == "full"
     assert "available_tiers" not in payload["report_profile"]["feature_tier"]
+
     assert "report_profile.feature_tier" in payload["report_profile"]["decision_grade_fields"]
     assert len(payload["warning_summary"]["sample"]) <= guard["warning_sample_limit"]
     for section in guard["high_volume_sections_excluded"]:
@@ -4850,6 +4865,38 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert posture["kind"] == "agentic-workspace/operating-posture/v1"
     assert posture["closeout_nudge"]["field"] == "improvement_signal_review"
     assert posture["boundaries"]["not_blanket_refactor_permission"] is True
+
+
+def test_report_section_returns_config_effect_audit(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[runtime]",
+                "strong_planner_available = true",
+                "cheap_bounded_executor_available = true",
+            ]
+        ),
+    )
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(target), "--section", "config_effect_audit", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["selector"] == {"section": "config_effect_audit"}
+    assert answer["kind"] == "workspace-config-effect-audit/v1"
+    assert answer["field_count_by_effect"]["local-advisory"] >= 1
+    assert any(effect["field"] == "runtime|handoff|safety|delegation_targets" for effect in answer["agent_dependent_fields"])
+    assert any(warning["field"] == "assurance.strict_closeout" for warning in answer["claimed_vs_actual_warnings"])
 
 
 def test_report_router_uses_resolved_cli_invoke_for_copyable_commands(tmp_path: Path, capsys) -> None:
