@@ -2,7 +2,7 @@
   "schema_version": "agentic-workspace/operation/v1",
   "id": "memory.list-skills.report",
   "command_surface": {
-    "program": "agentic-memory-bootstrap",
+    "program": "agentic-memory",
     "command": "list-skills",
     "format_option": "format"
   },
@@ -54,7 +54,8 @@
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
-    "operation command parity checks agentic-memory-bootstrap live parser"
+    "operation command parity checks agentic-memory live parser"
   ],
   "migration_status": "validated-contract"
 }
+

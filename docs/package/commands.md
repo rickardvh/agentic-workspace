@@ -28,7 +28,7 @@ This page is a human navigation map for the shipped `agentic-workspace` command 
 
 For ordered roadmap lanes, promote and complete one lane at a time. A lane may need multiple execplans, but one execplan should not span unrelated lanes.
 
-`agentic-planning-bootstrap` remains a compatibility alias for existing installs and docs. Prefer `agentic-planning` in new workflow guidance.
+Use `agentic-planning` in workflow guidance and package-local Planning lifecycle work.
 
 ## Workspace Lifecycle Mutation Commands
 
@@ -71,3 +71,4 @@ The deeper model for these groups is described in [Lifecycle and context command
 - `proof --format json`: [Proof selection rules](../reference/proof-selection-rules.md) and [Proof routes manifest](../reference/proof-routes-manifest.md).
 - `config --format json`: [Workspace config](../reference/workspace-config.md) and [Workspace local override](../reference/workspace-local-override.md).
 - generated adapter and operation contracts: [Operation contracts](../reference/operation-contracts.md), [Operation primitives](../reference/operation-primitives.md), and [Command adapter generation](../reference/command-adapter-generation.md).
+

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "agentic-planning-bootstrap/planning-decomposition.schema.json",
+  "$id": "agentic-planning/planning-decomposition.schema.json",
   "title": "Planning Decomposition Record",
   "type": "object",
   "required": [
@@ -133,3 +133,4 @@
     }
   }
 }
+

@@ -139,11 +139,11 @@ def test_command_adapter_generation_contract_records_package_migration_path() ->
     migration = manifest["package_surface_migration"]
     adapters = {adapter["id"]: adapter for adapter in manifest["adapters"]}
 
-    assert migration["planning"]["program"] == "agentic-planning-bootstrap"
+    assert migration["planning"]["program"] == "agentic-planning"
     assert migration["planning"]["status"] == "first-read-only-generated"
     assert adapters["planning.status.cli"]["command"]["program"] == migration["planning"]["program"]
     assert adapters["planning.status.cli"]["command"]["name"] == migration["planning"]["first_read_only_candidate"]
-    assert migration["memory"]["program"] == "agentic-memory-bootstrap"
+    assert migration["memory"]["program"] == "agentic-memory"
     assert migration["memory"]["status"] == "first-read-only-generated"
     assert adapters["memory.status.cli"]["command"]["program"] == migration["memory"]["program"]
     assert adapters["memory.status.cli"]["command"]["name"] == migration["memory"]["first_read_only_candidate"]
@@ -429,8 +429,8 @@ def test_command_generation_loader_uses_explicit_ir_and_schema_paths() -> None:
     assert manifest["schema_version"] == "agentic-workspace/command-package-ir/v1"
     assert {package["program"] for package in manifest["packages"]} >= {
         "agentic-workspace",
-        "agentic-planning-bootstrap",
-        "agentic-memory-bootstrap",
+        "agentic-planning",
+        "agentic-memory",
     }
 
 
@@ -442,7 +442,7 @@ def test_operation_command_parity_uses_package_program_namespace() -> None:
     spec.loader.exec_module(module)
 
     root_commands = module._known_command_names_for_program("agentic-workspace")
-    memory_commands = module._known_command_names_for_program("agentic-memory-bootstrap")
+    memory_commands = module._known_command_names_for_program("agentic-memory")
 
     assert "route-report" not in root_commands
     assert {"route-report", "promotion-report", "list-files", "list-skills"}.issubset(memory_commands)
@@ -781,8 +781,8 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     assert errors == []
     assert {status["program"] for status in statuses} == {
         "agentic-workspace",
-        "agentic-planning-bootstrap",
-        "agentic-memory-bootstrap",
+        "agentic-planning",
+        "agentic-memory",
     }
     assert all(status["status"] == "current" for status in statuses)
     assert all(status["direct_edit_detected"] is False for status in statuses)
@@ -810,8 +810,8 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
         "status",
         "doctor",
     ]
-    assert commands_by_program["agentic-planning-bootstrap"] == ["status", "doctor", "summary", "report", "reconcile"]
-    assert commands_by_program["agentic-memory-bootstrap"] == [
+    assert commands_by_program["agentic-planning"] == ["status", "doctor", "summary", "report", "reconcile"]
+    assert commands_by_program["agentic-memory"] == [
         "doctor",
         "report",
         "status",
@@ -845,7 +845,7 @@ def test_generated_adapter_live_cli_parity_catches_missing_contract_option(monke
 
     def fake_operation_manifest(_path: str) -> dict[str, object]:
         return {
-            "command_surface": {"program": "agentic-memory-bootstrap", "command": "status", "format_option": "format"},
+            "command_surface": {"program": "agentic-memory", "command": "status", "format_option": "format"},
             "inputs": [{"name": "format", "source": "cli-option", "required": False}],
         }
 

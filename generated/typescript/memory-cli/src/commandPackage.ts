@@ -1,6 +1,6 @@
 // Generated command package metadata.
 // Source: src/agentic_workspace/contracts/command_package_ir.json
-// Program: agentic-memory-bootstrap
+// Program: agentic-memory
 // Regenerate with: uv run python scripts/generate/generate_command_packages.py
 // DO NOT EDIT DIRECTLY.
 
@@ -577,22 +577,22 @@ export const generatedCommandPackage = {
   ],
   "id": "memory-bootstrap",
   "package_role": "memory-module-cli",
-  "program": "agentic-memory-bootstrap",
+  "program": "agentic-memory",
   "targets": [
     {
       "entrypoints": [
-        "agentic-memory-bootstrap"
+        "agentic-memory"
       ],
       "generated_root": "packages/memory/src/repo_memory_bootstrap/generated_cli_package",
       "generation_status": "runtime-backed-read-only-adapter",
       "kind": "python",
       "maturity_level_ref": "runtime-backed-read-only-adapter",
-      "package_name": "agentic-memory-bootstrap",
+      "package_name": "agentic-memory",
       "test_environment": "python-dev"
     },
     {
       "entrypoints": [
-        "agentic-memory-bootstrap"
+        "agentic-memory"
       ],
       "generated_root": "generated/typescript/memory-cli",
       "generation_status": "proof-fixture",

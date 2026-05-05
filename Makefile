@@ -127,10 +127,10 @@ verify-workspace:
 	@$(COMPACT_RUN) --label "workspace verify" -- uv run agentic-workspace modules --format json
 
 verify-memory:
-	@$(COMPACT_RUN) --label "memory verify-payload" --cwd packages/memory -- uv run agentic-memory-bootstrap verify-payload --target .
+	@$(COMPACT_RUN) --label "memory verify-payload" --cwd packages/memory -- uv run agentic-memory verify-payload --target .
 
 verify-planning:
-	@$(COMPACT_RUN) --label "planning verify-payload" --cwd packages/planning -- uv run agentic-planning-bootstrap verify-payload
+	@$(COMPACT_RUN) --label "planning verify-payload" --cwd packages/planning -- uv run agentic-planning verify-payload
 
 verify: sync-all verify-workspace verify-memory verify-planning
 
@@ -189,3 +189,4 @@ check-planning: sync-all test-planning lint-planning typecheck-planning maintain
 check: sync-all test lint typecheck format-check verify memory-freshness-strict maintainer-surfaces structured-file-inventory agent-aids absolute-paths
 
 check-all: check-memory check-planning
+

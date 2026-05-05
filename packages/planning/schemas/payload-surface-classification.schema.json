@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "agentic-planning-bootstrap/payload-surface-classification.schema.json",
+  "$id": "agentic-planning/payload-surface-classification.schema.json",
   "title": "Planning Package Payload Surface Classification",
   "type": "object",
   "required": [
@@ -142,3 +142,4 @@
   },
   "additionalProperties": false
 }
+

@@ -15,7 +15,7 @@ Package-local contract for work under `packages/planning/`.
 
 ## Scope
 
-- This package contains the reusable `agentic-planning-bootstrap` source, shipped planning payload, helper rendering/check logic, and tests.
+- This package contains the reusable `agentic-planning` source, shipped planning payload, helper rendering/check logic, and tests.
 - Treat `bootstrap/` as packaged target-repository content, not as the active planning system of this monorepo.
 - Treat `.agentic-workspace/planning/state.toml`, `.agentic-workspace/planning/execplans/`, and root tooling as the operational authority for this repository.
 - When a task crosses package source, shipped payload, and root install boundaries, use `../../docs/maintainer/source-payload-operational-install.md` to keep the layers separate.
@@ -60,3 +60,4 @@ Package-local contract for work under `packages/planning/`.
 - Prefer `uv run ruff check packages/planning` for lint validation.
 - Run `make maintainer-surfaces` when a change also affects generated maintainer docs, startup routing, or the root planning contract.
 - Escalate to `make check-planning` or `make check-all` only when the change crosses package or root orchestration boundaries.
+

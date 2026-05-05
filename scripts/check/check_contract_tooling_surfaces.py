@@ -968,11 +968,11 @@ def _known_command_names_for_program(program: str) -> set[str]:
 def _program_parser(program: str) -> argparse.ArgumentParser | None:
     if program == "agentic-workspace":
         return cli.build_parser()
-    if program == "agentic-planning-bootstrap":
+    if program == "agentic-planning":
         from repo_planning_bootstrap import cli as planning_cli
 
         return planning_cli.build_parser()
-    if program == "agentic-memory-bootstrap":
+    if program == "agentic-memory":
         from repo_memory_bootstrap import cli as memory_cli
 
         return memory_cli.build_parser()
@@ -1732,3 +1732,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

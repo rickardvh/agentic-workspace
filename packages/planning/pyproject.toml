@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentic-planning-bootstrap"
+name = "agentic-planning"
 version = "0.1.2"
 description = "Install a checked-in planning bootstrap for execution into an existing repository."
 readme = "README.md"
@@ -30,7 +30,6 @@ Issues = "https://github.com/rickardvh/agentic-workspace/issues"
 
 [project.scripts]
 agentic-planning = "repo_planning_bootstrap.cli:main"
-agentic-planning-bootstrap = "repo_planning_bootstrap.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/repo_planning_bootstrap"]
@@ -77,3 +76,4 @@ select = ["E", "F", "I"]
 
 [tool.coverage.run]
 source = ["repo_planning_bootstrap"]
+

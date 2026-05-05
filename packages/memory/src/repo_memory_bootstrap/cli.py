@@ -52,7 +52,7 @@ from repo_memory_bootstrap.installer import (
 
 def _program_name() -> str:
     invoked = sys.argv[0].replace("\\", "/").rsplit("/", 1)[-1]
-    if invoked in {"agentic-memory", "agentic-memory-bootstrap"}:
+    if invoked == "agentic-memory":
         return invoked
     return "agentic-memory"
 
@@ -60,10 +60,7 @@ def _program_name() -> str:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=_program_name(),
-        description=(
-            "Install, route, inspect, and maintain checked-in repository Memory. "
-            "`agentic-memory-bootstrap` remains a compatibility alias for this command."
-        ),
+        description=("Install, route, inspect, and maintain checked-in repository Memory."),
     )
     parser.add_argument(
         "--version",
@@ -830,7 +827,7 @@ def _print_install_summary(result) -> None:
     )
     print(
         f"- Use the temporary bootstrap skills under {bootstrap_skills_path} to finish install "
-        "or adopt lifecycle work, then run `agentic-memory-bootstrap bootstrap-cleanup --target "
+        "or adopt lifecycle work, then run `agentic-memory bootstrap-cleanup --target "
         "<repo>` when that work is complete."
     )
     print("- Treat `.agentic-workspace/memory/` as the bootstrap-managed surface, and keep repo-specific memory procedures outside it.")

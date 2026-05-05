@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "agentic-planning-bootstrap/extraction-candidates.schema.json",
+  "$id": "agentic-planning/extraction-candidates.schema.json",
   "title": "Planning Package Extraction Candidates",
   "type": "object",
   "required": [
@@ -183,3 +183,4 @@
   },
   "additionalProperties": false
 }
+

@@ -6,7 +6,7 @@ These skills are part of the package distribution and should be available to run
 
 `REGISTRY.json` is the explicit bundled-skill registry for this package. Treat it as the machine-readable source of truth for bundled planning skill discovery and task-matching hints.
 
-If a bundled skill is not already visible, prefer the installed `agentic-planning-bootstrap` command or the repo's checked-in `.agentic-planning/UPGRADE-SOURCE.toml` as the source of truth for any remote `uvx` or `pipx` runner spec.
+If a bundled skill is not already visible, prefer the installed `agentic-planning` command or the repo's checked-in `.agentic-planning/UPGRADE-SOURCE.toml` as the source of truth for any remote `uvx` or `pipx` runner spec.
 
 For maintainers of this repository, `skills/` is the canonical source of truth. Any bundled copy inside an installed package is only a runtime copy for packaging or install-path testing and may be stale until the package is reinstalled.
 
@@ -28,3 +28,4 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
   - report active planning state, proof expectations, and next-action guidance from the canonical summary JSON
 
 These bundled skills cover payload refresh, bounded planning execution, delegated planning workflow, review capture, review-to-plan promotion, and upstream-task intake.
+

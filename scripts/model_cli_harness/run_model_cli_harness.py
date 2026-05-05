@@ -830,8 +830,8 @@ def _semantic_workflow_warnings(
                 "The agent created canonical execplan files without registering them in planning state.",
                 evidence=", ".join(unregistered_execplans[:8]),
             )
-        if "agentic-planning-bootstrap promote-lane" in response_lower:
-            add("The agent recommended unsupported planning lifecycle command `agentic-planning-bootstrap promote-lane`.")
+        if "agentic-planning promote-lane" in response_lower:
+            add("The agent recommended unsupported planning lifecycle command `agentic-planning promote-lane`.")
         if scenario_id == "planning-artifact-integrity":
             missing_planning_refs = _missing_mentioned_paths(
                 text=response,
@@ -1633,3 +1633,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

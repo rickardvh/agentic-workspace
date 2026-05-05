@@ -49,9 +49,10 @@ Ordinary compact inspection should answer:
 Use:
 - `agentic-workspace defaults --section system_intent --format json`
 - `agentic-workspace summary --format json`
-- `agentic-planning-bootstrap report --format json`
+- `agentic-planning report --format json`
 - `agentic-workspace system-intent --target ./repo --sync --format json`
 
 ## Checked-In Residue Rule
 
 Keep a checked-in execplan whenever later proof, intent validation, or required continuation would be expensive or ambiguous to reconstruct from chat alone.
+

@@ -21,13 +21,13 @@ coverage:
 	uv run pytest $(PYTEST_PARALLEL_ARGS)
 
 doctor:
-	uv run agentic-memory-bootstrap doctor --target .
+	uv run agentic-memory doctor --target .
 
 verify-payload:
-	uv run agentic-memory-bootstrap verify-payload
+	uv run agentic-memory verify-payload
 
 prompt-upgrade:
-	uv run agentic-memory-bootstrap prompt upgrade --target .
+	uv run agentic-memory prompt upgrade --target .
 
 check-memory:
 	uv run agentic-workspace doctor --target ../.. --format json
@@ -48,3 +48,4 @@ format:
 
 typecheck:
 	uv run ty check src
+

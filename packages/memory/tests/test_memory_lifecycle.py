@@ -1,4 +1,4 @@
-"""Test lifecycle operations for agentic-memory-bootstrap package."""
+"""Test lifecycle operations for agentic-memory package."""
 
 import subprocess
 import tempfile
@@ -14,7 +14,7 @@ def test_memory_clean_install() -> None:
 
         # Install memory bootstrap
         subprocess.run(
-            ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target)],
+            ["uv", "run", "agentic-memory", "install", "--target", str(target)],
             capture_output=True,
             text=True,
             cwd=memory_root,
@@ -41,7 +41,7 @@ def test_memory_install_dry_run() -> None:
 
         # Install with dry-run
         subprocess.run(
-            ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target), "--dry-run"],
+            ["uv", "run", "agentic-memory", "install", "--target", str(target), "--dry-run"],
             capture_output=True,
             text=True,
             cwd=memory_root,
@@ -62,7 +62,7 @@ def test_memory_install_idempotent() -> None:
 
         # First install
         subprocess.run(
-            ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target)],
+            ["uv", "run", "agentic-memory", "install", "--target", str(target)],
             capture_output=True,
             text=True,
             cwd=memory_root,
@@ -74,7 +74,7 @@ def test_memory_install_idempotent() -> None:
 
         # Second install (should fail or overwrite with --force)
         result = subprocess.run(
-            ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target)],
+            ["uv", "run", "agentic-memory", "install", "--target", str(target)],
             capture_output=True,
             text=True,
             cwd=memory_root,
@@ -95,7 +95,7 @@ def test_memory_status_after_install() -> None:
 
         # Install
         subprocess.run(
-            ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target)],
+            ["uv", "run", "agentic-memory", "install", "--target", str(target)],
             capture_output=True,
             text=True,
             cwd=memory_root,
@@ -104,7 +104,7 @@ def test_memory_status_after_install() -> None:
 
         # Check status
         result = subprocess.run(
-            ["uv", "run", "agentic-memory-bootstrap", "status", "--target", str(target), "--format", "json"],
+            ["uv", "run", "agentic-memory", "status", "--target", str(target), "--format", "json"],
             capture_output=True,
             text=True,
             cwd=memory_root,
@@ -123,7 +123,7 @@ def test_memory_install_with_force() -> None:
 
         # First install
         subprocess.run(
-            ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target)],
+            ["uv", "run", "agentic-memory", "install", "--target", str(target)],
             capture_output=True,
             text=True,
             cwd=memory_root,
@@ -137,7 +137,7 @@ def test_memory_install_with_force() -> None:
 
         # Install with force
         subprocess.run(
-            ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target), "--force"],
+            ["uv", "run", "agentic-memory", "install", "--target", str(target), "--force"],
             capture_output=True,
             text=True,
             cwd=memory_root,

@@ -1,4 +1,4 @@
-"""Test that agentic-memory-bootstrap package artifacts contain required payload files."""
+"""Test that agentic-memory package artifacts contain required payload files."""
 
 from __future__ import annotations
 
@@ -200,7 +200,7 @@ def _build_artifact(kind: str, output_dir: Path) -> Path:
         check=True,
     )
 
-    pattern = "agentic_memory_bootstrap-*.whl" if kind == "wheel" else "agentic_memory_bootstrap-*.tar.gz"
+    pattern = "agentic_memory-*.whl" if kind == "wheel" else "agentic_memory-*.tar.gz"
     matches = list(output_dir.glob(pattern))
     assert len(matches) == 1, f"Expected exactly 1 {kind}, found {len(matches)}"
     return matches[0]

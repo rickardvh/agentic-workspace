@@ -9,8 +9,8 @@ Use this skill when you need to answer memory-operating questions cheaply and co
 
 ## Default read path (machine-readable first)
 
-1. `uv run agentic-memory-bootstrap status --target . --format json`
-2. If remediation is needed: `uv run agentic-memory-bootstrap doctor --target . --format json`
+1. `uv run agentic-memory status --target . --format json`
+2. If remediation is needed: `uv run agentic-memory doctor --target . --format json`
 
 Treat `status` as the fast "what is wrong / what next" view, and `doctor` as the compact remediation guide.
 
@@ -21,7 +21,7 @@ Treat `status` as the fast "what is wrong / what next" view, and `doctor` as the
 
 If you need to check current-memory note shape and staleness specifically:
 
-- `uv run agentic-memory-bootstrap current check --target . --format json`
+- `uv run agentic-memory current check --target . --format json`
 
 ## Anti-rediscovery health (routing and promotion pressure)
 
@@ -50,3 +50,4 @@ When reporting memory state to another agent or a human:
 
 - paste the `status --format json` result (or the minimal relevant fields)
 - if action is required, include `doctor --format json` and name the specific remediation step you are taking
+

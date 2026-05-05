@@ -21,7 +21,7 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
    - explicit changed files from the task
    - or repo changes discovered from version control
 3. Use the repo's routing help first:
-   - run `agentic-memory-bootstrap sync-memory --files <paths...>` when available
+   - run `agentic-memory sync-memory --files <paths...>` when available
    - run `agentic-memory route --files <paths...>` when useful for note selection
    - when `.agentic-workspace/memory/repo/manifest.toml` exists, prefer manifest-triggered note matches as the first stale-memory candidates
    - treat `.agentic-workspace/memory/WORKFLOW.md` as reference policy only when the task touches the memory contract or policy boundary
@@ -59,3 +59,4 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
 - notes marked `Needs verification` where certainty is incomplete
 - deprecated or removed stale notes
 - an updated `.agentic-workspace/memory/repo/index.md` or `.agentic-workspace/memory/repo/manifest.toml` when routing changed
+

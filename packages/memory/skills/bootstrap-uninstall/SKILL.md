@@ -5,7 +5,7 @@ description: Finish bootstrap removal conservatively after the CLI has removed t
 
 # Bootstrap Uninstall
 
-Use this skill after `agentic-memory-bootstrap uninstall`.
+Use this skill after `agentic-memory uninstall`.
 
 It handles the manual-review part of uninstall without deleting repo-local content blindly.
 
@@ -36,3 +36,4 @@ It handles the manual-review part of uninstall without deleting repo-local conte
 - a concise uninstall review
 - remaining manual-review items called out clearly
 - a final statement of what was removed and what was intentionally left
+

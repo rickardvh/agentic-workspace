@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the boundary between checked-in memory, checked-in repo skills, and bundled product skills in `agentic-memory-bootstrap`.
+This document defines the boundary between checked-in memory, checked-in repo skills, and bundled product skills in `agentic-memory`.
 
 ## Layer boundary
 
@@ -127,3 +127,4 @@ For now:
 - treat any runtime-local mirrored copies as disposable caches
 - keep the mandatory bootstrap payload understandable and useful without any skill runtime support
 - during development, treat the repo's checked-in files as canonical and any packaged or mirrored copies as potentially stale until explicitly refreshed
+

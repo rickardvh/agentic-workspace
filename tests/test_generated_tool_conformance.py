@@ -152,8 +152,8 @@ def test_generated_adapters_are_backed_by_black_box_conformance_contracts() -> N
             assert contract["operation_id"] == adapter["operation_id"]
             placeholders_by_program = {
                 "agentic-workspace": "{agentic_workspace_cli}",
-                "agentic-planning-bootstrap": "{agentic_planning_cli}",
-                "agentic-memory-bootstrap": "{agentic_memory_cli}",
+                "agentic-planning": "{agentic_planning_cli}",
+                "agentic-memory": "{agentic_memory_cli}",
             }
             expected_placeholder = placeholders_by_program[adapter["command"]["program"]]
             assert command_template[0] == expected_placeholder

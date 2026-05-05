@@ -5,7 +5,7 @@ description: Finish bootstrap installation conservatively after the CLI has crea
 
 # Install
 
-Use this skill after `agentic-memory-bootstrap init`, `install`, or `adopt` to finish installation review from the temporary bootstrap workspace.
+Use this skill after `agentic-memory init`, `install`, or `adopt` to finish installation review from the temporary bootstrap workspace.
 
 ## Workflow
 
@@ -20,7 +20,7 @@ Use this skill after `agentic-memory-bootstrap init`, `install`, or `adopt` to f
    - preserve repo-specific notes unless there is clear evidence they should be aligned
 4. If installation created new current-memory files, use `populate` from the same path.
 5. Point out the shipped bootstrap-managed memory skills under `.agentic-workspace/memory/skills/` and any repo-specific memory skills under `.agentic-workspace/memory/repo/skills/`, keeping the managed package home concentrated under `.agentic-workspace/` rather than spreading package-managed machinery across the wider repo.
-6. When install work is complete, prefer `agentic-memory-bootstrap bootstrap-cleanup --target <repo>`.
+6. When install work is complete, prefer `agentic-memory bootstrap-cleanup --target <repo>`.
 
 ## Guardrails
 
@@ -36,3 +36,4 @@ Use this skill after `agentic-memory-bootstrap init`, `install`, or `adopt` to f
 - manual-review items called out clearly
 - a follow-up to `populate` when relevant
 - a follow-up to `bootstrap-cleanup` when bootstrap work is complete
+

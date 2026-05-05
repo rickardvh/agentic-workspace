@@ -1,6 +1,6 @@
 // Generated command package metadata.
 // Source: src/agentic_workspace/contracts/command_package_ir.json
-// Program: agentic-planning-bootstrap
+// Program: agentic-planning
 // Regenerate with: uv run python scripts/generate/generate_command_packages.py
 // DO NOT EDIT DIRECTLY.
 
@@ -411,22 +411,22 @@ export const generatedCommandPackage = {
   ],
   "id": "planning-bootstrap",
   "package_role": "planning-module-cli",
-  "program": "agentic-planning-bootstrap",
+  "program": "agentic-planning",
   "targets": [
     {
       "entrypoints": [
-        "agentic-planning-bootstrap"
+        "agentic-planning"
       ],
       "generated_root": "packages/planning/src/repo_planning_bootstrap/generated_cli_package",
       "generation_status": "runtime-backed-read-only-adapter",
       "kind": "python",
       "maturity_level_ref": "runtime-backed-read-only-adapter",
-      "package_name": "agentic-planning-bootstrap",
+      "package_name": "agentic-planning",
       "test_environment": "python-dev"
     },
     {
       "entrypoints": [
-        "agentic-planning-bootstrap"
+        "agentic-planning"
       ],
       "generated_root": "generated/typescript/planning-cli",
       "generation_status": "proof-fixture",

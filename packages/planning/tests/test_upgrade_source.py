@@ -16,7 +16,7 @@ def test_default_upgrade_source_uses_master_branch() -> None:
     source = default_upgrade_source()
     assert source.source_type == "git"
     assert source.source_ref == "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning"
-    assert source.source_label == "agentic-planning-bootstrap monorepo master"
+    assert source.source_label == "agentic-planning monorepo master"
 
 
 def test_resolve_upgrade_source_reads_checked_in_file(tmp_path: Path) -> None:

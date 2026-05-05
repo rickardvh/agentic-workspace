@@ -1,7 +1,7 @@
 {
   "agenticWorkspace": {
     "declaredEntrypoints": [
-      "agentic-memory-bootstrap"
+      "agentic-memory"
     ],
     "fixtureOnly": true,
     "generated": true,
@@ -18,7 +18,7 @@
       "summary": "Generated metadata proves projection from the command-package IR but does not provide a runnable CLI entrypoint.",
       "weak_agent_routing": "forbidden"
     },
-    "program": "agentic-memory-bootstrap",
+    "program": "agentic-memory",
     "runtimeBinding": {
       "default_runtime_command": "python -m agentic_workspace.cli",
       "error_mapping": [

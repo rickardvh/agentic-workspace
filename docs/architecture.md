@@ -8,8 +8,8 @@ Use `docs/design-principles.md` as the higher-level rule set for why this shape 
 
 ```mermaid
 flowchart TD
-    W[agentic-workspace\nthin workspace layer] --> M[Agentic Memory\nagentic-memory-bootstrap]
-    W --> P[Agentic Planning\nagentic-planning-bootstrap]
+    W[agentic-workspace\nthin workspace layer] --> M[Agentic Memory\nagentic-memory]
+    W --> P[Agentic Planning\nagentic-planning]
     P --> R[Target-repo planning install\n.agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans/\n.agentic-workspace/planning/]
     M --> N[Target-repo memory boundary\npackage-owned memory should collapse into .agentic-workspace/\nuntil ownership is deliberately promoted outward]
     P --> G[Generated maintainer docs\ntools/agent-manifest.json\nAGENT_QUICKSTART.md\nAGENT_ROUTING.md]
@@ -43,3 +43,4 @@ Default rule:
 
 - new module-specific lifecycle flags or domain rules should land in the package CLI first
 - add them to the workspace layer only when there is a clear cross-module reason
+

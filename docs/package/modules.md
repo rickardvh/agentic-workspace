@@ -29,7 +29,7 @@ Planning is not a ticketing system, backlog manager, durable knowledge base, or 
 
 Package reference: [Planning README](../../packages/planning/README.md).
 
-Preferred command name: `agentic-planning`. `agentic-planning-bootstrap` remains a compatibility alias.
+Command: `agentic-planning`.
 
 ## Memory
 
@@ -48,7 +48,7 @@ Memory is not active task state, execution history, issue triage, or a replaceme
 
 Package reference: [Memory README](../../packages/memory/README.md).
 
-Preferred command name: `agentic-memory`. `agentic-memory-bootstrap` remains a compatibility alias.
+Command: `agentic-memory`.
 
 ## Command Generation
 
@@ -59,3 +59,4 @@ Package reference: [Command generation README](../../packages/command-generation
 ## Module Contracts
 
 The module registry declares available modules, profiles, component metadata, and package footprint policy. See [Module registry](../reference/module-registry.md) for the generated field reference. The lower-level command and component generation path is documented by [Command package IR](../reference/command-package-ir.md), [Command adapter generation](../reference/command-adapter-generation.md), and [Lifecycle generation readiness](../reference/lifecycle-generation-readiness.md).
+

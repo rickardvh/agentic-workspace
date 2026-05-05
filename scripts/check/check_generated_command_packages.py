@@ -797,8 +797,8 @@ def _validate_static_surfaces() -> list[str]:
         packages = {package.get("id"): package for package in ir.get("packages", []) if isinstance(package, dict)}
         expected_python_promotions = {
             "root-workspace": "agentic-workspace",
-            "planning-bootstrap": "agentic-planning-bootstrap",
-            "memory-bootstrap": "agentic-memory-bootstrap",
+            "planning-bootstrap": "agentic-planning",
+            "memory-bootstrap": "agentic-memory",
         }
         for package_id, program in expected_python_promotions.items():
             package = packages.get(package_id)
@@ -963,3 +963,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

@@ -46,7 +46,7 @@ from repo_planning_bootstrap.installer import (
 
 def _program_name() -> str:
     invoked = sys.argv[0].replace("\\", "/").rsplit("/", 1)[-1]
-    if invoked in {"agentic-planning", "agentic-planning-bootstrap"}:
+    if invoked == "agentic-planning":
         return invoked
     return "agentic-planning"
 
@@ -54,10 +54,7 @@ def _program_name() -> str:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=_program_name(),
-        description=(
-            "Install, inspect, and maintain checked-in Planning surfaces. "
-            "`agentic-planning-bootstrap` remains a compatibility alias for this command."
-        ),
+        description=("Install, inspect, and maintain checked-in Planning surfaces."),
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -962,7 +959,7 @@ def _build_prompt(command: str, target: str | None) -> str:
         if runner is None:
             return (
                 "No pinned remote runner is published for this bootstrap version yet. "
-                "Use an installed `agentic-planning-bootstrap` command if it is already available locally, "
+                "Use an installed `agentic-planning` command if it is already available locally, "
                 "or publish a tagged release before relying on remote `prompt install` workflows."
             )
         return (
@@ -974,7 +971,7 @@ def _build_prompt(command: str, target: str | None) -> str:
         if runner is None:
             return (
                 "No pinned remote runner is published for this bootstrap version yet. "
-                "Use an installed `agentic-planning-bootstrap` command if it is already available locally, "
+                "Use an installed `agentic-planning` command if it is already available locally, "
                 "or publish a tagged release before relying on remote `prompt adopt` workflows."
             )
         return (
@@ -986,7 +983,7 @@ def _build_prompt(command: str, target: str | None) -> str:
         upgrade_guidance = (
             f"Use the checked-in `bootstrap-upgrade` skill under `{_managed_skills_path(target)}/`. "
             "It should use the repo's `.agentic-workspace/planning/UPGRADE-SOURCE.toml`, prefer an installed "
-            "`agentic-planning-bootstrap` command with `--non-interactive` when available, and rerun render/check validation. "
+            "`agentic-planning` command with `--non-interactive` when available, and rerun render/check validation. "
             "If `doctor` still flags older active execplans, reconcile those plans to the current contract by "
             "adding or refreshing `Intent Continuity`, `Required Continuation`, `Delegated Judgment`, "
             "`Active Milestone`, and `Execution Summary` instead of treating the upgrade as broken."
@@ -997,7 +994,7 @@ def _build_prompt(command: str, target: str | None) -> str:
     if runner is None:
         return (
             "No pinned remote runner is published for this bootstrap version yet. "
-            "Use an installed `agentic-planning-bootstrap` command if it is already available locally."
+            "Use an installed `agentic-planning` command if it is already available locally."
         )
     return (
         f"Run `{runner} adopt{target_args}{non_interactive_args}` conservatively. "
@@ -1012,10 +1009,10 @@ def _preferred_runner(source: UpgradeSource) -> str | None:
     if source.source_type == "local":
         return _runner_command_for_local_source(source.source_ref)
     if shutil.which("uvx"):
-        return f"uvx --from {source.source_ref} agentic-planning-bootstrap"
+        return f"uvx --from {source.source_ref} agentic-planning"
     if shutil.which("pipx"):
-        return f"pipx run --spec {source.source_ref} agentic-planning-bootstrap"
-    return f"uvx --from {source.source_ref} agentic-planning-bootstrap"
+        return f"pipx run --spec {source.source_ref} agentic-planning"
+    return f"uvx --from {source.source_ref} agentic-planning"
 
 
 def _managed_skills_path(target: str | None) -> str:
@@ -1025,7 +1022,7 @@ def _managed_skills_path(target: str | None) -> str:
 
 def _runner_command_for_local_source(source_ref: str) -> str:
     if shutil.which("uvx"):
-        return f"uvx --from {source_ref} agentic-planning-bootstrap"
+        return f"uvx --from {source_ref} agentic-planning"
     if shutil.which("pipx"):
-        return f"pipx run --spec {source_ref} agentic-planning-bootstrap"
-    return f"uvx --from {source_ref} agentic-planning-bootstrap"
+        return f"pipx run --spec {source_ref} agentic-planning"
+    return f"uvx --from {source_ref} agentic-planning"

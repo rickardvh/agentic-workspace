@@ -1660,15 +1660,15 @@
     },
     {
       "id": "planning-bootstrap",
-      "program": "agentic-planning-bootstrap",
+      "program": "agentic-planning",
       "package_role": "planning-module-cli",
       "targets": [
         {
           "kind": "python",
-          "package_name": "agentic-planning-bootstrap",
+          "package_name": "agentic-planning",
           "generated_root": "packages/planning/src/repo_planning_bootstrap/generated_cli_package",
           "entrypoints": [
-            "agentic-planning-bootstrap"
+            "agentic-planning"
           ],
           "test_environment": "python-dev",
           "maturity_level_ref": "runtime-backed-read-only-adapter",
@@ -1679,7 +1679,7 @@
           "package_name": "@agentic-workspace/planning-cli",
           "generated_root": "generated/typescript/planning-cli",
           "entrypoints": [
-            "agentic-planning-bootstrap"
+            "agentic-planning"
           ],
           "test_environment": "docker",
           "maturity_level_ref": "metadata-proof-fixture",
@@ -2093,15 +2093,15 @@
     },
     {
       "id": "memory-bootstrap",
-      "program": "agentic-memory-bootstrap",
+      "program": "agentic-memory",
       "package_role": "memory-module-cli",
       "targets": [
         {
           "kind": "python",
-          "package_name": "agentic-memory-bootstrap",
+          "package_name": "agentic-memory",
           "generated_root": "packages/memory/src/repo_memory_bootstrap/generated_cli_package",
           "entrypoints": [
-            "agentic-memory-bootstrap"
+            "agentic-memory"
           ],
           "test_environment": "python-dev",
           "maturity_level_ref": "runtime-backed-read-only-adapter",
@@ -2112,7 +2112,7 @@
           "package_name": "@agentic-workspace/memory-cli",
           "generated_root": "generated/typescript/memory-cli",
           "entrypoints": [
-            "agentic-memory-bootstrap"
+            "agentic-memory"
           ],
           "test_environment": "docker",
           "maturity_level_ref": "metadata-proof-fixture",
@@ -2692,3 +2692,4 @@
     }
   ]
 }
+

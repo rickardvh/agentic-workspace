@@ -67,13 +67,13 @@ Update this page directly when any of the following happens:
 
 - Category: `shipped module`
 - Role: anti-rediscovery knowledge for the repository
-- Current home: `agentic-memory-bootstrap`
+- Current home: `agentic-memory`
 
 ### Agentic Planning
 
 - Category: `shipped module`
 - Role: active execution state for bounded work
-- Current home: `agentic-planning-bootstrap`
+- Current home: `agentic-planning`
 
 ### Workspace Composition Layer
 
@@ -292,3 +292,4 @@ It should hold only bounded future candidates, promotion triggers, and sequencin
 `docs/ecosystem-roadmap.md` records the current ecosystem stance: what is shipped today, what remains internal for now, and the discipline for extraction.
 
 This document is broader. It records the capability map itself and the intended architectural role of those capabilities without turning them into a queue or package promise.
+

@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.11"
 
 [[package]]
-name = "agentic-memory-bootstrap"
+name = "agentic-memory"
 version = "0.3.9"
 source = { editable = "." }
 
@@ -576,3 +576,4 @@ sdist = { url = "https://files.pythonhosted.org/packages/35/a2/8e3becb46433538a3
 wheels = [
     { url = "https://files.pythonhosted.org/packages/68/5a/199c59e0a824a3db2b89c5d2dade7ab5f9624dbf6448dc291b46d5ec94d3/wcwidth-0.6.0-py3-none-any.whl", hash = "sha256:1a3a1e510b553315f8e146c54764f4fb6264ffad731b3d78088cdb1478ffbdad", size = 94189, upload-time = "2026-02-06T19:19:39.646Z" },
 ]
+

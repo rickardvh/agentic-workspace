@@ -103,23 +103,23 @@
       "path": "src/agentic_workspace/generated_command_adapters.py"
     },
     {
-      "program": "agentic-planning-bootstrap",
+      "program": "agentic-planning",
       "path": "packages/planning/src/repo_planning_bootstrap/generated_command_adapters.py"
     },
     {
-      "program": "agentic-memory-bootstrap",
+      "program": "agentic-memory",
       "path": "packages/memory/src/repo_memory_bootstrap/generated_command_adapters.py"
     }
   ],
   "package_surface_migration": {
     "planning": {
-      "program": "agentic-planning-bootstrap",
+      "program": "agentic-planning",
       "first_read_only_candidate": "status",
       "status": "first-read-only-generated",
       "next_step": "Use the planning status adapter proof before considering summary/report/handoff read-only adapters."
     },
     "memory": {
-      "program": "agentic-memory-bootstrap",
+      "program": "agentic-memory",
       "first_read_only_candidate": "status",
       "status": "first-read-only-generated",
       "next_step": "Use the memory status adapter proof before considering broader memory read-only adapters."
@@ -1343,7 +1343,7 @@
       "id": "planning.status.cli",
       "status": "generated",
       "command": {
-        "program": "agentic-planning-bootstrap",
+        "program": "agentic-planning",
         "name": "status",
         "command_manifest": "package:planning:cli",
         "option_group_manifest": "package:planning:cli"
@@ -1417,7 +1417,7 @@
       "id": "planning.doctor.cli",
       "status": "generated",
       "command": {
-        "program": "agentic-planning-bootstrap",
+        "program": "agentic-planning",
         "name": "doctor",
         "command_manifest": "package:planning:cli",
         "option_group_manifest": "package:planning:cli"
@@ -1491,7 +1491,7 @@
       "id": "planning.summary.cli",
       "status": "generated",
       "command": {
-        "program": "agentic-planning-bootstrap",
+        "program": "agentic-planning",
         "name": "summary",
         "command_manifest": "package:planning:cli",
         "option_group_manifest": "package:planning:cli"
@@ -1565,7 +1565,7 @@
       "id": "planning.report.cli",
       "status": "generated",
       "command": {
-        "program": "agentic-planning-bootstrap",
+        "program": "agentic-planning",
         "name": "report",
         "command_manifest": "package:planning:cli",
         "option_group_manifest": "package:planning:cli"
@@ -1639,7 +1639,7 @@
       "id": "planning.reconcile.cli",
       "status": "generated",
       "command": {
-        "program": "agentic-planning-bootstrap",
+        "program": "agentic-planning",
         "name": "reconcile",
         "command_manifest": "package:planning:cli",
         "option_group_manifest": "package:planning:cli"
@@ -1713,7 +1713,7 @@
       "id": "memory.doctor.cli",
       "status": "generated",
       "command": {
-        "program": "agentic-memory-bootstrap",
+        "program": "agentic-memory",
         "name": "doctor",
         "command_manifest": "package:memory:cli",
         "option_group_manifest": "package:memory:cli"
@@ -1787,7 +1787,7 @@
       "id": "memory.report.cli",
       "status": "generated",
       "command": {
-        "program": "agentic-memory-bootstrap",
+        "program": "agentic-memory",
         "name": "report",
         "command_manifest": "package:memory:cli",
         "option_group_manifest": "package:memory:cli"
@@ -1861,7 +1861,7 @@
       "id": "memory.status.cli",
       "status": "generated",
       "command": {
-        "program": "agentic-memory-bootstrap",
+        "program": "agentic-memory",
         "name": "status",
         "command_manifest": "package:memory:cli",
         "option_group_manifest": "package:memory:cli"
@@ -1935,7 +1935,7 @@
       "id": "memory.route-report.cli",
       "status": "generated",
       "command": {
-        "program": "agentic-memory-bootstrap",
+        "program": "agentic-memory",
         "name": "route-report",
         "command_manifest": "package:memory:cli",
         "option_group_manifest": "package:memory:cli"
@@ -2009,7 +2009,7 @@
       "id": "memory.promotion-report.cli",
       "status": "generated",
       "command": {
-        "program": "agentic-memory-bootstrap",
+        "program": "agentic-memory",
         "name": "promotion-report",
         "command_manifest": "package:memory:cli",
         "option_group_manifest": "package:memory:cli"
@@ -2083,7 +2083,7 @@
       "id": "memory.list-files.cli",
       "status": "generated",
       "command": {
-        "program": "agentic-memory-bootstrap",
+        "program": "agentic-memory",
         "name": "list-files",
         "command_manifest": "package:memory:cli",
         "option_group_manifest": "package:memory:cli"
@@ -2157,7 +2157,7 @@
       "id": "memory.list-skills.cli",
       "status": "generated",
       "command": {
-        "program": "agentic-memory-bootstrap",
+        "program": "agentic-memory",
         "name": "list-skills",
         "command_manifest": "package:memory:cli",
         "option_group_manifest": "package:memory:cli"
@@ -2229,3 +2229,4 @@
     }
   ]
 }
+

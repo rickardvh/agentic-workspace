@@ -63,8 +63,8 @@ The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`,
 ## Ownership Map
 
 - Root workspace: shared lifecycle orchestration, root planning surfaces, memory notes, root validation entrypoints, and the thin `agentic-workspace` CLI.
-- `packages/memory/`: reusable `agentic-memory-bootstrap` source, packaged payload, package skills, and memory-specific tests.
-- `packages/planning/`: reusable `agentic-planning-bootstrap` source, packaged payload, planning helpers, and planning-specific tests.
+- `packages/memory/`: reusable `agentic-memory` source, packaged payload, package skills, and memory-specific tests.
+- `packages/planning/`: reusable `agentic-planning` source, packaged payload, planning helpers, and planning-specific tests.
 - `packages/command-generation/`: generic command-package IR loading and rendering machinery. Agentic Workspace consumes it through `scripts/generate/workspace_command_generation.py`; workspace command facts remain in `src/agentic_workspace/contracts/`, and runtime behavior remains in hand-written workspace/package code.
 
 ## Pick The Right Surface
@@ -169,4 +169,5 @@ Use `docs/maintainer/installed-contract-design-checklist.md` when a package chan
 - Prefer explicit adapters, manifests, and generated artifacts over private cross-package assumptions.
 - Capture meaningful follow-up work through the planning helpers or the narrowest current planning surface instead of leaving it in chat-only residue.
 - For any changed operational surface, run an operational-affordance review from `docs/maintainer/operational-affordance-design.md`: name the one primary next action, demote irrelevant or deep actions, use resolved config/local invocation, keep raw files behind compact routing, and confirm weak agents can proceed without learning package internals while strong agents can still inspect or override safely.
+
 

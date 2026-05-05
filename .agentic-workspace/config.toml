@@ -36,13 +36,13 @@ preferred_source = "SYSTEM_INTENT.md"
 [update.modules.planning]
 source_type = "git"
 source_ref = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning"
-source_label = "agentic-planning-bootstrap monorepo master"
+source_label = "agentic-planning monorepo master"
 recommended_upgrade_after_days = 30
 
 [update.modules.memory]
 source_type = "git"
 source_ref = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory"
-source_label = "agentic-memory-bootstrap monorepo master"
+source_label = "agentic-memory monorepo master"
 recommended_upgrade_after_days = 30
 
 [workflow_obligations.adapter_surface_refresh]
@@ -95,3 +95,4 @@ stage = "review"
 scope_tags = ["workspace", "system-intent"]
 commands = ["uv run agentic-workspace system-intent --target . --sync --format json"]
 review_hint = "Treat system intent as directional input and keep the compiled declaration aligned without turning it into active task state."
+

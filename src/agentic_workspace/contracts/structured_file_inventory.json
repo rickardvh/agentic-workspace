@@ -816,7 +816,7 @@
     },
     {
       "pattern": ".agentic-workspace/planning/agent-manifest.json",
-      "source_command": "uv run agentic-planning-bootstrap doctor --target . --format json",
+      "source_command": "uv run agentic-planning doctor --target . --format json",
       "named_consumer": "installed planning module lifecycle and root maintainer-surface renderers",
       "checked_in_justification": "Installed planning payload manifest used as the local source for generated weak-agent adapters.",
       "freshness_check": "uv run agentic-workspace doctor --target . --modules planning --format json",
@@ -856,7 +856,7 @@
     },
     {
       "pattern": "packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json",
-      "source_command": "uv run agentic-planning-bootstrap doctor --target <repo> --format json",
+      "source_command": "uv run agentic-planning doctor --target <repo> --format json",
       "named_consumer": "planning package bootstrap payload installation",
       "checked_in_justification": "Package payload source needed to install the planning manifest into target repos.",
       "freshness_check": "make maintainer-surfaces",
@@ -887,3 +887,4 @@
     "platform-tooling"
   ]
 }
+

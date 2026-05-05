@@ -1,7 +1,7 @@
 """Generated command adapter metadata.
 
 Source: src/agentic_workspace/contracts/command_adapter_generation.json
-Program: agentic-planning-bootstrap
+Program: agentic-planning
 Regenerate with: uv run python scripts/generate/generate_command_adapters.py
 """
 
@@ -22,7 +22,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "command_manifest": "package:planning:cli",
       "name": "doctor",
       "option_group_manifest": "package:planning:cli",
-      "program": "agentic-planning-bootstrap"
+      "program": "agentic-planning"
     },
     "conformance_refs": [
       "planning.doctor.process"
@@ -54,7 +54,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "command_manifest": "package:planning:cli",
       "name": "reconcile",
       "option_group_manifest": "package:planning:cli",
-      "program": "agentic-planning-bootstrap"
+      "program": "agentic-planning"
     },
     "conformance_refs": [
       "planning.reconcile.process"
@@ -86,7 +86,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "command_manifest": "package:planning:cli",
       "name": "report",
       "option_group_manifest": "package:planning:cli",
-      "program": "agentic-planning-bootstrap"
+      "program": "agentic-planning"
     },
     "conformance_refs": [
       "planning.report.process"
@@ -118,7 +118,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "command_manifest": "package:planning:cli",
       "name": "status",
       "option_group_manifest": "package:planning:cli",
-      "program": "agentic-planning-bootstrap"
+      "program": "agentic-planning"
     },
     "conformance_refs": [
       "planning.status.process"
@@ -150,7 +150,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "command_manifest": "package:planning:cli",
       "name": "summary",
       "option_group_manifest": "package:planning:cli",
-      "program": "agentic-planning-bootstrap"
+      "program": "agentic-planning"
     },
     "conformance_refs": [
       "planning.summary.process"

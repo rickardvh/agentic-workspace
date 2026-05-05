@@ -9401,7 +9401,7 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     assert any("agentic-workspace config --target" in q for q in queries)
     assert any("agentic-workspace summary" in q for q in queries)
     # Ensure NO stale bootstrap references in startup queries (most critical part)
-    assert not any("agentic-planning-bootstrap summary" in q for q in queries)
+    assert not any("agentic-planning summary" in q for q in queries)
 
     # Step 2: preflight should provide the bundled compact takeover context
     assert cli.main(["preflight", "--target", str(target), "--format", "json"]) == 0

@@ -1,4 +1,4 @@
-"""Test that agentic-planning-bootstrap package artifacts contain required payload files."""
+"""Test that agentic-planning package artifacts contain required payload files."""
 
 from __future__ import annotations
 
@@ -85,7 +85,7 @@ def _build_artifact(kind: str, output_dir: Path) -> Path:
         check=True,
     )
 
-    pattern = "agentic_planning_bootstrap-*.whl" if kind == "wheel" else "agentic_planning_bootstrap-*.tar.gz"
+    pattern = "agentic_planning-*.whl" if kind == "wheel" else "agentic_planning-*.tar.gz"
     artifacts = list(output_dir.glob(pattern))
     assert len(artifacts) == 1, f"Expected exactly 1 {kind}, found {len(artifacts)}"
     return artifacts[0]
@@ -101,7 +101,7 @@ def _artifact_entries(path: Path) -> set[str]:
 
     with tarfile.open(path, "r:gz") as tar:
         names = tar.getnames()
-        root_dir = next(name.split("/", 1)[0] for name in names if name.startswith("agentic_planning_bootstrap-"))
+        root_dir = next(name.split("/", 1)[0] for name in names if name.startswith("agentic_planning-"))
         return _normalized_contract_entries(names, payload_prefix=f"{root_dir}/bootstrap/", skills_prefix=f"{root_dir}/skills/")
 
 
@@ -112,7 +112,7 @@ def _raw_artifact_entries(path: Path) -> set[str]:
 
     with tarfile.open(path, "r:gz") as tar:
         members = [member for member in tar.getmembers() if member.isfile()]
-    root_dir = next(name.split("/", 1)[0] for name in (member.name for member in members) if name.startswith("agentic_planning_bootstrap-"))
+    root_dir = next(name.split("/", 1)[0] for name in (member.name for member in members) if name.startswith("agentic_planning-"))
     prefix = f"{root_dir}/"
     return {member.name.removeprefix(prefix) for member in members if member.name.startswith(prefix)}
 

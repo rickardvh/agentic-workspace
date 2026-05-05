@@ -9,8 +9,8 @@ description = "Repo-native continuity and execution layer for agents, combining 
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-  "agentic-memory-bootstrap",
-  "agentic-planning-bootstrap",
+  "agentic-memory",
+  "agentic-planning",
 ]
 
 [project.scripts]
@@ -32,8 +32,8 @@ dev = [
 package = true
 
 [tool.uv.sources]
-agentic-memory-bootstrap = { workspace = true }
-agentic-planning-bootstrap = { workspace = true }
+agentic-memory = { workspace = true }
+agentic-planning = { workspace = true }
 
 [tool.uv.workspace]
 members = [
@@ -71,3 +71,4 @@ source = ["agentic_workspace"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
+

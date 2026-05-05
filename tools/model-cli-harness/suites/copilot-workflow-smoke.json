@@ -170,7 +170,7 @@
         "does not create freehand epic markdown"
       ],
       "score_notes": [
-        "Good: uses agentic-planning-bootstrap new-plan or schema-backed decomposition template.",
+        "Good: uses agentic-planning new-plan or schema-backed decomposition template.",
         "Bad: creates generic PM-shaped JSON or ecommerce-epic.md with late-stage task detail."
       ]
     },
@@ -435,3 +435,4 @@
     }
   ]
 }
+

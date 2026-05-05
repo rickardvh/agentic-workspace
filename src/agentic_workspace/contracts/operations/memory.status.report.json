@@ -2,7 +2,7 @@
   "schema_version": "agentic-workspace/operation/v1",
   "id": "memory.status.report",
   "command_surface": {
-    "program": "agentic-memory-bootstrap",
+    "program": "agentic-memory",
     "command": "status",
     "format_option": "format"
   },
@@ -63,3 +63,4 @@
   ],
   "migration_status": "draft-contract-only"
 }
+

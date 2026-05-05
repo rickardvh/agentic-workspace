@@ -1,19 +1,19 @@
 # Planning CLI Naming
 
-`agentic-planning-bootstrap` and `agentic-memory-bootstrap` are historical public command names. They began as install/adopt helpers, but the module commands now also own ongoing lifecycle operations such as `new-plan`, `promote-to-plan`, `archive-plan`, `summary`, `report`, `reconcile`, `handoff`, Memory routing, Memory reports, and note capture.
+`agentic-planning` and `agentic-memory` are the public command names for the Planning and Memory package CLIs. The package CLIs began as install/adopt helpers, but now also own ongoing lifecycle operations such as `new-plan`, `promote-to-plan`, `archive-plan`, `summary`, `report`, `reconcile`, `handoff`, Memory routing, Memory reports, and note capture.
 
-The name is therefore incomplete: agents can wrongly infer that the CLI is only for initial bootstrap, or that all lifecycle work should be described as bootstrap work. The current compatibility decision is:
+Older `*-bootstrap` compatibility names were incomplete: agents could wrongly infer that the CLI was only for initial bootstrap, or that all lifecycle work should be described as bootstrap work. The current naming decision is:
 
 - prefer `agentic-planning` and `agentic-memory` in new docs and workflow guidance;
-- keep existing `*-bootstrap` commands as stable compatibility aliases;
-- clarify in help output that `*-bootstrap` names are aliases, not the preferred mental model;
+- do not ship `*-bootstrap` compatibility command names for non-bootstrap lifecycle CLIs;
 - use command names, documentation, and workflow guidance to distinguish install/adopt bootstrap from ongoing module lifecycle;
-- defer package/module import renames until public aliases have proven usable.
+- keep internal import package names stable until a separate migration is justified.
 
 Possible target names for a future migration:
 
 - `agentic-planning` for the planning module lifecycle CLI;
 - `agentic-memory` for the memory module lifecycle CLI;
-- keep Python package/module names stable until public CLI aliases have proven usable.
+- keep Python import module names stable until a separate migration is justified.
 
-Do not rename public commands abruptly. Prefer aliases first, document the preferred names, keep compatibility for existing repos, and only then consider deprecation language.
+Do not reintroduce `*-bootstrap` command aliases for ordinary lifecycle operations. Use bootstrap terminology only for actual install/adopt/upgrade payload lifecycle concepts.
+

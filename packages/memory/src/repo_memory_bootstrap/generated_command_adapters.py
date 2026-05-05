@@ -1,7 +1,7 @@
 """Generated command adapter metadata.
 
 Source: src/agentic_workspace/contracts/command_adapter_generation.json
-Program: agentic-memory-bootstrap
+Program: agentic-memory
 Regenerate with: uv run python scripts/generate/generate_command_adapters.py
 """
 
@@ -22,7 +22,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "command_manifest": "package:memory:cli",
       "name": "doctor",
       "option_group_manifest": "package:memory:cli",
-      "program": "agentic-memory-bootstrap"
+      "program": "agentic-memory"
     },
     "conformance_refs": [
       "memory.doctor.process"
@@ -54,7 +54,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "command_manifest": "package:memory:cli",
       "name": "list-files",
       "option_group_manifest": "package:memory:cli",
-      "program": "agentic-memory-bootstrap"
+      "program": "agentic-memory"
     },
     "conformance_refs": [
       "memory.list-files.process"
@@ -86,7 +86,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "command_manifest": "package:memory:cli",
       "name": "list-skills",
       "option_group_manifest": "package:memory:cli",
-      "program": "agentic-memory-bootstrap"
+      "program": "agentic-memory"
     },
     "conformance_refs": [
       "memory.list-skills.process"
@@ -118,7 +118,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "command_manifest": "package:memory:cli",
       "name": "promotion-report",
       "option_group_manifest": "package:memory:cli",
-      "program": "agentic-memory-bootstrap"
+      "program": "agentic-memory"
     },
     "conformance_refs": [
       "memory.promotion-report.process"
@@ -150,7 +150,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "command_manifest": "package:memory:cli",
       "name": "report",
       "option_group_manifest": "package:memory:cli",
-      "program": "agentic-memory-bootstrap"
+      "program": "agentic-memory"
     },
     "conformance_refs": [
       "memory.report.process"
@@ -182,7 +182,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "command_manifest": "package:memory:cli",
       "name": "route-report",
       "option_group_manifest": "package:memory:cli",
-      "program": "agentic-memory-bootstrap"
+      "program": "agentic-memory"
     },
     "conformance_refs": [
       "memory.route-report.process"
@@ -214,7 +214,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "command_manifest": "package:memory:cli",
       "name": "status",
       "option_group_manifest": "package:memory:cli",
-      "program": "agentic-memory-bootstrap"
+      "program": "agentic-memory"
     },
     "conformance_refs": [
       "memory.status.process"

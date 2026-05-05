@@ -9,5 +9,6 @@ description: Upgrade an existing planning bootstrap install through the root wor
 2. Resolve any review items before applying changes.
 3. Run `agentic-workspace upgrade --target <repo> --format json`.
 4. Run `agentic-workspace doctor --target <repo> --format json`.
-5. Use `agentic-planning doctor --target <repo>` or `agentic-planning upgrade --target <repo>` only for package-local debugging or when the root command cannot run. `agentic-planning-bootstrap` remains a compatibility alias.
+5. Use `agentic-planning doctor --target <repo>` or `agentic-planning upgrade --target <repo>` only for package-local debugging or when the root command cannot run.
 6. Report any manual-review items that were intentionally preserved.
+

@@ -63,7 +63,7 @@ Compact durable facts live under `[durable_facts."<id>"]`. Use them only when a 
 
 ## Validation Contract
 
-`agentic-memory-bootstrap doctor --target <repo>` validates `manifest.toml` as a typed TOML contract. Invalid TOML, malformed tables, scalar values where arrays are required, non-boolean booleans, invalid enum values, incomplete improvement-signal lifecycle metadata, and incomplete durable facts produce `memory-manifest` diagnostics.
+`agentic-memory doctor --target <repo>` validates `manifest.toml` as a typed TOML contract. Invalid TOML, malformed tables, scalar values where arrays are required, non-boolean booleans, invalid enum values, incomplete improvement-signal lifecycle metadata, and incomplete durable facts produce `memory-manifest` diagnostics.
 
 Agents may edit manifest entries, but they should keep values inside this contract and run doctor or the workspace doctor before claiming completion.
 
@@ -73,19 +73,20 @@ Agents should follow these patterns for "Habitual Pull":
 
 ### 1. Automatic Routing (Preferred)
 
-Use `agentic-memory-bootstrap route --files <paths>` or `agentic-memory-bootstrap route --surface <terms>`.
+Use `agentic-memory route --files <paths>` or `agentic-memory route --surface <terms>`.
 This uses the manifest and `.agentic-workspace/memory/repo/index.md` to find the smallest set of relevant notes.
 
 ### 2. Keyword Search (Fallback)
 
-Use `agentic-memory-bootstrap search "<query>"` to find notes containing specific keywords or patterns.
+Use `agentic-memory search "<query>"` to find notes containing specific keywords or patterns.
 
 ### 3. Sync Check
 
-Use `agentic-memory-bootstrap sync-memory --files <paths>` to see which notes might be stale after your changes.
+Use `agentic-memory sync-memory --files <paths>` to see which notes might be stale after your changes.
 
 ## Note Hygiene
 
 - **No Overlap**: One fact has one primary home.
 - **Residue Only**: Memory stores what is expensive to rediscover. If it's in the code or canonical docs, don't duplicate it in memory.
 - **Weak Authority for Current**: Notes in `.agentic-workspace/memory/repo/current/` are for orientation and continuation, not durable facts.
+

@@ -1,4 +1,4 @@
-"""Test lifecycle operations for agentic-planning-bootstrap package."""
+"""Test lifecycle operations for agentic-planning package."""
 
 import subprocess
 import tempfile
@@ -14,7 +14,7 @@ def test_planning_clean_install() -> None:
 
         # Install planning bootstrap
         subprocess.run(
-            ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target), "--format", "json"],
+            ["uv", "run", "agentic-planning", "install", "--target", str(target), "--format", "json"],
             capture_output=True,
             text=True,
             cwd=planning_root,
@@ -39,7 +39,7 @@ def test_planning_install_dry_run() -> None:
 
         # Install with dry-run
         subprocess.run(
-            ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target), "--dry-run"],
+            ["uv", "run", "agentic-planning", "install", "--target", str(target), "--dry-run"],
             capture_output=True,
             text=True,
             cwd=planning_root,
@@ -60,7 +60,7 @@ def test_planning_install_idempotent() -> None:
 
         # First install
         subprocess.run(
-            ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target)],
+            ["uv", "run", "agentic-planning", "install", "--target", str(target)],
             capture_output=True,
             text=True,
             cwd=planning_root,
@@ -72,7 +72,7 @@ def test_planning_install_idempotent() -> None:
 
         # Second install (should fail or overwrite with --force)
         result = subprocess.run(
-            ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target)],
+            ["uv", "run", "agentic-planning", "install", "--target", str(target)],
             capture_output=True,
             text=True,
             cwd=planning_root,
@@ -93,7 +93,7 @@ def test_planning_status_after_install() -> None:
 
         # Install
         subprocess.run(
-            ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target)],
+            ["uv", "run", "agentic-planning", "install", "--target", str(target)],
             capture_output=True,
             text=True,
             cwd=planning_root,
@@ -102,7 +102,7 @@ def test_planning_status_after_install() -> None:
 
         # Check status
         result = subprocess.run(
-            ["uv", "run", "agentic-planning-bootstrap", "status", "--target", str(target), "--format", "json"],
+            ["uv", "run", "agentic-planning", "status", "--target", str(target), "--format", "json"],
             capture_output=True,
             text=True,
             cwd=planning_root,
@@ -121,7 +121,7 @@ def test_planning_install_with_force() -> None:
 
         # First install
         subprocess.run(
-            ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target)],
+            ["uv", "run", "agentic-planning", "install", "--target", str(target)],
             capture_output=True,
             text=True,
             cwd=planning_root,
@@ -135,7 +135,7 @@ def test_planning_install_with_force() -> None:
 
         # Install with force
         subprocess.run(
-            ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target), "--force"],
+            ["uv", "run", "agentic-planning", "install", "--target", str(target), "--force"],
             capture_output=True,
             text=True,
             cwd=planning_root,

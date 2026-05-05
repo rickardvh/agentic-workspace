@@ -389,7 +389,7 @@ def test_model_cli_harness_scores_unsupported_planning_promotion_command() -> No
 
     warnings = harness._semantic_workflow_warnings(
         scenario_id="planning-artifact-integrity",
-        result={"stdout": json.dumps({"response": "Next run agentic-planning-bootstrap promote-lane --id checkout."}), "stderr": ""},
+        result={"stdout": json.dumps({"response": "Next run agentic-planning promote-lane --id checkout."}), "stderr": ""},
         mutation_summary={"status": "changed", "created": [".agentic-workspace/planning/decompositions/ecommerce.json"]},
     )
 

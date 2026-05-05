@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "agentic-planning-bootstrap/planning-review.schema.json",
+  "$id": "agentic-planning/planning-review.schema.json",
   "title": "Planning Review Record",
   "type": "object",
   "required": ["kind", "title"],
@@ -115,3 +115,4 @@
     }
   }
 }
+
