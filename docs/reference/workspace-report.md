@@ -64,6 +64,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `agent_configuration_system` | object | yes |  | How repo-owned agent configuration classes are represented in this workspace. |  |  |
 | `agent_configuration_queries` | object | yes |  | Compact queries agents should ask before opening broader configuration docs. |  |  |
 | `system_intent_mirror` | object | no |  | Compiled system-intent mirror status and source metadata. |  |  |
+| `durable_intent` | object | yes |  | Compact decision projection for durable task, subsystem, and system intent pressure. |  |  |
 | `workflow_obligations` | object | yes |  | Repo-configured workflow obligations surfaced for report consumers. |  |  |
 | `product_managed_enclave` | object | yes |  | Product-managed workspace enclave boundaries and ownership signals. |  |  |
 | `ownership_diagnostics` | object | yes |  | Diagnostics for drift between authority ledgers, startup adapters, config policy, and workflow surfaces. |  |  |

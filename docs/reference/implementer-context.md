@@ -96,6 +96,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.token_tradeoff` | string | yes |  | When token saving is acceptable or should be deferred. |  |  |
 | `execution_posture.ready_handoff` | anyOf | yes |  | Prompt or handoff packet to use when local mode allows manual or suggested delegation. |  |  |
 | `execution_posture.inference_limits` | array of string | yes |  | Limits that prevent the posture recommendation from becoming hidden execution authority. |  |  |
+| `durable_intent` | object | yes |  | Compact durable system or subsystem intent pressure that may affect scope, proof, delegation, or closeout. |  |  |
 | `handoff_requirements` | object | yes |  | Information that must be preserved before pausing or handing off work. |  |  |
 | `handoff_requirements.before_handoff` | array of string | yes |  | Ordered before handoff entries used by this contract. |  |  |
 | `handoff_requirements.stop_when` | array of string | yes |  | Ordered stop when entries used by this contract. |  |  |

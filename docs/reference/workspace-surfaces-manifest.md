@@ -14,6 +14,7 @@ Manifest of workspace-owned surfaces, generated artifacts, and ownership roles.
 | `schema_version` | const `"workspace-surfaces-manifest/v1"` | yes |  | Contract version for this document. |  |  |
 | `payload_files` | array of string | yes |  | Ordered payload files entries used by this contract. |  |  |
 | `system_intent_mirror_kind` | string | yes |  | System intent mirror kind text value used by this contract. |  |  |
+| `subsystem_intent_kind` | string | yes |  | Subsystem intent set kind used by the editable scoped durable-intent store. |  |  |
 | `default_agents_path` | string | yes |  | Default agents path text value used by this contract. |  |  |
 | `handoff_surfaces` | array of string | yes |  | Ordered handoff surfaces entries used by this contract. |  |  |
 | `module_upgrade_source_paths` | object | yes |  | Module upgrade source paths details used by this contract. |  |  |

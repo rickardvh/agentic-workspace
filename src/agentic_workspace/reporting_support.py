@@ -164,6 +164,7 @@ def report_profile_payload(*, context_router: dict[str, Any], cli_invoke: str = 
             "section_hints",
             "effective_authority",
             "execution_shape",
+            "durable_intent",
             "memory_consult",
             "improvement_intake",
             "external_work_reconciliation",
@@ -420,6 +421,7 @@ def report_router_payload(
         "section_hints": compact_section_hints,
         "effective_authority": _report_router_effective_authority(payload.get("effective_authority", {})),
         "execution_shape": _report_router_execution_shape(payload.get("execution_shape", {})),
+        "durable_intent": payload.get("durable_intent", {}),
         "improvement_intake": _report_router_improvement_intake(payload.get("improvement_intake", {})),
         "external_work_reconciliation": _report_router_external_work_reconciliation(payload.get("external_work_reconciliation", {})),
         "surface_value_guardrail": {
@@ -782,6 +784,7 @@ def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_C
     section_purposes = {
         "effective_authority": "authority, current work, system-intent pressure, idle context, and unresolved gaps",
         "execution_shape": "default execution posture and planning-backed work guidance",
+        "durable_intent": "task, subsystem, and system intent pressure relevant to decisions before implementation or closeout",
         "maintenance_pressure": "one compact router for audit, retention, footprint, external-evidence, and closeout residue",
         "operational_compression": "falsifiable advisory measures for whether surfaces reduce total operational cost",
         "findings": "raw warnings and attention signals grouped in router warning_summary",
@@ -808,6 +811,7 @@ def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_C
     why_now = {
         "effective_authority": ("inspect now if authority, idle state, or unresolved intent pressure affects whether work can proceed"),
         "execution_shape": "inspect now to choose direct work, light planning, or checked-in execplan promotion",
+        "durable_intent": "inspect now when task intent may generalize into durable system or subsystem direction",
         "maintenance_pressure": "inspect now only when residue, retention, or closeout pressure affects the active lane",
         "operational_compression": "inspect now when assessing whether package surfaces are reducing total work",
         "findings": "inspect now because warnings are present" if findings else "skip unless diagnosing an absent-warning state",

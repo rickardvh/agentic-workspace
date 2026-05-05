@@ -105,6 +105,44 @@ def test_workspace_config_schema_accepts_supported_system_intent_declaration() -
     assert errors == []
 
 
+def test_subsystem_intent_schema_accepts_provenance_and_revision_fields() -> None:
+    schema = contract_tooling.contract_schema("subsystem_intent.schema.json")
+    sample = {
+        "schema_version": 1,
+        "kind": "agentic-workspace/subsystem-intent-set/v1",
+        "rule": "Subsystem intent is decision pressure.",
+        "subsystems": [
+            {
+                "id": "access-log",
+                "scope": "audit log storage and reporting",
+                "status": "needs-review",
+                "summary": "Access logs must remain auditable for compliance review.",
+                "governing_intents": ["Keep audit evidence queryable."],
+                "anti_intents": ["Do not replace audit evidence with transient chat context."],
+                "decision_tests": ["Does this change preserve auditability?"],
+                "source_records": [
+                    {
+                        "source_type": "issue",
+                        "ref": "#746",
+                        "summary": "Durable intent needs provenance.",
+                        "observed_at": "2026-05-05",
+                    }
+                ],
+                "confidence": "medium",
+                "needs_review": True,
+                "supersedes": ["old-audit-intent"],
+                "superseded_by": [],
+                "last_reviewed_at": "2026-05-05",
+                "open_questions": ["Which retention rule applies?"],
+                "interpretation_notes": "Inferred from issue discussion.",
+            }
+        ],
+    }
+
+    errors = list(Draft202012Validator(schema).iter_errors(sample))
+    assert errors == []
+
+
 def test_workspace_config_schema_accepts_custom_agent_instructions_file() -> None:
     schema = contract_tooling.contract_schema("workspace_config.schema.json")
     sample = {

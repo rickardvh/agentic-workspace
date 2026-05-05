@@ -131,6 +131,18 @@
       "checked_in_justification": "Compact durable decision state; reconstructing intent from chat or history would be lossy."
     },
     {
+      "pattern": ".agentic-workspace/system-intent/subsystems.toml",
+      "format": "toml",
+      "owner": "system-intent",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/subsystem_intent.schema.json plus agentic-workspace system-intent report path",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Subsystem intent is compact durable scoped decision pressure for package areas and host-repo components.",
+      "storage_class": "non-reconstructable-decision",
+      "checked_in_justification": "Compact durable scoped intent; reconstructing subsystem direction from chat or archived plans would be lossy."
+    },
+    {
       "pattern": ".agentic-workspace/docs/capability-contract.json",
       "format": "json",
       "owner": "planning-payload",

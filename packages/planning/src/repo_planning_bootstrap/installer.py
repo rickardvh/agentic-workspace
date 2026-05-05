@@ -237,6 +237,7 @@ EXECPLAN_SECTION_ORDER: tuple[tuple[str, str, str], ...] = (
     ("Closure Check", "closure_check", "dict"),
     ("Generated Closeout", "generated_closeout", "dict"),
     ("Durable Residue", "durable_residue", "dict"),
+    ("Task Intent Promotion", "task_intent_promotion", "dict"),
     ("Execution Summary", "execution_summary", "dict"),
     ("Drift Log", "drift_log", "list"),
 )
@@ -7797,6 +7798,36 @@ def _prepared_memory_learning_capture(record: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def _prepared_task_intent_promotion(record: dict[str, Any]) -> dict[str, Any]:
+    existing = _record_section_dict(record, "task_intent_promotion") or {}
+    durable_residue = _prepared_durable_residue(record)
+    residue_status = durable_residue.get("status", "none").strip().lower() or "none"
+    owner = durable_residue.get("canonical owner now", "").strip()
+    decision = str(existing.get("decision", "")).strip()
+    if not decision or decision == "pending":
+        if residue_status == "memory":
+            decision = "memory"
+        elif residue_status == "docs":
+            decision = "refine-existing-intent" if "system-intent" in owner else "do-not-promote"
+        elif residue_status == "contract":
+            decision = "subsystem-intent" if "intent" in owner else "do-not-promote"
+        else:
+            decision = "do-not-promote"
+    return {
+        "decision": decision,
+        "accepted values": (
+            existing.get("accepted values")
+            or "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent"
+        ),
+        "evidence source": existing.get("evidence source") or "archive-plan --prepare-closeout",
+        "target scope": existing.get("target scope") or owner,
+        "proposed durable intent": existing.get("proposed durable intent") or durable_residue.get("motivation worth preserving", ""),
+        "confidence": existing.get("confidence") or "low",
+        "needs review": existing.get("needs review", True),
+        "owner surface": existing.get("owner surface") or owner,
+    }
+
+
 def _execplan_durable_residue(path: Path) -> dict[str, str]:
     record = _record_section_dict(_load_execplan_record(path), "durable_residue")
     if record is not None:
@@ -8013,6 +8044,7 @@ def _prepare_execplan_closeout(
         },
         "durable_residue": _prepared_durable_residue(record),
         "memory_learning_capture": _prepared_memory_learning_capture(record),
+        "task_intent_promotion": _prepared_task_intent_promotion(record),
     }
 
     prepared_proof_report = _prepared_closeout_proof_report(
@@ -10070,6 +10102,16 @@ def _build_execplan_record_from_todo_item(
             "canonical owner now": "none",
             "promotion trigger": "none",
             "retention after promotion": "retain",
+        },
+        "task_intent_promotion": {
+            "decision": "pending",
+            "accepted values": ("do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent"),
+            "evidence source": "",
+            "target scope": "",
+            "proposed durable intent": "",
+            "confidence": "low",
+            "needs review": True,
+            "owner surface": "",
         },
         "closure_check": {
             "slice status": "pending",

@@ -69,6 +69,7 @@ from agentic_workspace.config import (
     WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
     WORKSPACE_LOCAL_SCRATCH_ROOT_PATH,
     WORKSPACE_POINTER_BLOCK,
+    WORKSPACE_SUBSYSTEM_INTENT_PATH,
     WORKSPACE_SYSTEM_INTENT_MIRROR_PATH,
     WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH,
     WORKSPACE_WORKFLOW_MARKER_END,
@@ -158,6 +159,7 @@ WORKSPACE_CONFIG_CONTRACT_DOC = ".agentic-workspace/docs/workspace-config-contra
 WORKSPACE_CONFIG_SOURCE_SCHEMA = "src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
 WORKSPACE_CONFIG_REFERENCE_DOC = "docs/reference/workspace-config.md"
 SYSTEM_INTENT_MIRROR_KIND = str(_WORKSPACE_SURFACES_MANIFEST["system_intent_mirror_kind"])
+SUBSYSTEM_INTENT_KIND = str(_WORKSPACE_SURFACES_MANIFEST["subsystem_intent_kind"])
 WORKSPACE_AGENTS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["default_agents_path"])
 WORKSPACE_HANDOFF_SURFACES = tuple(Path(relative) for relative in _WORKSPACE_SURFACES_MANIFEST["handoff_surfaces"])
 MODULE_UPGRADE_SOURCE_PATHS = {
@@ -5525,6 +5527,7 @@ def _run_report_command(
         memory_installed="memory" in installed_modules,
     )
     execution_shape = _execution_shape_payload(config=config, module_reports=module_reports)
+    durable_intent = _intent_decision_projection(target_root=target_root, config=config, compact=True)
     branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
     local_memory = _local_memory_payload(config=config)
     closeout_trust = _report_closeout_trust_payload(module_reports=module_reports, target_root=target_root, cli_invoke=config.cli_invoke)
@@ -5566,6 +5569,7 @@ def _run_report_command(
         "memory_consult": _memory_consult_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "agent_aids": _agent_aids_report_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "execution_shape": execution_shape,
+        "durable_intent": durable_intent,
         "agent_configuration_system": _agent_configuration_report_payload(
             config=config,
             installed_modules=installed_modules,
@@ -7839,6 +7843,12 @@ def _run_preflight_command(
         active_planning_record=obligation_record,
     )
     closeout_obligations = _closeout_workflow_obligations_payload(workflow_obligations)
+    durable_intent = _intent_decision_projection(
+        target_root=target_root,
+        config=config,
+        task_text=task_text,
+        compact=True,
+    )
 
     if active_only:
         # Return only compact active state for polling/monitoring.
@@ -7857,6 +7867,7 @@ def _run_preflight_command(
             "workflow_obligations": workflow_obligations,
             "closeout_obligations": closeout_obligations,
             "operating_posture": _operating_posture_payload(config=config, surface="preflight", compact=True),
+            "durable_intent": durable_intent,
             "skill_routing": _task_skill_recommendations_payload(
                 target_root=target_root,
                 task_text=task_text,
@@ -7941,6 +7952,7 @@ def _run_preflight_command(
         "workflow_obligations": workflow_obligations,
         "closeout_obligations": closeout_obligations,
         "operating_posture": _operating_posture_payload(config=config, surface="preflight"),
+        "durable_intent": durable_intent,
         "active_planning_state": active_state,
     }
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
@@ -8256,12 +8268,24 @@ def _start_payload(*, target_root: Path, changed_paths: list[str], task_text: st
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
         payload["vague_outcome_orientation"] = vague_orientation
+    if task_text:
+        payload["durable_intent"] = _intent_decision_projection(
+            target_root=target_root,
+            config=config,
+            task_text=task_text,
+            changed_paths=changed_paths,
+            compact=True,
+        )
     cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
     if cli_compatibility["configured"]:
         payload["cli_compatibility"] = cli_compatibility
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths:
-        payload["proof"] = _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root)
+        payload["proof"] = _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths,
+            target_root=target_root,
+            include_durable_intent=False,
+        )
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     return payload
 
@@ -8310,7 +8334,11 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
     normalized_paths = _normalize_changed_paths(changed_paths)
     config = _load_workspace_config(target_root=target_root)
     proof = (
-        _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root)
+        _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths,
+            target_root=target_root,
+            include_durable_intent=False,
+        )
         if normalized_paths
         else copy.deepcopy(implementer_template["unknown_scope_proof"])
     )
@@ -8369,6 +8397,13 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
             config=config,
             changed_paths=normalized_paths,
             task_text=task_text,
+        ),
+        "durable_intent": _intent_decision_projection(
+            target_root=target_root,
+            config=config,
+            task_text=task_text,
+            changed_paths=normalized_paths,
+            compact=True,
         ),
         "handoff_requirements": copy.deepcopy(implementer_template["handoff_requirements"]),
         "next_allowed_action": (
@@ -9126,6 +9161,308 @@ def _system_intent_source_payload(config: WorkspaceConfig) -> dict[str, Any]:
     }
 
 
+INTENT_RECORD_STATUSES = {"active", "proposed", "needs-review", "superseded", "retired"}
+INTENT_CONFIDENCE_VALUES = {"low", "medium", "high"}
+
+
+def _intent_string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _intent_source_records(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    records: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        source_type = str(item.get("source_type", item.get("type", ""))).strip()
+        records.append(
+            {
+                "source_type": source_type or "unspecified",
+                "ref": str(item.get("ref", item.get("path", ""))).strip(),
+                "summary": str(item.get("summary", "")).strip(),
+                "observed_at": str(item.get("observed_at", "")).strip(),
+            }
+        )
+    return records
+
+
+def _validate_intent_lifecycle_fields(*, surface: str, item: dict[str, Any]) -> None:
+    status = str(item.get("status", "proposed")).strip()
+    if status and status not in INTENT_RECORD_STATUSES:
+        accepted = ", ".join(sorted(INTENT_RECORD_STATUSES))
+        raise WorkspaceUsageError(f"{surface} status must be one of: {accepted}.")
+    confidence = str(item.get("confidence", "low")).strip()
+    if confidence and confidence not in INTENT_CONFIDENCE_VALUES:
+        accepted = ", ".join(sorted(INTENT_CONFIDENCE_VALUES))
+        raise WorkspaceUsageError(f"{surface} confidence must be one of: {accepted}.")
+
+
+def _default_subsystem_intent_text() -> str:
+    subsystems: list[dict[str, Any]] = [
+        {
+            "id": "planning",
+            "scope": "planning module and checked-in planning surfaces",
+            "status": "active",
+            "summary": "Planning should preserve current execution intent, proof expectations, and honest continuation without becoming historical storage.",
+            "governing_intents": [
+                "Keep task intent bounded, closable, and tied to proof.",
+                "Keep larger intent explicit when a slice only completes part of it.",
+                "Route durable reusable learning to Memory, docs, config, or durable intent instead of leaving it in archived plans.",
+            ],
+            "anti_intents": [
+                "Do not let planning state become a historical archive.",
+                "Do not treat validation success alone as intent satisfaction.",
+            ],
+            "decision_tests": [
+                "Does this planning change make the next correct action more obvious and compact?",
+                "Does closeout preserve useful durable direction somewhere other than completed planning state?",
+            ],
+            "confidence": "high",
+            "needs_review": False,
+            "source_records": [
+                {
+                    "source_type": "issue",
+                    "ref": "#746",
+                    "summary": "Intent lifecycle parent issue requires durable task/system/subsystem distinction.",
+                }
+            ],
+        },
+        {
+            "id": "memory",
+            "scope": "memory module and checked-in durable repo knowledge",
+            "status": "active",
+            "summary": "Memory should preserve reusable understanding that prevents expensive rediscovery without becoming policy, active task state, or a wiki.",
+            "governing_intents": [
+                "Promote only durable, shareable, non-private knowledge that helps future agents.",
+                "Prefer compact routed notes over broad narrative archives.",
+            ],
+            "anti_intents": [
+                "Do not use Memory as a substitute for active Planning.",
+                "Do not encode binding workflow policy as Memory when config, contracts, or checks own it.",
+            ],
+            "decision_tests": [
+                "Would this knowledge be expensive to reconstruct and useful beyond the current task?",
+                "Is Memory the stronger home than subsystem intent, docs, config, or a check?",
+            ],
+            "confidence": "high",
+            "needs_review": False,
+            "source_records": [
+                {
+                    "source_type": "issue",
+                    "ref": "#748",
+                    "summary": "Task-to-durable promotion should distinguish Memory from system/subsystem intent.",
+                }
+            ],
+        },
+    ]
+    rule = "Subsystem intent is durable scoped decision pressure, not active task state by default."
+    lines = [
+        "schema_version = 1",
+        f'kind = "{SUBSYSTEM_INTENT_KIND}"',
+        f"rule = {json.dumps(rule)}",
+    ]
+    for subsystem in subsystems:
+        raw_records = subsystem.get("source_records", [])
+        records = raw_records if isinstance(raw_records, list) else []
+        source_records = [
+            "{ "
+            + ", ".join(
+                [
+                    f"source_type = {json.dumps(str(record.get('source_type', '')))}",
+                    f"ref = {json.dumps(str(record.get('ref', '')))}",
+                    f"summary = {json.dumps(str(record.get('summary', '')))}",
+                ]
+            )
+            + " }"
+            for record in records
+            if isinstance(record, dict)
+        ]
+        lines.extend(
+            [
+                "",
+                "[[subsystems]]",
+                f"id = {json.dumps(subsystem['id'])}",
+                f"scope = {json.dumps(subsystem['scope'])}",
+                f"status = {json.dumps(subsystem['status'])}",
+                f"summary = {json.dumps(subsystem['summary'])}",
+                f"governing_intents = {json.dumps(subsystem['governing_intents'])}",
+                f"anti_intents = {json.dumps(subsystem['anti_intents'])}",
+                f"decision_tests = {json.dumps(subsystem['decision_tests'])}",
+                f"confidence = {json.dumps(subsystem['confidence'])}",
+                f"needs_review = {'true' if subsystem['needs_review'] else 'false'}",
+                f"source_records = [{', '.join(source_records)}]",
+            ]
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _load_subsystem_intent(*, target_root: Path) -> dict[str, Any]:
+    path = target_root / WORKSPACE_SUBSYSTEM_INTENT_PATH
+    if not path.exists():
+        return {
+            "status": "missing",
+            "path": WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix(),
+            "kind": SUBSYSTEM_INTENT_KIND,
+            "sync_command": "agentic-workspace system-intent --target ./repo --sync --format json",
+            "subsystems": [],
+        }
+    payload = config_lib.load_toml_payload(path=path, surface_name=WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix())
+    raw_subsystems = payload.get("subsystems", [])
+    if not isinstance(raw_subsystems, list):
+        raise WorkspaceUsageError(f"{WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix()} subsystems must be an array of tables.")
+    subsystems: list[dict[str, Any]] = []
+    for raw in raw_subsystems:
+        if not isinstance(raw, dict):
+            raise WorkspaceUsageError(f"{WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix()} subsystem entries must be tables.")
+        identifier = str(raw.get("id", "")).strip()
+        if not identifier:
+            raise WorkspaceUsageError(f"{WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix()} subsystem entries must set id.")
+        _validate_intent_lifecycle_fields(surface=f"{WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix()} subsystem {identifier}", item=raw)
+        subsystems.append(
+            {
+                "id": identifier,
+                "scope": str(raw.get("scope", "")).strip(),
+                "status": str(raw.get("status", "proposed")).strip() or "proposed",
+                "summary": str(raw.get("summary", "")).strip(),
+                "governing_intents": _intent_string_list(raw.get("governing_intents", [])),
+                "anti_intents": _intent_string_list(raw.get("anti_intents", [])),
+                "decision_tests": _intent_string_list(raw.get("decision_tests", [])),
+                "open_questions": _intent_string_list(raw.get("open_questions", [])),
+                "confidence": str(raw.get("confidence", "low")).strip() or "low",
+                "needs_review": bool(raw.get("needs_review", True)),
+                "supersedes": _intent_string_list(raw.get("supersedes", [])),
+                "superseded_by": _intent_string_list(raw.get("superseded_by", [])),
+                "last_reviewed_at": str(raw.get("last_reviewed_at", "")).strip(),
+                "interpretation_notes": str(raw.get("interpretation_notes", "")).strip(),
+                "source_records": _intent_source_records(raw.get("source_records", [])),
+            }
+        )
+    return {
+        "status": "present",
+        "path": WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix(),
+        "kind": str(payload.get("kind", SUBSYSTEM_INTENT_KIND)),
+        "schema_version": int(payload.get("schema_version", 1)),
+        "rule": str(payload.get("rule", "Subsystem intent is durable scoped decision pressure, not active task state by default.")),
+        "subsystem_count": len(subsystems),
+        "subsystems": subsystems,
+    }
+
+
+def _intent_terms(value: str) -> set[str]:
+    return {part for part in re.split(r"[^a-z0-9_-]+", value.lower()) if len(part) >= 3}
+
+
+def _intent_decision_projection(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    task_text: str | None = None,
+    changed_paths: list[str] | None = None,
+    compact: bool = False,
+) -> dict[str, Any]:
+    mirror = _load_system_intent_mirror(target_root=target_root, config=config)
+    subsystem_intent = _load_subsystem_intent(target_root=target_root)
+    task_terms = _intent_terms(task_text or "")
+    path_terms = _intent_terms(" ".join(changed_paths or []))
+    query_terms = task_terms | path_terms
+    matched_subsystems: list[dict[str, Any]] = []
+    for subsystem in subsystem_intent.get("subsystems", []):
+        if not isinstance(subsystem, dict) or subsystem.get("status") in {"retired", "superseded"}:
+            continue
+        haystack = " ".join(
+            [
+                str(subsystem.get("id", "")),
+                str(subsystem.get("scope", "")),
+                str(subsystem.get("summary", "")),
+                " ".join(subsystem.get("decision_tests", []) if isinstance(subsystem.get("decision_tests"), list) else []),
+            ]
+        )
+        terms = _intent_terms(haystack)
+        if not query_terms or query_terms & terms:
+            matched_subsystems.append(
+                {
+                    "id": subsystem.get("id", ""),
+                    "status": subsystem.get("status", ""),
+                    "summary": subsystem.get("summary", ""),
+                    "decision_tests": list(subsystem.get("decision_tests", []))[: 2 if compact else 4],
+                    "confidence": subsystem.get("confidence", "low"),
+                    "needs_review": subsystem.get("needs_review", True),
+                }
+            )
+    system_tests = mirror.get("decision_tests", []) if mirror.get("status") == "present" else []
+    projection = {
+        "kind": "agentic-workspace/durable-intent-decision/v1",
+        "status": "present" if mirror.get("status") == "present" or subsystem_intent.get("status") == "present" else "missing",
+        "rule": "Durable intent is decision pressure for scope, proof, delegation, and closeout; it is not active task state by default.",
+        "task_intent": {
+            "role": "bounded and closable",
+            "promotion_question": "Did this task reveal reusable direction that should become Memory, subsystem intent, or system intent?",
+        },
+        "system_intent": {
+            "status": mirror.get("status", "missing"),
+            "surface": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
+            "summary": mirror.get("summary", ""),
+            "decision_tests": list(system_tests)[: 3 if compact else 6],
+            "confidence": mirror.get("confidence", "low"),
+            "needs_review": mirror.get("needs_review", True),
+        },
+        "subsystem_intent": {
+            "status": subsystem_intent.get("status", "missing"),
+            "surface": WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix(),
+            "matched_count": len(matched_subsystems),
+            "matches": matched_subsystems[: 3 if compact else 10],
+        },
+        "decision_effects": [
+            "Use relevant decision tests before choosing scope or proof.",
+            "Escalate when relevant durable intent is low-confidence, needs review, or implies compliance, accessibility, security, or high judgment.",
+            "At closeout, classify discovered intent as do-not-promote, Memory, subsystem intent, system intent, refine-existing, or supersede-existing.",
+        ],
+        "commands": {
+            "inspect": "agentic-workspace report --target ./repo --section durable_intent --format json",
+            "refresh": "agentic-workspace system-intent --target ./repo --sync --format json",
+            "defaults": "agentic-workspace defaults --section durable_intent --format json",
+        },
+    }
+    if compact:
+        projection = {
+            "kind": projection["kind"],
+            "status": projection["status"],
+            "rule": "Use durable intent as decision pressure; it is not active task state.",
+            "task_intent": {
+                "role": "bounded and closable",
+                "promotion_question": "Did this reveal durable direction?",
+            },
+            "system_intent": {
+                "status": projection["system_intent"]["status"],
+                "surface": projection["system_intent"]["surface"],
+                "decision_tests": projection["system_intent"]["decision_tests"][:1],
+                "needs_review": projection["system_intent"]["needs_review"],
+            },
+            "subsystem_intent": {
+                "status": projection["subsystem_intent"]["status"],
+                "surface": projection["subsystem_intent"]["surface"],
+                "matched_count": projection["subsystem_intent"]["matched_count"],
+                "matches": [
+                    {
+                        "id": match.get("id", ""),
+                        "decision_tests": list(match.get("decision_tests", []))[:1],
+                        "needs_review": match.get("needs_review", True),
+                    }
+                    for match in projection["subsystem_intent"]["matches"][:2]
+                    if isinstance(match, dict)
+                ],
+            },
+            "decision_effects": ["Use relevant decision tests before choosing scope or proof."],
+            "inspect": "agentic-workspace report --target ./repo --section durable_intent --format json",
+        }
+    return projection
+
+
 def _system_intent_record_from_path(*, target_root: Path, relative: str) -> dict[str, Any]:
     path = target_root / relative
     if not path.exists():
@@ -9314,11 +9651,33 @@ def _sync_system_intent_mirror(*, target_root: Path, config: WorkspaceConfig, dr
                 "detail": "system-intent declaration metadata already current for the declared sources",
             }
         )
+    subsystem_path = target_root / WORKSPACE_SUBSYSTEM_INTENT_PATH
+    if not subsystem_path.exists():
+        subsystem_text = _default_subsystem_intent_text()
+        if not dry_run:
+            subsystem_path.parent.mkdir(parents=True, exist_ok=True)
+            subsystem_path.write_text(subsystem_text, encoding="utf-8")
+        actions.append(
+            {
+                "kind": "would-create" if dry_run else "created",
+                "path": WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix(),
+                "detail": "create editable subsystem-intent store with starter planning and memory records",
+            }
+        )
+    else:
+        actions.append(
+            {
+                "kind": "current",
+                "path": WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix(),
+                "detail": "subsystem-intent store already present",
+            }
+        )
     return actions, _load_system_intent_mirror(target_root=target_root, config=config)
 
 
 def _system_intent_report_payload(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
     mirror = _load_system_intent_mirror(target_root=target_root, config=config)
+    subsystem_intent = _load_subsystem_intent(target_root=target_root)
     return {
         "canonical_doc": ".agentic-workspace/docs/system-intent-contract.md",
         "rule": (
@@ -9330,6 +9689,8 @@ def _system_intent_report_payload(*, target_root: Path, config: WorkspaceConfig)
         "workflow_surface": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
         "source_declaration": _system_intent_source_payload(config),
         "mirror": mirror,
+        "subsystem_intent": subsystem_intent,
+        "decision_projection": _intent_decision_projection(target_root=target_root, config=config),
     }
 
 
@@ -9644,6 +10005,7 @@ def _system_intent_payload() -> dict[str, Any]:
         ),
         "source_declaration_surface": ".agentic-workspace/config.toml [system_intent]",
         "mirror_surface": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
+        "subsystem_surface": WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix(),
         "workflow_surface": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
         "sync_command": "agentic-workspace system-intent --target ./repo --sync --format json",
         "sync_behavior": "Refresh source hints and source-record metadata only; interpreted intent fields remain agent-owned and human-correctable.",
@@ -9700,6 +10062,69 @@ def _system_intent_payload() -> dict[str, Any]:
         "checked_in_execplan_rule": (
             "Use a checked-in execplan whenever later proof, intent validation, or follow-through would be expensive or ambiguous to reconstruct from chat alone."
         ),
+        "durable_intent_command": "agentic-workspace defaults --section durable_intent --format json",
+    }
+
+
+def _durable_intent_payload() -> dict[str, Any]:
+    return {
+        "canonical_doc": ".agentic-workspace/docs/system-intent-contract.md",
+        "command": "agentic-workspace defaults --section durable_intent --format json",
+        "rule": "Task intent is closable work; system and subsystem intent are durable, editable decision pressure with provenance.",
+        "intent_scopes": [
+            {
+                "id": "task",
+                "role": "bounded goal for current work",
+                "closure": "can be satisfied and validated during implementation",
+                "promotion": "classify at closeout; do not persist by default",
+            },
+            {
+                "id": "subsystem",
+                "role": "durable direction for a component, module, concern, or owned surface",
+                "surface": WORKSPACE_SUBSYSTEM_INTENT_PATH.as_posix(),
+                "closure": "not closed by one task; revised, superseded, or retired over time",
+            },
+            {
+                "id": "system",
+                "role": "durable repo/system-wide direction, purpose, constraint, or invariant",
+                "surface": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
+                "closure": "not active work; inspected and refined as understanding or requirements change",
+            },
+        ],
+        "promotion_choices": [
+            "do-not-promote",
+            "memory",
+            "subsystem-intent",
+            "system-intent",
+            "refine-existing-intent",
+            "supersede-existing-intent",
+        ],
+        "promotion_rule": (
+            "Promotion from task evidence creates reviewable durable intent proposals with evidence and confidence; "
+            "agents must not silently make inferred intent authoritative."
+        ),
+        "record_fields": [
+            "id",
+            "scope",
+            "status",
+            "summary",
+            "governing_intents",
+            "anti_intents",
+            "decision_tests",
+            "source_records",
+            "confidence",
+            "needs_review",
+            "supersedes",
+            "superseded_by",
+            "last_reviewed_at",
+            "open_questions",
+        ],
+        "decision_consumption": [
+            "start/preflight can surface compact relevant intent pressure before implementation",
+            "report --section durable_intent returns the inspectable projection",
+            "planning closeout asks whether task intent revealed durable intent worth promotion",
+            "proof/delegation should escalate when relevant intent implies compliance, accessibility, security, or high judgment",
+        ],
     }
 
 
@@ -10378,6 +10803,13 @@ def _effective_authority_payload(
                 "owner": "workspace",
                 "surface": ".agentic-workspace/system-intent/intent.toml",
                 "status": "present",
+            },
+            {
+                "concern": "compiled subsystem intent",
+                "authority_class": "authoritative",
+                "owner": "workspace",
+                "surface": ".agentic-workspace/system-intent/subsystems.toml",
+                "status": "present" if target_root and (target_root / WORKSPACE_SUBSYSTEM_INTENT_PATH).exists() else "missing",
             },
             {
                 "concern": "workspace policy",
@@ -11573,6 +12005,7 @@ def _defaults_payload() -> dict[str, Any]:
         "agent_configuration_workflow_extensions": _agent_configuration_workflow_extensions_payload(),
         "agent_aid_storage": _agent_aid_storage_payload(),
         "system_intent": _system_intent_payload(),
+        "durable_intent": _durable_intent_payload(),
         "surface_value_guardrail": _surface_value_guardrail_payload(),
         "effective_authority": _effective_authority_payload(),
         "intent": _intent_contract_payload(),
@@ -13165,7 +13598,12 @@ def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[
     }
 
 
-def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root: Path | None = None) -> dict[str, Any]:
+def _proof_selection_for_changed_paths(
+    *,
+    changed_paths: list[str],
+    target_root: Path | None = None,
+    include_durable_intent: bool = True,
+) -> dict[str, Any]:
     defaults = _defaults_payload()
     cli_invoke = DEFAULT_CLI_INVOKE
     config: WorkspaceConfig | None = None
@@ -13294,6 +13732,20 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
         "broaden_when": broaden_when,
         "escalate_when": escalate_when,
     }
+    if config is not None and target_root is not None and include_durable_intent:
+        durable_intent = _intent_decision_projection(
+            target_root=target_root,
+            config=config,
+            changed_paths=changed_paths,
+            compact=True,
+        )
+        proof_selection["durable_intent"] = durable_intent
+        if durable_intent.get("status") == "present":
+            intent_effect = (
+                "Relevant durable intent may add proof, review, or escalation expectations; inspect durable_intent before closeout."
+            )
+            if intent_effect not in proof_selection["escalate_when"]:
+                proof_selection["escalate_when"].append(intent_effect)
     if subsystem_matches["matched_subsystems"]:
         proof_selection["subsystem_ownership"] = subsystem_matches
     if planning_assurance.get("status") == "present":
@@ -15568,6 +16020,8 @@ def _system_intent_command_payload(*, target_root: Path, config: WorkspaceConfig
         "workflow_surface": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
         "source_declaration": _system_intent_source_payload(config),
         "mirror": mirror,
+        "subsystem_intent": _load_subsystem_intent(target_root=target_root),
+        "decision_projection": _intent_decision_projection(target_root=target_root, config=config, compact=True),
         "actions": actions,
         "next_action": (
             {

@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/subsystem-intent.schema.json",
+  "title": "Subsystem Intent Set",
+  "description": "Editable durable subsystem-intent records used as scoped decision pressure, not active task state.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "subsystems"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "Subsystem intent contract version."
+    },
+    "kind": {
+      "const": "agentic-workspace/subsystem-intent-set/v1",
+      "description": "Discriminator for the subsystem intent set."
+    },
+    "rule": {
+      "type": "string",
+      "description": "Short rule explaining how subsystem intent should be used."
+    },
+    "subsystems": {
+      "type": "array",
+      "description": "Durable scoped subsystem intent records.",
+      "items": {
+        "$ref": "#/$defs/subsystem_intent_record",
+        "description": "One subsystem intent record."
+      },
+      "default": []
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "subsystem_intent_record": {
+      "type": "object",
+      "required": [
+        "id",
+        "scope",
+        "status",
+        "summary",
+        "decision_tests",
+        "source_records",
+        "confidence",
+        "needs_review"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable subsystem or concern identifier."
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Bounded subsystem, component, concern, or surface this intent applies to."
+        },
+        "status": {
+          "enum": [
+            "active",
+            "proposed",
+            "needs-review",
+            "superseded",
+            "retired"
+          ],
+          "description": "Lifecycle status for the inferred durable intent."
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Compact durable direction for this subsystem."
+        },
+        "governing_intents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Positive direction to preserve."
+          },
+          "default": []
+        },
+        "anti_intents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Direction this subsystem should resist becoming."
+          },
+          "default": []
+        },
+        "decision_tests": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Question agents should answer when this subsystem intent is relevant."
+          },
+          "default": []
+        },
+        "source_records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source_record",
+            "description": "Evidence source for this inferred durable intent."
+          },
+          "default": []
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "description": "Confidence that the normalized intent faithfully represents its sources."
+        },
+        "needs_review": {
+          "type": "boolean",
+          "description": "Whether a human or stronger reviewer should inspect the inferred intent before treating it as stable."
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Older intent record replaced by this record."
+          },
+          "default": []
+        },
+        "superseded_by": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Newer intent record that replaced this record."
+          },
+          "default": []
+        },
+        "last_reviewed_at": {
+          "type": "string",
+          "description": "Date or timestamp when this intent was last reviewed."
+        },
+        "open_questions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unresolved ambiguity in this durable interpretation."
+          },
+          "default": []
+        },
+        "interpretation_notes": {
+          "type": "string",
+          "description": "Notes distinguishing source meaning from normalized interpretation."
+        }
+      },
+      "additionalProperties": false
+    },
+    "source_record": {
+      "type": "object",
+      "required": [
+        "source_type",
+        "ref",
+        "summary"
+      ],
+      "properties": {
+        "source_type": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Kind of source, such as issue, docs, code, chat, review, or evaluation."
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path, issue number, URL, or other source reference."
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Compact source evidence summary."
+        },
+        "observed_at": {
+          "type": "string",
+          "description": "Date or timestamp when the evidence was observed."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

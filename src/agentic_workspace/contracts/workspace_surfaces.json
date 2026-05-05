@@ -10,6 +10,7 @@
     ".agentic-workspace/system-intent/WORKFLOW.md"
   ],
   "system_intent_mirror_kind": "agentic-workspace/system-intent/v1",
+  "subsystem_intent_kind": "agentic-workspace/subsystem-intent-set/v1",
   "default_agents_path": "AGENTS.md",
   "handoff_surfaces": [
     "llms.txt",

@@ -10,6 +10,7 @@ Instead:
 
 - repo-owned intent sources are declared in `.agentic-workspace/config.toml [system_intent]`
 - workspace stores the consumed compiled declaration in `.agentic-workspace/system-intent/intent.toml`
+- workspace stores scoped subsystem intent in `.agentic-workspace/system-intent/subsystems.toml`
 - `.agentic-workspace/system-intent/WORKFLOW.md` tells agents how to refresh source metadata and refine that declaration
 
 This keeps the consumed declaration inside the workspace home while leaving host-repo source authoring unconstrained.
@@ -23,6 +24,40 @@ This keeps the consumed declaration inside the workspace home while leaving host
 - humans retain easy inspection and correction authority
 
 Low-confidence interpretation should remain visible through `confidence`, `needs_review`, and `open_questions`.
+
+## Intent Scopes
+
+Task intent is the bounded goal of current work. It can be implemented, validated, and closed.
+
+System intent is durable repo-wide direction, purpose, constraint, or invariant. It is not active work by default; it is decision pressure that should remain inspectable, editable, provenance-backed, and allowed to change.
+
+Subsystem intent is durable direction for a component, module, concern, or owned surface. Use it when the direction is narrower than the whole system but broader than one task, such as Planning behavior, Memory hygiene, generated CLI portability, accessibility expectations, memory usage constraints, documentation philosophy, or auditability requirements.
+
+## Durable Intent Lifecycle
+
+Durable intent records may be inferred from docs, code, issues, chat context, review evidence, or repeated task outcomes. Inference can be wrong or become stale, so records should carry:
+
+- source records
+- confidence
+- `needs_review`
+- open questions
+- revision or supersession fields when an interpretation changes
+
+Use `agentic-workspace report --target ./repo --section durable_intent --format json` for the compact decision projection.
+Use `agentic-workspace defaults --section durable_intent --format json` for the lifecycle contract.
+
+## Promotion From Task Intent
+
+Before closing planned work, classify any durable direction revealed by the task:
+
+- `do-not-promote`
+- `memory`
+- `subsystem-intent`
+- `system-intent`
+- `refine-existing-intent`
+- `supersede-existing-intent`
+
+Promotion should be evidence-backed and reviewable. Agents should not silently make inferred intent authoritative.
 
 ## Core Rule
 
@@ -58,6 +93,8 @@ Ordinary compact inspection should answer:
 
 Use:
 - `agentic-workspace defaults --section system_intent --format json`
+- `agentic-workspace defaults --section durable_intent --format json`
+- `agentic-workspace report --target ./repo --section durable_intent --format json`
 - `agentic-workspace summary --format json`
 - `agentic-planning report --format json`
 - `agentic-workspace system-intent --target ./repo --sync --format json`

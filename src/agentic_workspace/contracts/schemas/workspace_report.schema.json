@@ -26,6 +26,7 @@
     "agent_configuration_system",
     "agent_configuration_queries",
     "workflow_obligations",
+    "durable_intent",
     "product_managed_enclave",
     "ownership_diagnostics",
     "surface_value_guardrail",
@@ -176,6 +177,10 @@
     "system_intent_mirror": {
       "type": "object",
       "description": "Compiled system-intent mirror status and source metadata."
+    },
+    "durable_intent": {
+      "type": "object",
+      "description": "Compact decision projection for durable task, subsystem, and system intent pressure."
     },
     "workflow_obligations": {
       "type": "object",

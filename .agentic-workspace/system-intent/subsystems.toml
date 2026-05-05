@@ -1,0 +1,27 @@
+schema_version = 1
+kind = "agentic-workspace/subsystem-intent-set/v1"
+rule = "Subsystem intent is durable scoped decision pressure, not active task state by default."
+
+[[subsystems]]
+id = "planning"
+scope = "planning module and checked-in planning surfaces"
+status = "active"
+summary = "Planning should preserve current execution intent, proof expectations, and honest continuation without becoming historical storage."
+governing_intents = ["Keep task intent bounded, closable, and tied to proof.", "Keep larger intent explicit when a slice only completes part of it.", "Route durable reusable learning to Memory, docs, config, or durable intent instead of leaving it in archived plans."]
+anti_intents = ["Do not let planning state become a historical archive.", "Do not treat validation success alone as intent satisfaction."]
+decision_tests = ["Does this planning change make the next correct action more obvious and compact?", "Does closeout preserve useful durable direction somewhere other than completed planning state?"]
+confidence = "high"
+needs_review = false
+source_records = [{ source_type = "issue", ref = "#746", summary = "Intent lifecycle parent issue requires durable task/system/subsystem distinction." }]
+
+[[subsystems]]
+id = "memory"
+scope = "memory module and checked-in durable repo knowledge"
+status = "active"
+summary = "Memory should preserve reusable understanding that prevents expensive rediscovery without becoming policy, active task state, or a wiki."
+governing_intents = ["Promote only durable, shareable, non-private knowledge that helps future agents.", "Prefer compact routed notes over broad narrative archives."]
+anti_intents = ["Do not use Memory as a substitute for active Planning.", "Do not encode binding workflow policy as Memory when config, contracts, or checks own it."]
+decision_tests = ["Would this knowledge be expensive to reconstruct and useful beyond the current task?", "Is Memory the stronger home than subsystem intent, docs, config, or a check?"]
+confidence = "high"
+needs_review = false
+source_records = [{ source_type = "issue", ref = "#748", summary = "Task-to-durable promotion should distinguish Memory from system/subsystem intent." }]

@@ -146,6 +146,7 @@
         "retention after promotion": { "type": "string" }
       }
     },
+    "task_intent_promotion": { "$ref": "#/$defs/string_map" },
     "execution_summary": { "$ref": "#/$defs/string_map" },
     "improvement_signal_review": {
       "type": "object",

@@ -1911,6 +1911,20 @@ def test_defaults_system_intent_section_selector_returns_compact_contract_answer
     assert ".agentic-workspace/docs/system-intent-contract.md" in payload["refs"]
 
 
+def test_defaults_durable_intent_section_selector_explains_lifecycle(capsys) -> None:
+    assert cli.main(["defaults", "--section", "durable_intent", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "durable_intent"}
+    answer = payload["answer"]
+    assert answer["intent_scopes"][0]["id"] == "task"
+    assert answer["intent_scopes"][1]["surface"] == ".agentic-workspace/system-intent/subsystems.toml"
+    assert "subsystem-intent" in answer["promotion_choices"]
+    assert answer["promotion_rule"].startswith("Promotion from task evidence creates reviewable")
+
+
 def test_system_intent_command_sync_refreshes_source_metadata_without_mechanical_extraction(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace").mkdir(exist_ok=True)
@@ -1932,6 +1946,126 @@ def test_system_intent_command_sync_refreshes_source_metadata_without_mechanical
     assert "needs_review = true" in mirror_text
     assert "[[source_records]]" in mirror_text
     assert 'path = "README.md"' in mirror_text
+    subsystem_text = (tmp_path / ".agentic-workspace/system-intent/subsystems.toml").read_text(encoding="utf-8")
+    assert 'kind = "agentic-workspace/subsystem-intent-set/v1"' in subsystem_text
+    assert 'id = "planning"' in subsystem_text
+    assert payload["subsystem_intent"]["subsystem_count"] == 2
+    assert payload["decision_projection"]["task_intent"]["role"] == "bounded and closable"
+
+
+def test_system_intent_rejects_invalid_subsystem_intent_lifecycle(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".agentic-workspace/system-intent").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/system-intent/subsystems.toml").write_text(
+        'schema_version = 1\nkind = "agentic-workspace/subsystem-intent-set/v1"\n\n'
+        '[[subsystems]]\nid = "ux"\nscope = "frontend"\nstatus = "done"\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main(["system-intent", "--target", str(tmp_path), "--format", "json"])
+    assert exc_info.value.code == 2
+    assert "status must be one of" in capsys.readouterr().err
+
+
+def test_start_surfaces_compact_durable_intent_for_task(capsys) -> None:
+    assert cli.main(["start", "--target", ".", "--task", "planning closeout should preserve durable intent", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
+    assert payload["durable_intent"]["subsystem_intent"]["surface"] == ".agentic-workspace/system-intent/subsystems.toml"
+    assert any(match["id"] == "planning" for match in payload["durable_intent"]["subsystem_intent"]["matches"])
+
+
+def test_preflight_surfaces_compact_durable_intent_for_task(capsys) -> None:
+    assert cli.main(["preflight", "--target", ".", "--task", "memory routing should preserve durable context", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
+    assert any(match["id"] == "memory" for match in payload["durable_intent"]["subsystem_intent"]["matches"])
+
+
+def test_start_matches_durable_intent_across_decision_pressure_types(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "system-intent" / "subsystems.toml",
+        """
+schema_version = 1
+kind = "agentic-workspace/subsystem-intent-set/v1"
+rule = "Subsystem intent is durable scoped decision pressure, not active task state by default."
+
+[[subsystems]]
+id = "performance"
+scope = "runtime memory usage"
+status = "active"
+summary = "Keep runtime memory usage bounded."
+decision_tests = ["Does this preserve memory ceilings?"]
+confidence = "high"
+needs_review = false
+
+[[subsystems]]
+id = "accessibility"
+scope = "UX accessibility"
+status = "active"
+summary = "Interfaces should stay accessible to elderly users."
+decision_tests = ["Can low-vision and elderly users complete the flow?"]
+confidence = "medium"
+needs_review = true
+
+[[subsystems]]
+id = "docs"
+scope = "documentation philosophy"
+status = "active"
+summary = "Prefer self-documenting code over external-facing wikis."
+decision_tests = ["Is the durable explanation closest to the code?"]
+confidence = "medium"
+needs_review = false
+
+[[subsystems]]
+id = "audit"
+scope = "compliance auditability"
+status = "active"
+summary = "Access logs must remain auditable."
+decision_tests = ["Can a reviewer reconstruct access-log decisions?"]
+confidence = "high"
+needs_review = false
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "improve memory usage, elderly user accessibility, self-documenting code, and audit logs",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    matches = {match["id"] for match in payload["durable_intent"]["subsystem_intent"]["matches"]}
+    assert {"performance", "accessibility"} <= matches
+    assert payload["durable_intent"]["subsystem_intent"]["matched_count"] == 4
+
+
+def test_report_durable_intent_section_returns_compact_projection(capsys) -> None:
+    assert cli.main(["report", "--target", ".", "--section", "durable_intent", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["selector"] == {"section": "durable_intent"}
+    answer = payload["answer"]
+    assert answer["rule"].startswith("Use durable intent as decision pressure")
+    assert answer["system_intent"]["surface"] == ".agentic-workspace/system-intent/intent.toml"
+    assert answer["subsystem_intent"]["surface"] == ".agentic-workspace/system-intent/subsystems.toml"
 
 
 def test_setup_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Path, capsys) -> None:
@@ -4380,6 +4514,8 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["agent_configuration_queries"]["current_queries"][0]["id"] == "startup_path"
     assert payload["system_intent_mirror"]["mirror_surface"] == ".agentic-workspace/system-intent/intent.toml"
     assert payload["system_intent_mirror"]["mirror"]["status"] in {"missing", "present"}
+    assert payload["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
+    assert "durable_intent" in payload["schema"]["shared_fields"]
     assert payload["workflow_obligations"]["configured_count"] == 0
     assert payload["workflow_obligations"]["match_evidence"]["match_count"] == 0
     assert payload["workflow_obligations"]["relevant_to_current_work"] == []
@@ -7526,6 +7662,8 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
     assert payload["execution_posture"]["delegation_control"]["execution_permitted"] is False
     assert "quality" in payload["execution_posture"]["quality_tradeoff"]
     assert "Token saving" in payload["execution_posture"]["token_tradeoff"]
+    assert payload["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
+    assert payload["durable_intent"]["subsystem_intent"]["surface"] == ".agentic-workspace/system-intent/subsystems.toml"
     assert (
         "whether proof commands were actually executed unless evidence is recorded elsewhere" in payload["inference_limits"]["cannot_infer"]
     )
@@ -7682,6 +7820,8 @@ def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> No
     assert first_step["next_proof"] == "continue to the next required step, then rerun proof selection if changed paths expand"
     assert answer["validation_plan"]["primary_next_action"] == first_step
     assert answer["validation_plan"]["next_proof"] == "proof is complete when all required steps pass for the current changed paths"
+    assert answer["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
+    assert any(item.startswith("Relevant durable intent may add proof") for item in answer["escalate_when"])
 
 
 def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, capsys) -> None:

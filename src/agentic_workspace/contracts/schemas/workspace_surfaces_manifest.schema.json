@@ -8,6 +8,7 @@
     "schema_version",
     "payload_files",
     "system_intent_mirror_kind",
+    "subsystem_intent_kind",
     "default_agents_path",
     "handoff_surfaces",
     "module_upgrade_source_paths",
@@ -31,6 +32,10 @@
     "system_intent_mirror_kind": {
       "type": "string",
       "description": "System intent mirror kind text value used by this contract."
+    },
+    "subsystem_intent_kind": {
+      "type": "string",
+      "description": "Subsystem intent set kind used by the editable scoped durable-intent store."
     },
     "default_agents_path": {
       "type": "string",

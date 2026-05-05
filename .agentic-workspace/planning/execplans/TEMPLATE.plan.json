@@ -241,6 +241,16 @@
     "promotion trigger": "none",
     "retention after promotion": "retain"
   },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
   "execution_summary": {
     "outcome delivered": "",
     "validation confirmed": "",

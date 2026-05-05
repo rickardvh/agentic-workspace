@@ -586,6 +586,8 @@ def test_execplan_template_surfaces_archive_closeout_terminal_values() -> None:
     assert "archive-but-keep-lane-open" in template["closure_check"]["accepted values"]
     assert "archive-plan <plan> --prepare-closeout" in template["closure_check"]["accepted values"]
     assert template["durable_residue"]["status"] == "none"
+    assert template["task_intent_promotion"]["decision"] == "pending"
+    assert "subsystem-intent" in template["task_intent_promotion"]["accepted values"]
     assert template["improvement_signal_review"]["source"] == "operating_posture"
     assert "reported-only/routed" in template["improvement_signal_review"]["guidance"]
 
@@ -3139,6 +3141,8 @@ def test_archive_plan_prepare_closeout_dry_run_returns_valid_patch(tmp_path: Pat
     assert any(action["kind"] == "would update" and "prepared closeout patch" in action["detail"] for action in payload["actions"])
     assert "archive-and-close" in text
     assert "intent_satisfaction" in text
+    assert "task_intent_promotion" in text
+    assert "do-not-promote" in text
     assert "generated_closeout" in text
     assert "Generated closeout adapter; structured execplan fields are authoritative." in text
     assert "closeout_distillation" in text

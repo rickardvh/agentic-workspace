@@ -1446,6 +1446,8 @@ def main(argv: list[str] | None = None) -> int:
         checks.append(("workspace surfaces parity", ["workspace payload files drifted from workspace_surfaces.json"]))
     if cli.SYSTEM_INTENT_MIRROR_KIND != workspace_surfaces["system_intent_mirror_kind"]:
         checks.append(("workspace surfaces parity", ["system intent mirror kind drifted from workspace_surfaces.json"]))
+    if cli.SUBSYSTEM_INTENT_KIND != workspace_surfaces["subsystem_intent_kind"]:
+        checks.append(("workspace surfaces parity", ["subsystem intent kind drifted from workspace_surfaces.json"]))
     if cli.WORKSPACE_AGENTS_PATH.as_posix() != workspace_surfaces["default_agents_path"]:
         checks.append(("workspace surfaces parity", ["workspace agents path drifted from workspace_surfaces.json"]))
     if [path.as_posix() for path in cli.WORKSPACE_HANDOFF_SURFACES] != workspace_surfaces["handoff_surfaces"]:

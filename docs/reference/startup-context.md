@@ -69,6 +69,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `closeout_obligations` | object | yes |  | Closeout obligations that may apply before claiming work is complete. |  |  |
 | `memory_consult` | object | no |  | Memory lookup guidance for durable repo knowledge when startup context says it is relevant. |  |  |
 | `operating_posture` | object | yes |  | Compact statement of the current operating mode and risk posture. |  |  |
+| `durable_intent` | object | no |  | Compact durable task, subsystem, and system intent pressure to consider before implementation. |  |  |
 | `skill_routing` | ref `#/$defs/skill_routing` | no |  | Skill-discovery route and fallback guidance for task-specific instructions. |  |  |
 | `skill_routing.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
 | `skill_routing.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
