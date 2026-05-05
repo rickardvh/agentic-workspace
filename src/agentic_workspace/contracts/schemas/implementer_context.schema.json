@@ -18,6 +18,7 @@
     "orientation",
     "inference_limits",
     "execution_posture",
+    "delegation_decision",
     "durable_intent",
     "handoff_requirements",
     "next_allowed_action"
@@ -175,6 +176,7 @@
         "quality_tradeoff",
         "token_tradeoff",
         "ready_handoff",
+        "delegation_decision",
         "inference_limits"
       ],
       "properties": {
@@ -228,6 +230,11 @@
           ],
           "description": "Prompt or handoff packet to use when local mode allows manual or suggested delegation."
         },
+        "delegation_decision": {
+          "type": "object",
+          "description": "Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and changed-path signals.",
+          "additionalProperties": true
+        },
         "inference_limits": {
           "type": "array",
           "items": {
@@ -244,6 +251,11 @@
     "durable_intent": {
       "type": "object",
       "description": "Compact durable system or subsystem intent pressure that may affect scope, proof, delegation, or closeout.",
+      "additionalProperties": true
+    },
+    "delegation_decision": {
+      "type": "object",
+      "description": "Top-level copy of the compact delegation decision for next-action consumers.",
       "additionalProperties": true
     },
     "handoff_requirements": {

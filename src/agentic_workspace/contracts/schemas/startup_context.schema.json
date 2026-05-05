@@ -203,6 +203,11 @@
       "type": "object",
       "description": "Compact statement of the current operating mode and risk posture."
     },
+    "delegation_decision": {
+      "type": "object",
+      "description": "Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and task signals.",
+      "additionalProperties": true
+    },
     "durable_intent": {
       "type": "object",
       "description": "Compact durable task, subsystem, and system intent pressure to consider before implementation."

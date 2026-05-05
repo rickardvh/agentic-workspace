@@ -32,6 +32,7 @@
     "safety.safe_to_auto_run_commands",
     "safety.requires_human_verification_on_pr",
     "delegation.mode",
+    "clarification.mode",
     "local_memory.enabled",
     "local_memory.path",
     "delegation_targets.<target>.strength",

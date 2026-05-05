@@ -25,6 +25,8 @@ Machine-local override schema for invocation preferences, delegation capabilitie
 | `safety.requires_human_verification_on_pr` | boolean | no |  | Whether pull request or review closeout on this machine should remain lower-trust until a human verifies it. |  |  |
 | `delegation` | object | no |  | Machine-local delegation control. This decides how far local tooling may go after recommending stay-local, stronger-reasoning, external-delegation, or manual-handoff. |  |  |
 | `delegation.mode` | enum `"off"`, `"manual"`, `"suggest"`, `"auto"` | no | `"suggest"` | Local control mode for delegation: disable target recommendations, prepare manual handoff prompts, suggest targets without execution, or allow automatic delegation only when safety settings permit it. |  |  |
+| `clarification` | object | no |  | Machine-local clarification control for when agents should stop for human input instead of guessing or widening scope. |  |  |
+| `clarification.mode` | enum `"ask-first"`, `"suggest"`, `"auto-continue"` | no | `"suggest"` | Local control mode for clarification: stop and ask before proceeding when intent is unclear, surface the ask-human option without forcing it, or continue with the best bounded interpretation unless a hard blocker is present. |  |  |
 | `local_memory` | object | no |  | Machine-local memory opt-in and path configuration. |  |  |
 | `local_memory.enabled` | boolean | no |  | Whether this machine may use local-only repo memory in addition to checked-in shared Memory. |  |  |
 | `local_memory.path` | string | no |  | Repository-relative path for local-only memory; it must stay ignored and non-authoritative. |  |  |

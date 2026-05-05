@@ -40,6 +40,7 @@ from agentic_workspace.config import (
     SUPPORTED_ASSURANCE_LEVELS,
     SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
     SUPPORTED_CAPABILITY_LOCATIONS,
+    SUPPORTED_CLARIFICATION_CONTROL_MODES,
     SUPPORTED_DELEGATION_CONTROL_MODES,
     SUPPORTED_DELEGATION_OUTCOMES,
     SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES,
@@ -8246,6 +8247,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "status": payload.get("operating_posture", {}).get("status", "unknown"),
             "required_behavior_summary": payload.get("operating_posture", {}).get("required_behavior_summary", ""),
         },
+        "delegation_decision": payload.get("delegation_decision", {}),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
             "rule": "Use listed skills only when directly relevant; otherwise proceed from the next action.",
@@ -8386,6 +8388,12 @@ def _start_payload(
         subsystem_matched_count = int(subsystem_projection.get("matched_count", 0) or 0) if isinstance(subsystem_projection, dict) else 0
         if task_text or subsystem_matched_count:
             payload["durable_intent"] = durable_intent
+    execution_posture = _execution_posture_payload(
+        config=config,
+        changed_paths=_normalize_changed_paths(changed_paths),
+        task_text=task_text,
+    )
+    payload["delegation_decision"] = execution_posture["delegation_decision"]
     cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
     if cli_compatibility["configured"]:
         payload["cli_compatibility"] = cli_compatibility
@@ -8456,6 +8464,11 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
     attention_paths = [item["path"] for item in path_boundaries if item["requires_attention"]]
     inspect_files = normalized_paths or list(implementer_template["default_inspect_files"])
     task_routing = _implementation_task_routing(target_root=target_root, task_text=task_text)
+    execution_posture = _execution_posture_payload(
+        config=config,
+        changed_paths=normalized_paths,
+        task_text=task_text,
+    )
     payload = {
         "kind": "implementer-context/v1",
         "target": target_root.as_posix(),
@@ -8503,11 +8516,8 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
                 "or continuation is not obvious."
             ),
         },
-        "execution_posture": _execution_posture_payload(
-            config=config,
-            changed_paths=normalized_paths,
-            task_text=task_text,
-        ),
+        "execution_posture": execution_posture,
+        "delegation_decision": execution_posture["delegation_decision"],
         "durable_intent": _intent_decision_projection(
             target_root=target_root,
             config=config,
@@ -8580,6 +8590,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "proof_burden": capability.get("proof_burden"),
             "delegation_recommendation": runtime_resolution.get("recommendation"),
         },
+        "delegation_decision": execution_posture.get("delegation_decision", {}),
         "detail_command": "agentic-workspace implement --profile full --changed <paths> --format json",
     }
 
@@ -8796,6 +8807,134 @@ def _delegation_control_payload(local_override: MixedAgentLocalOverride) -> dict
     }
 
 
+def _clarification_control_payload(local_override: MixedAgentLocalOverride) -> dict[str, Any]:
+    configured_mode = local_override.clarification_mode or "suggest"
+    mode_actions = {
+        "ask-first": "Stop and ask the human when task intent, ownership, or required information is unclear.",
+        "suggest": "Surface the ask-human option when uncertainty is material, but continue when the next action is otherwise safe.",
+        "auto-continue": "Continue with the best bounded interpretation unless a hard blocker or safety boundary is present.",
+    }
+    return {
+        "configured_mode": configured_mode,
+        "effective_mode": configured_mode,
+        "supported_modes": list(SUPPORTED_CLARIFICATION_CONTROL_MODES),
+        "source": "local-override" if local_override.clarification_mode is not None else "default",
+        "human_control": {
+            "rule": "Clarification posture controls when the agent should stop for human input instead of guessing or widening scope.",
+            "next_action": mode_actions.get(configured_mode, mode_actions["suggest"]),
+        },
+    }
+
+
+def _delegation_next_action_decision(
+    *,
+    config: WorkspaceConfig,
+    execution_posture: dict[str, Any],
+    task_text: str | None,
+    changed_paths: list[str],
+) -> dict[str, Any]:
+    capability = execution_posture.get("capability_posture", {})
+    runtime_resolution = execution_posture.get("runtime_resolution", {})
+    delegation_control = execution_posture.get("delegation_control", _delegation_control_payload(config.local_override))
+    clarification_control = _clarification_control_payload(config.local_override)
+    recommendation = str(runtime_resolution.get("recommendation", "stay-local"))
+    mode = str(delegation_control.get("effective_mode", "suggest"))
+    clarification_mode = str(clarification_control.get("effective_mode", "suggest"))
+    selected_target = execution_posture.get("selected_target")
+    target_name = str(selected_target.get("name")) if isinstance(selected_target, dict) and selected_target.get("name") else None
+    capability_status = str(capability.get("status", "unknown")) if isinstance(capability, dict) else "unknown"
+    posture = capability.get("posture", {}) if isinstance(capability, dict) else {}
+    work_shape = capability.get("work_shape") or (posture.get("work shape") if isinstance(posture, dict) else None)
+    proof_burden = capability.get("proof_burden") or (posture.get("proof burden") if isinstance(posture, dict) else None)
+    reasons = list(runtime_resolution.get("reasons", [])) if isinstance(runtime_resolution.get("reasons", []), list) else []
+    if not reasons:
+        reasons = [str(runtime_resolution.get("guidance", "Local posture did not produce a specific reason."))]
+
+    missing_task_signal = capability_status == "insufficient-task-signal" or (not task_text and not changed_paths)
+    decision = "stay-local"
+    required_next_action = "continue-local"
+    handoff_command: str | None = None
+    manual_prompt: dict[str, Any] | None = None
+    mode_effect = "Delegation mode is suggest by default: surface the decision, but do not delegate automatically."
+
+    downrouting = runtime_resolution.get("downrouting_guardrail", {})
+    downrouting_active = isinstance(downrouting, dict) and downrouting.get("status") == "active"
+
+    if missing_task_signal and clarification_mode == "ask-first":
+        decision = "ask-human"
+        required_next_action = "stop-and-ask-human"
+        reasons = ["clarification.mode is ask-first and the command lacks enough task or changed-path signal"]
+    elif recommendation == "manual-handoff":
+        decision = "manual-handoff"
+        required_next_action = "prepare-manual-handoff"
+    elif recommendation == "stronger-reasoning":
+        decision = "suggest-escalation"
+        required_next_action = "mention-suggestion" if mode == "suggest" else "prepare-handoff"
+    elif recommendation == "external-delegation":
+        decision = "suggest-delegation"
+        required_next_action = "mention-suggestion" if mode == "suggest" else "prepare-handoff"
+    elif downrouting_active:
+        decision = "suggest-downroute"
+        required_next_action = "mention-suggestion" if mode == "suggest" else "prepare-handoff"
+
+    if mode == "off":
+        mode_effect = "delegation.mode is off: do not use local delegation targets."
+        if decision in {"suggest-delegation", "suggest-downroute"}:
+            decision = "stay-local"
+            required_next_action = "continue-local"
+    elif mode == "manual":
+        mode_effect = "delegation.mode is manual: prepare a handoff prompt or packet and stop for human/runtime execution."
+        if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation"}:
+            required_next_action = "prepare-handoff"
+    elif mode == "auto" and delegation_control.get("execution_permitted") is True:
+        mode_effect = "delegation.mode is auto and safety permits execution within target-profile limits."
+        if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation"}:
+            required_next_action = "execute-when-safe"
+
+    if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation", "manual-handoff"}:
+        handoff_command = _command_with_cli_invoke(
+            command="agentic-planning handoff --target . --format json",
+            cli_invoke=config.cli_invoke,
+        )
+    if decision in {"manual-handoff", "ask-human"}:
+        manual_prompt = {
+            "kind": "agentic-workspace/manual-human-prompt/v1",
+            "target": "human-or-external-strong-general-purpose-model",
+            "context": "The current agent needs bounded input before safely choosing or continuing the next action.",
+            "question": "Clarify the intended outcome, missing constraints, or high-judgment decision for this task.",
+            "constraints": [
+                "Keep the answer bounded to the current task.",
+                "Do not widen implementation scope unless explicitly intended.",
+                "State any hard stop conditions or proof expectations.",
+            ],
+            "expected_output": "A short decision, constraint list, or answer the current agent can apply directly.",
+            "return_to": "Paste the answer back into the current agent session for integration.",
+        }
+
+    return {
+        "kind": "agentic-workspace/delegation-next-action/v1",
+        "status": "evaluated",
+        "mode": mode,
+        "clarification_mode": clarification_mode,
+        "decision": decision,
+        "target": target_name,
+        "work_shape": work_shape,
+        "proof_burden": proof_burden,
+        "quality_risk": "high" if proof_burden == "high" else ("medium" if proof_burden == "non-obvious" else "low"),
+        "token_savings_expected": "likely"
+        if decision == "suggest-downroute"
+        else ("possible" if decision == "suggest-delegation" else "none"),
+        "required_next_action": required_next_action,
+        "mode_effect": mode_effect,
+        "reason": reasons[0],
+        "handoff_command": handoff_command,
+        "manual_prompt": manual_prompt,
+        "human_control_summary": (
+            "Local posture may suggest delegation or clarification, but only auto mode may execute without a human handoff."
+        ),
+    }
+
+
 def _execution_posture_payload(
     *,
     config: WorkspaceConfig,
@@ -8859,6 +8998,17 @@ def _execution_posture_payload(
         "quality_tradeoff": quality_tradeoff,
         "token_tradeoff": token_tradeoff,
         "ready_handoff": ready_handoff,
+        "delegation_decision": _delegation_next_action_decision(
+            config=config,
+            execution_posture={
+                "capability_posture": posture,
+                "runtime_resolution": runtime_resolution,
+                "delegation_control": delegation_control,
+                "selected_target": target,
+            },
+            task_text=task_text,
+            changed_paths=changed_paths,
+        ),
         "inference_limits": [
             "Task posture is inferred from changed paths and optional --task text; it is not proof of human intent.",
             "No delegation target may reduce required validation, review, or closeout evidence.",
@@ -12342,6 +12492,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "supported_target_cost_classes": list(SUPPORTED_DELEGATION_TARGET_COST_CLASSES),
                 "supported_target_latency_classes": list(SUPPORTED_DELEGATION_TARGET_LATENCY_CLASSES),
                 "supported_delegation_modes": list(SUPPORTED_DELEGATION_CONTROL_MODES),
+                "supported_clarification_modes": list(SUPPORTED_CLARIFICATION_CONTROL_MODES),
                 "intended_scope": [
                     "machine-specific capability posture",
                     "account- or cost-profile asymmetry",
@@ -12362,6 +12513,16 @@ def _defaults_payload() -> dict[str, Any]:
                     "manual": "prepare handoff packets or prompts only",
                     "suggest": "recommend a target and rationale, but do not execute",
                     "auto": "permit automatic delegation only when local safety and target rules allow it",
+                },
+            },
+            "clarification_control": {
+                "field": "clarification.mode",
+                "default": "suggest",
+                "supported_modes": list(SUPPORTED_CLARIFICATION_CONTROL_MODES),
+                "mode_semantics": {
+                    "ask-first": "stop and ask when task intent, ownership, or required information is unclear",
+                    "suggest": "surface the ask-human option without forcing it when uncertainty is material",
+                    "auto-continue": "continue with the best bounded interpretation unless a hard blocker is present",
                 },
             },
             "local_outcome_artifact": {
@@ -16029,6 +16190,10 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 local_override.delegation_mode or "suggest",
                 source="local-override" if local_override.delegation_mode is not None else "default",
             ),
+            "clarification_mode": _sourced_value(
+                local_override.clarification_mode or "suggest",
+                source="local-override" if local_override.clarification_mode is not None else "default",
+            ),
         },
         "derived_mode": {
             "planner_executor_pattern": planner_executor_pattern,
@@ -16182,6 +16347,7 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "strong_planner_available": effective_posture["strong_planner_available"],
             "cheap_bounded_executor_available": effective_posture["cheap_bounded_executor_available"],
             "delegation_mode": effective_posture["delegation_mode"],
+            "clarification_mode": effective_posture["clarification_mode"],
             "safe_to_auto_run_commands": effective_posture["safe_to_auto_run_commands"],
             "prefer_internal_delegation_when_available": effective_posture["prefer_internal_delegation_when_available"],
             "requires_human_verification_on_pr": effective_posture["requires_human_verification_on_pr"],

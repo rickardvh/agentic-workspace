@@ -87,6 +87,23 @@
       "additionalProperties": false,
       "description": "Machine-local delegation control. This decides how far local tooling may go after recommending stay-local, stronger-reasoning, external-delegation, or manual-handoff."
     },
+    "clarification": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "ask-first",
+            "suggest",
+            "auto-continue"
+          ],
+          "default": "suggest",
+          "description": "Local control mode for clarification: stop and ask before proceeding when intent is unclear, surface the ask-human option without forcing it, or continue with the best bounded interpretation unless a hard blocker is present."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Machine-local clarification control for when agents should stop for human input instead of guessing or widening scope."
+    },
     "local_memory": {
       "type": "object",
       "properties": {

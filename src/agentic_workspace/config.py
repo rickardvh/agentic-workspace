@@ -151,6 +151,11 @@ SUPPORTED_DELEGATION_CONTROL_MODES = (
     "suggest",
     "auto",
 )
+SUPPORTED_CLARIFICATION_CONTROL_MODES = (
+    "ask-first",
+    "suggest",
+    "auto-continue",
+)
 WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
 WORKSPACE_POINTER_BLOCK = (
@@ -246,6 +251,7 @@ class MixedAgentLocalOverride:
     safe_to_auto_run_commands: bool | None
     requires_human_verification_on_pr: bool | None
     delegation_mode: str | None
+    clarification_mode: str | None
     local_memory_enabled: bool | None
     local_memory_path: Path
     delegation_targets: tuple[DelegationTargetProfile, ...]
@@ -972,6 +978,7 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         safe_to_auto_run_commands=None,
         requires_human_verification_on_pr=None,
         delegation_mode=None,
+        clarification_mode=None,
         local_memory_enabled=None,
         local_memory_path=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
         delegation_targets=(),
@@ -1066,6 +1073,21 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             allowed_text = ", ".join(SUPPORTED_DELEGATION_CONTROL_MODES)
             raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} delegation.mode must be one of: {allowed_text}.")
 
+    raw_clarification = payload.get("clarification", {})
+    if raw_clarification is None:
+        raw_clarification = {}
+    if not isinstance(raw_clarification, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [clarification] section must be a table.")
+    unknown_clarification = sorted(set(raw_clarification) - {"mode"})
+    if unknown_clarification:
+        unknown_text = ", ".join(unknown_clarification)
+        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [clarification] contains unsupported field(s): {unknown_text}.")
+    clarification_mode = raw_clarification.get("mode")
+    if clarification_mode is not None:
+        if not isinstance(clarification_mode, str) or clarification_mode not in SUPPORTED_CLARIFICATION_CONTROL_MODES:
+            allowed_text = ", ".join(SUPPORTED_CLARIFICATION_CONTROL_MODES)
+            raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} clarification.mode must be one of: {allowed_text}.")
+
     raw_local_memory = payload.get("local_memory", {})
     if raw_local_memory is None:
         raw_local_memory = {}
@@ -1123,6 +1145,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             config_path=WORKSPACE_LOCAL_CONFIG_PATH,
         ),
         delegation_mode=delegation_mode,
+        clarification_mode=clarification_mode,
         local_memory_enabled=require_optional_bool(
             payload=raw_local_memory,
             key="enabled",

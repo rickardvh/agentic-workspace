@@ -561,6 +561,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "safety.safe_to_auto_run_commands",
         "safety.requires_human_verification_on_pr",
         "delegation.mode",
+        "clarification.mode",
         "local_memory.enabled",
         "local_memory.path",
         "delegation_targets.<target>.strength",
@@ -606,11 +607,16 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["mixed_agent"]["local_override"]["supported_target_cost_classes"] == ["cheap", "standard", "premium", "unknown"]
     assert payload["mixed_agent"]["local_override"]["supported_target_latency_classes"] == ["fast", "standard", "slow", "unknown"]
     assert payload["mixed_agent"]["local_override"]["supported_delegation_modes"] == ["off", "manual", "suggest", "auto"]
+    assert payload["mixed_agent"]["local_override"]["supported_clarification_modes"] == ["ask-first", "suggest", "auto-continue"]
     delegation_control = payload["mixed_agent"]["delegation_control"]
     assert delegation_control["field"] == "delegation.mode"
     assert delegation_control["default"] == "suggest"
     assert "quality" in delegation_control["quality_first_rule"]
     assert delegation_control["mode_semantics"]["auto"].startswith("permit automatic delegation")
+    clarification_control = payload["mixed_agent"]["clarification_control"]
+    assert clarification_control["field"] == "clarification.mode"
+    assert clarification_control["default"] == "suggest"
+    assert clarification_control["mode_semantics"]["ask-first"].startswith("stop and ask")
     assert payload["mixed_agent"]["local_outcome_artifact"] == {
         "path": ".agentic-workspace/delegation-outcomes.json",
         "kind": "agentic-workspace/delegation-outcomes/v1",
@@ -1153,6 +1159,9 @@ schema_version = 1
 [delegation]
 mode = "suggest"
 
+[clarification]
+mode = "ask-first"
+
 [safety]
 safe_to_auto_run_commands = false
 """.strip(),
@@ -1170,6 +1179,7 @@ safe_to_auto_run_commands = false
     assert payload["workspace"]["optimization_bias"] == "agent-efficiency"
     assert payload["workspace"]["workflow_obligations"][0]["id"] == "closeout_proof"
     assert payload["local_runtime"]["delegation_mode"] == {"value": "suggest", "source": "local-override"}
+    assert payload["local_runtime"]["clarification_mode"] == {"value": "ask-first", "source": "local-override"}
     assert payload["local_runtime"]["safe_to_auto_run_commands"] == {"value": False, "source": "local-override"}
     assert payload["edit_reference"]["check_command"] == "agentic-workspace config --target . --profile compact --format json"
     assert payload["full_profile_command"] == "agentic-workspace config --target . --profile full --format json"
@@ -7473,7 +7483,17 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert posture["detail_sections"]["improvement"] == (
         "uv run agentic-workspace report --target ./repo --section repo_friction --format json"
     )
-    assert len(json.dumps(payload, sort_keys=True)) < 15200
+    assert payload["delegation_decision"]["status"] == "evaluated"
+    assert payload["delegation_decision"]["mode"] == "suggest"
+    assert payload["delegation_decision"]["decision"] in {
+        "stay-local",
+        "suggest-delegation",
+        "suggest-downroute",
+        "suggest-escalation",
+        "manual-handoff",
+        "ask-human",
+    }
+    assert len(json.dumps(payload, sort_keys=True)) < 15300
     assert payload["proof"]["required_commands"] == [
         "uv run pytest tests -q",
         "uv run ruff check src tests",
@@ -7516,10 +7536,43 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert payload["immediate_next_allowed_action"]["action"] in {"choose-smallest-workflow-shape", "continue-active-planning-record"}
     assert "implement --profile tiny --changed <paths>" in payload["immediate_next_allowed_action"]["summary"]
     assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
+    assert payload["delegation_decision"]["status"] == "evaluated"
+    assert payload["delegation_decision"]["mode"] == "suggest"
+    assert payload["delegation_decision"]["required_next_action"] in {
+        "continue-local",
+        "mention-suggestion",
+        "prepare-handoff",
+        "execute-when-safe",
+        "stop-and-ask-human",
+    }
     assert "durable_intent" not in payload
     assert "cli_compatibility" not in payload
     assert "proof" not in payload
     assert len(payload["authority_markers"]) == 1
+
+
+def test_start_tiny_respects_ask_first_clarification_mode(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[clarification]",
+                'mode = "ask-first"',
+            ]
+        ),
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--profile", "tiny", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    decision = payload["delegation_decision"]
+    assert decision["decision"] == "ask-human"
+    assert decision["required_next_action"] == "stop-and-ask-human"
+    assert decision["manual_prompt"]["target"] == "human-or-external-strong-general-purpose-model"
+    assert decision["clarification_mode"] == "ask-first"
 
 
 def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -> None:
@@ -7791,6 +7844,9 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
     assert payload["execution_posture"]["kind"] == "agentic-workspace/execution-posture/v1"
     assert payload["execution_posture"]["delegation_control"]["effective_mode"] == "suggest"
     assert payload["execution_posture"]["delegation_control"]["execution_permitted"] is False
+    assert payload["delegation_decision"]["status"] == "evaluated"
+    assert payload["delegation_decision"] == payload["execution_posture"]["delegation_decision"]
+    assert payload["delegation_decision"]["mode"] == "suggest"
     assert "quality" in payload["execution_posture"]["quality_tradeoff"]
     assert "Token saving" in payload["execution_posture"]["token_tradeoff"]
     assert payload["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
@@ -7829,6 +7885,8 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert payload["scope"]["inspect_files"] == ["src/agentic_workspace/cli.py"]
     assert "uv run pytest tests -q" in payload["proof"]["required_commands"]
     assert payload["routing"]["work_shape"] == "bounded"
+    assert payload["delegation_decision"]["status"] == "evaluated"
+    assert payload["delegation_decision"]["mode"] == "suggest"
     assert "package_boundary" not in payload
     assert "authority_markers" not in payload
     assert "durable_intent" not in payload
@@ -7930,6 +7988,10 @@ def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: 
     assert posture["ready_handoff"]["mode"] == "manual"
     assert posture["ready_handoff"]["packet_type"] == "manual_human_clarification"
     assert "quality" in posture["ready_handoff"]["prompt"]
+    assert posture["delegation_decision"]["decision"] == "suggest-escalation"
+    assert posture["delegation_decision"]["required_next_action"] == "prepare-handoff"
+    assert posture["delegation_decision"]["handoff_command"] == "agentic-planning handoff --target . --format json"
+    assert payload["delegation_decision"] == posture["delegation_decision"]
 
 
 def test_ownership_path_answer_includes_authority_marker_and_boundary_warning(capsys) -> None:
