@@ -922,13 +922,67 @@ def test_model_cli_harness_postmortem_prompt_keeps_feedback_compact_and_actionab
 
     assert "Why did you choose the workflow and commands you used?" in prompt
     assert "Do not inspect the repo, run commands, read files, or edit files." in prompt
-    assert "Use only the supplied prompt, mutation summary, warnings, and prior-output excerpt." in prompt
+    assert prompt.startswith("TASK: Answer the postmortem questions using the provided evidence.")
+    assert "Do not ask for more evidence." in prompt
+    assert "Use only the evidence block above." in prompt
+    assert "The evidence block is complete." in prompt
+    assert "EVIDENCE BLOCK START" in prompt
+    assert "EVIDENCE BLOCK END" in prompt
+    assert "Warnings: Too much raw reading." in prompt
+    assert "Mutation: status=clean" in prompt
+    assert prompt.index("Warnings:") < prompt.index("Original prompt excerpt:")
     assert "What was ambiguous, missing, or more verbose than necessary?" in prompt
     assert "What would have reduced token usage without reducing safety or proof quality?" in prompt
     assert "Separate model/provider limitations from product or harness improvements." in prompt
-    assert "say what evidence is missing instead of inspecting the repository" in prompt
-    assert "Keep the answer under 250 words." in prompt
-    assert len(prompt) < 5000
+    assert "If a required field inside the block says missing, name that field." in prompt
+    assert "Keep the answer under 200 words." in prompt
+    assert len(prompt) < 2200
+
+
+def test_model_cli_harness_postmortem_prompt_truncates_long_evidence() -> None:
+    harness = _load_harness()
+
+    prompt = harness._postmortem_feedback_prompt(
+        scenario={"id": "startup-orientation"},
+        invocation={
+            "scenario_id": "startup-orientation",
+            "prompt_variant_id": "default",
+            "prompt": "P" * 2000,
+            "mutation_summary": {"status": "changed", "created_count": 3, "modified_count": 4, "deleted_count": 0},
+            "warnings": [{"warning_class": "model_cli_semantic_workflow_failure", "message": "Raw file scan"}],
+            "result": {"final_message": "O" * 2000},
+        },
+    )
+
+    assert "Warnings: Raw file scan" in prompt
+    assert "Mutation: status=changed, created=3, modified=4, deleted=0" in prompt
+    assert len(prompt) < 2500
+
+
+def test_model_cli_harness_postmortem_feedback_warns_on_missing_evidence_claim() -> None:
+    harness = _load_harness()
+
+    warnings = harness._postmortem_feedback_warnings(
+        result={"stdout": "The evidence block is missing. Please provide the complete evidence.", "stderr": ""}
+    )
+
+    assert warnings == [
+        {
+            "warning_class": "model_cli_postmortem_feedback_failure",
+            "message": "The postmortem agent claimed supplied evidence was missing.",
+        }
+    ]
+
+
+def test_model_cli_harness_postmortem_feedback_warns_on_repo_inspection() -> None:
+    harness = _load_harness()
+
+    warnings = harness._postmortem_feedback_warnings(
+        result={"stdout": "● Read AGENTS.md\n✗ List files (shell)\nPermission denied", "stderr": ""}
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert "The postmortem agent inspected files or attempted commands despite the no-inspection rule." in messages
 
 
 def test_model_cli_harness_parser_accepts_postmortem_feedback_flag() -> None:

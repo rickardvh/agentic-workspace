@@ -582,6 +582,9 @@ def test_execplan_template_surfaces_archive_closeout_terminal_values() -> None:
     assert template["closure_check"]["slice status"] == "bounded slice complete"
     assert template["closure_check"]["larger-intent status"] == "closed"
     assert template["closure_check"]["closure decision"] == "archive-and-close"
+    assert "accepted values" in template["closure_check"]
+    assert "archive-but-keep-lane-open" in template["closure_check"]["accepted values"]
+    assert "archive-plan <plan> --prepare-closeout" in template["closure_check"]["accepted values"]
     assert template["durable_residue"]["status"] == "none"
     assert template["improvement_signal_review"]["source"] == "operating_posture"
     assert "reported-only/routed" in template["improvement_signal_review"]["guidance"]
@@ -3087,6 +3090,29 @@ def test_archive_execplan_refusal_names_supported_closure_decisions(tmp_path: Pa
         and "closure_check.closure decision" in action.detail
         and "archive-and-close" in action.detail
         and "archive-but-keep-lane-open" in action.detail
+        and "Use `archive-and-close`" in action.detail
+        for action in result.actions
+    )
+
+
+def test_archive_execplan_refusal_suggests_closed_for_satisfied_larger_intent(tmp_path: Path) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
+    _write(
+        plan_path,
+        _minimal_execplan(status="completed").replace("- Larger-intent status: closed", "- Larger-intent status: satisfied"),
+    )
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_intent_not_fully_satisfied" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review"
+        and action.path == plan_path
+        and "closure_check.larger-intent status" in action.detail
+        and "Use `closed`" in action.detail
         for action in result.actions
     )
 

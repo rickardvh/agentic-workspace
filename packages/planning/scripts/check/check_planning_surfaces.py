@@ -55,6 +55,10 @@ ROADMAP_MAX_CANDIDATES = 8
 ROADMAP_MAX_CANDIDATE_SECTION_LINES = 90
 DRIFT_LOG_MAX_ENTRIES = 12
 DRIFT_LOG_MAX_LINES = 80
+ARCHIVE_SLICE_STATUS_VALUES = ("complete", "completed", "bounded slice complete")
+ARCHIVE_AND_CLOSE_LARGER_INTENT_VALUES = ("closed", "complete", "completed")
+ARCHIVE_KEEP_OPEN_LARGER_INTENT_VALUES = ("open", "partial", "unfinished")
+ARCHIVE_CLOSURE_DECISION_VALUES = ("archive-and-close", "archive-but-keep-lane-open")
 
 WARNING_TODO_SHAPE_DRIFT = "todo_shape_drift"
 WARNING_TODO_ACTIVATION_OVERFLOW = "todo_activation_overflow"
@@ -2168,8 +2172,20 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
 
         if has_only_completed_status:
             closure_decision = closure_check_fields.get("closure decision", "").strip().lower()
+            slice_status = closure_check_fields.get("slice status", "").strip().lower()
             larger_intent_status = closure_check_fields.get("larger-intent status", "").strip().lower()
-            if closure_decision in {"keep-active", "stay-active", "continue-active"}:
+            if slice_status not in ARCHIVE_SLICE_STATUS_VALUES:
+                suggested = " Use `complete` for a completed bounded slice." if slice_status in {"satisfied", "done", "closed"} else ""
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_CLOSURE_DRIFT,
+                        _render_path(path),
+                        "Completed execplan Closure Check does not mark the bounded slice complete."
+                        + suggested
+                        + " Accepted values: complete, completed, bounded slice complete.",
+                    )
+                )
+            elif closure_decision in {"keep-active", "stay-active", "continue-active"}:
                 warnings.append(
                     PlanningWarning(
                         WARNING_EXECPLAN_CLOSURE_DRIFT,
@@ -2177,34 +2193,41 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                         "Completed execplan still says it should remain active in Closure Check.",
                     )
                 )
-            elif closure_decision == "archive-and-close" and larger_intent_status not in {"closed", "complete", "completed"}:
+            elif closure_decision == "archive-and-close" and larger_intent_status not in ARCHIVE_AND_CLOSE_LARGER_INTENT_VALUES:
+                suggested = (
+                    " Use `closed` when the larger intent is fully satisfied." if larger_intent_status in {"satisfied", "done"} else ""
+                )
                 warnings.append(
                     PlanningWarning(
                         WARNING_EXECPLAN_CLOSURE_DRIFT,
                         _render_path(path),
-                        "Archive-and-close requires a closed larger-intent status in Closure Check.",
+                        "Archive-and-close requires a closed larger-intent status in Closure Check."
+                        + suggested
+                        + " Accepted values: closed, complete, completed.",
                     )
                 )
-            elif closure_decision == "archive-but-keep-lane-open" and larger_intent_status not in {"open", "partial", "unfinished"}:
+            elif closure_decision == "archive-but-keep-lane-open" and larger_intent_status not in ARCHIVE_KEEP_OPEN_LARGER_INTENT_VALUES:
                 warnings.append(
                     PlanningWarning(
                         WARNING_EXECPLAN_CLOSURE_DRIFT,
                         _render_path(path),
-                        "Archive-but-keep-lane-open requires an open or partial larger-intent status in Closure Check.",
+                        "Archive-but-keep-lane-open requires an open or partial larger-intent status in Closure Check."
+                        " Accepted values: open, partial, unfinished.",
                     )
                 )
-            elif closure_decision and closure_decision not in {
-                "archive-and-close",
-                "archive-but-keep-lane-open",
+            elif closure_decision and closure_decision not in ARCHIVE_CLOSURE_DECISION_VALUES + (
                 "keep-active",
                 "stay-active",
                 "continue-active",
-            }:
+            ):
+                suggested = " Use `archive-and-close` for fully completed work." if closure_decision in {"archive", "close"} else ""
                 warnings.append(
                     PlanningWarning(
                         WARNING_EXECPLAN_CLOSURE_DRIFT,
                         _render_path(path),
-                        f"Closure Check uses an unsupported closure decision: {closure_decision}.",
+                        f"Closure Check uses an unsupported closure decision: {closure_decision}."
+                        + suggested
+                        + " Accepted archive decisions: archive-and-close, archive-but-keep-lane-open.",
                     )
                 )
 

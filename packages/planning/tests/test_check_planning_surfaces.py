@@ -1084,6 +1084,36 @@ def test_completed_execplan_with_partial_archive_decision_requires_open_larger_i
     assert any(warning.warning_class == "execplan_closure_drift" for warning in warnings)
 
 
+def test_completed_execplan_checker_suggests_archive_closeout_replacements(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_closure_replacements")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    plan = (
+        _minimal_execplan(status="completed")
+        .replace("- Slice status: bounded slice complete", "- Slice status: satisfied")
+        .replace("- Closure decision: archive-and-close", "- Closure decision: archive")
+    )
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", plan)
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+
+    messages = [warning.message for warning in warnings if warning.warning_class == "execplan_closure_drift"]
+    assert any("Use `complete`" in message for message in messages)
+
+
+def test_completed_execplan_checker_suggests_archive_decision_replacement(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_archive_decision_replacement")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    plan = _minimal_execplan(status="completed").replace("- Closure decision: archive-and-close", "- Closure decision: archive")
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", plan)
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+
+    messages = [warning.message for warning in warnings if warning.warning_class == "execplan_closure_drift"]
+    assert any("Use `archive-and-close`" in message for message in messages)
+
+
 def test_planning_surface_checker_validates_execplan_json_schema(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_record_schema_execplan")
     _install_planning_record_schemas(tmp_path)

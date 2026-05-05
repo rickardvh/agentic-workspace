@@ -55,6 +55,16 @@ MANAGED_STATE_HEADER_LINES = (
 )
 PLANNING_STATE_MATURITIES = {"idea", "candidate", "shaped", "ready", "active"}
 PLANNING_STATE_STATUSES = {"deferred", "next", "active", "blocked"}
+ARCHIVE_SLICE_STATUS_VALUES = ("complete", "completed", "bounded slice complete")
+ARCHIVE_AND_CLOSE_LARGER_INTENT_VALUES = ("closed", "complete", "completed")
+ARCHIVE_KEEP_OPEN_LARGER_INTENT_VALUES = ("open", "partial", "unfinished")
+ARCHIVE_CLOSURE_DECISION_VALUES = ("archive-and-close", "archive-but-keep-lane-open")
+ARCHIVE_CLOSEOUT_VALUE_HINT = (
+    "Accepted values: slice status = complete|completed|bounded slice complete; "
+    "larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished "
+    "for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. "
+    "Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields."
+)
 PLANNING_STATE_ROLE_FIELDS = (
     "decision_owner",
     "strategy_role",
@@ -8564,7 +8574,8 @@ def archive_execplan(
         )
         result.add("manual review", plan_path, "fill `Closure Check` before archiving")
         return result
-    if slice_status not in {"complete", "completed", "bounded slice complete"}:
+    if slice_status not in ARCHIVE_SLICE_STATUS_VALUES:
+        suggested = " Use `complete` for a completed bounded slice." if slice_status in {"satisfied", "done", "closed"} else ""
         result.warnings.append(
             {
                 "warning_class": "archive_missing_closure_check",
@@ -8577,7 +8588,7 @@ def archive_execplan(
             plan_path,
             (
                 "mark the bounded slice complete before archiving: "
-                "`closure_check.slice status` must be one of `complete`, `completed`, or `bounded slice complete`"
+                "`closure_check.slice status` must be one of `complete`, `completed`, or `bounded slice complete`." + suggested
             ),
         )
         return result
@@ -8592,7 +8603,12 @@ def archive_execplan(
         result.add("manual review", plan_path, "keep the plan active until `Closure Check` allows archive")
         return result
     if closure_decision == "archive-and-close":
-        if fully_satisfied not in {"yes", "true"} or larger_intent_status not in {"closed", "complete", "completed"}:
+        if fully_satisfied not in {"yes", "true"} or larger_intent_status not in ARCHIVE_AND_CLOSE_LARGER_INTENT_VALUES:
+            suggested = (
+                " Use `closed` when the larger intent is fully satisfied."
+                if larger_intent_status in {"satisfied", "done", "archive", "archived"}
+                else ""
+            )
             result.warnings.append(
                 {
                     "warning_class": "archive_intent_not_fully_satisfied",
@@ -8606,7 +8622,7 @@ def archive_execplan(
                 (
                     "record larger-intent closure honestly before using `archive-and-close`: "
                     "`intent_satisfaction.was original intent fully satisfied?` must be `yes` or `true`, "
-                    "and `closure_check.larger-intent status` must be one of `closed`, `complete`, or `completed`"
+                    "and `closure_check.larger-intent status` must be one of `closed`, `complete`, or `completed`." + suggested
                 ),
             )
             return result
@@ -8628,11 +8644,7 @@ def archive_execplan(
             )
             return result
     elif closure_decision == "archive-but-keep-lane-open":
-        if fully_satisfied not in {"yes", "true", "no", "false"} or larger_intent_status not in {
-            "open",
-            "partial",
-            "unfinished",
-        }:
+        if fully_satisfied not in {"yes", "true", "no", "false"} or larger_intent_status not in ARCHIVE_KEEP_OPEN_LARGER_INTENT_VALUES:
             result.warnings.append(
                 {
                     "warning_class": "archive_intent_not_fully_satisfied",
@@ -8668,6 +8680,7 @@ def archive_execplan(
             )
             return result
     else:
+        suggested = " Use `archive-and-close` for fully completed work." if closure_decision in {"archive", "close", "close-lane"} else ""
         result.warnings.append(
             {
                 "warning_class": "archive_missing_closure_check",
@@ -8680,7 +8693,7 @@ def archive_execplan(
             plan_path,
             (
                 "use a supported closure decision: "
-                "`closure_check.closure decision` must be one of `archive-and-close` or `archive-but-keep-lane-open`"
+                "`closure_check.closure decision` must be one of `archive-and-close` or `archive-but-keep-lane-open`." + suggested
             ),
         )
         return result
@@ -10062,6 +10075,7 @@ def _build_execplan_record_from_todo_item(
             "slice status": "pending",
             "larger-intent status": "pending",
             "closure decision": "pending",
+            "accepted values": ARCHIVE_CLOSEOUT_VALUE_HINT,
             "why this decision is honest": "",
             "evidence carried forward": "",
             "reopen trigger": "",

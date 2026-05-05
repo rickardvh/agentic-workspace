@@ -740,9 +740,28 @@ def _postmortem_feedback_prompt(*, scenario: dict[str, Any], invocation: dict[st
         result = {}
     mutation_summary = invocation.get("mutation_summary", {})
     warnings = invocation.get("warnings", [])
-    final_message = _response_text(result)[-1200:]
-    warning_text = json.dumps(warnings, ensure_ascii=False)[:1500]
-    mutation_text = json.dumps(mutation_summary, ensure_ascii=False)[:1000]
+    final_message = _response_text(result)[-700:]
+    warning_messages = []
+    if isinstance(warnings, list):
+        for warning in warnings[:6]:
+            if isinstance(warning, dict):
+                message = str(warning.get("message") or warning.get("warning_class") or "").strip()
+                evidence = str(warning.get("evidence") or "").strip()
+                warning_messages.append(f"{message} ({evidence})" if evidence else message)
+    warning_text = "; ".join(message for message in warning_messages if message) or "none"
+    if isinstance(mutation_summary, dict):
+        mutation_bits = [
+            f"status={mutation_summary.get('status', 'unknown')}",
+            f"created={mutation_summary.get('created_count', 0)}",
+            f"modified={mutation_summary.get('modified_count', 0)}",
+            f"deleted={mutation_summary.get('deleted_count', 0)}",
+        ]
+        mutation_text = ", ".join(mutation_bits)
+    else:
+        mutation_text = "status=unknown"
+    original_prompt = str(invocation.get("prompt", ""))
+    if len(original_prompt) > 650:
+        original_prompt = original_prompt[:650].rstrip() + "..."
     questions = scenario.get("postmortem_feedback_questions")
     if not isinstance(questions, list) or not questions:
         questions = [
@@ -753,20 +772,49 @@ def _postmortem_feedback_prompt(*, scenario: dict[str, Any], invocation: dict[st
         ]
     question_lines = "\n".join(f"- {question}" for question in questions if str(question).strip())
     return (
-        "You just completed a disposable Agentic Workspace evaluation scenario. "
-        "Do not inspect the repo, run commands, read files, or edit files. "
-        "Use only the supplied prompt, mutation summary, warnings, and prior-output excerpt. "
-        "Give a compact post-mortem for improving the package and harness.\n\n"
+        "TASK: Answer the postmortem questions using the provided evidence. Do not ask for more evidence.\n"
+        "Do not inspect the repo, run commands, read files, or edit files.\n\n"
+        "EVIDENCE BLOCK START\n"
         f"Scenario: {invocation.get('scenario_id', '')} / {invocation.get('prompt_variant_id', '')}\n"
-        f"Original prompt:\n{invocation.get('prompt', '')}\n\n"
-        f"Mutation summary:\n{mutation_text}\n\n"
-        f"Warnings:\n{warning_text}\n\n"
-        f"Your prior final/output excerpt:\n{final_message}\n\n"
+        f"Warnings: {warning_text}\n"
+        f"Mutation: {mutation_text}\n"
+        f"Prior output excerpt: {final_message or 'none'}\n"
+        f"Original prompt excerpt: {original_prompt or 'none'}\n"
+        "EVIDENCE BLOCK END\n\n"
+        "Use only the evidence block above. The evidence block is complete. "
+        "If a required field inside the block says missing, name that field.\n\n"
         "Answer these questions:\n"
         f"{question_lines}\n\n"
-        "Keep the answer under 250 words. Separate model/provider limitations from product or harness improvements. "
-        "If the supplied evidence is insufficient, say what evidence is missing instead of inspecting the repository."
+        "Keep the answer under 200 words. Separate model/provider limitations from product or harness improvements."
     )
+
+
+def _postmortem_feedback_warnings(*, result: dict[str, Any]) -> list[dict[str, str]]:
+    response = _full_response_text(result).lower()
+    warnings: list[dict[str, str]] = []
+
+    def add(message: str, *, evidence: str = "") -> None:
+        warning: dict[str, str] = {
+            "warning_class": "model_cli_postmortem_feedback_failure",
+            "message": message,
+        }
+        if evidence:
+            warning["evidence"] = evidence
+        warnings.append(warning)
+
+    if any(marker in response for marker in ("evidence block is missing", "provide the complete evidence", "provide these directly")):
+        add("The postmortem agent claimed supplied evidence was missing.")
+    inspection_markers = (
+        "● read ",
+        "● list directory",
+        "● search ",
+        "shell)",
+        "permission denied",
+        "get-childitem",
+    )
+    if any(marker in response for marker in inspection_markers):
+        add("The postmortem agent inspected files or attempted commands despite the no-inspection rule.")
+    return warnings
 
 
 def _semantic_workflow_warnings(
@@ -1627,6 +1675,7 @@ def run_suite(
                         "prompt": postmortem_prompt,
                         "command": postmortem_command,
                         "result": postmortem_result,
+                        "warnings": _postmortem_feedback_warnings(result=postmortem_result),
                         "share_path": str(postmortem_share),
                     }
             else:
