@@ -94,7 +94,7 @@
         "does not invent planning files"
       ],
       "required_executed_commands": [
-        "agentic-workspace preflight"
+        "agentic-workspace start"
       ],
       "score_notes": [
         "Good: CLI-first orientation before broad reads.",
@@ -329,7 +329,7 @@
         "**"
       ],
       "required_executed_commands": [
-        "agentic-workspace preflight"
+        "agentic-workspace start"
       ],
       "expected_signals": [
         "weak target escalates or prepares a handoff for high-judgment work",
@@ -467,7 +467,7 @@
         "**"
       ],
       "required_executed_commands": [
-        "agentic-workspace preflight"
+        "agentic-workspace start"
       ],
       "expected_signals": [
         "does not equate passing tests with full intent satisfaction",

@@ -8,5 +8,5 @@ Authority marker:
 - refresh_command: null
 
 <!-- agentic-workspace:workflow:start -->
-For non-trivial requests, first run `agentic-workspace preflight --task "<task>" --format json` using the user's request as `<task>`; use its `primary_next_action` and `skill_routing` before opening raw `.agentic-workspace` files. If unavailable, read `.agentic-workspace/WORKFLOW.md`.
+For non-trivial requests, first run `agentic-workspace start --task "<task>" --format json` using the user's request as `<task>`; follow `immediate_next_allowed_action` and `skill_routing` before opening raw `.agentic-workspace` files. Use `preflight` for takeover or recovery. If unavailable, read `.agentic-workspace/WORKFLOW.md`.
 <!-- agentic-workspace:workflow:end -->

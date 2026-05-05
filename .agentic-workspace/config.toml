@@ -79,15 +79,13 @@ commands = [
 review_hint = "Do this without waiting for explicit instruction. Before claiming a lane complete, separate validation success, issue completion, intent satisfaction, and total operating-cost direction; consume improvement_signal_candidates, fix blockers immediately, create narrow issues for durable friction, and promote reusable knowledge to Memory only when it prevents rediscovery. Surface actionable findings clearly in the final answer."
 
 [workflow_obligations.startup_first_contact_routing]
-summary = "Use compact startup, config, and summary queries before opening raw planning or routing docs."
+summary = "Use the compact start query before opening raw planning or routing docs; add config, summary, or preflight only when the start answer leaves that detail unresolved."
 stage = "pre-work"
 scope_tags = ["workspace", "startup", "routing", "planning"]
 commands = [
-  "uv run agentic-workspace defaults --section startup --format json",
-  "uv run agentic-workspace config --target . --profile compact --format json",
-  "uv run agentic-workspace summary --format json",
+  "uv run agentic-workspace start --task \"<task>\" --format json",
 ]
-review_hint = "Open raw planning state, an active execplan, or deeper routing docs only when the compact answers point there."
+review_hint = "Open raw planning state, an active execplan, config, preflight, or deeper routing docs only when the compact start answer points there."
 
 [workflow_obligations.system_intent_refresh]
 summary = "Refresh declared system-intent sources and the compiled interpretation when higher-level direction changes materially."

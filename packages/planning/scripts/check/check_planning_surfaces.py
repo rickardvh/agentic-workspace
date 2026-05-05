@@ -1101,10 +1101,11 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
 
     required_agents_fragments = (
         "<!-- agentic-workspace:workflow:start -->",
-        "agentic-workspace preflight --task",
-        "primary_next_action",
+        "agentic-workspace start --task",
+        "immediate_next_allowed_action",
         "skill_routing",
         "before opening raw `.agentic-workspace` files",
+        "preflight",
         ".agentic-workspace/workflow.md",
         "<!-- agentic-workspace:workflow:end -->",
     )

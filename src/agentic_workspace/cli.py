@@ -4087,10 +4087,11 @@ def _feature_tier_payload(
         "active": active,
         "default_rule": "Use the smallest module profile whose selected modules match the repo footprint; source-checkout maintainer tooling is not a shipped tier.",
         "detail_command": f"{cli_invoke} modules --target ./repo --format json",
-        "advanced_policy": _advanced_feature_policy_payload(config=config, include_catalog=not compact),
     }
     if compact:
+        payload["advanced_features_enabled_count"] = len(config.advanced_features) if config is not None else 0
         return payload
+    payload["advanced_policy"] = _advanced_feature_policy_payload(config=config, include_catalog=True)
     payload["available_tiers"] = [
         {
             "id": str(profile["id"]),
@@ -7895,11 +7896,15 @@ def _run_preflight_command(
         ),
         cli_invoke=config.cli_invoke,
     )
-    planning_record_present = isinstance(planning_record, dict) and planning_record.get("status") == "present"
+    planning_record_present = isinstance(planning_record, dict) and (
+        planning_record.get("status") == "present"
+        or active_state.get("todo", {}).get("active_count", 0)
+        or active_state.get("execplans", {}).get("active_execplans")
+    )
     preflight_primary_command = (
         _command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=config.cli_invoke)
         if planning_record_present
-        else (first_compact_queries[0] if first_compact_queries else None)
+        else None
     )
 
     # Get config
@@ -7916,15 +7921,15 @@ def _run_preflight_command(
             "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True),
             "entrypoint": startup_payload.get("default_canonical_agent_instructions_file", "AGENTS.md"),
             "entry_query": _command_with_cli_invoke(
-                command=str(tiny_safe_model.get("entry_query", "agentic-workspace preflight --format json")),
+                command=str(tiny_safe_model.get("entry_query", 'agentic-workspace start --task "<task>" --format json')),
                 cli_invoke=config.cli_invoke,
             ),
             "primary_next_action": {
-                "action": "continue-active-planning-record" if planning_record_present else "run-first-compact-query",
+                "action": "continue-active-planning-record" if planning_record_present else "use-preflight-context",
                 "summary": (
                     str(planning_record.get("next_action", "") or "Continue from the active planning record.")
                     if planning_record_present
-                    else "Run the first compact query before opening raw workspace files."
+                    else "Use this preflight answer as takeover context; run more commands only when a listed route is needed."
                 ),
                 "command": preflight_primary_command,
                 "run": preflight_primary_command,
@@ -8202,10 +8207,18 @@ def _start_payload(*, target_root: Path, changed_paths: list[str], task_text: st
                 agent_instructions_file=preflight.get("resolved_config", {}).get("agent_instructions_file", "AGENTS.md")
             )
         step["command"] = _command_with_cli_invoke(command=step.get("command"), cli_invoke=config.cli_invoke)
+    active_planning_present = bool(
+        isinstance(planning_record, dict)
+        and (
+            planning_record.get("status") == "present"
+            or active_state.get("todo", {}).get("active_count", 0)
+            or active_state.get("execplans", {}).get("active_execplans")
+        )
+    )
     primary_command = (
         _command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=config.cli_invoke)
-        if isinstance(planning_record, dict) and planning_record.get("status") == "present"
-        else (preflight.get("startup_guidance", {}).get("first_compact_queries", []) or [None])[0]
+        if active_planning_present
+        else None
     )
 
     workflow_obligations = preflight.get("workflow_obligations", {})
@@ -8231,18 +8244,18 @@ def _start_payload(*, target_root: Path, changed_paths: list[str], task_text: st
         "package_boundary": _package_boundary_payload(target_root=target_root),
         "authority_markers": _authority_markers_for_startup(active_execplan=active_execplan),
         "immediate_next_allowed_action": {
-            "action": (
-                "continue-active-planning-record"
-                if isinstance(planning_record, dict) and planning_record.get("status") == "present"
-                else "follow-startup-router"
-            ),
+            "action": ("continue-active-planning-record" if active_planning_present else "choose-smallest-workflow-shape"),
             "summary": next_action,
             "command": primary_command,
             "run": primary_command,
             "risk": "read-only routing",
             "required_inputs": ["target repo", "current task"],
             "next_proof": "run proof selection once changed paths are known",
-            "read_first": preflight.get("startup_guidance", {}).get("first_compact_queries", []),
+            "read_first": (
+                [_command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=config.cli_invoke)]
+                if active_planning_present
+                else []
+            ),
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         },
         "workflow_obligations": compact_workflow_obligations,
@@ -8322,14 +8335,12 @@ def _compact_start_closeout_obligations(value: Any) -> dict[str, Any]:
     required = value.get("required_before_lane_closeout", [])
     if not isinstance(required, list):
         required = []
-    primary = value.get("primary_next_action")
     return {
         "status": value.get("status", "unknown"),
         "required_before_lane_closeout_count": len(required),
         "required_before_lane_closeout_ids": [str(item.get("id", "")) for item in required if isinstance(item, dict)],
-        "primary_next_action": primary if isinstance(primary, dict) else None,
-        "recommended_next_action": value.get("recommended_next_action", ""),
-        "detail_command": "agentic-workspace preflight --format json",
+        "activation_rule": "closeout obligations apply after implementation or lane closeout, not ordinary first-contact orientation",
+        "detail_command": "agentic-workspace report --target ./repo --section closeout_trust --format json",
     }
 
 
@@ -9497,7 +9508,11 @@ def _intent_decision_projection(
                 "status": projection["subsystem_intent"]["status"],
                 "surface": projection["subsystem_intent"]["surface"],
                 "matched_count": projection["subsystem_intent"]["matched_count"],
-                "ownership_registry": subsystem_intent.get("ownership_registry", {}),
+                "ownership_registry": {
+                    "surface": subsystem_intent.get("ownership_registry", {}).get("surface", ".agentic-workspace/OWNERSHIP.toml"),
+                    "status": subsystem_intent.get("ownership_registry", {}).get("status", "unknown"),
+                    "subsystem_count": subsystem_intent.get("ownership_registry", {}).get("subsystem_count", 0),
+                },
                 "matches": [
                     {
                         "id": match.get("id", ""),
@@ -11336,7 +11351,7 @@ def _startup_skill_routing_payload(
         "advanced_route_rule": "Review and external-intake skills are surfaced only when the repo enables the matching reusable diagnostic feature. Source-checkout-only maintainer skills stay outside shipped feature tiers.",
         "fallback_when_skills_unavailable": [
             "follow AGENTS.md and .agentic-workspace/WORKFLOW.md",
-            "use agentic-workspace preflight --format json for one-call takeover context",
+            'use agentic-workspace start --task "<task>" --format json for ordinary first contact',
             "use agentic-workspace summary --format json before raw planning reads",
         ],
         "preferred_routes": core_routes + advanced_routes,
@@ -11644,17 +11659,20 @@ def _defaults_payload() -> dict[str, Any]:
             "canonical_doc": ".agentic-workspace/docs/minimum-operating-model.md",
             "context_router": _context_router_family_payload(),
             "primary": [
-                "For one-call takeover context, run `agentic-workspace preflight --format json`.",
+                'For ordinary first contact, run `agentic-workspace start --task "<task>" --format json`.',
+                "Use `agentic-workspace implement --changed <paths> --format json` when changed paths are already known.",
+                "For takeover or recovery context, run `agentic-workspace preflight --format json`.",
                 "Read the configured root startup file from `agentic-workspace config --target ./repo --profile compact --format json` (default `AGENTS.md`).",
-                "Use `agentic-workspace summary --format json` for current planning state before opening raw planning files.",
+                "Use `agentic-workspace summary --format json` only when current planning state matters before opening raw planning files.",
                 "Open `.agentic-workspace/planning/state.toml` or an active execplan only when compact output points there.",
             ],
             "tiny_safe_model": {
-                "summary": "Start from one repo entrypoint, one cheap takeover query, and conditional deeper reads.",
+                "summary": "Start from one repo entrypoint, one ordinary startup query, and conditional deeper reads.",
                 "entrypoint": "AGENTS.md",
-                "entry_query": "agentic-workspace preflight --format json",
+                "entry_query": 'agentic-workspace start --task "<task>" --format json',
                 "first_compact_queries": [
-                    "agentic-workspace defaults --section startup --format json",
+                    'agentic-workspace start --target ./repo --task "<task>" --format json',
+                    "agentic-workspace implement --changed <paths> --format json",
                     "agentic-workspace config --target ./repo --profile compact --format json",
                     "agentic-workspace summary --format json",
                 ],
@@ -11701,15 +11719,15 @@ def _defaults_payload() -> dict[str, Any]:
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
             "first_queries": [
                 {
-                    "question": "What is the cheapest one-call takeover path?",
-                    "command": "agentic-workspace preflight --format json",
-                    "field": "startup_guidance",
-                    "why": "preflight bundles startup guidance, resolved config, and active state into one compact answer",
+                    "question": "What is the ordinary first-contact path?",
+                    "command": 'agentic-workspace start --task "<task>" --format json',
+                    "field": "immediate_next_allowed_action",
+                    "why": "start bundles ordinary startup routing, active-state summary, and task-specific skill recommendations",
                 },
                 {
                     "question": "What is the ordinary repo startup path?",
                     "command": "agentic-workspace defaults --section startup --format json",
-                    "why": "startup defaults carry the compact ordered route without reopening broader prose first",
+                    "why": "startup defaults carry reference routing when start is unavailable or insufficient",
                 },
                 {
                     "question": "Which startup file is canonical here?",
@@ -11824,7 +11842,7 @@ def _defaults_payload() -> dict[str, Any]:
                     "`AGENTS.md` or another supported startup file already present."
                 ),
                 (
-                    "If you need startup guidance plus live state together, prefer "
+                    "If you need takeover guidance plus live state together, prefer "
                     "`agentic-workspace preflight --format json` before running multiple compact queries or rereading repo prose."
                 ),
                 (
@@ -11835,7 +11853,8 @@ def _defaults_payload() -> dict[str, Any]:
             ],
             "workflow_recovery": [
                 (
-                    "When startup, first-contact routing, or recovery is unclear, prefer "
+                    "When takeover or recovery is unclear, prefer "
+                    '`agentic-workspace start --task "<task>" --format json`, then '
                     "`agentic-workspace preflight --format json`, "
                     "`agentic-workspace defaults --section startup --format json`, "
                     "`agentic-workspace config --target ./repo --profile compact --format json`, and "
@@ -14664,9 +14683,10 @@ def _product_managed_enclave_payload(*, target_root: Path, ownership_payload: di
             "rule": "ordinary startup reads AGENTS.md and compact commands; broad enclave scans are only for selected ownership, report, or module operations",
             "ordinary_entrypoints": [
                 "AGENTS.md",
-                "agentic-workspace preflight --format json",
+                'agentic-workspace start --task "<task>" --format json',
+                "agentic-workspace implement --changed <paths> --format json",
                 "agentic-workspace summary --format json",
-                "agentic-workspace defaults --section startup --format json",
+                "agentic-workspace preflight --format json for takeover/recovery",
             ],
         },
         "local_only_state": {
