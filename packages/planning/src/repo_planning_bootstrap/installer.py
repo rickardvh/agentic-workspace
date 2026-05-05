@@ -9666,6 +9666,8 @@ def _file_reference_candidates(text: str) -> list[str]:
     candidates: list[str] = []
     for token in re.findall(r"`([^`]+)`|([^\s,;:]+)", text):
         raw = token[0] or token[1]
+        if _looks_like_markup_tag(raw):
+            continue
         value = raw.strip().strip("\"'()[]{}<>.,")
         if not value or "://" in value or value.startswith("-"):
             continue
@@ -9676,6 +9678,11 @@ def _file_reference_candidates(text: str) -> list[str]:
         if suffix in _FILE_REFERENCE_SUFFIXES or "/" in normalized:
             candidates.append(normalized)
     return _dedupe(candidates)
+
+
+def _looks_like_markup_tag(token: str) -> bool:
+    stripped = token.strip().rstrip(".,;:")
+    return bool(re.search(r"</?[A-Za-z][A-Za-z0-9:-]*(?:\s+[^<>]*)?/?>", stripped))
 
 
 def _execplan_missing_reference_warnings(*, target_root: Path, plan_path: Path, record: dict[str, Any]) -> list[dict[str, str]]:

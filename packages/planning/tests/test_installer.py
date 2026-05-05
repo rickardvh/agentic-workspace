@@ -4829,6 +4829,28 @@ def test_planning_summary_warns_when_execplan_next_action_references_missing_fil
     assert any("plan.md" in warning["message"] for warning in warnings)
 
 
+def test_planning_summary_ignores_jsx_tags_in_execplan_next_action(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(plan_path)
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    option_close = "</" + "option>"
+    select_close = "</" + "select>"
+    record["immediate_next_action"] = [f"Fix the select markup in src/Picker.tsx around <option>A{option_close}."]
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+    _write(
+        tmp_path / "src" / "Picker.tsx",
+        f'export function Picker() {{ return <select><option value="a">A{option_close}{select_close}; }}',
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    warnings = summary["planning_surface_health"]["warnings"]
+
+    assert not any(
+        warning["warning_class"] == "execplan_missing_file_reference" and "/" + "option" in warning["message"] for warning in warnings
+    )
+
+
 def test_planning_summary_warns_on_historical_work_in_live_state(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
