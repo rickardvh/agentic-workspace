@@ -134,8 +134,8 @@ Generated compatibility adapter.
 
 Ordinary path:
 - Read `AGENTS.md` first.
-- Run `agentic-workspace start --format json` for compact startup context.
-- Run `agentic-workspace proof --changed <paths> --format json` before claiming validation.
+- Run `agentic-workspace start --profile tiny --task "<task>" --format json` for compact startup context.
+- Run `agentic-workspace proof --profile tiny --changed <paths> --format json` before claiming validation.
 
 When needed:
 - Open raw planning or contract files only when compact commands point there.
@@ -450,9 +450,11 @@ def test_contributor_playbook_routes_first_contact_through_compact_queries() -> 
     text = (WORKSPACE_ROOT / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
     startup_section = text.split("## Start Here", 1)[1].split("##", 1)[0].lower()
 
-    assert "agentic-workspace start --format json" in startup_section
+    assert 'agentic-workspace start --profile tiny --task "<task>" --format json' in startup_section
     assert "agentic-workspace summary --format json" in startup_section
-    assert startup_section.index("agentic-workspace start --format json") < startup_section.index(".agentic-workspace/planning/state.toml")
+    assert startup_section.index('agentic-workspace start --profile tiny --task "<task>" --format json') < startup_section.index(
+        ".agentic-workspace/planning/state.toml"
+    )
     assert "only when compact output points there" in startup_section
 
 
@@ -492,7 +494,7 @@ def test_rendered_routing_adapter_stays_secondary_and_compact() -> None:
 
     assert "Secondary generated adapter" in text
     assert "Prefer `AGENTS.md`, then `tools/AGENT_QUICKSTART.md`." in text
-    assert "uv run agentic-workspace start --format json" in text
+    assert 'uv run agentic-workspace start --profile tiny --task "<task>" --format json' in text
     assert "uv run agentic-workspace summary --format json" in text
     assert "uv run agentic-workspace preflight --format json" not in text
     assert "uv run agentic-workspace report --target . --format json" not in text

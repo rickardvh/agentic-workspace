@@ -10,7 +10,7 @@ Secondary generated adapter. Prefer `AGENTS.md`, then `tools/AGENT_QUICKSTART.md
 
 - Read `AGENTS.md` first.
 - Use `tools/AGENT_QUICKSTART.md` for the ordinary startup path.
-- Run `uv run agentic-workspace start --format json` for current startup truth.
+- Run `uv run agentic-workspace start --profile tiny --task "<task>" --format json` for current startup truth.
 - Run `uv run agentic-workspace summary --format json` when active planning state matters.
 
 ## Boundary

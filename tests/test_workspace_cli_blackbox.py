@@ -45,7 +45,7 @@ def test_blackbox_near_miss_command_guides_to_startup() -> None:
     result = _run_cli("summry", "--format", "json", cwd=Path.cwd())
 
     _assert_usage_error_without_traceback(result, expected="Did you mean: summary?")
-    assert "Startup tip: run 'agentic-workspace start --format json'" in result.stderr
+    assert "Startup tip: run 'agentic-workspace start --profile tiny --task \"<task>\" --format json'" in result.stderr
 
 
 def test_blackbox_selector_conflict_guides_to_correct_usage() -> None:

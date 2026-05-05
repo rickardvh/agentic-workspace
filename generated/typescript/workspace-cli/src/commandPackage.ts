@@ -516,6 +516,18 @@ export const generatedCommandPackage = {
           },
           {
             "choices": [
+              "full",
+              "tiny"
+            ],
+            "default": "full",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Implementer output profile. Use tiny for the next decision and proof commands only.",
+            "name": "profile"
+          },
+          {
+            "choices": [
               "text",
               "json"
             ],
@@ -560,6 +572,7 @@ export const generatedCommandPackage = {
         "primitive_refs": [
           "workspace.root.resolve",
           "implementer.context.assemble",
+          "output.profile.select",
           "output.emit"
         ]
       },
@@ -723,6 +736,18 @@ export const generatedCommandPackage = {
           },
           {
             "choices": [
+              "full",
+              "tiny"
+            ],
+            "default": "full",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Proof output profile. Use tiny for the next validation action and command list only.",
+            "name": "profile"
+          },
+          {
+            "choices": [
               "text",
               "json"
             ],
@@ -769,6 +794,7 @@ export const generatedCommandPackage = {
           "workspace.root.resolve",
           "proof.routes.resolve",
           "proof.routes.resolve",
+          "output.profile.select",
           "output.emit"
         ]
       },

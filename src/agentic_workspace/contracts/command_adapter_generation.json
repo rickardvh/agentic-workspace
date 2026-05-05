@@ -553,6 +553,7 @@
         "primitive_refs": [
           "workspace.root.resolve",
           "implementer.context.assemble",
+          "output.profile.select",
           "output.emit"
         ]
       },
@@ -716,6 +717,7 @@
           "workspace.root.resolve",
           "proof.routes.resolve",
           "proof.routes.resolve",
+          "output.profile.select",
           "output.emit"
         ]
       },

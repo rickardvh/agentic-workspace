@@ -145,6 +145,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "primitive_refs": [
         "workspace.root.resolve",
         "implementer.context.assemble",
+        "output.profile.select",
         "output.emit"
       ]
     },
@@ -282,6 +283,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
         "workspace.root.resolve",
         "proof.routes.resolve",
         "proof.routes.resolve",
+        "output.profile.select",
         "output.emit"
       ]
     },

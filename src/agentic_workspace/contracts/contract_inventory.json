@@ -164,7 +164,7 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
       "consumers": [
-        "agentic-workspace start --format json",
+        "agentic-workspace start --profile tiny --task \"<task>\" --format json",
         "agentic_workspace.cli:_start_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],

@@ -1119,7 +1119,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         )
 
     if (
-        "agentic-workspace start --format json" not in quickstart_text
+        'agentic-workspace start --profile tiny --task "<task>" --format json' not in quickstart_text
         or "agentic-workspace summary --format json" not in quickstart_text
         or "do not bulk-read all planning surfaces" not in quickstart_text
         or "## authority table" in quickstart_text
@@ -1138,8 +1138,8 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         for fragment in (
             "generated compatibility adapter",
             "read `agents.md`",
-            "agentic-workspace start --format json",
-            "agentic-workspace proof --changed <paths> --format json",
+            'agentic-workspace start --profile tiny --task "<task>" --format json',
+            "agentic-workspace proof --profile tiny --changed <paths> --format json",
             "open raw planning or contract files only when compact commands point there",
         )
     ):

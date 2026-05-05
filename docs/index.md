@@ -11,6 +11,7 @@ Use this map when updating docs so each page stays complete at its level without
 | What is Agentic Workspace and when does it pay back? | [Package overview](package/overview.md) | another page only needs the product thesis or adoption boundary |
 | Which preset/profile should a repo start with? | [Which package should I install?](which-package.md) | repeating the memory/planning/full threshold would duplicate install guidance |
 | What does the root CLI do? | [Lifecycle and context commands](package/lifecycle.md) and [Command map](package/commands.md) | a page only needs to name a command or compact router |
+| Which CLI output profile should an agent use? | [CLI output profiles](package/output-profiles.md) | next-decision policy belongs in one command-output contract |
 | What files are installed and who owns them? | [Installed surfaces](package/installed-surfaces.md) | explaining startup adapters, managed fences, local-only state, or source-checkout boundaries |
 | What do Planning and Memory own? | [Modules](package/modules.md), then the module READMEs | a page only needs to distinguish active execution state from durable repo knowledge |
 | What are the exact fields and generated references? | [Contracts and references](package/contracts.md) and [Reference material](reference/index.md) | hand-written docs would otherwise copy generated schema detail |

@@ -9,7 +9,7 @@ Generated, non-authoritative helper. It points to compact query surfaces and own
 ## Route
 
 - Read `AGENTS.md` first.
-- Run `uv run agentic-workspace start --format json` for compact startup context.
+- Run `uv run agentic-workspace start --profile tiny --task "<task>" --format json` for compact startup context.
 - Run `uv run agentic-workspace summary --format json` only when active planning or roadmap state matters.
 - Run `uv run agentic-workspace preflight --format json` only when you need bundled takeover or recovery context.
 - Run `uv run agentic-workspace report --target . --format json` when you need health, warnings, or section hints.

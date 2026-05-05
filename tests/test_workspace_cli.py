@@ -889,11 +889,11 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
     assert "- safe_to_edit: false" in text
     assert "Generated compatibility adapter" in text
     assert "Ordinary path:" in text
-    assert "agentic-workspace start --format json" in text
+    assert 'agentic-workspace start --profile tiny --task "<task>" --format json' in text
     assert "agentic-workspace preflight --format json" in text
     assert "agentic-workspace config --target ./repo --profile compact --format json" in text
     assert "agentic-workspace summary --format json" in text
-    assert "agentic-workspace proof --changed <paths> --format json" in text
+    assert "agentic-workspace proof --profile tiny --changed <paths> --format json" in text
     assert "agentic-workspace defaults --section install_profiles --format json" in text
     assert "Use `full` only when both Memory and Planning are explicitly desired." not in text
     assert "`AGENTS.md` remains the repo startup entrypoint" in text
@@ -905,7 +905,7 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
 def test_external_agent_handoff_text_demotes_broad_routing_until_compact_startup_fails() -> None:
     text = cli._external_agent_handoff_text(selected_modules=["planning"])
 
-    start_index = text.index("agentic-workspace start --format json")
+    start_index = text.index('agentic-workspace start --profile tiny --task "<task>" --format json')
     preflight_index = text.index("agentic-workspace preflight --format json")
     config_index = text.index("agentic-workspace config --target ./repo --profile compact --format json")
     summary_index = text.index("agentic-workspace summary --format json")
@@ -945,7 +945,7 @@ def test_external_agent_handoff_text_reports_workflow_artifact_profile() -> None
 
     assert "Workflow artifact profile: gemini." in text
     assert "Generated compatibility adapter" in text
-    assert "agentic-workspace start --format json" in text
+    assert 'agentic-workspace start --profile tiny --task "<task>" --format json' in text
     assert "Keep canonical authority in contracts, config, planning, Memory, and checks, not this adapter." in text
 
 
@@ -1647,7 +1647,9 @@ def test_defaults_section_selector_returns_surface_value_guardrail(capsys) -> No
     assert answer["authority_classes"][0]["class"] == "authoritative"
     assert "first-line thing to remember" in answer["review_result"]["reject_when"][1]
     assert answer["review_gate"]["answer_field"] == "surface_value_review"
-    assert answer["review_gate"]["ordinary_path"] == "agentic-workspace proof --target ./repo --changed <paths> --format json"
+    assert (
+        answer["review_gate"]["ordinary_path"] == "agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json"
+    )
 
 
 def test_defaults_section_selector_returns_effective_authority_view(capsys) -> None:
@@ -4475,11 +4477,11 @@ def test_install_real_init_generates_llms_with_compact_startup_path_first(tmp_pa
     assert cli.main(["init", "--target", str(target)]) == 0
 
     llms_text = (target / "llms.txt").read_text(encoding="utf-8")
-    start_index = llms_text.index("agentic-workspace start --format json")
+    start_index = llms_text.index('agentic-workspace start --profile tiny --task "<task>" --format json')
     preflight_index = llms_text.index("agentic-workspace preflight --format json")
     config_index = llms_text.index("agentic-workspace config --target ./repo --profile compact --format json")
     summary_index = llms_text.index("agentic-workspace summary --format json")
-    proof_index = llms_text.index("agentic-workspace proof --changed <paths> --format json")
+    proof_index = llms_text.index("agentic-workspace proof --profile tiny --changed <paths> --format json")
     raw_index = llms_text.index("Open raw planning or contract files only when compact commands point there.")
 
     assert "Ordinary path:" in llms_text
@@ -4710,7 +4712,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     ordinary_path = payload["report_profile"]["ordinary_agent_path"]
     assert ordinary_path["entry_command"] == "agentic-workspace start --target ./repo --profile tiny --format json"
     assert ordinary_path["current_work_command"] == "agentic-workspace summary --format json"
-    assert ordinary_path["proof_command"] == "agentic-workspace proof --target ./repo --changed <paths> --format json"
+    assert ordinary_path["proof_command"] == "agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json"
     recovery = ordinary_path["off_happy_path_recovery"]
     assert recovery["kind"] == "workspace-off-happy-path-recovery/v1"
     assert set(recovery["scenario_ids"]) >= {
@@ -4824,7 +4826,7 @@ def test_report_router_uses_resolved_cli_invoke_for_copyable_commands(tmp_path: 
     assert ordinary_path["entry_command"] == "uv run agentic-workspace start --target ./repo --profile tiny --format json"
     assert ordinary_path["state_command"] == "uv run agentic-workspace report --target ./repo --format json"
     assert ordinary_path["current_work_command"] == "uv run agentic-workspace summary --format json"
-    assert ordinary_path["proof_command"] == "uv run agentic-workspace proof --target ./repo --changed <paths> --format json"
+    assert ordinary_path["proof_command"] == "uv run agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json"
     recovery = ordinary_path["off_happy_path_recovery"]
     assert recovery["recover_by_default"] == "uv run agentic-workspace start --target ./repo --profile tiny --format json"
     assert payload["section_hints"][0]["command"].startswith("uv run agentic-workspace report ")
@@ -7465,9 +7467,14 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
         }
     ]
     assert payload["context_router"]["first_view"] == "start"
+    assert (
+        payload["context_router"]["detail_commands"]["known_changed_paths"]
+        == "agentic-workspace implement --profile tiny --changed <paths> --format json"
+    )
     assert payload["context_router"]["detail_commands"]["takeover_or_recovery"] == "agentic-workspace preflight --format json"
     assert payload["active_state_summary"]["todo_active_count"] >= 0
     assert payload["immediate_next_allowed_action"]["action"] in {"choose-smallest-workflow-shape", "continue-active-planning-record"}
+    assert "implement --profile tiny --changed <paths>" in payload["immediate_next_allowed_action"]["summary"]
     assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
     assert "durable_intent" not in payload
     assert "cli_compatibility" not in payload
@@ -7757,6 +7764,38 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
     assert payload["next_allowed_action"] == "Resolve boundary warnings before editing."
 
 
+def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--profile",
+                "tiny",
+                "--changed",
+                "src/agentic_workspace/cli.py",
+                "--task",
+                "apply output profile policy",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    encoded = json.dumps(payload)
+    assert payload["kind"] == "implementer-context-tiny/v1"
+    assert payload["next"]["action"] == "Inspect only the listed files and run the required validation commands."
+    assert payload["scope"]["inspect_files"] == ["src/agentic_workspace/cli.py"]
+    assert "uv run pytest tests -q" in payload["proof"]["required_commands"]
+    assert payload["routing"]["work_shape"] == "bounded"
+    assert "package_boundary" not in payload
+    assert "authority_markers" not in payload
+    assert "durable_intent" not in payload
+    assert "inference_limits" not in payload
+    assert len(encoded) < 4000
+
+
 def test_implement_task_routes_broad_issue_ingestion_to_planning(tmp_path: Path, capsys) -> None:
     assert (
         cli.main(
@@ -7906,6 +7945,36 @@ def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> No
     assert answer["validation_plan"]["next_proof"] == "proof is complete when all required steps pass for the current changed paths"
     assert answer["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
     assert any(item.startswith("Relevant durable intent may add proof") for item in answer["escalate_when"])
+
+
+def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--profile",
+                "tiny",
+                "--changed",
+                "src/agentic_workspace/cli.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    encoded = json.dumps(payload)
+    assert payload["kind"] == "proof-next-decision/v1"
+    assert payload["selector"] == {"changed": ["src/agentic_workspace/cli.py"]}
+    assert payload["next"]["action"] == "run-validation-command"
+    assert payload["next"]["command"] == "uv run pytest tests -q"
+    assert "uv run ruff check src tests" in payload["required_commands"]
+    assert payload["warnings"] == []
+    assert "answer" not in payload
+    assert "selected_lanes" not in encoded
+    assert "validation_plan" not in encoded
+    assert len(encoded) < 2500
 
 
 def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
@@ -8730,7 +8799,9 @@ def test_proof_changed_selector_accepts_existing_durable_surface_update(tmp_path
     assert review["flagged_count"] == 0
     assert review["reviewed_paths"][0]["surface_class"] == "workspace_contract_surface"
     assert review["reviewed_paths"][0]["result"] == "accepted"
-    assert review["review_gate"]["ordinary_path"] == "agentic-workspace proof --target ./repo --changed <paths> --format json"
+    assert (
+        review["review_gate"]["ordinary_path"] == "agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json"
+    )
 
 
 def test_proof_changed_selector_flags_additive_only_durable_surface(tmp_path: Path, capsys) -> None:
@@ -8842,7 +8913,7 @@ def test_invalid_command_shows_preflight_fallback_hint(capsys) -> None:
     assert excinfo.value.code == 2
     stderr = capsys.readouterr().err
     assert "Did you mean: preflight?" in stderr
-    assert "agentic-workspace start --format json" in stderr
+    assert 'agentic-workspace start --profile tiny --task "<task>" --format json' in stderr
     assert "agentic-workspace preflight --format json" in stderr
 
 

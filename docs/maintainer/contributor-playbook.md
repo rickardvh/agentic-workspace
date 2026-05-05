@@ -44,7 +44,7 @@ Treat `start`, `summary`, `report`, `defaults`, and `preflight` as context-route
 Default startup path for an agent maintainer:
 
 1. Read `AGENTS.md`.
-2. Run `agentic-workspace start --format json` for the ordinary compact startup context.
+2. Run `agentic-workspace start --profile tiny --task "<task>" --format json` for the ordinary compact startup context.
 3. If the question is startup order or first-contact routing, ask `agentic-workspace defaults --section startup --format json` before broader prose.
 4. If you need the current planning state, ask `agentic-workspace summary --format json` before opening raw planning files.
 5. If you need the combined workspace state, ask `agentic-workspace report --target ./repo --format json` before reading raw module files.

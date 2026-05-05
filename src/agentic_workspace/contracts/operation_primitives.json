@@ -139,6 +139,10 @@
       "summary": "Render text or JSON output according to the operation format option."
     },
     {
+      "id": "output.profile.select",
+      "summary": "Select the smallest requested output projection that preserves the operation's next decision."
+    },
+    {
       "id": "usage.error",
       "summary": "Stop with a user-facing usage error when operation preconditions are violated."
     },

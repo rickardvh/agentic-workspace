@@ -8,7 +8,7 @@ Keep this file thin. Treat it as the repo-owned startup adapter over the structu
 
 ## Startup
 
-- Use `agentic-workspace start --format json` for ordinary compact startup context.
+- Use `agentic-workspace start --profile tiny --task "<task>" --format json` for ordinary compact startup context.
 - Use `agentic-workspace preflight --format json` when you need bundled takeover or recovery context.
 - Use `agentic-workspace defaults --section startup --format json` when startup order or first-contact routing is the question.
 - Use `agentic-workspace config --target . --profile compact --format json` when the configured entrypoint, posture, or workflow obligations matter.

@@ -6,7 +6,7 @@ Do not hand-edit generated pages. Update the source schema and regenerate the re
 
 ## Host-Repo Runtime Outputs
 
-- [Startup context](startup-context.md): `agentic-workspace start --format json`.
+- [Startup context](startup-context.md): `agentic-workspace start --profile tiny --task "<task>" --format json` for first contact; use `--profile full` for full context.
 - [Workspace report](workspace-report.md): `agentic-workspace report --format json`.
 - [Compact contract answer](compact-contract-answer.md): shared compact selector answer envelope.
 - [Implementer context](implementer-context.md): bounded changed-path implementer context.

@@ -580,7 +580,7 @@ def _assurance_onboarding_payload(*, assurance: AssuranceConfig | None = None) -
         "status": status,
         "command": "agentic-workspace defaults --section assurance_onboarding --format json",
         "report_command": "agentic-workspace report --target ./repo --section closeout_trust --format json",
-        "proof_command": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+        "proof_command": "agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json",
         "rule": "Host repos own assurance truth; Agentic Workspace only routes levels, gates, refs, proof profiles, and compact evidence state.",
         "configured_profile_count": len(configured_profiles),
         "host_ref_count": len(host_refs),
@@ -1100,7 +1100,7 @@ class WorkspaceArgumentParser(argparse.ArgumentParser):
                 suggestion_text = ", ".join(suggestions)
                 message = f"{message}\nDid you mean: {suggestion_text}?"
             message = (
-                f"{message}\nStartup tip: run 'agentic-workspace start --format json' for normal startup "
+                f"{message}\nStartup tip: run 'agentic-workspace start --profile tiny --task \"<task>\" --format json' for normal startup "
                 "or 'agentic-workspace preflight --format json' to recover a compact takeover context."
             )
         super().error(message)
@@ -3390,9 +3390,9 @@ def _external_agent_handoff_text(
         "",
         "Ordinary path:",
         f"- Read `{agent_instructions_file}` first.",
-        "- Run `agentic-workspace start --format json` for compact startup context.",
+        '- Run `agentic-workspace start --profile tiny --task "<task>" --format json` for compact startup context.',
         "- Run `agentic-workspace summary --format json` when active work or roadmap state matters.",
-        "- Run `agentic-workspace proof --changed <paths> --format json` before claiming validation.",
+        "- Run `agentic-workspace proof --profile tiny --changed <paths> --format json` before claiming validation.",
         "",
         "When needed:",
         "- `agentic-workspace preflight --format json` for takeover context.",
@@ -8205,6 +8205,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "first_view": "start",
             "rule": "This tiny profile is the first-contact answer; run detail commands only when the next action says why.",
             "detail_commands": {
+                "known_changed_paths": "agentic-workspace implement --profile tiny --changed <paths> --format json",
                 "active_state": "agentic-workspace summary --format json",
                 "takeover_or_recovery": "agentic-workspace preflight --format json",
                 "startup_reference": "agentic-workspace defaults --section startup --format json",
@@ -8532,6 +8533,55 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
                 *payload["handoff_requirements"]["stop_when"],
             ]
     return payload
+
+
+def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    path_warnings = [
+        {
+            "path": item.get("path"),
+            "authority": item.get("authority"),
+            "warning": item.get("warning"),
+        }
+        for item in payload.get("path_boundaries", [])
+        if isinstance(item, dict) and item.get("requires_attention")
+    ]
+    task_routing = payload.get("task_routing")
+    next_action = payload.get("next_allowed_action", "")
+    if isinstance(task_routing, dict) and task_routing.get("status") == "needs-planning":
+        next_action = "Plan or narrow before implementation."
+    elif path_warnings:
+        next_action = "Resolve path authority warnings before editing."
+    elif not payload.get("changed_paths"):
+        next_action = "Provide --changed paths or use start/preflight before broad implementation."
+
+    execution_posture = payload.get("execution_posture", {})
+    capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
+    runtime_resolution = execution_posture.get("runtime_resolution", {}) if isinstance(execution_posture, dict) else {}
+    return {
+        "kind": "implementer-context-tiny/v1",
+        "target": payload.get("target"),
+        "next": {
+            "action": next_action,
+            "status": payload.get("orientation", {}).get("status", "unknown"),
+            "ask_human_only_if": "scope, authority, risk, or intent is genuinely blocked after inspecting the listed paths",
+        },
+        "scope": {
+            "changed_paths": payload.get("changed_paths", []),
+            "inspect_files": payload.get("inspect_files", []),
+            "warnings": path_warnings,
+        },
+        "proof": {
+            "required_commands": payload.get("required_validation_commands", []),
+            "detail_command": "agentic-workspace proof --profile full --changed <paths> --format json",
+        },
+        "routing": {
+            "task_status": task_routing.get("status") if isinstance(task_routing, dict) else None,
+            "work_shape": capability.get("work_shape"),
+            "proof_burden": capability.get("proof_burden"),
+            "delegation_recommendation": runtime_resolution.get("recommendation"),
+        },
+        "detail_command": "agentic-workspace implement --profile full --changed <paths> --format json",
+    }
 
 
 def _implementation_task_routing(*, target_root: Path, task_text: str | None) -> dict[str, Any] | None:
@@ -10871,7 +10921,7 @@ def _surface_value_guardrail_payload() -> dict[str, Any]:
             ],
         },
         "review_gate": {
-            "ordinary_path": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+            "ordinary_path": "agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json",
             "answer_field": "surface_value_review",
             "rule": "Durable-surface changes should carry an inspectable answer during ordinary proof selection.",
             "flags_additive_only_when": [
@@ -11754,7 +11804,7 @@ def _defaults_payload() -> dict[str, Any]:
             "context_router": _context_router_family_payload(),
             "primary": [
                 'For ordinary first contact, run `agentic-workspace start --profile tiny --task "<task>" --format json`.',
-                "Use `agentic-workspace implement --changed <paths> --format json` when changed paths are already known.",
+                "Use `agentic-workspace implement --profile tiny --changed <paths> --format json` when changed paths are already known.",
                 "For takeover or recovery context, run `agentic-workspace preflight --format json`.",
                 "Read the configured root startup file from `agentic-workspace config --target ./repo --profile compact --format json` (default `AGENTS.md`).",
                 "Use `agentic-workspace summary --format json` only when current planning state matters before opening raw planning files.",
@@ -11766,7 +11816,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "entry_query": 'agentic-workspace start --profile tiny --task "<task>" --format json',
                 "first_compact_queries": [
                     'agentic-workspace start --target ./repo --profile tiny --task "<task>" --format json',
-                    "agentic-workspace implement --changed <paths> --format json",
+                    "agentic-workspace implement --profile tiny --changed <paths> --format json",
                     "agentic-workspace config --target ./repo --profile compact --format json",
                     "agentic-workspace summary --format json",
                 ],
@@ -13119,6 +13169,57 @@ def _select_proof_payload(
     return payload
 
 
+def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    if payload.get("profile") == "compact-contract-answer/v1":
+        answer = payload.get("answer", {})
+        required_commands = answer.get("required_commands", []) if isinstance(answer, dict) else []
+        validation_plan = answer.get("validation_plan", {}) if isinstance(answer, dict) else {}
+        primary = validation_plan.get("primary_next_action") if isinstance(validation_plan, dict) else None
+        if not isinstance(primary, dict):
+            primary = {
+                "action": "run-validation-command" if required_commands else "select-proof-scope",
+                "command": required_commands[0] if required_commands else None,
+                "run": required_commands[0] if required_commands else None,
+            }
+        surface_value = answer.get("surface_value_review") if isinstance(answer, dict) else None
+        warnings: list[dict[str, Any]] = []
+        if isinstance(surface_value, dict) and surface_value.get("status") in {"blocked", "needs-review"}:
+            warnings.append(
+                {
+                    "status": surface_value.get("status"),
+                    "summary": surface_value.get("summary") or surface_value.get("rule"),
+                }
+            )
+        return {
+            "kind": "proof-next-decision/v1",
+            "target": payload.get("target"),
+            "selector": payload.get("selector", {}),
+            "next": {
+                "action": primary.get("action", "run-validation-command"),
+                "command": primary.get("command"),
+                "run": primary.get("run"),
+                "required": primary.get("required", bool(required_commands)),
+            },
+            "required_commands": required_commands,
+            "warnings": warnings,
+            "detail_command": "agentic-workspace proof --profile full --changed <paths> --format json",
+        }
+    return {
+        "kind": "proof-next-decision/v1",
+        "target": payload.get("target"),
+        "selector": {},
+        "next": {
+            "action": "select-proof-scope",
+            "command": "agentic-workspace proof --profile tiny --changed <paths> --format json",
+            "run": None,
+            "required": False,
+        },
+        "required_commands": [],
+        "warnings": [],
+        "detail_command": "agentic-workspace proof --profile full --format json",
+    }
+
+
 def _emit_proof(
     *,
     format_name: str,
@@ -13127,6 +13228,7 @@ def _emit_proof(
     route: str | None = None,
     current_only: bool = False,
     changed_paths: list[str] | None = None,
+    profile: str = "full",
 ) -> None:
     payload = _proof_payload(target_root=target_root, descriptors=descriptors)
     payload = _select_proof_payload(
@@ -13136,6 +13238,8 @@ def _emit_proof(
         current_only=current_only,
         changed_paths=changed_paths,
     )
+    if profile == "tiny":
+        payload = _tiny_proof_payload(payload)
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
         return
@@ -13256,6 +13360,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         changed_paths=list(getattr(args, "changed", []) or []),
         task_text=getattr(args, "task", None),
     )
+    if getattr(args, "profile", "full") == "tiny":
+        payload = _tiny_implement_payload(payload)
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 
@@ -13284,6 +13390,7 @@ def _run_proof_report_adapter(args: argparse.Namespace) -> int:
         route=getattr(args, "route", None),
         current_only=bool(getattr(args, "current", False)),
         changed_paths=list(getattr(args, "changed", []) or []),
+        profile=getattr(args, "profile", "full"),
     )
     return 0
 
@@ -14779,7 +14886,7 @@ def _product_managed_enclave_payload(*, target_root: Path, ownership_payload: di
             "ordinary_entrypoints": [
                 "AGENTS.md",
                 'agentic-workspace start --profile tiny --task "<task>" --format json',
-                "agentic-workspace implement --changed <paths> --format json",
+                "agentic-workspace implement --profile tiny --changed <paths> --format json",
                 "agentic-workspace summary --format json",
                 "agentic-workspace preflight --format json for takeover/recovery",
             ],

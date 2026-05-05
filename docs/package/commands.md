@@ -2,16 +2,18 @@
 
 This page is a human navigation map for the shipped `agentic-workspace` command surface. For exact option shapes, see the generated [CLI commands reference](../reference/cli-commands.md) and [CLI option groups](../reference/cli-option-groups.md).
 
+For machine-readable agent use, prefer the smallest output profile that answers the next decision. See [CLI output profiles](output-profiles.md).
+
 ## Ordinary Host-Repo Commands
 
 | Command | Use when |
 | --- | --- |
 | `agentic-workspace init --target ./repo --preset memory` | bootstrap the smallest common durable-knowledge install |
-| `agentic-workspace start --target ./repo --format json` | begin ordinary work from compact startup context |
+| `agentic-workspace start --target ./repo --profile tiny --task "<task>" --format json` | begin ordinary work from the smallest startup decision card |
 | `agentic-workspace summary --target ./repo --format json` | inspect active planning, handoff, and continuation state |
 | `agentic-workspace preflight --target ./repo --format json` | bundle startup defaults, config, and active state for takeover |
-| `agentic-workspace implement --target ./repo --changed <paths> --format json` | inspect bounded changed-path context, path authority, projection shape, and proof routes before editing |
-| `agentic-workspace proof --target ./repo --changed <paths> --format json` | choose validation and proof routes for changed paths |
+| `agentic-workspace implement --target ./repo --profile tiny --changed <paths> --format json` | inspect the next implementation decision, path warnings, and required proof commands |
+| `agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json` | choose the next validation action and proof commands for changed paths |
 | `agentic-workspace report --target ./repo --format json` | inspect combined module health, warnings, and next actions |
 | `agentic-workspace planning --target ./repo --format json` | inspect planning lifecycle guidance before creating or mutating checked-in planning state |
 | `agentic-workspace doctor --target ./repo --format json` | diagnose missing, stale, or conflicting installed surfaces |

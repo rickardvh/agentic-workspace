@@ -691,6 +691,18 @@
                 "help": "Optional task text used to route broad external-work requests before implementation."
               },
               {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "full",
+                  "tiny"
+                ],
+                "default": "full",
+                "help": "Implementer output profile. Use tiny for the next decision and proof commands only."
+              },
+              {
                 "name": "format",
                 "flags": [
                   "--format"
@@ -713,6 +725,7 @@
             "primitive_refs": [
               "workspace.root.resolve",
               "implementer.context.assemble",
+              "output.profile.select",
               "output.emit"
             ]
           },
@@ -898,6 +911,18 @@
                 "help": "Return required proof commands for the provided repo-relative changed paths."
               },
               {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "full",
+                  "tiny"
+                ],
+                "default": "full",
+                "help": "Proof output profile. Use tiny for the next validation action and command list only."
+              },
+              {
                 "name": "format",
                 "flags": [
                   "--format"
@@ -921,6 +946,7 @@
               "workspace.root.resolve",
               "proof.routes.resolve",
               "proof.routes.resolve",
+              "output.profile.select",
               "output.emit"
             ]
           },

@@ -530,6 +530,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           },
           {
             "choices": [
+              "full",
+              "tiny"
+            ],
+            "default": "full",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Implementer output profile. Use tiny for the next decision and proof commands only.",
+            "name": "profile"
+          },
+          {
+            "choices": [
               "text",
               "json"
             ],
@@ -574,6 +586,7 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
         "primitive_refs": [
           "workspace.root.resolve",
           "implementer.context.assemble",
+          "output.profile.select",
           "output.emit"
         ]
       },
@@ -737,6 +750,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           },
           {
             "choices": [
+              "full",
+              "tiny"
+            ],
+            "default": "full",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Proof output profile. Use tiny for the next validation action and command list only.",
+            "name": "profile"
+          },
+          {
+            "choices": [
               "text",
               "json"
             ],
@@ -783,6 +808,7 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           "workspace.root.resolve",
           "proof.routes.resolve",
           "proof.routes.resolve",
+          "output.profile.select",
           "output.emit"
         ]
       },
@@ -1795,6 +1821,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
         },
         {
           "choices": [
+            "full",
+            "tiny"
+          ],
+          "default": "full",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Implementer output profile. Use tiny for the next decision and proof commands only.",
+          "name": "profile"
+        },
+        {
+          "choices": [
             "text",
             "json"
           ],
@@ -1889,6 +1927,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "help": "Return required proof commands for the provided repo-relative changed paths.",
           "name": "changed",
           "nargs": "*"
+        },
+        {
+          "choices": [
+            "full",
+            "tiny"
+          ],
+          "default": "full",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Proof output profile. Use tiny for the next validation action and command list only.",
+          "name": "profile"
         },
         {
           "choices": [

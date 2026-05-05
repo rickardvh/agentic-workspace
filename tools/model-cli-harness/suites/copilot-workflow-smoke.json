@@ -132,6 +132,30 @@
       ]
     },
     {
+      "id": "next-decision-output-profile",
+      "fixture": "aw-minimal-host-repo",
+      "prompt": "You are about to make a narrow README edit, but do not edit files yet. Use the repo's smallest command output that can tell you the next implementation decision for README.md. Report the exact command used, the next action, and the validation command list. Avoid reading raw .agentic-workspace files unless the command output tells you to.",
+      "required_executed_commands": [
+        "agentic-workspace start --profile tiny"
+      ],
+      "required_command_mentions": [
+        "agentic-workspace implement --profile tiny"
+      ],
+      "forbidden_write_patterns": [
+        "**/*"
+      ],
+      "expected_signals": [
+        "uses implement --profile tiny rather than full diagnostics",
+        "identifies the next action from command output",
+        "reports validation commands without dumping full proof detail",
+        "does not read raw workspace files first"
+      ],
+      "score_notes": [
+        "Good: one small command answer, no edits, concise next action.",
+        "Bad: reads raw workspace files, runs full diagnostics first, or cannot identify the next step."
+      ]
+    },
+    {
       "id": "broad-work-decomposition",
       "fixture": "aw-minimal-host-repo",
       "prompt_variants": [
