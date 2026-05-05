@@ -62,6 +62,27 @@
       "label": "Workspace startup skill scope",
       "role": "evidence",
       "locator": "lines 8-31"
+    },
+    {
+      "kind": "issue",
+      "target": "GitHub #739",
+      "label": "Discover temporary Memory bootstrap skills in skill inventory",
+      "role": "promotion",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "GitHub #740",
+      "label": "Refresh skill metadata to prefer non-bootstrap CLI names",
+      "role": "promotion",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "GitHub #741",
+      "label": "Add skill coverage for high-risk workflow decisions",
+      "role": "promotion",
+      "locator": ""
     }
   ],
   "findings": [
@@ -172,6 +193,7 @@
     "rg -n \"bootstrap|agentic-planning-bootstrap|agentic-memory-bootstrap\" .agentic-workspace packages tools src/agentic_workspace/_payload -g SKILL.md -g REGISTRY.json"
   ],
   "drift_log": [
-    "2026-05-05: Review created from a skill-system pass over shipped and installed skill surfaces."
+    "2026-05-05: Review created from a skill-system pass over shipped and installed skill surfaces.",
+    "2026-05-05: Findings promoted to GitHub #739, #740, and #741."
   ]
 }
