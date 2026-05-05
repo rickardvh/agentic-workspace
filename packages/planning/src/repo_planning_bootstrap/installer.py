@@ -53,8 +53,8 @@ MANAGED_STATE_HEADER_LINES = (
     "# Inspect: uv run agentic-workspace summary --format json",
     "# Mutate through the package command named by that output.",
 )
-PLANNING_STATE_MATURITIES = {"idea", "candidate", "shaped", "ready", "active", "closed"}
-PLANNING_STATE_STATUSES = {"deferred", "next", "active", "blocked", "done", "dismissed"}
+PLANNING_STATE_MATURITIES = {"idea", "candidate", "shaped", "ready", "active"}
+PLANNING_STATE_STATUSES = {"deferred", "next", "active", "blocked"}
 PLANNING_STATE_ROLE_FIELDS = (
     "decision_owner",
     "strategy_role",
@@ -173,10 +173,9 @@ EXECPLAN_DURABLE_RESIDUE_STATUSES = frozenset(
 EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES = frozenset({"none", "evidence_only"})
 EXECPLAN_DURABLE_RESIDUE_OWNER_VALUES = frozenset({"none", "n/a", "archive", "archives", "evidence", "evidence-only"})
 EXECPLAN_DURABLE_RESIDUE_RETENTION_VALUES = frozenset({"retain", "shrink", "stub", "delete"})
-PLANNING_STATE_CLOSED_ITEM_SCAFFOLD = (
-    '{ id = "example-closed-item", maturity = "closed", status = "done", '
-    'path = ".agentic-workspace/planning/execplans/archive/example-closed-item.plan.json", '
-    'durable_residue = "evidence_only", residue_owner = "archive", residue_promotion_trigger = "none" }'
+PLANNING_STATE_LIVE_ONLY_RULE = (
+    "Planning state is live/selectable state only. Completed, dismissed, or historical work belongs in archived "
+    "execplans, external evidence, or durable Memory/docs residue, not in state.toml."
 )
 
 PACKAGE_MANAGED_FILES = tuple(
@@ -1382,7 +1381,7 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
     source_age = upgrade_source.age_days()
     if source_age is not None:
         result.add("source age", target_root / UPGRADE_SOURCE_PATH, f"{source_age} days since {upgrade_source.recorded_at}")
-        if source_age >= upgrade_source.recommended_upgrade_after_days:
+        if source_age > upgrade_source.recommended_upgrade_after_days:
             result.warnings.append(
                 {
                     "warning_class": "upgrade_source_stale",
@@ -3477,11 +3476,7 @@ def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
             "recommended_next_action": "No planning-surface drift detected.",
             "warnings": [],
             "authoring_affordances": {
-                "closed_work_item_scaffold": PLANNING_STATE_CLOSED_ITEM_SCAFFOLD,
-                "closed_work_item_rule": (
-                    "Closed planning-state rows require maturity = closed, status = done or dismissed, "
-                    "and explicit durable_residue, residue, or closure routing."
-                ),
+                "live_state_rule": PLANNING_STATE_LIVE_ONLY_RULE,
                 "recovery_rule": (
                     "When planning state is invalid, inspect summary warnings first and make the smallest "
                     "schema-preserving correction; do not delete state.toml or execplans as the first move."
@@ -3509,11 +3504,7 @@ def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
         ),
         "warnings": health_warnings,
         "authoring_affordances": {
-            "closed_work_item_scaffold": PLANNING_STATE_CLOSED_ITEM_SCAFFOLD,
-            "closed_work_item_rule": (
-                "Closed planning-state rows require maturity = closed, status = done or dismissed, "
-                "and explicit durable_residue, residue, or closure routing."
-            ),
+            "live_state_rule": PLANNING_STATE_LIVE_ONLY_RULE,
             "recovery_rule": (
                 "When planning state is invalid, inspect summary warnings first and make the smallest "
                 "schema-preserving correction; do not delete state.toml or execplans as the first move."
@@ -3621,6 +3612,9 @@ def _planning_state_v1_warnings(*, target_root: Path, state: dict[str, Any] | No
         item_id = str(item.get("id", "")).strip() or "<missing-id>"
         maturity = str(item.get("maturity", "")).strip()
         status = str(item.get("status", "")).strip()
+        if _is_completed_or_historical_state_item(maturity=maturity, status=status):
+            warnings.append(_completed_or_historical_state_warning(bucket_path=bucket_path, item_id=item_id))
+            continue
         if maturity not in PLANNING_STATE_MATURITIES:
             warnings.append(
                 _planning_state_v1_warning(
@@ -3649,6 +3643,22 @@ def _planning_state_v1_warnings(*, target_root: Path, state: dict[str, Any] | No
                 }
             )
     return warnings
+
+
+def _is_completed_or_historical_state_item(*, maturity: str, status: str) -> bool:
+    return maturity in {"closed", "completed"} or status in {"done", "dismissed", "closed", "completed"}
+
+
+def _completed_or_historical_state_warning(*, bucket_path: str, item_id: str) -> dict[str, str]:
+    return {
+        "warning_class": "historical_work_in_live_planning_state",
+        "path": f"{PLANNING_STATE_PATH.as_posix()}#{bucket_path}.{item_id}",
+        "message": (
+            f"planning-state/v1 item {item_id} is completed, dismissed, closed, or historical work; "
+            "remove it from state.toml and keep the evidence in archived execplans, external evidence, Memory, or docs."
+        ),
+        "suggested_fix": PLANNING_STATE_LIVE_ONLY_RULE,
+    }
 
 
 def _planning_state_v1_items(state: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
@@ -3850,24 +3860,6 @@ def _planning_state_v1_item_warnings(*, bucket_path: str, item_id: str, item: di
         surface = str(item.get("execplan") or item.get("surface") or item.get("path") or "").strip()
         if not surface or not _surface_execplan_reference(surface):
             warnings.append(_planning_state_v1_warning(bucket_path, f"active item {item_id} requires an execplan or execplan surface."))
-    if maturity == "closed":
-        residue = str(item.get("durable_residue") or item.get("residue") or item.get("closure") or "").strip()
-        if str(item.get("status", "")).strip() not in {"done", "dismissed"}:
-            warnings.append(
-                _planning_state_v1_warning(
-                    bucket_path,
-                    f"closed item {item_id} requires status done or dismissed.",
-                    suggested_fix=f"Use a closed item shape like: {PLANNING_STATE_CLOSED_ITEM_SCAFFOLD}",
-                )
-            )
-        if not residue:
-            warnings.append(
-                _planning_state_v1_warning(
-                    bucket_path,
-                    f"closed item {item_id} requires durable_residue, residue, or closure routing.",
-                    suggested_fix=f"Use a closed item shape like: {PLANNING_STATE_CLOSED_ITEM_SCAFFOLD}",
-                )
-            )
     return warnings
 
 
@@ -3962,6 +3954,8 @@ def _planning_work_maturity_projection(*, state: dict[str, Any] | None, active_e
         summary = _planning_state_item_summary(bucket_path=bucket_path, item=item)
         maturity = str(item.get("maturity", "")).strip()
         status = str(item.get("status", "")).strip()
+        if _is_completed_or_historical_state_item(maturity=maturity, status=status):
+            continue
         if status == "blocked":
             buckets["blocked_items"].append(summary)
             continue
@@ -10331,6 +10325,7 @@ def _close_state_active_execplan_for_archive(
     durable_residue: dict[str, str],
     closure_decision: str,
 ) -> dict[str, Any]:
+    del archived_record_relative, durable_residue, closure_decision
     state = _read_state_from_toml(target_root)
     if not state:
         return {"changed": False, "state": None, "details": []}
@@ -10341,7 +10336,8 @@ def _close_state_active_execplan_for_archive(
 
     relative = plan_path.relative_to(target_root).as_posix()
     kept_execplans: list[Any] = []
-    closed_items: list[dict[str, Any]] = []
+    removed_ids: set[str] = set()
+    removed_any = False
     for raw in active["execplans"]:
         if not isinstance(raw, dict):
             kept_execplans.append(raw)
@@ -10350,28 +10346,22 @@ def _close_state_active_execplan_for_archive(
         if item_surface != relative:
             kept_execplans.append(raw)
             continue
-        if _archive_should_leave_closed_work_item(durable_residue=durable_residue, closure_decision=closure_decision):
-            closed_items.append(
-                _closed_work_item_from_active_execplan(
-                    raw,
-                    archived_record_relative=archived_record_relative,
-                    durable_residue=durable_residue,
-                    closure_decision=closure_decision,
-                )
-            )
+        removed_any = True
+        raw_id = str(raw.get("id", "")).strip()
+        if raw_id:
+            removed_ids.add(raw_id)
 
-    if not closed_items:
+    if not removed_any:
         return {"changed": False, "state": None, "details": []}
 
     next_state = dict(state)
     next_active = dict(active)
     next_active["execplans"] = kept_execplans
     next_state["active"] = next_active
-    work_items = list(next_state.get("work_items", [])) if isinstance(next_state.get("work_items"), list) else []
-    closed_ids = {str(item.get("id", "")) for item in closed_items}
-    work_items = [item for item in work_items if not (isinstance(item, dict) and str(item.get("id", "")) in closed_ids)]
-    work_items.extend(closed_items)
-    next_state["work_items"] = work_items
+    if removed_ids and isinstance(next_state.get("work_items"), list):
+        next_state["work_items"] = [
+            item for item in next_state["work_items"] if not (isinstance(item, dict) and str(item.get("id", "")) in removed_ids)
+        ]
     if isinstance(next_state.get("todo"), dict):
         todo_state = dict(next_state["todo"])
         for bucket in ("active_items", "queued_items"):
@@ -10381,53 +10371,13 @@ def _close_state_active_execplan_for_archive(
             todo_state[bucket] = [
                 item
                 for item in raw_items
-                if not (isinstance(item, dict) and (_active_execplan_reference(item) == relative or str(item.get("id", "")) in closed_ids))
+                if not (isinstance(item, dict) and (_active_execplan_reference(item) == relative or str(item.get("id", "")) in removed_ids))
             ]
         next_state["todo"] = todo_state
-    details = [f"move active execplan '{item['id']}' to closed work_items with durable residue routing" for item in closed_items]
+    details = [f"remove active execplan '{item_id}' from live planning state after archive" for item_id in sorted(removed_ids)]
+    if not details:
+        details = [f"remove active execplan reference to {relative} from live planning state after archive"]
     return {"changed": True, "state": next_state, "details": details}
-
-
-def _archive_should_leave_closed_work_item(*, durable_residue: dict[str, str], closure_decision: str) -> bool:
-    residue_status = durable_residue.get("status", "").strip().lower()
-    residue_owner = durable_residue.get("canonical owner now", "").strip()
-    promotion_trigger = durable_residue.get("promotion trigger", "").strip()
-    if closure_decision == "archive-but-keep-lane-open" and residue_status == "planning":
-        return True
-    if residue_status == "planning" and residue_owner == ".agentic-workspace/planning/state.toml" and promotion_trigger:
-        return True
-    return False
-
-
-def _closed_work_item_from_active_execplan(
-    raw: dict[str, Any],
-    *,
-    archived_record_relative: str,
-    durable_residue: dict[str, str],
-    closure_decision: str,
-) -> dict[str, Any]:
-    residue_status = durable_residue.get("status", "").strip() or "none"
-    residue_owner = durable_residue.get("canonical owner now", "").strip()
-    if not residue_owner and residue_status in EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES:
-        residue_owner = "archive"
-    closed: dict[str, Any] = {}
-    if raw.get("id"):
-        closed["id"] = raw["id"]
-    closed.setdefault("id", Path(archived_record_relative).name.removesuffix(".plan.json").removesuffix(".md"))
-    closed["maturity"] = "closed"
-    closed["status"] = "done"
-    closed["path"] = archived_record_relative
-    closed["durable_residue"] = residue_status
-    if residue_owner:
-        closed["residue_owner"] = residue_owner
-        closed["residue_routing"] = residue_owner
-    promotion_trigger = durable_residue.get("promotion trigger", "").strip()
-    if promotion_trigger:
-        closed["residue_promotion_trigger"] = promotion_trigger
-    retention = durable_residue.get("retention after promotion", "").strip()
-    if retention:
-        closed["residue_retention"] = retention
-    return closed
 
 
 def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path) -> list[TodoItem]:

@@ -1778,12 +1778,12 @@ candidates = [
 
     summary = planning_summary(target=tmp_path)
     messages = [warning["message"] for warning in summary["planning_surface_health"]["warnings"]]
-    closed_warning = next(
+    historical_warning = next(
         warning
         for warning in summary["planning_surface_health"]["warnings"]
-        if "closed item closed-without-residue requires durable_residue" in warning["message"]
+        if warning["warning_class"] == "historical_work_in_live_planning_state"
     )
-    closed_scaffold = summary["planning_surface_health"]["authoring_affordances"]["closed_work_item_scaffold"]
+    live_state_rule = summary["planning_surface_health"]["authoring_affordances"]["live_state_rule"]
 
     assert summary["planning_surface_health"]["status"] == "not-clean"
     assert any("active item active-without-plan requires an execplan" in message for message in messages)
@@ -1794,24 +1794,21 @@ candidates = [
     assert any("ready-missing-proof owner_role must be a non-empty string" in message for message in messages)
     assert any("ready-missing-proof handoff_ready must be true or false" in message for message in messages)
     assert any("bad-maturity must use one maturity" in message for message in messages)
-    assert any("closed item closed-without-residue requires durable_residue" in message for message in messages)
-    assert 'maturity = "closed"' in closed_scaffold
-    assert 'status = "done"' in closed_scaffold
-    assert "durable_residue" in closed_scaffold
-    assert closed_warning["suggested_fix"].endswith(closed_scaffold)
+    assert any("closed-without-residue is completed, dismissed, closed, or historical work" in message for message in messages)
+    assert "live/selectable state only" in live_state_rule
+    assert historical_warning["suggested_fix"] == live_state_rule
 
 
-def test_planning_summary_exposes_closed_state_authoring_affordance_when_clean(tmp_path: Path) -> None:
+def test_planning_summary_exposes_live_state_authoring_affordance_when_clean(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
 
     summary = planning_summary(target=tmp_path)
-    scaffold = summary["planning_surface_health"]["authoring_affordances"]["closed_work_item_scaffold"]
+    affordances = summary["planning_surface_health"]["authoring_affordances"]
 
     assert summary["planning_surface_health"]["status"] == "clean"
-    assert 'maturity = "closed"' in scaffold
-    assert 'status = "done"' in scaffold
-    assert "durable_residue" in scaffold
-    assert "status = done or dismissed" in summary["planning_surface_health"]["authoring_affordances"]["closed_work_item_rule"]
+    assert "live/selectable state only" in affordances["live_state_rule"]
+    assert "closed_work_item_scaffold" not in affordances
+    assert "closed_work_item_rule" not in affordances
 
 
 def test_planning_summary_projects_handoff_role_metadata(tmp_path: Path) -> None:
@@ -1883,9 +1880,7 @@ queued_items = [
 lanes = [
   { id = "deferred-lane", title = "Deferred lane", maturity = "shaped", status = "deferred", issues = ["#496"], outcome = "later.", reason = "not now.", promotion_signal = "later." },
 ]
-candidates = [
-  { id = "closed-needs-residue", title = "Closed needs residue", maturity = "closed", status = "done" },
-]
+candidates = []
 """,
     )
     _write_execplan_record(
@@ -1909,7 +1904,6 @@ candidates = [
     assert work_maturity["needs_shaping"][0]["id"] == "shape-candidate"
     assert work_maturity["deferred_lanes"][0]["id"] == "deferred-lane"
     assert work_maturity["blocked_items"][0]["id"] == "blocked-ready"
-    assert work_maturity["residue_routing_needed"][0]["id"] == "closed-needs-residue"
     assert work_maturity["counts"] == {
         "active_execplans": 1,
         "ready_slices": 1,
@@ -1917,13 +1911,11 @@ candidates = [
         "deferred_lanes": 1,
         "blocked_items": 1,
         "closed_items": 0,
-        "residue_routing_needed": 1,
+        "residue_routing_needed": 0,
     }
     assert compact["work_maturity"]["ready_slices"][0]["id"] == "ready-slice"
-    assert compact["work_maturity"]["residue_routing_needed"][0]["id"] == "closed-needs-residue"
     assert report["work_maturity"]["blocked_items"][0]["id"] == "blocked-ready"
     assert report["status"]["ready_slice_count"] == 1
-    assert any("closed item closed-needs-residue requires durable_residue" in warning["message"] for warning in summary["warnings"])
 
 
 def test_planning_summary_uses_work_items_state_shape(tmp_path: Path) -> None:
@@ -3446,7 +3438,7 @@ def test_archive_execplan_allows_rename_like_work_with_reference_sweep(tmp_path:
     assert any(action.kind == "archived" and action.path == archived_record_path for action in result.actions)
 
 
-def test_archive_execplan_apply_cleanup_moves_active_execplan_to_closed_work_item(tmp_path: Path) -> None:
+def test_archive_execplan_apply_cleanup_removes_active_execplan_without_closed_state_history(tmp_path: Path) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
         """
@@ -3466,9 +3458,9 @@ execplans = [
     record = json.loads(plan_path.read_text(encoding="utf-8"))
     record["durable_residue"] = {
         "status": "planning",
-        "learned constraint": "Closed work should keep only compact residue routing in state.",
-        "motivation worth preserving": "Later agents need to know the residue owner without reading the archive first.",
-        "canonical owner now": ".agentic-workspace/planning/state.toml",
+        "learned constraint": "Closed work should not remain in live planning state.",
+        "motivation worth preserving": "Later agents can inspect the archived execplan when historical evidence is needed.",
+        "canonical owner now": ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json",
         "promotion trigger": "when selecting the next planning-state maturity slice",
         "retention after promotion": "shrink",
     }
@@ -3481,17 +3473,18 @@ execplans = [
 
     assert archived_record_path.exists()
     assert "execplans = []" in state_text
-    assert 'maturity = "closed"' in state_text
-    assert 'durable_residue = "planning"' in state_text
-    assert 'residue_owner = ".agentic-workspace/planning/state.toml"' in state_text
+    assert 'maturity = "closed"' not in state_text
+    assert "durable_residue" not in state_text
+    assert "residue_owner" not in state_text
     assert 'title = "Plan Alpha"' not in state_text
     assert 'closure = "archive-and-close"' not in state_text
-    assert summary["work_maturity"]["closed_items"][0]["id"] == "plan-alpha"
-    assert summary["work_maturity"]["closed_items"][0]["durable_residue"] == "planning"
+    assert summary["work_maturity"]["closed_items"] == []
     assert summary["work_maturity"]["counts"]["residue_routing_needed"] == 0
-    assert not any(warning["warning_class"] == "closed_work_history_residue" for warning in summary["planning_surface_health"]["warnings"])
+    assert not any(
+        warning["warning_class"] == "historical_work_in_live_planning_state" for warning in summary["planning_surface_health"]["warnings"]
+    )
     assert summary["todo"]["queued_count"] == 0
-    assert any("closed work_items" in action.detail for action in result.actions)
+    assert any("remove active execplan 'plan-alpha' from live planning state after archive" in action.detail for action in result.actions)
 
 
 def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_path: Path) -> None:
@@ -3706,7 +3699,10 @@ execplans = [
     assert not plan_path.exists()
     assert "intent-validation-and-dangling-debt-2026-04-22" not in state_text
     assert "execplans = []" in state_text
-    assert any(action.kind == "updated" and "remove TODO item '#257'" in action.detail for action in result.actions)
+    assert any(
+        action.kind == "updated" and "remove active execplan '#257' from live planning state after archive" in action.detail
+        for action in result.actions
+    )
 
 
 def test_archive_execplan_apply_cleanup_removes_active_execplan_and_work_item_pointer(tmp_path: Path) -> None:
@@ -3741,7 +3737,10 @@ execplans = [
     assert "current-lane" not in state_text
     assert "work_items = []" in state_text
     assert "execplans = []" in state_text
-    assert any(action.kind == "updated" and "remove TODO item 'current-lane'" in action.detail for action in result.actions)
+    assert any(
+        action.kind == "updated" and "remove active execplan 'current-lane' from live planning state after archive" in action.detail
+        for action in result.actions
+    )
 
 
 def test_archive_execplan_apply_cleanup_removes_active_execplan_field_pointer(tmp_path: Path) -> None:
@@ -3783,7 +3782,11 @@ execplans = [
     assert "module-manifest-components" not in state_text
     assert "active_items = []" in state_text
     assert "unrelated-active-plan" in state_text
-    assert any(action.kind == "updated" and "remove TODO item 'module-manifest-components'" in action.detail for action in result.actions)
+    assert any(
+        action.kind == "updated"
+        and "remove active execplan 'module-manifest-components' from live planning state after archive" in action.detail
+        for action in result.actions
+    )
 
 
 def test_archive_execplan_apply_cleanup_removes_work_item_and_string_execplan_pointer(tmp_path: Path) -> None:
@@ -4482,11 +4485,14 @@ candidates = [
     assert "Roadmap candidates are not execution authority" in readiness["rule"]
 
 
-def test_planning_summary_excludes_closed_lanes_from_promotion_candidates(tmp_path: Path) -> None:
+def test_planning_summary_warns_on_closed_lanes_in_live_state(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
         """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
 work_items = [
   { id = "done-lane", type = "lane", title = "Done lane", maturity = "closed", status = "done", priority = "first", issues = ["#1"], outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "", closure = "archive-and-close", durable_residue = "planning" },
 ]
@@ -4511,9 +4517,13 @@ candidates = [
     assert summary["roadmap"]["lane_count"] == 0
     assert summary["roadmap"]["candidate_count"] == 0
     assert summary["roadmap"]["candidates"] == []
+    assert summary["planning_surface_health"]["status"] == "not-clean"
+    assert any(
+        warning["warning_class"] == "historical_work_in_live_planning_state" for warning in summary["planning_surface_health"]["warnings"]
+    )
     assert summary["execution_readiness"]["status"] == "narrow-direct-ready"
     assert summary["execution_readiness"]["recommendation"]["id"] == "stay-direct-for-narrow-work"
-    assert summary["autopilot_loop"]["status"] == "satisfied"
+    assert summary["autopilot_loop"]["status"] == "blocked"
 
 
 def test_planning_summary_reports_candidate_lanes(tmp_path: Path) -> None:
@@ -4749,7 +4759,7 @@ def test_planning_summary_warns_when_execplan_next_action_references_missing_fil
     assert any("plan.md" in warning["message"] for warning in warnings)
 
 
-def test_planning_summary_warns_on_reconstructable_closed_work_history(tmp_path: Path) -> None:
+def test_planning_summary_warns_on_historical_work_in_live_state(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
@@ -4771,8 +4781,8 @@ queued_items = []
     warnings = summary["planning_surface_health"]["warnings"]
 
     assert summary["planning_surface_health"]["status"] == "not-clean"
-    assert any(warning["warning_class"] == "closed_work_history_residue" for warning in warnings)
-    assert "Remove reconstructable closed work rows" in summary["planning_surface_health"]["recommended_next_action"]
+    assert any(warning["warning_class"] == "historical_work_in_live_planning_state" for warning in warnings)
+    assert "not in state.toml" in summary["planning_surface_health"]["recommended_next_action"]
 
 
 def test_planning_summary_exposes_intent_validation_contract(tmp_path: Path) -> None:

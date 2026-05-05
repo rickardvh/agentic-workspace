@@ -60,11 +60,14 @@ candidates = [
     assert "candidate_lanes" not in payload["roadmap"]
 
 
-def test_workspace_summary_json_excludes_closed_lanes_from_promotion_candidates(tmp_path: Path, capsys) -> None:
+def test_workspace_summary_json_warns_on_closed_lanes_in_live_state(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
         """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
 work_items = [
   { id = "done-lane", type = "lane", title = "Done lane", maturity = "closed", status = "done", priority = "first", issues = ["#1"], outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "", closure = "archive-and-close", durable_residue = "planning" },
 ]
@@ -90,8 +93,12 @@ candidates = [
     assert exit_code == 0
     assert payload["roadmap"]["lane_count"] == 0
     assert payload["roadmap"]["candidate_count"] == 0
+    assert payload["planning_surface_health"]["status"] == "not-clean"
+    assert any(
+        warning["warning_class"] == "historical_work_in_live_planning_state" for warning in payload["planning_surface_health"]["warnings"]
+    )
     assert payload["execution_readiness"]["status"] == "narrow-direct-ready"
-    assert payload["autopilot_loop"]["status"] == "satisfied"
+    assert payload["autopilot_loop"]["status"] == "blocked"
 
 
 def test_workspace_summary_json_accepts_full_profile(tmp_path: Path, capsys) -> None:

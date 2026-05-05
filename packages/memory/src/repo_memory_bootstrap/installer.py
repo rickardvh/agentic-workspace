@@ -769,7 +769,7 @@ def upgrade_bootstrap(
             category="safe-update",
         )
         threshold = source_choice.get("recommended_upgrade_after_days")
-        if isinstance(threshold, int) and source_age_days >= threshold:
+        if isinstance(threshold, int) and source_age_days > threshold:
             result.add(
                 "warning",
                 target_root / upgrade_source_path,
@@ -1028,7 +1028,7 @@ def doctor_bootstrap(
             category="safe-update",
         )
         threshold = source_choice.get("recommended_upgrade_after_days")
-        if isinstance(threshold, int) and source_age_days >= threshold:
+        if isinstance(threshold, int) and source_age_days > threshold:
             result.add(
                 "warning",
                 target_root / upgrade_source_path,
