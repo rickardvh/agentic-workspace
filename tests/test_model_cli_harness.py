@@ -73,6 +73,7 @@ def test_model_cli_harness_dry_run_copies_fixture_and_renders_command(tmp_path: 
     assert str(repo_path) in result["prompt"]
     assert str(REPO_ROOT) in result["prompt"]
     assert (Path(result["run_root"]) / "run.json").exists()
+    assert len(Path(result["run_root"]).name) < 90
 
 
 def test_model_cli_harness_can_inject_repo_startup_instructions(tmp_path: Path) -> None:
@@ -1785,6 +1786,27 @@ def test_model_cli_harness_sets_git_ceiling_to_run_root(tmp_path: Path) -> None:
     env = harness._with_git_ceiling({"GIT_CEILING_DIRECTORIES": "existing"}, run_root=tmp_path / "run")
 
     assert env["GIT_CEILING_DIRECTORIES"].split(os.pathsep)[-1] == str((tmp_path / "run").resolve())
+
+
+def test_model_cli_harness_snapshot_ignores_ephemeral_runtime_dirs(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    (repo / "src" / "app.py").write_text("print('hello')\n", encoding="utf-8")
+    before = harness._file_snapshot(repo)
+    (repo / ".venv" / "Lib").mkdir(parents=True)
+    (repo / ".venv" / "Lib" / "dependency.py").write_text("# generated\n", encoding="utf-8")
+    (repo / ".pytest_cache").mkdir()
+    (repo / ".pytest_cache" / "CACHEDIR.TAG").write_text("cache\n", encoding="utf-8")
+    (repo / ".git").mkdir()
+    (repo / ".git" / "index").write_text("index\n", encoding="utf-8")
+    (repo / "src" / "app.py").write_text("print('changed')\n", encoding="utf-8")
+    after = harness._file_snapshot(repo)
+
+    diff = harness._snapshot_diff(before, after)
+
+    assert diff["created"] == []
+    assert diff["modified"] == ["src/app.py"]
 
 
 def test_model_cli_harness_scores_direct_task_overplanning_as_semantic_failure() -> None:

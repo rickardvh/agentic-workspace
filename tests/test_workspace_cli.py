@@ -5877,6 +5877,7 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
             },
             "proof_report": {
                 "validation proof": "uv run agentic-workspace proof passed",
+                "acceptance reconciliation": "requested package workflow evidence -> delivered closeout report evidence -> proof passed",
                 "proof achieved now": "yes",
                 'evidence for "proof achieved" state': "focused report test fixture",
             },
@@ -5924,6 +5925,11 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert closure_scope["larger_intent_closure"]["status"] == "open"
     assert closure_scope["larger_intent_closure"]["closure_decision"] == "archive-but-keep-lane-open"
     assert closure_scope["non_substitution_rule"] == "Validation success alone is not closure evidence."
+    acceptance = payload["closeout_trust"]["acceptance_criteria_reconciliation"]
+    assert acceptance["status"] == "present"
+    assert acceptance["trust"] == "normal"
+    assert acceptance["evidence_present"] is True
+    assert acceptance["completion_criteria_count"] == 1
     residue_action = payload["closeout_trust"]["durable_residue_action"]
     assert residue_action["action"] == "route-durable-residue"
     assert residue_action["command"] == "agentic-workspace report --target ./repo --section closeout_trust --format json"
@@ -6036,10 +6042,14 @@ def test_report_closeout_trust_lowers_trust_when_active_plan_has_no_package_evid
     assert closeout["trust"] == "lower-trust"
     assert closeout["strict_closeout_gate"]["status"] == "blocked"
     assert closeout["strict_closeout_gate"]["blocking"] is True
-    assert closeout["lower_trust_closeout_count"] == 1
+    assert closeout["lower_trust_closeout_count"] == 2
     assert closeout["planning_residue_lower_trust_count"] == 0
     assert closeout["package_evidence_lower_trust_count"] == 1
+    assert closeout["acceptance_reconciliation_lower_trust_count"] == 1
     assert "missing preflight, summary, report, proof" in closeout["absence_signals"][0]
+    acceptance = closeout["acceptance_criteria_reconciliation"]
+    assert acceptance["trust"] == "lower-trust"
+    assert "requested->delivered->proof->gap" in acceptance["recommended_next_action"]
     evidence = closeout["package_workflow_evidence"]
     assert evidence["trust"] == "lower-trust"
     assert evidence["missing_expected_surfaces"] == ["preflight", "summary", "report", "proof"]
@@ -7678,6 +7688,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
         "suggest-delegation",
         "suggest-downroute",
         "suggest-escalation",
+        "delegate-bounded-slice",
         "manual-handoff",
         "ask-human",
     }
@@ -8275,6 +8286,62 @@ def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: 
     ]
     assert "active execplan" in posture["delegation_decision"]["handoff_surface"]["fallback_when_unavailable"]
     assert payload["delegation_decision"] == posture["delegation_decision"]
+
+
+def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "auto"',
+                "",
+                "[runtime]",
+                "supports_internal_delegation = true",
+                "cheap_bounded_executor_available = true",
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = true",
+                "",
+                "[delegation_targets.mini]",
+                'strength = "medium"',
+                'location = "local"',
+                "confidence = 0.8",
+                'task_fit = ["bounded implementation", "validation"]',
+                'capability_classes = ["mixed", "mechanical-follow-through"]',
+                'execution_methods = ["cli"]',
+            ]
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--task",
+                "Implement bounded text helper behavior",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    decision = payload["delegation_decision"]
+    assert decision["decision"] == "delegate-bounded-slice"
+    assert decision["target"] == "mini"
+    assert decision["required_next_action"] == "execute-when-safe"
+    assert decision["token_savings_expected"] == "likely"
+    assert decision["handoff_command"] == "agentic-planning handoff --target . --format json"
+    assert "bounded work" in decision["reason"]
 
 
 def test_ownership_path_answer_includes_authority_marker_and_boundary_warning(capsys) -> None:
@@ -9376,6 +9443,22 @@ def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, c
     assert safety["strict_preflight"]["available"] is True
     scenarios = {entry["scenario"]: entry for entry in safety["fixture_coverage"]}
     assert scenarios["upgrade dry-run on installed repo"]["status"] == "covered"
+
+
+def test_init_flags_preserved_agentic_workspace_absence_instructions(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "AGENTS.md",
+        "# Agent Instructions\n\nThis repository does not use Agentic Workspace. Work from ordinary files.\n",
+    )
+
+    assert cli.main(["init", "--target", str(tmp_path), "--preset", "full", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert any(
+        item.startswith("AGENTS.md: preserved repo-owned instructions claim Agentic Workspace is absent")
+        for item in payload["needs_review"]
+    )
 
 
 def test_doctor_json_does_not_report_dry_run_actions_as_mutations(monkeypatch, tmp_path: Path, capsys) -> None:

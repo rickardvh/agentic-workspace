@@ -39,6 +39,13 @@ Cheap implementer context for a bounded changed-path scope.
 | `proof.broaden_when` | array of string | yes |  | Signals that narrow proof is no longer enough. |  |  |
 | `proof.escalate_when` | array of string | yes |  | Signals that the implementer should not guess. |  |  |
 | `required_validation_commands` | array of string | yes |  | Commands that must pass before claiming implementation complete. |  |  |
+| `acceptance_reconciliation` | object | yes |  | Closeout guard against passing self-authored tests while missing requested behavior. |  |  |
+| `acceptance_reconciliation.kind` | const `"agentic-workspace/acceptance-reconciliation/v1"` | yes |  | Discriminator for the acceptance reconciliation guidance. |  |  |
+| `acceptance_reconciliation.status` | string | yes |  | Whether acceptance reconciliation is required before closeout for the current context. |  |  |
+| `acceptance_reconciliation.rule` | string | yes |  | Why validation alone is not enough for closeout. |  |  |
+| `acceptance_reconciliation.checklist` | array of string | yes |  | Checklist for mapping requested outcomes to delivered behavior and proof. |  |  |
+| `acceptance_reconciliation.compact_closeout_prompt` | string | yes |  | Short prompt agents can use before final answer or lane closeout. |  |  |
+| `acceptance_reconciliation.task_text_available` | boolean | yes |  | Whether the CLI invocation included task text to reconcile. |  |  |
 | `orientation` | object | yes |  | Minimum workspace orientation guidance for the implementer. |  |  |
 | `orientation.status` | string | yes |  | Whether the implementer context is based on changed paths or an unknown scope. |  |  |
 | `orientation.minimum_before_editing` | string | yes |  | Minimum orientation step an agent should complete before implementation. |  |  |

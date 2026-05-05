@@ -19,6 +19,12 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SUITE = REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "scratch" / "model-cli-harness"
+EPHEMERAL_MUTATION_PATHS = (
+    ".git/",
+    ".pytest_cache/",
+    ".venv/",
+    "__pycache__/",
+)
 
 
 @dataclass(frozen=True)
@@ -118,7 +124,9 @@ def _scenario_paths(
     if prompt_variant_id and prompt_variant_id != "default":
         safe_variant = prompt_variant_id.replace("/", "_").replace(":", "_").replace(" ", "_")
         variant_suffix = f"-{safe_variant}"
-    run_root = output_root / f"{_now_id()}-{suite_id}-{scenario_id}{variant_suffix}-{adapter_id}-{safe_model}"
+    readable = f"{suite_id}-{scenario_id}{variant_suffix}-{adapter_id}-{safe_model}"
+    digest = hashlib.sha1(readable.encode("utf-8")).hexdigest()[:10]
+    run_root = output_root / f"{_now_id()}-{scenario_id[:36]}-{adapter_id}-{safe_model[:24]}-{digest}"
     fixture_root = run_root / "fixture"
     repo_path = run_root / "repo"
     transcript_path = run_root / "transcript.jsonl"
@@ -143,6 +151,14 @@ def _prepare_fixture(*, suite_path: Path, scenario: dict[str, Any], paths: Harne
         raise FileNotFoundError(f"fixture not found: {fixture}")
     paths.run_root.mkdir(parents=True, exist_ok=False)
     shutil.copytree(fixture_path, paths.repo_path)
+    if (paths.repo_path / ".git").exists():
+        subprocess.run(  # noqa: S603
+            ["git", "config", "core.longpaths", "true"],
+            cwd=paths.repo_path,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
 
 
 def _run_command(command: list[str], *, cwd: Path, timeout_seconds: int, env: dict[str, str] | None = None) -> dict[str, Any]:
@@ -179,12 +195,22 @@ def _with_git_ceiling(env: dict[str, str], *, run_root: Path) -> dict[str, str]:
     return isolated
 
 
+def _is_ephemeral_mutation_path(path: str) -> bool:
+    normalized = path.replace("\\", "/")
+    parts = normalized.split("/")
+    if any(part in {".git", ".pytest_cache", ".venv", "__pycache__"} for part in parts):
+        return True
+    return any(normalized.startswith(prefix) for prefix in EPHEMERAL_MUTATION_PATHS)
+
+
 def _file_snapshot(root: Path) -> dict[str, dict[str, Any]]:
     snapshot: dict[str, dict[str, Any]] = {}
     if not root.exists():
         return snapshot
     for path in sorted(item for item in root.rglob("*") if item.is_file()):
         relative = path.relative_to(root).as_posix()
+        if _is_ephemeral_mutation_path(relative):
+            continue
         data = path.read_bytes()
         snapshot[relative] = {
             "size": len(data),

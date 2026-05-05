@@ -4451,6 +4451,40 @@ def _detect_placeholder_surfaces(*, target_root: Path, surfaces: list[str]) -> l
     return placeholders
 
 
+_WORKSPACE_ABSENCE_PATTERNS = (
+    re.compile(r"\bdoes\s+not\s+use\s+agentic\s+workspace\b", re.IGNORECASE),
+    re.compile(r"\bno\s+agentic\s+workspace\b", re.IGNORECASE),
+    re.compile(r"\bagentic\s+workspace\s+is\s+not\s+(?:installed|used|enabled)\b", re.IGNORECASE),
+)
+
+
+def _detect_workspace_absence_contradictions(*, target_root: Path, surfaces: list[str]) -> list[str]:
+    contradictions: list[str] = []
+    for surface in surfaces:
+        path = target_root / surface
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        repo_owned_text = _without_workspace_workflow_fence(text)
+        if any(pattern.search(repo_owned_text) for pattern in _WORKSPACE_ABSENCE_PATTERNS):
+            contradictions.append(
+                f"{Path(surface).as_posix()}: preserved repo-owned instructions claim Agentic Workspace is absent; reconcile or remove stale absence wording"
+            )
+    return contradictions
+
+
+def _without_workspace_workflow_fence(text: str) -> str:
+    return re.sub(
+        rf"{re.escape(WORKSPACE_WORKFLOW_MARKER_START)}.*?{re.escape(WORKSPACE_WORKFLOW_MARKER_END)}",
+        "",
+        text,
+        flags=re.DOTALL,
+    )
+
+
 def _build_init_summary(
     *,
     target_root: Path,
@@ -4465,6 +4499,12 @@ def _build_init_summary(
     updated_managed: list[str] = []
     preserved_existing = list(inspection.preserved_existing)
     needs_review = list(inspection.needs_review)
+    needs_review.extend(
+        _detect_workspace_absence_contradictions(
+            target_root=target_root,
+            surfaces=[config.agent_instructions_file, *config.detected_agent_instructions_files],
+        )
+    )
     placeholders = list(inspection.placeholders)
     generated_artifacts: list[str] = []
 
@@ -6943,6 +6983,7 @@ def _report_closeout_trust_payload(
             "strict_closeout_gate": gate,
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report={}),
             "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report={}),
+            "acceptance_criteria_reconciliation": _acceptance_criteria_reconciliation_payload(planning_report={}),
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report={},
                 intent_validation={},
@@ -6964,6 +7005,7 @@ def _report_closeout_trust_payload(
             "strict_closeout_gate": gate,
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
             "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report),
+            "acceptance_criteria_reconciliation": _acceptance_criteria_reconciliation_payload(planning_report=planning_report),
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report=planning_report,
                 intent_validation={},
@@ -6988,6 +7030,7 @@ def _report_closeout_trust_payload(
     ]
     sample_signals = [message for message in sample_signals if message][:3]
     package_workflow_evidence = _package_workflow_evidence_payload(planning_report=planning_report)
+    acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
     active_planning_record = package_workflow_evidence.get("status") == "present"
     package_absence_signals: list[str] = []
     if package_workflow_evidence.get("status") == "present" and package_workflow_evidence.get("trust") == "lower-trust":
@@ -6997,6 +7040,8 @@ def _report_closeout_trust_payload(
             f"Active planning record is present, but package workflow evidence is incomplete or absent: missing {missing}."
         )
     effective_lower_trust_count = lower_trust_closeout_count + len(package_absence_signals)
+    if acceptance_reconciliation.get("trust") == "lower-trust":
+        effective_lower_trust_count += 1
     trust = "lower-trust" if effective_lower_trust_count > 0 else "normal"
     if trust == "lower-trust":
         summary = (
@@ -7021,11 +7066,13 @@ def _report_closeout_trust_payload(
         "lower_trust_closeout_count": effective_lower_trust_count,
         "planning_residue_lower_trust_count": lower_trust_closeout_count,
         "package_evidence_lower_trust_count": len(package_absence_signals),
+        "acceptance_reconciliation_lower_trust_count": 1 if acceptance_reconciliation.get("trust") == "lower-trust" else 0,
         "summary": summary,
         "sample_signals": [*sample_signals, *package_absence_signals][:3],
         "absence_signals": package_absence_signals,
         "package_workflow_evidence": package_workflow_evidence,
         "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report),
+        "acceptance_criteria_reconciliation": acceptance_reconciliation,
         "historical_review_artifacts": _historical_review_artifacts_policy(
             planning_report=planning_report,
             intent_validation=intent_validation,
@@ -7447,6 +7494,83 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any]) -> di
             "non_substitution_rule": "Validation success alone is not closure evidence.",
         },
         "recommended_next_action": recommended_next_action,
+    }
+
+
+def _acceptance_criteria_reconciliation_payload(*, planning_report: dict[str, Any]) -> dict[str, Any]:
+    active = planning_report.get("active", {}) if isinstance(planning_report, dict) else {}
+    planning_record = active.get("planning_record", {}) if isinstance(active, dict) else {}
+    if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
+        return {
+            "status": "unavailable",
+            "trust": "not-applicable",
+            "required_for_bounded_or_broad_work": True,
+            "reason": "no active planning record exposes acceptance reconciliation evidence",
+            "rule": "Validation success and self-authored tests do not prove that requested outcomes were delivered.",
+            "required_closeout_shape": [
+                "requested requirement or criterion",
+                "delivered behavior or surface",
+                "proof covering it",
+                "gap or intentional deviation",
+            ],
+        }
+    active_milestone = planning_record.get("active_milestone", {})
+    if not isinstance(active_milestone, dict):
+        active_milestone = {}
+    completion_criteria = [str(item).strip() for item in _list_payload(planning_record.get("completion_criteria")) if str(item).strip()]
+    proof_expectations = [str(item).strip() for item in _list_payload(planning_record.get("proof_expectations")) if str(item).strip()]
+    proof_report = planning_record.get("proof_report", {})
+    if not isinstance(proof_report, dict):
+        proof_report = {}
+    closure_check = planning_record.get("closure_check", {})
+    if not isinstance(closure_check, dict):
+        closure_check = {}
+    evidence_text = "\n".join(
+        [
+            str(proof_report.get("validation proof", "")),
+            str(proof_report.get("acceptance reconciliation", "")),
+            str(closure_check.get("acceptance reconciliation", "")),
+            str(closure_check.get("criteria satisfied", "")),
+        ]
+    ).lower()
+    evidence_present = any(
+        marker in evidence_text
+        for marker in (
+            "requested",
+            "delivered",
+            "acceptance",
+            "criteria",
+            "requirement",
+            "deviation",
+        )
+    )
+    criteria_count = len(completion_criteria) or (1 if active_milestone else 0)
+    trust = "normal" if evidence_present and (criteria_count or proof_expectations) else "lower-trust"
+    return {
+        "status": "present",
+        "trust": trust,
+        "required_for_bounded_or_broad_work": True,
+        "completion_criteria_count": criteria_count,
+        "proof_expectation_count": len(proof_expectations),
+        "evidence_present": evidence_present,
+        "rule": "Before closeout, reconcile each requested outcome or planning criterion against delivered behavior and proof.",
+        "required_closeout_shape": [
+            "requested requirement or criterion",
+            "delivered behavior or surface",
+            "proof covering it",
+            "gap or intentional deviation",
+        ],
+        "recommended_next_action": (
+            "Acceptance reconciliation is visible in planning closeout evidence."
+            if trust == "normal"
+            else "Record requested->delivered->proof->gap reconciliation before claiming successful closeout."
+        ),
+        "sources": [
+            "planning.active.planning_record.completion_criteria",
+            "planning.active.planning_record.proof_expectations",
+            "planning.active.planning_record.proof_report",
+            "planning.active.planning_record.closure_check",
+        ],
     }
 
 
@@ -8755,6 +8879,7 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         "authority_markers": [_authority_marker_for_path(path) for path in (normalized_paths or ["AGENTS.md", "llms.txt"])],
         "proof": proof,
         "required_validation_commands": proof["required_commands"],
+        "acceptance_reconciliation": _acceptance_reconciliation_prompt_payload(task_text=task_text),
         "orientation": {
             "status": "changed-path-context" if normalized_paths else "unknown-scope",
             "minimum_before_editing": (
@@ -8859,6 +8984,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "required_commands": payload.get("required_validation_commands", []),
             "detail_command": "agentic-workspace proof --profile full --changed <paths> --format json",
         },
+        "acceptance_reconciliation": payload.get("acceptance_reconciliation", {}),
         "routing": {
             "task_status": task_routing.get("status") if isinstance(task_routing, dict) else None,
             "work_shape": capability.get("work_shape"),
@@ -8867,6 +8993,26 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         },
         "delegation_decision": execution_posture.get("delegation_decision", {}),
         "detail_command": "agentic-workspace implement --profile full --changed <paths> --format json",
+    }
+
+
+def _acceptance_reconciliation_prompt_payload(*, task_text: str | None) -> dict[str, Any]:
+    has_task = bool(str(task_text or "").strip())
+    return {
+        "kind": "agentic-workspace/acceptance-reconciliation/v1",
+        "status": "required-before-closeout" if has_task else "required-when-task-intent-is-known",
+        "rule": "Validation success is not enough; before closeout, reconcile requested outcomes against delivered behavior and tests.",
+        "checklist": [
+            "list each explicit user requirement or accepted planning criterion",
+            "name the delivered surface or behavior for each requirement",
+            "name proof covering each requirement, or mark the gap",
+            "state intentional deviations before claiming success",
+        ],
+        "compact_closeout_prompt": (
+            "Before final answer: requested -> delivered -> proof -> gaps/deviations. "
+            "Do not claim completion from self-authored tests alone."
+        ),
+        "task_text_available": has_task,
     }
 
 
@@ -9151,6 +9297,23 @@ def _delegation_next_action_decision(
     elif downrouting_active:
         decision = "suggest-downroute"
         required_next_action = "mention-suggestion" if mode == "suggest" else "prepare-handoff"
+    elif (
+        recommendation == "stay-local"
+        and mode == "auto"
+        and delegation_control.get("execution_permitted") is True
+        and isinstance(selected_target, dict)
+        and str(selected_target.get("strength", "")) in {"weak", "medium"}
+        and proof_burden != "high"
+        and work_shape in {"direct", "bounded"}
+    ):
+        decision = "delegate-bounded-slice"
+        required_next_action = "execute-when-safe"
+        reasons = [
+            (
+                f"auto delegation is permitted and target '{target_name}' fits bounded work; "
+                "delegate a narrow implementation or validation slice only if proof expectations stay unchanged"
+            )
+        ]
 
     if mode == "off":
         mode_effect = "delegation.mode is off: do not use local delegation targets."
@@ -9166,7 +9329,13 @@ def _delegation_next_action_decision(
         if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation"}:
             required_next_action = "execute-when-safe"
 
-    if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation", "manual-handoff"}:
+    if decision in {
+        "suggest-delegation",
+        "suggest-downroute",
+        "suggest-escalation",
+        "manual-handoff",
+        "delegate-bounded-slice",
+    }:
         handoff_command = _command_with_cli_invoke(
             command="agentic-planning handoff --target . --format json",
             cli_invoke=config.cli_invoke,
@@ -9197,7 +9366,7 @@ def _delegation_next_action_decision(
         "proof_burden": proof_burden,
         "quality_risk": "high" if proof_burden == "high" else ("medium" if proof_burden == "non-obvious" else "low"),
         "token_savings_expected": "likely"
-        if decision == "suggest-downroute"
+        if decision in {"suggest-downroute", "delegate-bounded-slice"}
         else ("possible" if decision == "suggest-delegation" else "none"),
         "required_next_action": required_next_action,
         "mode_effect": mode_effect,

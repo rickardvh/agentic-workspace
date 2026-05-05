@@ -15,6 +15,7 @@
     "authority_markers",
     "proof",
     "required_validation_commands",
+    "acceptance_reconciliation",
     "orientation",
     "inference_limits",
     "execution_posture",
@@ -89,6 +90,10 @@
         "description": "One entry in the required validation commands list."
       },
       "description": "Commands that must pass before claiming implementation complete."
+    },
+    "acceptance_reconciliation": {
+      "$ref": "#/$defs/acceptance_reconciliation",
+      "description": "Compact checklist requiring requested outcomes to be reconciled against delivered behavior and proof before closeout."
     },
     "orientation": {
       "type": "object",
@@ -257,6 +262,50 @@
       "type": "object",
       "description": "Top-level copy of the compact delegation decision for next-action consumers.",
       "additionalProperties": true
+    },
+    "acceptance_reconciliation": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "rule",
+        "checklist",
+        "compact_closeout_prompt",
+        "task_text_available"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/acceptance-reconciliation/v1",
+          "description": "Discriminator for the acceptance reconciliation guidance."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether acceptance reconciliation is required before closeout for the current context."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Why validation alone is not enough for closeout."
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One required acceptance reconciliation check."
+          },
+          "minItems": 1,
+          "description": "Checklist for mapping requested outcomes to delivered behavior and proof."
+        },
+        "compact_closeout_prompt": {
+          "type": "string",
+          "description": "Short prompt agents can use before final answer or lane closeout."
+        },
+        "task_text_available": {
+          "type": "boolean",
+          "description": "Whether the CLI invocation included task text to reconcile."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Closeout guard against passing self-authored tests while missing requested behavior."
     },
     "handoff_requirements": {
       "type": "object",
