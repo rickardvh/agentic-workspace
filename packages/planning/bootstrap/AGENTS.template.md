@@ -21,5 +21,5 @@ Keep this file thin. Treat it as the repo-owned startup adapter over the structu
 
 - Do not bulk-read all planning surfaces.
 - Keep package boundaries explicit.
-- Preserve independent package versioning and CLI entry points.
+- Preserve package boundaries, package-local versioning, and module CLI entry points for maintainer/debugging work.
 - Keep repo-custom workflow obligations in `.agentic-workspace/config.toml`; let `AGENTS.md` stay a compact router.

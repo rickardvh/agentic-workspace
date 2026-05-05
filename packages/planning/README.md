@@ -1,6 +1,6 @@
 # Agentic Planning
 
-Agentic Planning is a checked-in planning-for-execution contract, distributed through the `agentic-planning` package. Use the `agentic-planning` CLI for planning lifecycle operations.
+Agentic Planning is a checked-in planning-for-execution contract, distributed as the Planning module of Agentic Workspace. Use the root `agentic-workspace` CLI for normal host-repo lifecycle, startup, reporting, and module orchestration. The `agentic-planning` CLI remains the module-level interface for package-local maintenance, advanced debugging, and explicit Planning-only lifecycle control.
 
 ## Why
 
@@ -35,10 +35,9 @@ Current maturity in this repo: beta.
 
 Adoption shape:
 
-- Works well alone in repos that need checked-in execution steering without a separate memory layer.
+- Works through the Workspace layer in repos that need checked-in execution steering without a separate memory layer.
 - Works alongside Agentic Memory when active planning should be able to reference durable repo knowledge.
-- Does not require the full stack or the workspace layer.
-- Selective adoption must remain valid: planning should still make sense in repos that do not install memory.
+- Selective adoption remains valid: a repo can install the `planning` preset without Memory, while Workspace still owns startup routing, lifecycle coordination, shared config, and combined reports.
 
 Collaboration shape:
 
@@ -84,7 +83,7 @@ Default path: use `agentic-workspace init --preset planning`.
 Treat the preset as the user intent: "set up this repo for Agentic Planning" and let the workspace CLI choose the safe install vs adopt path from repo state.
 Use the package CLI below only for package-local maintainer work, advanced debugging, or when you explicitly need module-level control.
 
-Fastest no-install path:
+Advanced module-only no-install path:
 
 ```bash
 # Preferred when uvx is available
@@ -94,7 +93,7 @@ uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirector
 pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning prompt install --target ./repo
 ```
 
-Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
+Prefer the root Workspace command for host repos. Use these module-only commands when you are maintaining Planning itself, debugging the module boundary, or performing a narrow package-level operation after Workspace has established repo context. Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
 
 Use `prompt install` for a clean bootstrap. Use `adopt` when the repository already has planning-like docs and you want the package to merge conservatively around existing surfaces.
 After workspace bootstrap, `llms.txt` is the canonical external-agent handoff surface and `.agentic-workspace/bootstrap-handoff.md` is the next-action brief when the repo still needs review.
@@ -338,10 +337,10 @@ In this monorepo checkout, the active operational planning install lives at the 
 
 ## Installed Operating Shape
 
-The installed planning state lives under `.agentic-workspace/planning/`.
-The root `AGENTS.md` adapter points agents to compact startup commands, and the package payload supplies reusable contracts and templates.
+The installed planning state lives under `.agentic-workspace/planning/`, inside the shared Workspace operating layer.
+The root `AGENTS.md` adapter points agents to compact Workspace startup commands, and the package payload supplies reusable contracts and templates consumed by the Workspace orchestrator.
 
-This package can work alongside Agentic Memory, but does not require it: planning owns active execution state, while memory owns durable technical knowledge.
+This module can work alongside Agentic Memory, but does not require Memory: Planning owns active execution state, while Memory owns durable technical knowledge. Workspace remains the common orchestrator whether a repo installs Planning alone, Memory alone, both modules, or only routing surfaces.
 
 ## Commands
 

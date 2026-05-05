@@ -1,6 +1,6 @@
 # Agentic Memory
 
-Agentic Memory is a checked-in repo-memory contract for anti-rediscovery knowledge: durable, shared technical context that is expensive to reconstruct across agents, contributors, sessions, and branches. The `agentic-memory` package installs and maintains that contract inside a repository. Use the `agentic-memory` CLI for memory lifecycle operations.
+Agentic Memory is a checked-in repo-memory contract for anti-rediscovery knowledge: durable, shared technical context that is expensive to reconstruct across agents, contributors, sessions, and branches. It is distributed as the Memory module of Agentic Workspace. Use the root `agentic-workspace` CLI for normal host-repo lifecycle, startup, reporting, and module orchestration. The `agentic-memory` CLI remains the module-level interface for package-local maintenance, advanced debugging, and explicit Memory-only lifecycle control.
 
 ## At A Glance
 
@@ -29,9 +29,9 @@ Current maturity in this repo: beta.
 
 Adoption shape:
 
-- Works well alone in repos that need durable shared knowledge without a checked-in planning system.
+- Works through the Workspace layer in repos that need durable shared knowledge without a checked-in planning system.
 - Works alongside Agentic Planning when the repo also needs active execution steering.
-- Does not require the full stack or the workspace layer.
+- Selective adoption remains valid: a repo can install the `memory` preset without Planning, while Workspace still owns startup routing, lifecycle coordination, shared config, and combined reports.
 
 Collaboration shape:
 
@@ -46,7 +46,7 @@ The CLI is the delivery mechanism, not the whole product. The product capability
 Default path: use `agentic-workspace init --preset memory`.
 Use the package CLI below only for package-local maintainer work, advanced debugging, or when you explicitly need module-level control.
 
-Fastest no-install path:
+Advanced module-only no-install path:
 
 ```bash
 # Preferred when uvx is available
@@ -56,7 +56,7 @@ uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirector
 pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory prompt install --target ./repo
 ```
 
-Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
+Prefer the root Workspace command for host repos. Use these module-only commands when you are maintaining Memory itself, debugging the module boundary, or performing a narrow package-level operation after Workspace has established repo context. Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
 
 Use `prompt install` for a clean bootstrap into a repo that does not already have a memory system. Use `prompt adopt` when the repository already has related docs or workflow notes and you want the installer to merge conservatively instead of assuming a blank slate.
 
@@ -130,7 +130,7 @@ When both modules are installed, the combined install should be cheaper than eit
 - **Explicit improvement-targeting workflow.** Symptomatic notes should move through a concrete path: symptom captured -> remediation target chosen -> follow-up routed -> remediation lands -> note retained, shrunk, stubbed, or deleted. The workflow distinguishes when a signal should stay in memory, become a review artifact, enter issue intake, or promote into roadmap or active planning.
 - **Freshness and hygiene tooling.** The common CLI surfaces memory freshness, stale confirmations, oversized notes, explicit planning-state spillover in `.agentic-workspace/memory/repo/current/*`, manifest/note mismatches, and recurring-friction pressure without shipping executable repo helpers. `stale_when` globs catch semantic drift from code changes, not just calendar age, and the compact memory report projects those anchors into note trust states such as `supported`, `questionable`, `stale`, and `elimination_candidate`.
 - **Skills layer.** Repeatable memory operations such as capture, hygiene, refresh, routing, and upgrade ship as upgrade-replaceable skills under `.agentic-workspace/memory/skills/`. Repos can add their own memory-specific skills under `.agentic-workspace/memory/repo/skills/` without modifying the core set.
-- **Language-agnostic.** The installed memory system is plain Markdown and TOML. It works in any repository regardless of language or framework. Only the bootstrap CLI itself requires Python; once installed, the memory layer has no runtime dependencies.
+- **Language-agnostic checked-in state.** The installed memory notes and manifests are plain Markdown and TOML. They work in any repository regardless of language or framework. Runtime lifecycle, startup routing, reports, doctor checks, and upgrades are coordinated through the Workspace CLI.
 
 ### Bootstrap CLI requirements
 

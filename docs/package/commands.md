@@ -30,7 +30,7 @@ For machine-readable agent use, prefer the smallest output profile that answers 
 
 For ordered roadmap lanes, promote and complete one lane at a time. A lane may need multiple execplans, but one execplan should not span unrelated lanes.
 
-Use `agentic-planning` in workflow guidance and package-local Planning lifecycle work.
+Use `agentic-workspace` in ordinary host-repo workflow guidance. Use `agentic-planning` for package-local Planning maintenance, advanced debugging, or explicit module-level lifecycle control.
 
 ## Workspace Lifecycle Mutation Commands
 

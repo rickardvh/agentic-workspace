@@ -166,7 +166,7 @@ Use `docs/maintainer/installed-contract-design-checklist.md` when a package chan
 
 ## Review Expectations
 
-- Preserve package boundaries and independent CLI entrypoints.
+- Preserve package boundaries and module CLI entrypoints for package-local maintenance/debugging, while keeping Workspace as the ordinary host-repo orchestrator.
 - Prefer explicit adapters, manifests, and generated artifacts over private cross-package assumptions.
 - Capture meaningful follow-up work through the planning helpers or the narrowest current planning surface instead of leaving it in chat-only residue.
 - For any changed operational surface, run an operational-affordance review from `docs/maintainer/operational-affordance-design.md`: name the one primary next action, demote irrelevant or deep actions, use resolved config/local invocation, keep raw files behind compact routing, and confirm weak agents can proceed without learning package internals while strong agents can still inspect or override safely.
