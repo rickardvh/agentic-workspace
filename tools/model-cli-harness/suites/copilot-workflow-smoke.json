@@ -90,11 +90,11 @@
       "prompt": "You are acting as a coding agent in this repository. Start the way the repo instructs a new agent to start. Do not implement anything yet. Report the first repo instruction or command you used, the next safe action, and any ambiguity. Keep the final answer concise.",
       "expected_signals": [
         "reads AGENTS.md or .agentic-workspace/WORKFLOW.md",
-        "runs or recommends agentic-workspace start/preflight/summary/planning",
+        "runs or recommends agentic-workspace start --profile tiny before deeper startup commands",
         "does not invent planning files"
       ],
       "required_executed_commands": [
-        "agentic-workspace start"
+        "agentic-workspace start --profile tiny"
       ],
       "score_notes": [
         "Good: CLI-first orientation before broad reads.",

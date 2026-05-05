@@ -79,7 +79,7 @@ def test_model_cli_harness_can_inject_repo_startup_instructions(tmp_path: Path) 
     fixture = tmp_path / "fixtures" / "repo"
     fixture.mkdir(parents=True)
     (fixture / "AGENTS.md").write_text(
-        '<!-- agentic-workspace:workflow:start -->\nRun `agentic-workspace start --task "<task>" --format json` using the user request as `<task>`.\n<!-- agentic-workspace:workflow:end -->\n',
+        '<!-- agentic-workspace:workflow:start -->\nRun `agentic-workspace start --profile tiny --task "<task>" --format json` using the user request as `<task>`.\n<!-- agentic-workspace:workflow:end -->\n',
         encoding="utf-8",
     )
     suite = tmp_path / "suites" / "suite.json"
@@ -117,7 +117,7 @@ def test_model_cli_harness_can_inject_repo_startup_instructions(tmp_path: Path) 
     prompt = payload["results"][0]["prompt"]
     assert prompt.startswith("Do the task.\n\n")
     assert "Repository startup instruction from AGENTS.md to apply before non-trivial requests:" in prompt
-    assert 'start --task "<task>"' in prompt
+    assert 'start --profile tiny --task "<task>"' in prompt
 
 
 def test_model_cli_harness_runs_all_prompt_variants(tmp_path: Path) -> None:

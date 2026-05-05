@@ -325,6 +325,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           },
           {
             "choices": [
+              "full",
+              "tiny"
+            ],
+            "default": "full",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Startup output profile. Use tiny for the cheapest first-contact routing answer.",
+            "name": "profile"
+          },
+          {
+            "choices": [
               "text",
               "json"
             ],
@@ -1683,6 +1695,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Optional task description used to include task-specific skill recommendations in startup context.",
           "name": "task"
+        },
+        {
+          "choices": [
+            "full",
+            "tiny"
+          ],
+          "default": "full",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Startup output profile. Use tiny for the cheapest first-contact routing answer.",
+          "name": "profile"
         },
         {
           "choices": [

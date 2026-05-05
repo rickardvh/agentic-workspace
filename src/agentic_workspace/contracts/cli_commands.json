@@ -100,6 +100,18 @@
             "--task"
           ],
           "help": "Optional task description used to include task-specific skill recommendations in startup context."
+        },
+        {
+          "name": "profile",
+          "flags": [
+            "--profile"
+          ],
+          "choices": [
+            "full",
+            "tiny"
+          ],
+          "default": "full",
+          "help": "Startup output profile. Use tiny for the cheapest first-contact routing answer."
         }
       ],
       "role": "core_context_router",

@@ -4140,7 +4140,9 @@ def _context_router_family_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE, comp
     views = [
         {
             "view": "start",
-            "command": _command_with_cli_invoke(command="agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace start --target ./repo --profile tiny --format json", cli_invoke=cli_invoke
+            ),
             "use_when": "ordinary entry into the repo",
         },
         {
@@ -7921,7 +7923,7 @@ def _run_preflight_command(
             "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True),
             "entrypoint": startup_payload.get("default_canonical_agent_instructions_file", "AGENTS.md"),
             "entry_query": _command_with_cli_invoke(
-                command=str(tiny_safe_model.get("entry_query", 'agentic-workspace start --task "<task>" --format json')),
+                command=str(tiny_safe_model.get("entry_query", 'agentic-workspace start --profile tiny --task "<task>" --format json')),
                 cli_invoke=config.cli_invoke,
             ),
             "primary_next_action": {
@@ -8172,7 +8174,97 @@ def _authority_markers_for_startup(*, active_execplan: str | None = None) -> lis
     return [_authority_marker_for_path(path) for path in paths]
 
 
-def _start_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None = None) -> dict[str, Any]:
+def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Project startup context to the smallest schema-compatible first-contact answer."""
+    immediate = copy.deepcopy(payload["immediate_next_allowed_action"])
+    if not immediate.get("command") and not immediate.get("read_first"):
+        immediate["required_inputs"] = []
+        immediate["next_proof"] = "select proof after changed paths are known"
+    skill_routing = payload.get("skill_routing", {})
+    task_recommendations = skill_routing.get("task_recommendations", {}) if isinstance(skill_routing, dict) else {}
+    top_recommendations = task_recommendations.get("top_recommendations", []) if isinstance(task_recommendations, dict) else []
+    preferred_routes = [
+        {"task_shape": "current task", "skill": str(item.get("id", ""))}
+        for item in top_recommendations[:2]
+        if isinstance(item, dict) and item.get("id")
+    ]
+    if not preferred_routes and isinstance(skill_routing, dict):
+        preferred_routes = [
+            {"task_shape": str(item.get("task_shape", "")), "skill": str(item.get("skill", ""))}
+            for item in skill_routing.get("preferred_routes", [])[:2]
+            if isinstance(item, dict)
+        ]
+
+    return {
+        "kind": payload["kind"],
+        "target": payload["target"],
+        "invoked_cli_identity": payload["invoked_cli_identity"],
+        "startup_sequence": payload["startup_sequence"][:1],
+        "context_router": {
+            "kind": "workspace-context-router-family/v1",
+            "first_view": "start",
+            "rule": "This tiny profile is the first-contact answer; run detail commands only when the next action says why.",
+            "detail_commands": {
+                "active_state": "agentic-workspace summary --format json",
+                "takeover_or_recovery": "agentic-workspace preflight --format json",
+                "startup_reference": "agentic-workspace defaults --section startup --format json",
+            },
+        },
+        "feature_tier": {
+            "active": payload.get("feature_tier", {}).get("active", {}),
+            "detail_command": payload.get("feature_tier", {}).get(
+                "detail_command", "agentic-workspace modules --target ./repo --format json"
+            ),
+        },
+        "active_state_summary": payload["active_state_summary"],
+        "package_boundary": payload["package_boundary"],
+        "authority_markers": payload["authority_markers"][:1],
+        "immediate_next_allowed_action": immediate,
+        "workflow_obligations": {
+            "status": payload.get("workflow_obligations", {}).get("status", "unknown"),
+            "match_count": payload.get("workflow_obligations", {}).get("match_count", 0),
+            "detail_command": payload.get("workflow_obligations", {}).get("detail_command", "agentic-workspace preflight --format json"),
+        },
+        "closeout_obligations": {
+            "status": payload.get("closeout_obligations", {}).get("status", "unknown"),
+            "activation_rule": payload.get("closeout_obligations", {}).get(
+                "activation_rule",
+                "closeout obligations apply after implementation or lane closeout, not ordinary first-contact orientation",
+            ),
+            "detail_command": payload.get("closeout_obligations", {}).get(
+                "detail_command",
+                "agentic-workspace report --target ./repo --section closeout_trust --format json",
+            ),
+        },
+        "memory_consult": {
+            "status": payload.get("memory_consult", {}).get("status", "unknown"),
+            "read_first": payload.get("memory_consult", {}).get("read_first", []),
+            "do_not_bulk_read": payload.get("memory_consult", {}).get("do_not_bulk_read", True),
+        },
+        "operating_posture": {
+            "status": payload.get("operating_posture", {}).get("status", "unknown"),
+            "required_behavior_summary": payload.get("operating_posture", {}).get("required_behavior_summary", ""),
+        },
+        "skill_routing": {
+            "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
+            "rule": "Use listed skills only when directly relevant; otherwise proceed from the next action.",
+            "query": (
+                skill_routing.get("query", 'agentic-workspace skills --target ./repo --task "<task>" --format json')
+                if isinstance(skill_routing, dict)
+                else 'agentic-workspace skills --target ./repo --task "<task>" --format json'
+            ),
+            "preferred_routes": preferred_routes,
+        },
+    }
+
+
+def _start_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    task_text: str | None = None,
+    profile: str = "full",
+) -> dict[str, Any]:
     startup_template = _CONTEXT_TEMPLATES["startup_context"]
     config = _load_workspace_config(target_root=target_root)
     descriptors = _module_operations()
@@ -8304,6 +8396,8 @@ def _start_payload(*, target_root: Path, changed_paths: list[str], task_text: st
             include_durable_intent=False,
         )
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
+    if profile == "tiny":
+        return _tiny_start_payload(payload)
     return payload
 
 
@@ -11351,7 +11445,7 @@ def _startup_skill_routing_payload(
         "advanced_route_rule": "Review and external-intake skills are surfaced only when the repo enables the matching reusable diagnostic feature. Source-checkout-only maintainer skills stay outside shipped feature tiers.",
         "fallback_when_skills_unavailable": [
             "follow AGENTS.md and .agentic-workspace/WORKFLOW.md",
-            'use agentic-workspace start --task "<task>" --format json for ordinary first contact',
+            'use agentic-workspace start --profile tiny --task "<task>" --format json for ordinary first contact',
             "use agentic-workspace summary --format json before raw planning reads",
         ],
         "preferred_routes": core_routes + advanced_routes,
@@ -11659,7 +11753,7 @@ def _defaults_payload() -> dict[str, Any]:
             "canonical_doc": ".agentic-workspace/docs/minimum-operating-model.md",
             "context_router": _context_router_family_payload(),
             "primary": [
-                'For ordinary first contact, run `agentic-workspace start --task "<task>" --format json`.',
+                'For ordinary first contact, run `agentic-workspace start --profile tiny --task "<task>" --format json`.',
                 "Use `agentic-workspace implement --changed <paths> --format json` when changed paths are already known.",
                 "For takeover or recovery context, run `agentic-workspace preflight --format json`.",
                 "Read the configured root startup file from `agentic-workspace config --target ./repo --profile compact --format json` (default `AGENTS.md`).",
@@ -11669,9 +11763,9 @@ def _defaults_payload() -> dict[str, Any]:
             "tiny_safe_model": {
                 "summary": "Start from one repo entrypoint, one ordinary startup query, and conditional deeper reads.",
                 "entrypoint": "AGENTS.md",
-                "entry_query": 'agentic-workspace start --task "<task>" --format json',
+                "entry_query": 'agentic-workspace start --profile tiny --task "<task>" --format json',
                 "first_compact_queries": [
-                    'agentic-workspace start --target ./repo --task "<task>" --format json',
+                    'agentic-workspace start --target ./repo --profile tiny --task "<task>" --format json',
                     "agentic-workspace implement --changed <paths> --format json",
                     "agentic-workspace config --target ./repo --profile compact --format json",
                     "agentic-workspace summary --format json",
@@ -11720,7 +11814,7 @@ def _defaults_payload() -> dict[str, Any]:
             "first_queries": [
                 {
                     "question": "What is the ordinary first-contact path?",
-                    "command": 'agentic-workspace start --task "<task>" --format json',
+                    "command": 'agentic-workspace start --profile tiny --task "<task>" --format json',
                     "field": "immediate_next_allowed_action",
                     "why": "start bundles ordinary startup routing, active-state summary, and task-specific skill recommendations",
                 },
@@ -11854,7 +11948,7 @@ def _defaults_payload() -> dict[str, Any]:
             "workflow_recovery": [
                 (
                     "When takeover or recovery is unclear, prefer "
-                    '`agentic-workspace start --task "<task>" --format json`, then '
+                    '`agentic-workspace start --profile tiny --task "<task>" --format json`, then '
                     "`agentic-workspace preflight --format json`, "
                     "`agentic-workspace defaults --section startup --format json`, "
                     "`agentic-workspace config --target ./repo --profile compact --format json`, and "
@@ -13126,6 +13220,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         target_root=target_root,
         changed_paths=list(getattr(args, "changed", []) or []),
         task_text=getattr(args, "task", None),
+        profile=getattr(args, "profile", "full"),
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
@@ -14683,7 +14778,7 @@ def _product_managed_enclave_payload(*, target_root: Path, ownership_payload: di
             "rule": "ordinary startup reads AGENTS.md and compact commands; broad enclave scans are only for selected ownership, report, or module operations",
             "ordinary_entrypoints": [
                 "AGENTS.md",
-                'agentic-workspace start --task "<task>" --format json',
+                'agentic-workspace start --profile tiny --task "<task>" --format json',
                 "agentic-workspace implement --changed <paths> --format json",
                 "agentic-workspace summary --format json",
                 "agentic-workspace preflight --format json for takeover/recovery",
