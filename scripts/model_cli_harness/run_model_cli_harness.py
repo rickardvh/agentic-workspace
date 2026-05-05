@@ -1109,6 +1109,73 @@ def _semantic_workflow_warnings(
             if "execution method" in response_lower and "must not" not in response_lower and "does not" not in response_lower:
                 add("The agent blurred output-posture settings into execution-method control.")
 
+    if scenario_id == "intent-satisfaction-review":
+        is_vague_intent_variant = prompt_variant_id in {"vague-outcome-trust", "vague-outcome-less-rework"}
+        distinction_markers = (
+            "validation",
+            "proof",
+            "tests",
+            "intent",
+            "larger",
+            "durable",
+            "residue",
+            "follow-up",
+            "follow up",
+        )
+        if not is_vague_intent_variant and sum(1 for marker in distinction_markers if marker in response_lower) < 4:
+            add("The agent did not clearly separate proof, local completion, larger intent, and residue/follow-up.")
+        full_satisfaction_markers = (
+            "fully satisfied",
+            "original intent is satisfied",
+            "intent is satisfied",
+            "no follow-up",
+            "no follow up",
+            "nothing else",
+            "complete",
+        )
+        partial_markers = (
+            "partial",
+            "partially",
+            "not fully",
+            "not enough",
+            "not satisfied",
+            "follow-up",
+            "follow up",
+            "repo-visible",
+            "planning",
+            "issue",
+        )
+        if not is_vague_intent_variant and any(marker in response_lower for marker in full_satisfaction_markers) and not any(
+            marker in response_lower for marker in partial_markers
+        ):
+            add("The agent treated local proof or a narrow wording change as full satisfaction of the broader human intent.")
+        if "tests passed" in response_lower and "intent" not in response_lower:
+            add("The agent reported validation proof without judging whether the original intent was satisfied.")
+        if prompt_variant_id == "passed-tests-partial-intent" and not any(marker in response_lower for marker in partial_markers):
+            add("The partial-intent variant did not route the broader docs/product-positioning intent to follow-up.")
+        if is_vague_intent_variant:
+            outcome_markers = ("intended outcome", "intent", "goal", "trust", "rework", "handoff", "preserve")
+            inspect_markers = ("inspect", "preflight", "summary", "report", "config", "planning", "memory", "closeout")
+            satisfaction_markers = ("satisfied", "done when", "know", "evidence", "criteria", "proof", "measure")
+            solution_markers = (
+                "i will implement",
+                "i'll implement",
+                "implement now",
+                "edit ",
+                "change the readme",
+                "add a doc",
+                "create a script",
+                "write code",
+            )
+            if not any(marker in response_lower for marker in outcome_markers):
+                add("The vague-outcome variant did not restate the intended outcome before choosing next actions.")
+            if not any(marker in response_lower for marker in inspect_markers):
+                add("The vague-outcome variant did not name the first repo-visible surface to inspect.")
+            if not any(marker in response_lower for marker in satisfaction_markers):
+                add("The vague-outcome variant did not define how satisfaction would be judged.")
+            if any(marker in response_lower for marker in solution_markers) and "rather than" not in response_lower and "not jump" not in response_lower:
+                add("The vague-outcome variant jumped to a solution without preserving intent separately.")
+
     deduped: list[dict[str, str]] = []
     seen: set[tuple[str, str, str]] = set()
     for warning in warnings:

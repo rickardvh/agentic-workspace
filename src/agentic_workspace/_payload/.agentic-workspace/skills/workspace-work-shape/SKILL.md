@@ -5,17 +5,21 @@ description: Classify work shape and route direct, bounded, lane, or epic work b
 
 # Workspace Work Shape
 
-Use this skill before implementation when task size, proof cost, or handoff needs are unclear.
+Use this skill before implementation when task size, proof cost, handoff needs, or the user's intended outcome are unclear.
 
 ## Route
 
 1. Run `agentic-workspace preflight --target . --format json`.
 2. If changed paths are known, run `agentic-workspace implement --target . --changed <paths> --format json`.
-3. Classify the request as `direct`, `bounded`, `lane`, or `epic`.
-4. For `direct` work, keep workspace overhead minimal and prove with the obvious narrow command.
-5. For `bounded` work, use compact planning or proof output when continuation, risk, or non-obvious validation matters.
-6. For `lane` or `epic` work, stop before coding and create or continue checked-in Planning state.
+3. For vague outcome prompts, resolve the intended outcome before naming a solution:
+   - What user-visible failure or cost should be reduced?
+   - What would count as satisfaction?
+   - Which repo-visible surface should preserve that intent for the next pass?
+4. Classify the request as `direct`, `bounded`, `lane`, or `epic`.
+5. For `direct` work, keep workspace overhead minimal and prove with the obvious narrow command.
+6. For `bounded` work, use compact planning or proof output when continuation, risk, or non-obvious validation matters.
+7. For `lane` or `epic` work, stop before coding and create or continue checked-in Planning state.
 
 ## Output
 
-Report the shape, why that shape fits, the required next command, and whether Planning state is optional, recommended, or required.
+Report the inferred intended outcome, the shape, why that shape fits, the first repo-visible surface to inspect or update, the satisfaction evidence, the required next command, and whether Planning state is optional, recommended, or required.

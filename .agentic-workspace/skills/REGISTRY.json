@@ -33,17 +33,46 @@
       "stability": "package-managed",
       "summary": "classify work shape and route direct, bounded, lane, or epic work before implementation",
       "activation_hints": {
-        "verbs": ["classify", "triage", "shape", "route", "decide"],
-        "nouns": ["work shape", "direct task", "bounded task", "lane", "epic", "vague request"],
+        "verbs": ["classify", "triage", "shape", "route", "decide", "infer", "resolve"],
+        "nouns": [
+          "work shape",
+          "direct task",
+          "bounded task",
+          "lane",
+          "epic",
+          "vague request",
+          "vague outcome",
+          "intended outcome",
+          "intent",
+          "trust",
+          "rework",
+          "handoff trust",
+          "what I meant",
+          "satisfaction evidence"
+        ],
         "phrases": [
           "classify work shape",
           "shape this work",
+          "infer intended outcome",
+          "resolve intended outcome",
+          "vague outcome prompt",
+          "feel more trustworthy",
+          "agents hand work back",
+          "agents keep making me repeat",
+          "what I meant",
+          "long task handoff",
+          "before naming a solution",
+          "how to know intent is satisfied",
           "large vague feature request",
           "before implementation",
           "direct bounded lane epic"
         ],
         "when": [
           "task size is unclear",
+          "the user describes an outcome rather than a solution",
+          "the user names a desired quality such as trust, less rework, or safer handoff",
+          "intent needs to be preserved before implementation",
+          "satisfaction criteria are unclear",
           "agent may jump straight to implementation",
           "broad work needs routing before planning"
         ]

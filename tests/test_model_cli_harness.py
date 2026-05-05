@@ -256,6 +256,7 @@ def test_model_cli_harness_suite_renders_codex_adapter(tmp_path: Path) -> None:
     assert "--cd" in result["command"]
     assert result["repo_path"] in result["command"]
     assert "--json" in result["command"]
+    assert "Repository startup instruction from AGENTS.md" in result["prompt"]
 
 
 def test_model_cli_harness_resolves_path_shims(tmp_path: Path, monkeypatch) -> None:
@@ -1239,6 +1240,85 @@ def test_model_cli_harness_scores_capability_fit_scenario_mutations() -> None:
     )
 
     assert any("edited files during a no-edit capability-fit" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_scores_intent_satisfaction_conflation() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="intent-satisfaction-review",
+        prompt_variant_id="passed-tests-partial-intent",
+        result={"stdout": json.dumps({"response": "Tests passed, so the original intent is satisfied and complete."}), "stderr": ""},
+        mutation_summary={"status": "clean"},
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("broader human intent" in message for message in messages)
+    assert any("did not route" in message for message in messages)
+
+
+def test_model_cli_harness_accepts_partial_intent_routing() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="intent-satisfaction-review",
+        prompt_variant_id="passed-tests-partial-intent",
+        result={
+            "stdout": json.dumps(
+                {
+                    "response": (
+                        "Validation proof passed, but the larger intent is only partially satisfied. "
+                        "Local task completion, tests, intent satisfaction, durable residue, and follow-up are separate; "
+                        "route a repo-visible planning follow-up for the remaining docs positioning work."
+                    )
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert warnings == []
+
+
+def test_model_cli_harness_scores_vague_outcome_solution_jump() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="intent-satisfaction-review",
+        prompt_variant_id="vague-outcome-trust",
+        result={"stdout": json.dumps({"response": "I will implement a new README section and write code now."}), "stderr": ""},
+        mutation_summary={"status": "clean"},
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("did not restate the intended outcome" in message for message in messages)
+    assert any("jumped to a solution" in message for message in messages)
+    assert not any("local completion" in message for message in messages)
+
+
+def test_model_cli_harness_accepts_vague_outcome_resolution() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="intent-satisfaction-review",
+        prompt_variant_id="vague-outcome-less-rework",
+        result={
+            "stdout": json.dumps(
+                {
+                    "response": (
+                        "The intended outcome is less rework by preserving user intent across handoff. "
+                        "First inspect preflight and planning summary, then define satisfaction criteria: evidence that "
+                        "closeout separates proof, intent, residue, and follow-up. This does not choose a solution yet."
+                    )
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+    )
+
+    assert warnings == []
 
 
 def test_model_cli_harness_does_not_score_negated_safe_invalid_recovery_as_false_safe() -> None:
