@@ -564,6 +564,16 @@ def _metadata_workflow_warnings(
         if forbidden:
             add("The agent changed files matching the scenario's forbidden write patterns.", evidence=", ".join(forbidden[:12]))
 
+    no_workspace_baseline = bool(scenario.get("no_agentic_workspace_baseline", False))
+    if no_workspace_baseline:
+        if (repo_path / ".agentic-workspace").exists():
+            add("The no-AW baseline fixture contains an `.agentic-workspace` directory.")
+        agents_path = repo_path / "AGENTS.md"
+        if not agents_path.exists():
+            add("The no-AW baseline fixture lacks explicit plain-repo agent instructions.")
+        elif "does not use agentic workspace" not in agents_path.read_text(encoding="utf-8", errors="replace").lower():
+            add("The no-AW baseline fixture does not explicitly say the repo does not use Agentic Workspace.")
+
     for required in _string_list(
         scenario.get("required_command_mentions"),
         field="required_command_mentions",
@@ -588,6 +598,19 @@ def _metadata_workflow_warnings(
     ):
         if _normalized_command_text(forbidden) in executed_command_text:
             add("The agent executed a command this scenario marks as avoidable or forbidden.", evidence=forbidden)
+    if no_workspace_baseline and any(
+        command in executed_command_text
+        for command in (
+            "agentic-workspace",
+            "agentic-planning",
+            "repo-planning",
+            "repo-memory",
+        )
+    ):
+        add(
+            "The no-AW baseline was contaminated by Agentic Workspace command usage.",
+            evidence="agentic-workspace/agentic-planning command observed",
+        )
     for forbidden in _string_list(
         scenario.get("forbidden_response_phrases"),
         field="forbidden_response_phrases",
@@ -876,7 +899,13 @@ def _semantic_workflow_warnings(
         if "agentic-workspace --help" not in response_lower and "agentic-workspace planning" not in response_lower:
             add("The agent did not report verifying Agentic Workspace CLI help before naming planning commands.")
 
-    if scenario_id in {"planning-artifact-integrity", "broad-work-decomposition", "native-plan-bridge"}:
+    planning_only_scenario = scenario_id in {
+        "planning-artifact-integrity",
+        "broad-work-decomposition",
+        "native-plan-bridge",
+    } or scenario_id.endswith("-handoff-aw")
+
+    if planning_only_scenario:
         created = mutation_summary.get("created", []) if isinstance(mutation_summary, dict) else []
         deleted = mutation_summary.get("deleted", []) if isinstance(mutation_summary, dict) else []
         deleted_templates = [
@@ -929,7 +958,7 @@ def _semantic_workflow_warnings(
                     "The agent claimed next-action planning references were valid while naming missing execplan files.",
                     evidence=", ".join(missing_planning_refs[:8]),
                 )
-        if scenario_id == "broad-work-decomposition":
+        if scenario_id == "broad-work-decomposition" or scenario_id.endswith("-handoff-aw"):
             modified = mutation_summary.get("modified", []) if isinstance(mutation_summary, dict) else []
             product_files = [
                 path

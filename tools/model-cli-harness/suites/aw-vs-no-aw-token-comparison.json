@@ -1,0 +1,77 @@
+{
+  "schema": "agentic-workspace/model-cli-harness-suite/v1",
+  "id": "aw-vs-no-aw-token-comparison",
+  "purpose": "Compare model CLI token usage and behavior in equivalent repos with Agentic Workspace startup surfaces and without the package.",
+  "adapters": {
+    "codex": {
+      "default_model": "gpt-5.3-codex-spark",
+      "timeout_seconds": 900,
+      "block_on_preflight_failure": true,
+      "inject_repo_startup_instructions": true,
+      "postmortem_feedback_supported": false,
+      "command": [
+        "codex",
+        "exec",
+        "--model",
+        "{model}",
+        "--cd",
+        "{repo}",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--skip-git-repo-check",
+        "--output-last-message",
+        "{share_path}",
+        "--json",
+        "{prompt}"
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "id": "small-readme-aw",
+      "fixture": "aw-minimal-host-repo",
+      "prompt": "Make the README introduction clearer in one sentence. Keep the change small. Final answer should name the file changed and any validation you did.",
+      "allowed_write_patterns": [
+        "README.md"
+      ]
+    },
+    {
+      "id": "small-readme-no-aw",
+      "fixture": "plain-no-aw-python-host-repo",
+      "prompt": "Make the README introduction clearer in one sentence. Keep the change small. Final answer should name the file changed and any validation you did.",
+      "no_agentic_workspace_baseline": true,
+      "allowed_write_patterns": [
+        "README.md"
+      ]
+    },
+    {
+      "id": "broad-handoff-aw",
+      "fixture": "aw-minimal-host-repo",
+      "prompt": "I want this repository to support importing rows from CSV files, but do not implement the feature yet. Prepare enough durable state that a later coding pass can safely start from a bounded first slice. Final answer should name the repo-visible state you left behind.",
+      "allowed_write_patterns": [
+        ".agentic-workspace/planning/**"
+      ],
+      "forbidden_write_patterns": [
+        "README.md",
+        "src/**",
+        "tests/**",
+        "docs/**",
+        "notes/**",
+        "package.json",
+        "pyproject.toml"
+      ],
+      "required_command_mentions": [
+        "agentic-workspace planning",
+        "agentic-workspace summary"
+      ],
+      "required_artifact_patterns": [
+        ".agentic-workspace/planning/execplans/*.plan.json"
+      ]
+    },
+    {
+      "id": "broad-handoff-no-aw",
+      "fixture": "plain-no-aw-python-host-repo",
+      "prompt": "I want this repository to support importing rows from CSV files, but do not implement the feature yet. Prepare enough durable state that a later coding pass can safely start from a bounded first slice. Final answer should name the repo-visible state you left behind.",
+      "no_agentic_workspace_baseline": true
+    }
+  ]
+}

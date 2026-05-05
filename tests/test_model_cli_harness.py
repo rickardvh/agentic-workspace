@@ -684,6 +684,31 @@ def test_model_cli_harness_scores_broad_prep_product_files_as_semantic_failure()
     assert any("README.md" in warning.get("evidence", "") for warning in warnings)
 
 
+def test_model_cli_harness_scores_aw_handoff_product_files_as_semantic_failure() -> None:
+    harness = _load_harness()
+
+    warnings = harness._semantic_workflow_warnings(
+        scenario_id="broad-handoff-aw",
+        result={
+            "stdout": json.dumps({"response": "Prepared a durable planning note."}),
+            "stderr": "",
+        },
+        mutation_summary={
+            "status": "changed",
+            "created": [
+                ".agentic-workspace/planning/README-CSV-IMPORT.md",
+                ".agentic-workspace/planning/execplans/csv-import-first-slice.json",
+                "src/sample_app/csv_import.py",
+            ],
+            "modified": [],
+        },
+    )
+
+    messages = [warning["message"] for warning in warnings]
+    assert any("likely planning artifacts outside canonical" in message for message in messages)
+    assert any("product or handoff files" in message for message in messages)
+
+
 def test_model_cli_harness_scores_broad_prep_proposal_only() -> None:
     harness = _load_harness()
 
@@ -746,6 +771,57 @@ def test_model_cli_harness_metadata_scoring_warns_on_write_and_response_rules(tm
     assert any("avoidable or forbidden" in message for message in messages)
     assert any("forbidden response phrase" in message for message in messages)
     assert any("required artifact pattern" in message for message in messages)
+
+
+def test_model_cli_harness_flags_no_aw_baseline_contamination(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "AGENTS.md").write_text(
+        "# Agent Instructions\n\nThis repository does not use Agentic Workspace.\n",
+        encoding="utf-8",
+    )
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={"id": "plain-token-baseline", "no_agentic_workspace_baseline": True},
+        result={
+            "stdout": "\n".join(
+                [
+                    json.dumps(
+                        {
+                            "type": "item.completed",
+                            "item": {
+                                "type": "command_execution",
+                                "command": "agentic-workspace start --profile tiny --format json",
+                            },
+                        }
+                    ),
+                    json.dumps({"type": "turn.completed", "usage": {"input_tokens": 1}}),
+                ]
+            ),
+            "stderr": "",
+            "returncode": 0,
+        },
+        mutation_summary={"status": "clean", "created": [], "modified": [], "deleted": []},
+        repo_path=repo,
+    )
+
+    assert any("no-AW baseline was contaminated" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_requires_explicit_no_aw_fixture_instructions(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={"id": "plain-token-baseline", "no_agentic_workspace_baseline": True},
+        result={"stdout": json.dumps({"response": "Done."}), "stderr": "", "returncode": 0},
+        mutation_summary={"status": "clean", "created": [], "modified": [], "deleted": []},
+        repo_path=repo,
+    )
+
+    assert any("lacks explicit plain-repo agent instructions" in warning["message"] for warning in warnings)
 
 
 def test_model_cli_harness_does_not_score_missing_workspace_execution_when_tool_unavailable(tmp_path: Path) -> None:

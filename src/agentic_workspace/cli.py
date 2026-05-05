@@ -8334,7 +8334,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             if isinstance(item, dict)
         ]
 
-    return {
+    projected = {
         "kind": payload["kind"],
         "target": payload["target"],
         "invoked_cli_identity": payload["invoked_cli_identity"],
@@ -8396,6 +8396,80 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             ),
             "preferred_routes": preferred_routes,
         },
+    }
+    if "prep_only_handoff" in payload:
+        projected["prep_only_handoff"] = payload["prep_only_handoff"]
+    return projected
+
+
+def _is_prep_only_handoff_task(task_text: str | None) -> bool:
+    normalized = " ".join((task_text or "").lower().split())
+    if not normalized:
+        return False
+    future_or_handoff = any(
+        marker in normalized
+        for marker in (
+            "future agent",
+            "later agent",
+            "later coding pass",
+            "future coding pass",
+            "durable state",
+            "repository state",
+            "repo-visible state",
+            "handoff",
+            "continue later",
+            "continuation",
+            "prepare enough",
+            "prepare the repo",
+            "prepare repository",
+            "future",
+            "ready for",
+        )
+    )
+    prep_or_plan = any(marker in normalized for marker in ("prepare", "plan", "decompose", "shape", "scaffold planning"))
+    implementation_blocked = any(
+        marker in normalized
+        for marker in (
+            "do not implement",
+            "don't implement",
+            "without implementing",
+            "not implement",
+            "no implementation",
+            "do not build",
+            "don't build",
+            "do not scaffold",
+            "don't scaffold",
+            "not build",
+        )
+    )
+    return future_or_handoff and (prep_or_plan or implementation_blocked)
+
+
+def _prep_only_handoff_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    planning_command = _command_with_cli_invoke(command="agentic-workspace planning --format json", cli_invoke=config.cli_invoke)
+    summary_command = _command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=config.cli_invoke)
+    return {
+        "kind": "agentic-workspace/prep-only-handoff-route/v1",
+        "status": "required",
+        "reason": "The task asks for durable continuation state before implementation.",
+        "first_command": planning_command,
+        "after_write": summary_command,
+        "required_action": (
+            "Use the planning durable_state_bridge/prep_only_route: create or continue canonical checked-in Planning "
+            "state, verify with summary, then stop."
+        ),
+        "allowed_write_scope": [
+            ".agentic-workspace/planning/state.toml",
+            ".agentic-workspace/planning/execplans/",
+            ".agentic-workspace/planning/decompositions/",
+        ],
+        "forbidden_until_implementation_requested": [
+            "product source files",
+            "tests or fixtures",
+            "README feature docs",
+            "package/dependency/app scaffold files",
+            "freehand PLAN/HANDOFF/ARCHITECTURE docs",
+        ],
     }
 
 
@@ -8532,6 +8606,26 @@ def _start_payload(
         task_text=task_text,
     )
     payload["delegation_decision"] = execution_posture["delegation_decision"]
+    if not active_planning_present and _is_prep_only_handoff_task(task_text):
+        prep_only = _prep_only_handoff_payload(config=config)
+        planning_command = prep_only["first_command"]
+        summary_command = prep_only["after_write"]
+        payload["prep_only_handoff"] = prep_only
+        payload["immediate_next_allowed_action"] = {
+            "action": "create-prep-only-planning-state",
+            "summary": (
+                "Prep-only durable handoff requested. Run the planning bridge, create or continue canonical Planning "
+                "state, verify with summary, then stop; do not create product source, tests, fixtures, README feature "
+                "docs, dependencies, or app scaffolding until implementation is requested."
+            ),
+            "command": planning_command,
+            "run": planning_command,
+            "risk": "planning-only write routing",
+            "required_inputs": ["target repo", "current task"],
+            "next_proof": summary_command,
+            "read_first": [planning_command],
+            "open_execplan_only_when": "the planning bridge or summary routes you to a specific checked-in planning record",
+        }
     cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
     if cli_compatibility["configured"]:
         payload["cli_compatibility"] = cli_compatibility

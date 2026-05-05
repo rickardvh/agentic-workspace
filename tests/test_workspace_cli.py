@@ -7739,6 +7739,48 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert len(payload["authority_markers"]) == 1
 
 
+def test_start_tiny_routes_prep_only_handoff_to_planning_bridge(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    task = (
+        "I want this repository to support importing rows from CSV files, but do not implement the feature yet. "
+        "Prepare enough durable state that a later coding pass can safely start from a bounded first slice."
+    )
+    assert cli.main(["start", "--target", str(target), "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    action = payload["immediate_next_allowed_action"]
+    assert action["action"] == "create-prep-only-planning-state"
+    assert action["command"] == "agentic-workspace planning --format json"
+    assert action["next_proof"] == "agentic-workspace summary --format json"
+    assert "do not create product source" in action["summary"]
+    prep_only = payload["prep_only_handoff"]
+    assert prep_only["first_command"] == "agentic-workspace planning --format json"
+    assert prep_only["after_write"] == "agentic-workspace summary --format json"
+    assert ".agentic-workspace/planning/execplans/" in prep_only["allowed_write_scope"]
+    assert "tests or fixtures" in prep_only["forbidden_until_implementation_requested"]
+    assert len(json.dumps(payload, sort_keys=True)) < 7500
+
+
+def test_start_tiny_routes_paraphrased_prep_only_handoff_to_planning_bridge(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    task = "Prepare repository state for future CSV row import feature without implementing it"
+    assert cli.main(["start", "--target", str(target), "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["immediate_next_allowed_action"]["action"] == "create-prep-only-planning-state"
+    assert payload["prep_only_handoff"]["status"] == "required"
+
+
 def test_start_tiny_respects_ask_first_clarification_mode(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
