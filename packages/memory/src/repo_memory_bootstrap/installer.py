@@ -146,6 +146,25 @@ def _add_contract_surface_summary(result: InstallResult, target_root: Path) -> N
     )
 
 
+def _add_workspace_orchestrator_notice(result: InstallResult, target_root: Path, *, preset: str = "memory") -> None:
+    if (target_root / WORKSPACE_WORKFLOW_PATH).exists():
+        return
+    result.add(
+        "warning",
+        target_root / WORKSPACE_WORKFLOW_PATH,
+        (
+            "shared Workspace layer is not installed; ordinary host-repo lifecycle should run through "
+            f"`agentic-workspace init --preset {preset}` or `agentic-workspace upgrade --modules memory`. "
+            "Direct `agentic-memory` lifecycle commands are module-level maintenance/debugging surfaces and do not "
+            "provide the full Workspace startup router, shared config, ownership, skills, or combined reports."
+        ),
+        role="workspace-orchestration",
+        safety="safe",
+        source=WORKSPACE_WORKFLOW_PATH.as_posix(),
+        category="safe-update",
+    )
+
+
 __all__ = [
     "subprocess",
     "AGENTS_PATH",
@@ -197,6 +216,7 @@ __all__ = [
     "uninstall_bootstrap",
     "upgrade_bootstrap",
     "verify_payload",
+    "_add_workspace_orchestrator_notice",
     "_audit_memory_doc_ownership",
     "_audit_routing_feedback_note",
     "_current_task_staleness_reason",
@@ -625,6 +645,7 @@ def install_bootstrap(
         other_key_commands=other_key_commands,
     )
     result = _new_result(target_root, dry_run=dry_run, message="Install plan")
+    _add_workspace_orchestrator_notice(result, target_root)
     _record_repo_context_warnings(target_root, result)
 
     for entry in _payload_entries(source_root, target_layout="managed-root"):
@@ -685,6 +706,7 @@ def adopt_bootstrap(
         other_key_commands=other_key_commands,
     )
     result = _new_result(target_root, dry_run=dry_run, message="Adoption plan for existing repository")
+    _add_workspace_orchestrator_notice(result, target_root)
     _record_repo_context_warnings(target_root, result)
     _plan_from_entries(
         source_root=source_root,
@@ -736,6 +758,7 @@ def upgrade_bootstrap(
         other_key_commands=other_key_commands,
     )
     result = _new_result(target_root, dry_run=dry_run, message="Upgrade plan")
+    _add_workspace_orchestrator_notice(result, target_root)
     _record_repo_context_warnings(target_root, result)
     detected_layout = detect_bootstrap_layout(target_root)
     source_choice = resolve_upgrade_source(target_root)
@@ -938,6 +961,7 @@ def _set_manifest_rule_boolean(
 def collect_status(target: str | Path | None = None) -> InstallResult:
     target_root = resolve_target_root(target)
     result = _new_result(target_root, dry_run=False, message="Status report")
+    _add_workspace_orchestrator_notice(result, target_root)
     _record_repo_context_warnings(target_root, result)
     target_layout = "legacy" if detect_bootstrap_layout(target_root) == "legacy" else "managed-root"
 
@@ -995,6 +1019,7 @@ def doctor_bootstrap(
         other_key_commands=other_key_commands,
     )
     result = _new_result(target_root, dry_run=True, message="Doctor report")
+    _add_workspace_orchestrator_notice(result, target_root)
     _record_repo_context_warnings(target_root, result)
     target_layout = "legacy" if detect_bootstrap_layout(target_root) == "legacy" else "managed-root"
     source_choice = resolve_upgrade_source(target_root)

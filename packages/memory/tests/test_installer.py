@@ -581,6 +581,47 @@ def test_install_does_not_duplicate_existing_optional_fragment(tmp_path: Path) -
     assert makefile_actions == []
 
 
+def test_direct_memory_install_warns_without_workspace_orchestrator(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+
+    result = installer.install_bootstrap(target=target)
+
+    assert any(
+        action.kind == "warning"
+        and action.path == target / ".agentic-workspace" / "WORKFLOW.md"
+        and "agentic-workspace init --preset memory" in action.detail
+        and "module-level maintenance/debugging" in action.detail
+        for action in result.actions
+    )
+
+
+def test_memory_status_warns_without_workspace_orchestrator(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+    (target / ".agentic-workspace" / "WORKFLOW.md").unlink(missing_ok=True)
+
+    result = installer.collect_status(target=target)
+
+    assert any(
+        action.kind == "warning"
+        and action.path == target / ".agentic-workspace" / "WORKFLOW.md"
+        and "agentic-workspace init --preset memory" in action.detail
+        for action in result.actions
+    )
+
+
+def test_direct_memory_install_skips_orchestrator_warning_when_workspace_present(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "WORKFLOW.md").write_text("Workspace workflow\n", encoding="utf-8")
+
+    result = installer.install_bootstrap(target=target)
+
+    assert not any(action.kind == "warning" and action.path == target / ".agentic-workspace" / "WORKFLOW.md" for action in result.actions)
+
+
 def test_patch_agents_workflow_block_inserts_pointer_after_heading() -> None:
     existing = "# Agent Instructions\n\nRepo-local rules live here.\n"
 

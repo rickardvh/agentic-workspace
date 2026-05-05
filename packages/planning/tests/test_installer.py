@@ -539,6 +539,41 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert any(action.kind in {"copied", "created", "updated"} for action in result.actions)
 
 
+def test_direct_planning_install_warns_without_workspace_orchestrator(tmp_path: Path) -> None:
+    result = install_bootstrap(target=tmp_path)
+
+    assert any(
+        action.kind == "warning"
+        and action.path == tmp_path / ".agentic-workspace" / "WORKFLOW.md"
+        and "agentic-workspace init --preset planning" in action.detail
+        and "module-level maintenance/debugging" in action.detail
+        for action in result.actions
+    )
+
+
+def test_planning_status_warns_without_workspace_orchestrator(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    (tmp_path / ".agentic-workspace" / "WORKFLOW.md").unlink(missing_ok=True)
+
+    result = collect_status(target=tmp_path)
+
+    assert any(
+        action.kind == "warning"
+        and action.path == tmp_path / ".agentic-workspace" / "WORKFLOW.md"
+        and "agentic-workspace init --preset planning" in action.detail
+        for action in result.actions
+    )
+
+
+def test_direct_planning_install_skips_orchestrator_warning_when_workspace_present(tmp_path: Path) -> None:
+    (tmp_path / ".agentic-workspace" / "WORKFLOW.md").parent.mkdir(parents=True)
+    (tmp_path / ".agentic-workspace" / "WORKFLOW.md").write_text("Workspace workflow\n", encoding="utf-8")
+
+    result = install_bootstrap(target=tmp_path)
+
+    assert not any(action.kind == "warning" and action.path == tmp_path / ".agentic-workspace" / "WORKFLOW.md" for action in result.actions)
+
+
 def test_install_bootstrap_state_toml_includes_managed_state_header(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
 

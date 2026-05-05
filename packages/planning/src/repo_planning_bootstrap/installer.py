@@ -24,6 +24,7 @@ from repo_planning_bootstrap._render import (
 from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, resolve_upgrade_source
 
 PLANNING_MANAGED_ROOT = module_root("planning")
+WORKSPACE_WORKFLOW_PATH = Path(".agentic-workspace") / "WORKFLOW.md"
 PLANNING_SKILLS_MANAGED_ROOT = PLANNING_MANAGED_ROOT / "skills"
 PLANNING_MANIFEST_PATH = PLANNING_MANAGED_ROOT / "agent-manifest.json"
 PLANNING_STATE_PATH = PLANNING_MANAGED_ROOT / "state.toml"
@@ -309,6 +310,21 @@ class InstallResult:
 
     def add(self, kind: str, path: Path, detail: str) -> None:
         self.actions.append(Action(kind=kind, path=path, detail=detail))
+
+
+def _add_workspace_orchestrator_notice(result: InstallResult, *, preset: str = "planning") -> None:
+    if (result.target_root / WORKSPACE_WORKFLOW_PATH).exists():
+        return
+    result.add(
+        "warning",
+        result.target_root / WORKSPACE_WORKFLOW_PATH,
+        (
+            "shared Workspace layer is not installed; ordinary host-repo lifecycle should run through "
+            f"`agentic-workspace init --preset {preset}` or `agentic-workspace upgrade --modules planning`. "
+            "Direct `agentic-planning` lifecycle commands are module-level maintenance/debugging surfaces and do not "
+            "provide the full Workspace startup router, shared config, ownership, skills, or combined reports."
+        ),
+    )
 
 
 @dataclass
@@ -1266,6 +1282,7 @@ def install_bootstrap(
 ) -> InstallResult:
     target_root = resolve_target_root(target, local_only=local_only)
     result = InstallResult(target_root=target_root, message="Install plan", dry_run=dry_run)
+    _add_workspace_orchestrator_notice(result)
     _copy_payload(target_root=target_root, result=result, conservative=False, force=force)
     if include_optional:
         _copy_payload(target_root=target_root, result=result, conservative=False, force=force, files=OPTIONAL_PAYLOAD_FILES)
@@ -1295,6 +1312,7 @@ def _ensure_local_ignored(repo_root: str | Path) -> None:
 def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False, include_optional: bool = False) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message="Adoption plan for existing repository", dry_run=dry_run)
+    _add_workspace_orchestrator_notice(result)
     _copy_payload(target_root=target_root, result=result, conservative=True, force=False)
     if include_optional:
         _copy_payload(target_root=target_root, result=result, conservative=True, force=False, files=OPTIONAL_PAYLOAD_FILES)
@@ -1312,6 +1330,7 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False, 
 def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False, include_optional: bool = False) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message="Upgrade plan", dry_run=dry_run)
+    _add_workspace_orchestrator_notice(result)
 
     for relative in PACKAGE_MANAGED_FILES:
         _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=True)
@@ -1374,6 +1393,7 @@ def collect_status(*, target: str | Path | None = None) -> InstallResult:
     target_root = resolve_target_root(target)
     mode = _detect_adoption_mode(target_root)
     result = InstallResult(target_root=target_root, message=f"Status report ({mode} mode)", dry_run=False)
+    _add_workspace_orchestrator_notice(result)
     result.add("mode", target_root, f"detected adoption mode: {mode}")
     for relative in _installed_surface_files():
         name = relative.name
@@ -1390,6 +1410,7 @@ def collect_status(*, target: str | Path | None = None) -> InstallResult:
 def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message="Doctor report", dry_run=True)
+    _add_workspace_orchestrator_notice(result)
     result.add("mode", target_root, f"detected adoption mode: {_detect_adoption_mode(target_root)}")
     upgrade_source = resolve_upgrade_source(target_root)
     source_detail = f"{upgrade_source.source_label}: {upgrade_source.source_ref}"
