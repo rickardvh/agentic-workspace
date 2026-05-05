@@ -4665,7 +4665,12 @@ def _run_lifecycle_command(
         cli_invoke=config.cli_invoke,
     )
     if command_name in {"status", "doctor"}:
-        repair_actions, manual_review_actions = _aggregate_repair_actions_from_reports(reports)
+        repair_actions, manual_review_actions = _aggregate_repair_actions_from_reports(
+            reports,
+            target_root=target_root,
+            cli_invoke=config.cli_invoke,
+            command_name=command_name,
+        )
         if command_name == "doctor":
             cli_review_action = _cli_compatibility_manual_review_action(
                 target_root=target_root,
@@ -4674,6 +4679,8 @@ def _run_lifecycle_command(
             )
             if cli_review_action is not None:
                 manual_review_actions.insert(0, cli_review_action)
+            if repair_actions or manual_review_actions:
+                payload["health"] = "attention-needed"
         payload["repair_actions"] = repair_actions
         payload["manual_review_actions"] = manual_review_actions
         payload["repair_plan"] = _repair_plan_payload(
@@ -4817,6 +4824,10 @@ def _cli_compatibility_manual_review_action(
 
 def _aggregate_repair_actions_from_reports(
     reports: list[dict[str, Any]],
+    *,
+    target_root: Path,
+    cli_invoke: str,
+    command_name: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     repair_actions: list[dict[str, Any]] = []
     manual_review_actions: list[dict[str, Any]] = []
@@ -4827,7 +4838,81 @@ def _aggregate_repair_actions_from_reports(
         for action in report.get("manual_review_actions", []):
             if isinstance(action, dict):
                 manual_review_actions.append(action)
+        if command_name == "doctor":
+            module_repair = _module_safe_lifecycle_repair_action(
+                report=report,
+                target_root=target_root,
+                cli_invoke=cli_invoke,
+            )
+            if module_repair is not None:
+                repair_actions.append(module_repair)
     return repair_actions, manual_review_actions
+
+
+def _module_safe_lifecycle_repair_action(
+    *,
+    report: dict[str, Any],
+    target_root: Path,
+    cli_invoke: str,
+) -> dict[str, Any] | None:
+    module = str(report.get("module", "")).strip()
+    if not module or module == "workspace":
+        return None
+    safe_planned_kinds = {"would create", "would copy", "would update", "would overwrite", "would replace"}
+    affected_surfaces: list[str] = []
+    for action in report.get("actions", []):
+        if not isinstance(action, dict):
+            continue
+        kind = str(action.get("kind", ""))
+        if kind not in safe_planned_kinds:
+            continue
+        if str(action.get("safety", "")) != "safe" and str(action.get("category", "")) != "safe-update":
+            continue
+        _append_unique(affected_surfaces, _display_path(action.get("path", "."), target_root))
+    if not affected_surfaces:
+        return None
+    target = target_root.as_posix()
+    dry_run = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --module {module} --dry-run --format json",
+        cli_invoke=cli_invoke,
+    )
+    command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --module {module} --format json",
+        cli_invoke=cli_invoke,
+    )
+    proof_after = [
+        _command_with_cli_invoke(
+            command=f"agentic-workspace doctor --target {target} --module {module} --format json",
+            cli_invoke=cli_invoke,
+        )
+    ]
+    return {
+        "id": f"apply-safe-{module}-lifecycle-repair",
+        "action": "run-module-upgrade",
+        "invariant": f"{module}.managed_surfaces_current",
+        "fault_class": "agent_operation_fault",
+        "severity": "warning",
+        "owner": module,
+        "safe_to_apply": True,
+        "risk": "low; applies safe module-managed lifecycle changes reported by doctor",
+        "command": command,
+        "run": command,
+        "dry_run": dry_run,
+        "proof_after": proof_after,
+        "affected_surfaces": affected_surfaces,
+        "current_fault_summary": f"{module} doctor found safe module-managed lifecycle changes that are not applied.",
+        "do_not": [
+            "Do not hand-author module-managed payload files when module upgrade can recreate them.",
+            "Do not treat safe module payload repairs as proof that unrelated repo-owned content may be overwritten.",
+        ],
+        "recurrence": "first_seen",
+        "improvement_signal_candidate": {
+            "when": "repeated",
+            "kind": "repair_recurrence",
+            "route": "agentic-workspace defaults --section improvement_intake --format json",
+            "preferred_remedy": "make safe module repair availability visible from the root lifecycle surface",
+        },
+    }
 
 
 def _lifecycle_plan_payload(

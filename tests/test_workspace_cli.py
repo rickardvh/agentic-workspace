@@ -5047,6 +5047,40 @@ def test_doctor_repair_actions_use_resolved_cli_invoke(tmp_path: Path, capsys) -
     assert action["proof_after"][0].startswith("uv run agentic-workspace doctor ")
 
 
+def test_doctor_promotes_safe_module_lifecycle_repairs_for_missing_memory_templates(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    template_paths = [
+        target / ".agentic-workspace" / "memory" / "repo" / "templates" / "invariant.template.md",
+        target / ".agentic-workspace" / "memory" / "repo" / "templates" / "memory-note.template.md",
+        target / ".agentic-workspace" / "memory" / "repo" / "templates" / "runbook.template.md",
+    ]
+    for path in template_paths:
+        if path.exists():
+            path.unlink()
+
+    assert cli.main(["setup", "--target", str(target), "--non-interactive", "--format", "json"]) == 0
+    setup_payload = json.loads(capsys.readouterr().out)
+    assert setup_payload["health"] == "attention-needed"
+
+    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+    status_payload = json.loads(capsys.readouterr().out)
+    assert status_payload["health"] == "attention-needed"
+    assert any("memory-note.template.md" in item for item in status_payload["needs_review"])
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    doctor_payload = json.loads(capsys.readouterr().out)
+    assert doctor_payload["health"] == "attention-needed"
+    repair = next(action for action in doctor_payload["repair_actions"] if action["id"] == "apply-safe-memory-lifecycle-repair")
+    assert repair["safe_to_apply"] is True
+    assert "--module memory" in repair["command"]
+    assert any(surface.endswith("memory/repo/templates/memory-note.template.md") for surface in repair["affected_surfaces"])
+    assert doctor_payload["repair_plan"]["status"] == "safe-action-available"
+
+
 def test_report_section_agent_aids_discovers_checked_in_and_local_aids(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
