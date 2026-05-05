@@ -7837,11 +7837,11 @@ candidates = []
 
     satisfied = planning_installer.archive_execplan("high-assurance", target=tmp_path, dry_run=True)
     assert not [warning for warning in satisfied.warnings if warning["warning_class"] == "archive_adaptive_assurance_blocked"]
-    assert any(action.kind == "would move" for action in satisfied.actions)
+    assert any(action.kind == "would remove" for action in satisfied.actions)
 
     low_result = planning_installer.archive_execplan("low-assurance", target=tmp_path, dry_run=True)
     assert not [warning for warning in low_result.warnings if warning["warning_class"] == "archive_adaptive_assurance_blocked"]
-    assert any(action.kind == "would move" for action in low_result.actions)
+    assert any(action.kind == "would remove" for action in low_result.actions)
 
 
 def test_summary_uses_immediate_next_action_and_warns_on_duplicate_drift(tmp_path: Path) -> None:
@@ -8046,7 +8046,7 @@ def test_archive_plan_blocks_oversized_archive_before_write(tmp_path: Path) -> N
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "too-large.plan.json"
     planning_installer._write_execplan_record(record_path=record_path, record=record)
 
-    result = planning_installer.archive_execplan("too-large", target=tmp_path, dry_run=True)
+    result = planning_installer.archive_execplan("too-large", target=tmp_path, dry_run=True, retain_archive=True)
 
     assert record_path.exists()
     assert not (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "too-large.plan.json").exists()

@@ -177,6 +177,11 @@ PLANNING_STATE_LIVE_ONLY_RULE = (
     "Planning state is live/selectable state only. Completed, dismissed, or historical work belongs in archived "
     "execplans, external evidence, or durable Memory/docs residue, not in state.toml."
 )
+EXECPLAN_CLOSEOUT_DISTILLATION_QUESTION = (
+    "Before removing a completed execplan, ask what from it may be useful again: route future work to Planning, "
+    "reusable technical context to Memory when installed, stable user-facing or operational guidance to docs, "
+    "enforceable rules to config/checks/tests/contracts, external follow-up to issues, and discard one-off execution chronology."
+)
 
 PACKAGE_MANAGED_FILES = tuple(
     relative for relative in REQUIRED_PAYLOAD_FILES if relative not in ROOT_SURFACE_FILES and relative not in GENERATED_PAYLOAD_FILES
@@ -6595,10 +6600,10 @@ def _active_closeout_distillation_contract(
     counts = {bucket: len(items) for bucket, items in buckets.items()}
     promoted_count = sum(counts[bucket] for bucket in ("memory", "config_check", "docs", "issue_follow_up", "continuation"))
     discarded_count = counts["discard"]
-    recommended_next_action = "Closeout distillation is ready for archive or continuation routing."
+    recommended_next_action = "Closeout distillation is ready for plan removal or continuation routing."
     if not promoted_count and not discarded_count:
         recommended_next_action = (
-            "Complete closeout distillation before archiving so durable learning has an owner or is intentionally discarded."
+            "Complete closeout distillation before closeout so durable learning has an owner or is intentionally discarded."
         )
     elif discarded_count:
         recommended_next_action = (
@@ -6612,7 +6617,7 @@ def _active_closeout_distillation_contract(
             "Closeout should route durable learning to continuation, Memory, config/checks, docs, or issue follow-up, "
             "and explicitly discard non-recurring execution detail instead of making archived execplans the normal knowledge base."
         ),
-        "archive_role": "archive is proof and historical recovery, not the ordinary durable-learning carrier",
+        "archive_role": "completed execplans are removed after distillation by default; legacy archives are compatibility evidence only",
         "buckets": buckets,
         "counts": {
             **counts,
@@ -7815,6 +7820,74 @@ def _invalid_durable_residue_message(durable_residue: dict[str, str]) -> str | N
     return None
 
 
+def _memory_module_installed(target_root: Path) -> bool:
+    memory_root = target_root / ".agentic-workspace" / "memory"
+    return (memory_root / "repo" / "manifest.toml").exists() or (memory_root / "repo" / "index.md").exists()
+
+
+def _invalid_closeout_distillation_message(
+    *,
+    target_root: Path,
+    record: dict[str, Any],
+    durable_residue: dict[str, str],
+) -> dict[str, str] | None:
+    buckets = _closeout_distillation_buckets(record=record, explicit={})
+    routed_count = sum(len(items) for items in buckets.values())
+    if routed_count == 0:
+        return {
+            "warning_class": "archive_missing_closeout_distillation",
+            "message": "Completed execplan is missing structured closeout distillation.",
+            "detail": EXECPLAN_CLOSEOUT_DISTILLATION_QUESTION,
+        }
+
+    status = durable_residue.get("status", "").strip().lower()
+    if status == "memory" and not _memory_module_installed(target_root):
+        return {
+            "warning_class": "archive_memory_destination_unavailable",
+            "message": "Completed execplan routes reusable learning to Memory, but Memory is not installed.",
+            "detail": (
+                "Memory-routed durable learning needs an installed Memory module before the completed execplan is removed; "
+                "install Memory or reroute the learning to docs, config/checks/tests/contracts, issue follow-up, or Planning."
+            ),
+        }
+    return None
+
+
+def _add_closeout_distillation_actions(
+    *,
+    result: InstallResult,
+    target_root: Path,
+    plan_path: Path,
+    record: dict[str, Any],
+    durable_residue: dict[str, str],
+    dry_run: bool,
+) -> None:
+    del dry_run
+    buckets = _closeout_distillation_buckets(record=record, explicit={})
+    result.add("closeout distillation", plan_path, EXECPLAN_CLOSEOUT_DISTILLATION_QUESTION)
+    status = durable_residue.get("status", "").strip().lower()
+    owner = durable_residue.get("canonical owner now", "").strip()
+    learned = durable_residue.get("learned constraint", "").strip()
+    if status == "memory":
+        slug = _slugify(str(record.get("title", "")).strip() or plan_path.stem)
+        summary = learned or next((item["summary"] for item in buckets["memory"] if item.get("summary")), "closeout learning")
+        command = (
+            f"agentic-memory-bootstrap capture-note {slug} --target . --summary "
+            f"{json.dumps(summary)} --surface {plan_path.relative_to(target_root).as_posix()} --format json"
+        )
+        result.add("memory candidate", target_root / (owner or ".agentic-workspace/memory/repo/index.md"), command)
+    for bucket, owner_label in (
+        ("docs", "docs"),
+        ("config_check", "config/checks/tests/contracts"),
+        ("continuation", "planning continuation"),
+        ("issue_follow_up", "issue follow-up"),
+    ):
+        for item in buckets[bucket]:
+            result.add("distillation route", plan_path, f"{owner_label}: {item.get('summary', '')}")
+    for item in buckets["discard"]:
+        result.add("discarded closeout detail", plan_path, item.get("summary", "discard one-off execution detail"))
+
+
 def _prepare_execplan_closeout(
     *,
     plan_path: Path,
@@ -8226,6 +8299,7 @@ def archive_execplan(
     reopen_trigger: str | None = None,
     discard_summary: str | None = None,
     continuation_summary: str | None = None,
+    retain_archive: bool = False,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message=f"Archive execplan '{plan}'", dry_run=dry_run)
@@ -8322,6 +8396,7 @@ def archive_execplan(
     closure_evidence = closure_check.get("evidence carried forward", "").strip()
     reopen_trigger = closure_check.get("reopen trigger", "").strip()
     durable_residue = _execplan_durable_residue(plan_path)
+    closeout_record = _load_execplan_record(plan_path) or _build_execplan_record_from_markdown(plan_path)
     validation_commands = _execplan_validation_commands(plan_path)
     if completes_larger_outcome == "no" and (not continuation_surface or continuation_surface.lower() in {"none", "n/a"}):
         result.warnings.append(
@@ -8620,6 +8695,21 @@ def archive_execplan(
         )
         result.add("manual review", plan_path, durable_residue_message)
         return result
+    distillation_message = _invalid_closeout_distillation_message(
+        target_root=target_root,
+        record=closeout_record,
+        durable_residue=durable_residue,
+    )
+    if distillation_message is not None:
+        result.warnings.append(
+            {
+                "warning_class": distillation_message["warning_class"],
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": distillation_message["message"],
+            }
+        )
+        result.add("manual review", plan_path, distillation_message["detail"])
+        return result
     if _execplan_needs_reference_sweep(plan_path) and not _validation_has_reference_sweep(validation_commands):
         result.warnings.append(
             {
@@ -8634,17 +8724,18 @@ def archive_execplan(
             "add a stale-reference sweep to `Validation Commands` before archiving rename/refactor-like work",
         )
         return result
-    destination = archive_dir / plan_path.name
     record_path = _canonical_execplan_record_path(plan_path)
+    destination = archive_dir / plan_path.name
     destination_record = _canonical_execplan_record_path(destination)
     archived_record_relative = destination_record.relative_to(target_root).as_posix()
     has_record = record_path.exists()
-    if destination.exists():
-        result.add("manual review", destination, "archive destination already exists")
-        return result
-    if has_record and destination_record.exists():
-        result.add("manual review", destination_record, "archive destination for canonical execplan record already exists")
-        return result
+    if retain_archive:
+        if destination.exists():
+            result.add("manual review", destination, "archive destination already exists")
+            return result
+        if has_record and destination_record.exists():
+            result.add("manual review", destination_record, "archive destination for canonical execplan record already exists")
+            return result
 
     cleanup_todo_lines: list[str] | None = None
     todo_ref_items = _todo_referencing_items(target_root / ".agentic-workspace/planning/state.toml", plan_path, target_root)
@@ -8668,7 +8759,7 @@ def archive_execplan(
             result.add(
                 "would update" if dry_run else "updated",
                 target_root / ".agentic-workspace/planning/state.toml",
-                (f"remove TODO item '{item.item_id}' while archiving its plan"),
+                (f"remove TODO item '{item.item_id}' while closing its plan"),
             )
     elif apply_cleanup:
         compact_cleanup = _cleanup_compact_todo_archive_followup(
@@ -8734,41 +8825,67 @@ def archive_execplan(
         )
         result.add("suggested fix", legacy_roadmap_path, note)
 
-    archive_size_warning = _archive_size_guardrail_warning(
-        target_root=target_root,
-        destination_record=destination_record,
-        record_path=record_path,
-        plan_path=plan_path,
-        has_record=has_record,
-    )
-    if archive_size_warning is not None:
-        result.warnings.append(archive_size_warning)
-        result.add(
-            "manual review",
-            destination_record,
-            "archive record would exceed the structured-file inventory max_bytes guardrail before write",
+    if retain_archive:
+        archive_size_warning = _archive_size_guardrail_warning(
+            target_root=target_root,
+            destination_record=destination_record,
+            record_path=record_path,
+            plan_path=plan_path,
+            has_record=has_record,
         )
-        return result
+        if archive_size_warning is not None:
+            result.warnings.append(archive_size_warning)
+            result.add(
+                "manual review",
+                destination_record,
+                "archive record would exceed the structured-file inventory max_bytes guardrail before write",
+            )
+            return result
 
     if dry_run:
-        if has_record:
-            result.add("would move", destination_record, f"archive {record_path.relative_to(target_root).as_posix()}")
+        _add_closeout_distillation_actions(
+            result=result,
+            target_root=target_root,
+            plan_path=plan_path,
+            record=closeout_record,
+            durable_residue=durable_residue,
+            dry_run=True,
+        )
+        if retain_archive:
+            if has_record:
+                result.add("would move", destination_record, f"archive {record_path.relative_to(target_root).as_posix()}")
+            else:
+                result.add("would create", destination_record, "build canonical record from Markdown and archive")
+            if plan_path != record_path:
+                result.add("would remove", plan_path, "remove active Markdown view")
         else:
-            result.add("would create", destination_record, "build canonical record from Markdown and archive")
-        if plan_path != record_path:
-            result.add("would remove", plan_path, "remove active Markdown view")
+            if record_path.exists():
+                result.add("would remove", record_path, "remove completed execplan after closeout distillation")
+            if plan_path.exists() and plan_path != record_path:
+                result.add("would remove", plan_path, "remove completed Markdown execplan view after closeout distillation")
         return result
 
-    archive_dir.mkdir(parents=True, exist_ok=True)
-    if has_record:
-        shutil.move(str(record_path), str(destination_record))
+    _add_closeout_distillation_actions(
+        result=result,
+        target_root=target_root,
+        plan_path=plan_path,
+        record=closeout_record,
+        durable_residue=durable_residue,
+        dry_run=False,
+    )
+    if retain_archive:
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        if has_record:
+            shutil.move(str(record_path), str(destination_record))
+        else:
+            _write_execplan_record(record_path=destination_record, record=closeout_record)
+        if plan_path.exists() and plan_path != record_path:
+            plan_path.unlink()
     else:
-        # Build a canonical record from the Markdown before archiving
-        record = _build_execplan_record_from_markdown(plan_path)
-        _write_execplan_record(record_path=destination_record, record=record)
-    # Remove the active .md (if plan_path is .md and separate from the record)
-    if plan_path.exists() and plan_path != record_path:
-        plan_path.unlink()
+        if plan_path.exists() and plan_path != record_path:
+            plan_path.unlink()
+        if record_path.exists():
+            record_path.unlink()
     if cleanup_todo_lines is not None and not (cleanup_roadmap_state["changed"] and apply_cleanup):
         (target_root / ".agentic-workspace/planning/state.toml").write_text("\n".join(cleanup_todo_lines).rstrip() + "\n", encoding="utf-8")
     if cleanup_roadmap_state["changed"] and apply_cleanup:
@@ -8778,7 +8895,10 @@ def archive_execplan(
         _write_state_to_toml(target_root, state_to_write)
     if cleanup_legacy_roadmap["changed"] and apply_cleanup and cleanup_legacy_roadmap["text"] is not None:
         legacy_roadmap_path.write_text(cleanup_legacy_roadmap["text"], encoding="utf-8")
-    result.add("archived", destination_record, f"canonical record for {plan_path.relative_to(target_root).as_posix()}")
+    if retain_archive:
+        result.add("archived", destination_record, f"canonical record for {plan_path.relative_to(target_root).as_posix()}")
+    else:
+        result.add("closed", plan_path, "completed execplan removed from Planning after closeout distillation")
     return result
 
 

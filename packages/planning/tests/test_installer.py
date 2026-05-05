@@ -2092,10 +2092,9 @@ candidates = []
     _write_execplan_record(record_path, item_id="compact-cli", status="completed")
     assert planning_cli.main(["archive-plan", "compact-cli", "--target", str(tmp_path), "--apply-cleanup", "--format", "json"]) == 0
     archive_payload = json.loads(capsys.readouterr().out)
-    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "compact-cli.plan.json"
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
-    assert any(action["kind"] == "archived" and action["path"].endswith("compact-cli.plan.json") for action in archive_payload["actions"])
-    assert archived_record_path.exists()
+    assert any(action["kind"] == "closed" and action["path"].endswith("compact-cli.plan.json") for action in archive_payload["actions"])
+    assert any(action["kind"] == "closeout distillation" for action in archive_payload["actions"])
     assert not record_path.exists()
     assert "compact-cli" not in state_text
 
@@ -2544,7 +2543,7 @@ def test_planning_cli_create_review_dry_run_does_not_write(tmp_path: Path, capsy
     assert not (tmp_path / ".agentic-workspace" / "planning" / "reviews" / "future-review.review.json").exists()
 
 
-def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:
+def test_archive_execplan_removes_completed_plan_after_distillation(tmp_path: Path) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(
         tmp_path / "ROADMAP.md",
@@ -2563,13 +2562,13 @@ def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:
     result = archive_execplan("plan-alpha", target=tmp_path)
     archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
 
-    assert archived_record_path.exists()
+    assert not archived_record_path.exists()
     assert not plan_path.exists()
     assert not record_path.exists()
-    assert any(action.kind == "archived" and action.path == archived_record_path for action in result.actions)
-    archived_record = json.loads(archived_record_path.read_text(encoding="utf-8"))
-    assert archived_record["kind"] == "planning-execplan/v1"
-    assert archived_record["proof_report"]["proof achieved now"] == "validation and closure checks passed for the bounded slice."
+    assert any(action.kind == "closed" and action.path == record_path for action in result.actions)
+    assert any(
+        action.kind == "closeout distillation" and "Memory" in action.detail and "docs" in action.detail for action in result.actions
+    )
 
 
 def test_planning_summary_prefers_canonical_execplan_record_when_markdown_stales(tmp_path: Path) -> None:
@@ -2947,6 +2946,8 @@ def test_archive_execplan_rejects_future_residue_without_non_archive_owner(tmp_p
 def test_archive_execplan_accepts_memory_routed_durable_residue(tmp_path: Path) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(tmp_path / ".agentic-workspace/memory/repo/index.md", "# Memory\n")
+    _write(tmp_path / ".agentic-workspace/memory/repo/manifest.toml", "schema_version = 1\n")
     plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
     _write(
         plan_path,
@@ -2960,7 +2961,26 @@ def test_archive_execplan_accepts_memory_routed_durable_residue(tmp_path: Path) 
 
     assert result.warnings == []
     assert not plan_path.exists()
-    assert (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").exists()
+    assert any(action.kind == "memory candidate" for action in result.actions)
+
+
+def test_archive_execplan_blocks_memory_residue_when_memory_is_missing(tmp_path: Path) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
+    _write(
+        plan_path,
+        _minimal_execplan(status="completed")
+        .replace("- Status: evidence_only", "- Status: memory")
+        .replace("- Canonical owner now: archive", "- Canonical owner now: .agentic-workspace/memory/repo/index.md")
+        .replace("- Promotion trigger: none", "- Promotion trigger: when the motivation recurs in another closeout"),
+    )
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_memory_destination_unavailable" for warning in result.warnings)
 
 
 def test_archive_execplan_blocks_missing_proof_report(tmp_path: Path) -> None:
@@ -3125,6 +3145,7 @@ def test_archive_plan_prepare_closeout_preserves_specific_closure_evidence(tmp_p
                 str(tmp_path),
                 "--prepare-closeout",
                 "--apply-cleanup",
+                "--retain-archive",
                 "--format",
                 "json",
             ]
@@ -3181,29 +3202,12 @@ candidates = []
     )
     payload = json.loads(capsys.readouterr().out)
     archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
-    archived = json.loads(archived_record_path.read_text(encoding="utf-8"))
 
     assert payload["warnings"] == []
     assert any(action["kind"] == "updated" and "prepared normalized closeout fields" in action["detail"] for action in payload["actions"])
-    assert any(action["kind"] == "archived" for action in payload["actions"])
-    assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
-    assert archived["proof_report"]["validation proof"] == "uv run pytest tests/test_check_planning_surfaces.py"
-    assert archived["proof_report"]["proof achieved now"] == "validation and closure checks passed for the bounded slice."
-    assert archived["closure_check"]["closure decision"] == "archive-and-close"
-    assert archived["generated_closeout"]["status"] == "generated"
-    assert archived["generated_closeout"]["source"] == "archive-plan --prepare-closeout"
-    assert "structured execplan fields are authoritative" in archived["generated_closeout"]["text"]
-    assert archived["memory_learning_capture"]["decision"] in {
-        "none",
-        "evidence_only",
-        "update_existing_memory_note",
-        "create_memory_note",
-        "promote_to_docs_contracts_checks_code",
-        "route_to_planning",
-    }
-    assert "Memory learning:" in archived["generated_closeout"]["text"]
-    assert "Proof: uv run pytest tests/test_check_planning_surfaces.py" in archived["generated_closeout"]["text"]
-    assert archived["closeout_distillation"]["buckets"]["discard"][0]["owner"] == "discard"
+    assert any(action["kind"] == "closed" for action in payload["actions"])
+    assert any(action["kind"] == "closeout distillation" for action in payload["actions"])
+    assert not archived_record_path.exists()
     assert not record_path.exists()
 
 
@@ -3239,6 +3243,7 @@ def test_archive_plan_prepare_closeout_handles_open_parent_lane(tmp_path: Path, 
                 "--prepare-closeout",
                 "--closure-decision",
                 "archive-but-keep-lane-open",
+                "--retain-archive",
                 "--format",
                 "json",
             ]
@@ -3378,7 +3383,7 @@ def test_archive_execplan_allows_partial_intent_when_continuation_is_explicit(tm
     result = archive_execplan("plan-alpha", target=tmp_path)
     archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
 
-    assert archived_record_path.exists()
+    assert not archived_record_path.exists()
     assert not plan_path.exists()
     assert not result.warnings
 
@@ -3433,9 +3438,9 @@ def test_archive_execplan_allows_rename_like_work_with_reference_sweep(tmp_path:
     result = archive_execplan("plan-alpha", target=tmp_path)
     archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
 
-    assert archived_record_path.exists()
+    assert not archived_record_path.exists()
     assert not plan_path.exists()
-    assert any(action.kind == "archived" and action.path == archived_record_path for action in result.actions)
+    assert any(action.kind == "closed" and action.path == plan_path for action in result.actions)
 
 
 def test_archive_execplan_apply_cleanup_removes_active_execplan_without_closed_state_history(tmp_path: Path) -> None:
@@ -3471,7 +3476,7 @@ execplans = [
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     summary = planning_summary(target=tmp_path)
 
-    assert archived_record_path.exists()
+    assert not archived_record_path.exists()
     assert "execplans = []" in state_text
     assert 'maturity = "closed"' not in state_text
     assert "durable_residue" not in state_text
@@ -3566,7 +3571,7 @@ def test_archive_execplan_apply_cleanup_removes_active_todo_pointer_to_same_plan
         and "remove TODO item 'bounded-delegated-judgment-contract'" in action.detail
         for action in result.actions
     )
-    assert (
+    assert not (
         tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "bounded-delegated-judgment-contract-2026-04-09.plan.json"
     ).exists()
 
@@ -3661,7 +3666,7 @@ candidates = []
         tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "intent-validation-and-dangling-debt-2026-04-22.plan.json"
     )
 
-    assert archived_path.exists()
+    assert not archived_path.exists()
     assert not plan_path.exists()
     assert "intent-validation-and-dangling-debt-2026-04-22.md" not in state_text
     assert "active_items = []" in state_text
@@ -3695,7 +3700,7 @@ execplans = [
         tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "intent-validation-and-dangling-debt-2026-04-22.plan.json"
     )
 
-    assert archived_path.exists()
+    assert not archived_path.exists()
     assert not plan_path.exists()
     assert "intent-validation-and-dangling-debt-2026-04-22" not in state_text
     assert "execplans = []" in state_text
@@ -3732,7 +3737,7 @@ execplans = [
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/current-lane.plan.json"
 
-    assert archived_path.exists()
+    assert not archived_path.exists()
     assert not plan_path.exists()
     assert "current-lane" not in state_text
     assert "work_items = []" in state_text
@@ -3777,7 +3782,7 @@ execplans = [
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/module-manifest-components.plan.json"
 
-    assert archived_path.exists()
+    assert not archived_path.exists()
     assert not plan_path.exists()
     assert "module-manifest-components" not in state_text
     assert "active_items = []" in state_text
@@ -3822,7 +3827,7 @@ queued_items = []
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/repair-drift-recovery-lane.plan.json"
 
-    assert archived_path.exists()
+    assert not archived_path.exists()
     assert not plan_path.exists()
     assert "repair-drift-recovery-lane" not in state_text
     assert "work_items = []" in state_text
@@ -3861,7 +3866,7 @@ candidates = [
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/planning-backed-dogfooding-guardrail.plan.json"
 
-    assert archived_path.exists()
+    assert not archived_path.exists()
     assert not plan_path.exists()
     assert "active_items = []" in state_text
     assert "planning-backed-dogfooding-guardrail" not in state_text
@@ -6812,7 +6817,10 @@ def test_planning_summary_exposes_closeout_distillation_contract(tmp_path: Path)
 
     assert "closeout_distillation_contract" in summary["schema"]["shared_fields"]
     assert contract["status"] == "present"
-    assert contract["archive_role"] == "archive is proof and historical recovery, not the ordinary durable-learning carrier"
+    assert (
+        contract["archive_role"]
+        == "completed execplans are removed after distillation by default; legacy archives are compatibility evidence only"
+    )
     assert contract["counts"]["intentionally_discarded_count"] == 1
     assert contract["buckets"]["discard"][0]["owner"] == "discard"
     assert contract["buckets"]["continuation"][0]["summary"] == "#344 memory routing"

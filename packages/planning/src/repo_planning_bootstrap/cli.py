@@ -160,6 +160,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write package-normalized closeout fields before archive validation runs.",
     )
     archive_parser.add_argument(
+        "--retain-archive",
+        action="store_true",
+        help="Legacy escape hatch: keep a completed execplan record under execplans/archive instead of removing it after distillation.",
+    )
+    archive_parser.add_argument(
         "--parent-lane-closeout",
         help="Close a parent lane from structured planning state without hand-authoring an execplan record.",
     )
@@ -327,6 +332,7 @@ def main(argv: list[str] | None = None) -> int:
                 reopen_trigger=args.reopen_trigger,
                 discard_summary=args.discard_summary,
                 continuation_summary=args.continuation_summary,
+                retain_archive=args.retain_archive,
             ),
             args.format,
         )
