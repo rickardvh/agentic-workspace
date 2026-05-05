@@ -1,0 +1,177 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Skill inventory and agent steering review",
+  "goal": [
+    "Review whether the shipped and installed skill inventory is complete, current, discoverable, and strong enough to steer agent behavior before prose fallback."
+  ],
+  "scope": [
+    "Root workspace installed skills and payload copies",
+    "Planning installed/package skills and skill discovery",
+    "Memory installed/package/temporary bootstrap skills",
+    "Repo-local maintainer skills under tools/skills and memory repo skills",
+    "Skill catalog discovery and recommendation output"
+  ],
+  "non_goals": [
+    "Implement fixes",
+    "Create or ingest issues",
+    "Redesign the skill system",
+    "Audit every skill sentence for copyediting"
+  ],
+  "review_mode": {
+    "mode": "skill-system",
+    "review question": "Does the current skill inventory make the intended Agentic Workspace behavior visible and hard to skip across shipped surfaces?",
+    "default finding cap": "3 findings",
+    "inputs inspected first": "agentic-workspace start, agentic-workspace skills, all REGISTRY.json files, all SKILL.md files under .agentic-workspace, packages, src payload, and tools"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --target . --format json; uv run agentic-workspace skills --target . --format json; rg --files -g REGISTRY.json -g SKILL.md; uv run python registry/skill coverage scripts; rg for bootstrap naming and workflow trigger terms",
+    "evidence sources": "Static inspection of current shipped surfaces, installed repo copies, package payload copies, registry coverage, and prior friction context around agents skipping or misusing package workflow"
+  },
+  "references": [
+    {
+      "kind": "file",
+      "target": "src/agentic_workspace/cli.py",
+      "label": "Skill catalog source list",
+      "role": "evidence",
+      "locator": "lines 15667-15714"
+    },
+    {
+      "kind": "file",
+      "target": "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+      "label": "Temporary memory bootstrap skill payload list",
+      "role": "evidence",
+      "locator": "lines 44-50"
+    },
+    {
+      "kind": "file",
+      "target": ".agentic-workspace/memory/repo/skills/memory-reporting/SKILL.md",
+      "label": "Repo memory skill with stale bootstrap commands",
+      "role": "evidence",
+      "locator": "lines 10-24"
+    },
+    {
+      "kind": "file",
+      "target": ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md",
+      "label": "Planning execution skill scope",
+      "role": "evidence",
+      "locator": "lines 10-31"
+    },
+    {
+      "kind": "file",
+      "target": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+      "label": "Workspace startup skill scope",
+      "role": "evidence",
+      "locator": "lines 8-31"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Temporary Memory bootstrap skills are shipped but not registered or discoverable as skills",
+      "summary": "The Memory package ships temporary install and cleanup skills under `.agentic-workspace/memory/bootstrap/skills/`, and prompts explicitly tell agents to use that path, but there is no registry for that temporary skill surface and `agentic-workspace skills` does not discover it.",
+      "evidence": "`packages/memory/src/repo_memory_bootstrap/_installer_shared.py` includes `.agentic-workspace/memory/bootstrap/skills/install/SKILL.md` and `cleanup/SKILL.md` in `BOOTSTRAP_WORKSPACE_FILES`, while the skill catalog sources in `src/agentic_workspace/cli.py` only include workspace-core, planning-bundled, memory-core, repo-memory, and repo-tools registries. A registry coverage scan found `packages/memory/bootstrap/.agentic-workspace/memory/bootstrap/skills/install/SKILL.md` and `cleanup/SKILL.md` as unregistered shipped skill files.",
+      "risk if unchanged": "The install/adopt flow still depends on a prose prompt naming a path instead of skill discovery. Weak agents may miss or underuse the temporary skills exactly when bootstrap review needs conservative behavior.",
+      "suggested action": "Add a registry for the temporary Memory bootstrap workspace or teach the workspace skills command to discover that explicit temporary skill surface when present. Prefer the non-bootstrap `agentic-memory` command names in those temporary skills at the same time.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": "GitHub issue or roadmap candidate for Memory bootstrap skill discoverability",
+      "promotion trigger": "Before further bootstrap/adopt UX evaluation or model-harness testing of clean installs",
+      "post-remediation note shape": "delete"
+    },
+    {
+      "title": "Skill metadata and bodies still steer agents toward historical bootstrap names",
+      "summary": "The normal CLIs now have preferred `agentic-planning` and `agentic-memory` aliases, but several skill registries and skill bodies still present bootstrap as the main identity rather than a compatibility alias.",
+      "evidence": "The Planning installed/package registries still use owner `agentic-planning-bootstrap`, skill id `bootstrap-upgrade`, and phrases such as `upgrade planning bootstrap`. Memory registries and skills still use owner `agentic-memory-bootstrap` and phrases such as `memory bootstrap`; `.agentic-workspace/memory/repo/skills/memory-reporting/SKILL.md` still starts with `uv run agentic-memory-bootstrap status` and `doctor`. Package Memory temporary install/cleanup skills also still say `agentic-memory-bootstrap init` and `bootstrap-cleanup`.",
+      "risk if unchanged": "The skill-first path can reintroduce the same naming confusion the CLI alias work reduced: agents may infer these are install-only bootstrap tools, or copy stale command names even when the preferred names exist.",
+      "suggested action": "Run a skill-specific alias refresh: update ordinary skill text and activation hints to prefer `agentic-planning` and `agentic-memory`, reserve `*-bootstrap` for compatibility notes or package-name contexts, and consider renaming lifecycle skill ids away from generic `bootstrap-upgrade` where the task is ongoing module maintenance.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "GitHub issue or roadmap candidate for skill copy/metadata alias refresh",
+      "promotion trigger": "Before treating the skill inventory as the primary agent-steering surface",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "The skill arsenal does not yet cover the highest-risk workflow decisions",
+      "summary": "There is a workspace startup skill, a planning autopilot skill, and an orchestrator skill, but no first-class skills for progressive maturity decomposition, adaptive assurance/classification, execplan creation/tightening, closeout distillation, bypass/trust review, or issue/queue promotion. Those are exactly the decisions agents have been missing or misapplying.",
+      "evidence": "`workspace-startup` routes startup, config, proof, and closeout in 31 lines but does not carry the decomposition or assurance workflow. `planning-autopilot` explicitly says to use it only when active work is already bounded and validation is obvious. `planning-orchestrator-workflow` handles delegation after planning exists. The inventory lacks corresponding shipped skills for the pre-execplan path: classify shape, decompose epic/lane work, promote into a valid plan, apply assurance/delegation posture, and close out by distilling residue.",
+      "risk if unchanged": "Skill-first routing will still work best after a plan exists, while the main failure mode remains before implementation: agents jump from prompt to coding, freehand invalid plans, skip classification, or miss closeout trust decisions.",
+      "suggested action": "Add a small set of workflow-critical skills that match the real decision points: `workspace-work-shape`, `planning-decompose`, `planning-new-plan-tighten`, `planning-closeout`, and `workspace-closeout-trust` or equivalent. Each should primarily call compact CLI commands and stop before broad prose.",
+      "confidence": "high",
+      "source": "friction-confirmed",
+      "promotion target": "GitHub issue or roadmap candidate for skill-first workflow coverage",
+      "promotion trigger": "Before the next model-evaluation optimization loop focused on agents honoring config and workflow obligations",
+      "post-remediation note shape": "retain"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote all three findings. The first is an inventory/discoverability bug, the second is consistency debt that undermines the recent alias work, and the third is the main product opportunity for a skill-first agent-steering model.",
+    "defer": "Defer repo-local maintainer skill cleanup unless those skills become part of shipped host-repo behavior; they are visible but source_kind marks them repo-owned.",
+    "dismiss": "Do not treat the presence of duplicate installed/package skill copies as a problem by itself; source and installed payload copies are expected as long as maintainer-surface checks keep them synchronized."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "After promoted issues or roadmap candidates capture the actionable work",
+    "proof surface": "GitHub issues or planning state plus future skill inventory checks",
+    "source retention rule": "Store decision, confidence, source refs, and reopen/promote triggers; do not copy issue titles, current status snapshots, long command output, or source summaries unless the copied text is the judgment itself.",
+    "distillation path": "When decisions are promoted into issues, planning state, Memory, docs, contracts, or checks, keep this artifact as evidence/history and remove or summarize reconstructable source context at the next cleanup.",
+    "reconstructable refs": [
+      "review artifact path",
+      "skill registry paths",
+      "skill catalog source list"
+    ],
+    "fields intentionally omitted": [
+      "full skill command output",
+      "complete registry dumps",
+      "full grep output"
+    ]
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run agentic-workspace start --target . --format json",
+    "uv run agentic-workspace skills --target . --format json",
+    "rg --files -g REGISTRY.json -g SKILL.md .agentic-workspace packages src tools",
+    "uv run python <registry coverage script>",
+    "rg -n \"bootstrap|agentic-planning-bootstrap|agentic-memory-bootstrap\" .agentic-workspace packages tools src/agentic_workspace/_payload -g SKILL.md -g REGISTRY.json"
+  ],
+  "drift_log": [
+    "2026-05-05: Review created from a skill-system pass over shipped and installed skill surfaces."
+  ]
+}
