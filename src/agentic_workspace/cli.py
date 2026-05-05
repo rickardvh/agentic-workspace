@@ -2129,6 +2129,7 @@ def main(argv: list[str] | None = None) -> int:
             payload = _start_payload(
                 target_root=target_root,
                 changed_paths=list(getattr(args, "changed", []) or []),
+                task_text=getattr(args, "task", None),
             )
             _emit_payload(payload=payload, format_name=args.format)
             return 0
@@ -2156,6 +2157,7 @@ def main(argv: list[str] | None = None) -> int:
             payload = _run_preflight_command(
                 target_root=target_root,
                 active_only=getattr(args, "active_only", False),
+                task_text=getattr(args, "task", None),
             )
             _emit_payload(payload=payload, format_name=args.format)
             return 0
@@ -7810,6 +7812,7 @@ def _run_preflight_command(
     *,
     target_root: Path,
     active_only: bool = False,
+    task_text: str | None = None,
 ) -> dict[str, Any]:
     """Get compact takeover-safe context: startup + config + active state.
 
@@ -7854,6 +7857,11 @@ def _run_preflight_command(
             "workflow_obligations": workflow_obligations,
             "closeout_obligations": closeout_obligations,
             "operating_posture": _operating_posture_payload(config=config, surface="preflight", compact=True),
+            "skill_routing": _task_skill_recommendations_payload(
+                target_root=target_root,
+                task_text=task_text,
+                cli_invoke=config.cli_invoke,
+            ),
             "active_planning_state": active_state,
             "planning_record": planning_record if isinstance(planning_record, dict) else {"status": "unavailable"},
         }
@@ -7871,6 +7879,8 @@ def _run_preflight_command(
         value=_startup_skill_routing_payload(
             cli_invoke=config.cli_invoke,
             enabled_advanced_features=config.advanced_features,
+            target_root=target_root,
+            task_text=task_text,
         ),
         cli_invoke=config.cli_invoke,
     )
@@ -8141,13 +8151,13 @@ def _authority_markers_for_startup(*, active_execplan: str | None = None) -> lis
     return [_authority_marker_for_path(path) for path in paths]
 
 
-def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
+def _start_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None = None) -> dict[str, Any]:
     startup_template = _CONTEXT_TEMPLATES["startup_context"]
     config = _load_workspace_config(target_root=target_root)
     descriptors = _module_operations()
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     installed_modules = [entry.name for entry in registry if entry.installed]
-    preflight = _run_preflight_command(target_root=target_root)
+    preflight = _run_preflight_command(target_root=target_root, task_text=task_text)
     active_state = preflight.get("active_planning_state", {})
     selected_modules = installed_modules or _preset_modules(descriptors).get(config.default_preset, [])
     if not installed_modules and isinstance(active_state, dict):
@@ -8233,6 +8243,8 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
                 cli_invoke=config.cli_invoke,
                 enabled_advanced_features=config.advanced_features,
                 compact=True,
+                target_root=target_root,
+                task_text=task_text,
             ),
             cli_invoke=config.cli_invoke,
         ),
@@ -8660,6 +8672,10 @@ def _command_with_cli_invoke(*, command: str | None, cli_invoke: str) -> str | N
     if command == "agentic-workspace" or command.startswith("agentic-workspace "):
         return f"{cli_invoke}{command.removeprefix('agentic-workspace')}"
     return command
+
+
+def _shell_quote(value: str) -> str:
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 def _text_with_cli_invoke(*, text: str, cli_invoke: str) -> str:
@@ -10779,6 +10795,8 @@ def _startup_skill_routing_payload(
     cli_invoke: str = DEFAULT_CLI_INVOKE,
     enabled_advanced_features: Sequence[str] = (),
     compact: bool = False,
+    target_root: Path | None = None,
+    task_text: str | None = None,
 ) -> dict[str, Any]:
     skill_command = _command_with_cli_invoke(
         command='agentic-workspace skills --target ./repo --task "<task>" --format json',
@@ -10834,6 +10852,14 @@ def _startup_skill_routing_payload(
         payload["enabled_advanced_routes"] = [route["feature"] for route in advanced_routes]
     else:
         payload["available_advanced_route_command"] = "agentic-workspace modules --target ./repo --format json"
+    task_recommendations = _task_skill_recommendations_payload(
+        target_root=target_root,
+        task_text=task_text,
+        cli_invoke=cli_invoke,
+        compact=compact,
+    )
+    if task_recommendations["status"] != "not-requested":
+        payload["task_recommendations"] = task_recommendations
     if compact:
         fallback_items = payload.pop("fallback_when_skills_unavailable", [])
         payload["preferred_routes"] = [
@@ -10842,6 +10868,50 @@ def _startup_skill_routing_payload(
         payload["fallback_when_skills_unavailable_count"] = len(fallback_items) if isinstance(fallback_items, list) else 0
         payload["fallback_detail"] = "Use AGENTS.md and compact CLI routers when skills are unavailable."
     return payload
+
+
+def _task_skill_recommendations_payload(
+    *,
+    target_root: Path | None,
+    task_text: str | None,
+    cli_invoke: str,
+    compact: bool = False,
+) -> dict[str, Any]:
+    skill_command = _command_with_cli_invoke(
+        command='agentic-workspace skills --target ./repo --task "<task>" --format json',
+        cli_invoke=cli_invoke,
+    )
+    if not task_text or not task_text.strip():
+        return {
+            "status": "not-requested",
+            "command": skill_command,
+            "hint": "Pass --task with the current user request to include task-specific skill recommendations in startup output.",
+        }
+    if target_root is None:
+        return {"status": "unavailable", "command": skill_command, "reason": "target_root is required for skill discovery"}
+    skills_payload = _skills_payload(target_root=target_root, task_text=task_text)
+    recommendations = skills_payload.get("recommendations", [])
+    compact_items = [
+        {
+            "id": str(item.get("id", "")),
+            "path": str(item.get("path", "")),
+            "summary": str(item.get("summary", "")),
+            "score": item.get("score"),
+            **({"reasons": item.get("reasons", [])[:2]} if not compact else {}),
+        }
+        for item in recommendations[:3]
+        if isinstance(item, dict)
+    ]
+    return {
+        "status": "recommended" if compact_items else "no-match",
+        "task": task_text,
+        "command": _command_with_cli_invoke(
+            command=f"agentic-workspace skills --target ./repo --task {_shell_quote(task_text)} --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "top_recommendations": compact_items,
+        "warning_count": len(skills_payload.get("warnings", [])) if isinstance(skills_payload.get("warnings", []), list) else 0,
+    }
 
 
 def _defaults_payload() -> dict[str, Any]:
@@ -12493,6 +12563,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     payload = _start_payload(
         target_root=target_root,
         changed_paths=list(getattr(args, "changed", []) or []),
+        task_text=getattr(args, "task", None),
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
@@ -12538,6 +12609,7 @@ def _run_preflight_report_adapter(args: argparse.Namespace) -> int:
     payload = _run_preflight_command(
         target_root=target_root,
         active_only=bool(getattr(args, "active_only", False)),
+        task_text=getattr(args, "task", None),
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0

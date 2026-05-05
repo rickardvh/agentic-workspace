@@ -188,7 +188,7 @@ WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
 WORKSPACE_POINTER_BLOCK = (
     f"{WORKSPACE_WORKFLOW_MARKER_START}\n"
-    "Start with `.agentic-workspace/WORKFLOW.md` before non-trivial edits; it routes startup, scope, proof, and durable repo-visible state.\n"
+    'For non-trivial requests, first run `agentic-workspace preflight --task "<task>" --format json` using the user\'s request as `<task>`; this read-only check does not need confirmation. If unavailable, read `.agentic-workspace/WORKFLOW.md`.\n'
     f"{WORKSPACE_WORKFLOW_MARKER_END}"
 )
 EMBEDDED_WORKFLOW_HEADINGS = (

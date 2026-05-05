@@ -75,6 +75,51 @@ def test_model_cli_harness_dry_run_copies_fixture_and_renders_command(tmp_path: 
     assert (Path(result["run_root"]) / "run.json").exists()
 
 
+def test_model_cli_harness_can_inject_repo_startup_instructions(tmp_path: Path) -> None:
+    fixture = tmp_path / "fixtures" / "repo"
+    fixture.mkdir(parents=True)
+    (fixture / "AGENTS.md").write_text(
+        '<!-- agentic-workspace:workflow:start -->\nRun `agentic-workspace preflight --task "<task>" --format json` using the user request as `<task>`.\n<!-- agentic-workspace:workflow:end -->\n',
+        encoding="utf-8",
+    )
+    suite = tmp_path / "suites" / "suite.json"
+    suite.parent.mkdir()
+    suite.write_text(
+        json.dumps(
+            {
+                "schema": "agentic-workspace/model-cli-harness-suite/v1",
+                "id": "unit",
+                "adapters": {
+                    "fake": {
+                        "default_model": "fake-model",
+                        "block_on_preflight_failure": False,
+                        "inject_repo_startup_instructions": True,
+                        "command": ["fake-cli", "-p", "{prompt}"],
+                    }
+                },
+                "scenarios": [{"id": "orientation", "fixture": "repo", "prompt": "Do the task."}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    harness = _load_harness()
+    payload = harness.run_suite(
+        suite_path=suite,
+        adapter_id="fake",
+        model=None,
+        scenario_filter="orientation",
+        execute=False,
+        output_root=tmp_path / "out",
+        timeout_seconds=None,
+    )
+
+    prompt = payload["results"][0]["prompt"]
+    assert prompt.startswith("Do the task.\n\n")
+    assert "Repository startup instruction from AGENTS.md to apply before non-trivial edits:" in prompt
+    assert 'preflight --task "<task>"' in prompt
+
+
 def test_model_cli_harness_runs_all_prompt_variants(tmp_path: Path) -> None:
     fixture = tmp_path / "fixtures" / "repo"
     fixture.mkdir(parents=True)

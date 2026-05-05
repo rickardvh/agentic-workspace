@@ -35,7 +35,8 @@ from repo_memory_bootstrap._installer_shared import (
     WORKFLOW_MARKER_END,
     WORKFLOW_MARKER_START,
     WORKFLOW_POINTER_BLOCK,
-    WORKSPACE_POINTER_BLOCK,
+    WORKSPACE_WORKFLOW_MARKER_END,
+    WORKSPACE_WORKFLOW_MARKER_START,
 )
 
 SECTION_HEADING_RE = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
@@ -526,4 +527,10 @@ def _agents_has_legacy_workflow_reference(text: str) -> bool:
 
 
 def _agents_has_workspace_workflow_pointer(text: str) -> bool:
-    return WORKSPACE_POINTER_BLOCK in text
+    lowered = text.lower()
+    return (
+        WORKSPACE_WORKFLOW_MARKER_START in text
+        and WORKSPACE_WORKFLOW_MARKER_END in text
+        and ".agentic-workspace/workflow.md" in lowered
+        and "agentic-workspace preflight --task" in lowered
+    )

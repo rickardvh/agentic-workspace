@@ -49,15 +49,35 @@
       "stability": "repo-managed",
       "summary": "run bounded repo-local improvement cycles that dogfood package surfaces without becoming shipped workflow",
       "activation_hints": {
-        "verbs": ["continue", "repeat", "improve", "dogfood", "autopilot"],
-        "nouns": ["self-improvement", "dogfooding", "improvement lane", "system intent"],
+        "verbs": ["continue", "repeat", "improve", "optimise", "optimize", "evaluate", "dogfood", "autopilot"],
+        "nouns": [
+          "self-improvement",
+          "dogfooding",
+          "improvement lane",
+          "system intent",
+          "skill optimisation",
+          "skill optimization",
+          "evaluation loop",
+          "model CLI evaluation"
+        ],
         "phrases": [
           "run self-improvement",
           "repeat improvement work",
+          "run skill optimisation evaluation loops",
+          "run skill optimization evaluation loops",
+          "skill optimisation evaluation loop",
+          "skill optimization evaluation loop",
+          "model cli optimisation loop",
           "dogfood the package",
           "system-intent-driven dogfooding"
         ],
-        "when": ["repo-local improvement loop", "autonomous package dogfooding", "system-intent follow-through"]
+        "when": [
+          "repo-local improvement loop",
+          "skill-routing optimisation",
+          "model CLI dogfooding loop",
+          "autonomous package dogfooding",
+          "system-intent follow-through"
+        ]
       }
     }
   ]

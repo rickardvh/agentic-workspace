@@ -121,7 +121,7 @@ def _write_planning_surfaces(tmp_path: Path) -> None:
 # Agent Instructions
 
 <!-- agentic-workspace:workflow:start -->
-Start with `.agentic-workspace/WORKFLOW.md` before non-trivial edits; it routes startup, scope, proof, and durable repo-visible state.
+For non-trivial requests, first run `agentic-workspace preflight --task "<task>" --format json` using the user's request as `<task>`; this read-only check does not need confirmation. If unavailable, read `.agentic-workspace/WORKFLOW.md`.
 <!-- agentic-workspace:workflow:end -->
 """,
     )

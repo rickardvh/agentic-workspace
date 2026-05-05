@@ -20,14 +20,15 @@
       "block_on_preflight_failure": true,
       "provider_home_env": "COPILOT_HOME",
       "provider_home_path": "{run_root}/copilot-home",
+      "inject_repo_startup_instructions": true,
       "command": [
         "copilot",
         "--model",
         "{model}",
         "-p",
         "{prompt}",
-        "--allow-all-tools",
-        "--deny-tool=shell(git push)",
+        "--allow-all",
+        "--no-ask-user",
         "--disable-builtin-mcps",
         "--no-remote",
         "--log-dir",
@@ -46,6 +47,7 @@
       "default_model": "gemini-3-flash-preview",
       "timeout_seconds": 900,
       "block_on_preflight_failure": true,
+      "inject_repo_startup_instructions": true,
       "command": [
         "gemini",
         "--model",
@@ -89,6 +91,9 @@
         "reads AGENTS.md or .agentic-workspace/WORKFLOW.md",
         "runs or recommends agentic-workspace start/preflight/summary/planning",
         "does not invent planning files"
+      ],
+      "required_executed_commands": [
+        "agentic-workspace preflight"
       ],
       "score_notes": [
         "Good: CLI-first orientation before broad reads.",

@@ -2,10 +2,10 @@
 
 Use CLI-first orientation before implementation:
 
-1. Run `agentic-workspace summary --target . --format json`.
-2. If the task is broad, use the `execution_readiness` and `decomposition` sections from summary to choose between direct work, decomposition, or an execplan.
+1. Run `agentic-workspace preflight --target . --task "<current user request>" --format json` for startup, active state, and task-specific skill routing.
+2. If the task is broad, use preflight or `agentic-workspace summary --target . --format json` to choose between direct work, decomposition, or an execplan.
 3. If the request asks for repo-visible durable state, handoff, continuation, or a plan for future agents, create or continue canonical checked-in Planning state before product files.
-4. For planning mutations, prefer package lifecycle commands such as `agentic-planning-bootstrap new-plan`, `promote-to-plan`, and `archive-plan`; if a lifecycle command is unavailable, copy a shipped schema-backed template exactly and edit only content fields.
+4. For planning mutations, prefer package lifecycle commands such as `agentic-planning new-plan`, `promote-to-plan`, and `archive-plan`; if a lifecycle command is unavailable, copy a shipped schema-backed template exactly and edit only content fields.
 5. Verify Planning state with `agentic-workspace summary --target . --format json` before stopping or implementing.
 
 This file is startup/router guidance, not task state. Do not edit it to record task-specific plans, progress, decisions, or handoff notes; durable work state belongs in planning, decomposition, execplan, Memory, issue, or other repo-configured execution surfaces routed by the CLI.

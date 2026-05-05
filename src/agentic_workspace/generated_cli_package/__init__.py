@@ -317,6 +317,13 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "nargs": "*"
           },
           {
+            "flags": [
+              "--task"
+            ],
+            "help": "Optional task description used to include task-specific skill recommendations in startup context.",
+            "name": "task"
+          },
+          {
             "choices": [
               "text",
               "json"
@@ -598,6 +605,13 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Return only active planning state without startup defaults and config.",
             "name": "active_only"
+          },
+          {
+            "flags": [
+              "--task"
+            ],
+            "help": "Optional task description used to include task-specific skill recommendations in preflight context.",
+            "name": "task"
           },
           {
             "choices": [
@@ -1664,6 +1678,13 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "nargs": "*"
         },
         {
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task description used to include task-specific skill recommendations in startup context.",
+          "name": "task"
+        },
+        {
           "choices": [
             "text",
             "json"
@@ -1784,6 +1805,13 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Return only active planning state without startup defaults and config.",
           "name": "active_only"
+        },
+        {
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task description used to include task-specific skill recommendations in preflight context.",
+          "name": "task"
         },
         {
           "choices": [

@@ -93,6 +93,13 @@
           "nargs": "*",
           "default": [],
           "help": "Optional repo-relative changed paths used to include a proof recommendation."
+        },
+        {
+          "name": "task",
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task description used to include task-specific skill recommendations in startup context."
         }
       ],
       "role": "core_context_router",
@@ -548,6 +555,13 @@
           ],
           "action": "store_true",
           "help": "Return only active planning state without startup defaults and config."
+        },
+        {
+          "name": "task",
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task description used to include task-specific skill recommendations in preflight context."
         }
       ],
       "role": "core_context_router",

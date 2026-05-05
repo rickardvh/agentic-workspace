@@ -303,6 +303,13 @@ export const generatedCommandPackage = {
             "nargs": "*"
           },
           {
+            "flags": [
+              "--task"
+            ],
+            "help": "Optional task description used to include task-specific skill recommendations in startup context.",
+            "name": "task"
+          },
+          {
             "choices": [
               "text",
               "json"
@@ -584,6 +591,13 @@ export const generatedCommandPackage = {
             ],
             "help": "Return only active planning state without startup defaults and config.",
             "name": "active_only"
+          },
+          {
+            "flags": [
+              "--task"
+            ],
+            "help": "Optional task description used to include task-specific skill recommendations in preflight context.",
+            "name": "task"
           },
           {
             "choices": [

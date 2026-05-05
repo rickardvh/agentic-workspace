@@ -19,6 +19,11 @@
       "required": false
     },
     {
+      "name": "task",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "format",
       "source": "cli-option",
       "required": false
@@ -51,6 +56,10 @@
     {
       "surface": "preflight_policy.json",
       "required": true
+    },
+    {
+      "surface": "task text for skill recommendations",
+      "required": false
     }
   ],
   "writes": [],
@@ -85,7 +94,7 @@
     {
       "id": "assemble_context",
       "uses": "preflight.context.assemble",
-      "description": "Assemble takeover-safe context and token metadata."
+      "description": "Assemble takeover-safe context, token metadata, and optional task-specific skill recommendations."
     },
     {
       "id": "emit_output",

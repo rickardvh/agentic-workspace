@@ -58,6 +58,21 @@ def _render_prompt(template: str, *, replacements: dict[str, str]) -> str:
     return _replace_placeholders(template, replacements=replacements)
 
 
+def _startup_instruction_prompt(*, repo_path: Path, prompt: str) -> str:
+    agents_path = repo_path / "AGENTS.md"
+    if not agents_path.exists():
+        return prompt
+    startup_text = agents_path.read_text(encoding="utf-8").strip()
+    if not startup_text:
+        return prompt
+    compact_startup = " ".join(line.strip() for line in startup_text.splitlines() if line.strip())
+    return (
+        f"{prompt}\n\n"
+        "Repository startup instruction from AGENTS.md to apply before non-trivial edits: "
+        f"{compact_startup}\n"
+    )
+
+
 def _prompt_variants(scenario: dict[str, Any], *, requested: str | None = None) -> list[dict[str, str]]:
     raw_variants = scenario.get("prompt_variants")
     if raw_variants is None:
@@ -1402,6 +1417,8 @@ def run_suite(
                 "local_app_data": os.environ.get("LOCALAPPDATA", ""),
             }
             prompt = _render_prompt(variant["prompt"], replacements=replacements)
+            if bool(adapter.get("inject_repo_startup_instructions", False)):
+                prompt = _startup_instruction_prompt(repo_path=paths.repo_path, prompt=prompt)
             replacements["prompt"] = prompt
             command_template = adapter.get("command")
             if not isinstance(command_template, list) or not all(isinstance(item, str) for item in command_template):

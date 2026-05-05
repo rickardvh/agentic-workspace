@@ -171,7 +171,7 @@ def report_profile_payload(*, context_router: dict[str, Any], cli_invoke: str = 
         ],
         "router_shape_guard": {
             "status": "active",
-            "max_top_level_fields": 21,
+            "max_top_level_fields": 22,
             "high_volume_sections_excluded": ["module_reports", "reports", "registry", "config"],
             "warning_sample_limit": 5,
             "rule": "Default router output should summarize health, current work, next action, warnings, and selectors before raw high-volume detail.",
@@ -636,7 +636,10 @@ def _report_router_maintenance_pressure(value: Any) -> dict[str, Any]:
         "current_execution_separate": value.get("current_execution_separate", True),
         "attention_category_count": value.get("attention_category_count", 0),
         "active_category_count": value.get("active_category_count", 0),
-        "subcategories": [{key: item[key] for key in ("id", "status", "count", "detail_section") if key in item} for item in subcategories],
+        "subcategories": [
+            {key: item[key] for key in ("id", "status", "count", "detail_section", "section_command") if key in item}
+            for item in subcategories
+        ],
         "detail_sections": value.get("detail_sections", []),
         "recommended_next_action": value.get("recommended_next_action", ""),
     }
