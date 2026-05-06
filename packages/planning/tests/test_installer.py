@@ -2351,7 +2351,9 @@ candidates = []
 
     assert inspection["derived_follow_up_candidates"] == []
     assert inspection["counts"]["routed_continuation_count"] == 1
-    assert inspection["inspections"][0]["classification"] == "routed_partial"
+    assert "inspections" not in inspection
+    full = planning_summary(target=tmp_path, profile="full")
+    assert full["finished_work_inspection_contract"]["inspections"][0]["classification"] == "routed_partial"
 
 
 def test_planning_summary_projects_decomposition_records(tmp_path: Path) -> None:
@@ -4530,16 +4532,19 @@ candidates = [
     assert summary["planning_record"]["system_intent_alignment"]["relevant system intent"] == (
         "Preserve larger user or product outcome separately from the bounded slice."
     )
-    assert summary["handoff_contract"]["system_intent_alignment"]["slice shaping bias"] == (
-        "Keep this slice small but route continuation explicitly."
-    )
+    assert "system_intent_alignment" not in summary["handoff_contract"]
+    assert "return_with" not in summary["handoff_contract"]
     assert "candidate_lanes" not in summary["roadmap"]
     assert summary["roadmap"]["candidates"] == [{"priority": "first", "summary": "Tracked lane"}]
     assert "signals" not in summary["intent_validation_contract"]
     assert "external_evidence" not in summary["intent_validation_contract"]
+    assert "sample_items" not in json.dumps(summary["intent_validation_contract"])
+    assert "derived_follow_up_candidates" not in summary["finished_work_inspection_contract"]
+    assert "inspections" not in summary["finished_work_inspection_contract"]
     assert summary["ownership_review"]["repo_owned_surface_count"] >= 1
     assert "repo_owned_surfaces" not in summary["ownership_review"]
     assert "shared_fields" in summary["schema"]
+    assert len(json.dumps(summary, sort_keys=True)) < 30000
 
 
 def test_planning_summary_flags_roadmap_work_without_active_plan(tmp_path: Path) -> None:
@@ -5229,12 +5234,8 @@ def test_planning_summary_reconciles_lower_trust_closeouts_from_review_artifact(
     assert reconciliation["counts"]["evidence_present_count"] == 1
     assert reconciliation["counts"]["follow_up_open_count"] == 1
     assert reconciliation["counts"]["needs_audit_count"] == 1
-    assert reconciliation["sample_items_by_state"] == {
-        "needs-audit": ["EXT-3"],
-        "evidence-present": ["EXT-1"],
-        "follow-up-open": ["EXT-2"],
-    }
     assert reconciliation["omitted_item_count"] == 0
+    assert "sample_items_by_state" not in reconciliation
     assert summary["intent_validation_contract"]["counts"]["closeout_reconciled_count"] == 2
     assert summary["intent_validation_contract"]["counts"]["closeout_needs_audit_count"] == 1
 
@@ -5296,8 +5297,7 @@ candidates = []
 
     assert reconciliation["status"] == "implemented-and-unclosed"
     assert reconciliation["counts"]["implemented_and_unclosed_count"] == 1
-    assert reconciliation["sample_items"][0]["id"] == "EXT-OPEN"
-    assert reconciliation["sample_items"][0]["action_state"] == "implemented-and-unclosed"
+    assert "sample_items" not in reconciliation
     assert summary["intent_validation_contract"]["counts"]["landed_open_issue_count"] == 1
     assert "close or reroute" in summary["intent_validation_contract"]["recommended_next_action"].lower()
 
@@ -5398,8 +5398,8 @@ def test_planning_summary_accepts_historical_closeout_baseline(tmp_path: Path) -
     assert reconciliation["status"] == "present"
     assert reconciliation["counts"]["historical_baseline_count"] == 1
     assert reconciliation["counts"]["needs_audit_count"] == 0
-    assert reconciliation["sample_items_by_state"] == {"historical-baseline": ["EXT-1"]}
     assert reconciliation["omitted_item_count"] == 0
+    assert "sample_items_by_state" not in reconciliation
     assert summary["intent_validation_contract"]["counts"]["closeout_needs_audit_count"] == 0
 
 
@@ -5538,18 +5538,14 @@ candidates = []
     assert audit["status"] == "backgrounded-by-active-execution"
     assert audit["current_lane_refs"] == ["#442", "#448"]
     assert audit["candidate_count"] == 6
-    assert audit["omitted_candidate_count"] == 1
-    assert len(audit["sample_candidates"]) == 5
-    first_candidate = audit["sample_candidates"][0]
-    assert first_candidate["priority"] == "same-parent-lane"
-    assert first_candidate["recency"]["basis"] == "source_plan_mtime_desc"
-    assert first_candidate["owner"] == ".agentic-workspace/planning/state.toml"
-    assert first_candidate["supersession_status"] == "active"
+    assert audit["omitted_candidate_count"] == 6
+    assert audit["sample_candidates"] == []
     assert audit["recommended_next_action"].startswith("Continue current_execution_pressure first")
     compact_finished = compact["finished_work_inspection_contract"]
-    assert len(compact_finished["inspections"]) == 5
     assert compact_finished["counts"]["omitted_inspection_count"] == 1
     assert compact_finished["counts"]["omitted_derived_follow_up_candidate_count"] == 1
+    assert "inspections" not in compact_finished
+    assert "derived_follow_up_candidates" not in compact_finished
     assert "finished-work inspection detail" in compact_finished["detail"]
     assert len(full["finished_work_inspection_contract"]["derived_follow_up_candidates"]) == 6
 

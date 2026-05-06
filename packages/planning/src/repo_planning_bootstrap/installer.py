@@ -2826,6 +2826,71 @@ def _compact_projection(
     return projected
 
 
+def _drop_empty_compact_fields(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in payload.items()
+        if value not in ({}, [], "", None) and not (isinstance(value, dict) and value.get("status") == "unspecified")
+    }
+
+
+def _compact_active_items(items: Any, *, max_items: int = 3) -> list[dict[str, Any]]:
+    if not isinstance(items, list):
+        return []
+    compact: list[dict[str, Any]] = []
+    for item in items[:max_items]:
+        if not isinstance(item, dict):
+            continue
+        compact.append(
+            {
+                key: item[key]
+                for key in (
+                    "id",
+                    "title",
+                    "status",
+                    "priority",
+                    "refs",
+                    "path",
+                    "surface",
+                    "why_now",
+                    "next_action",
+                    "done_when",
+                    "suggested_first_slice",
+                )
+                if key in item and item[key] not in ("", [], {}, None)
+            }
+        )
+    return compact
+
+
+def _compact_candidate_items(items: Any, *, max_items: int = 3) -> list[dict[str, Any]]:
+    if not isinstance(items, list):
+        return []
+    compact: list[dict[str, Any]] = []
+    for item in items[:max_items]:
+        if not isinstance(item, dict):
+            continue
+        compact.append(
+            {
+                key: item[key]
+                for key in ("id", "title", "summary", "status", "priority", "refs", "promotion_signal", "suggested_first_slice")
+                if key in item and item[key] not in ("", [], {}, None)
+            }
+        )
+    return compact
+
+
+def _compact_roadmap_candidates(items: Any, *, max_items: int = 3) -> list[dict[str, Any]]:
+    if not isinstance(items, list):
+        return []
+    actionable = [
+        item
+        for item in items
+        if isinstance(item, dict) and str(item.get("status", "")).strip().lower() not in {"deferred", "done", "closed"}
+    ]
+    return _compact_candidate_items(actionable or items, max_items=max_items)
+
+
 def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, Any]:
     todo = dict(summary.get("todo", {}))
     execplans = dict(summary.get("execplans", {}))
@@ -3001,9 +3066,9 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "line_count": todo.get("line_count", 0),
             "item_count": todo.get("item_count", 0),
             "active_count": todo.get("active_count", 0),
-            "active_items": todo.get("active_items", []),
+            "active_items": _compact_active_items(todo.get("active_items", [])),
             "queued_count": todo.get("queued_count", 0),
-            "queued_items": todo.get("queued_items", []),
+            "queued_items": _compact_active_items(todo.get("queued_items", [])),
         },
         "execplans": {
             "active_count": execplans.get("active_count", 0),
@@ -3035,7 +3100,6 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "next_role_needed",
                 "requested_outcome",
                 "next_action",
-                "review_residue",
                 "proof_expectations",
                 "system_intent_alignment",
                 "adaptive_assurance",
@@ -3053,7 +3117,6 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "tool_verification",
                 "continuation_owner",
                 "execution_bounds",
-                "stop_conditions",
                 "minimal_refs",
             ),
             idle_unavailable_reason=idle_unavailable_reason,
@@ -3091,13 +3154,9 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             dict(summary.get("hierarchy_contract", {})),
             fields=(
                 "current_layer",
-                "parent_lane",
                 "active_chunk",
-                "near_term_queue",
                 "next_likely_chunk",
                 "proof_state",
-                "required_continuation",
-                "closure_check",
                 "minimal_refs",
             ),
             idle_unavailable_reason=idle_unavailable_reason,
@@ -3106,33 +3165,14 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             dict(summary.get("handoff_contract", {})),
             fields=(
                 "task",
-                "parent_lane",
                 "role_metadata",
                 "next_role_needed",
                 "requested_outcome",
-                "review_residue",
                 "next_action",
-                "completion_criteria",
                 "read_first",
                 "owned_write_scope",
                 "proof_expectations",
-                "system_intent_alignment",
-                "adaptive_assurance",
-                "traceability_refs",
-                "control_gates",
-                "implementation_blockers",
-                "risk_registry_refs",
-                "invariant_refs",
-                "test_data_policy",
-                "layer_scaffold",
-                "architecture_decision_promotion",
-                "threat_failure_aids",
-                "execution_bounds",
-                "stop_conditions",
                 "tool_verification",
-                "continuation_owner",
-                "return_with",
-                "worker_contract",
             ),
             idle_unavailable_reason=idle_unavailable_reason,
         ),
@@ -3140,30 +3180,31 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             dict(summary.get("closeout_distillation_contract", {})),
             fields=(
                 "current_plan",
-                "rule",
-                "archive_role",
-                "buckets",
                 "counts",
                 "recommended_next_action",
-                "minimal_refs",
+                "detail",
             ),
             idle_unavailable_reason=idle_unavailable_reason,
         ),
         "intent_validation_contract": _compact_projection(
-            intent_validation_contract,
+            _compact_intent_validation_for_summary(intent_validation_contract),
             fields=(
                 "counts",
                 "external_work_reconciliation",
+                "external_work_state",
+                "closeout_state",
+                "landed_open_state",
                 "current_external_work",
                 "historical_audit_references",
                 "closeout_reconciliation",
                 "landed_open_issue_reconciliation",
                 "recommended_next_action",
+                "detail",
             ),
         ),
         "finished_work_inspection_contract": _compact_projection(
-            finished_work_inspection_contract,
-            fields=("counts", "inspections", "derived_follow_up_candidates", "detail", "recommended_next_action"),
+            _compact_finished_work_for_summary(finished_work_inspection_contract),
+            fields=("counts", "derived_follow_up_candidates", "detail", "recommended_next_action"),
         ),
         "current_execution_pressure": _compact_current_execution_pressure(summary),
         "historical_audit_pressure": _compact_historical_audit_pressure(
@@ -3177,7 +3218,8 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         "roadmap": {
             "lane_count": roadmap.get("lane_count", 0),
             "candidate_count": roadmap.get("candidate_count", 0),
-            "candidates": roadmap.get("candidates", []),
+            "candidates": _compact_roadmap_candidates(roadmap.get("candidates", [])),
+            "omitted_candidate_count": max(0, len(roadmap.get("candidates", []) or []) - 3),
         },
         "ownership_review": {
             "status": ownership_review.get("status", "unknown"),
@@ -3235,22 +3277,139 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "warnings": [],
             "warning_count": 0,
         }
+    for key in (
+        "planning_record",
+        "active_contract",
+        "resumable_contract",
+        "hierarchy_contract",
+        "handoff_contract",
+        "closeout_distillation_contract",
+    ):
+        if isinstance(compact_summary.get(key), dict):
+            compact_summary[key] = _drop_empty_compact_fields(compact_summary[key])
     return compact_summary
 
 
 def _compact_work_maturity_projection(work_maturity: dict[str, Any]) -> dict[str, Any]:
     return {
         "status": work_maturity.get("status", "unknown"),
-        "active_execplans": list(work_maturity.get("active_execplans", [])),
-        "ready_slices": list(work_maturity.get("ready_slices", [])),
-        "needs_shaping": list(work_maturity.get("needs_shaping", [])),
-        "deferred_lanes": list(work_maturity.get("deferred_lanes", [])),
-        "blocked_items": list(work_maturity.get("blocked_items", [])),
-        "residue_routing_needed": list(work_maturity.get("residue_routing_needed", [])),
+        "active_execplans": _compact_candidate_items(work_maturity.get("active_execplans", [])),
+        "ready_slices": _compact_candidate_items(work_maturity.get("ready_slices", [])),
+        "needs_shaping": _compact_candidate_items(work_maturity.get("needs_shaping", [])),
+        "blocked_items": _compact_candidate_items(work_maturity.get("blocked_items", [])),
+        "residue_routing_needed": _compact_candidate_items(work_maturity.get("residue_routing_needed", [])),
         "counts": dict(work_maturity.get("counts", {})),
         "recommended_next_action": str(work_maturity.get("recommended_next_action", "")).strip(),
         "rule": str(work_maturity.get("rule", "")).strip(),
     }
+
+
+def _compact_intent_validation_for_summary(contract: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(contract, dict):
+        return {}
+    counts = dict(contract.get("counts", {})) if isinstance(contract.get("counts"), dict) else {}
+    external = contract.get("external_work_reconciliation", {})
+    external_work_state = {}
+    closeout_state = {}
+    landed_open_state = {}
+    if isinstance(external, dict):
+        external_work_state = dict(external.get("external_work_state", {})) if isinstance(external.get("external_work_state"), dict) else {}
+        closeout_state = dict(external.get("closeout_state", {})) if isinstance(external.get("closeout_state"), dict) else {}
+        landed_open_state = dict(external.get("landed_open_state", {})) if isinstance(external.get("landed_open_state"), dict) else {}
+        external_work_reconciliation = _compact_external_work_reconciliation(external)
+    else:
+        external_work_reconciliation = {}
+    landed_open = contract.get("landed_open_issue_reconciliation", {})
+    if isinstance(landed_open, dict) and not landed_open_state:
+        landed_open_state = {
+            "status": landed_open.get("status", "absent"),
+            "item_count": landed_open.get("item_count", 0),
+            "counts": landed_open.get("counts", {}),
+        }
+    current_external = contract.get("current_external_work", {})
+    historical = contract.get("historical_audit_references", {})
+    closeout = contract.get("closeout_reconciliation", {})
+    return {
+        "status": contract.get("status", "unavailable"),
+        "counts": {
+            key: counts.get(key, 0)
+            for key in (
+                "internal_dangling_count",
+                "tracked_external_open_count",
+                "untracked_external_open_count",
+                "lower_trust_closeout_count",
+                "closeout_needs_audit_count",
+                "closeout_reconciled_count",
+                "landed_open_issue_count",
+                "attention_count",
+            )
+            if key in counts
+        },
+        "external_work_reconciliation": external_work_reconciliation,
+        "external_work_state": external_work_state,
+        "closeout_state": closeout_state,
+        "landed_open_state": landed_open_state,
+        "current_external_work": {
+            key: current_external.get(key)
+            for key in ("status", "open_count", "closed_count", "provider_count", "omitted_item_count", "detail")
+            if isinstance(current_external, dict) and key in current_external
+        },
+        "historical_audit_references": {
+            key: historical.get(key)
+            for key in (
+                "status",
+                "source_count",
+                "item_count",
+                "follow_up_open_count",
+                "needs_audit_count",
+                "likely_premature_closeout_count",
+                "sources_omitted",
+                "detail",
+            )
+            if isinstance(historical, dict) and key in historical
+        },
+        "closeout_reconciliation": {
+            key: closeout.get(key)
+            for key in ("status", "source_count", "item_count", "counts", "omitted_item_count", "detail")
+            if isinstance(closeout, dict) and key in closeout
+        },
+        "landed_open_issue_reconciliation": {
+            key: landed_open.get(key)
+            for key in ("status", "item_count", "counts", "omitted_item_count", "detail")
+            if isinstance(landed_open, dict) and key in landed_open
+        },
+        "recommended_next_action": contract.get("recommended_next_action", ""),
+        "detail": "Use `agentic-workspace summary --format json --profile full` for intent-validation samples and reconciliation detail.",
+    }
+
+
+def _compact_finished_work_for_summary(contract: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(contract, dict):
+        return {}
+    counts = dict(contract.get("counts", {})) if isinstance(contract.get("counts"), dict) else {}
+    compact = {
+        "status": contract.get("status", "unavailable"),
+        "counts": {
+            key: counts.get(key, 0)
+            for key in (
+                "archived_closeout_count",
+                "partial_count",
+                "likely_premature_closeout_count",
+                "unowned_continuation_count",
+                "routed_continuation_count",
+                "derived_follow_up_candidate_count",
+                "attention_count",
+                "omitted_derived_follow_up_candidate_count",
+                "omitted_inspection_count",
+            )
+            if key in counts
+        },
+        "recommended_next_action": contract.get("recommended_next_action", ""),
+        "detail": "Use `agentic-workspace summary --format json --profile full` for finished-work inspection detail, samples, and derived follow-up detail.",
+    }
+    if int(counts.get("routed_continuation_count", 0) or 0) > 0 and int(counts.get("derived_follow_up_candidate_count", 0) or 0) == 0:
+        compact["derived_follow_up_candidates"] = []
+    return compact
 
 
 def _compact_current_execution_pressure(summary: dict[str, Any]) -> dict[str, Any]:
@@ -3312,21 +3471,24 @@ def _compact_historical_audit_pressure(
         recommendation = (
             "Continue current_execution_pressure first; inspect historical audit pressure only when the active plan points there."
         )
+        sample_candidates: list[dict[str, Any]] = []
     elif backlog_count:
         status = "needs-prioritization"
         recommendation = compact_finished_work_inspection.get(
             "recommended_next_action",
             "Promote or explicitly route the highest-priority historical audit candidate.",
         )
+        sample_candidates = enriched_candidates[:3]
     else:
         status = "quiet"
         recommendation = "No historical audit backlog needs current attention."
+        sample_candidates = []
     return {
         "status": status,
         "current_lane_refs": sorted(active_refs),
         "candidate_count": backlog_count,
-        "sample_candidates": enriched_candidates,
-        "omitted_candidate_count": max(backlog_count - len(enriched_candidates), 0),
+        "sample_candidates": sample_candidates,
+        "omitted_candidate_count": max(backlog_count - len(sample_candidates), 0),
         "intent_validation_counts": {
             "follow_up_open_count": intent_counts.get("closeout_reconciliation", {}).get("follow_up_open_count", 0)
             if isinstance(intent_counts.get("closeout_reconciliation"), dict)
@@ -3337,6 +3499,7 @@ def _compact_historical_audit_pressure(
         "full_profile_candidate_count": len(full_candidates),
         "recommended_next_action": recommendation,
         "rule": "Historical audit residue is recoverable evidence; compact summary ranks it behind current execution unless it directly matches the active lane.",
+        "detail": "Use `agentic-workspace summary --format json --profile full` for historical audit samples.",
     }
 
 
