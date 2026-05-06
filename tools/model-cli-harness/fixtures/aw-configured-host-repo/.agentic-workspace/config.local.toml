@@ -5,7 +5,7 @@ cli_invoke = "agentic-workspace"
 
 [runtime]
 supports_internal_delegation = true
-strong_planner_available = false
+strong_planner_available = true
 cheap_bounded_executor_available = true
 
 [handoff]
@@ -25,3 +25,15 @@ confidence = 0.62
 task_fit = ["mechanical docs edits", "narrow validation", "fixture maintenance under explicit scope"]
 capability_classes = ["mechanical-follow-through"]
 execution_methods = ["cli"]
+forbidden_task_classes = ["boundary-shaping", "reasoning-heavy"]
+escalation_target = "strong_planner"
+
+[delegation_targets.strong_planner]
+strength = "strong"
+location = "local"
+confidence = 0.74
+task_fit = ["workflow design", "planning contract changes", "high-judgment review"]
+capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed"]
+execution_methods = ["manual"]
+cost_class = "premium"
+human_control_modes = ["manual", "suggest"]

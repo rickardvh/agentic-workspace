@@ -129,6 +129,13 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
 
 The comparison report lists resolved, retained, and new warnings, mutation deltas, a compact product interpretation, and the recommended next action. Treat it as a review aid, not a benchmark verdict.
 
+Executed run results include two different cost signals:
+
+- `usage_summary`: provider/runtime token counters when the adapter exposes them.
+- `package_read_surface_summary`: bytes and lines emitted by Agentic Workspace command executions found in structured transcripts.
+
+Use `package_read_surface_summary` when optimising package output size. Use `usage_summary` as a broader provider/runtime context signal; it may include adapter scaffolding, cached context, prompt injection, and model-runtime overhead that the package cannot directly control.
+
 Use postmortem feedback during real optimisation loops when a run exposes ambiguous routing, excess file reads, surprising confidence, or high token use. The follow-up prompt asks the same agent why it chose its workflow and commands, what was ambiguous or too verbose, what package surface would have made the next step obvious, and what would reduce token usage without reducing safety or proof quality:
 
 ```powershell

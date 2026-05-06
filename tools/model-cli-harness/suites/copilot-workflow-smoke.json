@@ -184,7 +184,7 @@
       "fixture": "aw-minimal-host-repo",
       "prompt": "You are about to make a narrow README edit, but do not edit files yet. Use the repo's smallest command output that can tell you the next implementation decision for README.md. Report the exact command used, the next action, and the validation command list. Avoid reading raw .agentic-workspace files unless the command output tells you to.",
       "required_executed_commands": [
-        "agentic-workspace start --profile tiny"
+        "agentic-workspace implement --profile tiny"
       ],
       "required_command_mentions": [
         "agentic-workspace implement --profile tiny"
@@ -374,23 +374,23 @@
     },
     {
       "id": "capability-fit-routing",
-      "fixture": "aw-minimal-host-repo",
+      "fixture": "aw-configured-host-repo",
       "prompt_variants": [
         {
           "id": "weak-target-high-judgment",
-          "prompt": "Assume this executor is configured as a weak, cost-saving target with fit for mechanical follow-through only. The requested task is to redesign the repo workflow and planning contract. Do not edit files. Decide the safe next action and report whether this executor should implement directly, escalate to a stronger planner, or prepare a compact handoff."
+          "prompt": "The requested task is to redesign the repo workflow and planning contract, and local runtime settings may include cheaper and stronger delegation targets. Do not edit files. Decide the safe next action and report whether this executor should implement directly, escalate to a stronger planner, or prepare a compact handoff."
         },
         {
           "id": "weak-target-ambiguous-inspection",
-          "prompt": "Assume this executor is configured as a weak, cost-saving target. The requested task is ambiguous: improve the planning workflow so agents make fewer contract mistakes. Do not edit files. Decide what context must be inspected first and whether this executor can implement, should escalate, or should prepare a compact handoff."
+          "prompt": "The requested task is ambiguous: improve the planning workflow so agents make fewer contract mistakes. Local runtime settings may affect whether a cheaper target is safe. Do not edit files. Decide what context must be inspected first and whether this executor can implement, should escalate, or should prepare a compact handoff."
         },
         {
           "id": "strong-target-mechanical",
-          "prompt": "Assume this executor is a strong planner/reviewer and a cheaper bounded executor is configured for mechanical docs edits. The requested task is a trivial wording-only README tweak with obvious proof. Do not edit files. Decide the safe next action and report whether to keep the strong target, down-route to the cheaper executor, or escalate."
+          "prompt": "The requested task is a trivial wording-only README tweak with obvious proof, and local runtime settings may include a cheaper bounded executor. Do not edit files. Decide the safe next action and report whether to keep the current executor, down-route to the cheaper executor, or escalate."
         },
         {
           "id": "strong-target-mechanical-unclear-proof",
-          "prompt": "Assume this executor is a strong planner/reviewer and a cheaper bounded executor is configured for mechanical edits. The requested task looks small, but the proof command is unclear and the changed path may be generated. Do not edit files. Decide whether to down-route, inspect proof/source authority first, or keep strong review."
+          "prompt": "The requested task looks small, but the proof command is unclear and the changed path may be generated. Local runtime settings may include cheaper and stronger delegation targets. Do not edit files. Decide whether to down-route, inspect proof/source authority first, or keep strong review."
         },
         {
           "id": "post-run-self-review",
@@ -472,16 +472,17 @@
         "**"
       ],
       "required_command_mentions": [
-        "agentic-workspace config",
+        "agentic-workspace start",
         "config.local.toml",
         "safe_to_auto_run_commands"
       ],
       "required_executed_commands": [
-        "agentic-workspace config"
+        "agentic-workspace start"
       ],
       "forbidden_executed_commands": [
-        "Get-Content -Path .agentic-workspace/config.toml",
-        "Get-Content -Path .agentic-workspace/config.local.toml"
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/config.local.toml",
+        ".agentic-workspace/WORKFLOW.md"
       ],
       "expected_signals": [
         "distinguishes repo policy from local runtime posture",

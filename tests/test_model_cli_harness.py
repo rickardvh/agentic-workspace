@@ -53,6 +53,125 @@ def test_model_cli_harness_extracts_token_usage_summary() -> None:
     }
 
 
+def test_model_cli_harness_extracts_package_read_surface_summary() -> None:
+    harness = _load_harness()
+    stdout = "\n".join(
+        [
+            json.dumps(
+                {
+                    "type": "item.completed",
+                    "item": {
+                        "type": "command_execution",
+                        "command": "pwsh -Command 'agentic-workspace start --profile tiny --format json'",
+                        "aggregated_output": '{\n  "kind": "startup-context/v1"\n}\n',
+                        "exit_code": 0,
+                        "status": "completed",
+                    },
+                }
+            ),
+            json.dumps(
+                {
+                    "type": "item.completed",
+                    "item": {
+                        "type": "command_execution",
+                        "command": "pwsh -Command 'pytest -q'",
+                        "aggregated_output": "1 passed\n",
+                        "exit_code": 0,
+                        "status": "completed",
+                    },
+                }
+            ),
+        ]
+    )
+
+    summary = harness._package_read_surface_summary_from_stdout(stdout)
+
+    assert summary["status"] == "present"
+    assert summary["command_count"] == 1
+    assert summary["output_lines"] == 3
+    assert summary["output_bytes"] == len('{\n  "kind": "startup-context/v1"\n}\n'.encode())
+    assert summary["commands"][0]["exit_code"] == 0
+    assert summary["precision"] == "direct"
+    assert summary["mixed_command_count"] == 0
+    assert "mixed shell commands" in summary["metric_role"]
+
+
+def test_model_cli_harness_marks_mixed_package_commands_approximate() -> None:
+    harness = _load_harness()
+    stdout = json.dumps(
+        {
+            "type": "item.completed",
+            "item": {
+                "type": "command_execution",
+                "command": 'pwsh -Command "Get-Content .agentic-workspace/config.toml; agentic-workspace start --format json"',
+                "aggregated_output": "config\n---\n{}\n",
+                "exit_code": 0,
+                "status": "completed",
+            },
+        }
+    )
+
+    summary = harness._package_read_surface_summary_from_stdout(stdout)
+
+    assert summary["status"] == "present"
+    assert summary["precision"] == "approximate"
+    assert summary["mixed_command_count"] == 1
+    assert summary["commands"][0]["mixed_shell_command"] is True
+
+
+def test_model_cli_harness_does_not_mark_task_punctuation_as_mixed_package_command() -> None:
+    harness = _load_harness()
+    stdout = json.dumps(
+        {
+            "type": "item.completed",
+            "item": {
+                "type": "command_execution",
+                "command": (
+                    'pwsh -Command "agentic-workspace start --profile tiny '
+                    '--task \\"Redesign policy; provide safe next action\\" --format json"'
+                ),
+                "aggregated_output": "{}\n",
+                "exit_code": 0,
+                "status": "completed",
+            },
+        }
+    )
+
+    summary = harness._package_read_surface_summary_from_stdout(stdout)
+
+    assert summary["precision"] == "direct"
+    assert summary["mixed_command_count"] == 0
+    assert summary["commands"][0]["mixed_shell_command"] is False
+
+
+def test_model_cli_harness_aggregates_package_read_surface_summary() -> None:
+    harness = _load_harness()
+
+    summary = harness._aggregate_package_read_surface_summaries(
+        [
+            {"package_read_surface_summary": {"status": "present", "command_count": 1, "output_bytes": 20, "output_lines": 2}},
+            {
+                "package_read_surface_summary": {
+                    "status": "present",
+                    "command_count": 2,
+                    "output_bytes": 30,
+                    "output_lines": 3,
+                    "mixed_command_count": 1,
+                }
+            },
+            {"package_read_surface_summary": {"status": "absent"}},
+        ]
+    )
+
+    assert summary["status"] == "present"
+    assert summary["result_count"] == 2
+    assert summary["command_count"] == 3
+    assert summary["output_bytes"] == 50
+    assert summary["output_lines"] == 5
+    assert summary["mixed_command_count"] == 1
+    assert summary["precision"] == "approximate"
+
+
 def test_model_cli_harness_dry_run_copies_fixture_and_renders_command(tmp_path: Path) -> None:
     fixture = tmp_path / "fixtures" / "repo"
     fixture.mkdir(parents=True)
@@ -101,12 +220,14 @@ def test_model_cli_harness_dry_run_copies_fixture_and_renders_command(tmp_path: 
     repo_path = Path(result["repo_path"])
     assert (repo_path / "AGENTS.md").read_text(encoding="utf-8") == "Start here.\n"
     assert result["result"]["status"] == "dry-run"
+    assert result["package_read_surface_summary"]["status"] == "not-run"
     assert result["preflight"]["status"] == "environment-blocked"
     assert result["command"][0:3] == ["fake-cli", "--model", "fake-model"]
     assert str(repo_path) in result["prompt"]
     assert str(REPO_ROOT) in result["prompt"]
     assert (Path(result["run_root"]) / "run.json").exists()
     assert len(Path(result["run_root"]).name) < 90
+    assert payload["package_read_surface_summary"]["status"] == "absent"
 
 
 def test_model_cli_harness_can_inject_repo_startup_instructions(tmp_path: Path) -> None:

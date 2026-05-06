@@ -404,7 +404,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
         "manual-handoff",
         "ask-human",
     }
-    assert len(json.dumps(payload, sort_keys=True)) < 15400
+    assert len(json.dumps(payload, sort_keys=True)) < 16600
     assert payload["proof"]["required_commands"] == [
         "uv run pytest tests -q",
         "uv run ruff check src tests",
@@ -492,6 +492,23 @@ def test_start_tiny_keeps_moderate_task_carry_forward_command_executable(capsys)
     assert f'--task "{task}"' in command
 
 
+def test_start_tiny_routes_existing_task_paths_to_implement_surface(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "README.md", "fixture\n")
+
+    task = "Prepare for a narrow README.md wording edit, but do not edit files yet."
+    assert cli.main(["start", "--target", str(tmp_path), "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    action = payload["immediate_next_allowed_action"]
+    assert action["action"] == "inspect-known-task-paths"
+    assert action["detected_paths"] == ["README.md"]
+    assert action["command"] == (
+        'agentic-workspace implement --profile tiny --changed README.md --task "Prepare for a narrow README.md wording edit, but do not edit files yet." --format json'
+    )
+    assert action["read_first"] == [action["command"]]
+
+
 def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> None:
     task = (
         "Inspect this repo enough to answer how a small follow-up should be reported. "
@@ -506,7 +523,7 @@ def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> No
     assert action["command"] == "uv run agentic-workspace config --profile tiny --format json"
     assert action["read_first"] == [action["command"]]
     assert "tiny config surface" in action["summary"]
-    assert len(json.dumps(payload, sort_keys=True)) < 6200
+    assert len(json.dumps(payload, sort_keys=True)) < 6700
 
 
 def test_start_tiny_compacts_long_task_carry_forward_command(capsys) -> None:
@@ -641,6 +658,91 @@ def test_start_tiny_respects_ask_first_clarification_mode(tmp_path: Path, capsys
     assert decision["required_next_action"] == "stop-and-ask-human"
     assert decision["manual_prompt"]["target"] == "human-or-external-strong-general-purpose-model"
     assert decision["clarification_mode"] == "ask-first"
+
+
+def test_start_tiny_surfaces_auto_delegation_safety_gate(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "auto"',
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = false",
+            ]
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--profile",
+                "tiny",
+                "--task",
+                "redesign workflow delegation policy",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    config_effect = payload["delegation_decision"]["config_effect"]
+    assert config_effect["authority"] == "local-config"
+    assert config_effect["source_path"] == ".agentic-workspace/config.local.toml"
+    assert config_effect["configured_delegation_mode"] == "auto"
+    assert config_effect["delegation_mode"] == "suggest"
+    assert config_effect["safe_to_auto_run_commands"] is False
+    assert "safe_to_auto_run_commands" in config_effect["disabled_reason"]
+
+
+def test_start_tiny_keeps_config_effect_when_auto_mode_is_safety_downgraded(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "auto"',
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = false",
+            ]
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--profile",
+                "tiny",
+                "--task",
+                "Can this request be automatically delegated to a cheaper executor under local settings?",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    decision = payload["delegation_decision"]
+    assert decision["decision"] == "stay-local"
+    assert decision["config_effect"]["delegation_mode"] == "suggest"
+    assert decision["config_effect"]["safe_to_auto_run_commands"] is False
 
 
 def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -> None:

@@ -2169,7 +2169,7 @@ def test_default_command_outputs_stay_router_sized(tmp_path: Path, capsys) -> No
     capsys.readouterr()
 
     budgets = {
-        "start": (["start", "--target", str(target), "--format", "json"], 9000),
+        "start": (["start", "--target", str(target), "--format", "json"], 9800),
         "summary": (["summary", "--target", str(target), "--format", "json"], 13000),
         "report": (["report", "--target", str(target), "--format", "json"], 18000),
         "proof": (

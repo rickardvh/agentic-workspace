@@ -387,6 +387,121 @@ def _usage_summary_from_stdout(stdout: str) -> dict[str, Any]:
     }
 
 
+def _is_agentic_workspace_command(command: str) -> bool:
+    normalized = command.replace("\\", "/").lower()
+    return any(
+        marker in normalized
+        for marker in (
+            "agentic-workspace",
+            "agentic-planning",
+            "agentic-memory",
+            "repo_planning_bootstrap",
+            "repo_memory_bootstrap",
+        )
+    )
+
+
+def _is_mixed_package_shell_command(command: str) -> bool:
+    raw_read_pattern = r"\b(Get-Content|cat|type|Write-Output)\b"
+    command_separator_pattern = (
+        r"(;|&&|\|\|)\s*"
+        r"(uv\s+run\s+)?"
+        r"(agentic-workspace|agentic-planning|agentic-memory|repo-planning|repo-memory|"
+        r"Get-Content|cat\b|type\b|Write-Output)"
+    )
+    return bool(re.search(raw_read_pattern, command, flags=re.IGNORECASE)) or bool(
+        re.search(command_separator_pattern, command, flags=re.IGNORECASE)
+    )
+
+
+def _package_read_surface_summary_from_stdout(stdout: str) -> dict[str, Any]:
+    """Separate package command payload size from provider/runtime token accounting."""
+    command_count = 0
+    output_bytes = 0
+    output_lines = 0
+    mixed_command_count = 0
+    commands: list[dict[str, Any]] = []
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(event, dict):
+            continue
+        item = event.get("item")
+        if not isinstance(item, dict) or item.get("type") != "command_execution":
+            continue
+        if item.get("status") != "completed":
+            continue
+        command = str(item.get("command", ""))
+        if not _is_agentic_workspace_command(command):
+            continue
+        mixed_shell_command = _is_mixed_package_shell_command(command)
+        output = str(item.get("aggregated_output", ""))
+        encoded = output.encode("utf-8", errors="replace")
+        line_count = 0 if not output else len(output.splitlines())
+        command_count += 1
+        output_bytes += len(encoded)
+        output_lines += line_count
+        if mixed_shell_command:
+            mixed_command_count += 1
+        commands.append(
+            {
+                "command_excerpt": command[:180],
+                "output_bytes": len(encoded),
+                "output_lines": line_count,
+                "exit_code": item.get("exit_code"),
+                "status": item.get("status"),
+                "mixed_shell_command": mixed_shell_command,
+            }
+        )
+    largest = max((item["output_bytes"] for item in commands), default=0)
+    return {
+        "kind": "agentic-workspace/package-read-surface-summary/v1",
+        "status": "present" if command_count else "absent",
+        "command_count": command_count,
+        "output_bytes": output_bytes,
+        "output_lines": output_lines,
+        "largest_command_output_bytes": largest,
+        "mixed_command_count": mixed_command_count,
+        "commands": commands[:10],
+        "omitted_command_count": max(0, len(commands) - 10),
+        "precision": "approximate" if mixed_command_count else "direct",
+        "metric_role": "package command output size only when commands are direct; mixed shell commands are marked approximate",
+    }
+
+
+def _aggregate_package_read_surface_summaries(results: list[dict[str, Any]]) -> dict[str, Any]:
+    present_count = 0
+    command_count = 0
+    output_bytes = 0
+    output_lines = 0
+    largest = 0
+    mixed_command_count = 0
+    for result in results:
+        summary = result.get("package_read_surface_summary")
+        if not isinstance(summary, dict) or summary.get("status") != "present":
+            continue
+        present_count += 1
+        command_count += int(summary.get("command_count", 0) or 0)
+        output_bytes += int(summary.get("output_bytes", 0) or 0)
+        output_lines += int(summary.get("output_lines", 0) or 0)
+        largest = max(largest, int(summary.get("largest_command_output_bytes", 0) or 0))
+        mixed_command_count += int(summary.get("mixed_command_count", 0) or 0)
+    return {
+        "kind": "agentic-workspace/package-read-surface-aggregate/v1",
+        "status": "present" if present_count else "absent",
+        "result_count": present_count,
+        "command_count": command_count,
+        "output_bytes": output_bytes,
+        "output_lines": output_lines,
+        "largest_command_output_bytes": largest,
+        "mixed_command_count": mixed_command_count,
+        "precision": "approximate" if mixed_command_count else "direct",
+        "metric_role": "aggregate Agentic Workspace command output size; provider token summaries remain separate",
+    }
+
+
 def _aggregate_usage_summaries(results: list[dict[str, Any]]) -> dict[str, Any]:
     totals = {
         "input_tokens": 0,
@@ -1944,6 +2059,7 @@ def run_suite(
                     }
                 ]
                 invocation["usage_summary"] = {"status": "not-run"}
+                invocation["package_read_surface_summary"] = {"status": "not-run"}
             elif execute:
                 result = _run_command(command, cwd=paths.repo_path, timeout_seconds=effective_timeout, env=adapter_env)
                 if paths.share_path.exists():
@@ -1951,6 +2067,7 @@ def run_suite(
                 _copy_transcript(str(result.get("stdout", "")), paths.transcript_path)
                 mutation_summary = _snapshot_diff(baseline_snapshot, _file_snapshot(paths.repo_path))
                 invocation["usage_summary"] = _usage_summary_from_stdout(str(result.get("stdout", "")))
+                invocation["package_read_surface_summary"] = _package_read_surface_summary_from_stdout(str(result.get("stdout", "")))
                 invocation["result"] = result
                 invocation["mutation_summary"] = mutation_summary
                 invocation["transcript_path"] = str(paths.transcript_path)
@@ -2021,6 +2138,7 @@ def run_suite(
                 }
                 invocation["mutation_summary"] = {"status": "not-run"}
                 invocation["usage_summary"] = {"status": "not-run"}
+                invocation["package_read_surface_summary"] = {"status": "not-run"}
                 invocation["warnings"] = []
             invocation["quality_signals"] = _quality_signals(
                 scenario_id=scenario_id,
@@ -2042,6 +2160,7 @@ def run_suite(
         "results": run_results,
     }
     payload["usage_summary"] = _aggregate_usage_summaries(run_results)
+    payload["package_read_surface_summary"] = _aggregate_package_read_surface_summaries(run_results)
     payload["finding_classification"] = _classify_suite_findings(run_results)
     _write_json(output_root / f"{_now_id()}-{suite_id}-{adapter_id}-summary.json", payload)
     return payload
@@ -2126,6 +2245,14 @@ def main(argv: list[str] | None = None) -> int:
     else:
         mode = "executed" if args.execute else "dry-run"
         print(f"{mode} {payload['result_count']} scenario(s) for {payload['adapter']}:{payload['model']}")
+        package_surface = payload.get("package_read_surface_summary", {})
+        if isinstance(package_surface, dict) and package_surface.get("status") == "present":
+            print(
+                "package read-surface: "
+                f"{package_surface['command_count']} command(s), "
+                f"{package_surface['output_bytes']} bytes, "
+                f"{package_surface['output_lines']} lines"
+            )
         for result in payload["results"]:
             variant = result.get("prompt_variant_id", "default")
             print(f"- {result['scenario_id']}[{variant}]: {result['run_root']}")

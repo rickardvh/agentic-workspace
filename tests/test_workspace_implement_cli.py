@@ -97,7 +97,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert "authority_markers" not in payload
     assert "durable_intent" not in payload
     assert "inference_limits" not in payload
-    assert len(encoded) < 4000
+    assert len(encoded) < 4200
 
 
 def test_implement_task_file_preserves_task_intent_for_acceptance_checks(tmp_path: Path, capsys) -> None:
@@ -256,6 +256,11 @@ def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: 
     assert "quality" in posture["ready_handoff"]["prompt"]
     assert posture["delegation_decision"]["decision"] == "suggest-escalation"
     assert posture["delegation_decision"]["required_next_action"] == "prepare-handoff"
+    assert posture["delegation_decision"]["route_obligation"]["must"].startswith("Prepare the handoff packet")
+    assert "report why" in posture["delegation_decision"]["route_obligation"]["report_if_skipped"]
+    assert posture["delegation_decision"]["config_effect"]["source_path"] == ".agentic-workspace/config.local.toml"
+    assert posture["delegation_decision"]["config_effect"]["delegation_mode"] == "manual"
+    assert posture["delegation_decision"]["config_effect"]["execution_authority"] == "suggest-or-handoff-only"
     assert posture["delegation_decision"]["handoff_command"] == "agentic-planning handoff --target . --format json"
     assert posture["delegation_decision"]["handoff_surface"]["required_packet_fields"] == [
         "intent",
@@ -323,6 +328,9 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
     assert decision["target"] == "mini"
     assert decision["required_next_action"] == "execute-when-safe"
     assert decision["token_savings_expected"] == "likely"
+    assert decision["route_obligation"]["must"].startswith("Execute only when local auto mode")
+    assert decision["config_effect"]["authority"] == "local-config"
+    assert decision["config_effect"]["execution_authority"] == "auto-execution-permitted"
     assert decision["handoff_command"] == "agentic-planning handoff --target . --format json"
     assert decision["delegation_next_step"]["status"] == "executable"
     assert decision["delegation_next_step"]["must_report_if_not_run"] is True

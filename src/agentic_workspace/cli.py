@@ -8981,6 +8981,19 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
     )
     compact = {key: value.get(key) for key in common_keys if key in value}
     decision = str(value.get("decision", ""))
+    config_effect = value.get("config_effect")
+    config_changes_effective_behavior = isinstance(config_effect, dict) and (
+        config_effect.get("configured_delegation_mode") != config_effect.get("delegation_mode")
+        or config_effect.get("disabled_reason") not in (None, "")
+        or config_effect.get("safe_to_auto_run_commands") is False
+    )
+    if decision != "stay-local" or value.get("required_next_action") != "continue-local" or config_changes_effective_behavior:
+        routed_keys = ("route_obligation", "config_effect")
+        if decision == "stay-local" and value.get("required_next_action") == "continue-local":
+            routed_keys = ("config_effect",)
+        for routed_key in routed_keys:
+            if routed_key in value:
+                compact[routed_key] = value.get(routed_key)
     if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation", "delegate-bounded-slice"}:
         compact["target"] = value.get("target")
         compact["reason"] = value.get("reason")
@@ -9283,6 +9296,7 @@ def _start_payload(
     task_intent = _task_intent_carry_forward_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if task_intent["status"] == "present":
         payload["task_intent"] = task_intent
+    task_mentioned_paths = _task_mentioned_existing_paths(task_text=task_text, target_root=target_root)
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
         payload["vague_outcome_orientation"] = vague_orientation
@@ -9304,7 +9318,31 @@ def _start_payload(
         task_text=task_text,
     )
     payload["delegation_decision"] = execution_posture["delegation_decision"]
-    if not active_planning_present and _is_prep_only_handoff_task(task_text):
+    if not active_planning_present and task_mentioned_paths and not changed_paths and not _is_config_posture_task(task_text):
+        implement_command = str(task_intent.get("implement_changed_command", "")) if isinstance(task_intent, dict) else ""
+        if implement_command:
+            implement_command = implement_command.replace("<paths>", " ".join(task_mentioned_paths))
+        else:
+            implement_command = _command_with_cli_invoke(
+                command=f"agentic-workspace implement --profile tiny --changed {' '.join(task_mentioned_paths)} --format json",
+                cli_invoke=config.cli_invoke,
+            )
+        payload["immediate_next_allowed_action"] = {
+            "action": "inspect-known-task-paths",
+            "summary": (
+                "The task text names existing repo paths. Run the tiny implement surface for those paths before broader startup "
+                "or raw workspace reads."
+            ),
+            "command": implement_command,
+            "run": implement_command,
+            "risk": "read-only changed-path routing",
+            "required_inputs": ["target repo", "named path(s)"],
+            "next_proof": "use the proof.required_commands from implement output",
+            "read_first": [implement_command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+            "detected_paths": task_mentioned_paths,
+        }
+    elif not active_planning_present and _is_prep_only_handoff_task(task_text):
         prep_only = _prep_only_handoff_payload(config=config)
         planning_command = prep_only["first_command"]
         summary_command = prep_only["after_write"]
@@ -9478,6 +9516,30 @@ def _extract_requested_outcomes(task_text: str | None) -> list[str]:
     for match in re.finditer(r"\b[A-Za-z][A-Za-z0-9]*[.][A-Za-z_][A-Za-z0-9_]*\b", text):
         add(match.group(0))
     return outcomes[:12]
+
+
+def _task_mentioned_existing_paths(*, task_text: str | None, target_root: Path) -> list[str]:
+    text = str(task_text or "")
+    if not text.strip():
+        return []
+    candidates = re.findall(r"(?<![\w./\\-])(?:[\w.-]+[/\\])*[\w.-]+\.[A-Za-z0-9]{1,8}(?![\w/\\-])", text)
+    found: list[str] = []
+    seen: set[str] = set()
+    for raw in candidates:
+        normalized = raw.replace("\\", "/").strip("`'\".,;:()[]{}")
+        if not normalized or normalized.lower().startswith(("http:", "https:")):
+            continue
+        candidate_path = Path(normalized)
+        if candidate_path.is_absolute() or ".." in candidate_path.parts:
+            continue
+        if not (target_root / candidate_path).exists():
+            continue
+        key = normalized.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append(normalized)
+    return found[:6]
 
 
 _TASK_INTENT_INLINE_COMMAND_MAX_CHARS = 1200
@@ -10231,6 +10293,48 @@ def _delegation_next_action_decision(
             ],
         }
 
+    if required_next_action == "continue-local":
+        must = "Continue locally; no delegation action is required for this step."
+        must_not = "Do not invent delegation work just because targets are configured."
+    elif required_next_action == "mention-suggestion":
+        must = "State the suggested route and rationale before continuing locally or preparing handoff."
+        must_not = "Do not execute delegation automatically in suggest mode."
+    elif required_next_action == "prepare-handoff":
+        must = "Prepare the handoff packet or prompt before implementation continues on the delegated slice."
+        must_not = "Do not treat the suggestion as optional background when the route is capability-driven."
+    elif required_next_action == "execute-when-safe":
+        must = "Execute only when local auto mode, target profile, scope, and proof constraints all remain satisfied."
+        must_not = "Do not widen scope, lower proof, or use a target outside its configured execution methods."
+    elif required_next_action == "stop-and-ask-human":
+        must = "Stop and ask for the bounded missing input before continuing."
+        must_not = "Do not guess the missing human intent or ownership boundary."
+    else:
+        must = "Follow required_next_action before implementation continues."
+        must_not = "Do not bypass the configured local posture silently."
+
+    route_obligation = {
+        "must": must,
+        "must_not": must_not,
+        "report_if_skipped": (
+            "If you do not follow this route, report why local execution is safer or cheaper without reducing quality, proof, or control."
+        ),
+    }
+    config_effect = {
+        "authority": "local-config",
+        "source_path": ".agentic-workspace/config.local.toml",
+        "configured_delegation_mode": delegation_control.get("configured_mode", mode),
+        "delegation_mode": mode,
+        "clarification_mode": clarification_mode,
+        "safe_to_auto_run_commands": delegation_control.get("safe_to_auto_run_commands"),
+        "disabled_reason": delegation_control.get("disabled_reason"),
+        "execution_authority": (
+            "auto-execution-permitted"
+            if mode == "auto" and delegation_control.get("execution_permitted") is True
+            else "suggest-or-handoff-only"
+        ),
+        "human_control": "auto execution requires local safety permission; otherwise surface suggest/handoff first.",
+    }
+
     return {
         "kind": "agentic-workspace/delegation-next-action/v1",
         "status": "evaluated",
@@ -10246,11 +10350,13 @@ def _delegation_next_action_decision(
         else ("possible" if decision == "suggest-delegation" else "none"),
         "required_next_action": required_next_action,
         "mode_effect": mode_effect,
+        "config_effect": config_effect,
         "reason": reasons[0],
         "handoff_command": handoff_command,
         "handoff_surface": _delegation_handoff_surface(command=handoff_command) if handoff_command else None,
         "delegation_next_step": delegation_next_step,
         "manual_prompt": manual_prompt,
+        "route_obligation": route_obligation,
         "human_control_summary": (
             "Local posture may suggest delegation or clarification, but only auto mode may execute without a human handoff."
         ),

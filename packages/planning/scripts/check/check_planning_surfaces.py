@@ -1104,7 +1104,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         "agentic-workspace start --profile tiny --task",
         "immediate_next_allowed_action",
         "skill_routing",
-        "before opening raw `.agentic-workspace` files",
+        "do not open raw `.agentic-workspace` files before this command",
         "preflight",
         ".agentic-workspace/workflow.md",
         "<!-- agentic-workspace:workflow:end -->",
