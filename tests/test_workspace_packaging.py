@@ -141,47 +141,147 @@ def test_installed_workspace_wheel_imports_cli_module() -> None:
     assert result.returncode == 0, result.stderr
 
 
-def test_installed_workspace_stack_runs_summary_adapter() -> None:
+def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir_path = Path(tmpdir)
         wheel_path = _build_artifact(tmpdir, "wheel")
-        install_root = tmpdir_path / "installed"
-        subprocess.run(
-            [
-                "uv",
-                "pip",
-                "install",
-                "--target",
-                str(install_root),
-                str(WORKSPACE_ROOT / "packages" / "memory"),
-                str(WORKSPACE_ROOT / "packages" / "planning"),
-                str(wheel_path),
-            ],
-            cwd=WORKSPACE_ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        workspace_exe = _install_workspace_stack_venv(wheel_path=wheel_path, tmpdir_path=tmpdir_path)
         target = tmpdir_path / "repo"
         target.mkdir()
         subprocess.run(["git", "init"], cwd=target, capture_output=True, text=True, check=True)
 
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "agentic_workspace.cli",
-                "summary",
-                "--target",
-                str(target),
-                "--format",
-                "json",
-            ],
-            cwd=tmpdir_path,
-            env={**os.environ, "PYTHONPATH": str(install_root)},
-            capture_output=True,
-            text=True,
-            check=False,
+        init_payload = _run_workspace_console_json(
+            workspace_exe,
+            tmpdir_path,
+            "init",
+            "--target",
+            str(target),
+            "--preset",
+            "full",
+            "--format",
+            "json",
+        )
+        start_payload = _run_workspace_console_json(
+            workspace_exe,
+            tmpdir_path,
+            "start",
+            "--target",
+            str(target),
+            "--profile",
+            "tiny",
+            "--task",
+            "fresh package proof",
+            "--format",
+            "json",
+        )
+        summary_payload = _run_workspace_console_json(
+            workspace_exe,
+            tmpdir_path,
+            "summary",
+            "--target",
+            str(target),
+            "--profile",
+            "compact",
+            "--format",
+            "json",
+        )
+        implement_payload = _run_workspace_console_json(
+            workspace_exe,
+            tmpdir_path,
+            "implement",
+            "--target",
+            str(target),
+            "--profile",
+            "tiny",
+            "--changed",
+            "README.md",
+            "--task",
+            "fresh package proof",
+            "--format",
+            "json",
+        )
+        proof_payload = _run_workspace_console_json(
+            workspace_exe,
+            tmpdir_path,
+            "proof",
+            "--target",
+            str(target),
+            "--profile",
+            "tiny",
+            "--changed",
+            "README.md",
+            "--format",
+            "json",
+        )
+        doctor_payload = _run_workspace_console_json(
+            workspace_exe,
+            tmpdir_path,
+            "doctor",
+            "--target",
+            str(target),
+            "--format",
+            "json",
         )
 
+    assert init_payload["command"] == "init"
+    assert init_payload["preset"] == "full"
+    assert start_payload["kind"] == "startup-context/v1"
+    assert start_payload["invoked_cli_identity"]["source_class"] == "installed-package"
+    assert summary_payload["kind"] == "planning-summary/v1"
+    assert summary_payload["profile"] == "compact"
+    assert implement_payload["kind"] == "implementer-context-tiny/v1"
+    assert proof_payload["kind"] == "proof-next-decision/v1"
+    assert doctor_payload["health"] == "healthy"
+
+
+def _install_workspace_stack_venv(*, wheel_path: Path, tmpdir_path: Path) -> Path:
+    venv_path = tmpdir_path / ".venv"
+    subprocess.run(
+        ["uv", "venv", str(venv_path)],
+        cwd=WORKSPACE_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    python_path = _venv_python(venv_path)
+    subprocess.run(
+        [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            str(python_path),
+            str(WORKSPACE_ROOT / "packages" / "memory"),
+            str(WORKSPACE_ROOT / "packages" / "planning"),
+            str(wheel_path),
+        ],
+        cwd=WORKSPACE_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return _venv_script(venv_path, "agentic-workspace")
+
+
+def _run_workspace_console_json(workspace_exe: Path, cwd: Path, *args: str) -> dict[str, object]:
+    result = subprocess.run(
+        [str(workspace_exe), *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     assert result.returncode == 0, result.stderr
+    return json.loads(result.stdout)
+
+
+def _venv_python(venv_path: Path) -> Path:
+    if os.name == "nt":
+        return venv_path / "Scripts" / "python.exe"
+    return venv_path / "bin" / "python"
+
+
+def _venv_script(venv_path: Path, name: str) -> Path:
+    if os.name == "nt":
+        return venv_path / "Scripts" / f"{name}.exe"
+    return venv_path / "bin" / name
