@@ -1180,10 +1180,14 @@ safe_to_auto_run_commands = false
     payload = json.loads(output)
     assert payload["kind"] == "agentic-workspace/config-compact/v1"
     assert payload["profile"] == "compact"
+    assert payload["target"] == "."
+    assert payload["config_path"] == ".agentic-workspace/config.toml"
     assert "mixed_agent" not in payload
     assert payload["workspace"]["improvement_latitude"] == "proactive"
     assert payload["workspace"]["optimization_bias"] == "agent-efficiency"
     assert payload["workspace"]["workflow_obligations"][0]["id"] == "closeout_proof"
+    assert payload["reporting_posture"]["repo_policy"]["improvement_latitude"] == "proactive"
+    assert payload["reporting_posture"]["citation_rule"].startswith("Final answers should cite repo-relative")
     assert payload["local_runtime"]["delegation_mode"] == {"value": "suggest", "source": "local-override"}
     assert payload["local_runtime"]["clarification_mode"] == {"value": "ask-first", "source": "local-override"}
     assert payload["local_runtime"]["safe_to_auto_run_commands"] == {"value": False, "source": "local-override"}
@@ -7219,7 +7223,7 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
         (tmp_path / "AGENTS.md"),
         "# Agent Instructions\n\n"
         "<!-- agentic-workspace:workflow:start -->\n"
-        'For non-trivial requests with known changed paths, first run `agentic-workspace implement --profile tiny --changed <paths> --format json`; otherwise run `agentic-workspace start --profile tiny --task "<task>" --format json` using the user\'s request as `<task>`. If the bare command is unavailable, use `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present. Follow `immediate_next_allowed_action` and `skill_routing` before opening raw `.agentic-workspace` files. Use `preflight` for takeover or recovery. If unavailable, read `.agentic-workspace/WORKFLOW.md`.\n'
+        'For non-trivial requests with known changed paths, first run `agentic-workspace implement --profile tiny --changed <paths> --format json`; otherwise run `agentic-workspace start --profile tiny --task "<task>" --format json` using the user\'s request as `<task>`. If the bare command is unavailable, use `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present. Follow `immediate_next_allowed_action` and `skill_routing` before opening raw `.agentic-workspace` files. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If unavailable, read `.agentic-workspace/WORKFLOW.md`.\n'
         "<!-- agentic-workspace:workflow:end -->\n\n"
         "Local repo instructions.\n",
         encoding="utf-8",
@@ -7772,6 +7776,23 @@ def test_start_tiny_keeps_moderate_task_carry_forward_command_executable(capsys)
     assert payload["task_intent"]["task_argument_mode"] == "inline"
     assert "--task-file" not in command
     assert f'--task "{task}"' in command
+
+
+def test_start_tiny_routes_config_posture_questions_to_compact_config(capsys) -> None:
+    task = (
+        "Inspect this repo enough to answer how a small follow-up should be reported. "
+        "Keep the answer aligned with the repo's configured operating and reporting posture."
+    )
+
+    assert cli.main(["start", "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    action = payload["immediate_next_allowed_action"]
+    assert action["action"] == "inspect-effective-config"
+    assert action["command"] == "uv run agentic-workspace config --profile compact --format json"
+    assert action["read_first"] == [action["command"]]
+    assert "before raw config files" in action["summary"]
+    assert len(json.dumps(payload, sort_keys=True)) < 6200
 
 
 def test_start_tiny_compacts_long_task_carry_forward_command(capsys) -> None:
@@ -9253,6 +9274,29 @@ def test_proof_changed_selector_routes_agent_aid_changes_to_manifest_lane(capsys
     assert answer["required_commands"] == ["uv run python scripts/check/check_agent_aids.py --quiet-success"]
     assert "candidate aids" in answer["selected_lanes"][0]["recovery_signal"]
     assert "uv run pytest tests -q" not in answer["required_commands"]
+
+
+def test_proof_changed_selector_routes_readme_to_docs_review(capsys) -> None:
+    assert cli.main(["proof", "--changed", "README.md", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review"]
+    assert answer["required_commands"] == ["git diff -- README.md docs"]
+    assert "uv run pytest tests -q" not in answer["required_commands"]
+    assert answer["surface_value_review"]["reviewed_paths"][0]["surface_class"] == "adapter_or_repo_intent_surface"
+
+
+def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> None:
+    assert cli.main(["proof", "--profile", "tiny", "--changed", "README.md", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    encoded = json.dumps(payload)
+    assert payload["kind"] == "proof-next-decision/v1"
+    assert payload["next"]["command"] == "git diff -- README.md docs"
+    assert payload["required_commands"] == ["git diff -- README.md docs"]
+    assert "uv run pytest tests -q" not in encoded
+    assert len(encoded) < 2500
 
 
 def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:

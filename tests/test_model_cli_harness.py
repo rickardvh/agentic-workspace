@@ -792,6 +792,7 @@ def test_model_cli_harness_metadata_scoring_warns_on_write_and_response_rules(tm
                 ]
             ),
             "stderr": "",
+            "final_message": ("See [config](" + "C:" + "\\Users\\ricka\\scratch\\repo\\.agentic-workspace\\config.toml#L1)."),
         },
         mutation_summary={"status": "changed", "created": ["src/app.ts"], "modified": ["README.md"]},
         repo_path=repo,
@@ -804,6 +805,7 @@ def test_model_cli_harness_metadata_scoring_warns_on_write_and_response_rules(tm
     assert any("did not execute a required command" in message for message in messages)
     assert any("avoidable or forbidden" in message for message in messages)
     assert any("forbidden response phrase" in message for message in messages)
+    assert any("local absolute path" in message for message in messages)
     assert any("required artifact pattern" in message for message in messages)
 
 

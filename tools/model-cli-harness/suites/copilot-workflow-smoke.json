@@ -501,12 +501,18 @@
         "**"
       ],
       "required_command_mentions": [
-        "agentic-workspace config",
+        "agentic-workspace config --profile compact",
+        "reporting_posture",
         "improvement_latitude",
         "optimization_bias"
       ],
       "required_executed_commands": [
-        "agentic-workspace config"
+        "agentic-workspace config --profile compact"
+      ],
+      "forbidden_executed_commands": [
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/config.local.toml",
+        ".agentic-workspace/WORKFLOW.md"
       ],
       "expected_signals": [
         "uses config rather than generic style preference",

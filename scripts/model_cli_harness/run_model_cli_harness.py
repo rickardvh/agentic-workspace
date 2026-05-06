@@ -752,6 +752,12 @@ def _metadata_workflow_warnings(
     ):
         if _contains_forbidden_phrase(final_response_lower, forbidden):
             add("The agent reported a forbidden response phrase for this scenario.", evidence=forbidden)
+    local_path_evidence = _local_absolute_path_evidence(_scored_agent_response_text(result))
+    if local_path_evidence:
+        add(
+            "The agent exposed a local absolute path in the final response.",
+            evidence=local_path_evidence,
+        )
     for pattern in _string_list(
         scenario.get("required_artifact_patterns"),
         field="required_artifact_patterns",
@@ -768,6 +774,21 @@ def _metadata_workflow_warnings(
             deduped.append(warning)
             seen.add(key)
     return deduped
+
+
+def _local_absolute_path_evidence(text: str) -> str:
+    if not text:
+        return ""
+    patterns = (
+        re.compile(r"\b[A-Za-z]:[\\/][^\s)`>\"']+"),
+        re.compile(r"\b/(?:Users|home|tmp|var/tmp|private/tmp)/[^\s)`>\"']+"),
+    )
+    for pattern in patterns:
+        match = pattern.search(text)
+        if match:
+            evidence = match.group(0)
+            return evidence[:160]
+    return ""
 
 
 def _executed_command_text(result: dict[str, Any]) -> str:

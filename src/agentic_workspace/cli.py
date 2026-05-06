@@ -8505,10 +8505,22 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if isinstance(task_intent, dict) and task_intent.get("implement_changed_command"):
         detail_commands["known_changed_paths"] = "Use task_intent.implement_changed_command after changed paths are known."
 
+    feature_tier = payload.get("feature_tier", {})
+    active_tier = feature_tier.get("active", {}) if isinstance(feature_tier, dict) else {}
+    compact_active_tier = {
+        key: active_tier.get(key) for key in ("id", "modules", "preset", "source") if isinstance(active_tier, dict) and key in active_tier
+    }
+    identity = payload.get("invoked_cli_identity", {})
+    compact_identity = {
+        key: identity.get(key)
+        for key in ("kind", "package", "version", "source_class", "target_relation", "compatibility")
+        if isinstance(identity, dict) and key in identity
+    }
+
     projected = {
         "kind": payload["kind"],
-        "target": payload["target"],
-        "invoked_cli_identity": payload["invoked_cli_identity"],
+        "target": ".",
+        "invoked_cli_identity": compact_identity,
         "cli_invocation": payload.get("cli_invocation", {}),
         "startup_sequence": payload["startup_sequence"][:1],
         "context_router": {
@@ -8518,10 +8530,10 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "detail_commands": detail_commands,
         },
         "feature_tier": {
-            "active": payload.get("feature_tier", {}).get("active", {}),
-            "detail_command": payload.get("feature_tier", {}).get(
-                "detail_command", "agentic-workspace modules --target ./repo --format json"
-            ),
+            "active": compact_active_tier,
+            "detail_command": feature_tier.get("detail_command", "agentic-workspace modules --target ./repo --format json")
+            if isinstance(feature_tier, dict)
+            else "agentic-workspace modules --target ./repo --format json",
         },
         "active_state_summary": payload["active_state_summary"],
         "package_boundary": payload["package_boundary"],
@@ -8552,7 +8564,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "status": payload.get("operating_posture", {}).get("status", "unknown"),
             "required_behavior_summary": payload.get("operating_posture", {}).get("required_behavior_summary", ""),
         },
-        "delegation_decision": payload.get("delegation_decision", {}),
+        "delegation_decision": _compact_start_delegation_decision(payload.get("delegation_decision", {})),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
             "rule": "Use listed skills only when directly relevant; otherwise proceed from the next action.",
@@ -8585,8 +8597,59 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if isinstance(startup_review, dict) and startup_review.get("status") == "attention":
         projected["startup_review"] = startup_review
     if "prep_only_handoff" in payload:
-        projected["prep_only_handoff"] = payload["prep_only_handoff"]
+        projected["prep_only_handoff"] = _compact_start_prep_only_handoff(payload["prep_only_handoff"])
     return projected
+
+
+def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    common_keys = (
+        "kind",
+        "status",
+        "mode",
+        "clarification_mode",
+        "decision",
+        "work_shape",
+        "proof_burden",
+        "quality_risk",
+        "token_savings_expected",
+        "required_next_action",
+    )
+    compact = {key: value.get(key) for key in common_keys if key in value}
+    decision = str(value.get("decision", ""))
+    if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation", "delegate-bounded-slice"}:
+        compact["target"] = value.get("target")
+        compact["reason"] = value.get("reason")
+    if decision in {"suggest-escalation", "delegate-bounded-slice", "manual-handoff", "ask-human"}:
+        if value.get("handoff_command"):
+            compact["handoff_command"] = value.get("handoff_command")
+        if value.get("manual_prompt"):
+            compact["manual_prompt"] = value.get("manual_prompt")
+    return compact
+
+
+def _compact_start_prep_only_handoff(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    keys = (
+        "kind",
+        "status",
+        "reason",
+        "first_command",
+        "reference_command",
+        "preferred_mutation_command_template",
+        "after_write",
+        "required_action",
+        "minimal_success_criteria",
+        "stop_after_summary",
+        "open_execplan_after_creation",
+        "manual_execplan_tightening",
+        "allowed_write_scope",
+        "allowed_after_new_plan",
+        "forbidden_until_implementation_requested",
+    )
+    return {key: value.get(key) for key in keys if key in value}
 
 
 def _is_prep_only_handoff_task(task_text: str | None) -> bool:
@@ -8639,6 +8702,33 @@ def _is_prep_only_handoff_task(task_text: str | None) -> bool:
         )
     )
     return future_or_handoff and (prep_or_plan or implementation_blocked)
+
+
+def _is_config_posture_task(task_text: str | None) -> bool:
+    normalized = " ".join((task_text or "").lower().split())
+    if not normalized:
+        return False
+    posture_markers = (
+        "configured operating",
+        "operating posture",
+        "reporting posture",
+        "closeout setting",
+        "closeout settings",
+        "reporting setting",
+        "reporting settings",
+        "repository-specific closeout",
+        "repo-specific closeout",
+        "configured operating settings",
+        "configured settings",
+        "config settings",
+        "local runtime settings",
+        "delegation posture",
+        "safe_to_auto_run_commands",
+        "improvement_latitude",
+        "optimization_bias",
+        "workflow_obligations",
+    )
+    return any(marker in normalized for marker in posture_markers)
 
 
 def _prep_only_handoff_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
@@ -8848,6 +8938,25 @@ def _start_payload(
             "next_proof": summary_command,
             "read_first": [],
             "open_execplan_only_when": "compact summary reports a blocking Planning problem after the prep-only scaffold is created",
+        }
+    elif _is_config_posture_task(task_text):
+        config_command = _command_with_cli_invoke(
+            command="agentic-workspace config --profile compact --format json",
+            cli_invoke=config.cli_invoke,
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": "inspect-effective-config",
+            "summary": (
+                "The task asks about configured operating, reporting, closeout, or delegation posture. "
+                "Run the compact config surface before raw config files; use raw files only if the compact answer is insufficient."
+            ),
+            "command": config_command,
+            "run": config_command,
+            "risk": "read-only config routing",
+            "required_inputs": ["target repo", "current task"],
+            "next_proof": "no file proof unless the task later becomes an edit",
+            "read_first": [config_command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
     cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
     if cli_compatibility["configured"]:
@@ -12865,6 +12974,27 @@ def _defaults_payload() -> dict[str, Any]:
             "recovery_signal": (
                 "Candidate aid changes should validate manifest safety and portability metadata; do not execute candidate aids "
                 "as canonical proof until they are promoted."
+            ),
+        },
+        {
+            "id": "repo_docs_review",
+            "when": [
+                "ordinary repository documentation changes without code, generated docs, or adapter surfaces",
+                "the trust question is whether the docs diff satisfies the requested outcome without adding misleading guidance",
+            ],
+            "enough_proof": [
+                "git diff -- README.md docs",
+            ],
+            "broaden_when": [
+                "the docs change updates generated maintainer surfaces, schema reference docs, or package payloads",
+                "the docs change describes behavior whose implementation also changed or needs executable proof",
+            ],
+            "escalate_when": [
+                "the documentation outcome cannot be verified from the diff and nearby docs alone",
+            ],
+            "recovery_signal": (
+                "Docs-only wording changes should use compact diff review; broaden to maintainer or code proof when the docs "
+                "are generated, adapter-owned, or coupled to behavior changes."
             ),
         },
         {
@@ -17338,8 +17468,8 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "kind": "agentic-workspace/config-compact/v1",
         "profile": "compact",
-        "target": payload["target"],
-        "config_path": payload["config_path"],
+        "target": ".",
+        "config_path": WORKSPACE_CONFIG_PATH.as_posix(),
         "exists": payload["exists"],
         "schema_version": payload["schema_version"],
         "warnings": payload["warnings"],
@@ -17356,10 +17486,30 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "agent_instructions_file": workspace["agent_instructions_file"],
             "workflow_artifact_profile": workspace["workflow_artifact_profile"],
             "improvement_latitude": workspace["improvement_latitude"],
+            "improvement_latitude_source": workspace["improvement_latitude_source"],
             "optimization_bias": workspace["optimization_bias"],
+            "optimization_bias_source": workspace["optimization_bias_source"],
             "cli_invoke": workspace["cli_invoke"],
             "workflow_obligations": compact_obligations,
             "system_intent_sources": workspace["system_intent"]["sources"],
+        },
+        "reporting_posture": {
+            "status": "present",
+            "summary": "Use this compact config payload as source evidence; do not read raw config files only to cite line numbers.",
+            "effect": "Report the setting names and values that changed the closeout or handoff answer.",
+            "repo_policy": {
+                "improvement_latitude": workspace["improvement_latitude"],
+                "improvement_latitude_source": workspace["improvement_latitude_source"],
+                "optimization_bias": workspace["optimization_bias"],
+                "optimization_bias_source": workspace["optimization_bias_source"],
+                "workflow_obligation_ids": [obligation["id"] for obligation in compact_obligations],
+            },
+            "local_runtime": {
+                "delegation_mode": effective_posture["delegation_mode"],
+                "safe_to_auto_run_commands": effective_posture["safe_to_auto_run_commands"],
+                "requires_human_verification_on_pr": effective_posture["requires_human_verification_on_pr"],
+            },
+            "citation_rule": "Final answers should cite repo-relative surfaces or setting names, not local absolute paths.",
         },
         "assurance": {
             "default_level": assurance["default_level"],

@@ -38,6 +38,30 @@
       ]
     },
     {
+      "id": "repo-docs-review",
+      "lane": "repo_docs_review",
+      "exact": [
+        "README.md"
+      ],
+      "prefixes": [
+        "docs/package/",
+        "docs/architecture.md",
+        "docs/collaboration-safety.md",
+        "docs/design-principles.md",
+        "docs/documentation-status.md",
+        "docs/ecosystem-roadmap.md",
+        "docs/extension-boundary.md",
+        "docs/index.md",
+        "docs/integration-contract.md",
+        "docs/jumpstart-contract.md",
+        "docs/maturity-model.md",
+        "docs/module-capability-contract.md",
+        "docs/planning-cli-naming.md",
+        "docs/setup-findings-contract.md",
+        "docs/which-package.md"
+      ]
+    },
+    {
       "id": "planning-installed-surfaces",
       "lane": "planning_surfaces",
       "prefixes": [
