@@ -42,6 +42,12 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `cli_compatibility.checks` | array of ref `#/$defs/cli_compatibility_check` | no |  | Ordered checks entries used by this contract. |  |  |
 | `cli_compatibility.failed_checks` | array of enum `"exact_version"`, `"minimum_version"`, `"source_class"`, `"target_relation"` | yes |  | Ordered failed checks entries used by this contract. |  |  |
 | `cli_compatibility.rule` | string | no |  | Policy rule that explains this contract behavior. |  |  |
+| `cli_invocation` | object | no |  | Local command invocation guidance for PATH-limited agent environments. |  |  |
+| `cli_invocation.kind` | const `"agentic-workspace/cli-invocation/v1"` | yes |  | Discriminator for the local CLI invocation guidance. |  |  |
+| `cli_invocation.primary` | string | yes |  | Preferred local command prefix for invoking Agentic Workspace. |  |  |
+| `cli_invocation.source` | string | yes |  | Where the preferred invocation was resolved from. |  |  |
+| `cli_invocation.bare_command` | string | yes |  | Default executable name agents may try first. |  |  |
+| `cli_invocation.fallback_when_unavailable` | string | yes |  | Compact recovery guidance when the bare command is not on PATH. |  |  |
 | `startup_sequence` | array of object | yes |  | Ordered surfaces and commands an agent should use before opening broader repo context. |  |  |
 | `feature_tier` | object | yes |  | Resolved feature tier and package footprint for the target repository. |  |  |
 | `context_router` | object | yes |  | Available compact context-router views and when to use each one. |  |  |
@@ -70,6 +76,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `memory_consult` | object | no |  | Memory lookup guidance for durable repo knowledge when startup context says it is relevant. |  |  |
 | `operating_posture` | object | yes |  | Compact statement of the current operating mode and risk posture. |  |  |
 | `delegation_decision` | object | no |  | Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and task signals. |  |  |
+| `task_intent` | object | no |  | Compact task-intent carry-forward guidance for subsequent implement --changed calls. |  |  |
 | `durable_intent` | object | no |  | Compact durable task, subsystem, and system intent pressure to consider before implementation. |  |  |
 | `skill_routing` | ref `#/$defs/skill_routing` | no |  | Skill-discovery route and fallback guidance for task-specific instructions. |  |  |
 | `skill_routing.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |

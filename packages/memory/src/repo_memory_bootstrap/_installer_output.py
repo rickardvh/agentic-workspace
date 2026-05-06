@@ -429,7 +429,7 @@ def resolve_upgrade_source(target: str | Path | None = None) -> dict[str, str | 
         "source_type": "git",
         "source_ref": "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory",
         "source_label": "agentic-memory monorepo master",
-        "recorded_at": "2026-04-05",
+        "recorded_at": "2026-05-06",
         "recommended_upgrade_after_days": 30,
         "path": None,
     }

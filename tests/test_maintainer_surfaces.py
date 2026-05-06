@@ -121,7 +121,7 @@ def _write_planning_surfaces(tmp_path: Path) -> None:
 # Agent Instructions
 
 <!-- agentic-workspace:workflow:start -->
-For non-trivial requests with known changed paths, first run `agentic-workspace implement --profile tiny --changed <paths> --format json`; otherwise run `agentic-workspace start --profile tiny --task "<task>" --format json` using the user's request as `<task>`. Follow `immediate_next_allowed_action` and `skill_routing` before opening raw `.agentic-workspace` files. Use `preflight` for takeover or recovery. If unavailable, read `.agentic-workspace/WORKFLOW.md`.
+For non-trivial requests with known changed paths, first run `agentic-workspace implement --profile tiny --changed <paths> --format json`; otherwise run `agentic-workspace start --profile tiny --task "<task>" --format json` using the user's request as `<task>`. If the bare command is unavailable, use `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present. Follow `immediate_next_allowed_action` and `skill_routing` before opening raw `.agentic-workspace` files. Use `preflight` for takeover or recovery. If unavailable, read `.agentic-workspace/WORKFLOW.md`.
 <!-- agentic-workspace:workflow:end -->
 """,
     )

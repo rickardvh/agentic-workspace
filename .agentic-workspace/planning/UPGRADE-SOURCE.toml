@@ -1,6 +1,6 @@
 source_type = "git"
 source_ref = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning"
 source_label = "agentic-planning monorepo master"
-recorded_at = "2026-04-05"
+recorded_at = "2026-05-06"
 recommended_upgrade_after_days = 30
 

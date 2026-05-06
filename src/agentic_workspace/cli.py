@@ -8471,21 +8471,27 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             if isinstance(item, dict)
         ]
 
+    task_intent = payload.get("task_intent", {})
+    detail_commands = {
+        "known_changed_paths": "agentic-workspace implement --profile tiny --changed <paths> --format json",
+        "active_state": "agentic-workspace summary --format json",
+        "takeover_or_recovery": "agentic-workspace preflight --format json",
+        "startup_reference": "agentic-workspace defaults --section startup --format json",
+    }
+    if isinstance(task_intent, dict) and task_intent.get("implement_changed_command"):
+        detail_commands["known_changed_paths"] = str(task_intent["implement_changed_command"])
+
     projected = {
         "kind": payload["kind"],
         "target": payload["target"],
         "invoked_cli_identity": payload["invoked_cli_identity"],
+        "cli_invocation": payload.get("cli_invocation", {}),
         "startup_sequence": payload["startup_sequence"][:1],
         "context_router": {
             "kind": "workspace-context-router-family/v1",
             "first_view": "start",
             "rule": "This tiny profile is the first-contact answer; run detail commands only when the next action says why.",
-            "detail_commands": {
-                "known_changed_paths": "agentic-workspace implement --profile tiny --changed <paths> --format json",
-                "active_state": "agentic-workspace summary --format json",
-                "takeover_or_recovery": "agentic-workspace preflight --format json",
-                "startup_reference": "agentic-workspace defaults --section startup --format json",
-            },
+            "detail_commands": detail_commands,
         },
         "feature_tier": {
             "active": payload.get("feature_tier", {}).get("active", {}),
@@ -8534,6 +8540,13 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "preferred_routes": preferred_routes,
         },
     }
+    if isinstance(task_intent, dict) and task_intent.get("status") == "present":
+        projected["task_intent"] = {
+            "status": "present",
+            "carry_forward_rule": task_intent.get("carry_forward_rule", ""),
+            "requested_outcomes": task_intent.get("requested_outcomes", [])[:8],
+            "implement_changed_command": task_intent.get("implement_changed_command"),
+        }
     if "prep_only_handoff" in payload:
         projected["prep_only_handoff"] = payload["prep_only_handoff"]
     return projected
@@ -8752,6 +8765,9 @@ def _start_payload(
             cli_invoke=config.cli_invoke,
         ),
     }
+    task_intent = _task_intent_carry_forward_payload(task_text=task_text, cli_invoke=config.cli_invoke)
+    if task_intent["status"] == "present":
+        payload["task_intent"] = task_intent
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
         payload["vague_outcome_orientation"] = vague_orientation
@@ -8805,6 +8821,7 @@ def _start_payload(
         )
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     if profile == "tiny":
+        payload["cli_invocation"] = _cli_invocation_payload(config=config)
         return _tiny_start_payload(payload)
     return payload
 
@@ -8846,6 +8863,167 @@ def _compact_start_closeout_obligations(value: Any) -> dict[str, Any]:
     }
 
 
+_TASK_STOPWORDS = {
+    "add",
+    "and",
+    "are",
+    "before",
+    "behavior",
+    "behaviour",
+    "build",
+    "change",
+    "code",
+    "create",
+    "deliver",
+    "docs",
+    "file",
+    "files",
+    "fix",
+    "for",
+    "from",
+    "function",
+    "helper",
+    "helpers",
+    "implement",
+    "into",
+    "issue",
+    "make",
+    "module",
+    "package",
+    "pass",
+    "public",
+    "repo",
+    "request",
+    "requested",
+    "run",
+    "should",
+    "small",
+    "task",
+    "test",
+    "tests",
+    "the",
+    "this",
+    "use",
+    "with",
+}
+
+
+def _cli_invocation_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/cli-invocation/v1",
+        "primary": config.cli_invoke,
+        "source": config.cli_invoke_source,
+        "bare_command": DEFAULT_CLI_INVOKE,
+        "fallback_when_unavailable": "If not on PATH, use primary or config.local.toml [workspace].cli_invoke.",
+    }
+
+
+def _extract_requested_outcomes(task_text: str | None) -> list[str]:
+    text = str(task_text or "")
+    if not text.strip():
+        return []
+    outcomes: list[str] = []
+    seen: set[str] = set()
+
+    def add(value: str) -> None:
+        token = value.strip().strip("`'\".,:;()[]{}")
+        if not token:
+            return
+        if len(token) < 4 or token.lower() in _TASK_STOPWORDS:
+            return
+        if token not in seen:
+            seen.add(token)
+            outcomes.append(token)
+
+    for match in re.finditer(r"`([^`]+)`", text):
+        add(match.group(1))
+    for match in re.finditer(r"\b[A-Za-z_][A-Za-z0-9_]*\s*\(", text):
+        add(match.group(0).split("(", 1)[0])
+    for match in re.finditer(r"\b[A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+\b", text):
+        add(match.group(0))
+    for match in re.finditer(r"\b[A-Za-z][A-Za-z0-9]*[.][A-Za-z_][A-Za-z0-9_]*\b", text):
+        add(match.group(0))
+    return outcomes[:12]
+
+
+def _task_intent_carry_forward_payload(*, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
+    has_task = bool(str(task_text or "").strip())
+    requested_outcomes = _extract_requested_outcomes(task_text)
+    command = "agentic-workspace implement --profile tiny --changed <paths> --format json"
+    if has_task:
+        command = f"agentic-workspace implement --profile tiny --changed <paths> --task {_shell_quote(str(task_text))} --format json"
+    return {
+        "kind": "agentic-workspace/task-intent-carry-forward/v1",
+        "status": "present" if has_task else "absent",
+        "carry_forward_rule": (
+            "Carry this task text into implement --changed so acceptance reconciliation and objective-drift checks use the original request."
+        ),
+        "task_text_available": has_task,
+        "requested_outcomes": requested_outcomes,
+        "implement_changed_command": _command_with_cli_invoke(command=command, cli_invoke=cli_invoke),
+        "closeout_rule": "Before closeout, map requested outcomes to delivered surfaces and proof; self-authored tests alone are not enough.",
+    }
+
+
+def _read_changed_surface_text(*, target_root: Path, changed_paths: list[str], max_bytes: int = 200_000) -> str:
+    chunks: list[str] = []
+    remaining = max_bytes
+    for path_text in changed_paths:
+        if remaining <= 0:
+            break
+        path = (target_root / path_text).resolve()
+        try:
+            path.relative_to(target_root.resolve())
+        except ValueError:
+            continue
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        chunks.append(text[:remaining])
+        remaining -= len(chunks[-1])
+    return "\n".join(chunks)
+
+
+def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None) -> dict[str, Any]:
+    requested_outcomes = _extract_requested_outcomes(task_text)
+    if not task_text:
+        return {
+            "kind": "agentic-workspace/objective-drift/v1",
+            "status": "unavailable",
+            "reason": "no task text was provided to compare against changed surfaces",
+            "requested_outcomes": [],
+            "missing_from_changed_surface": [],
+        }
+    if not requested_outcomes:
+        return {
+            "kind": "agentic-workspace/objective-drift/v1",
+            "status": "not-enough-explicit-outcomes",
+            "reason": "task text did not contain explicit symbols, code identifiers, or backticked outcomes",
+            "requested_outcomes": [],
+            "missing_from_changed_surface": [],
+        }
+    surface_text = _read_changed_surface_text(target_root=target_root, changed_paths=changed_paths)
+    searchable = surface_text.lower()
+    missing = [item for item in requested_outcomes if item.lower() not in searchable]
+    status = "warning" if missing and changed_paths else "clear"
+    return {
+        "kind": "agentic-workspace/objective-drift/v1",
+        "status": status,
+        "requested_outcomes": requested_outcomes,
+        "missing_from_changed_surface": missing,
+        "rule": "Do not claim completion until each requested outcome is mapped to delivered behavior and proof, or explicitly marked out of scope.",
+        "recommended_next_action": (
+            "Inspect changed files, exports, docs, and tests for the missing requested outcomes before closeout."
+            if status == "warning"
+            else "Use acceptance reconciliation before closeout."
+        ),
+        "heuristic": "identifier and backtick-term overlap between task text and changed file contents",
+    }
+
+
 def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None = None) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
@@ -8880,6 +9058,11 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         "proof": proof,
         "required_validation_commands": proof["required_commands"],
         "acceptance_reconciliation": _acceptance_reconciliation_prompt_payload(task_text=task_text),
+        "objective_drift": _objective_drift_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            task_text=task_text,
+        ),
         "orientation": {
             "status": "changed-path-context" if normalized_paths else "unknown-scope",
             "minimum_before_editing": (
@@ -8984,7 +9167,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "required_commands": payload.get("required_validation_commands", []),
             "detail_command": "agentic-workspace proof --profile full --changed <paths> --format json",
         },
-        "acceptance_reconciliation": payload.get("acceptance_reconciliation", {}),
+        "acceptance_reconciliation": _tiny_acceptance_reconciliation(payload.get("acceptance_reconciliation", {})),
+        "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
         "routing": {
             "task_status": task_routing.get("status") if isinstance(task_routing, dict) else None,
             "work_shape": capability.get("work_shape"),
@@ -8996,12 +9180,36 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _tiny_acceptance_reconciliation(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    return {
+        "status": value.get("status", "unknown"),
+        "task_text_available": bool(value.get("task_text_available")),
+        "requested_outcomes": value.get("requested_outcomes", []),
+        "compact_closeout_prompt": value.get("compact_closeout_prompt", ""),
+    }
+
+
+def _tiny_objective_drift(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    return {
+        "status": value.get("status", "unknown"),
+        "requested_outcomes": value.get("requested_outcomes", []),
+        "missing_from_changed_surface": value.get("missing_from_changed_surface", []),
+        "recommended_next_action": value.get("recommended_next_action", ""),
+    }
+
+
 def _acceptance_reconciliation_prompt_payload(*, task_text: str | None) -> dict[str, Any]:
     has_task = bool(str(task_text or "").strip())
+    requested_outcomes = _extract_requested_outcomes(task_text)
     return {
         "kind": "agentic-workspace/acceptance-reconciliation/v1",
         "status": "required-before-closeout" if has_task else "required-when-task-intent-is-known",
         "rule": "Validation success is not enough; before closeout, reconcile requested outcomes against delivered behavior and tests.",
+        "requested_outcomes": requested_outcomes,
         "checklist": [
             "list each explicit user requirement or accepted planning criterion",
             "name the delivered surface or behavior for each requirement",
@@ -9013,6 +9221,9 @@ def _acceptance_reconciliation_prompt_payload(*, task_text: str | None) -> dict[
             "Do not claim completion from self-authored tests alone."
         ),
         "task_text_available": has_task,
+        "task_carry_forward_hint": (
+            "Pass --task from start into implement --changed when possible so this checklist can name concrete outcomes."
+        ),
     }
 
 
@@ -9354,6 +9565,30 @@ def _delegation_next_action_decision(
             "expected_output": "A short decision, constraint list, or answer the current agent can apply directly.",
             "return_to": "Paste the answer back into the current agent session for integration.",
         }
+    delegation_next_step: dict[str, Any] | None = None
+    if decision in {
+        "suggest-delegation",
+        "suggest-downroute",
+        "suggest-escalation",
+        "manual-handoff",
+        "delegate-bounded-slice",
+    }:
+        delegation_next_step = {
+            "kind": "agentic-workspace/delegation-next-step/v1",
+            "status": "executable" if required_next_action == "execute-when-safe" else "prepare-or-report",
+            "action": required_next_action,
+            "target": target_name,
+            "command": handoff_command,
+            "execution_methods": selected_target.get("execution_methods", []) if isinstance(selected_target, dict) else [],
+            "must_report_if_not_run": required_next_action == "execute-when-safe",
+            "scope_rule": "Delegate only a bounded slice with unchanged proof expectations; otherwise stay local and state why.",
+            "return_contract": [
+                "what changed",
+                "proof run and result",
+                "scope or stop-condition issues",
+                "residue to route into planning, memory, docs, or issues",
+            ],
+        }
 
     return {
         "kind": "agentic-workspace/delegation-next-action/v1",
@@ -9373,6 +9608,7 @@ def _delegation_next_action_decision(
         "reason": reasons[0],
         "handoff_command": handoff_command,
         "handoff_surface": _delegation_handoff_surface(command=handoff_command) if handoff_command else None,
+        "delegation_next_step": delegation_next_step,
         "manual_prompt": manual_prompt,
         "human_control_summary": (
             "Local posture may suggest delegation or clarification, but only auto mode may execute without a human handoff."

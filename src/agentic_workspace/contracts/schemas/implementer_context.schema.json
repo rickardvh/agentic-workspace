@@ -16,6 +16,7 @@
     "proof",
     "required_validation_commands",
     "acceptance_reconciliation",
+    "objective_drift",
     "orientation",
     "inference_limits",
     "execution_posture",
@@ -94,6 +95,10 @@
     "acceptance_reconciliation": {
       "$ref": "#/$defs/acceptance_reconciliation",
       "description": "Compact checklist requiring requested outcomes to be reconciled against delivered behavior and proof before closeout."
+    },
+    "objective_drift": {
+      "$ref": "#/$defs/objective_drift",
+      "description": "Heuristic warning when changed files do not mention explicit requested outcomes."
     },
     "orientation": {
       "type": "object",
@@ -269,9 +274,11 @@
         "kind",
         "status",
         "rule",
+        "requested_outcomes",
         "checklist",
         "compact_closeout_prompt",
-        "task_text_available"
+        "task_text_available",
+        "task_carry_forward_hint"
       ],
       "properties": {
         "kind": {
@@ -285,6 +292,14 @@
         "rule": {
           "type": "string",
           "description": "Why validation alone is not enough for closeout."
+        },
+        "requested_outcomes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One explicit symbol or outcome extracted from the task text."
+          },
+          "description": "Concrete task outcomes available for acceptance mapping."
         },
         "checklist": {
           "type": "array",
@@ -302,10 +317,67 @@
         "task_text_available": {
           "type": "boolean",
           "description": "Whether the CLI invocation included task text to reconcile."
+        },
+        "task_carry_forward_hint": {
+          "type": "string",
+          "description": "Short reminder to preserve task text across start and implement calls."
         }
       },
       "additionalProperties": false,
       "description": "Closeout guard against passing self-authored tests while missing requested behavior."
+    },
+    "objective_drift": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "requested_outcomes",
+        "missing_from_changed_surface"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/objective-drift/v1",
+          "description": "Discriminator for the lightweight objective-drift heuristic."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether requested task terms appear missing from changed surfaces."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why no drift comparison could be made, when applicable."
+        },
+        "requested_outcomes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One requested symbol or concrete outcome extracted from the task text."
+          },
+          "description": "Task-specific terms checked against changed files."
+        },
+        "missing_from_changed_surface": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Requested outcome not found in the changed file contents."
+          },
+          "description": "Requested terms that were not observed in changed files."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Closeout rule agents should apply when drift is suspected."
+        },
+        "recommended_next_action": {
+          "type": "string",
+          "description": "Small next step for resolving or dismissing the drift signal."
+        },
+        "heuristic": {
+          "type": "string",
+          "description": "Brief explanation of the comparison method."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Heuristic warning when changed files do not mention explicit requested outcomes."
     },
     "handoff_requirements": {
       "type": "object",

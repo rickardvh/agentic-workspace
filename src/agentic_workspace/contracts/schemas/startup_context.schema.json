@@ -36,6 +36,40 @@
       "$ref": "#/$defs/cli_compatibility",
       "description": "Compatibility assessment between the invoked CLI and any repo-configured CLI expectations."
     },
+    "cli_invocation": {
+      "type": "object",
+      "required": [
+        "kind",
+        "primary",
+        "source",
+        "bare_command",
+        "fallback_when_unavailable"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/cli-invocation/v1",
+          "description": "Discriminator for the local CLI invocation guidance."
+        },
+        "primary": {
+          "type": "string",
+          "description": "Preferred local command prefix for invoking Agentic Workspace."
+        },
+        "source": {
+          "type": "string",
+          "description": "Where the preferred invocation was resolved from."
+        },
+        "bare_command": {
+          "type": "string",
+          "description": "Default executable name agents may try first."
+        },
+        "fallback_when_unavailable": {
+          "type": "string",
+          "description": "Compact recovery guidance when the bare command is not on PATH."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Local command invocation guidance for PATH-limited agent environments."
+    },
     "startup_sequence": {
       "type": "array",
       "minItems": 1,
@@ -206,6 +240,11 @@
     "delegation_decision": {
       "type": "object",
       "description": "Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and task signals.",
+      "additionalProperties": true
+    },
+    "task_intent": {
+      "type": "object",
+      "description": "Compact task-intent carry-forward guidance for subsequent implement --changed calls.",
       "additionalProperties": true
     },
     "durable_intent": {

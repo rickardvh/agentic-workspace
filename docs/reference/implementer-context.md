@@ -43,9 +43,20 @@ Cheap implementer context for a bounded changed-path scope.
 | `acceptance_reconciliation.kind` | const `"agentic-workspace/acceptance-reconciliation/v1"` | yes |  | Discriminator for the acceptance reconciliation guidance. |  |  |
 | `acceptance_reconciliation.status` | string | yes |  | Whether acceptance reconciliation is required before closeout for the current context. |  |  |
 | `acceptance_reconciliation.rule` | string | yes |  | Why validation alone is not enough for closeout. |  |  |
+| `acceptance_reconciliation.requested_outcomes` | array of string | yes |  | Concrete task outcomes available for acceptance mapping. |  |  |
 | `acceptance_reconciliation.checklist` | array of string | yes |  | Checklist for mapping requested outcomes to delivered behavior and proof. |  |  |
 | `acceptance_reconciliation.compact_closeout_prompt` | string | yes |  | Short prompt agents can use before final answer or lane closeout. |  |  |
 | `acceptance_reconciliation.task_text_available` | boolean | yes |  | Whether the CLI invocation included task text to reconcile. |  |  |
+| `acceptance_reconciliation.task_carry_forward_hint` | string | yes |  | Short reminder to preserve task text across start and implement calls. |  |  |
+| `objective_drift` | object | yes |  | Heuristic warning when changed files do not mention explicit requested outcomes. |  |  |
+| `objective_drift.kind` | const `"agentic-workspace/objective-drift/v1"` | yes |  | Discriminator for the lightweight objective-drift heuristic. |  |  |
+| `objective_drift.status` | string | yes |  | Whether requested task terms appear missing from changed surfaces. |  |  |
+| `objective_drift.reason` | string | no |  | Why no drift comparison could be made, when applicable. |  |  |
+| `objective_drift.requested_outcomes` | array of string | yes |  | Task-specific terms checked against changed files. |  |  |
+| `objective_drift.missing_from_changed_surface` | array of string | yes |  | Requested terms that were not observed in changed files. |  |  |
+| `objective_drift.rule` | string | no |  | Closeout rule agents should apply when drift is suspected. |  |  |
+| `objective_drift.recommended_next_action` | string | no |  | Small next step for resolving or dismissing the drift signal. |  |  |
+| `objective_drift.heuristic` | string | no |  | Brief explanation of the comparison method. |  |  |
 | `orientation` | object | yes |  | Minimum workspace orientation guidance for the implementer. |  |  |
 | `orientation.status` | string | yes |  | Whether the implementer context is based on changed paths or an unknown scope. |  |  |
 | `orientation.minimum_before_editing` | string | yes |  | Minimum orientation step an agent should complete before implementation. |  |  |

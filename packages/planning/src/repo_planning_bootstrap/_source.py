@@ -8,7 +8,7 @@ from pathlib import Path
 DEFAULT_SOURCE_TYPE = "git"
 DEFAULT_SOURCE_REF = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning"
 DEFAULT_SOURCE_LABEL = "agentic-planning monorepo master"
-DEFAULT_RECORDED_AT = "2026-04-05"
+DEFAULT_RECORDED_AT = "2026-05-06"
 DEFAULT_RECOMMENDED_UPGRADE_AFTER_DAYS = 30
 UPGRADE_SOURCE_PATH = Path(".agentic-workspace/planning/UPGRADE-SOURCE.toml")
 

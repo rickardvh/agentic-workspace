@@ -7219,7 +7219,7 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
         (tmp_path / "AGENTS.md"),
         "# Agent Instructions\n\n"
         "<!-- agentic-workspace:workflow:start -->\n"
-        'For non-trivial requests with known changed paths, first run `agentic-workspace implement --profile tiny --changed <paths> --format json`; otherwise run `agentic-workspace start --profile tiny --task "<task>" --format json` using the user\'s request as `<task>`. Follow `immediate_next_allowed_action` and `skill_routing` before opening raw `.agentic-workspace` files. Use `preflight` for takeover or recovery. If unavailable, read `.agentic-workspace/WORKFLOW.md`.\n'
+        'For non-trivial requests with known changed paths, first run `agentic-workspace implement --profile tiny --changed <paths> --format json`; otherwise run `agentic-workspace start --profile tiny --task "<task>" --format json` using the user\'s request as `<task>`. If the bare command is unavailable, use `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present. Follow `immediate_next_allowed_action` and `skill_routing` before opening raw `.agentic-workspace` files. Use `preflight` for takeover or recovery. If unavailable, read `.agentic-workspace/WORKFLOW.md`.\n'
         "<!-- agentic-workspace:workflow:end -->\n\n"
         "Local repo instructions.\n",
         encoding="utf-8",
@@ -7692,7 +7692,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
         "manual-handoff",
         "ask-human",
     }
-    assert len(json.dumps(payload, sort_keys=True)) < 15300
+    assert len(json.dumps(payload, sort_keys=True)) < 15400
     assert payload["proof"]["required_commands"] == [
         "uv run pytest tests -q",
         "uv run ruff check src tests",
@@ -7717,6 +7717,8 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     encoded = json.dumps(payload, sort_keys=True)
     assert len(encoded) < 6500
     assert payload["kind"] == "startup-context/v1"
+    assert payload["cli_invocation"]["primary"].endswith("agentic-workspace")
+    assert "config.local.toml" in payload["cli_invocation"]["fallback_when_unavailable"]
     assert payload["startup_sequence"] == [
         {
             "id": "entrypoint",
@@ -7728,12 +7730,12 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert payload["context_router"]["first_view"] == "start"
     assert (
         payload["context_router"]["detail_commands"]["known_changed_paths"]
-        == "agentic-workspace implement --profile tiny --changed <paths> --format json"
+        == f'uv run agentic-workspace implement --profile tiny --changed <paths> --task "{task}" --format json'
     )
     assert payload["context_router"]["detail_commands"]["takeover_or_recovery"] == "agentic-workspace preflight --format json"
     assert payload["active_state_summary"]["todo_active_count"] >= 0
     assert payload["immediate_next_allowed_action"]["action"] in {"choose-smallest-workflow-shape", "continue-active-planning-record"}
-    assert "implement --profile tiny --changed <paths>" in payload["immediate_next_allowed_action"]["summary"]
+    assert "implement --profile tiny --changed <paths>" in payload["context_router"]["detail_commands"]["known_changed_paths"]
     assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
     assert payload["delegation_decision"]["status"] == "evaluated"
     assert payload["delegation_decision"]["mode"] == "suggest"
@@ -7744,6 +7746,10 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
         "execute-when-safe",
         "stop-and-ask-human",
     }
+    assert payload["task_intent"]["status"] == "present"
+    assert payload["task_intent"]["implement_changed_command"] == (
+        f'uv run agentic-workspace implement --profile tiny --changed <paths> --task "{task}" --format json'
+    )
     assert "durable_intent" not in payload
     assert "cli_compatibility" not in payload
     assert "proof" not in payload
@@ -8130,6 +8136,8 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
     assert payload["delegation_decision"]["status"] == "evaluated"
     assert payload["delegation_decision"] == payload["execution_posture"]["delegation_decision"]
     assert payload["delegation_decision"]["mode"] == "suggest"
+    assert payload["acceptance_reconciliation"]["requested_outcomes"] == []
+    assert payload["objective_drift"]["status"] == "unavailable"
     assert "quality" in payload["execution_posture"]["quality_tradeoff"]
     assert "Token saving" in payload["execution_posture"]["token_tradeoff"]
     assert payload["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
@@ -8170,6 +8178,8 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert payload["routing"]["work_shape"] == "bounded"
     assert payload["delegation_decision"]["status"] == "evaluated"
     assert payload["delegation_decision"]["mode"] == "suggest"
+    assert payload["acceptance_reconciliation"]["task_text_available"] is True
+    assert payload["objective_drift"]["status"] in {"clear", "not-enough-explicit-outcomes"}
     assert "package_boundary" not in payload
     assert "authority_markers" not in payload
     assert "durable_intent" not in payload
@@ -8210,6 +8220,37 @@ def test_implement_task_allows_narrow_single_issue_context(capsys) -> None:
     assert payload["task_routing"]["issue_refs"] == ["#424"]
     assert payload["task_routing"]["broad_external_work"] is False
     assert payload["next_allowed_action"] == "Inspect only the listed files and run the required validation commands."
+
+
+def test_implement_task_specific_acceptance_warns_on_objective_drift(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "sample_app" / "text.py", "def normalize_cli_text(value):\n    return value.strip()\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--task",
+                "Implement normalize_whitespace(text) and sentence_summary(text)",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    acceptance = payload["acceptance_reconciliation"]
+    assert acceptance["task_text_available"] is True
+    assert acceptance["requested_outcomes"] == ["normalize_whitespace", "sentence_summary"]
+    drift = payload["objective_drift"]
+    assert drift["status"] == "warning"
+    assert drift["missing_from_changed_surface"] == ["normalize_whitespace", "sentence_summary"]
+    assert "self-authored tests alone" in acceptance["compact_closeout_prompt"]
 
 
 def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: Path, capsys) -> None:
@@ -8341,6 +8382,9 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
     assert decision["required_next_action"] == "execute-when-safe"
     assert decision["token_savings_expected"] == "likely"
     assert decision["handoff_command"] == "agentic-planning handoff --target . --format json"
+    assert decision["delegation_next_step"]["status"] == "executable"
+    assert decision["delegation_next_step"]["must_report_if_not_run"] is True
+    assert decision["delegation_next_step"]["execution_methods"] == ["cli"]
     assert "bounded work" in decision["reason"]
 
 

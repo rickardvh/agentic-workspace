@@ -1122,7 +1122,7 @@ def test_install_writes_upgrade_source_metadata(tmp_path: Path) -> None:
     assert 'source_type = "git"' in text
     assert MEMORY_GIT_SOURCE_REF in text
     assert 'source_label = "agentic-memory monorepo master"' in text
-    assert 'recorded_at = "2026-04-05"' in text
+    assert 'recorded_at = "2026-05-06"' in text
 
 
 def test_adopt_writes_upgrade_source_metadata(tmp_path: Path) -> None:
@@ -1369,7 +1369,7 @@ def test_resolve_upgrade_source_defaults_to_git_when_metadata_missing(
     assert resolved["source_type"] == "git"
     assert resolved["source_ref"] == MEMORY_GIT_SOURCE_REF
     assert resolved["source_label"] == "agentic-memory monorepo master"
-    assert resolved["recorded_at"] == "2026-04-05"
+    assert resolved["recorded_at"] == "2026-05-06"
     assert resolved["recommended_upgrade_after_days"] == 30
 
 
@@ -1389,7 +1389,7 @@ def test_upgrade_reports_resolved_source(tmp_path: Path) -> None:
     assert any(
         action.path == target / ".agentic-workspace/memory" / "UPGRADE-SOURCE.toml"
         and action.kind == "current"
-        and "recorded_at=2026-04-05" in action.detail
+        and "recorded_at=2026-05-06" in action.detail
         for action in result.actions
     )
 
