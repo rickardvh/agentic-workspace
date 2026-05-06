@@ -113,6 +113,24 @@ def test_workspace_artifacts_ship_generated_cli_package_import_dependency() -> N
         assert any(name.endswith("/src/agentic_workspace/generated_cli_package/__init__.py") for name in sdist_inventory)
 
 
+def test_root_wheel_ships_generated_cli_package_import_dependency() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        wheel_path = _build_artifact(tmpdir, "wheel")
+        inventory = _raw_wheel_inventory(wheel_path)
+
+    assert "agentic_workspace/generated_command_adapters.py" in inventory
+    assert "agentic_workspace/generated_cli_package/__init__.py" in inventory
+
+
+def test_root_sdist_ships_generated_cli_package_import_dependency() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sdist_path = _build_artifact(tmpdir, "sdist")
+        inventory = _raw_sdist_inventory(sdist_path)
+
+    assert any(name.endswith("/src/agentic_workspace/generated_command_adapters.py") for name in inventory)
+    assert any(name.endswith("/src/agentic_workspace/generated_cli_package/__init__.py") for name in inventory)
+
+
 def test_installed_workspace_wheel_imports_cli_module() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         wheel_path = _build_artifact(tmpdir, "wheel")

@@ -1,0 +1,880 @@
+from __future__ import annotations
+
+import sys as _sys
+
+# ruff: noqa: F403,F405
+from pathlib import Path as _Path
+
+_sys.path.insert(0, str(_Path(__file__).resolve().parent))
+from planning_test_support import *
+
+
+def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+# TODO
+
+## Next
+
+- ID: direct-item
+  Status: in-progress
+  Surface: direct
+  Why now: this thread needs a bounded execution contract.
+  Next Action: sketch the first implementation step.
+  Done When: the bounded change is implemented and validated.
+""",
+    )
+
+    result = promote_todo_item_to_execplan("direct-item", target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "direct-item.md"
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "direct-item.plan.json"
+
+    assert not plan_path.exists()
+    assert record_path.exists()
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    assert record["kind"] == "planning-execplan/v1"
+    assert record["active_milestone"]["id"] == "direct-item"
+    assert record["intent_continuity"]["this slice completes the larger intended outcome"] == "yes"
+    assert record["intent_continuity"]["continuation surface"] == "none"
+    assert record["required_continuation"]["required follow-on for the larger intended outcome"] == "no"
+    assert record["iterative_follow_through"]["proof achieved now"] == "pending"
+    assert record["intent_interpretation"]["inferred intended outcome"] == "this thread needs a bounded execution contract."
+    assert record["context_budget"]["tiny resumability note"] == "sketch the first implementation step."
+    assert record["execution_run"]["run status"] == "not-run-yet"
+    assert record["finished_run_review"]["review status"] == "pending"
+    assert record["improvement_signal_review"]["source"] == "operating_posture"
+    assert "reported-only/routed" in record["improvement_signal_review"]["guidance"]
+    assert record["delegated_judgment"]["requested outcome"] == "this thread needs a bounded execution contract."
+    assert installer_mod.planning_record_schema_findings(record_path) == []
+    assert "Surface: .agentic-workspace/planning/execplans/direct-item.md" in todo_text
+    assert "Next Action:" not in todo_text
+    assert "Done When:" not in todo_text
+    assert any(action.kind == "created" and action.path == record_path for action in result.actions)
+
+
+def test_promote_todo_item_to_execplan_supports_compact_toml_active_items(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "compact-item", maturity = "active", status = "active", surface = "direct", why_now = "this thread needs the package command to dogfood compact state.", next_action = "promote the compact item.", done_when = "the command creates a plan." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    result = promote_todo_item_to_execplan("compact-item", target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "compact-item.plan.json"
+
+    assert record_path.exists()
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    summary = planning_summary(target=tmp_path)
+    assert record["kind"] == "planning-execplan/v1"
+    assert record["active_milestone"]["id"] == "compact-item"
+    assert record["delegated_judgment"]["requested outcome"] == "this thread needs the package command to dogfood compact state."
+    assert record["context_budget"]["pre-work config pull"] == (
+        "Use compact config/startup/summary outputs before opening raw planning or routing files."
+    )
+    assert 'kind = "agentic-planning-state"' in state_text
+    assert 'schema_version = "planning-state/v1"' in state_text
+    assert 'maturity = "active"' in state_text
+    assert 'status = "active"' in state_text
+    assert 'surface = ".agentic-workspace/planning/execplans/compact-item.plan.json"' in state_text
+    assert "next_action" not in state_text
+    assert "done_when" not in state_text
+    assert summary["follow_through_contract"]["status"] == "present"
+    assert summary["intent_interpretation_contract"]["status"] == "present"
+    assert summary["context_budget_contract"]["status"] == "present"
+    assert summary["context_budget_contract"]["tiny_resumability_note"] == "promote the compact item."
+    assert summary["execution_run_contract"]["status"] == "present"
+    assert summary["finished_run_review_contract"]["status"] == "present"
+    assert any(action.kind == "created" and action.path == record_path for action in result.actions)
+
+
+def test_promote_todo_item_to_execplan_preserves_compact_state_types(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "typed-item", status = "active", surface = "direct", why_now = "promotion must keep structured state valid.", next_action = "promote the typed item.", done_when = "state remains clean.", owner_role = "implementation", review_role = "validation", handoff_ready = true, refs = ["#545"] },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    result = promote_todo_item_to_execplan("typed-item", target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "typed-item.plan.json"
+
+    assert record_path.exists()
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    state = tomllib.loads(state_text)
+    state_item = state["todo"]["active_items"][0]
+    summary = planning_summary(target=tmp_path)
+    assert 'surface = ".agentic-workspace/planning/execplans/typed-item.plan.json"' in state_text
+    assert 'maturity = "active"' in state_text
+    assert "handoff_ready = true" in state_text
+    assert 'refs = ["#545"]' in state_text
+    assert 'handoff_ready = "True"' not in state_text
+    assert 'refs = "#545"' not in state_text
+    assert state_item["handoff_ready"] is True
+    assert state_item["refs"] == ["#545"]
+    assert state_item["maturity"] == "active"
+    assert state_item["status"] == "active"
+    assert state_item["surface"] == ".agentic-workspace/planning/execplans/typed-item.plan.json"
+    assert summary["planning_surface_health"]["status"] == "clean"
+    assert summary["todo"]["active_items"][0]["handoff_ready"] is True
+    assert summary["todo"]["active_items"][0]["maturity"] == "active"
+    assert any(action.kind == "created" and action.path == record_path for action in result.actions)
+
+
+def test_promote_todo_item_to_execplan_supports_work_items_state(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+work_items = [
+  { id = "work-item", type = "slice", maturity = "ready", status = "next", why_now = "this ready slice should become active.", next_action = "promote the work item.", done_when = "the command creates a plan.", owner_role = "implementation", review_role = "validation", handoff_ready = true },
+]
+
+[active]
+execplans = []
+""",
+    )
+
+    result = promote_todo_item_to_execplan("work-item", target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "work-item.plan.json"
+
+    assert record_path.exists()
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    summary = planning_summary(target=tmp_path)
+    assert record["kind"] == "planning-execplan/v1"
+    assert record["context_budget"]["tiny resumability note"] == "promote the work item."
+    assert "[active]" in state_text
+    assert "work_items = []" in state_text
+    assert 'path = ".agentic-workspace/planning/execplans/work-item.plan.json"' in state_text
+    assert "next_action" not in state_text
+    assert summary["todo"]["active_items"][0]["id"] == "work-item"
+    assert summary["execplans"]["active_count"] == 1
+    assert summary["work_maturity"]["active_execplans"][0]["source_bucket"] == "active.execplans"
+    assert summary["planning_record"]["status"] == "present"
+    assert summary["follow_through_contract"]["status"] == "present"
+    assert summary["intent_interpretation_contract"]["status"] == "present"
+    assert summary["context_budget_contract"]["status"] == "present"
+    assert summary["context_budget_contract"]["tiny_resumability_note"] == "promote the work item."
+    assert summary["execution_run_contract"]["status"] == "present"
+    assert summary["finished_run_review_contract"]["status"] == "present"
+    assert any(action.kind == "created" and action.path == record_path for action in result.actions)
+
+
+def test_promote_todo_item_to_execplan_supports_roadmap_lane_state(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[active]
+execplans = []
+
+[roadmap]
+lanes = [
+  { type = "lane", id = "safer-promotion", maturity = "candidate", status = "next", priority = "P1", refs = "GitHub #700", title = "Safer promotion", outcome = "Promotion uses a command instead of hand-authored state.", reason = "Manual active state is easy to get subtly wrong.", promotion_signal = "Promote before broad work.", suggested_first_slice = "Add a command path." },
+]
+candidates = []
+""",
+    )
+
+    result = promote_todo_item_to_execplan("safer-promotion", target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "safer-promotion.plan.json"
+
+    assert record_path.exists()
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    summary = planning_summary(target=tmp_path)
+    assert record["context_budget"]["tiny resumability note"] == "Add a command path."
+    assert record["delegated_judgment"]["requested outcome"] == "Manual active state is easy to get subtly wrong."
+    assert state["roadmap"]["lanes"] == []
+    assert state["active"]["execplans"][0]["id"] == "safer-promotion"
+    assert state["active"]["execplans"][0]["path"] == ".agentic-workspace/planning/execplans/safer-promotion.plan.json"
+    assert state["active"]["execplans"][0]["maturity"] == "active"
+    assert state["active"]["execplans"][0]["status"] == "active"
+    assert summary["planning_record"]["status"] == "present"
+    assert any(action.kind == "created" and action.path == record_path for action in result.actions)
+
+
+def test_planning_summary_validates_planning_state_v1_maturity_contract(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json", why_now = "prove active maturity points to an execplan." },
+]
+queued_items = [
+  { id = "ready-slice", maturity = "ready", status = "next", refs = ["#497"], owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "implement schema validation.", done_when = "tests prove required fields.", proof = ["uv run pytest packages/planning/tests/test_installer.py -q"] },
+]
+
+[roadmap]
+lanes = [
+  { id = "maturity-lane", maturity = "shaped", status = "deferred", title = "Maturity lane", issues = ["#496"], outcome = "explicit maturity", reason = "avoid bucket inference", promotion_signal = "select a ready slice" },
+]
+candidates = []
+""",
+    )
+    _write_execplan_record(
+        tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json",
+        item_id="active-plan",
+        status="in-progress",
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    assert summary["planning_surface_health"]["status"] == "clean"
+    assert summary["warning_count"] == 0
+
+
+def test_planning_summary_warns_for_invalid_planning_state_v1_maturity_contract(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-without-plan", maturity = "active", status = "active", surface = "direct" },
+]
+queued_items = [
+  { id = "ready-missing-proof", maturity = "ready", status = "next", owner_role = ["implementation"], handoff_ready = "yes", next_action = "do work.", done_when = "done." },
+]
+
+[roadmap]
+lanes = [
+  { id = "bad-maturity", maturity = "someday", status = "later", title = "Bad maturity" },
+]
+candidates = [
+  { id = "closed-without-residue", maturity = "closed", status = "done" },
+]
+""",
+    )
+
+    summary = planning_summary(target=tmp_path)
+    messages = [warning["message"] for warning in summary["planning_surface_health"]["warnings"]]
+    historical_warning = next(
+        warning
+        for warning in summary["planning_surface_health"]["warnings"]
+        if warning["warning_class"] == "historical_work_in_live_planning_state"
+    )
+    live_state_rule = summary["planning_surface_health"]["authoring_affordances"]["live_state_rule"]
+
+    assert summary["planning_surface_health"]["status"] == "not-clean"
+    assert any("active item active-without-plan requires an execplan" in message for message in messages)
+    assert any("ready item ready-missing-proof requires proof" in message for message in messages)
+    assert any("ready item ready-missing-proof requires review_role" in message for message in messages)
+    assert any("ready item ready-missing-proof requires handoff_ready = true" in message for message in messages)
+    assert any("ready item ready-missing-proof requires refs, owner_role, or owner" in message for message in messages)
+    assert any("ready-missing-proof owner_role must be a non-empty string" in message for message in messages)
+    assert any("ready-missing-proof handoff_ready must be true or false" in message for message in messages)
+    assert any("bad-maturity must use one maturity" in message for message in messages)
+    assert any("closed-without-residue is completed, dismissed, closed, or historical work" in message for message in messages)
+    assert "live/selectable state only" in live_state_rule
+    assert historical_warning["suggested_fix"] == live_state_rule
+
+
+def test_planning_summary_projects_explicit_work_maturity_buckets(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Active plan", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json", why_now = "active maturity owns execution.", handoff_ready = true },
+]
+queued_items = [
+  { id = "ready-slice", title = "Ready slice", maturity = "ready", status = "next", refs = ["#499"], owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "implement ready slice.", done_when = "ready slice done.", proof = ["uv run pytest tests/test_installer.py"], adaptive_assurance = { level = "high", proof_profiles = ["access_control"], required_refs = ["security_refs"] }, traceability_refs = { security_refs = ["SEC-1"] }, control_gates = [{ id = "security-review", status = "pending", blocking = true }] },
+  { id = "shape-candidate", title = "Shape candidate", maturity = "candidate", status = "next", next_action = "shape the candidate." },
+  { id = "blocked-ready", title = "Blocked ready", maturity = "ready", status = "blocked", owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "unblock.", done_when = "unblocked.", proof = ["manual proof"] },
+]
+
+[roadmap]
+lanes = [
+  { id = "deferred-lane", title = "Deferred lane", maturity = "shaped", status = "deferred", issues = ["#496"], outcome = "later.", reason = "not now.", promotion_signal = "later." },
+]
+candidates = []
+""",
+    )
+    _write_execplan_record(
+        tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json",
+        item_id="active-plan",
+        status="in-progress",
+    )
+
+    summary = planning_summary(target=tmp_path)
+    compact = planning_summary(target=tmp_path, profile="compact")
+    report = planning_report(target=tmp_path)
+
+    work_maturity = summary["work_maturity"]
+    assert work_maturity["status"] == "active"
+    assert work_maturity["active_execplans"][0]["id"] == "active-plan"
+    assert work_maturity["active_execplans"][0]["source_bucket"] == "todo.active_items"
+    assert work_maturity["ready_slices"][0]["id"] == "ready-slice"
+    assert work_maturity["ready_slices"][0]["adaptive_assurance"]["level"] == "high"
+    assert work_maturity["ready_slices"][0]["traceability_refs"]["security_refs"] == ["SEC-1"]
+    assert work_maturity["ready_slices"][0]["control_gates"][0]["id"] == "security-review"
+    assert work_maturity["needs_shaping"][0]["id"] == "shape-candidate"
+    assert work_maturity["deferred_lanes"][0]["id"] == "deferred-lane"
+    assert work_maturity["blocked_items"][0]["id"] == "blocked-ready"
+    assert work_maturity["counts"] == {
+        "active_execplans": 1,
+        "ready_slices": 1,
+        "needs_shaping": 1,
+        "deferred_lanes": 1,
+        "blocked_items": 1,
+        "closed_items": 0,
+        "residue_routing_needed": 0,
+    }
+    assert compact["work_maturity"]["ready_slices"][0]["id"] == "ready-slice"
+    assert report["work_maturity"]["blocked_items"][0]["id"] == "blocked-ready"
+    assert report["status"]["ready_slice_count"] == 1
+
+
+def test_planning_summary_uses_work_items_state_shape(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+work_items = [
+  { id = "ready-slice", type = "slice", title = "Ready slice", maturity = "ready", status = "next", refs = ["#500"], owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "implement ready slice.", done_when = "ready slice done.", proof = ["uv run pytest tests/test_installer.py"] },
+  { id = "maturity-lane", type = "lane", title = "Maturity lane", maturity = "shaped", status = "deferred", issues = ["#496"], outcome = "later.", reason = "not now.", promotion_signal = "later.", suggested_first_slice = "#501" },
+]
+
+[active]
+execplans = [
+  { id = "active-plan", title = "Active plan", maturity = "active", status = "active", path = ".agentic-workspace/planning/execplans/active-plan.plan.json", why_now = "active maturity owns execution.", handoff_ready = true },
+]
+""",
+    )
+    _write_execplan_record(
+        tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json",
+        item_id="active-plan",
+        status="in-progress",
+    )
+
+    summary = planning_summary(target=tmp_path)
+    report = planning_report(target=tmp_path)
+
+    assert summary["todo"]["active_items"][0]["id"] == "active-plan"
+    assert summary["todo"]["queued_items"][0]["id"] == "ready-slice"
+    assert summary["roadmap"]["lane_count"] == 1
+    assert summary["roadmap"]["candidate_count"] == 0
+    assert summary["roadmap"]["candidates"] == []
+    assert summary["roadmap"]["candidate_lanes"][0]["id"] == "maturity-lane"
+    assert summary["work_maturity"]["active_execplans"][0]["source_bucket"] == "active.execplans"
+    assert summary["work_maturity"]["ready_slices"][0]["id"] == "ready-slice"
+    assert summary["work_maturity"]["deferred_lanes"][0]["id"] == "maturity-lane"
+    assert report["status"]["ready_slice_count"] == 1
+
+
+def test_promote_todo_item_to_execplan_accepts_bom_prefixed_compact_toml(tmp_path: Path) -> None:
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_bytes(
+        b"\xef\xbb\xbf"
+        + b"""
+[todo]
+active_items = [
+  { id = "bom-compact", status = "in-progress", surface = "direct", why_now = "Windows-authored TOML should still be parsed." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+"""
+    )
+
+    result = promote_todo_item_to_execplan("bom-compact", target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "bom-compact.plan.json"
+
+    assert record_path.exists()
+    assert any(action.kind == "created" and action.path == record_path for action in result.actions)
+
+
+def test_promote_todo_item_to_execplan_refuses_existing_execplan_surface(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: .agentic-workspace/planning/execplans/plan-alpha.md
+  Why now: this item is already routed through an execplan.
+""",
+    )
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan())
+
+    result = promote_todo_item_to_execplan("plan-alpha", target=tmp_path)
+
+    assert any(action.kind == "manual review" and "already points at" in action.detail for action in result.actions)
+
+
+def test_promote_todo_item_to_execplan_refuses_existing_compact_execplan_surface(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "in-progress", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json", why_now = "this item is already routed through an execplan." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_execplan_record(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json",
+        status="in-progress",
+    )
+
+    result = promote_todo_item_to_execplan("plan-alpha", target=tmp_path)
+
+    assert any(action.kind == "manual review" and "already points at" in action.detail for action in result.actions)
+
+
+def test_promote_todo_item_to_execplan_creates_missing_compact_execplan_surface(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "active", path = ".agentic-workspace/planning/execplans/plan-alpha.plan.json", why_now = "this item is active but the plan was not created yet.", next_action = "create the plan." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    result = promote_todo_item_to_execplan("plan-alpha", target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+
+    assert record_path.exists()
+    assert any(action.kind == "created" and action.path == record_path for action in result.actions)
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    item = state["todo"]["active_items"][0]
+    assert item["path"] == ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    assert item["surface"] == ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    assert "next_action" not in item
+
+
+def test_planning_cli_dogfoods_compact_state_for_summary_promote_and_archive(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "compact-cli", status = "in-progress", surface = "direct", why_now = "prove package commands use compact state.", next_action = "promote through the CLI.", done_when = "archive through the CLI." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert planning_cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
+    summary_payload = json.loads(capsys.readouterr().out)
+    assert summary_payload["todo"]["active_items"][0]["id"] == "compact-cli"
+    assert summary_payload["execution_readiness"]["status"] == "active-item-without-execplan"
+
+    assert planning_cli.main(["promote-to-plan", "compact-cli", "--target", str(tmp_path), "--format", "json"]) == 0
+    promote_payload = json.loads(capsys.readouterr().out)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "compact-cli.plan.json"
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    assert promote_payload["actions"][0]["kind"] == "created"
+    assert record_path.exists()
+    assert 'surface = ".agentic-workspace/planning/execplans/compact-cli.plan.json"' in state_text
+    assert "next_action" not in state_text
+    assert "done_when" not in state_text
+
+    _write_execplan_record(record_path, item_id="compact-cli", status="completed")
+    assert planning_cli.main(["archive-plan", "compact-cli", "--target", str(tmp_path), "--apply-cleanup", "--format", "json"]) == 0
+    archive_payload = json.loads(capsys.readouterr().out)
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    assert any(action["kind"] == "closed" and action["path"].endswith("compact-cli.plan.json") for action in archive_payload["actions"])
+    assert any(action["kind"] == "closeout distillation" for action in archive_payload["actions"])
+    assert not record_path.exists()
+    assert "compact-cli" not in state_text
+
+
+def test_planning_cli_new_plan_creates_valid_active_scaffold(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+
+    assert (
+        planning_cli.main(
+            [
+                "new-plan",
+                "--id",
+                "Plan Alpha",
+                "--title",
+                "Plan Alpha",
+                "--source",
+                "#666",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    assert any(action["kind"] == "created" and action["path"].endswith("plan-alpha.plan.json") for action in payload["actions"])
+    assert any(
+        action["kind"] == "next" and "tighten scaffold fields" in action["detail"] and "adaptive_assurance" in action["detail"]
+        for action in payload["actions"]
+    )
+    assert record_path.exists()
+    assert not installer_mod.planning_record_schema_findings(record_path)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    assert summary["todo"]["active_items"][0]["id"] == "plan-alpha"
+    assert summary["execplans"]["active_execplans"][0]["path"].endswith("plan-alpha.plan.json")
+
+
+def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    install_bootstrap(target=tmp_path)
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "baseline", "-q"],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    assert (
+        planning_cli.main(
+            [
+                "new-plan",
+                "--id",
+                "Shop Prep",
+                "--title",
+                "Shop Prep",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--prep-only",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "shop-prep.plan.json"
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+
+    assert any("--profile compact --format json" in action["detail"] for action in payload["actions"] if action["kind"] == "next")
+    assert any("prep-only route" in action["detail"] and "manual JSON tightening" in action["detail"] for action in payload["actions"])
+    assert any("after summary verification, stop" in action["detail"] for action in payload["actions"] if action["kind"] == "next")
+    assert record["immediate_next_action"] == [
+        "Run agentic-workspace summary --target . --profile compact --format json, confirm the planning state is clean, then stop without product scaffolding."
+    ]
+    assert record["machine_readable_contract"]["planning_mode"]["prep_only"] is True
+    assert "task_intent_promotion" not in record
+    assert record["machine_readable_contract"]["planning_mode"]["halt_after_summary"] is True
+    assert "HALT: prep-only mode active" in record["machine_readable_contract"]["planning_mode"]["halt_instruction"]
+    assert "Do not manually tighten" in record["machine_readable_contract"]["planning_mode"]["halt_instruction"]
+    assert "PLANNING_STATE" in record["machine_readable_contract"]["planning_mode"]["halt_instruction"]
+    assert record["machine_readable_contract"]["planning_mode"]["minimal_success_criteria"] == [
+        "prep-only execplan registered in Planning state",
+        "agentic-workspace summary --target . --profile compact --format json exits successfully",
+        "only canonical Planning surfaces changed",
+    ]
+    assert "defer during prep-only" in record["machine_readable_contract"]["planning_mode"]["manual_tightening_policy"]
+    assert ".agentic-workspace/planning/state.toml" in record["machine_readable_contract"]["planning_mode"]["allowed_outputs"]
+    assert "PLANNING_STATE" in record["machine_readable_contract"]["planning_mode"]["forbidden_outputs"]
+    assert "src" in record["machine_readable_contract"]["planning_mode"]["forbidden_outputs"]
+    assert record["control_gates"][0]["id"] == "prep-only-halt"
+    assert record["control_gates"][0]["blocking"] is True
+    assert record["control_gates"][0]["evidence"] == ["agentic-workspace summary --target . --profile compact --format json"]
+    assert record["execution_bounds"]["stop before touching"].startswith("README, PLANNING_STATE, HANDOFF, SLICES")
+    assert "src/" in record["execution_bounds"]["stop before touching"]
+    assert (
+        record["execution_bounds"]["required validation commands"] == "agentic-workspace summary --target . --profile compact --format json"
+    )
+    assert "ad hoc JSON validation loops" in record["execution_bounds"]["manual JSON validation"]
+    assert record["touched_paths"] == [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/",
+        ".agentic-workspace/planning/decompositions/",
+    ]
+    assert not installer_mod.planning_record_schema_findings(record_path)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    assert summary["schema"]["profile"] == "compact-prep-only"
+    assert summary["stop_now"]["do_not_open_execplan"] is True
+    assert "handoff_contract" not in summary
+    prep_only_contract = summary["planning_record"]["prep_only_contract"]
+    assert prep_only_contract["is_prep_only"] is True
+    assert prep_only_contract["halt_after_summary"] is True
+    assert "HALT: prep-only mode active" in prep_only_contract["halt_instruction"]
+    assert "src" in prep_only_contract["forbidden_outputs"]
+
+    (tmp_path / "README.md").write_text("# Drift\n", encoding="utf-8")
+    summary_with_drift = planning_summary(target=tmp_path, profile="compact")
+    assert summary_with_drift["planning_surface_health"]["status"] == "not-clean"
+    assert any(warning["warning_class"] == "prep_only_scope_violation" for warning in summary_with_drift["warnings"])
+
+
+def test_planning_cli_new_plan_refuses_duplicate_without_overwrite(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    args = [
+        "new-plan",
+        "--id",
+        "Plan Alpha",
+        "--title",
+        "Plan Alpha",
+        "--target",
+        str(tmp_path),
+        "--format",
+        "json",
+    ]
+
+    assert planning_cli.main(args) == 0
+    capsys.readouterr()
+    assert planning_cli.main(args) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert any(action["kind"] == "manual review" and "already exists" in action["detail"] for action in payload["actions"])
+
+
+def test_planning_summary_exposes_ordered_roadmap_batch_guidance(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "first-lane", title = "First lane", priority = "P0", issues = ["#1"], outcome = "First.", reason = "Needed first.", promotion_signal = "Start here.", suggested_first_slice = "Do first slice." },
+  { id = "second-lane", title = "Second lane", priority = "P1", issues = ["#2"], outcome = "Second.", reason = "Needed second.", promotion_signal = "After first.", suggested_first_slice = "Do second slice." },
+]
+candidates = []
+""",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    batch = summary["execution_readiness"]["ordered_batch"]
+
+    assert summary["execution_readiness"]["status"] == "roadmap-needs-promotion"
+    assert batch["status"] == "present"
+    assert [item["id"] for item in batch["items"]] == ["first-lane", "second-lane"]
+    assert batch["first_promotion_command"].endswith("promote-to-plan first-lane --target . --format json")
+    assert summary["execution_readiness"]["recommendation"]["ordered_batch"]["items"][0]["issues"] == ["#1"]
+
+
+def test_finished_work_inspection_treats_state_roadmap_owner_as_routed_continuation(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "capability-routing", title = "Capability routing", priority = "P0", issues = [], outcome = "Continue capability routing.", reason = "Parent continuation.", promotion_signal = "Continue when ready.", suggested_first_slice = "Next routing slice." },
+]
+candidates = []
+""",
+    )
+    archive_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "partial.plan.json"
+    _write_execplan_record(archive_path, item_id="partial", status="completed")
+    record = json.loads(archive_path.read_text(encoding="utf-8"))
+    record["intent_satisfaction"] = {
+        "original intent": "Improve capability routing.",
+        "was original intent fully satisfied?": "no",
+        "evidence of intent satisfaction": "one bounded slice landed.",
+        "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane capability-routing",
+    }
+    record["closure_check"] = {
+        "slice status": "bounded slice complete",
+        "larger-intent status": "open",
+        "closure decision": "archive-but-keep-lane-open",
+        "why this decision is honest": "the parent remains open and is already routed to roadmap.",
+        "evidence carried forward": ".agentic-workspace/planning/state.toml roadmap lane capability-routing",
+        "reopen trigger": "promote capability-routing",
+    }
+    installer_mod._write_execplan_record(record_path=archive_path, record=record)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    inspection = summary["finished_work_inspection_contract"]
+
+    assert inspection["derived_follow_up_candidates"] == []
+    assert inspection["counts"]["routed_continuation_count"] == 1
+    assert "inspections" not in inspection
+    full = planning_summary(target=tmp_path, profile="full")
+    assert full["finished_work_inspection_contract"]["inspections"][0]["classification"] == "routed_partial"
+
+
+def test_finished_work_inspection_rejects_schema_invalid_finished_work_evidence(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write_finished_work_evidence(
+        tmp_path / ".agentic-workspace/planning/finished-work-evidence.json",
+        items=[{"system": "manual", "id": "", "status": "open"}],
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    evidence = summary["finished_work_inspection_contract"]["evidence"]
+    assert evidence["status"] == "invalid"
+    assert "schema validation failed" in evidence["reason"]
+    assert any("items.0.id" in finding for finding in evidence["schema_findings"])
+
+
+def test_finished_work_inspection_derives_reopeners_from_external_evidence(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    _write(
+        archive_dir / "closed-lane.md",
+        (
+            "# Closed Lane\n\n"
+            "## Intent Satisfaction\n\n"
+            "- Was original intent fully satisfied?: yes\n\n"
+            "## Closure Check\n\n"
+            "- Closure decision: archive-and-close\n"
+            "- Larger-intent status: closed\n\n"
+            "Implemented #1.\n"
+        ),
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#99",
+                "title": "Reopened externally",
+                "status": "open",
+                "kind": "issue",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+                "reopens": ["#1"],
+            }
+        ],
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    contract = summary["finished_work_inspection_contract"]
+    assert contract["counts"]["likely_premature_closeout_count"] == 1
+    assert contract["derived_follow_up_candidates"][0]["reopened_by"] == ["#99"]
+
+
+def test_finished_work_inspection_uses_external_status_over_stale_sidecar(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    _write(
+        archive_dir / "closed-lane.md",
+        (
+            "# Closed Lane\n\n"
+            "## Intent Satisfaction\n\n"
+            "- Was original intent fully satisfied?: yes\n\n"
+            "## Closure Check\n\n"
+            "- Closure decision: archive-and-close\n"
+            "- Larger-intent status: closed\n\n"
+            "Implemented #1.\n"
+        ),
+    )
+    _write_finished_work_evidence(
+        tmp_path / ".agentic-workspace/planning/finished-work-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#99",
+                "title": "Stale sidecar title",
+                "status": "open",
+                "kind": "issue",
+                "reopens": ["#1"],
+            }
+        ],
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#99",
+                "title": "Source-owned title",
+                "status": "closed",
+                "kind": "issue",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            }
+        ],
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    contract = summary["finished_work_inspection_contract"]
+    assert contract["counts"]["likely_premature_closeout_count"] == 0
+    assert contract["counts"]["derived_follow_up_candidate_count"] == 0
