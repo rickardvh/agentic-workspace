@@ -7730,12 +7730,12 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert payload["context_router"]["first_view"] == "start"
     assert (
         payload["context_router"]["detail_commands"]["known_changed_paths"]
-        == f'uv run agentic-workspace implement --profile tiny --changed <paths> --task "{task}" --format json'
+        == "Use task_intent.implement_changed_command after changed paths are known."
     )
     assert payload["context_router"]["detail_commands"]["takeover_or_recovery"] == "agentic-workspace preflight --format json"
     assert payload["active_state_summary"]["todo_active_count"] >= 0
     assert payload["immediate_next_allowed_action"]["action"] in {"choose-smallest-workflow-shape", "continue-active-planning-record"}
-    assert "implement --profile tiny --changed <paths>" in payload["context_router"]["detail_commands"]["known_changed_paths"]
+    assert "implement --profile tiny --changed <paths>" in payload["task_intent"]["implement_changed_command"]
     assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
     assert payload["delegation_decision"]["status"] == "evaluated"
     assert payload["delegation_decision"]["mode"] == "suggest"
@@ -7756,12 +7756,33 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert len(payload["authority_markers"]) == 1
 
 
-def test_start_tiny_compacts_long_task_carry_forward_command(capsys) -> None:
+def test_start_tiny_keeps_moderate_task_carry_forward_command_executable(capsys) -> None:
     task = (
-        "Implement a deliberately long follow-up request that asks the agent to preserve acceptance reconciliation, "
-        "avoid repeating large prompts in every generated command, keep objective-drift checks connected to the original "
-        "task intent, and make the next command compact enough for weak model startup surfaces. "
-        "Also ensure closeout still maps requested outcomes to proof and delivered files."
+        "Add robust CSV row importing to this Python package. Implement import_rows_from_csv(text, *, "
+        "required_fields=None, delimiter=',') in sample_app, exporting it from sample_app.__init__. "
+        "It should parse CSV text with the standard library, normalize headers, validate row data, "
+        "accumulate row-level errors instead of raising for bad rows, add focused pytest coverage, "
+        "update README with a concise usage example, and run the relevant tests."
+    )
+
+    assert cli.main(["start", "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    command = payload["task_intent"]["implement_changed_command"]
+    assert payload["task_intent"]["task_argument_mode"] == "inline"
+    assert "--task-file" not in command
+    assert f'--task "{task}"' in command
+
+
+def test_start_tiny_compacts_long_task_carry_forward_command(capsys) -> None:
+    task = " ".join(
+        [
+            "Implement a deliberately long follow-up request that asks the agent to preserve acceptance reconciliation, "
+            "avoid repeating large prompts in every generated command, keep objective-drift checks connected to the original "
+            "task intent, and make the next command compact enough for weak model startup surfaces.",
+            "Also ensure closeout still maps requested outcomes to proof and delivered files.",
+        ]
+        * 5
     )
 
     assert cli.main(["start", "--profile", "tiny", "--task", task, "--format", "json"]) == 0

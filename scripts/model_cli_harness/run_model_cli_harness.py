@@ -354,6 +354,61 @@ def _copy_transcript(stdout: str, transcript_path: Path) -> None:
     transcript_path.write_text(stdout, encoding="utf-8")
 
 
+def _usage_summary_from_stdout(stdout: str) -> dict[str, Any]:
+    totals = {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0,
+    }
+    event_count = 0
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") != "turn.completed":
+            continue
+        usage = event.get("usage")
+        if not isinstance(usage, dict):
+            continue
+        event_count += 1
+        for key in totals:
+            value = usage.get(key)
+            if isinstance(value, int | float):
+                totals[key] += int(value)
+    uncached_input = max(0, totals["input_tokens"] - totals["cached_input_tokens"])
+    return {
+        "status": "present" if event_count else "absent",
+        "turn_count": event_count,
+        **totals,
+        "uncached_input_tokens": uncached_input,
+        "total_billable_proxy_tokens": uncached_input + totals["output_tokens"] + totals["reasoning_output_tokens"],
+    }
+
+
+def _aggregate_usage_summaries(results: list[dict[str, Any]]) -> dict[str, Any]:
+    totals = {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0,
+        "uncached_input_tokens": 0,
+        "total_billable_proxy_tokens": 0,
+    }
+    present_count = 0
+    for result in results:
+        usage = result.get("usage_summary")
+        if not isinstance(usage, dict) or usage.get("status") != "present":
+            continue
+        present_count += 1
+        for key in totals:
+            value = usage.get(key)
+            if isinstance(value, int | float):
+                totals[key] += int(value)
+    return {"status": "present" if present_count else "absent", "result_count": present_count, **totals}
+
+
 def _response_text(result: dict[str, Any]) -> str:
     final_message = result.get("final_message")
     stdout = result.get("stdout")
@@ -506,6 +561,11 @@ def _contains_forbidden_phrase(text: str, phrase: str) -> bool:
     return lowered_phrase in text
 
 
+def _strip_local_path_targets_for_scoring(text: str) -> str:
+    without_markdown_targets = re.sub(r"\]\([A-Za-z]:[/\\][^)]+\)", "]", text)
+    return re.sub(r"\b[A-Za-z]:[/\\]\S+", "<local-path>", without_markdown_targets)
+
+
 def _normalized_signal_text(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[._-]+", " ", text.lower())).strip()
 
@@ -607,7 +667,7 @@ def _metadata_workflow_warnings(
 ) -> list[dict[str, str]]:
     scenario_id = str(scenario.get("id", "<unknown>"))
     changed_paths = _changed_paths(mutation_summary)
-    final_response_lower = _scored_agent_response_text(result).lower()
+    final_response_lower = _strip_local_path_targets_for_scoring(_scored_agent_response_text(result)).lower()
     full_response_lower = _full_response_text(result).lower()
     warnings: list[dict[str, str]] = []
     if _provider_did_not_run(result):
@@ -624,15 +684,17 @@ def _metadata_workflow_warnings(
         warnings.append(warning)
 
     allowed_write_patterns = _string_list(scenario.get("allowed_write_patterns"), field="allowed_write_patterns", scenario_id=scenario_id)
+    ignored_write_patterns = _string_list(scenario.get("ignored_write_patterns"), field="ignored_write_patterns", scenario_id=scenario_id)
     forbidden_write_patterns = _string_list(
         scenario.get("forbidden_write_patterns"), field="forbidden_write_patterns", scenario_id=scenario_id
     )
+    scored_changed_paths = [path for path in changed_paths if not _matches_any(path, ignored_write_patterns)]
     if allowed_write_patterns:
-        unexpected = [path for path in changed_paths if not _matches_any(path, allowed_write_patterns)]
+        unexpected = [path for path in scored_changed_paths if not _matches_any(path, allowed_write_patterns)]
         if unexpected:
             add("The agent changed files outside the scenario's allowed write patterns.", evidence=", ".join(unexpected[:12]))
     if forbidden_write_patterns:
-        forbidden = [path for path in changed_paths if _matches_any(path, forbidden_write_patterns)]
+        forbidden = [path for path in scored_changed_paths if _matches_any(path, forbidden_write_patterns)]
         if forbidden:
             add("The agent changed files matching the scenario's forbidden write patterns.", evidence=", ".join(forbidden[:12]))
 
@@ -1780,12 +1842,14 @@ def run_suite(
                         "missing": ", ".join(item["name"] for item in preflight["missing"]),
                     }
                 ]
+                invocation["usage_summary"] = {"status": "not-run"}
             elif execute:
                 result = _run_command(command, cwd=paths.repo_path, timeout_seconds=effective_timeout, env=adapter_env)
                 if paths.share_path.exists():
                     result["final_message"] = paths.share_path.read_text(encoding="utf-8")
                 _copy_transcript(str(result.get("stdout", "")), paths.transcript_path)
                 mutation_summary = _snapshot_diff(baseline_snapshot, _file_snapshot(paths.repo_path))
+                invocation["usage_summary"] = _usage_summary_from_stdout(str(result.get("stdout", "")))
                 invocation["result"] = result
                 invocation["mutation_summary"] = mutation_summary
                 invocation["transcript_path"] = str(paths.transcript_path)
@@ -1855,6 +1919,7 @@ def run_suite(
                     "detail": "Use --execute to run the model CLI.",
                 }
                 invocation["mutation_summary"] = {"status": "not-run"}
+                invocation["usage_summary"] = {"status": "not-run"}
                 invocation["warnings"] = []
             invocation["quality_signals"] = _quality_signals(
                 scenario_id=scenario_id,
@@ -1874,6 +1939,7 @@ def run_suite(
         "result_count": len(run_results),
         "results": run_results,
     }
+    payload["usage_summary"] = _aggregate_usage_summaries(run_results)
     payload["finding_classification"] = _classify_suite_findings(run_results)
     _write_json(output_root / f"{_now_id()}-{suite_id}-{adapter_id}-summary.json", payload)
     return payload

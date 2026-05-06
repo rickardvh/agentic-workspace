@@ -8503,7 +8503,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "startup_reference": "agentic-workspace defaults --section startup --format json",
     }
     if isinstance(task_intent, dict) and task_intent.get("implement_changed_command"):
-        detail_commands["known_changed_paths"] = str(task_intent["implement_changed_command"])
+        detail_commands["known_changed_paths"] = "Use task_intent.implement_changed_command after changed paths are known."
 
     projected = {
         "kind": payload["kind"],
@@ -8986,7 +8986,7 @@ def _extract_requested_outcomes(task_text: str | None) -> list[str]:
     return outcomes[:12]
 
 
-_TASK_INTENT_INLINE_COMMAND_MAX_CHARS = 240
+_TASK_INTENT_INLINE_COMMAND_MAX_CHARS = 1200
 _TASK_INTENT_SCRATCH_FILE = WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "task-intent.txt"
 
 

@@ -77,6 +77,7 @@ Suites live under `tools/model-cli-harness/suites/`. Each suite defines:
 Scenario metadata can express common scoring without adding Python branches:
 
 - `allowed_write_patterns`: changed paths must match one of these glob patterns.
+- `ignored_write_patterns`: changed paths matching these glob patterns are omitted from allowed/forbidden write scoring; use this only for known runtime byproducts that are not part of the task outcome.
 - `forbidden_write_patterns`: changed paths must not match these glob patterns.
 - `required_command_mentions`: final/transcript text must mention these commands or routed files.
 - `required_executed_commands`: structured command transcripts must show that these commands actually ran; use this when a quoted command in docs or config is not enough.

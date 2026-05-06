@@ -20,6 +20,39 @@ def _load_harness():
     return module
 
 
+def test_model_cli_harness_extracts_token_usage_summary() -> None:
+    harness = _load_harness()
+    stdout = "\n".join(
+        [
+            json.dumps({"type": "item.completed", "item": {"type": "agent_message", "text": "done"}}),
+            json.dumps(
+                {
+                    "type": "turn.completed",
+                    "usage": {
+                        "input_tokens": 100,
+                        "cached_input_tokens": 40,
+                        "output_tokens": 20,
+                        "reasoning_output_tokens": 5,
+                    },
+                }
+            ),
+        ]
+    )
+
+    usage = harness._usage_summary_from_stdout(stdout)
+
+    assert usage == {
+        "status": "present",
+        "turn_count": 1,
+        "input_tokens": 100,
+        "cached_input_tokens": 40,
+        "output_tokens": 20,
+        "reasoning_output_tokens": 5,
+        "uncached_input_tokens": 60,
+        "total_billable_proxy_tokens": 85,
+    }
+
+
 def test_model_cli_harness_dry_run_copies_fixture_and_renders_command(tmp_path: Path) -> None:
     fixture = tmp_path / "fixtures" / "repo"
     fixture.mkdir(parents=True)
@@ -774,6 +807,25 @@ def test_model_cli_harness_metadata_scoring_warns_on_write_and_response_rules(tm
     assert any("required artifact pattern" in message for message in messages)
 
 
+def test_model_cli_harness_metadata_scoring_ignores_configured_write_byproducts(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "csv-import",
+            "allowed_write_patterns": ["src/**", "tests/**", "README.md"],
+            "ignored_write_patterns": ["uv.lock"],
+        },
+        result={"stdout": "", "stderr": "", "returncode": 0},
+        mutation_summary={"status": "changed", "created": ["src/app.py", "uv.lock"], "modified": []},
+        repo_path=repo,
+    )
+
+    assert not any("outside the scenario's allowed write patterns" in warning["message"] for warning in warnings)
+
+
 def test_model_cli_harness_flags_no_aw_baseline_contamination(tmp_path: Path) -> None:
     harness = _load_harness()
     repo = tmp_path / "repo"
@@ -928,6 +980,36 @@ def test_model_cli_harness_forbidden_response_phrases_ignore_command_prompt_payl
                 }
             ),
             "final_message": "Updated README without using the workspace package.",
+            "stderr": "",
+            "returncode": 0,
+        },
+        mutation_summary={"status": "changed", "modified": ["README.md"]},
+        repo_path=repo,
+    )
+
+    assert not any("forbidden response phrase" in warning["message"] for warning in warnings)
+
+
+def test_model_cli_harness_forbidden_response_phrases_ignore_local_file_link_targets(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "AGENTS.md").write_text(
+        "# Agent Instructions\n\nThis repository does not use Agentic Workspace.\n",
+        encoding="utf-8",
+    )
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "plain-token-baseline",
+            "no_agentic_workspace_baseline": True,
+            "forbidden_response_phrases": ["agentic-workspace"],
+        },
+        result={
+            "final_message": (
+                "Changed [README.md](" + "C:" + "/" + "Users/example/Documents/src/agentic-workspace/scratch/run/repo/README.md)."
+            ),
+            "stdout": "",
             "stderr": "",
             "returncode": 0,
         },
