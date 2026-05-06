@@ -1307,15 +1307,12 @@ def test_model_cli_harness_quality_signals_capture_proportionality() -> None:
         warnings=[],
     )
 
-    assert direct == [
-        {
-            "id": "direct_task_stayed_direct",
-            "status": "satisfied",
-            "evidence": "README.md",
-        }
-    ]
+    assert any(signal["id"] == "direct_task_stayed_direct" and signal["status"] == "satisfied" for signal in direct)
+    assert any(signal["id"] == "read_surface_entrypoint_used" and signal["status"] == "weak" for signal in direct)
+    assert any(signal["id"] == "read_surface_over_read" and signal["status"] == "satisfied" for signal in direct)
     assert any(signal["id"] == "broad_task_created_durable_planning" and signal["status"] == "satisfied" for signal in broad)
     assert any(signal["id"] == "planning_only_avoided_product_scaffold" and signal["status"] == "weak" for signal in broad)
+    assert any(signal["id"] == "read_surface_under_read" and signal["status"] == "satisfied" for signal in broad)
 
 
 def test_model_cli_harness_quality_signals_separate_diagnostic_residue() -> None:
@@ -1335,6 +1332,24 @@ def test_model_cli_harness_quality_signals_separate_diagnostic_residue() -> None
 
     assert any(signal["id"] == "planning_only_avoided_product_scaffold" and signal["status"] == "satisfied" for signal in signals)
     assert any(signal["id"] == "diagnostic_output_not_persisted" and signal["status"] == "weak" for signal in signals)
+
+
+def test_model_cli_harness_quality_signals_flag_read_surface_over_read() -> None:
+    harness = _load_harness()
+
+    signals = harness._quality_signals(
+        scenario_id="direct-task-minimal-overhead",
+        mutation_summary={"status": "changed", "modified": ["README.md"]},
+        warnings=[],
+        result={
+            "stdout": json.dumps(
+                {"response": "I ran agentic-workspace summary --profile full and read .agentic-workspace/planning/state.toml."}
+            )
+        },
+    )
+
+    assert any(signal["id"] == "read_surface_entrypoint_used" and signal["status"] == "satisfied" for signal in signals)
+    assert any(signal["id"] == "read_surface_over_read" and signal["status"] == "weak" for signal in signals)
 
 
 def test_model_cli_harness_postmortem_prompt_keeps_feedback_compact_and_actionable() -> None:
@@ -1365,6 +1380,7 @@ def test_model_cli_harness_postmortem_prompt_keeps_feedback_compact_and_actionab
     assert prompt.index("Warnings:") < prompt.index("Scenario prompt excerpt:")
     assert "What was ambiguous, missing, or more verbose than necessary?" in prompt
     assert "What would have reduced token usage without reducing safety or proof quality?" in prompt
+    assert "Did the package make you read too much, too little, or the right amount for this task?" in prompt
     assert "Separate model/provider limitations from product or harness improvements." in prompt
     assert "If a field says none or missing, name that field instead of looking elsewhere." in prompt
     assert "Keep the answer under 200 words." in prompt

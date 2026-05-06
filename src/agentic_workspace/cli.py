@@ -2121,7 +2121,12 @@ def main(argv: list[str] | None = None) -> int:
             from repo_planning_bootstrap.installer import format_summary_json, planning_summary
 
             summary_profile = args.profile if args.format == "json" else "full"
-            summary = planning_summary(target=target_root.as_posix(), profile=summary_profile)
+            summary = planning_summary(
+                target=target_root.as_posix(),
+                profile=summary_profile,
+                task_text=getattr(args, "task", None),
+                changed_paths=list(getattr(args, "changed", []) or []),
+            )
             if isinstance(summary, dict):
                 config = _load_workspace_config(target_root=target_root)
                 summary["memory_consult"] = _memory_consult_payload(
@@ -4158,34 +4163,34 @@ def _context_router_family_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE, comp
             "command": _command_with_cli_invoke(
                 command="agentic-workspace start --target ./repo --profile tiny --format json", cli_invoke=cli_invoke
             ),
-            "use_when": "ordinary entry into the repo",
+            "use_when": "repo entry",
         },
         {
             "view": "summary",
             "command": _command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=cli_invoke),
-            "use_when": "current planning, active work, or handoff state is the question",
+            "use_when": "active work or handoff",
         },
         {
             "view": "report",
             "command": _command_with_cli_invoke(command="agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke),
-            "use_when": "combined workspace routing, diagnostics, warnings, or section selectors are needed",
+            "use_when": "diagnostics or sections",
         },
         {
             "view": "defaults",
             "command": _command_with_cli_invoke(
                 command="agentic-workspace defaults --section <section> --format json", cli_invoke=cli_invoke
             ),
-            "use_when": "policy, contract, setup, proof, or startup defaults are the question",
+            "use_when": "policy or defaults",
         },
         {
             "view": "preflight",
             "command": _command_with_cli_invoke(command="agentic-workspace preflight --format json", cli_invoke=cli_invoke),
-            "use_when": "takeover, recovery, or one-call startup plus active state is needed",
+            "use_when": "takeover or recovery",
         },
     ]
     payload: dict[str, Any] = {
         "kind": "workspace-context-router-family/v1",
-        "rule": "Treat compact context commands as views over one router; choose the view that answers the current question and only then go deeper.",
+        "rule": "Use the smallest view that answers the question.",
         "first_view": "start",
         "views": views,
     }
@@ -8474,6 +8479,76 @@ def _authority_markers_for_startup(*, active_execplan: str | None = None) -> lis
     return [_authority_marker_for_path(path) for path in paths]
 
 
+def _read_budget_payload(*, profile: str, current_need: str, required_sections: list[str], optional_sections: list[str]) -> dict[str, Any]:
+    if profile == "tiny":
+        max_detail = "next-action packet only"
+    elif profile == "compact":
+        max_detail = "current-state packet"
+    else:
+        max_detail = "full diagnostic packet"
+    return {
+        "profile": profile,
+        "current_need": current_need,
+        "max_detail": max_detail,
+        "required_sections": required_sections,
+        "optional_sections": optional_sections,
+        "raw_file_reads": "only after a detail command or active plan points there",
+    }
+
+
+def _adaptive_routing_payload(
+    *,
+    surface: str,
+    profile: str,
+    current_need: str,
+    why_this_packet: str,
+    required_sections: list[str],
+    optional_sections: list[str],
+    detail_commands: dict[str, str],
+    when_to_escalate: list[str],
+    not_needed_now: list[str],
+) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/adaptive-routing/v1",
+        "surface": surface,
+        "current_need": current_need,
+        "read_budget": _read_budget_payload(
+            profile=profile,
+            current_need=current_need,
+            required_sections=required_sections,
+            optional_sections=optional_sections,
+        ),
+        "why_this_packet": why_this_packet,
+        "when_to_escalate": when_to_escalate,
+        "not_needed_now": not_needed_now,
+        "detail_commands": detail_commands,
+        "rule": "Return the smallest packet that supports the next correct action; escalate detail only when a listed condition applies.",
+    }
+
+
+def _tiny_adaptive_routing_payload(
+    *,
+    surface: str,
+    profile: str = "tiny",
+    current_need: str,
+    why_this_packet: str,
+    detail_commands: dict[str, str],
+    when_to_escalate: list[str],
+    not_needed_now: list[str],
+) -> dict[str, Any]:
+    return {
+        "current_need": current_need,
+        "read_budget": {
+            "profile": profile,
+            "raw_file_reads": "only after a detail command points there",
+        },
+        "why": why_this_packet,
+        "escalate_when": when_to_escalate[:3],
+        "not_needed_now": not_needed_now[:3],
+        "detail_commands": detail_commands,
+    }
+
+
 def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Project startup context to the smallest schema-compatible first-contact answer."""
     immediate = copy.deepcopy(payload["immediate_next_allowed_action"])
@@ -8499,6 +8574,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     detail_commands = {
         "known_changed_paths": "agentic-workspace implement --profile tiny --changed <paths> --format json",
         "active_state": "agentic-workspace summary --format json",
+        "task_scoped_state": "agentic-workspace summary --profile compact --task <task> --format json",
         "takeover_or_recovery": "agentic-workspace preflight --format json",
         "startup_reference": "agentic-workspace defaults --section startup --format json",
     }
@@ -8520,6 +8596,27 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     projected = {
         "kind": payload["kind"],
         "target": ".",
+        "adaptive_routing": _tiny_adaptive_routing_payload(
+            surface="start",
+            current_need=payload.get("adaptive_routing", {}).get("current_need", "first-contact-routing"),
+            why_this_packet=payload.get("adaptive_routing", {}).get(
+                "why_this_packet",
+                "Tiny startup returns only identity, next action, active-state summary, obligations, and direct detail commands.",
+            ),
+            detail_commands=detail_commands,
+            when_to_escalate=[
+                "changed paths are known",
+                "active planning or handoff state matters",
+                "takeover or recovery is needed",
+                "config or proof selection becomes the question",
+            ],
+            not_needed_now=[
+                "raw planning files",
+                "full summary",
+                "historical audit detail",
+                "full memory tree",
+            ],
+        ),
         "invoked_cli_identity": compact_identity,
         "cli_invocation": payload.get("cli_invocation", {}),
         "startup_sequence": payload["startup_sequence"][:1],
@@ -8837,12 +8934,34 @@ def _start_payload(
 
     workflow_obligations = preflight.get("workflow_obligations", {})
     compact_workflow_obligations = _compact_start_workflow_obligations(workflow_obligations)
+    current_need = "continue-active-planning" if active_planning_present else "first-contact-routing"
+    if changed_paths:
+        current_need = "changed-path-startup"
+    elif _is_config_posture_task(task_text):
+        current_need = "config-posture-routing"
+    elif _is_prep_only_handoff_task(task_text):
+        current_need = "prep-only-planning-routing"
     payload: dict[str, Any] = {
         "kind": "startup-context/v1",
         "target": target_root.as_posix(),
         "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root, compact=True),
         "startup_sequence": startup_sequence,
         "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True),
+        "adaptive_routing": {
+            "current_need": current_need,
+            "read_budget": f"{profile}; raw files only by detail command",
+            "detail_commands": {
+                "c": _command_with_cli_invoke(
+                    command="agentic-workspace implement --profile tiny --changed <paths> --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "t": _command_with_cli_invoke(
+                    command='agentic-workspace summary --profile compact --task "<task>" --format json',
+                    cli_invoke=config.cli_invoke,
+                ),
+            },
+            "escalate_when": ["changed paths", "handoff", "lane/epic"],
+        },
         "feature_tier": _feature_tier_payload(
             selected_modules=selected_modules,
             installed_modules=installed_modules or None,
@@ -9235,9 +9354,52 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         changed_paths=normalized_paths,
         task_text=task_text,
     )
+    implement_current_need = "changed-path-implementation" if normalized_paths else "unknown-scope-routing"
     payload = {
         "kind": "implementer-context/v1",
         "target": target_root.as_posix(),
+        "adaptive_routing": _adaptive_routing_payload(
+            surface="implement",
+            profile="full",
+            current_need=implement_current_need,
+            why_this_packet=(
+                "Changed paths are known, so implement can return bounded inspect files, proof, path warnings, and acceptance checks."
+                if normalized_paths
+                else "Changed paths are missing, so implement can only route the agent away from broad implementation."
+            ),
+            required_sections=[
+                "changed_paths",
+                "inspect_files",
+                "proof",
+                "acceptance_reconciliation",
+                "objective_drift",
+                "next_allowed_action",
+            ],
+            optional_sections=[
+                "path_boundaries",
+                "execution_posture",
+                "delegation_decision",
+                "durable_intent",
+                "handoff_requirements",
+            ],
+            detail_commands={
+                "tiny_next_action": "agentic-workspace implement --profile tiny --changed <paths> --format json",
+                "proof_detail": "agentic-workspace proof --profile full --changed <paths> --format json",
+                "active_state": "agentic-workspace summary --profile compact --changed <paths> --format json",
+                "takeover_or_recovery": "agentic-workspace preflight --format json",
+            },
+            when_to_escalate=[
+                "changed paths are missing or incomplete",
+                "proof, path authority, or objective-drift warnings appear",
+                "task routing says planning is needed",
+                "delegation decision requests escalation or handoff",
+            ],
+            not_needed_now=[
+                "full planning summary unless active state or task routing requires it",
+                "raw planning files before compact summary points there",
+                "unrelated memory notes",
+            ],
+        ),
         "changed_paths": normalized_paths,
         "inspect_files": inspect_files,
         "files_to_avoid": list(implementer_template["files_to_avoid"]),
@@ -9339,9 +9501,32 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     execution_posture = payload.get("execution_posture", {})
     capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
     runtime_resolution = execution_posture.get("runtime_resolution", {}) if isinstance(execution_posture, dict) else {}
+    detail_commands = {
+        "full_context": "agentic-workspace implement --profile full --changed <paths> --format json",
+        "proof_detail": "agentic-workspace proof --profile full --changed <paths> --format json",
+        "task_scoped_state": "agentic-workspace summary --profile compact --changed <paths> --format json",
+        "takeover_or_recovery": "agentic-workspace preflight --format json",
+    }
     return {
         "kind": "implementer-context-tiny/v1",
         "target": payload.get("target"),
+        "adaptive_routing": _tiny_adaptive_routing_payload(
+            surface="implement",
+            current_need="changed-path-next-action" if payload.get("changed_paths") else "unknown-scope-routing",
+            why_this_packet="Tiny implement returns only the next action, changed-path scope, proof commands, reconciliation checks, and escalation pointers.",
+            detail_commands=detail_commands,
+            when_to_escalate=[
+                "changed paths are missing or wrong",
+                "proof commands are insufficient",
+                "objective drift is warning",
+                "delegation or planning routing changes the next action",
+            ],
+            not_needed_now=[
+                "package boundary detail when there are no warnings",
+                "full execution posture unless delegation is selected",
+                "raw workspace files",
+            ],
+        ),
         "next": {
             "action": next_action,
             "status": payload.get("orientation", {}).get("status", "unknown"),
@@ -9364,8 +9549,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "proof_burden": capability.get("proof_burden"),
             "delegation_recommendation": runtime_resolution.get("recommendation"),
         },
-        "delegation_decision": execution_posture.get("delegation_decision", {}),
-        "detail_command": "agentic-workspace implement --profile full --changed <paths> --format json",
+        "delegation_decision": _compact_start_delegation_decision(execution_posture.get("delegation_decision", {})),
+        "detail_command": detail_commands["full_context"],
+        "detail_commands": detail_commands,
     }
 
 
@@ -14643,7 +14829,12 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     from repo_planning_bootstrap.installer import format_summary_json, planning_summary
 
     summary_profile = args.profile if args.format == "json" else "full"
-    summary = planning_summary(target=target_root.as_posix(), profile=summary_profile)
+    summary = planning_summary(
+        target=target_root.as_posix(),
+        profile=summary_profile,
+        task_text=getattr(args, "task", None),
+        changed_paths=list(getattr(args, "changed", []) or []),
+    )
     if isinstance(summary, dict):
         config = _load_workspace_config(target_root=target_root)
         summary["memory_consult"] = _memory_consult_payload(

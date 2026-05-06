@@ -7208,6 +7208,51 @@ candidates = [
     assert "candidate_lanes" in full_payload["roadmap"]
 
 
+def test_summary_command_accepts_task_scoped_compact_context(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "adaptive-routing", status = "active", surface = ".agentic-workspace/planning/execplans/adaptive-routing.md", why_now = "adaptive routing needs a bounded slice." }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { priority = "first", summary = "Adaptive read budget routing" },
+]
+""",
+    )
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "adaptive-routing.md", _minimal_execplan())
+
+    exit_code = planning_cli.main(
+        [
+            "summary",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+            "--task",
+            "Improve adaptive read budget routing",
+            "--changed",
+            "src/agentic_workspace/cli.py",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["profile"] == "compact-task"
+    assert payload["schema"]["schema_version"] == "planning-summary-compact-task-schema/v1"
+    assert payload["task_scope"]["task_text_available"] is True
+    assert payload["task_scope"]["changed_paths"] == ["src/agentic_workspace/cli.py"]
+    assert "adaptive" in payload["task_scope"]["match_tokens"]
+    assert "historical_audit_pressure" not in payload
+    assert payload["detail_commands"]["broad_compact"] == "agentic-workspace summary --profile compact --format json"
+
+
 def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(

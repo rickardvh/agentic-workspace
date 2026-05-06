@@ -433,6 +433,22 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "profile"
           },
           {
+            "flags": [
+              "--task"
+            ],
+            "help": "Optional task text used to return a task-scoped compact summary.",
+            "name": "task"
+          },
+          {
+            "default": [],
+            "flags": [
+              "--changed"
+            ],
+            "help": "Optional changed paths used to scope compact summary output.",
+            "name": "changed",
+            "nargs": "*"
+          },
+          {
             "choices": [
               "text",
               "json"
@@ -1782,6 +1798,22 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
             "--profile"
           ],
           "name": "profile"
+        },
+        {
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task text used to return a task-scoped compact summary.",
+          "name": "task"
+        },
+        {
+          "default": [],
+          "flags": [
+            "--changed"
+          ],
+          "help": "Optional changed paths used to scope compact summary output.",
+          "name": "changed",
+          "nargs": "*"
         },
         {
           "choices": [

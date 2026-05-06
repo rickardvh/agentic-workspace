@@ -1508,7 +1508,13 @@ def verify_payload() -> InstallResult:
     return result
 
 
-def planning_summary(*, target: str | Path | None = None, profile: str = "full") -> dict[str, Any]:
+def planning_summary(
+    *,
+    target: str | Path | None = None,
+    profile: str = "full",
+    task_text: str | None = None,
+    changed_paths: list[str] | None = None,
+) -> dict[str, Any]:
     target_root = resolve_target_root(target)
     todo_path = target_root / "TODO.md"
     legacy_todo_path = target_root / PLANNING_STATE_PATH
@@ -1773,7 +1779,14 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
         "warning_count": len(warnings),
     }
     if profile == "compact":
-        return _planning_summary_compact_projection(full_summary)
+        compact_summary = _planning_summary_compact_projection(full_summary)
+        if task_text or changed_paths:
+            return _planning_summary_task_scoped_projection(
+                compact_summary,
+                task_text=task_text,
+                changed_paths=changed_paths or [],
+            )
+        return compact_summary
     if profile != "full":
         raise ValueError(f"Unsupported planning summary profile: {profile}")
     return full_summary
@@ -2889,6 +2902,114 @@ def _compact_roadmap_candidates(items: Any, *, max_items: int = 3) -> list[dict[
         if isinstance(item, dict) and str(item.get("status", "")).strip().lower() not in {"deferred", "done", "closed"}
     ]
     return _compact_candidate_items(actionable or items, max_items=max_items)
+
+
+def _planning_summary_scope_tokens(*, task_text: str | None, changed_paths: list[str]) -> list[str]:
+    raw = " ".join([task_text or "", *changed_paths]).lower()
+    tokens = re.findall(r"[a-z0-9][a-z0-9_.-]{2,}", raw)
+    stopwords = {
+        "the",
+        "and",
+        "for",
+        "with",
+        "from",
+        "this",
+        "that",
+        "into",
+        "issue",
+        "issues",
+        "implement",
+        "change",
+        "changes",
+        "agentic",
+        "workspace",
+    }
+    return sorted({token for token in tokens if token not in stopwords})[:20]
+
+
+def _planning_summary_scope_matches(value: Any, *, tokens: list[str]) -> list[str]:
+    if not tokens:
+        return []
+    text = json.dumps(value, sort_keys=True, default=str).lower()
+    return [token for token in tokens if token in text][:8]
+
+
+def _planning_summary_task_scoped_projection(
+    compact_summary: dict[str, Any],
+    *,
+    task_text: str | None,
+    changed_paths: list[str],
+) -> dict[str, Any]:
+    tokens = _planning_summary_scope_tokens(task_text=task_text, changed_paths=changed_paths)
+    active_matches = _planning_summary_scope_matches(compact_summary.get("planning_record", {}), tokens=tokens)
+    roadmap_matches = _planning_summary_scope_matches(compact_summary.get("roadmap", {}), tokens=tokens)
+    warning_matches = _planning_summary_scope_matches(compact_summary.get("warnings", []), tokens=tokens)
+    scoped: dict[str, Any] = {
+        "kind": compact_summary.get("kind", "planning-summary/v1"),
+        "profile": "compact-task",
+        "schema": {
+            "schema_version": "planning-summary-compact-task-schema/v1",
+            "command": "agentic-workspace summary --profile compact --task <task> --format json",
+            "full_profile_command": "agentic-workspace summary --profile full --format json",
+            "rule": "Task-scoped summary keeps current planning state, matching signals, and detail commands; unrelated historical audit detail stays omitted.",
+        },
+        "target_root": compact_summary.get("target_root", ""),
+        "task_scope": {
+            "status": "present",
+            "task_text_available": bool(str(task_text or "").strip()),
+            "changed_paths": changed_paths,
+            "match_tokens": tokens,
+            "matches": {
+                "active_planning": active_matches,
+                "roadmap": roadmap_matches,
+                "warnings": warning_matches,
+            },
+            "recommended_next_action": compact_summary.get("current_execution_pressure", {}).get(
+                "recommended_next_action",
+                "Use the current planning pressure if present; otherwise continue only if the task is direct or bounded.",
+            ),
+        },
+        "detail_commands": {
+            "broad_compact": "agentic-workspace summary --profile compact --format json",
+            "full_planning": "agentic-workspace summary --profile full --format json",
+            "active_execplan": "Open the active execplan only when planning_record.status is present or planning_surface_health says recovery is required.",
+            "changed_path_implement": "agentic-workspace implement --profile tiny --changed <paths> --format json",
+        },
+        "todo": {
+            "active_count": compact_summary.get("todo", {}).get("active_count", 0),
+            "queued_count": compact_summary.get("todo", {}).get("queued_count", 0),
+            "active_items": compact_summary.get("todo", {}).get("active_items", []),
+        },
+        "execplans": {
+            "active_count": compact_summary.get("execplans", {}).get("active_count", 0),
+            "active_execplans": compact_summary.get("execplans", {}).get("active_execplans", []),
+        },
+        "work_maturity": compact_summary.get("work_maturity", {}),
+        "execution_readiness": {
+            key: compact_summary.get("execution_readiness", {}).get(key)
+            for key in ("status", "broad_work_allowed", "direct_work_allowed", "recommendation", "rule")
+            if key in compact_summary.get("execution_readiness", {})
+        },
+        "planning_surface_health": compact_summary.get("planning_surface_health", {}),
+        "planning_record": compact_summary.get("planning_record", {}),
+        "handoff_contract": compact_summary.get("handoff_contract", {}),
+        "current_execution_pressure": compact_summary.get("current_execution_pressure", {}),
+        "intent_validation_contract": {
+            key: compact_summary.get("intent_validation_contract", {}).get(key)
+            for key in ("status", "counts", "recommended_next_action", "detail")
+            if key in compact_summary.get("intent_validation_contract", {})
+        },
+        "omitted_context": {
+            "historical_audit_pressure": "not relevant unless the task is audit/recovery or active planning points there",
+            "finished_work_inspection_contract": "available through full profile or broad compact summary",
+            "roadmap_detail": "available through broad compact summary",
+        },
+        "warnings": compact_summary.get("warnings", []),
+        "warning_count": compact_summary.get("warning_count", 0),
+    }
+    if roadmap_matches:
+        scoped["roadmap"] = compact_summary.get("roadmap", {})
+    return _drop_empty_compact_fields(scoped)
 
 
 def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, Any]:

@@ -7778,6 +7778,12 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     encoded = json.dumps(payload, sort_keys=True)
     assert len(encoded) < 6500
     assert payload["kind"] == "startup-context/v1"
+    adaptive = payload["adaptive_routing"]
+    assert adaptive["current_need"] in {"first-contact-routing", "continue-active-planning"}
+    assert adaptive["read_budget"]["profile"] == "tiny"
+    assert adaptive["read_budget"]["raw_file_reads"].startswith("only after")
+    assert "task_scoped_state" in adaptive["detail_commands"]
+    assert "raw planning files" in adaptive["not_needed_now"]
     assert payload["cli_invocation"]["primary"].endswith("agentic-workspace")
     assert "config.local.toml" in payload["cli_invocation"]["fallback_when_unavailable"]
     assert payload["startup_sequence"] == [
@@ -8294,6 +8300,11 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload)
     assert payload["kind"] == "implementer-context-tiny/v1"
+    adaptive = payload["adaptive_routing"]
+    assert adaptive["current_need"] == "changed-path-next-action"
+    assert adaptive["read_budget"]["profile"] == "tiny"
+    assert adaptive["detail_commands"]["task_scoped_state"].startswith("agentic-workspace summary --profile compact")
+    assert "raw workspace files" in adaptive["not_needed_now"]
     assert payload["next"]["action"] == "Inspect only the listed files and run the required validation commands."
     assert payload["scope"]["inspect_files"] == ["src/agentic_workspace/cli.py"]
     assert "uv run pytest tests -q" in payload["proof"]["required_commands"]
@@ -8307,6 +8318,40 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert "durable_intent" not in payload
     assert "inference_limits" not in payload
     assert len(encoded) < 4000
+
+
+def test_summary_task_scoped_profile_omits_historical_audit_detail(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "summary",
+                "--target",
+                str(target),
+                "--profile",
+                "compact",
+                "--task",
+                "Implement adaptive read action routing",
+                "--changed",
+                "src/agentic_workspace/cli.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-task"
+    assert payload["task_scope"]["task_text_available"] is True
+    assert payload["task_scope"]["changed_paths"] == ["src/agentic_workspace/cli.py"]
+    assert "detail_commands" in payload
+    assert "historical_audit_pressure" not in payload
+    assert payload["omitted_context"]["historical_audit_pressure"].startswith("not relevant")
 
 
 def test_implement_task_file_preserves_task_intent_for_acceptance_checks(tmp_path: Path, capsys) -> None:

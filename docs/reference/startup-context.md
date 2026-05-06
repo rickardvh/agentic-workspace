@@ -51,6 +51,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `startup_sequence` | array of object | yes |  | Ordered surfaces and commands an agent should use before opening broader repo context. |  |  |
 | `feature_tier` | object | yes |  | Resolved feature tier and package footprint for the target repository. |  |  |
 | `context_router` | object | yes |  | Available compact context-router views and when to use each one. |  |  |
+| `adaptive_routing` | object | yes |  | Machine-readable need classification, read budget, and escalation detail commands for this startup packet. |  |  |
 | `active_state_summary` | object | yes |  | Small active-work projection used to decide whether raw planning state needs to be opened. |  |  |
 | `active_state_summary.todo_active_count` | integer | yes |  | Todo active count numeric value used by this contract. |  |  |
 | `active_state_summary.active_execplan` | string \| null | yes |  | Active execplan contract value used by this contract. |  |  |

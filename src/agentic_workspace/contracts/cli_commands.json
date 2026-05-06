@@ -46,6 +46,22 @@
             "full"
           ],
           "default": "compact"
+        },
+        {
+          "name": "task",
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task text used to return a task-scoped compact summary."
+        },
+        {
+          "name": "changed",
+          "flags": [
+            "--changed"
+          ],
+          "nargs": "*",
+          "default": [],
+          "help": "Optional changed paths used to scope compact summary output."
         }
       ],
       "role": "core_context_router",

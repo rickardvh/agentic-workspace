@@ -856,6 +856,7 @@ def _quality_signals(
     scenario_id: str,
     mutation_summary: dict[str, Any] | None,
     warnings: list[dict[str, Any]],
+    result: dict[str, Any] | None = None,
 ) -> list[dict[str, str]]:
     if not isinstance(mutation_summary, dict) or mutation_summary.get("status") == "not-run":
         return []
@@ -870,6 +871,13 @@ def _quality_signals(
     ]
     non_planning_changes = [path for path in changed_paths if not path.startswith(".agentic-workspace/planning/")]
     signals: list[dict[str, str]] = []
+    signals.extend(
+        _read_surface_quality_signals(
+            scenario_id=scenario_id,
+            result=result or {},
+            warnings=warnings,
+        )
+    )
     if scenario_id == "direct-task-minimal-overhead":
         direct_only = bool(changed_paths) and all(path == "README.md" for path in changed_paths)
         signals.append(
@@ -926,6 +934,55 @@ def _quality_signals(
     return signals
 
 
+def _read_surface_quality_signals(
+    *,
+    scenario_id: str,
+    result: dict[str, Any],
+    warnings: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    executed = _normalized_command_text(_executed_command_text(result))
+    response = _full_response_text(result).lower()
+    warning_text = "\n".join(str(warning.get("message", "")) for warning in warnings).lower()
+    used_start = "agentic-workspace start" in executed or "agentic-workspace start" in response
+    used_implement = "agentic-workspace implement" in executed or "agentic-workspace implement" in response
+    used_summary = "agentic-workspace summary" in executed or "agentic-workspace summary" in response
+    used_full = "--profile full" in executed or "--profile full" in response
+    raw_workspace_reads = len(re.findall(r"\.agentic-workspace/(?:planning|memory|docs|workflow|config)", response))
+    signals: list[dict[str, str]] = [
+        {
+            "id": "read_surface_entrypoint_used",
+            "status": "satisfied" if used_start or used_implement or used_summary else "weak",
+            "evidence": "start/implement/summary observed" if used_start or used_implement or used_summary else "no package routing command observed",
+        }
+    ]
+    if scenario_id == "direct-task-minimal-overhead":
+        over_read = used_summary or used_full or raw_workspace_reads > 2
+        signals.append(
+            {
+                "id": "read_surface_over_read",
+                "status": "weak" if over_read else "satisfied",
+                "evidence": f"summary={used_summary}; full={used_full}; raw_workspace_mentions={raw_workspace_reads}",
+            }
+        )
+    else:
+        unclear = "did not report" in warning_text or "not report" in warning_text
+        signals.append(
+            {
+                "id": "read_surface_under_read",
+                "status": "weak" if unclear and not (used_start or used_implement or used_summary) else "satisfied",
+                "evidence": "warnings suggested missing workflow evidence" if unclear else "no missing-workflow warning signal",
+            }
+        )
+        signals.append(
+            {
+                "id": "read_surface_detail_escalation",
+                "status": "satisfied" if used_full or not used_summary else "neutral",
+                "evidence": "full/detail context used or broad summary not needed",
+            }
+        )
+    return signals
+
+
 def _postmortem_feedback_prompt(*, scenario: dict[str, Any], invocation: dict[str, Any]) -> str:
     result = invocation.get("result", {})
     if not isinstance(result, dict):
@@ -961,6 +1018,7 @@ def _postmortem_feedback_prompt(*, scenario: dict[str, Any], invocation: dict[st
             "What was ambiguous, missing, or more verbose than necessary?",
             "What package output, instruction, or command would have made the correct next step more obvious?",
             "What would have reduced token usage without reducing safety or proof quality?",
+            "Did the package make you read too much, too little, or the right amount for this task?",
         ]
     question_lines = "\n".join(f"- {question}" for question in questions if str(question).strip())
     return (
@@ -1968,6 +2026,7 @@ def run_suite(
                 scenario_id=scenario_id,
                 mutation_summary=invocation.get("mutation_summary"),
                 warnings=invocation["warnings"],
+                result=invocation.get("result"),
             )
             _write_json(paths.run_root / "run.json", invocation)
             run_results.append(invocation)

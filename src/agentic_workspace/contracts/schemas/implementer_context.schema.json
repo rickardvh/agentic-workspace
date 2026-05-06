@@ -7,6 +7,7 @@
   "required": [
     "kind",
     "target",
+    "adaptive_routing",
     "changed_paths",
     "inspect_files",
     "files_to_avoid",
@@ -33,6 +34,10 @@
     "target": {
       "type": "string",
       "description": "Resolved target repository for the implementation context."
+    },
+    "adaptive_routing": {
+      "type": "object",
+      "description": "Machine-readable need classification, read budget, and escalation detail commands for this implementer packet."
     },
     "changed_paths": {
       "type": "array",

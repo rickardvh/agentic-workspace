@@ -10,6 +10,7 @@
     "invoked_cli_identity",
     "startup_sequence",
     "context_router",
+    "adaptive_routing",
     "feature_tier",
     "active_state_summary",
     "package_boundary",
@@ -113,6 +114,10 @@
     "context_router": {
       "type": "object",
       "description": "Available compact context-router views and when to use each one."
+    },
+    "adaptive_routing": {
+      "type": "object",
+      "description": "Machine-readable need classification, read budget, and escalation detail commands for this startup packet."
     },
     "active_state_summary": {
       "type": "object",

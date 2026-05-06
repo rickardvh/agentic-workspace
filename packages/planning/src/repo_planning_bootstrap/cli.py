@@ -108,6 +108,8 @@ def build_parser() -> argparse.ArgumentParser:
     summary_parser = subparsers.add_parser("summary", help="Summarise the active planning surfaces in a machine-readable way.")
     summary_parser.add_argument("--target")
     summary_parser.add_argument("--profile", choices=("compact", "full"), default="compact")
+    summary_parser.add_argument("--task", help="Optional task text used to return a task-scoped compact summary.")
+    summary_parser.add_argument("--changed", nargs="*", default=[], help="Optional changed paths used to scope compact summary output.")
     summary_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     report_parser = subparsers.add_parser("report", help="Report compact planning module state without reading raw planning files first.")
@@ -252,7 +254,12 @@ def main(argv: list[str] | None = None) -> int:
         return _emit(collect_status(target=args.target), args.format)
     if args.command == "summary":
         summary_profile = args.profile if args.format == "json" else "full"
-        summary = planning_summary(target=args.target, profile=summary_profile)
+        summary = planning_summary(
+            target=args.target,
+            profile=summary_profile,
+            task_text=getattr(args, "task", None),
+            changed_paths=list(getattr(args, "changed", []) or []),
+        )
         if args.format == "json":
             print(format_summary_json(summary))
         else:
@@ -415,7 +422,12 @@ def _run_doctor_report_adapter(args: argparse.Namespace) -> int:
 
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     summary_profile = args.profile if args.format == "json" else "full"
-    summary = planning_summary(target=args.target, profile=summary_profile)
+    summary = planning_summary(
+        target=args.target,
+        profile=summary_profile,
+        task_text=getattr(args, "task", None),
+        changed_paths=list(getattr(args, "changed", []) or []),
+    )
     if args.format == "json":
         print(format_summary_json(summary))
     else:

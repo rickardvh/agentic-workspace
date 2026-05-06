@@ -419,6 +419,22 @@ export const generatedCommandPackage = {
             "name": "profile"
           },
           {
+            "flags": [
+              "--task"
+            ],
+            "help": "Optional task text used to return a task-scoped compact summary.",
+            "name": "task"
+          },
+          {
+            "default": [],
+            "flags": [
+              "--changed"
+            ],
+            "help": "Optional changed paths used to scope compact summary output.",
+            "name": "changed",
+            "nargs": "*"
+          },
+          {
             "choices": [
               "text",
               "json"
