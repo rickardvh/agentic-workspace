@@ -425,7 +425,7 @@ def _baseline_install() -> str:
 This file is only the external install/adopt handoff.
 Do not treat it as the normal repo startup surface after bootstrap or adoption.
 
-- After install or adopt, inspect `agentic-workspace config --target ./repo --format json`.
+- After install or adopt, inspect `agentic-workspace config --target ./repo --profile tiny --format json`.
 - When the question is active planning recovery rather than bootstrap, prefer `agentic-workspace summary --format json`.
 """
 

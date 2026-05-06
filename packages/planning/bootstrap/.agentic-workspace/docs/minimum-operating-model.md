@@ -9,7 +9,7 @@ Use it when the goal is to start useful work without loading the repo's full int
 Start from:
 
 1. one repo startup entrypoint: `AGENTS.md` by default
-2. one compact query path: `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --format json`, and `agentic-workspace summary --format json`
+2. one compact query path: `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --profile tiny --format json`, and `agentic-workspace summary --format json`
 3. conditional deeper reads only after those compact answers show that the task has crossed a real boundary
 
 The ordinary rule is:
@@ -24,7 +24,7 @@ Escalate into a deeper layer only when the task makes that layer relevant.
 
 | Boundary | Escalation cue | Load next | Why |
 | --- | --- | --- | --- |
-| `workspace` | Startup order, lifecycle behavior, config, ownership, or combined workspace state is the actual question. | `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --format json`, `agentic-workspace report --target ./repo --format json` | Workspace-level surfaces own routing, lifecycle orchestration, and cross-module coordination. |
+| `workspace` | Startup order, lifecycle behavior, config, ownership, or combined workspace state is the actual question. | `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --profile tiny --format json`, `agentic-workspace report --target ./repo --format json` | Workspace-level surfaces own routing, lifecycle orchestration, and cross-module coordination. |
 | `planning` | The task needs active sequencing, blockers, proof expectations, promotion decisions, or cross-session continuation. | `agentic-workspace summary --format json`, `.agentic-workspace/planning/state.toml`, `.agentic-workspace/planning/execplans/` | Planning owns active execution state and near-term follow-through. |
 | `memory` | The work keeps rediscovering repo facts, prior decisions, failure modes, or domain context that should survive the current slice. | `.agentic-workspace/memory/repo/`, `.agentic-workspace/memory/WORKFLOW.md` | Memory owns durable anti-rediscovery knowledge instead of active execution state. |
 

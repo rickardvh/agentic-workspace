@@ -557,7 +557,7 @@ def _runtime_artifact_shim_pattern_payload() -> dict[str, Any]:
         ],
         "discovery": [
             "agentic-workspace defaults --section agent_aid_storage --format json",
-            "agentic-workspace config --target ./repo --profile compact --format json",
+            "agentic-workspace config --target ./repo --profile tiny --format json",
             "agentic-workspace report --target ./repo --section agent_aids --format json",
         ],
     }
@@ -3411,7 +3411,7 @@ def _external_agent_handoff_text(
         "",
         "When needed:",
         "- `agentic-workspace preflight --format json` for takeover context.",
-        "- `agentic-workspace config --target ./repo --profile compact --format json` for configured posture or obligations.",
+        "- `agentic-workspace config --target ./repo --profile tiny --format json` for configured posture or obligations.",
         "- `agentic-workspace report --target ./repo --format json` for health, warnings, and selectors.",
         "- Open raw planning or contract files only when compact commands point there.",
         "",
@@ -3429,7 +3429,7 @@ def _external_agent_handoff_text(
         lines.append("- Use `full` only when both Memory and Planning are explicitly desired.")
     lines.extend(
         [
-            "- `agentic-workspace config --target ./repo --profile compact --format json`",
+            "- `agentic-workspace config --target ./repo --profile tiny --format json`",
             "- `agentic-workspace summary --format json`",
             "- `agentic-workspace report --target ./repo --format json`",
             "",
@@ -3654,7 +3654,7 @@ def _managed_workspace_config_header(*, cli_invoke: str) -> str:
             "# Agentic Workspace managed config.",
             "# Edit this file directly only when changing repo-owned policy.",
             f"# Reference: {WORKSPACE_CONFIG_CONTRACT_DOC}",
-            f"# Check resolved config: {cli_invoke} config --target . --profile compact --format json",
+            f"# Check resolved config: {cli_invoke} config --target . --profile tiny --format json",
         ]
     )
 
@@ -4812,7 +4812,7 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
             "warnings": config_payload.get("warnings", []),
             "workspace": compact_workspace,
             "detail_command": _command_with_cli_invoke(
-                command="agentic-workspace config --target ./repo --profile compact --format json", cli_invoke=cli_invoke
+                command="agentic-workspace config --target ./repo --profile tiny --format json", cli_invoke=cli_invoke
             ),
         }
     registry = payload.get("registry", [])
@@ -4835,7 +4835,7 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
     }
     payload["deeper_detail"] = {
         "config_command": _command_with_cli_invoke(
-            command="agentic-workspace config --target ./repo --profile compact --format json", cli_invoke=cli_invoke
+            command="agentic-workspace config --target ./repo --profile tiny --format json", cli_invoke=cli_invoke
         ),
         "report_command": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --profile full --format json", cli_invoke=cli_invoke
@@ -10237,7 +10237,7 @@ def _config_enforcement_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             {
                 "field": "local runtime/delegation posture",
                 "command": _command_with_cli_invoke(
-                    command="agentic-workspace config --target ./repo --profile compact --format json",
+                    command="agentic-workspace config --target ./repo --profile tiny --format json",
                     cli_invoke=config.cli_invoke,
                 ),
                 "field_path": "mixed_agent.runtime_resolution",
@@ -11193,7 +11193,7 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
             "status": "unavailable",
             "reason": "planning module report is unavailable",
             "sources": [
-                "agentic-workspace config --target ./repo --profile compact --format json",
+                "agentic-workspace config --target ./repo --profile tiny --format json",
                 "agentic-workspace summary --format json",
             ],
         }
@@ -11210,7 +11210,7 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
     internal_delegation = bool(mixed_agent["effective_posture"]["supports_internal_delegation"]["value"])
     prefer_internal = bool(mixed_agent["effective_posture"]["prefer_internal_delegation_when_available"]["value"])
     sources = [
-        "agentic-workspace config --target ./repo --profile compact --format json",
+        "agentic-workspace config --target ./repo --profile tiny --format json",
         "agentic-workspace summary --format json",
     ]
     if isinstance(handoff_contract, dict) and handoff_contract.get("status") == "present":
@@ -11361,7 +11361,7 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
             "There is no active planning-backed slice that justifies a planner-to-worker split by default.",
             "The mixed-agent posture remains advisory rather than scheduler-like when work is still cheap and self-sufficient.",
         ],
-        "consult": ["agentic-workspace config --target ./repo --profile compact --format json"],
+        "consult": ["agentic-workspace config --target ./repo --profile tiny --format json"],
         "allowed_execution_methods": ["single-agent fallback"],
         "deviation_visibility": (
             "If the task stops being cheap and direct, promote or tighten planning first instead of silently widening the run."
@@ -12124,7 +12124,7 @@ def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
             "docs/delegated-judgment-contract.md",
             "docs/init-lifecycle.md",
             "agentic-workspace defaults --format json",
-            "agentic-workspace config --target ./repo --profile compact --format json",
+            "agentic-workspace config --target ./repo --profile tiny --format json",
         ],
     }
 
@@ -12385,7 +12385,7 @@ def _agent_configuration_system_payload() -> dict[str, Any]:
                 "id": "workspace_policy",
                 "summary": "repo-owned preset, update intent, improvement latitude, and optimization bias",
                 "primary_owner": ".agentic-workspace/config.toml",
-                "ask_first": "agentic-workspace config --target ./repo --profile compact --format json",
+                "ask_first": "agentic-workspace config --target ./repo --profile tiny --format json",
             },
             {
                 "id": "module_attachment",
@@ -12427,7 +12427,7 @@ def _agent_configuration_system_payload() -> dict[str, Any]:
             "rule": "Prefer the smallest compact query that answers the current configuration question before opening broader prose.",
             "first_queries": [
                 "agentic-workspace defaults --section agent_configuration_system --format json",
-                "agentic-workspace config --target ./repo --profile compact --format json",
+                "agentic-workspace config --target ./repo --profile tiny --format json",
                 "agentic-workspace ownership --target ./repo --format json",
                 "agentic-workspace modules --format json",
                 "agentic-workspace report --target ./repo --format json",
@@ -12456,7 +12456,7 @@ def _agent_configuration_queries_payload() -> dict[str, Any]:
                 "question": "What is the startup path?",
                 "ask_first": "agentic-workspace defaults --section startup --format json",
                 "then_if_needed": [
-                    "agentic-workspace config --target ./repo --profile compact --format json",
+                    "agentic-workspace config --target ./repo --profile tiny --format json",
                     "AGENTS.md",
                 ],
             },
@@ -13100,7 +13100,7 @@ def _defaults_payload() -> dict[str, Any]:
                 'For ordinary first contact, run `agentic-workspace start --profile tiny --task "<task>" --format json`.',
                 "Use `agentic-workspace implement --profile tiny --changed <paths> --format json` when changed paths are already known.",
                 "For takeover or recovery context, run `agentic-workspace preflight --format json`.",
-                "Read the configured root startup file from `agentic-workspace config --target ./repo --profile compact --format json` (default `AGENTS.md`).",
+                "Read the configured root startup file from `agentic-workspace config --target ./repo --profile tiny --format json` (default `AGENTS.md`).",
                 "Use `agentic-workspace summary --format json` only when current planning state matters before opening raw planning files.",
                 "Open `.agentic-workspace/planning/state.toml` or an active execplan only when compact output points there.",
             ],
@@ -13111,7 +13111,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "first_compact_queries": [
                     'agentic-workspace start --target ./repo --profile tiny --task "<task>" --format json',
                     "agentic-workspace implement --profile tiny --changed <paths> --format json",
-                    "agentic-workspace config --target ./repo --profile compact --format json",
+                    "agentic-workspace config --target ./repo --profile tiny --format json",
                     "agentic-workspace summary --format json",
                 ],
                 "deeper_reads_become_valid_when": [
@@ -13169,7 +13169,7 @@ def _defaults_payload() -> dict[str, Any]:
                 },
                 {
                     "question": "Which startup file is canonical here?",
-                    "command": "agentic-workspace config --target ./repo --profile compact --format json",
+                    "command": "agentic-workspace config --target ./repo --profile tiny --format json",
                     "field": "workspace.agent_instructions_file",
                     "why": "repo config is authoritative when the startup filename differs from the default `AGENTS.md`",
                 },
@@ -13226,7 +13226,7 @@ def _defaults_payload() -> dict[str, Any]:
                     "cue": "The question is startup order, lifecycle behavior, config, ownership, or combined workspace state.",
                     "load_next": [
                         "agentic-workspace defaults --section startup --format json",
-                        "agentic-workspace config --target ./repo --profile compact --format json",
+                        "agentic-workspace config --target ./repo --profile tiny --format json",
                         "agentic-workspace report --target ./repo --format json",
                     ],
                     "why": "Workspace-level surfaces own routing, lifecycle orchestration, and cross-module coordination.",
@@ -13275,7 +13275,7 @@ def _defaults_payload() -> dict[str, Any]:
             "fallbacks": [
                 (
                     "If the current agent does not natively look for `AGENTS.md`, inspect "
-                    "`agentic-workspace config --target ./repo --profile compact --format json` and follow "
+                    "`agentic-workspace config --target ./repo --profile tiny --format json` and follow "
                     "the configured startup file; if the CLI is unavailable, fall back to "
                     "`AGENTS.md` or another supported startup file already present."
                 ),
@@ -13295,7 +13295,7 @@ def _defaults_payload() -> dict[str, Any]:
                     '`agentic-workspace start --profile tiny --task "<task>" --format json`, then '
                     "`agentic-workspace preflight --format json`, "
                     "`agentic-workspace defaults --section startup --format json`, "
-                    "`agentic-workspace config --target ./repo --profile compact --format json`, and "
+                    "`agentic-workspace config --target ./repo --profile tiny --format json`, and "
                     "`agentic-workspace summary --format json` before broader "
                     "prose or repo-local workaround guidance."
                 ),
@@ -13318,7 +13318,7 @@ def _defaults_payload() -> dict[str, Any]:
                     "question": "How do I start, or which lifecycle path applies?",
                     "ask_first": "agentic-workspace defaults --section startup --format json",
                     "then_if_needed": [
-                        "agentic-workspace config --target ./repo --profile compact --format json",
+                        "agentic-workspace config --target ./repo --profile tiny --format json",
                         ".agentic-workspace/docs/lifecycle-and-config-contract.md",
                     ],
                 },
@@ -13364,7 +13364,7 @@ def _defaults_payload() -> dict[str, Any]:
                 {
                     "id": "mixed_agent_posture",
                     "question": "What mixed-agent posture is in effect here?",
-                    "ask_first": "agentic-workspace config --target ./repo --profile compact --format json",
+                    "ask_first": "agentic-workspace config --target ./repo --profile tiny --format json",
                     "then_if_needed": [
                         ".agentic-workspace/docs/delegation-posture-contract.md",
                     ],
@@ -13525,7 +13525,7 @@ def _defaults_payload() -> dict[str, Any]:
         "relay": _relay_contract_payload(),
         "config": {
             "path": ".agentic-workspace/config.toml",
-            "command": "agentic-workspace config --target ./repo --profile compact --format json",
+            "command": "agentic-workspace config --target ./repo --profile tiny --format json",
             "supported_fields": [
                 "workspace.default_preset",
                 "workspace.agent_instructions_file",
@@ -13997,7 +13997,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "agentic-workspace status --target ./repo",
                 "agentic-workspace doctor --target ./repo",
                 "agentic-workspace defaults --format json",
-                "agentic-workspace config --target ./repo --profile compact --format json",
+                "agentic-workspace config --target ./repo --profile tiny --format json",
             ],
             "refresh_contract": [
                 "uv run agentic-planning upgrade --target .",
@@ -14009,7 +14009,7 @@ def _defaults_payload() -> dict[str, Any]:
                 ".agentic-workspace/bootstrap-handoff.json",
             ],
             "effective_output_posture": {
-                "command": "agentic-workspace config --target ./repo --profile compact --format json",
+                "command": "agentic-workspace config --target ./repo --profile tiny --format json",
                 "field": "workspace.optimization_bias",
                 "rule": (
                     "When startup or recovery needs the effective repo output posture, inspect it through config "
@@ -17377,7 +17377,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "reference_doc": WORKSPACE_CONFIG_CONTRACT_DOC,
             "generated_reference_doc": WORKSPACE_CONFIG_REFERENCE_DOC,
             "source_schema": WORKSPACE_CONFIG_SOURCE_SCHEMA,
-            "check_command": f"{config.cli_invoke} config --target . --profile compact --format json",
+            "check_command": f"{config.cli_invoke} config --target . --profile tiny --format json",
             "managed_header": _managed_workspace_config_header(cli_invoke=config.cli_invoke).splitlines(),
         },
         "warnings": list(config.warnings),
@@ -17557,6 +17557,7 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "citation_rule": reporting_posture["citation_rule"],
         },
         "workspace": {
+            "agent_instructions_file": workspace["agent_instructions_file"],
             "improvement_latitude": workspace["improvement_latitude"],
             "improvement_latitude_source": workspace["improvement_latitude_source"],
             "optimization_bias": workspace["optimization_bias"],

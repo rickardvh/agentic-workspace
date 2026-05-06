@@ -147,7 +147,7 @@ Use `agentic-workspace defaults --section intent --format json` when the questio
 Use `agentic-workspace defaults --section clarification --format json` when the question is how to ask the smallest useful follow-up.
 Use `agentic-workspace defaults --section prompt_routing --format json` when the question is which proof lane or owner should absorb a vague prompt.
 Use `agentic-workspace defaults --section relay --format json` when the question is how a strong planner should hand a compact contract to a bounded executor, and `agentic-planning handoff --format json` when the active delegated slice itself needs to be handed off.
-Use `agentic-workspace config --target ./repo --format json` when the question is posture alone; keep `execution_shape` for the combined current-slice recommendation.
+Use `agentic-workspace config --target ./repo --profile tiny --format json` when the question is posture alone; keep `execution_shape` for the combined current-slice recommendation.
 Use `agentic-memory report --target ./repo --format json` when the question is whether Memory now has a compact ordinary-work pull path; its `habitual_pull` object exposes the baseline bundle, owner boundary, and current proof signals without opening raw memory notes first.
 Use `agentic-workspace defaults --section improvement_latitude --format json` when the question is how much evidence-backed repo-friction reduction is welcome by default.
 Use `agentic-workspace defaults --section optimization_bias --format json` when the question is how shared report density and residue style should lean by default.

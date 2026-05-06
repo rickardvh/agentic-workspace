@@ -15,7 +15,7 @@ Use it when work is broad enough to benefit from stronger planning first and a b
 1. `AGENTS.md`
 2. `agentic-workspace preflight --target . --format json`
 3. `agentic-workspace summary --target . --format json`
-4. `agentic-workspace config --target . --format json`
+4. `agentic-workspace config --target . --profile tiny --format json`
 5. `agentic-workspace defaults --section relay --format json`
 6. `agentic-planning handoff --format json`
 

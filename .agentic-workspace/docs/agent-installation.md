@@ -12,7 +12,7 @@ Required steps:
 
 - Do not assume agentic-workspace is already installed; follow the checked-in lifecycle instructions in this repository.
 - For lifecycle work, use agentic-workspace rather than package-specific CLIs unless package-local debugging is required.
-- After install or adopt, inspect `agentic-workspace config --target ./repo --format json` to find the canonical repo startup entrypoint.
+- After install or adopt, inspect `agentic-workspace config --target ./repo --profile tiny --format json` to find the canonical repo startup entrypoint.
 - For normal work after bootstrap, return to that configured startup file, then inspect `.agentic-workspace/planning/state.toml` and the active execplan only when the active queue points to one.
 - When the question is active planning recovery rather than bootstrap, prefer `agentic-workspace summary --format json` before broad planning prose.
 
@@ -43,7 +43,7 @@ Package-specific bootstrap CLIs are fallback/debug surfaces for package-local wo
 Quick state check:
 
 - agentic-workspace defaults --section startup --format json
-- agentic-workspace config --target ./repo --format json
+- agentic-workspace config --target ./repo --profile tiny --format json
 - agentic-workspace summary --format json
 - If .agentic-workspace/config.local.toml is present, use the config report to see local machine/runtime posture without treating it as checked-in repo policy.
 - If the current agent does not natively use `AGENTS.md`, follow the configured startup file from config; if the CLI is unavailable, fall back to `AGENTS.md` or another supported startup file already present in the repo.
