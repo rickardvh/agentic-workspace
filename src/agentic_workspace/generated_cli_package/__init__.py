@@ -144,6 +144,7 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           },
           {
             "choices": [
+              "tiny",
               "compact",
               "full"
             ],
@@ -1657,6 +1658,7 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
         },
         {
           "choices": [
+            "tiny",
             "compact",
             "full"
           ],

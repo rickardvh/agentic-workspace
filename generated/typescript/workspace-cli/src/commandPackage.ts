@@ -130,6 +130,7 @@ export const generatedCommandPackage = {
           },
           {
             "choices": [
+              "tiny",
               "compact",
               "full"
             ],

@@ -5546,6 +5546,11 @@ candidates = []
     assert first_candidate["owner"] == ".agentic-workspace/planning/state.toml"
     assert first_candidate["supersession_status"] == "active"
     assert audit["recommended_next_action"].startswith("Continue current_execution_pressure first")
+    compact_finished = compact["finished_work_inspection_contract"]
+    assert len(compact_finished["inspections"]) == 5
+    assert compact_finished["counts"]["omitted_inspection_count"] == 1
+    assert compact_finished["counts"]["omitted_derived_follow_up_candidate_count"] == 1
+    assert "finished-work inspection detail" in compact_finished["detail"]
     assert len(full["finished_work_inspection_contract"]["derived_follow_up_candidates"]) == 6
 
 

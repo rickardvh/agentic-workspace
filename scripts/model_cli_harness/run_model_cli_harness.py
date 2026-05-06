@@ -1579,6 +1579,7 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
                 ),
             }
         )
+    failed_commands: list[str] = []
     for line in stdout_text.splitlines():
         try:
             event = json.loads(line)
@@ -1592,6 +1593,19 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
                     "message": "The model CLI could not run shell commands because pwsh.exe was unavailable.",
                 }
             )
+        item = event.get("item")
+        if isinstance(item, dict) and item.get("type") == "command_execution":
+            status = item.get("status")
+            exit_code = item.get("exit_code")
+            aggregated_output = item.get("aggregated_output")
+            if status == "failed" or (isinstance(exit_code, int) and exit_code != 0):
+                command = str(item.get("command", "<unknown command>"))
+                evidence_parts = [command[:160]]
+                if isinstance(exit_code, int):
+                    evidence_parts.append(f"exit_code={exit_code}")
+                if isinstance(aggregated_output, str) and aggregated_output.strip():
+                    evidence_parts.append(aggregated_output.strip()[:160])
+                failed_commands.append(" | ".join(evidence_parts))
         if event.get("type") != "result":
             continue
         usage = event.get("usage", {})
@@ -1614,6 +1628,14 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
                     "paths": "; ".join(external_paths),
                 }
             )
+    if failed_commands:
+        warnings.append(
+            {
+                "warning_class": "model_cli_command_execution_failed",
+                "message": "The model CLI had failed command executions inside the run transcript.",
+                "evidence": "; ".join(failed_commands[:3]),
+            }
+        )
     deduped: list[dict[str, str]] = []
     seen: set[tuple[str, str]] = set()
     for warning in warnings:

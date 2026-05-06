@@ -3510,19 +3510,72 @@ def _compact_current_external_work(current_external_work: Any) -> dict[str, Any]
 
 def _compact_finished_work_inspection(contract: dict[str, Any]) -> dict[str, Any]:
     compact = dict(contract)
+    inspections = compact.get("inspections", [])
+    if isinstance(inspections, list):
+        max_inspections = 5
+        compact["inspections"] = [
+            _compact_finished_work_inspection_item(item) for item in inspections[:max_inspections] if isinstance(item, dict)
+        ]
+        omitted_inspection_count = max(len(inspections) - max_inspections, 0)
+    else:
+        compact["inspections"] = []
+        omitted_inspection_count = 0
     candidates = compact.get("derived_follow_up_candidates", [])
     if not isinstance(candidates, list):
         compact["derived_follow_up_candidates"] = []
+        counts = dict(compact.get("counts", {})) if isinstance(compact.get("counts", {}), dict) else {}
+        counts["omitted_inspection_count"] = omitted_inspection_count
+        compact["counts"] = counts
         return compact
     max_items = 5
-    compact["derived_follow_up_candidates"] = candidates[:max_items]
+    compact["derived_follow_up_candidates"] = [
+        _compact_finished_work_candidate(item) for item in candidates[:max_items] if isinstance(item, dict)
+    ]
     omitted_count = max(len(candidates) - max_items, 0)
     counts = dict(compact.get("counts", {})) if isinstance(compact.get("counts", {}), dict) else {}
     counts["omitted_derived_follow_up_candidate_count"] = omitted_count
+    counts["omitted_inspection_count"] = omitted_inspection_count
     compact["counts"] = counts
-    if omitted_count:
-        compact["detail"] = "Use `agentic-workspace summary --format json --profile full` for all derived follow-up candidates."
+    if omitted_count or omitted_inspection_count:
+        compact["detail"] = "Use `agentic-workspace summary --format json --profile full` for all finished-work inspection detail."
     return compact
+
+
+def _compact_finished_work_inspection_item(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: item[key]
+        for key in (
+            "plan",
+            "title",
+            "classification",
+            "closure_decision",
+            "larger_intent_status",
+            "tracked_refs",
+            "non_closure_refs",
+            "reason",
+        )
+        if key in item
+    }
+
+
+def _compact_finished_work_candidate(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: item[key]
+        for key in (
+            "source_plan",
+            "title",
+            "classification",
+            "priority",
+            "reason",
+            "recommended_owner",
+            "recommended_action",
+            "supersession_status",
+            "superseded_by",
+            "reopened_by",
+            "reference_roles",
+        )
+        if key in item
+    }
 
 
 def _compact_historical_audit_references(historical: Any) -> dict[str, Any]:

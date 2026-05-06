@@ -309,6 +309,7 @@
             "--profile"
           ],
           "choices": [
+            "tiny",
             "compact",
             "full"
           ],

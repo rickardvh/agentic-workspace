@@ -33,7 +33,7 @@ Use `implement --profile tiny --changed <paths>` before `start` when the user or
 | `implement` | `implement --profile tiny --changed <paths> --format json` | `implement --profile full --changed <paths> --format json` |
 | `proof` | `proof --profile tiny --changed <paths> --format json` | `proof --profile full --changed <paths> --format json` |
 | `summary` | `summary --profile compact --format json` | `summary --profile full --format json` |
-| `config` | `config --profile compact --format json` | `config --profile full --format json` |
+| `config` | `config --profile tiny --format json` | `config --profile compact --format json`, then `config --profile full --format json` |
 | `report` | default router profile or `--section <name>` | `report --profile full --format json` |
 
 Commands that do not yet expose a `tiny` profile should still follow the same rule: the ordinary output should answer the command's immediate question first, then point to a detail command when more context is needed.

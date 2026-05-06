@@ -463,6 +463,18 @@ def test_model_cli_harness_extracts_execution_warnings(tmp_path: Path) -> None:
                     },
                 }
             ),
+            json.dumps(
+                {
+                    "type": "item.completed",
+                    "item": {
+                        "type": "command_execution",
+                        "command": "Get-Content README.md",
+                        "aggregated_output": "execution error: invalid directory",
+                        "exit_code": -1,
+                        "status": "failed",
+                    },
+                }
+            ),
         ]
     )
 
@@ -471,7 +483,10 @@ def test_model_cli_harness_extracts_execution_warnings(tmp_path: Path) -> None:
     assert {warning["warning_class"] for warning in warnings} == {
         "model_cli_shell_unavailable",
         "model_cli_external_write",
+        "model_cli_command_execution_failed",
     }
+    failed = next(warning for warning in warnings if warning["warning_class"] == "model_cli_command_execution_failed")
+    assert "Get-Content README.md" in failed["evidence"]
 
 
 def test_model_cli_harness_warns_on_runtime_failures_and_mutations(tmp_path: Path) -> None:

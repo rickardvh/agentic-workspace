@@ -1196,6 +1196,62 @@ safe_to_auto_run_commands = false
     assert len(output) < 10000
 
 
+def test_config_command_reports_tiny_profile_for_config_posture(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[workspace]
+improvement_latitude = "reporting"
+optimization_bias = "agent-efficiency"
+cli_invoke = "uv run agentic-workspace"
+
+[workflow_obligations.closeout_proof]
+summary = "Run closeout proof before reporting done."
+stage = "closeout"
+scope_tags = ["closeout"]
+commands = ["make check"]
+""".strip(),
+        encoding="utf-8",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/config.local.toml",
+        """
+schema_version = 1
+
+[delegation]
+mode = "suggest"
+
+[clarification]
+mode = "ask-first"
+
+[safety]
+safe_to_auto_run_commands = false
+requires_human_verification_on_pr = true
+""".strip(),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(tmp_path), "--profile", "tiny", "--format", "json"]) == 0
+
+    output = capsys.readouterr().out
+    payload = json.loads(output)
+    assert payload["kind"] == "agentic-workspace/config-tiny/v1"
+    assert payload["profile"] == "tiny"
+    assert payload["workspace"]["improvement_latitude"] == "reporting"
+    assert payload["workspace"]["optimization_bias"] == "agent-efficiency"
+    assert payload["workspace"]["workflow_obligation_ids"] == ["closeout_proof"]
+    assert payload["local_runtime"]["delegation_mode"] == {"value": "suggest", "source": "local-override"}
+    assert payload["local_runtime"]["clarification_mode"] == {"value": "ask-first", "source": "local-override"}
+    assert payload["local_runtime"]["safe_to_auto_run_commands"] == {"value": False, "source": "local-override"}
+    assert payload["local_runtime"]["requires_human_verification_on_pr"] == {"value": True, "source": "local-override"}
+    assert payload["next_detail"]["compact"].endswith("agentic-workspace config --target . --profile compact --format json")
+    assert "config_effect_audit" not in payload
+    assert len(output) < 3000
+
+
 def test_config_command_accepts_reporting_improvement_latitude_mode(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
@@ -7778,7 +7834,7 @@ def test_start_tiny_keeps_moderate_task_carry_forward_command_executable(capsys)
     assert f'--task "{task}"' in command
 
 
-def test_start_tiny_routes_config_posture_questions_to_compact_config(capsys) -> None:
+def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> None:
     task = (
         "Inspect this repo enough to answer how a small follow-up should be reported. "
         "Keep the answer aligned with the repo's configured operating and reporting posture."
@@ -7789,9 +7845,9 @@ def test_start_tiny_routes_config_posture_questions_to_compact_config(capsys) ->
     payload = json.loads(capsys.readouterr().out)
     action = payload["immediate_next_allowed_action"]
     assert action["action"] == "inspect-effective-config"
-    assert action["command"] == "uv run agentic-workspace config --profile compact --format json"
+    assert action["command"] == "uv run agentic-workspace config --profile tiny --format json"
     assert action["read_first"] == [action["command"]]
-    assert "before raw config files" in action["summary"]
+    assert "tiny config surface" in action["summary"]
     assert len(json.dumps(payload, sort_keys=True)) < 6200
 
 

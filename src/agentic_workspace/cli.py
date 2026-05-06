@@ -8941,14 +8941,14 @@ def _start_payload(
         }
     elif _is_config_posture_task(task_text):
         config_command = _command_with_cli_invoke(
-            command="agentic-workspace config --profile compact --format json",
+            command="agentic-workspace config --profile tiny --format json",
             cli_invoke=config.cli_invoke,
         )
         payload["immediate_next_allowed_action"] = {
             "action": "inspect-effective-config",
             "summary": (
                 "The task asks about configured operating, reporting, closeout, or delegation posture. "
-                "Run the compact config surface before raw config files; use raw files only if the compact answer is insufficient."
+                "Run the tiny config surface before raw config files; use compact or full only if the tiny answer is insufficient."
             ),
             "command": config_command,
             "run": config_command,
@@ -17539,11 +17539,63 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    compact = _compact_config_payload(payload)
+    workspace = compact["workspace"]
+    local_runtime = compact["local_runtime"]
+    reporting_posture = compact["reporting_posture"]
+    return {
+        "kind": "agentic-workspace/config-tiny/v1",
+        "profile": "tiny",
+        "target": compact["target"],
+        "config_path": compact["config_path"],
+        "exists": compact["exists"],
+        "warnings": compact["warnings"],
+        "reporting_posture": {
+            "status": reporting_posture["status"],
+            "effect": reporting_posture["effect"],
+            "citation_rule": reporting_posture["citation_rule"],
+        },
+        "workspace": {
+            "improvement_latitude": workspace["improvement_latitude"],
+            "improvement_latitude_source": workspace["improvement_latitude_source"],
+            "optimization_bias": workspace["optimization_bias"],
+            "optimization_bias_source": workspace["optimization_bias_source"],
+            "workflow_obligation_ids": reporting_posture["repo_policy"]["workflow_obligation_ids"],
+            "cli_invoke": workspace["cli_invoke"],
+        },
+        "local_runtime": {
+            "delegation_mode": local_runtime["delegation_mode"],
+            "clarification_mode": local_runtime["clarification_mode"],
+            "safe_to_auto_run_commands": local_runtime["safe_to_auto_run_commands"],
+            "requires_human_verification_on_pr": local_runtime["requires_human_verification_on_pr"],
+        },
+        "next_detail": {
+            "compact": f"{workspace['cli_invoke']} config --target . --profile compact --format json",
+            "full": compact["full_profile_command"],
+        },
+    }
+
+
 def _emit_config(*, format_name: str, config: WorkspaceConfig, profile: str = "full") -> None:
     full_payload = _config_payload(config=config)
-    payload = _compact_config_payload(full_payload) if profile == "compact" else full_payload
+    if profile == "tiny":
+        payload = _tiny_config_payload(full_payload)
+    elif profile == "compact":
+        payload = _compact_config_payload(full_payload)
+    else:
+        payload = full_payload
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
+        return
+    if profile == "tiny":
+        print(f"Target: {payload['target']}")
+        print(f"Config path: {payload['config_path']}")
+        print(f"Improvement latitude: {payload['workspace']['improvement_latitude']}")
+        print(f"Optimization bias: {payload['workspace']['optimization_bias']}")
+        print(f"Delegation mode: {payload['local_runtime']['delegation_mode']['value']}")
+        print(f"Safe to auto-run commands: {payload['local_runtime']['safe_to_auto_run_commands']['value']}")
+        print(f"Compact profile: {payload['next_detail']['compact']}")
         return
     if profile == "compact":
         print(f"Target: {payload['target']}")
