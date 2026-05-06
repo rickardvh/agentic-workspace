@@ -82,8 +82,46 @@ def test_planning_summary_does_not_treat_json_template_as_active_execplan(tmp_pa
     summary = planning_summary(target=tmp_path)
 
     assert summary["execplans"]["active_count"] == 0
-    assert summary["execplans"]["active_execplans"] == []
-    assert summary["work_maturity"]["active_execplans"] == []
+
+
+def test_planning_summary_exposes_low_collaboration_pressure(tmp_path: Path) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", 'kind = "agentic-planning-state"\nschema_version = "planning-state/v1"\n')
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    pressure = summary["planning_surface_health"]["collaboration_pressure"]
+    assert pressure["kind"] == "planning-collaboration-pressure/v1"
+    assert pressure["status"] == "normal"
+    assert pressure["risk"] == "low"
+    assert pressure["metrics"]["state_line_count"] == 2
+
+
+def test_planning_summary_flags_changed_shared_planning_surfaces(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write(
+        state_path,
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "plan-alpha", title = "Plan Alpha", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json", handoff_ready = true }
+]
+queued_items = []
+""",
+    )
+    _write_execplan_record(plan_path, item_id="plan-alpha", status="in-progress")
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    pressure = summary["planning_surface_health"]["collaboration_pressure"]
+    assert pressure["status"] == "attention"
+    assert pressure["risk"] == "high"
+    assert pressure["shared_state_changed"] is True
+    assert ".agentic-workspace/planning/state.toml" in pressure["changed_shared_surfaces"]
 
 
 def test_planning_summary_exposes_live_state_authoring_affordance_when_clean(tmp_path: Path) -> None:

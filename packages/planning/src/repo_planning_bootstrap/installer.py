@@ -1640,7 +1640,14 @@ def planning_summary(
         resumable_contract=resumable_contract,
     )
     warnings.extend(_prep_only_changed_path_warnings(target_root=target_root, planning_record=planning_record))
-    planning_surface_health = _planning_surface_health(warnings)
+    planning_collaboration_pressure = _planning_collaboration_pressure(
+        target_root=target_root,
+        active_items=active_items,
+        queued_items=queued_items,
+        active_execplans=active_execplans,
+        state=state,
+    )
+    planning_surface_health = _planning_surface_health(warnings, collaboration_pressure=planning_collaboration_pressure)
     follow_through_contract = _active_follow_through_contract(
         target_root=target_root,
         planning_record=planning_record,
@@ -3206,6 +3213,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "status": planning_surface_health.get("status", "unknown"),
             "warning_count": planning_surface_health.get("warning_count", 0),
             "recommended_next_action": planning_surface_health.get("recommended_next_action", ""),
+            "collaboration_pressure": planning_surface_health.get("collaboration_pressure", {}),
             "warnings": planning_surface_health.get("warnings", []),
         },
         "projection_state": {
@@ -3879,7 +3887,11 @@ def _compact_historical_audit_references(historical: Any) -> dict[str, Any]:
     }
 
 
-def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
+def _planning_surface_health(
+    warnings: list[dict[str, Any]],
+    *,
+    collaboration_pressure: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     health_warnings: list[dict[str, str]] = []
     for warning in warnings:
         warning_class = str(warning.get("warning_class", "")).strip()
@@ -3900,6 +3912,7 @@ def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
             "warning_count": 0,
             "recommended_next_action": "No planning-surface drift detected.",
             "warnings": [],
+            "collaboration_pressure": collaboration_pressure or _empty_planning_collaboration_pressure(),
             "authoring_affordances": {
                 "live_state_rule": PLANNING_STATE_LIVE_ONLY_RULE,
                 "recovery_rule": (
@@ -3928,6 +3941,7 @@ def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
             else f"{health_warnings[0]['warning_class']}; resolve planning-surface health before treating the repo as safe to continue."
         ),
         "warnings": health_warnings,
+        "collaboration_pressure": collaboration_pressure or _empty_planning_collaboration_pressure(),
         "authoring_affordances": {
             "live_state_rule": PLANNING_STATE_LIVE_ONLY_RULE,
             "recovery_rule": (
@@ -3941,6 +3955,114 @@ def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
                 "Rerun `agentic-workspace summary --target . --format json` before continuing implementation.",
             ],
         },
+    }
+
+
+def _empty_planning_collaboration_pressure() -> dict[str, Any]:
+    return {
+        "kind": "planning-collaboration-pressure/v1",
+        "status": "normal",
+        "risk": "low",
+        "shared_state_changed": False,
+        "signals": [],
+        "metrics": {
+            "active_item_count": 0,
+            "queued_item_count": 0,
+            "active_execplan_count": 0,
+            "state_line_count": 0,
+            "changed_shared_surface_count": 0,
+        },
+        "recommended_next_action": "Keep live planning state compact and branch-local.",
+        "rule": "This is a merge-pressure signal, not a lock or concurrency guarantee.",
+    }
+
+
+def _planning_collaboration_pressure(
+    *,
+    target_root: Path,
+    active_items: list[dict[str, Any]],
+    queued_items: list[dict[str, Any]],
+    active_execplans: list[dict[str, str]],
+    state: dict[str, Any] | None,
+) -> dict[str, Any]:
+    state_path = target_root / PLANNING_STATE_PATH
+    state_line_count = len(state_path.read_text(encoding="utf-8", errors="replace").splitlines()) if state_path.exists() else 0
+    changed_paths = _git_status_changed_paths(target_root)
+    changed_shared_surfaces = [
+        path
+        for path in changed_paths
+        if path == PLANNING_STATE_PATH.as_posix()
+        or path.startswith(".agentic-workspace/planning/execplans/")
+        or path.startswith(".agentic-workspace/planning/reviews/")
+    ]
+    active_item_count = len(active_items)
+    queued_item_count = len(queued_items)
+    active_execplan_count = len(active_execplans)
+    signals: list[dict[str, str]] = []
+    if active_item_count > 1:
+        signals.append(
+            {
+                "id": "multiple-active-items",
+                "summary": "More than one active planning item increases same-file merge pressure.",
+                "suggested_action": "Prefer one active lane/execplan per branch or close unrelated active items.",
+            }
+        )
+    if active_execplan_count > 1:
+        signals.append(
+            {
+                "id": "multiple-active-execplans",
+                "summary": "Multiple active execplans make continuation and merge ownership ambiguous.",
+                "suggested_action": "Split unrelated work across branches or make only the current lane active.",
+            }
+        )
+    if queued_item_count > 5:
+        signals.append(
+            {
+                "id": "large-queued-set",
+                "summary": "A large queued set makes state.toml a broader shared coordination hotspot.",
+                "suggested_action": "Move speculative or deferred work to issues, docs, or roadmap candidates with compact entries.",
+            }
+        )
+    if state_line_count > 120:
+        signals.append(
+            {
+                "id": "large-state-file",
+                "summary": "A large planning state file is harder to merge and review.",
+                "suggested_action": "Keep state.toml live/selectable only; distill completed residue to Memory, docs, issues, or checks.",
+            }
+        )
+    if changed_shared_surfaces:
+        signals.append(
+            {
+                "id": "shared-planning-surfaces-changed",
+                "summary": "Git status shows changed live Planning surfaces.",
+                "suggested_action": "Before closeout or push, confirm these edits are intentional and still branch-local.",
+            }
+        )
+
+    high_ids = {"multiple-active-items", "multiple-active-execplans", "shared-planning-surfaces-changed"}
+    risk = "high" if any(signal["id"] in high_ids for signal in signals) else "medium" if signals else "low"
+    status = "attention" if signals else "normal"
+    if not signals:
+        recommended_next_action = "Keep live planning state compact and branch-local."
+    else:
+        recommended_next_action = signals[0]["suggested_action"]
+    return {
+        "kind": "planning-collaboration-pressure/v1",
+        "status": status,
+        "risk": risk,
+        "shared_state_changed": bool(changed_shared_surfaces),
+        "signals": signals,
+        "metrics": {
+            "active_item_count": active_item_count,
+            "queued_item_count": queued_item_count,
+            "active_execplan_count": active_execplan_count,
+            "state_line_count": state_line_count,
+            "changed_shared_surface_count": len(changed_shared_surfaces),
+        },
+        "changed_shared_surfaces": changed_shared_surfaces[:8],
+        "recommended_next_action": recommended_next_action,
+        "rule": "This is a merge-pressure signal, not a lock or concurrency guarantee.",
     }
 
 

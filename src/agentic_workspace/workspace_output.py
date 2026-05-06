@@ -108,6 +108,16 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
         current_branch = branch_posture.get("current_branch") or "(unknown)"
         default_branch = branch_posture.get("default_branch") or "(unknown)"
         print(f"Branch posture: {current_branch} (default: {default_branch}; risk: {branch_posture.get('risk', 'unknown')})")
+        shared_state_risk = branch_posture.get("shared_state_mutation_risk", {})
+        if isinstance(shared_state_risk, dict) and shared_state_risk.get("status") == "attention":
+            print(
+                "Shared AW state: "
+                f"{shared_state_risk.get('risk', 'unknown')} risk; "
+                f"{shared_state_risk.get('changed_surface_count', 0)} changed surface(s)"
+            )
+            next_action = shared_state_risk.get("recommended_next_action")
+            if next_action:
+                print(f"Shared AW state next action: {next_action}")
     local_memory = payload.get("local_memory", {})
     if isinstance(local_memory, dict):
         print(f"Local memory: {local_memory.get('status', 'unknown')} ({local_memory.get('path', '')})")

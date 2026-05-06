@@ -154,6 +154,52 @@ def test_memory_report_derives_compact_module_state(tmp_path: Path) -> None:
     assert "capture-note" in helpers["memory_capture_recommendation"]["command"]
     assert "create-note" in helpers["memory_note"]["command"]
     assert report["promotion_pressure"]["status"] in {"clear", "attention"}
+    assert report["merge_safety"]["kind"] == "agentic-memory/merge-safety/v1"
+    assert report["merge_safety"]["status"] in {"clear", "advisory", "attention"}
+
+
+def test_memory_report_flags_merge_conflict_markers_in_notes(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+    note_path = target / ".agentic-workspace/memory/repo/domains/conflicted-note.md"
+    installer.create_memory_note(
+        target=target,
+        slug="conflicted-note",
+        summary="Conflicted durable note.",
+        applies_to=["src/**"],
+    )
+    note_path.write_text(
+        "# Conflicted Note\n\n<<<<<<< ours\n- Durable fact from this branch.\n=======\n- Durable fact from another branch.\n>>>>>>> theirs\n",
+        encoding="utf-8",
+    )
+
+    report = installer.memory_report(target=target)
+
+    merge_safety = report["merge_safety"]
+    assert merge_safety["status"] == "attention"
+    assert merge_safety["findings"][0]["warning_class"] == "memory_merge_conflict_marker"
+    assert report["health"] == "attention-needed"
+    assert any(finding["source_report"] == "merge-safety" for finding in report["findings"])
+
+
+def test_memory_report_flags_large_broad_notes_as_merge_hotspots(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+    installer.create_memory_note(
+        target=target,
+        slug="broad-note",
+        summary="Broad note.",
+    )
+    note_path = target / ".agentic-workspace/memory/repo/domains/broad-note.md"
+    note_path.write_text("# Broad Note\n\n" + "\n".join(f"- fact {idx}" for idx in range(260)) + "\n", encoding="utf-8")
+
+    report = installer.memory_report(target=target)
+
+    classes = {finding["warning_class"] for finding in report["merge_safety"]["findings"]}
+    assert "memory_note_merge_hotspot" in classes
+    assert "memory_broad_note_hotspot" in classes
 
 
 def test_create_memory_note_writes_note_and_manifest_entry(tmp_path: Path) -> None:

@@ -2535,6 +2535,75 @@ def _memory_usefulness_audit(
     }
 
 
+def _memory_merge_safety_diagnostics(*, target_root: Path, manifest: MemoryManifest) -> dict[str, object]:
+    findings: list[dict[str, object]] = []
+    for note in manifest.notes:
+        relative = note.path.as_posix()
+        note_path = target_root / note.path
+        if not note_path.exists() or not note_path.is_file():
+            continue
+        try:
+            text = note_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        line_count = len(text.splitlines())
+        if any(marker in text for marker in ("<<<<<<< ", "=======", ">>>>>>> ")):
+            findings.append(
+                {
+                    "severity": "warning",
+                    "warning_class": "memory_merge_conflict_marker",
+                    "path": relative,
+                    "line_count": line_count,
+                    "message": "Durable Memory note contains git merge conflict markers.",
+                    "recommended_action": (
+                        "Resolve the semantic conflict, preserve reusable durable knowledge, and split the note if the same broad "
+                        "surface keeps colliding."
+                    ),
+                }
+            )
+            continue
+        if line_count > 240:
+            findings.append(
+                {
+                    "severity": "advisory",
+                    "warning_class": "memory_note_merge_hotspot",
+                    "path": relative,
+                    "line_count": line_count,
+                    "message": "Durable Memory note is large enough to become a merge and routing hotspot.",
+                    "recommended_action": (
+                        "Split stable subsystem facts, decisions, or runbook steps into focused notes or promote canonical guidance to docs."
+                    ),
+                }
+            )
+        broad_role = note.memory_role in {"durable_truth", "unclassified", ""} and not note.applies_to and not note.use_when
+        if broad_role and line_count > 120:
+            findings.append(
+                {
+                    "severity": "advisory",
+                    "warning_class": "memory_broad_note_hotspot",
+                    "path": relative,
+                    "line_count": line_count,
+                    "message": "Durable Memory note is broad and lacks routing metadata.",
+                    "recommended_action": (
+                        "Add manifest routing metadata or split the note so unrelated branches do not edit the same catch-all surface."
+                    ),
+                }
+            )
+    status = "attention" if any(finding["severity"] == "warning" for finding in findings) else "advisory" if findings else "clear"
+    return {
+        "kind": "agentic-memory/merge-safety/v1",
+        "status": status,
+        "finding_count": len(findings),
+        "findings": findings[:10],
+        "rule": "Memory is durable shared knowledge; it is git-native, not multi-writer safe.",
+        "recommended_next_action": (
+            str(findings[0]["recommended_action"])
+            if findings
+            else "Keep notes focused and routed; split or promote broad notes when they grow."
+        ),
+    }
+
+
 def _memory_habitual_pull_view(
     *,
     manifest: MemoryManifest,
@@ -2944,6 +3013,27 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
         durable_facts=durable_facts,
     )
     state_model = _memory_state_model_view(manifest=manifest, trust_items=trust_items)
+    merge_safety = _memory_merge_safety_diagnostics(target_root=target_root, manifest=manifest)
+    merge_safety_findings_raw = merge_safety.get("findings", [])
+    merge_safety_findings = merge_safety_findings_raw if isinstance(merge_safety_findings_raw, list) else []
+    for finding in merge_safety_findings:
+        if not isinstance(finding, dict):
+            continue
+        finding_payload = cast(dict[str, Any], finding)
+        severity = str(finding_payload.get("severity", "warning"))
+        key = (severity, str(finding_payload.get("path", "")), str(finding_payload.get("message", "")), "merge-safety")
+        if key in seen_findings:
+            continue
+        seen_findings.add(key)
+        findings.append(
+            {
+                "severity": severity,
+                "path": str(finding_payload.get("path", "")),
+                "message": str(finding_payload.get("message", "")),
+                "source_report": "merge-safety",
+                "category": str(finding_payload.get("warning_class", "memory_merge_safety")),
+            }
+        )
     state_records = state_model.get("records", [])
     state_record_items = (
         [cast(dict[str, Any], record) for record in state_records if isinstance(record, dict)] if isinstance(state_records, list) else []
@@ -2977,7 +3067,10 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
     manual_review_total = sum(1 for action in significant_actions if action.kind in {"manual review", "missing"})
     warning_total = sum(1 for action in significant_actions if action.kind == "warning")
     advisory_total = 0
-    if manual_review_total or warning_total or stale_notes or questionable_notes:
+    merge_safety_warning_count = sum(
+        1 for finding in merge_safety_findings if isinstance(finding, dict) and cast(dict[str, Any], finding).get("severity") == "warning"
+    )
+    if manual_review_total or warning_total or stale_notes or questionable_notes or merge_safety_warning_count:
         health = "attention-needed"
     else:
         health = "healthy"
@@ -2999,6 +3092,9 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
             "agentic-memory doctor --target ./repo",
             "agentic-memory promotion-report --target ./repo --mode remediation",
         ]
+    elif merge_safety.get("status") in {"attention", "advisory"}:
+        next_action_summary = str(merge_safety.get("recommended_next_action", next_action_summary))
+        next_action_commands = ["agentic-memory report --target ./repo --format json"]
     elif recurring_friction["promotion_pressure_count"]:
         next_action_summary = "Recurring friction has repeated enough times that it should promote into stronger remediation instead of staying note-only evidence."
         next_action_commands = [
@@ -3044,6 +3140,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
                 "writer_helpers",
                 "durable_facts",
                 "habitual_pull",
+                "merge_safety",
                 "promotion_pressure",
                 "trust",
                 "recurring_friction",
@@ -3094,6 +3191,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
         },
         "durable_facts": durable_facts,
         "habitual_pull": habitual_pull,
+        "merge_safety": merge_safety,
         "promotion_pressure": promotion_pressure,
         "trust": {
             "warning_count": warning_total,

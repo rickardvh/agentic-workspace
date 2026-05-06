@@ -1291,7 +1291,17 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             warnings=tuple(warnings),
         )
 
-    payload = load_toml_payload(path=config_path, surface_name=WORKSPACE_CONFIG_PATH.as_posix())
+    try:
+        payload = load_toml_payload(path=config_path, surface_name=WORKSPACE_CONFIG_PATH.as_posix())
+    except WorkspaceUsageError:
+        text = config_path.read_text(encoding="utf-8-sig", errors="replace")
+        if not any(marker in text for marker in ("<<<<<<< ", "=======", ">>>>>>> ")):
+            raise
+        warnings.append(
+            f"{WORKSPACE_CONFIG_PATH.as_posix()} contains git merge conflict markers; "
+            "using product defaults only so doctor/report can route semantic recovery."
+        )
+        payload: dict[str, Any] = {"schema_version": 1}
 
     schema_version = payload.get("schema_version")
     if schema_version != 1:

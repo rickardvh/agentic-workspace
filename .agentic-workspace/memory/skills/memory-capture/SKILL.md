@@ -30,6 +30,7 @@ It operates on durable memory files. It does not create a separate storage layer
    - `.agentic-workspace/memory/repo/mistakes/recurring-failures.md` for repeated failure patterns
    - `.agentic-workspace/memory/repo/decisions/` for longer-lived rationale when a README note is no longer enough
 5. Prefer editing an existing note over creating a new one.
+   - If the existing note is already large, broad, or a repeated merge hotspot, split the durable lesson into a focused note instead of adding to the same catch-all surface.
 6. Update note metadata and routing in the same change:
    - `Status`
    - `Applies to`
@@ -60,6 +61,7 @@ If not, leave it out of `/memory`.
 
 - Keep durable knowledge in checked-in files so the result stays visible in git.
 - Do not create a new note when an existing note can be tightened instead.
+- Do not keep expanding one broad note when separate branches are likely to edit unrelated facts in it.
 - Do not put task state, backlog items, or one-off implementation history into memory.
 - Mark uncertain claims `Needs verification` instead of presenting them as settled.
 - Treat legacy `project-state.md` and `task-context.md` files as migration residue, not normal capture targets.

@@ -37,6 +37,7 @@ Use them when they save rediscovery cost; avoid adding notes that merely restate
 Optimise for deletion and consolidation, not just capture.
 If a memory note stabilises into canonical repo guidance, promote it into checked-in docs and leave a short replacement note instead of duplicate truth.
 Prefer compact residue-oriented notes: pitfalls, routing hints, traps, operator context, and short fallback summaries.
+Memory is git-native, not multi-writer safe. Keep notes focused enough that unrelated branches do not edit the same broad durable surface. When a note becomes large, repeatedly collides in merges, or lacks routing metadata, split it by subsystem, decision, invariant, or runbook; if the stable guidance belongs in user-facing docs, promote it there and leave Memory as a stub or backlink.
 Memory is a reasoning aid and constraint layer; it does not replace checking the codebase when the codebase is the source of truth.
 Use memory in two modes:
 
@@ -106,6 +107,7 @@ Treat `.agentic-workspace/memory/skills/memory-router/` as the normal entrypoint
 When `.agentic-workspace/memory/repo/manifest.toml` marks a note as `canonical_elsewhere`, routing should prefer the canonical checked-in doc and keep the memory note as optional fallback context.
 Planning/status surfaces identify touched paths or surfaces; memory routing returns the smallest relevant durable note set.
 If the same note keeps being routed for safe work on one subsystem, that is often a cue to suggest clearer docs, stronger validation, or refactor review.
+If the same note keeps appearing in merge conflicts, treat it as a note-design smell: split durable facts, add route metadata, or promote stable guidance to docs rather than teaching agents to keep resolving the same catch-all file.
 In combined installs, memory should reduce what planning has to restate, not become a second plan explanation layer.
 Use `.agentic-workspace/memory/repo/manifest.toml` to make that improvement pressure legible: optional fields such as `memory_role`, `preferred_remediation`, `improvement_note`, `elimination_target`, and `retention_justification` explain whether a note is durable truth or a symptom pointing at upstream docs, tests, skills, scripts, validation, or refactor work.
 

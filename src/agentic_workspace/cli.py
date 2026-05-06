@@ -2833,6 +2833,7 @@ def _workspace_repair_payload(
     pointer_surfaces: list[str] = []
     absolute_path_surfaces: list[str] = []
     contract_drift_surfaces: list[str] = []
+    merge_conflict_findings = _workspace_merge_conflict_findings(target_root=target_root)
 
     for action in actions:
         path = str(action.get("path", ""))
@@ -2973,6 +2974,27 @@ def _workspace_repair_payload(
                 },
             )
         )
+    for finding in merge_conflict_findings:
+        affected = [str(finding.get("path", ""))]
+        surface_class = str(finding.get("surface_class", "workspace-surface"))
+        invariant = str(finding.get("invariant", "structured.schema_valid"))
+        manual_review_actions.append(
+            _workspace_manual_review_action(
+                id=f"resolve-{surface_class.replace('_', '-').replace('/', '-')}-merge-conflict",
+                invariant=invariant,
+                fault_class=str(finding.get("fault_class", "agent_operation_fault")),
+                owner=str(finding.get("owner", "surface-owner")),
+                target_root=target_root,
+                cli_invoke=cli_invoke,
+                affected_surfaces=affected,
+                current_fault_summary=str(finding.get("message", "AW-owned surface contains git merge conflict markers.")),
+                risk=str(finding.get("risk", "manual review required; resolve the semantic conflict before continuing")),
+                do_not=[
+                    str(finding.get("do_not", "Do not delete or blindly regenerate the conflicted surface as the first recovery step.")),
+                    "Do not treat conflict markers as ordinary formatting drift.",
+                ],
+            )
+        )
 
     return (
         repair_actions,
@@ -3075,6 +3097,13 @@ def _workspace_safe_repair_action(
         "affected_surfaces": affected_surfaces,
         "current_fault_summary": current_fault_summary,
         "do_not": do_not,
+        "merge_repair": {
+            "status": "safe-rerender-when-source-authority-is-clear",
+            "canonical_source": "installed package payloads, module descriptors, and workspace config",
+            "rerender_command": command,
+            "proof_after": proof_after,
+            "rule": "After a merge, repair generated or managed surfaces from canonical source instead of editing generated output by hand.",
+        },
         "recurrence": "first_seen",
         "improvement_signal_candidate": {
             "when": "repeated",
@@ -3132,6 +3161,98 @@ def _workspace_manual_review_action(
     if package_command_bug_signal is not None:
         payload["package_command_bug_signal"] = package_command_bug_signal
     return payload
+
+
+_MERGE_CONFLICT_MARKERS = ("<<<<<<< ", "=======", ">>>>>>> ")
+_MERGE_CONFLICT_EXTENSIONS = {".toml", ".json", ".md", ".txt"}
+
+
+def _workspace_merge_conflict_findings(*, target_root: Path) -> list[dict[str, Any]]:
+    workspace_root = target_root / ".agentic-workspace"
+    if not workspace_root.exists():
+        return []
+    findings: list[dict[str, Any]] = []
+    for path in sorted(workspace_root.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in _MERGE_CONFLICT_EXTENSIONS:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if not any(marker in text for marker in _MERGE_CONFLICT_MARKERS):
+            continue
+        relative = path.relative_to(target_root).as_posix()
+        findings.append(_workspace_merge_conflict_finding(relative))
+    return findings
+
+
+def _workspace_merge_conflict_finding(relative_path: str) -> dict[str, Any]:
+    if relative_path in {".agentic-workspace/config.toml", ".agentic-workspace/OWNERSHIP.toml"}:
+        return {
+            "path": relative_path,
+            "surface_class": "workspace_policy",
+            "owner": "repo",
+            "fault_class": "ambiguous_ownership",
+            "invariant": "workspace.policy_conflict_reviewed",
+            "message": "Workspace config or ownership surface contains git merge conflict markers.",
+            "risk": "manual review required; policy and ownership conflicts are high-impact semantic conflicts",
+            "do_not": "Do not resolve config or ownership conflicts by blind regeneration or by committing local-only preferences.",
+        }
+    if relative_path == ".agentic-workspace/config.local.toml.example":
+        return {
+            "path": relative_path,
+            "surface_class": "local_config_example",
+            "owner": "workspace",
+            "fault_class": "ambiguous_ownership",
+            "invariant": "workspace.policy_conflict_reviewed",
+            "message": "Local config example contains git merge conflict markers.",
+            "risk": "manual review required; preserve portable examples and keep user-specific local config out of shared state",
+            "do_not": "Do not copy user-specific config.local.toml values into the shared example while resolving the conflict.",
+        }
+    if relative_path.endswith("/state.toml") and relative_path.startswith(".agentic-workspace/planning/"):
+        return {
+            "path": relative_path,
+            "surface_class": "planning_live_state",
+            "owner": "planning",
+            "fault_class": "agent_operation_fault",
+            "invariant": "planning.live_state_conflict_resolved",
+            "message": "Live Planning state contains git merge conflict markers.",
+            "risk": "manual review required; live state selects future work and must preserve intentional active/queued items",
+            "do_not": "Do not delete state.toml or recreate active work from memory as the first recovery step.",
+        }
+    if relative_path.startswith(".agentic-workspace/planning/execplans/"):
+        return {
+            "path": relative_path,
+            "surface_class": "planning_execplan",
+            "owner": "planning",
+            "fault_class": "agent_operation_fault",
+            "invariant": "planning.execplan_conflict_resolved",
+            "message": "Planning execplan contains git merge conflict markers.",
+            "risk": "manual review required; preserve the bounded implementation contract before continuing",
+            "do_not": "Do not replace the execplan with a new freehand plan unless the conflicting intent has been preserved.",
+        }
+    if relative_path.startswith(".agentic-workspace/memory/repo/"):
+        return {
+            "path": relative_path,
+            "surface_class": "durable_memory_note",
+            "owner": "memory",
+            "fault_class": "agent_operation_fault",
+            "invariant": "memory.note_conflict_resolved",
+            "message": "Durable Memory surface contains git merge conflict markers.",
+            "risk": "manual review required; preserve durable facts and split broad notes when conflicts recur",
+            "do_not": "Do not treat durable Memory as active task state or discard one side without checking whether it records reusable knowledge.",
+        }
+    generated_hint = "generated" if "generated" in relative_path or relative_path.endswith(".report.json") else "workspace_surface"
+    return {
+        "path": relative_path,
+        "surface_class": generated_hint,
+        "owner": "workspace",
+        "fault_class": "generated_artifact_drift" if generated_hint == "generated" else "agent_operation_fault",
+        "invariant": "workspace.merge_conflict_resolved",
+        "message": "Agentic Workspace surface contains git merge conflict markers.",
+        "risk": "manual review required unless a canonical source and safe rerender command are known",
+        "do_not": "Do not blindly regenerate repo-owned content; first identify the authoritative source for the conflicted surface.",
+    }
 
 
 def _workspace_agents_template(
@@ -8292,6 +8413,8 @@ def _branch_workflow_posture_payload(*, target_root: Path) -> dict[str, Any]:
     sources = [".git/HEAD"]
     if default_branch:
         sources.append(".git/refs/remotes/origin/HEAD")
+    shared_state_risk = _workspace_shared_state_mutation_risk(target_root=target_root)
+    upstream_divergence = _git_upstream_divergence(target_root=target_root)
 
     if not current_branch:
         return {
@@ -8303,6 +8426,8 @@ def _branch_workflow_posture_payload(*, target_root: Path) -> dict[str, Any]:
             "advisory_only": True,
             "rule": rule,
             "sources": sources,
+            "upstream_divergence": upstream_divergence,
+            "shared_state_mutation_risk": shared_state_risk,
             "recommended_next_action": "Inspect git branch state before implementation, commit, or push.",
         }
 
@@ -8310,7 +8435,9 @@ def _branch_workflow_posture_payload(*, target_root: Path) -> dict[str, Any]:
     on_default_branch = default_branch_known and current_branch == default_branch
     likely_default_name = current_branch in {"main", "master", "trunk"}
     risk = "default-branch-commit-risk" if on_default_branch or (not default_branch_known and likely_default_name) else "normal"
-    if risk == "default-branch-commit-risk":
+    if shared_state_risk["risk"] == "high":
+        recommended_next_action = str(shared_state_risk["recommended_next_action"])
+    elif risk == "default-branch-commit-risk":
         recommended_next_action = "Make the default-branch posture explicit before implementation, commit, or push; do not switch branches unless the user decides."
     else:
         recommended_next_action = "Continue normal branch-aware workflow; keep commit and push posture explicit before closeout."
@@ -8343,8 +8470,147 @@ def _branch_workflow_posture_payload(*, target_root: Path) -> dict[str, Any]:
         "advisory_only": True,
         "rule": rule,
         "branch_mutation_policy": branch_mutation_policy,
+        "upstream_divergence": upstream_divergence,
+        "shared_state_mutation_risk": shared_state_risk,
         "sources": sources,
         "recommended_next_action": recommended_next_action,
+    }
+
+
+def _workspace_shared_state_mutation_risk(*, target_root: Path) -> dict[str, Any]:
+    changed_paths = _git_status_short_paths(target_root=target_root)
+    surfaces = [_workspace_shared_state_surface(path) for path in changed_paths]
+    surfaces = [surface for surface in surfaces if surface is not None]
+    if not surfaces:
+        return {
+            "kind": "workspace-shared-state-mutation-risk/v1",
+            "status": "clear",
+            "risk": "low",
+            "changed_surface_count": 0,
+            "surfaces": [],
+            "recommended_next_action": "No changed Agentic Workspace shared-state surfaces detected.",
+            "rule": "Shared-state risk is merge pressure, not a lock or concurrency guarantee.",
+        }
+    high_classes = {"planning-live-state", "active-planning-execplan", "workspace-policy", "durable-memory-note"}
+    risk = "high" if any(surface["class"] in high_classes for surface in surfaces) else "medium"
+    first = surfaces[0]
+    return {
+        "kind": "workspace-shared-state-mutation-risk/v1",
+        "status": "attention",
+        "risk": risk,
+        "changed_surface_count": len(surfaces),
+        "surfaces": surfaces[:12],
+        "recommended_next_action": (
+            f"Review changed shared workspace surface {first['path']} before closeout or push; "
+            "confirm it is intentional branch-local state or durable shared knowledge."
+        ),
+        "rule": "Shared-state risk is merge pressure, not a lock or concurrency guarantee.",
+    }
+
+
+def _workspace_shared_state_surface(path: str) -> dict[str, str] | None:
+    normalized = path.replace("\\", "/")
+    if normalized == ".agentic-workspace/planning/state.toml":
+        return {
+            "path": normalized,
+            "class": "planning-live-state",
+            "why": "selects active or queued future work and is a shared hot file",
+        }
+    if normalized.startswith(".agentic-workspace/planning/execplans/") and "/archive/" not in normalized:
+        return {
+            "path": normalized,
+            "class": "active-planning-execplan",
+            "why": "active execution contracts can conflict when multiple branches edit the same plan",
+        }
+    if normalized in {".agentic-workspace/config.toml", ".agentic-workspace/OWNERSHIP.toml"}:
+        return {
+            "path": normalized,
+            "class": "workspace-policy",
+            "why": "config and ownership changes are rare but high-impact shared policy edits",
+        }
+    if normalized == ".agentic-workspace/config.local.toml":
+        return {
+            "path": normalized,
+            "class": "local-only-config",
+            "why": "local config should normally remain uncommitted and machine-local",
+        }
+    if normalized == ".agentic-workspace/config.local.toml.example":
+        return {
+            "path": normalized,
+            "class": "local-config-example",
+            "why": "shared examples must remain portable and free of user-specific settings",
+        }
+    if normalized.startswith(".agentic-workspace/memory/repo/") and normalized.endswith(".md"):
+        return {
+            "path": normalized,
+            "class": "durable-memory-note",
+            "why": "durable shared knowledge can conflict when branches update the same note",
+        }
+    if normalized.startswith(".agentic-workspace/") and (
+        normalized.endswith(".toml") or normalized.endswith(".json") or normalized.endswith(".md")
+    ):
+        return {
+            "path": normalized,
+            "class": "workspace-surface",
+            "why": "checked-in workspace surface participates in ordinary git merge semantics",
+        }
+    return None
+
+
+def _git_status_short_paths(*, target_root: Path) -> list[str]:
+    if _git_metadata_dir(target_root=target_root) is None:
+        return []
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(target_root), "status", "--short", "--untracked-files=all"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if completed.returncode != 0:
+        return []
+    paths: list[str] = []
+    for line in completed.stdout.splitlines():
+        if len(line) < 4:
+            continue
+        raw_path = line[3:].strip()
+        if " -> " in raw_path:
+            raw_path = raw_path.split(" -> ", 1)[1].strip()
+        normalized = raw_path.replace("\\", "/")
+        if normalized:
+            paths.append(normalized)
+    return paths
+
+
+def _git_upstream_divergence(*, target_root: Path) -> dict[str, Any]:
+    if _git_metadata_dir(target_root=target_root) is None:
+        return {"status": "unavailable", "ahead": None, "behind": None}
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(target_root), "rev-list", "--left-right", "--count", "HEAD...@{upstream}"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return {"status": "unknown", "ahead": None, "behind": None}
+    if completed.returncode != 0:
+        return {"status": "unknown", "ahead": None, "behind": None}
+    parts = completed.stdout.strip().split()
+    if len(parts) != 2 or not all(part.isdigit() for part in parts):
+        return {"status": "unknown", "ahead": None, "behind": None}
+    ahead = int(parts[0])
+    behind = int(parts[1])
+    return {
+        "status": "diverged" if ahead and behind else "ahead" if ahead else "behind" if behind else "in-sync",
+        "ahead": ahead,
+        "behind": behind,
     }
 
 

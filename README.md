@@ -96,6 +96,7 @@ For agent maintainers, the primary operating path is `AGENTS.md`, the active exe
 - Choosing an install shape: [`docs/which-package.md`](docs/which-package.md)
 - CLI, installed surfaces, modules, and contracts: [`docs/package/`](docs/package/overview.md)
 - Architecture and ownership boundaries: [`docs/architecture.md`](docs/architecture.md)
+- Collaboration and merge safety: [`docs/collaboration-safety.md`](docs/collaboration-safety.md)
 - Documentation roles and maturity: [`docs/documentation-status.md`](docs/documentation-status.md), [`docs/maturity-model.md`](docs/maturity-model.md)
 - Memory module: [`packages/memory/README.md`](packages/memory/README.md)
 - Planning module: [`packages/planning/README.md`](packages/planning/README.md)

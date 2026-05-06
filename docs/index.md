@@ -27,6 +27,7 @@ Use this map when updating docs so each page stays complete at its level without
 - [Modules](package/modules.md): how the root package composes Planning and Memory.
 - [Contracts and references](package/contracts.md): how JSON contracts, schemata, generated reference docs, and runtime outputs relate.
 - [Jumpstart contract](jumpstart-contract.md): how a newly installed or adopted workspace in a lived-in repo should discover candidate durable surfaces without bulk importing repo prose.
+- [Collaboration safety](collaboration-safety.md): git-native collaboration model, merge recovery, and shared-state pressure rules.
 
 ## Reference Material
 
@@ -49,4 +50,6 @@ Use this map when updating docs so each page stays complete at its level without
 - [Maturity model](maturity-model.md): support and adoption expectations, not a product map.
 - [Design principles](design-principles.md): product doctrine and tradeoff guidance, not first-contact package documentation.
 - [Setup findings contract](setup-findings-contract.md): how optional setup findings are promoted, dismissed, or kept transient.
+- [Collaboration safety](collaboration-safety.md): practical merge expectations for Planning, Memory, config, generated surfaces, and managed fences.
+- [Planning live-state collaboration design](planning-live-state-collaboration-design.md): design note for lower-conflict live-state alternatives and the current compact-state choice.
 - [Historical reviews](reviews/): dated audits and evidence. These support future work, but they are not first-contact package documentation.

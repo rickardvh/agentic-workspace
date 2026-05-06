@@ -83,6 +83,33 @@ def test_doctor_repair_actions_use_resolved_cli_invoke(tmp_path: Path, capsys) -
     assert action["proof_after"][0].startswith("uv run agentic-workspace doctor ")
 
 
+def test_doctor_routes_workspace_merge_conflict_markers_to_manual_review(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "<<<<<<< ours\nschema_version = 1\n=======\nschema_version = 1\n>>>>>>> theirs\n",
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        '<<<<<<< ours\nkind = "agentic-planning-state"\n=======\nkind = "agentic-planning-state"\n>>>>>>> theirs\n',
+    )
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    manual_actions = payload["manual_review_actions"]
+    ids = {action["id"] for action in manual_actions}
+    assert "resolve-workspace-policy-merge-conflict" in ids
+    assert "resolve-planning-live-state-merge-conflict" in ids
+    config_action = next(action for action in manual_actions if action["id"] == "resolve-workspace-policy-merge-conflict")
+    assert config_action["invariant"] == "workspace.policy_conflict_reviewed"
+    assert "blind regeneration" in " ".join(config_action["do_not"])
+
+
 def test_doctor_promotes_safe_module_lifecycle_repairs_for_missing_memory_templates(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

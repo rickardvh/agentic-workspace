@@ -1092,6 +1092,30 @@ def test_report_surfaces_default_branch_commit_risk(tmp_path: Path, capsys) -> N
     assert "explicit user intent" in policy["rule"]
 
 
+def test_report_branch_posture_flags_changed_workspace_shared_state(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=target, check=True)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=target, check=True)
+    subprocess.run(["git", "config", "user.name", "Agent"], cwd=target, check=True)
+    subprocess.run(["git", "add", "-A"], cwd=target, check=True)
+    subprocess.run(["git", "commit", "-m", "seed"], cwd=target, check=True, capture_output=True)
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        'kind = "agentic-planning-state"\nschema_version = "planning-state/v1"\n',
+    )
+
+    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    risk = payload["branch_workflow_posture"]["shared_state_mutation_risk"]
+    assert risk["status"] == "attention"
+    assert risk["risk"] == "high"
+    assert any(surface["path"] == ".agentic-workspace/planning/state.toml" for surface in risk["surfaces"])
+
+
 def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

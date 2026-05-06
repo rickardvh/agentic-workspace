@@ -25,10 +25,12 @@ It operates on checked-in memory files. It does not replace them.
    - contradicted behaviour
    - duplicate or overlapping guidance
    - stale placeholders
+   - merge-conflict markers or repeated same-note merge collisions
    - oversized history or narrative that no longer affects future work
 7. Update the smallest set of files needed:
    - edit existing notes before creating new ones
    - merge or delete stale notes instead of accumulating near-duplicates
+   - split broad notes by subsystem, decision, invariant, or runbook when they become merge hotspots
    - keep the overview and task-context notes short and avoid turning current-memory files into task trackers
    - ask whether a repeated note should instead become canonical docs, a skill, a script suggestion, a regression test suggestion, or a refactor suggestion
 8. If note names, roles, or routing changed, update `.agentic-workspace/memory/repo/index.md` and `.agentic-workspace/memory/repo/manifest.toml` in the same change when used.
@@ -41,6 +43,7 @@ It operates on checked-in memory files. It does not replace them.
 - Keep durable knowledge in checked-in files so the result stays visible and reviewable in git.
 - Preserve useful current guidance; remove only what no longer helps the next contributor.
 - Do not move durable repo knowledge into task tooling.
+- Do not treat Memory as multi-writer safe; resolve note conflicts semantically and split broad notes when conflict pressure repeats.
 - Mark uncertain notes `Needs verification` instead of guessing.
 - If memory keeps compensating for the same awkward subsystem or workflow, suggest the upstream improvement instead of only expanding the note.
 - Do not assume good hygiene means fewer notes in every repo; it means clearer, cheaper, better-justified notes and less dependence on memory for avoidable complexity.
