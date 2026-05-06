@@ -4476,6 +4476,30 @@ def _detect_workspace_absence_contradictions(*, target_root: Path, surfaces: lis
     return contradictions
 
 
+def _workspace_absence_startup_review(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
+    contradictions = _detect_workspace_absence_contradictions(
+        target_root=target_root,
+        surfaces=[config.agent_instructions_file, *config.detected_agent_instructions_files],
+    )
+    if not contradictions:
+        return {"status": "clean", "items": []}
+    items: list[dict[str, str]] = []
+    for contradiction in contradictions:
+        path, _, detail = contradiction.partition(": ")
+        items.append(
+            {
+                "path": path,
+                "issue": detail or contradiction,
+                "action": "reconcile stale no-workspace wording in repo-owned instructions after Agentic Workspace adoption",
+            }
+        )
+    return {
+        "status": "attention",
+        "items": items,
+        "rule": "Resolve contradictory no-workspace wording before relying on startup instructions.",
+    }
+
+
 def _without_workspace_workflow_fence(text: str) -> str:
     return re.sub(
         rf"{re.escape(WORKSPACE_WORKFLOW_MARKER_START)}.*?{re.escape(WORKSPACE_WORKFLOW_MARKER_END)}",
@@ -8547,6 +8571,19 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "requested_outcomes": task_intent.get("requested_outcomes", [])[:8],
             "implement_changed_command": task_intent.get("implement_changed_command"),
         }
+        for optional_key in (
+            "task_argument_mode",
+            "task_file",
+            "task_file_instruction",
+            "task_excerpt",
+            "task_digest",
+            "task_text_length",
+        ):
+            if optional_key in task_intent:
+                projected["task_intent"][optional_key] = task_intent[optional_key]
+    startup_review = payload.get("startup_review", {})
+    if isinstance(startup_review, dict) and startup_review.get("status") == "attention":
+        projected["startup_review"] = startup_review
     if "prep_only_handoff" in payload:
         projected["prep_only_handoff"] = payload["prep_only_handoff"]
     return projected
@@ -8765,6 +8802,9 @@ def _start_payload(
             cli_invoke=config.cli_invoke,
         ),
     }
+    startup_review = _workspace_absence_startup_review(target_root=target_root, config=config)
+    if startup_review["status"] == "attention":
+        payload["startup_review"] = startup_review
     task_intent = _task_intent_carry_forward_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if task_intent["status"] == "present":
         payload["task_intent"] = task_intent
@@ -8946,23 +8986,63 @@ def _extract_requested_outcomes(task_text: str | None) -> list[str]:
     return outcomes[:12]
 
 
+_TASK_INTENT_INLINE_COMMAND_MAX_CHARS = 240
+_TASK_INTENT_SCRATCH_FILE = WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "task-intent.txt"
+
+
 def _task_intent_carry_forward_payload(*, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
-    has_task = bool(str(task_text or "").strip())
-    requested_outcomes = _extract_requested_outcomes(task_text)
+    task = str(task_text or "").strip()
+    has_task = bool(task)
+    requested_outcomes = _extract_requested_outcomes(task)
     command = "agentic-workspace implement --profile tiny --changed <paths> --format json"
+    task_argument_mode = "absent"
+    optional: dict[str, Any] = {}
     if has_task:
-        command = f"agentic-workspace implement --profile tiny --changed <paths> --task {_shell_quote(str(task_text))} --format json"
+        if len(task) <= _TASK_INTENT_INLINE_COMMAND_MAX_CHARS:
+            task_argument_mode = "inline"
+            command = f"agentic-workspace implement --profile tiny --changed <paths> --task {_shell_quote(task)} --format json"
+        else:
+            task_argument_mode = "task-file"
+            task_file = _TASK_INTENT_SCRATCH_FILE.as_posix()
+            command = f"agentic-workspace implement --profile tiny --changed <paths> --task-file {task_file} --format json"
+            optional = {
+                "task_file": task_file,
+                "task_file_instruction": (
+                    "Write the original request once to this local scratch file, then pass --task-file instead of repeating "
+                    "the full task text in follow-up commands."
+                ),
+                "task_excerpt": task[:180].rstrip() + "...",
+                "task_digest": hashlib.sha256(task.encode("utf-8")).hexdigest()[:16],
+                "task_text_length": len(task),
+            }
     return {
         "kind": "agentic-workspace/task-intent-carry-forward/v1",
         "status": "present" if has_task else "absent",
         "carry_forward_rule": (
-            "Carry this task text into implement --changed so acceptance reconciliation and objective-drift checks use the original request."
+            "Carry the original task intent into implement --changed so acceptance reconciliation and objective-drift checks use the request."
         ),
         "task_text_available": has_task,
+        "task_argument_mode": task_argument_mode,
         "requested_outcomes": requested_outcomes,
         "implement_changed_command": _command_with_cli_invoke(command=command, cli_invoke=cli_invoke),
         "closeout_rule": "Before closeout, map requested outcomes to delivered surfaces and proof; self-authored tests alone are not enough.",
+        **optional,
     }
+
+
+def _read_task_text_from_file(*, target_root: Path, task_file: str | None) -> str | None:
+    if not task_file:
+        return None
+    raw_path = Path(task_file)
+    path = raw_path if raw_path.is_absolute() else target_root / raw_path
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(target_root.resolve())
+    except ValueError as exc:
+        raise WorkspaceUsageError("--task-file must resolve inside the target repository.") from exc
+    if not resolved.is_file():
+        raise WorkspaceUsageError(f"--task-file does not exist or is not a file: {task_file}")
+    return resolved.read_text(encoding="utf-8").strip()
 
 
 def _read_changed_surface_text(*, target_root: Path, changed_paths: list[str], max_bytes: int = 200_000) -> str:
@@ -14451,10 +14531,15 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
 def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="implement", target_root=target_root)
+    task_text = getattr(args, "task", None)
+    if task_text and getattr(args, "task_file", None):
+        raise WorkspaceUsageError("Use either --task or --task-file, not both.")
+    if not task_text:
+        task_text = _read_task_text_from_file(target_root=target_root, task_file=getattr(args, "task_file", None))
     payload = _implement_payload(
         target_root=target_root,
         changed_paths=list(getattr(args, "changed", []) or []),
-        task_text=getattr(args, "task", None),
+        task_text=task_text,
     )
     if getattr(args, "profile", "full") == "tiny":
         payload = _tiny_implement_payload(payload)

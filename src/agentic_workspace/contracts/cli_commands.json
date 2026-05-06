@@ -149,6 +149,13 @@
           "help": "Optional task text used to route broad external-work requests before implementation."
         },
         {
+          "name": "task_file",
+          "flags": [
+            "--task-file"
+          ],
+          "help": "Optional repo-local file containing task text; use this instead of repeating long task prompts."
+        },
+        {
           "name": "profile",
           "flags": [
             "--profile"

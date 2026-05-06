@@ -529,6 +529,13 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "task"
           },
           {
+            "flags": [
+              "--task-file"
+            ],
+            "help": "Optional repo-local file containing task text; use this instead of repeating long task prompts.",
+            "name": "task_file"
+          },
+          {
             "choices": [
               "full",
               "tiny"
@@ -1818,6 +1825,13 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Optional task text used to route broad external-work requests before implementation.",
           "name": "task"
+        },
+        {
+          "flags": [
+            "--task-file"
+          ],
+          "help": "Optional repo-local file containing task text; use this instead of repeating long task prompts.",
+          "name": "task_file"
         },
         {
           "choices": [

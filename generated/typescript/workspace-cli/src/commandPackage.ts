@@ -515,6 +515,13 @@ export const generatedCommandPackage = {
             "name": "task"
           },
           {
+            "flags": [
+              "--task-file"
+            ],
+            "help": "Optional repo-local file containing task text; use this instead of repeating long task prompts.",
+            "name": "task_file"
+          },
+          {
             "choices": [
               "full",
               "tiny"

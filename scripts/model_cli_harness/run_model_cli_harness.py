@@ -391,6 +391,42 @@ def _response_text(result: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
+def _scored_agent_response_text(result: dict[str, Any]) -> str:
+    """Return model-authored response text without command payload or injected prompt echoes."""
+    parts: list[str] = []
+    final_message = result.get("final_message")
+    if isinstance(final_message, str) and final_message.strip():
+        parts.append(_last_copilot_transcript_answer(final_message))
+    stdout = result.get("stdout")
+    if isinstance(stdout, str):
+        stripped = stdout.strip()
+        if stripped.startswith("{"):
+            try:
+                payload = json.loads(stripped)
+            except json.JSONDecodeError:
+                payload = None
+            if isinstance(payload, dict) and isinstance(payload.get("response"), str):
+                parts.append(payload["response"])
+        for line in stdout.splitlines():
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            if isinstance(event.get("response"), str):
+                parts.append(event["response"])
+            data = event.get("data")
+            if isinstance(data, dict) and isinstance(data.get("content"), str):
+                parts.append(data["content"])
+            message = event.get("message")
+            if isinstance(message, str):
+                parts.append(message)
+            elif isinstance(message, dict) and isinstance(message.get("content"), str):
+                parts.append(message["content"])
+    return "\n".join(part for part in parts if part.strip())
+
+
 def _full_response_text(result: dict[str, Any]) -> str:
     parts: list[str] = []
     for key in ("final_message", "stdout", "stderr"):
@@ -486,6 +522,16 @@ def _normalized_command_text(text: str) -> str:
     return normalized
 
 
+def _command_requirement_satisfied(*, required: str, executed_command_text: str) -> bool:
+    normalized_required = _normalized_command_text(required)
+    if normalized_required in executed_command_text:
+        return True
+    bare_required = re.sub(r"(?<!\S)uv\s+run\s+(?=agentic-workspace|agentic-planning|repo-planning|repo-memory)", "", normalized_required)
+    if bare_required != normalized_required and bare_required in executed_command_text:
+        return True
+    return False
+
+
 def _provider_did_not_run(result: dict[str, Any]) -> bool:
     returncode = result.get("returncode")
     stdout = str(result.get("stdout") or "").strip()
@@ -561,7 +607,7 @@ def _metadata_workflow_warnings(
 ) -> list[dict[str, str]]:
     scenario_id = str(scenario.get("id", "<unknown>"))
     changed_paths = _changed_paths(mutation_summary)
-    final_response_lower = _response_text(result).lower()
+    final_response_lower = _scored_agent_response_text(result).lower()
     full_response_lower = _full_response_text(result).lower()
     warnings: list[dict[str, str]] = []
     if _provider_did_not_run(result):
@@ -613,7 +659,7 @@ def _metadata_workflow_warnings(
         field="required_executed_commands",
         scenario_id=scenario_id,
     ):
-        if _normalized_command_text(required) not in executed_command_text:
+        if not _command_requirement_satisfied(required=required, executed_command_text=executed_command_text):
             if adapter_could_not_execute_workspace_command and "agentic-workspace" in required:
                 continue
             add("The agent did not execute a required command.", evidence=required)
@@ -622,7 +668,7 @@ def _metadata_workflow_warnings(
         field="forbidden_executed_commands",
         scenario_id=scenario_id,
     ):
-        if _normalized_command_text(forbidden) in executed_command_text:
+        if _command_requirement_satisfied(required=forbidden, executed_command_text=executed_command_text):
             add("The agent executed a command this scenario marks as avoidable or forbidden.", evidence=forbidden)
     if no_workspace_baseline and any(
         command in executed_command_text

@@ -902,6 +902,42 @@ def test_model_cli_harness_forbidden_response_phrases_ignore_tool_echo(tmp_path:
     assert not any("forbidden response phrase" in warning["message"] for warning in warnings)
 
 
+def test_model_cli_harness_forbidden_response_phrases_ignore_command_prompt_payload(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "AGENTS.md").write_text(
+        "# Agent Instructions\n\nThis repository does not use Agentic Workspace.\n",
+        encoding="utf-8",
+    )
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "plain-token-baseline",
+            "no_agentic_workspace_baseline": True,
+            "forbidden_response_phrases": ["agentic-workspace"],
+        },
+        result={
+            "stdout": json.dumps(
+                {
+                    "type": "item.completed",
+                    "item": {
+                        "type": "command_execution",
+                        "command": 'codex exec "This prompt mentions agentic-workspace only as injected fixture text."',
+                    },
+                }
+            ),
+            "final_message": "Updated README without using the workspace package.",
+            "stderr": "",
+            "returncode": 0,
+        },
+        mutation_summary={"status": "changed", "modified": ["README.md"]},
+        repo_path=repo,
+    )
+
+    assert not any("forbidden response phrase" in warning["message"] for warning in warnings)
+
+
 def test_model_cli_harness_metadata_scoring_distinguishes_command_mentions_from_execution(tmp_path: Path) -> None:
     harness = _load_harness()
     repo = tmp_path / "repo"
@@ -944,6 +980,35 @@ def test_model_cli_harness_metadata_scoring_distinguishes_command_mentions_from_
     )
 
     assert executed == []
+
+
+def test_model_cli_harness_accepts_configured_and_bare_workspace_command_equivalence(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "startup-orientation",
+            "required_executed_commands": ["uv run agentic-workspace start --profile tiny"],
+        },
+        result={
+            "stdout": json.dumps(
+                {
+                    "type": "item.completed",
+                    "item": {
+                        "type": "command_execution",
+                        "command": 'agentic-workspace start --profile tiny --task "Fix README" --format json',
+                    },
+                }
+            ),
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+        repo_path=repo,
+    )
+
+    assert warnings == []
 
 
 def test_model_cli_harness_counts_copilot_powershell_markdown_as_executed_command(tmp_path: Path) -> None:

@@ -7756,6 +7756,29 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert len(payload["authority_markers"]) == 1
 
 
+def test_start_tiny_compacts_long_task_carry_forward_command(capsys) -> None:
+    task = (
+        "Implement a deliberately long follow-up request that asks the agent to preserve acceptance reconciliation, "
+        "avoid repeating large prompts in every generated command, keep objective-drift checks connected to the original "
+        "task intent, and make the next command compact enough for weak model startup surfaces. "
+        "Also ensure closeout still maps requested outcomes to proof and delivered files."
+    )
+
+    assert cli.main(["start", "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    command = payload["task_intent"]["implement_changed_command"]
+    assert payload["task_intent"]["task_argument_mode"] == "task-file"
+    assert "--task-file .agentic-workspace/local/scratch/task-intent.txt" in command
+    assert "--task " not in command
+    assert task not in command
+    assert payload["task_intent"]["task_file"] == ".agentic-workspace/local/scratch/task-intent.txt"
+    assert "Write the original request once" in payload["task_intent"]["task_file_instruction"]
+    assert len(payload["task_intent"]["task_digest"]) == 16
+    assert payload["task_intent"]["task_text_length"] == len(task)
+    assert len(json.dumps(payload, sort_keys=True)) < 7200
+
+
 def test_start_tiny_routes_prep_only_handoff_to_planning_bridge(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -8185,6 +8208,35 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert "durable_intent" not in payload
     assert "inference_limits" not in payload
     assert len(encoded) < 4000
+
+
+def test_implement_task_file_preserves_task_intent_for_acceptance_checks(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "sample_app" / "text.py", "def normalize_cli_text(value):\n    return value.strip()\n")
+    task_file = tmp_path / ".agentic-workspace" / "local" / "scratch" / "task-intent.txt"
+    _write(task_file, "Implement normalize_whitespace(text) and sentence_summary(text)\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--task-file",
+                ".agentic-workspace/local/scratch/task-intent.txt",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["acceptance_reconciliation"]["task_text_available"] is True
+    assert payload["acceptance_reconciliation"]["requested_outcomes"] == ["normalize_whitespace", "sentence_summary"]
+    assert payload["objective_drift"]["missing_from_changed_surface"] == ["normalize_whitespace", "sentence_summary"]
 
 
 def test_implement_task_routes_broad_issue_ingestion_to_planning(tmp_path: Path, capsys) -> None:
@@ -9503,6 +9555,25 @@ def test_init_flags_preserved_agentic_workspace_absence_instructions(tmp_path: P
         item.startswith("AGENTS.md: preserved repo-owned instructions claim Agentic Workspace is absent")
         for item in payload["needs_review"]
     )
+
+
+def test_start_surfaces_preserved_agentic_workspace_absence_instructions(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "AGENTS.md",
+        "# Agent Instructions\n\nThis repository does not use Agentic Workspace. Work from ordinary files.\n",
+    )
+
+    assert cli.main(["init", "--target", str(tmp_path), "--preset", "full", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--profile", "tiny", "--task", "Orient and fix README", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["startup_review"]["status"] == "attention"
+    assert payload["startup_review"]["items"][0]["path"] == "AGENTS.md"
+    assert "claim Agentic Workspace is absent" in payload["startup_review"]["items"][0]["issue"]
+    assert "reconcile stale no-workspace wording" in payload["startup_review"]["items"][0]["action"]
 
 
 def test_doctor_json_does_not_report_dry_run_actions_as_mutations(monkeypatch, tmp_path: Path, capsys) -> None:
