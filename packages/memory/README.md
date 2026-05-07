@@ -8,6 +8,8 @@ Choose this package when you want a repository to keep durable, shared repo know
 
 Memory is intentional overhead. It pays back when the note an agent reads is cheaper than re-deriving the same invariant, trap, runbook, or subsystem boundary from code and chat history. It can be useful for solo work too: the handoff may be to a future session or a future agent rather than to another person.
 
+In the temporary-contributor mental model, Memory is the part of the repo that keeps expensive onboarding knowledge from being rediscovered every time a new session, tool, or branch picks up the work.
+
 Use it for:
 
 - invariants and authority boundaries

@@ -10,6 +10,8 @@ Use Planning when the current work itself is the fragile thing. Use Memory when 
 
 Planning is intentional overhead. It pays back when the next session, branch, or agent would otherwise have to reconstruct scope, proof expectations, blockers, or the difference between a completed slice and an unfinished larger intent.
 
+In the temporary-contributor mental model, Planning is the part of the repo that makes current work bounded and resumable: what is being attempted now, what proves it, where it must stop, and what the next contributor needs if the session ends first.
+
 ## What It Does
 
 Choose this package when you want active work in a repository to stay bounded, resumable, and finishable across fragmented sessions.
@@ -406,5 +408,4 @@ make check-planning
 ```
 
 Package checks run against the shared root workspace environment; the package directory is not a separate operational planning install in this monorepo.
-
 

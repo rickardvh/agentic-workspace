@@ -2,6 +2,8 @@
 
 Agentic Workspace is for repositories where agent work must survive time: multiple sessions, tools, branches, contributors, or non-trivial proof expectations. It adds a small repo-native operating layer so agents can preserve intent, recover context, validate changes, and hand off safely without relying on chat history.
 
+The simplest mental model is temporary technical contributors. Agents can move quickly, but they enter and leave a codebase with partial local context. Agentic Workspace gives the repo a small checked-in way to onboard them, bound their work, preserve useful lessons, and make handoff reviewable.
+
 ## Why Use It?
 
 Use Agentic Workspace when agent work keeps depending on context that disappears between sessions, tools, branches, or handoffs.
@@ -13,6 +15,14 @@ It is not zero-overhead productivity tooling. It adds small, intentional coordin
 - Active work can use checked-in Planning when continuity matters.
 - Proof, startup, and handoff routes become explicit and cheaper to rediscover.
 - Repeated friction can become a checked-in note, plan, doc, test, scaffold, or issue instead of staying tribal knowledge.
+
+In short:
+
+| Question | Agentic Workspace answer |
+| --- | --- |
+| Why does this exist? | Agent work loses intent, context, proof, and ownership when those live only in chat. |
+| What does it add? | A small repo-native operating layer for durable context, active work, startup routing, proof, and handoff. |
+| How does it help? | It makes the correct operating path cheaper than guessing, and makes recurring friction visible enough to improve the repo. |
 
 ## When It Pays Back
 

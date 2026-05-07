@@ -1,0 +1,146 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Codex review artifact routing gap",
+  "goal": [
+    "Capture the missed review-artifact step from the proof-routing review and preserve the five promoted findings as evidence."
+  ],
+  "scope": [
+    "Codex review workflow behavior for the proof-routing review",
+    "planning-review-pass skill routing for review-shaped requests",
+    "local-only integration opportunity for future Codex review turns"
+  ],
+  "non_goals": [
+    "Do not change proof-routing implementation in this artifact.",
+    "Do not make local Codex integration aids canonical workflow.",
+    "Do not add active planning items; the findings have already been promoted to GitHub issues."
+  ],
+  "review_mode": {
+    "mode": "skill-system",
+    "review question": "Should the proof-routing review have produced a checked-in review artifact, and what local Codex aid would reduce recurrence?",
+    "default finding cap": "3 findings",
+    "inputs inspected first": "AGENTS.md, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/reviews/README.md, .agentic-workspace/planning/skills/planning-review-pass/SKILL.md, .agentic-workspace/docs/agent-aids-storage.md"
+  },
+  "review_method": {
+    "commands used": "agentic-workspace start --profile tiny --task \"Check whether review skill routing should have produced a review artifact, and if useful create a local agent aid integrating Codex review workflow with review artifacts\" --format json; Get-Content .agentic-workspace/planning/skills/planning-review-pass/SKILL.md; Get-Content .agentic-workspace/docs/agent-aids-storage.md; Get-Content .agentic-workspace/planning/reviews/README.md; Get-Content .agentic-workspace/planning/reviews/TEMPLATE.review.json; Get-Content .agentic-workspace/planning/state.toml",
+    "evidence sources": "skill_routing preferred planning-review-pass for the review-shaped task; planning-review-pass requires writing findings into .agentic-workspace/planning/reviews; agent-aids storage routes runtime-specific helpers to .agentic-workspace/local/integrations/<vendor-or-runtime>/; the five proof-routing findings were promoted to GitHub issues #814-#818."
+  },
+  "references": [
+    {
+      "kind": "skill",
+      "target": ".agentic-workspace/planning/skills/planning-review-pass/SKILL.md",
+      "label": "planning-review-pass",
+      "role": "review artifact requirement",
+      "locator": "Operating Rules 1-6"
+    },
+    {
+      "kind": "contract",
+      "target": ".agentic-workspace/docs/agent-aids-storage.md",
+      "label": "agent aids storage",
+      "role": "local integration placement",
+      "locator": "Storage Classes / Local-Only"
+    },
+    {
+      "kind": "issues",
+      "target": "GitHub #814-#818",
+      "label": "promoted proof-routing findings",
+      "role": "promotion target",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/814"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Codex review output skipped the routed review artifact lane",
+      "summary": "The proof-routing behavior review produced inline findings and GitHub issues but did not first write the expected planning review artifact.",
+      "evidence": "The startup router recommended planning-review-pass for the follow-up task, and that skill states that bounded review findings should be written into .agentic-workspace/planning/reviews using the local template.",
+      "risk if unchanged": "Future Codex review turns may leave only chat-local findings or issue text, losing the repo-local evidence trail used for later promotion, retention, and cleanup.",
+      "suggested action": "For review-shaped requests that produce durable findings, Codex should create or update a compact .review.json artifact before or alongside issue promotion.",
+      "confidence": "high",
+      "source": "friction-confirmed",
+      "promotion target": "GitHub issue if recurrence continues after the local Codex integration aid is used",
+      "promotion trigger": "Another Codex review turn promotes findings or reports material review findings without creating a review artifact when planning-review-pass is routed.",
+      "post-remediation note shape": "shrink after the Codex local integration proves sufficient or a product-level routing fix supersedes it"
+    },
+    {
+      "title": "A local Codex review-artifact bridge is appropriate",
+      "summary": "The fix is runtime-specific to this Codex session behavior, so local-only integration storage is the right first home.",
+      "evidence": "agent-aids-storage.md says machine-specific or runtime-specific helpers belong under .agentic-workspace/local/integrations/<vendor-or-runtime>/ and must remain optional, ignored, and non-authoritative.",
+      "risk if unchanged": "The workflow lesson may remain implicit and require rediscovery on the next review-shaped Codex turn.",
+      "suggested action": "Add a local-only Codex review-artifact bridge note that tells Codex when to invoke planning-review-pass and what closeout fields to preserve.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "none now; checked-in candidate aid only after repeated value across agents or sessions",
+      "promotion trigger": "Promote only after repeated use shows this is repo-general rather than Codex-local behavior.",
+      "post-remediation note shape": "delete if unused; promote to checked-in candidate aid if repeated and portable"
+    }
+  ],
+  "recommendation": {
+    "promote": "Five original proof-routing findings were promoted to GitHub issues #814-#818.",
+    "defer": "Do not promote the Codex-local bridge to checked-in agent aids yet; keep it local-only until repeated use proves repo-general value.",
+    "dismiss": "No additional active planning item is needed now because the issues already own implementation follow-up."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "After GitHub issues #814-#818 are closed or the Codex local integration has either proven useful or been deleted.",
+    "proof surface": "GitHub #814-#818 plus .agentic-workspace/local/integrations/codex/review-artifact-bridge/README.md for local runtime behavior.",
+    "source retention rule": "Store decision, confidence, source refs, and reopen/promote triggers; do not copy issue titles, current status snapshots, long command output, or source summaries unless the copied text is the judgment itself.",
+    "distillation path": "When decisions are promoted into issues, planning state, Memory, docs, contracts, or checks, keep this artifact as evidence/history and remove or summarize reconstructable source context at the next cleanup.",
+    "reconstructable refs": [
+      "GitHub #814-#818",
+      ".agentic-workspace/local/integrations/codex/review-artifact-bridge/README.md",
+      ".agentic-workspace/planning/skills/planning-review-pass/SKILL.md"
+    ],
+    "fields intentionally omitted": [
+      "issue titles",
+      "current status snapshots",
+      "long command output",
+      "source-history summaries"
+    ]
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "git diff --check -- .agentic-workspace/planning/reviews/codex-review-artifact-routing-2026-05-07.review.json"
+  ],
+  "drift_log": [
+    "2026-05-07: Review created after maintainer noted Codex should have written a review artifact before promoting findings."
+  ]
+}
