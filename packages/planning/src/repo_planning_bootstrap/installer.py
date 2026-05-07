@@ -2613,16 +2613,28 @@ def _roadmap_ordered_batch_guidance(*, roadmap_lanes: list[dict[str, Any]], road
         )
     if not items:
         for index, candidate in enumerate(roadmap_candidates, start=1):
-            summary = str(candidate.get("summary", "")).strip()
+            title = str(candidate.get("title") or candidate.get("summary") or "").strip()
+            candidate_id = str(candidate.get("id", "")).strip()
+            issue_refs = []
+            raw_refs = candidate.get("refs", "")
+            if isinstance(raw_refs, list):
+                issue_refs.extend(str(ref).strip() for ref in raw_refs if str(ref).strip())
+            elif str(raw_refs).strip():
+                issue_refs.extend(_issue_refs_from_text(str(raw_refs)))
+            issue_refs.extend(_issue_refs_from_text(title))
             items.append(
                 {
                     "order": index,
-                    "id": "",
-                    "title": summary,
+                    "id": candidate_id,
+                    "title": title or candidate_id,
                     "priority": str(candidate.get("priority", "")).strip(),
-                    "issues": sorted(_issue_refs_from_text(summary)),
-                    "suggested_first_slice": "",
-                    "promotion_command": "agentic-planning new-plan --id <id> --title <title> --target . --activate --format json",
+                    "issues": sorted(set(issue_refs)),
+                    "suggested_first_slice": str(candidate.get("suggested_first_slice", "")).strip(),
+                    "promotion_command": (
+                        f"agentic-planning promote-to-plan {candidate_id} --target . --format json"
+                        if candidate_id
+                        else "agentic-planning new-plan --id <id> --title <title> --target . --activate --format json"
+                    ),
                 }
             )
     return {

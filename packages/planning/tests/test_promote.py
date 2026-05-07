@@ -729,6 +729,38 @@ candidates = []
     assert summary["execution_readiness"]["recommendation"]["ordered_batch"]["items"][0]["issues"] == ["#1"]
 
 
+def test_planning_summary_ordered_batch_uses_state_candidate_identity(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-824-typescript-weak-agent-safe-root", maturity = "candidate", status = "deferred", priority = "P2", refs = "GitHub #824", title = "Define weak-agent-safe promotion criteria for the root TypeScript adapter", promotion_signal = "Promote after read-only conformance is stable.", suggested_first_slice = "Add IR criteria and generated-package proof." },
+]
+""",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    batch = summary["execution_readiness"]["ordered_batch"]
+
+    assert batch["status"] == "present"
+    assert batch["items"][0]["id"] == "github-824-typescript-weak-agent-safe-root"
+    assert batch["items"][0]["title"] == "Define weak-agent-safe promotion criteria for the root TypeScript adapter"
+    assert batch["items"][0]["issues"] == ["#824"]
+    assert batch["items"][0]["promotion_command"].endswith(
+        "promote-to-plan github-824-typescript-weak-agent-safe-root --target . --format json"
+    )
+
+
 def test_finished_work_inspection_treats_state_roadmap_owner_as_routed_continuation(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
