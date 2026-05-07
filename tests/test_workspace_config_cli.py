@@ -227,6 +227,7 @@ safe_to_auto_run_commands = false
     payload = json.loads(output)
     assert payload["kind"] == "agentic-workspace/config-compact/v1"
     assert payload["profile"] == "compact"
+    assert payload["warnings"] == []
     assert payload["target"] == "."
     assert payload["config_path"] == ".agentic-workspace/config.toml"
     assert "mixed_agent" not in payload
@@ -287,6 +288,7 @@ requires_human_verification_on_pr = true
     payload = json.loads(output)
     assert payload["kind"] == "agentic-workspace/config-tiny/v1"
     assert payload["profile"] == "tiny"
+    assert not any("clarification" in warning for warning in payload["warnings"])
     assert payload["workspace"]["agent_instructions_file"] == "AGENTS.md"
     assert payload["workspace"]["improvement_latitude"] == "reporting"
     assert payload["workspace"]["optimization_bias"] == "agent-efficiency"

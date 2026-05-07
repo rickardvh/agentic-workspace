@@ -1018,7 +1018,18 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         )
 
     unknown_top_level = sorted(
-        set(payload) - {"schema_version", "workspace", "runtime", "handoff", "safety", "delegation", "local_memory", "delegation_targets"}
+        set(payload)
+        - {
+            "schema_version",
+            "workspace",
+            "runtime",
+            "handoff",
+            "safety",
+            "delegation",
+            "clarification",
+            "local_memory",
+            "delegation_targets",
+        }
     )
     if unknown_top_level:
         unknown_text = ", ".join(unknown_top_level)

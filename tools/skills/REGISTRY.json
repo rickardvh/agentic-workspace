@@ -84,6 +84,19 @@
           "system-intent follow-through"
         ]
       }
+    },
+    {
+      "id": "github-issue-creation",
+      "path": "github-issue-creation/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "create GitHub issues from repo issue templates with correct fields, labels, and refresh/reconcile follow-through",
+      "activation_hints": {
+        "verbs": ["create", "file", "open"],
+        "nouns": ["github issue", "issue template", "tracker issue", "dogfooding finding", "review finding"],
+        "phrases": ["create github issue", "file an issue", "open tracker issue", "issue template", "create issues"],
+        "when": ["creating external tracker items", "turning findings into GitHub issues", "filing dogfooding friction"]
+      }
     }
   ]
 }

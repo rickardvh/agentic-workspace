@@ -1,0 +1,165 @@
+{
+  "kind": "planning-review/v1",
+  "title": "TypeScript command generation next-stage review",
+  "goal": [
+    "Identify the next bounded stage of work for generated TypeScript command packages."
+  ],
+  "scope": [
+    "TypeScript command-package generation, generated TypeScript outputs, and generated-package proof/conformance checks."
+  ],
+  "non_goals": [
+    "Do not implement TypeScript generation changes in this review pass.",
+    "Do not promote findings into active planning or create new issues automatically.",
+    "Do not review unrelated generated Python relocation work beyond noting that #661 already owns it."
+  ],
+  "review_mode": {
+    "mode": "generated-surface-trust",
+    "review question": "What is the next evidence-backed stage for TypeScript command generation after the current root runnable adapter and package metadata fixtures?",
+    "default finding cap": "2 findings; exceeded to 3 because the package promotion, weak-agent safety, and conformance-harness gaps are distinct next-stage gates.",
+    "inputs inspected first": "AGENTS.md; .agentic-workspace/planning/state.toml; packages/command-generation/README.md; src/agentic_workspace/contracts/command_package_ir.json; packages/command-generation/src/agentic_command_generation/generator.py; generated/typescript/*; scripts/check/check_generated_command_packages.py"
+  },
+  "review_method": {
+    "commands used": "git status --short; rg -n \"typescript|commandPackage|generated/typescript|generate.*typescript|node|npm|tsc|vitest|conformance\" scripts src generated packages tests .agentic-workspace -S; gh issue list --repo rickardvh/agentic-workspace --state open --limit 20 --json number,title,labels,url; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "evidence sources": "Static review of command-package IR maturity policy, TypeScript generator, generated root/planning/memory package metadata, generated root CLI handoff, and the generated-package checker; local generated-package static proof and Node conformance passed."
+  },
+  "references": [
+    {
+      "kind": "contract",
+      "target": "src/agentic_workspace/contracts/command_package_ir.json",
+      "label": "command package IR",
+      "role": "canonical TypeScript package maturity and command truth",
+      "locator": "generation_policy.generated_package_maturity; packages[].targets"
+    },
+    {
+      "kind": "source",
+      "target": "packages/command-generation/src/agentic_command_generation/generator.py",
+      "label": "TypeScript renderer",
+      "role": "generated TypeScript package and CLI output",
+      "locator": "_is_runnable_typescript_target; _typescript_cli_module; _typescript_test"
+    },
+    {
+      "kind": "check",
+      "target": "scripts/check/check_generated_command_packages.py",
+      "label": "generated command package check",
+      "role": "freshness/static/conformance proof",
+      "locator": "_run_adapter_conformance; _validate_static_surfaces"
+    },
+    {
+      "kind": "generated",
+      "target": "generated/typescript/",
+      "label": "generated TypeScript outputs",
+      "role": "current generated package state",
+      "locator": "workspace-cli, planning-cli, memory-cli"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Promote package TypeScript targets from metadata fixtures to runnable read-only adapters",
+      "summary": "Planning and Memory TypeScript packages are generated only as metadata proof fixtures, while root workspace TypeScript is already a runnable read-only adapter.",
+      "evidence": "generated/typescript/planning-cli/package.json and generated/typescript/memory-cli/package.json both set fixtureOnly true, omit bin, and use maturity id metadata-proof-fixture; generated/typescript/workspace-cli/package.json sets fixtureOnly false, declares bin, and uses runnable-read-only-adapter.",
+      "risk if unchanged": "The TypeScript generation lane remains root-only for real invocation, so package-local agent workflows cannot dogfood non-Python read-only adapters and package command generation maturity cannot advance evenly.",
+      "suggested action": "Create a bounded lane to promote planning-cli and memory-cli TypeScript targets to runnable-read-only-adapter for their read-only generated commands, with package-specific process handoff defaults and local/Docker conformance.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": "roadmap or new GitHub issue for TypeScript package read-only runnable adapters",
+      "promotion trigger": "Promote when TypeScript generation work resumes or when package-local non-Python adapters are needed for dogfooding.",
+      "post-remediation note shape": "shrink to a short reference once package TypeScript targets become runnable and conformance-backed"
+    },
+    {
+      "title": "Root TypeScript adapter is runnable but not yet weak-agent safe",
+      "summary": "The current root TypeScript CLI delegates supported commands to the canonical Python process, but the maturity policy still marks weak-agent routing as review-required rather than allowed.",
+      "evidence": "generated/typescript/workspace-cli/src/cli.mjs whitelists command names and hands argv to AGENTIC_WORKSPACE_RUNTIME or python -m agentic_workspace.cli; the root TypeScript target maturity is runnable-read-only-adapter with weak_agent_routing review-required.",
+      "risk if unchanged": "Agents can technically invoke the generated TypeScript adapter, but the product cannot honestly route weak agents to it as a safe default because help, recovery guidance, and off-happy-path behavior are not yet proven as weak-agent safe.",
+      "suggested action": "After package runnable promotion or in a separate root-only lane, define and prove the weak-agent-safe-adapter promotion criteria for root TypeScript: help shape, unsupported-command recovery, runtime failure mapping, and proof output that explicitly advertises the routing status.",
+      "confidence": "medium",
+      "source": "static-analysis",
+      "promotion target": "roadmap or new GitHub issue for weak-agent-safe TypeScript root adapter promotion",
+      "promotion trigger": "Promote after read-only conformance is stable enough that weak-agent routing would reduce operating cost without reducing safety.",
+      "post-remediation note shape": "delete after weak-agent-safe status is encoded in IR and checked by generated-package proof"
+    },
+    {
+      "title": "Conformance coverage is manually mirrored instead of derived from command conformance refs",
+      "summary": "The generated-package conformance checker hardcodes selected command cases and output-field projections instead of deriving coverage from command_package_ir conformance_refs.",
+      "evidence": "scripts/check/check_generated_command_packages.py defines many _selected_* helpers and compare_adapter calls for individual commands, while command_package_ir.json already lists conformance_refs for generated commands.",
+      "risk if unchanged": "Each promoted TypeScript command or package target requires manual checker edits, which increases drift risk and makes the next generation stage more expensive than the IR contract implies.",
+      "suggested action": "Create a contract-driven conformance harness that enumerates generated commands and selected process fixtures from conformance_refs, leaving only command-specific selected-field extractors where truly necessary.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": "roadmap or new GitHub issue for contract-derived generated TypeScript conformance",
+      "promotion trigger": "Promote before broadening runnable TypeScript packages beyond the current root command set.",
+      "post-remediation note shape": "shrink after the checker consumes conformance refs directly"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote the next executable TypeScript generation stage as package TypeScript runnable read-only adapters, with conformance-harness derivation either included as the first milestone or split as a prerequisite if scope needs to stay smaller.",
+    "defer": "Defer weak-agent-safe root routing until runnable read-only conformance is less manual and package targets are no longer metadata-only.",
+    "dismiss": "Do not use #661 for this work; it is specifically about relocating generated Python adapters after landing, not advancing TypeScript maturity."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "After the next TypeScript generation lane is promoted or explicitly declined.",
+    "proof surface": "Generated-package IR maturity fields, generated/typescript package metadata, scripts/check/check_generated_command_packages.py, and generated-package conformance output.",
+    "source retention rule": "Store decision, confidence, source refs, and reopen/promote triggers; do not copy issue titles, current status snapshots, long command output, or source summaries unless the copied text is the judgment itself.",
+    "distillation path": "When decisions are promoted into issues, planning state, Memory, docs, contracts, or checks, keep this artifact as evidence/history and remove or summarize reconstructable source context at the next cleanup.",
+    "reconstructable refs": [
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "packages/command-generation/src/agentic_command_generation/generator.py",
+      "scripts/check/check_generated_command_packages.py",
+      "generated/typescript/"
+    ],
+    "fields intentionally omitted": [
+      "full command-package IR dump",
+      "full generated TypeScript package source",
+      "long conformance command output",
+      "current GitHub status snapshots"
+    ]
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "drift_log": [
+    "2026-05-07: Review created from maintainer request to identify the next TypeScript code-generation stage."
+  ]
+}

@@ -10290,7 +10290,7 @@ def _file_reference_candidates(text: str) -> list[str]:
         raw = token[0] or token[1]
         if _looks_like_markup_tag(raw):
             continue
-        value = raw.strip().strip("\"'()[]{}<>.,")
+        value = _strip_file_reference_token(raw)
         if not value or "://" in value or value.startswith("-"):
             continue
         normalized = value.replace("\\", "/")
@@ -10300,6 +10300,13 @@ def _file_reference_candidates(text: str) -> list[str]:
         if suffix in _FILE_REFERENCE_SUFFIXES or "/" in normalized:
             candidates.append(normalized)
     return _dedupe(candidates)
+
+
+def _strip_file_reference_token(raw: str) -> str:
+    value = raw.strip()
+    value = value.lstrip("\"'([{<")
+    value = value.rstrip("\"')]}>.,")
+    return value
 
 
 def _looks_like_markup_tag(token: str) -> bool:

@@ -1,0 +1,39 @@
+{
+  "kind": "agentic-workspace/agent-aid/v1",
+  "id": "github-issue-body",
+  "type": "script",
+  "status": "candidate",
+  "scope": "repo-shared",
+  "portability": "cross-platform",
+  "proof_role": "advisory-helper",
+  "owner": "workspace",
+  "created_because": "Agents bypassed the repo GitHub issue templates when creating issues from review findings.",
+  "use_when": [
+    "creating GitHub issues from review findings, dogfooding friction, bugs, or planning follow-ups"
+  ],
+  "entrypoint": ".agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py",
+  "safety": {
+    "read_only": true,
+    "writes_repo": false,
+    "destructive": false,
+    "network": false,
+    "hidden_required_workflow": false,
+    "requires_review": false
+  },
+  "validation": {
+    "commands": [
+      "uv run python .agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py --kind direction --field problem_intent=Example --field intended_outcome=Example --field larger_picture=Example --field scope=Example --field acceptance=Example --format json"
+    ]
+  },
+  "promotion": {
+    "target_kind": "command",
+    "target": "agentic-workspace issue-body",
+    "discovery_route": "repo-command",
+    "trigger": "promote if issue-template body generation proves useful outside this repo or becomes part of external-intent workflows",
+    "retention_after_promotion": "delete"
+  },
+  "retirement": {
+    "trigger": "retire when issue creation is handled by a canonical package or GitHub connector flow",
+    "retention_after_retirement": "delete"
+  }
+}
