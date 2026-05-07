@@ -28,11 +28,11 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
         "src/agentic_workspace/cli.py",
     ]
     assert payload["required_validation_commands"] == [
-        "cd packages/planning && uv run pytest tests/test_installer.py",
-        "cd packages/planning && uv run ruff check .",
-        "uv run pytest tests -q",
-        "uv run ruff check src tests",
-        "agentic-workspace defaults --section root_cli_authority --format json",
+        "make test-planning",
+        "make lint-planning",
+        "make test-workspace",
+        "make lint-workspace",
+        "uv run agentic-workspace defaults --section root_cli_authority --format json",
         "uv run pytest tests/test_workspace_cli.py -q",
     ]
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
@@ -88,11 +88,11 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert adaptive["detail_commands"]["task_scoped_state"].startswith("agentic-workspace summary --profile compact")
     assert "raw workspace files" in adaptive["not_needed_now"]
     assert payload["next"]["action"] == "Inspect only the listed files and run the required validation commands."
-    assert payload["next"]["command"] == "uv run pytest tests -q"
+    assert payload["next"]["command"] == "make test-workspace"
     assert payload["next"]["run"] == payload["next"]["command"]
-    assert "uv run ruff check src tests" in payload["next"]["commands"]
+    assert "make lint-workspace" in payload["next"]["commands"]
     assert payload["scope"]["inspect_files"] == ["src/agentic_workspace/cli.py"]
-    assert "uv run pytest tests -q" in payload["proof"]["required_commands"]
+    assert "make test-workspace" in payload["proof"]["required_commands"]
     assert payload["routing"]["work_shape"] == "bounded"
     assert payload["delegation_decision"]["status"] == "evaluated"
     assert payload["delegation_decision"]["mode"] == "suggest"

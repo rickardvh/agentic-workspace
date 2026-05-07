@@ -13,6 +13,15 @@ Rules for selecting validation lanes from changed paths and task scope.
 | (root) | object | yes |  | Rules for selecting validation lanes from changed paths and task scope. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `schema_version` | const `"agentic-workspace/proof-selection-rules/v1"` | yes |  | Contract version for this document. |  |  |
 | `rules` | array of object | yes |  | Policy rules that explain this contract behavior. |  |  |
+| `lane_proof_kinds` | object | no |  | Optional proof-kind classifications keyed by validation lane id. |  |  |
+| `lane_proof_kinds.<name>` | enum `"diff-review"`, `"surface-check"`, `"targeted-test"`, `"full-test"` | no |  | Proof kind for one validation lane. |  |  |
+| `docs_only_reducer` | object | no |  | Second-stage classifier that can downgrade docs-only path-prefix matches to review proof. |  |  |
+| `docs_only_reducer.lane` | string | yes |  | Lane to use after reducing an eligible docs-only match. |  |  |
+| `docs_only_reducer.source_lanes` | array of string | yes |  | Matched lanes that may be reduced when the changed path is docs-only. |  |  |
+| `docs_only_reducer.extensions` | array of string | yes |  | File extensions eligible for docs-only reduction. |  |  |
+| `docs_only_reducer.exact` | array of string | no |  | Exact repo-relative paths eligible for docs-only reduction. |  |  |
+| `docs_only_reducer.prefixes` | array of string | no |  | Repo-relative prefixes eligible for docs-only reduction. |  |  |
+| `docs_only_reducer.rule` | string | no |  | Human-readable reduction policy. |  |  |
 | `fallback_lane` | string | yes |  | Fallback lane text value used by this contract. |  |  |
 | `cross_lane_escalation` | string | yes |  | Cross lane escalation text value used by this contract. |  |  |
 | `cli_authority` | object | no |  | Cli authority details used by this contract. |  |  |

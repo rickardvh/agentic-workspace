@@ -112,12 +112,12 @@ def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> No
     answer = payload["answer"]
     assert answer["kind"] == "proof-selection/v1"
     assert answer["selected_lanes"][0]["id"] == "planning_surfaces"
-    assert answer["required_commands"] == ["agentic-workspace doctor --target ./repo --modules planning --format json"]
+    assert answer["required_commands"] == ["uv run agentic-workspace doctor --target ./repo --modules planning --format json"]
     assert answer["validation_plan"]["kind"] == "validation-plan/v1"
     assert answer["validation_plan"]["status"] == "inspect-before-run"
     first_step = answer["validation_plan"]["required"][0]
     assert first_step["order"] == 1
-    assert first_step["command"] == "agentic-workspace doctor --target ./repo --modules planning --format json"
+    assert first_step["command"] == "uv run agentic-workspace doctor --target ./repo --modules planning --format json"
     assert first_step["cwd"] == "."
     assert first_step["run"].endswith("agentic-workspace doctor --target ./repo --modules planning --format json")
     assert first_step["required"] is True
@@ -153,8 +153,8 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert payload["kind"] == "proof-next-decision/v1"
     assert payload["selector"] == {"changed": ["src/agentic_workspace/cli.py"]}
     assert payload["next"]["action"] == "run-validation-command"
-    assert payload["next"]["command"] == "uv run pytest tests -q"
-    assert "uv run ruff check src tests" in payload["required_commands"]
+    assert payload["next"]["command"] == "make test-workspace"
+    assert "make lint-workspace" in payload["required_commands"]
     assert payload["warnings"] == []
     assert "answer" not in payload
     assert "selected_lanes" not in encoded
@@ -187,7 +187,7 @@ def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, 
 
     payload = json.loads(capsys.readouterr().out)
     step = payload["answer"]["validation_plan"]["required"][0]
-    assert step["command"] == "agentic-workspace doctor --target ./repo --modules planning --format json"
+    assert step["command"] == "uv run agentic-workspace doctor --target ./repo --modules planning --format json"
     assert step["run"] == "uv run agentic-workspace doctor --target ./repo --modules planning --format json"
 
 
@@ -416,7 +416,7 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
         "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
         "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
         "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
-        "agentic-workspace defaults --section root_cli_authority --format json",
+        "uv run agentic-workspace defaults --section root_cli_authority --format json",
     ]
     assert [step["lane_id"] for step in answer["validation_plan"]["required"]] == [
         "generated_command_packages",
@@ -496,10 +496,66 @@ def test_proof_changed_selector_routes_readme_to_docs_review(capsys) -> None:
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
+    docs_diff = "git diff -- README.md docs packages/planning/README.md packages/memory/README.md packages/command-generation/README.md"
     assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review"]
-    assert answer["required_commands"] == ["git diff -- README.md docs"]
+    assert answer["selected_lanes"][0]["proof_kind"] == "diff-review"
+    assert answer["required_commands"] == [docs_diff]
     assert "uv run pytest tests -q" not in answer["required_commands"]
     assert answer["surface_value_review"]["reviewed_paths"][0]["surface_class"] == "adapter_or_repo_intent_surface"
+
+
+def test_proof_changed_selector_routes_package_readmes_to_docs_review(capsys) -> None:
+    assert cli.main(["proof", "--profile", "full", "--changed", "packages/planning/README.md", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review"]
+    assert answer["selected_lanes"][0]["proof_kind"] == "diff-review"
+    assert "make test-planning" not in answer["required_commands"]
+    assert "git diff -- README.md docs" in answer["required_commands"][0]
+
+
+def test_proof_changed_selector_reduces_package_docs_prefix_to_review(capsys) -> None:
+    assert cli.main(["proof", "--profile", "full", "--changed", "packages/planning/docs/usage.md", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review"]
+    assert answer["routing_reductions"] == [
+        {
+            "path": "packages/planning/docs/usage.md",
+            "from_lane": "planning_package",
+            "to_lane": "repo_docs_review",
+            "reason": (
+                "Markdown-only package documentation edits use review proof unless behavior, generated payload, install contracts, "
+                "or implementation semantics also changed."
+            ),
+        }
+    ]
+
+
+def test_proof_changed_selector_does_not_escalate_review_only_cross_lane_changes(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--profile",
+                "full",
+                "--changed",
+                "packages/planning/README.md",
+                "src/agentic_workspace/contracts/proof_selection_rules.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review", "contract_tooling"]
+    assert {lane["proof_kind"] for lane in answer["selected_lanes"]} == {"diff-review", "surface-check"}
+    assert not answer["escalate_when"] or not answer["escalate_when"][0].startswith("changed paths span multiple validation lanes")
 
 
 def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> None:
@@ -507,9 +563,10 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload)
+    docs_diff = "git diff -- README.md docs packages/planning/README.md packages/memory/README.md packages/command-generation/README.md"
     assert payload["kind"] == "proof-next-decision/v1"
-    assert payload["next"]["command"] == "git diff -- README.md docs"
-    assert payload["required_commands"] == ["git diff -- README.md docs"]
+    assert payload["next"]["command"] == docs_diff
+    assert payload["required_commands"] == [docs_diff]
     assert "uv run pytest tests -q" not in encoded
     assert len(encoded) < 2500
 
@@ -567,7 +624,7 @@ def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> No
         "subsystem:workspace-cli-runtime",
     ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
-    assert "uv run pytest tests -q" in answer["required_commands"]
+    assert "make test-workspace" in answer["required_commands"]
 
 
 def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None:
@@ -597,9 +654,9 @@ def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None
     ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
     package_step = answer["validation_plan"]["required"][0]
-    assert package_step["command"] == "cd packages/planning && uv run pytest tests/test_installer.py"
-    assert package_step["cwd"] == "packages/planning"
-    assert package_step["run"] == "uv run pytest tests/test_installer.py"
+    assert package_step["command"] == "make test-planning"
+    assert package_step["cwd"] == "."
+    assert package_step["run"] == "make test-planning"
     assert package_step["lane_id"] == "planning_package"
 
 

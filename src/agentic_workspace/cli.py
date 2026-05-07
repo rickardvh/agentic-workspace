@@ -10125,13 +10125,18 @@ _TASK_STOPWORDS = {
 
 
 def _cli_invocation_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
-    return {
+    payload = {
         "kind": "agentic-workspace/cli-invocation/v1",
         "primary": config.cli_invoke,
         "source": config.cli_invoke_source,
         "bare_command": DEFAULT_CLI_INVOKE,
-        "fallback_when_unavailable": "If not on PATH, use primary or config.local.toml [workspace].cli_invoke.",
+        "fallback_when_unavailable": "Use primary from resolved config; config.local.toml [workspace].cli_invoke overrides bare PATH lookup.",
     }
+    if config.cli_invoke != DEFAULT_CLI_INVOKE:
+        payload["stale_bare_command_warning"] = (
+            "Do not substitute the bare command for primary; PATH may resolve a stale installed selector outside this repo."
+        )
+    return payload
 
 
 def _extract_requested_outcomes(task_text: str | None) -> list[str]:
@@ -14218,8 +14223,9 @@ def _defaults_payload() -> dict[str, Any]:
                 "the trust question is whether the docs diff satisfies the requested outcome without adding misleading guidance",
             ],
             "enough_proof": [
-                "git diff -- README.md docs",
+                "git diff -- README.md docs packages/planning/README.md packages/memory/README.md packages/command-generation/README.md",
             ],
+            "proof_kind": "diff-review",
             "broaden_when": [
                 "the docs change updates generated maintainer surfaces, schema reference docs, or package payloads",
                 "the docs change describes behavior whose implementation also changed or needs executable proof",
@@ -14240,9 +14246,10 @@ def _defaults_payload() -> dict[str, Any]:
                 "root src/agentic_workspace changes",
             ],
             "enough_proof": [
-                "uv run pytest tests -q",
-                "uv run ruff check src tests",
+                "make test-workspace",
+                "make lint-workspace",
             ],
+            "proof_kind": "targeted-test",
             "broaden_when": [
                 "the change also touches generated maintainer docs",
                 "the change also touches installed package payloads or shared orchestration boundaries",
@@ -14262,9 +14269,10 @@ def _defaults_payload() -> dict[str, Any]:
                 "the behavior remains inside packages/planning",
             ],
             "enough_proof": [
-                "cd packages/planning && uv run pytest tests/test_installer.py",
-                "cd packages/planning && uv run ruff check .",
+                "make test-planning",
+                "make lint-planning",
             ],
+            "proof_kind": "targeted-test",
             "broaden_when": [
                 "the change also touches root workspace orchestration",
                 "the change also affects generated maintainer surfaces or installed contract boundaries",
@@ -14281,9 +14289,10 @@ def _defaults_payload() -> dict[str, Any]:
                 "the behavior remains inside packages/memory",
             ],
             "enough_proof": [
-                "cd packages/memory && uv run pytest tests/test_installer.py",
-                "cd packages/memory && uv run ruff check .",
+                "make test-memory",
+                "make lint-memory",
             ],
+            "proof_kind": "targeted-test",
             "broaden_when": [
                 "the change also touches root workspace orchestration",
                 "the change also affects generated maintainer surfaces or installed contract boundaries",
@@ -15139,9 +15148,9 @@ def _defaults_payload() -> dict[str, Any]:
                 ],
             },
             "default_routes": {
-                "workspace_cli": "uv run pytest tests -q",
-                "planning_package": "cd packages/planning && uv run pytest tests/test_installer.py",
-                "memory_package": "cd packages/memory && uv run pytest tests/test_installer.py",
+                "workspace_cli": "make test-workspace",
+                "planning_package": "make test-planning",
+                "memory_package": "make test-memory",
                 "maintainer_surfaces": "make maintainer-surfaces",
             },
             "lanes": validation_lanes,
@@ -16299,6 +16308,41 @@ def _validation_plan_for_proof(
     }
 
 
+def _proof_kind_for_lane(lane: dict[str, Any]) -> str:
+    explicit = str(lane.get("proof_kind", "")).strip()
+    if explicit:
+        return explicit
+    lane_id = str(lane.get("id", "")).strip()
+    configured = _PROOF_SELECTION_RULES.get("lane_proof_kinds", {})
+    if isinstance(configured, dict):
+        value = str(configured.get(lane_id, "")).strip()
+        if value:
+            return value
+    if str(lane_id).startswith("concern:"):
+        return "targeted-test"
+    if str(lane_id).startswith("subsystem:"):
+        return "targeted-test"
+    return "targeted-test"
+
+
+def _docs_only_reduction_lane(*, changed_path: str, matched_lane: str) -> str | None:
+    reducer = _PROOF_SELECTION_RULES.get("docs_only_reducer", {})
+    if not isinstance(reducer, dict):
+        return None
+    source_lanes = {str(item) for item in reducer.get("source_lanes", [])}
+    if matched_lane not in source_lanes:
+        return None
+    extensions = tuple(str(item) for item in reducer.get("extensions", []) if str(item).strip())
+    if extensions and not changed_path.endswith(extensions):
+        return None
+    exact = {str(item) for item in reducer.get("exact", [])}
+    prefixes = tuple(str(item) for item in reducer.get("prefixes", []) if str(item).strip())
+    if changed_path in exact or (prefixes and changed_path.startswith(prefixes)):
+        reduced_lane = str(reducer.get("lane", "")).strip()
+        return reduced_lane or None
+    return None
+
+
 def _active_planning_assurance_for_proof(*, target_root: Path | None) -> dict[str, Any]:
     if target_root is None:
         return {"status": "unavailable", "reason": "requires a target root"}
@@ -16503,6 +16547,7 @@ def _proof_selection_for_changed_paths(
         return next(lane for lane in validation_lanes if lane["id"] == lane_id)
 
     selected_ids: list[str] = []
+    routing_reductions: list[dict[str, str]] = []
 
     def _select(lane_id: str) -> None:
         if lane_id not in selected_ids:
@@ -16514,7 +16559,18 @@ def _proof_selection_for_changed_paths(
             exact_matches = set(rule.get("exact", []))
             prefixes = tuple(rule.get("prefixes", []))
             if changed_path in exact_matches or changed_path.startswith(prefixes):
-                _select(str(rule["lane"]))
+                matched_lane = str(rule["lane"])
+                selected_lane = _docs_only_reduction_lane(changed_path=changed_path, matched_lane=matched_lane) or matched_lane
+                if selected_lane != matched_lane:
+                    routing_reductions.append(
+                        {
+                            "path": changed_path,
+                            "from_lane": matched_lane,
+                            "to_lane": selected_lane,
+                            "reason": str(_PROOF_SELECTION_RULES.get("docs_only_reducer", {}).get("rule", "")),
+                        }
+                    )
+                _select(selected_lane)
                 matched_rule = True
                 break
         if not matched_rule:
@@ -16567,6 +16623,11 @@ def _proof_selection_for_changed_paths(
                 }
             )
     selected_lanes.extend(concern_lanes)
+    for lane in selected_lanes:
+        lane["proof_kind"] = _proof_kind_for_lane(lane)
+        lane["enough_proof"] = [
+            str(_command_with_cli_invoke(command=str(command), cli_invoke=cli_invoke)) for command in lane.get("enough_proof", [])
+        ]
     required_commands: list[str] = []
     broaden_when: list[str] = []
     escalate_when: list[str] = []
@@ -16581,8 +16642,10 @@ def _proof_selection_for_changed_paths(
             if condition not in escalate_when:
                 escalate_when.append(condition)
 
-    implementation_lanes = [lane for lane in selected_lanes if lane["id"] != cli_authority_lane]
-    if len(implementation_lanes) > 1:
+    executable_lanes = [
+        lane for lane in selected_lanes if lane["id"] != cli_authority_lane and lane.get("proof_kind") in {"targeted-test", "full-test"}
+    ]
+    if len(executable_lanes) > 1:
         escalate_when.insert(0, str(_PROOF_SELECTION_RULES["cross_lane_escalation"]))
 
     optional_commands = [
@@ -16593,6 +16656,7 @@ def _proof_selection_for_changed_paths(
         for command in concern_lane.get("optional_commands", []):
             if command not in optional_commands:
                 optional_commands.append(str(command))
+    optional_commands = [str(_command_with_cli_invoke(command=str(command), cli_invoke=cli_invoke)) for command in optional_commands]
     proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,
@@ -16601,6 +16665,7 @@ def _proof_selection_for_changed_paths(
                 "id": lane["id"],
                 "when": lane["when"],
                 "required_commands": lane["enough_proof"],
+                "proof_kind": lane.get("proof_kind", "targeted-test"),
                 "recovery_signal": lane.get("recovery_signal", ""),
                 **({"proof_profile": lane["proof_profile"]} if lane.get("proof_profile") else {}),
                 **({"review_aids": lane["review_aids"]} if lane.get("review_aids") else {}),
@@ -16618,6 +16683,8 @@ def _proof_selection_for_changed_paths(
         "broaden_when": broaden_when,
         "escalate_when": escalate_when,
     }
+    if routing_reductions:
+        proof_selection["routing_reductions"] = routing_reductions
     if config is not None and target_root is not None and include_durable_intent:
         durable_intent = _intent_decision_projection(
             target_root=target_root,

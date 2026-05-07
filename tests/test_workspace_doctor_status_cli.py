@@ -210,11 +210,7 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     _write((tmp_path / ".agentic-workspace" / "system-intent" / "WORKFLOW.md"), "# System Intent Workflow\n")
     _write(
         (tmp_path / "AGENTS.md"),
-        "# Agent Instructions\n\n"
-        "<!-- agentic-workspace:workflow:start -->\n"
-        'Before answering or editing non-trivial requests, including read-only workflow, config, delegation, or action-safety decisions, run `agentic-workspace implement --profile tiny --changed <paths> --format json` when changed paths are known; otherwise run `agentic-workspace start --profile tiny --task "<task>" --format json` using the user\'s request as `<task>`. If the bare command is unavailable, use `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present. Do not open raw `.agentic-workspace` files before this command; follow `immediate_next_allowed_action` and `skill_routing` first. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If unavailable, read `.agentic-workspace/WORKFLOW.md`.\n'
-        "<!-- agentic-workspace:workflow:end -->\n\n"
-        "Local repo instructions.\n",
+        f"# Agent Instructions\n\n{cli.WORKSPACE_POINTER_BLOCK}\n\nLocal repo instructions.\n",
         encoding="utf-8",
     )
     (tmp_path / "llms.txt").write_text(cli._external_agent_handoff_text(selected_modules=["planning", "memory"]))

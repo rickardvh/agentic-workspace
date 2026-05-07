@@ -67,6 +67,62 @@
       },
       "description": "Policy rules that explain this contract behavior."
     },
+    "lane_proof_kinds": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": ["diff-review", "surface-check", "targeted-test", "full-test"],
+        "description": "Proof kind for one validation lane."
+      },
+      "description": "Optional proof-kind classifications keyed by validation lane id."
+    },
+    "docs_only_reducer": {
+      "type": "object",
+      "required": [
+        "lane",
+        "source_lanes",
+        "extensions"
+      ],
+      "properties": {
+        "lane": {
+          "type": "string",
+          "description": "Lane to use after reducing an eligible docs-only match."
+        },
+        "source_lanes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Matched lanes that may be reduced when the changed path is docs-only."
+        },
+        "extensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "File extensions eligible for docs-only reduction."
+        },
+        "exact": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Exact repo-relative paths eligible for docs-only reduction."
+        },
+        "prefixes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Repo-relative prefixes eligible for docs-only reduction."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Human-readable reduction policy."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Second-stage classifier that can downgrade docs-only path-prefix matches to review proof."
+    },
     "fallback_lane": {
       "type": "string",
       "description": "Fallback lane text value used by this contract."

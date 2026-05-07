@@ -164,13 +164,14 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "Do not collapse setup into the proof backlog.",
         "Do not turn setup into generic analysis.",
     ]
-    assert payload["validation"]["default_routes"]["planning_package"] == "cd packages/planning && uv run pytest tests/test_installer.py"
+    assert payload["validation"]["default_routes"]["planning_package"] == "make test-planning"
     workspace_lane = next(lane for lane in payload["validation"]["lanes"] if lane["id"] == "workspace_cli")
     assert "root workspace CLI changes" in workspace_lane["when"]
     assert workspace_lane["enough_proof"] == [
-        "uv run pytest tests -q",
-        "uv run ruff check src tests",
+        "make test-workspace",
+        "make lint-workspace",
     ]
+    assert workspace_lane["proof_kind"] == "targeted-test"
     assert "the change also touches generated maintainer docs" in workspace_lane["broaden_when"]
     assert "the narrow lane cannot prove the change on its own" in workspace_lane["escalate_when"]
     planning_surface_lane = next(lane for lane in payload["validation"]["lanes"] if lane["id"] == "planning_surfaces")

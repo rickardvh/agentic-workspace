@@ -1,5 +1,38 @@
 {
   "schema_version": "agentic-workspace/proof-selection-rules/v1",
+  "lane_proof_kinds": {
+    "generated_command_packages": "full-test",
+    "cli_authority": "diff-review",
+    "contract_tooling": "surface-check",
+    "agent_aid_manifests": "surface-check",
+    "repo_docs_review": "diff-review",
+    "workspace_cli": "targeted-test",
+    "planning_package": "targeted-test",
+    "memory_package": "targeted-test",
+    "planning_surfaces": "surface-check",
+    "maintainer_surfaces": "surface-check"
+  },
+  "docs_only_reducer": {
+    "lane": "repo_docs_review",
+    "source_lanes": [
+      "planning_package",
+      "memory_package"
+    ],
+    "extensions": [
+      ".md"
+    ],
+    "exact": [
+      "packages/planning/README.md",
+      "packages/memory/README.md",
+      "packages/command-generation/README.md"
+    ],
+    "prefixes": [
+      "packages/planning/docs/",
+      "packages/memory/docs/",
+      "packages/command-generation/docs/"
+    ],
+    "rule": "Markdown-only package documentation edits use review proof unless behavior, generated payload, install contracts, or implementation semantics also changed."
+  },
   "rules": [
     {
       "id": "generated-command-packages",
@@ -14,6 +47,15 @@
         "src/agentic_workspace/generated_cli_package/",
         "packages/planning/src/repo_planning_bootstrap/generated_cli_package/",
         "packages/memory/src/repo_memory_bootstrap/generated_cli_package/"
+      ]
+    },
+    {
+      "id": "package-readme-docs",
+      "lane": "repo_docs_review",
+      "exact": [
+        "packages/planning/README.md",
+        "packages/memory/README.md",
+        "packages/command-generation/README.md"
       ]
     },
     {

@@ -436,9 +436,9 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     }
     assert len(json.dumps(payload, sort_keys=True)) < 16600
     assert payload["proof"]["required_commands"] == [
-        "uv run pytest tests -q",
-        "uv run ruff check src tests",
-        "agentic-workspace defaults --section root_cli_authority --format json",
+        "make test-workspace",
+        "make lint-workspace",
+        "uv run agentic-workspace defaults --section root_cli_authority --format json",
     ]
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
     assert payload["path_boundaries"] == [
@@ -457,7 +457,7 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload, sort_keys=True)
-    assert len(encoded) < 6500
+    assert len(encoded) < 7800
     assert payload["kind"] == "startup-context/v1"
     adaptive = payload["adaptive_routing"]
     assert adaptive["current_need"] in {"first-contact-routing", "continue-active-planning"}
@@ -467,6 +467,7 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert "raw planning files" in adaptive["not_needed_now"]
     assert payload["cli_invocation"]["primary"].endswith("agentic-workspace")
     assert "config.local.toml" in payload["cli_invocation"]["fallback_when_unavailable"]
+    assert "stale installed selector" in payload["cli_invocation"]["stale_bare_command_warning"]
     assert payload["startup_sequence"] == [
         {
             "id": "entrypoint",
@@ -553,7 +554,7 @@ def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> No
     assert action["command"] == "uv run agentic-workspace config --profile tiny --format json"
     assert action["read_first"] == [action["command"]]
     assert "tiny config surface" in action["summary"]
-    assert len(json.dumps(payload, sort_keys=True)) < 7800
+    assert len(json.dumps(payload, sort_keys=True)) < 8100
 
 
 def test_start_tiny_compacts_long_task_carry_forward_command(capsys) -> None:

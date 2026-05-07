@@ -1101,7 +1101,8 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
 
     required_agents_fragments = (
         "<!-- agentic-workspace:workflow:start -->",
-        "agentic-workspace start --profile tiny --task",
+        "<effective-cli> start --profile tiny --task",
+        "config.local.toml",
         "immediate_next_allowed_action",
         "skill_routing",
         "do not open raw `.agentic-workspace` files before this command",
