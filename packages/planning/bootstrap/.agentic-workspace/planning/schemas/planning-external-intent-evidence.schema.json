@@ -43,6 +43,18 @@
           "type": "integer",
           "minimum": 0
         },
+        "fetched_item_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fetched_open_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fetched_closed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
         "limit": {
           "type": "integer",
           "minimum": 0
@@ -58,6 +70,45 @@
         },
         "command": {
           "type": "string"
+        },
+        "cache_compaction": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "storage": {
+              "type": "string"
+            },
+            "closed_retention_days": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cutoff": {
+              "type": "string"
+            },
+            "retained_item_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "dropped_closed_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "retained_recent_closed_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "retained_referenced_closed_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "referenced_issue_count": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
         }
       }
     },
@@ -114,6 +165,9 @@
             "type": "string"
           },
           "updated_at": {
+            "type": "string"
+          },
+          "closed_at": {
             "type": "string"
           },
           "comments_count": {

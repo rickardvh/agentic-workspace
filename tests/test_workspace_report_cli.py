@@ -1488,6 +1488,8 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
             self.stdout = stdout
             self.stderr = ""
 
+    recent_closed_at = cli.datetime.now(cli.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
     def fake_run(command, cwd, capture_output, text, encoding, check):
         assert command[:2] == ["gh", "issue"]
         assert command[command.index("--state") + 1] == "all"
@@ -1507,6 +1509,7 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
                         "labels": [{"name": "planning"}],
                         "createdAt": "2026-04-01T00:00:00Z",
                         "updatedAt": "2026-04-27T00:00:00Z",
+                        "closedAt": None,
                         "body": "## Issue kind\n\nChild slice\n\n## Parent issue or lane\n\n#10\n\n## Closed lane(s) to revisit\n\n#8, #9\n",
                         "comments": [{"body": "closeout"}],
                     },
@@ -1518,6 +1521,7 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
                         "labels": [],
                         "createdAt": "2026-04-01T00:00:00Z",
                         "updatedAt": "2026-04-26T00:00:00Z",
+                        "closedAt": recent_closed_at,
                         "body": "",
                         "comments": 0,
                     },
@@ -1570,6 +1574,112 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
     assert refreshed["items"][1]["status"] == "closed"
 
 
+def test_external_intent_refresh_github_compacts_old_unreferenced_closed_cache_items(tmp_path: Path, monkeypatch, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    (target / ".agentic-workspace" / "planning" / "reviews" / "retained.review.json").write_text(
+        json.dumps({"kind": "planning-review/v1", "title": "Retain #3", "references": ["#3"]}) + "\n",
+        encoding="utf-8",
+    )
+    evidence_path = target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    now = cli.datetime.now(cli.timezone.utc).replace(microsecond=0)
+    recent = now.isoformat().replace("+00:00", "Z")
+    old = (now - cli.timedelta(days=90)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+    class Result:
+        recent_closed_at = cli.datetime.now(cli.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        returncode = 0
+        stderr = ""
+        stdout = json.dumps(
+            [
+                {
+                    "number": 1,
+                    "title": "Open work",
+                    "state": "OPEN",
+                    "url": "https://github.com/acme/project/issues/1",
+                    "labels": [],
+                    "createdAt": old,
+                    "updatedAt": old,
+                    "closedAt": None,
+                    "body": "",
+                    "comments": 0,
+                },
+                {
+                    "number": 2,
+                    "title": "Recent closed work",
+                    "state": "CLOSED",
+                    "url": "https://github.com/acme/project/issues/2",
+                    "labels": [],
+                    "createdAt": old,
+                    "updatedAt": recent,
+                    "closedAt": recent,
+                    "body": "",
+                    "comments": 0,
+                },
+                {
+                    "number": 3,
+                    "title": "Referenced closed work",
+                    "state": "CLOSED",
+                    "url": "https://github.com/acme/project/issues/3",
+                    "labels": [],
+                    "createdAt": old,
+                    "updatedAt": recent,
+                    "closedAt": old,
+                    "body": "",
+                    "comments": 0,
+                },
+                {
+                    "number": 4,
+                    "title": "Old unreferenced closed work",
+                    "state": "CLOSED",
+                    "url": "https://github.com/acme/project/issues/4",
+                    "labels": [],
+                    "createdAt": old,
+                    "updatedAt": recent,
+                    "closedAt": old,
+                    "body": "",
+                    "comments": 0,
+                },
+            ]
+        )
+
+    monkeypatch.setattr(cli.subprocess, "run", lambda *args, **kwargs: Result())
+
+    assert (
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(target),
+                "--repo",
+                "acme/project",
+                "--state",
+                "all",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    refreshed = json.loads(evidence_path.read_text(encoding="utf-8"))
+    retained_ids = [item["id"] for item in refreshed["items"]]
+    assert retained_ids == ["#1", "#2", "#3"]
+    assert payload["fetched_item_count"] == 4
+    assert payload["item_count"] == 3
+    assert payload["cache_compaction"]["dropped_closed_count"] == 1
+    assert payload["cache_compaction"]["retained_recent_closed_count"] == 1
+    assert payload["cache_compaction"]["retained_referenced_closed_count"] == 1
+    assert refreshed["refresh_metadata"]["fetched_closed_count"] == 3
+    assert refreshed["refresh_metadata"]["closed_count"] == 2
+    assert refreshed["refresh_metadata"]["cache_compaction"]["retained_item_count"] == 3
+
+
 def test_external_intent_refresh_github_accepts_bom_and_recomputes_counts(tmp_path: Path, monkeypatch, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -1584,6 +1694,7 @@ def test_external_intent_refresh_github_accepts_bom_and_recomputes_counts(tmp_pa
         "items": [{"system": "github", "id": "#1", "status": "open"}],
     }
     evidence_path.write_bytes(("\ufeff" + json.dumps(previous, indent=2) + "\n").encode("utf-8"))
+    recent_closed_at = cli.datetime.now(cli.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
     class Result:
         returncode = 0
@@ -1598,6 +1709,7 @@ def test_external_intent_refresh_github_accepts_bom_and_recomputes_counts(tmp_pa
                     "labels": [],
                     "createdAt": "2026-04-01T00:00:00Z",
                     "updatedAt": "2026-04-27T00:00:00Z",
+                    "closedAt": None,
                     "body": "",
                     "comments": 0,
                 },
@@ -1609,6 +1721,7 @@ def test_external_intent_refresh_github_accepts_bom_and_recomputes_counts(tmp_pa
                     "labels": [],
                     "createdAt": "2026-04-01T00:00:00Z",
                     "updatedAt": "2026-04-27T00:00:00Z",
+                    "closedAt": recent_closed_at,
                     "body": "",
                     "comments": 0,
                 },

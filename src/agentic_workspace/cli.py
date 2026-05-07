@@ -14,7 +14,7 @@ import time
 import tomllib
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, NoReturn, cast
 
@@ -3605,6 +3605,7 @@ def _write_generated_text(*, destination: Path, text: str, dry_run: bool) -> Non
 LOCAL_ONLY_INSTALL_ROOT = Path(".agentic-workspace") / "local-only"
 EXTERNAL_INTENT_CACHE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 EXTERNAL_INTENT_PLANNING_RELATIVE_PATH = Path(".agentic-workspace") / "planning" / "external-intent-evidence.json"
+EXTERNAL_INTENT_CACHE_CLOSED_RETENTION_DAYS = 7
 LOCAL_ONLY_IGNORE_BLOCK = "# Agentic Workspace local-only storage\n.agentic-workspace/\n"
 LOCAL_ONLY_STATE_FILE = Path("LOCAL-ONLY.toml")
 
@@ -8264,6 +8265,7 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
         "labels": labels,
         "created_at": str(issue.get("createdAt", "")).strip(),
         "updated_at": str(issue.get("updatedAt", "")).strip(),
+        "closed_at": str(issue.get("closedAt", "") or "").strip(),
         "comments_count": _github_comments_count(issue.get("comments")),
     }
 
@@ -8330,6 +8332,86 @@ def _external_intent_evidence_consistency_findings(payload: dict[str, Any]) -> l
     return findings
 
 
+def _parse_external_intent_timestamp(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw_value = value.strip()
+    if raw_value.endswith("Z"):
+        raw_value = raw_value[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(raw_value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _checked_in_planning_issue_refs(target_root: Path) -> set[str]:
+    planning_root = target_root / ".agentic-workspace" / "planning"
+    if not planning_root.exists():
+        return set()
+    refs: set[str] = set()
+    ref_patterns = (
+        re.compile(r"(?<![\w/-])#(\d+)\b"),
+        re.compile(r"/issues/(\d+)\b"),
+    )
+    for path in planning_root.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in {".json", ".toml", ".md"}:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8-sig")
+        except UnicodeDecodeError:
+            continue
+        for pattern in ref_patterns:
+            refs.update(f"#{match}" for match in pattern.findall(text))
+    return refs
+
+
+def _compact_external_intent_cache_items(
+    *,
+    items: list[dict[str, Any]],
+    target_root: Path,
+    refreshed_at: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    refreshed_at_datetime = _parse_external_intent_timestamp(refreshed_at) or datetime.now(timezone.utc).replace(microsecond=0)
+    cutoff = refreshed_at_datetime - timedelta(days=EXTERNAL_INTENT_CACHE_CLOSED_RETENTION_DAYS)
+    referenced_ids = _checked_in_planning_issue_refs(target_root)
+    compacted: list[dict[str, Any]] = []
+    retained_recent_closed = 0
+    retained_referenced_closed = 0
+    dropped_closed = 0
+    for item in items:
+        if str(item.get("status", "")).strip().lower() != "closed":
+            compacted.append(item)
+            continue
+        item_id = str(item.get("id", "")).strip()
+        closed_at = _parse_external_intent_timestamp(item.get("closed_at"))
+        updated_at = _parse_external_intent_timestamp(item.get("updated_at"))
+        recency_timestamp = closed_at or updated_at
+        is_recent = recency_timestamp is None or recency_timestamp >= cutoff
+        is_referenced = item_id in referenced_ids
+        if is_recent or is_referenced:
+            compacted.append(item)
+            if is_recent:
+                retained_recent_closed += 1
+            if is_referenced:
+                retained_referenced_closed += 1
+        else:
+            dropped_closed += 1
+    return compacted, {
+        "enabled": True,
+        "storage": "cache",
+        "closed_retention_days": EXTERNAL_INTENT_CACHE_CLOSED_RETENTION_DAYS,
+        "cutoff": cutoff.replace(microsecond=0).isoformat(),
+        "retained_item_count": len(compacted),
+        "dropped_closed_count": dropped_closed,
+        "retained_recent_closed_count": retained_recent_closed,
+        "retained_referenced_closed_count": retained_referenced_closed,
+        "referenced_issue_count": len(referenced_ids),
+    }
+
+
 def _refresh_github_external_intent_evidence(
     *,
     target_root: Path,
@@ -8369,7 +8451,7 @@ def _refresh_github_external_intent_evidence(
             "--limit",
             str(resolved_limit),
             "--json",
-            "number,title,state,url,labels,createdAt,updatedAt,body,comments",
+            "number,title,state,url,labels,createdAt,updatedAt,closedAt,body,comments",
         ],
         cwd=target_root,
     )
@@ -8385,6 +8467,16 @@ def _refresh_github_external_intent_evidence(
     items.sort(key=lambda item: int(str(item["id"]).lstrip("#") or "0"))
     previous_count = len([item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)])
     refreshed_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    fetched_item_count = len(items)
+    fetched_open_count = sum(1 for item in items if item["status"] == "open")
+    fetched_closed_count = sum(1 for item in items if item["status"] == "closed")
+    cache_compaction: dict[str, Any] | None = None
+    if storage_class == "cache":
+        items, cache_compaction = _compact_external_intent_cache_items(
+            items=items,
+            target_root=target_root,
+            refreshed_at=refreshed_at,
+        )
     next_payload = {
         "kind": "planning-external-intent-evidence/v1",
         "systems": ["github"],
@@ -8396,14 +8488,19 @@ def _refresh_github_external_intent_evidence(
             "item_count": len(items),
             "open_count": sum(1 for item in items if item["status"] == "open"),
             "closed_count": sum(1 for item in items if item["status"] == "closed"),
+            "fetched_item_count": fetched_item_count,
+            "fetched_open_count": fetched_open_count,
+            "fetched_closed_count": fetched_closed_count,
             "limit": resolved_limit,
             "state": resolved_state,
             "state_source": state_source,
             "limit_source": limit_source,
-            "command": f"gh issue list --state {resolved_state} --json number,title,state,url,labels,createdAt,updatedAt,body,comments",
+            "command": f"gh issue list --state {resolved_state} --json number,title,state,url,labels,createdAt,updatedAt,closedAt,body,comments",
         },
         "items": items,
     }
+    if cache_compaction is not None:
+        next_payload["refresh_metadata"]["cache_compaction"] = cache_compaction
     if not dry_run:
         evidence_path.parent.mkdir(parents=True, exist_ok=True)
         evidence_path.write_text(json.dumps(next_payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
@@ -8421,7 +8518,11 @@ def _refresh_github_external_intent_evidence(
         "item_count": len(items),
         "open_count": next_payload["refresh_metadata"]["open_count"],
         "closed_count": next_payload["refresh_metadata"]["closed_count"],
+        "fetched_item_count": fetched_item_count,
+        "fetched_open_count": fetched_open_count,
+        "fetched_closed_count": fetched_closed_count,
         "previous_item_count": previous_count,
+        "cache_compaction": cache_compaction,
         "state": resolved_state,
         "limit": resolved_limit,
         "state_source": state_source,
