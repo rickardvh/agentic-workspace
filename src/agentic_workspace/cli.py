@@ -4986,6 +4986,38 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
             command="agentic-workspace report --target ./repo --profile full --format json", cli_invoke=cli_invoke
         ),
     }
+    command_name = str(payload.get("command", "status") or "status")
+    if str(payload.get("health", "")) == "healthy":
+        payload["next_action"] = {
+            "action": "no-immediate-action",
+            "summary": "No immediate lifecycle action is required.",
+            "commands": [],
+        }
+    else:
+        detail_command = _command_with_cli_invoke(
+            command=f"agentic-workspace {command_name} --target ./repo --profile full --format json",
+            cli_invoke=cli_invoke,
+        )
+        if command_name == "status":
+            inspect_command = _command_with_cli_invoke(
+                command="agentic-workspace doctor --target ./repo --format json",
+                cli_invoke=cli_invoke,
+            )
+            action = "inspect-health-with-doctor"
+            summary = "Inspect attention-needed lifecycle state with the compact doctor route."
+            commands = [inspect_command]
+        else:
+            action = "inspect-repair-or-full-detail"
+            summary = "Review compact repair and manual-review actions; use full detail only when the compact lists are insufficient."
+            commands = [detail_command]
+        payload["next_action"] = {
+            "action": action,
+            "summary": summary,
+            "command": commands[0],
+            "run": commands[0],
+            "commands": commands,
+            "detail_command": detail_command,
+        }
     return payload
 
 
@@ -5942,6 +5974,147 @@ def _run_report_command(
         findings=aggregated_findings,
     )
     return payload
+
+
+def _run_report_router_command(
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    descriptors: dict[str, ModuleDescriptor],
+    config: WorkspaceConfig,
+) -> dict[str, Any]:
+    status_payload = _run_lifecycle_command(
+        command_name="status",
+        target_root=target_root,
+        local_only_repo_root=None,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        dry_run=False,
+        non_interactive=False,
+        config=config,
+        compact_status=True,
+    )
+    warnings = list(status_payload.get("warnings", []))
+    findings = [
+        {
+            "severity": "warning",
+            "module": "workspace",
+            "message": str(warning),
+        }
+        for warning in warnings
+    ]
+    installed_modules = [
+        str(entry["name"])
+        for entry in status_payload.get("registry", [])
+        if isinstance(entry, dict) and entry.get("installed") and entry.get("name")
+    ] or _fast_installed_modules(target_root=target_root)
+    external_work_delta = _external_work_delta_payload(target_root=target_root)
+    next_command = _command_with_cli_invoke(
+        command="agentic-workspace doctor --target ./repo --format json",
+        cli_invoke=config.cli_invoke,
+    )
+    if str(status_payload.get("health", "unknown")) == "healthy":
+        next_action = {"summary": "No immediate action", "commands": []}
+    else:
+        next_action = {
+            "summary": "Inspect the reported warnings with the compact doctor route.",
+            "commands": [next_command],
+            "command": next_command,
+            "run": next_command,
+        }
+    router_source = {
+        "kind": "workspace-report/v1",
+        "schema": _reporting_schema_payload(),
+        "command": "report",
+        "target": target_root.as_posix(),
+        "selected_modules": selected_modules,
+        "installed_modules": installed_modules,
+        "feature_tier": _feature_tier_payload(
+            selected_modules=selected_modules,
+            installed_modules=installed_modules,
+            resolved_preset=resolved_preset,
+            config=config,
+        ),
+        "health": status_payload.get("health", "unknown"),
+        "output_contract": output_contract_payload(
+            optimization_bias=config.optimization_bias,
+            optimization_bias_source=config.optimization_bias_source,
+            bias_payload=_optimization_bias_payload(config.optimization_bias),
+            surface="report",
+        ),
+        "operating_posture": _operating_posture_payload(config=config, surface="report"),
+        "report_profile": _report_profile_payload(cli_invoke=config.cli_invoke),
+        "config_enforcement": _config_enforcement_payload(config=config),
+        "config_effect_audit": _config_effect_audit_payload(config=config),
+        "memory_consult": _tiny_memory_consult_payload(config=config),
+        "execution_shape": _report_router_execution_shape_fast(config=config),
+        "durable_intent": _intent_decision_projection(target_root=target_root, config=config, compact=True),
+        "effective_authority": _effective_authority_payload(
+            target_root=target_root,
+            config=config,
+            installed_modules=installed_modules,
+            module_reports=[],
+        ),
+        "improvement_intake": _improvement_intake_payload(target_root=target_root, config=config, repo_friction=None),
+        "external_work_reconciliation": _external_work_reconciliation_payload(
+            module_reports=[],
+            external_work_delta=external_work_delta,
+            cli_invoke=config.cli_invoke,
+        ),
+        "surface_value_guardrail": _surface_value_guardrail_payload(),
+        "next_action": next_action,
+        "findings": findings,
+        "module_reports": [],
+        "reports": [],
+        "config": {"workspace": {"cli_invoke": config.cli_invoke}},
+    }
+    return _report_router_payload(router_source)
+
+
+def _report_router_execution_shape_fast(*, config: WorkspaceConfig) -> dict[str, Any]:
+    return {
+        "status": "present",
+        "task_shape": {
+            "id": "direct-or-no-active-plan",
+            "summary": "No active planning record is present; direct work can proceed when the task is narrow and proof is obvious.",
+            "why": "The default report router does not load deep planning reports; run the execution_shape section for active-plan detail.",
+        },
+        "task_shape_recommender": {
+            "status": "available",
+            "rule": "Choose the cheapest workflow shape that preserves proof and continuation honesty.",
+            "shapes": [
+                {"id": "direct"},
+                {"id": "light-plan"},
+                {"id": "checked-in-execplan"},
+            ],
+        },
+        "narrow_work_fast_path": {
+            "status": "blessed",
+            "one_compact_check": _command_with_cli_invoke(
+                command="agentic-workspace config --target ./repo --profile tiny --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "rule": "For narrow work, use the smallest compact route that answers state, config, or proof uncertainty.",
+            "promote_when": [
+                "work claims lane progress",
+                "proof is unclear",
+                "continuation or handoff would be expensive without checked-in state",
+            ],
+        },
+        "recommendation": {
+            "id": "stay-direct",
+            "summary": "Stay direct unless the task needs active sequencing, handoff, or non-obvious proof.",
+            "consult": [
+                _command_with_cli_invoke(
+                    command="agentic-workspace config --target ./repo --profile tiny --format json",
+                    cli_invoke=config.cli_invoke,
+                )
+            ],
+        },
+        "deviation_rule": "Do not implement roadmap or autopilot lanes from router context alone; promote active planning first.",
+    }
 
 
 def _operational_compression_payload(
@@ -10297,6 +10470,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     elif not payload.get("changed_paths"):
         next_action = "Provide --changed paths or use start/preflight before broad implementation."
 
+    proof_commands = payload.get("required_validation_commands", [])
+    primary_command = proof_commands[0] if isinstance(proof_commands, list) and proof_commands else None
     execution_posture = payload.get("execution_posture", {})
     capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
     runtime_resolution = execution_posture.get("runtime_resolution", {}) if isinstance(execution_posture, dict) else {}
@@ -10328,6 +10503,10 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         ),
         "next": {
             "action": next_action,
+            "summary": next_action,
+            "command": primary_command,
+            "run": primary_command,
+            "commands": proof_commands if isinstance(proof_commands, list) else [],
             "status": payload.get("orientation", {}).get("status", "unknown"),
             "ask_human_only_if": "scope, authority, risk, or intent is genuinely blocked after inspecting the listed paths",
         },
@@ -15862,8 +16041,20 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     if getattr(args, "startup", False):
         _emit_startup_report(format_name=args.format, target_root=target_root, descriptors=descriptors, config=config)
         return 0
-    if getattr(args, "section", None) in {"external_work_reconciliation", "external_work_delta"}:
+    profile = str(getattr(args, "profile", "router"))
+    section = getattr(args, "section", None)
+    if section in {"external_work_reconciliation", "external_work_delta"}:
         _ensure_external_intent_cache_if_available(target_root=target_root)
+    if profile == "router" and section is None and args.format == "json":
+        payload = _run_report_router_command(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            config=config,
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
     payload = _run_report_command(
         target_root=target_root,
         selected_modules=selected_modules,
@@ -15873,8 +16064,8 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     )
     payload = _select_report_payload(
         payload,
-        profile=str(getattr(args, "profile", "router")),
-        section=getattr(args, "section", None),
+        profile=profile,
+        section=section,
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0

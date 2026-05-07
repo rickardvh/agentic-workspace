@@ -88,6 +88,9 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert adaptive["detail_commands"]["task_scoped_state"].startswith("agentic-workspace summary --profile compact")
     assert "raw workspace files" in adaptive["not_needed_now"]
     assert payload["next"]["action"] == "Inspect only the listed files and run the required validation commands."
+    assert payload["next"]["command"] == "uv run pytest tests -q"
+    assert payload["next"]["run"] == payload["next"]["command"]
+    assert "uv run ruff check src tests" in payload["next"]["commands"]
     assert payload["scope"]["inspect_files"] == ["src/agentic_workspace/cli.py"]
     assert "uv run pytest tests -q" in payload["proof"]["required_commands"]
     assert payload["routing"]["work_shape"] == "bounded"
@@ -99,7 +102,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert "authority_markers" not in payload
     assert "durable_intent" not in payload
     assert "inference_limits" not in payload
-    assert len(encoded) < 4200
+    assert len(encoded) < 4700
 
 
 def test_implement_task_file_preserves_task_intent_for_acceptance_checks(tmp_path: Path, capsys) -> None:

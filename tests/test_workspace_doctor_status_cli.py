@@ -342,6 +342,30 @@ def test_status_reports_advisory_cli_compatibility_drift(tmp_path: Path, capsys)
     assert compatibility["remediation"]["payload_drift_separate"] is True
 
 
+def test_status_and_doctor_compact_outputs_include_machine_next_action(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[cli_compatibility]\nenforcement = "advisory"\nexact_version = "999.0.0"\n',
+    )
+
+    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+    status_payload = json.loads(capsys.readouterr().out)
+    assert status_payload["next_action"]["action"] == "inspect-health-with-doctor"
+    assert status_payload["next_action"]["command"] == "agentic-workspace doctor --target ./repo --format json"
+    assert status_payload["next_action"]["run"] == status_payload["next_action"]["command"]
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    doctor_payload = json.loads(capsys.readouterr().out)
+    assert doctor_payload["next_action"]["action"] == "inspect-repair-or-full-detail"
+    assert doctor_payload["next_action"]["command"] == "agentic-workspace doctor --target ./repo --profile full --format json"
+    assert doctor_payload["next_action"]["run"] == doctor_payload["next_action"]["command"]
+
+
 def test_doctor_reports_cli_executable_drift_with_concrete_next_action(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
