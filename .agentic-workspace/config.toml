@@ -48,6 +48,7 @@ recommended_upgrade_after_days = 30
 [workflow_obligations.adapter_surface_refresh]
 summary = "Refresh adapter surfaces when structured startup, routing, or query contracts change."
 stage = "before-claiming-completion"
+force = "required-before-closeout"
 scope_tags = ["workspace", "planning", "adapter-surfaces"]
 commands = ["make maintainer-surfaces", "uv run python scripts/check/check_planning_surfaces.py"]
 review_hint = "Use when AGENTS.md, llms.txt, generated agent docs, routing contracts, or workspace query surfaces changed."
@@ -55,6 +56,7 @@ review_hint = "Use when AGENTS.md, llms.txt, generated agent docs, routing contr
 [workflow_obligations.boundary_and_context_discipline]
 summary = "Keep package boundaries explicit and start from checked-in surfaces before broad rereads."
 stage = "pre-work"
+force = "recommended"
 scope_tags = ["workspace", "planning", "memory", "package-boundaries"]
 commands = ["uv run agentic-workspace report --target . --format json", "uv run agentic-workspace ownership --target . --format json"]
 review_hint = "Do not start coding from chat context alone when checked-in files already answer the question, and do not bulk-read all planning surfaces."
@@ -62,6 +64,7 @@ review_hint = "Do not start coding from chat context alone when checked-in files
 [workflow_obligations.commit_after_proof]
 summary = "Commit only after the bounded proof lane passes and the active execplan reflects the current milestone."
 stage = "before-commit"
+force = "recommended"
 scope_tags = ["workspace", "planning", "memory"]
 commands = ["uv run agentic-workspace summary --format json", "git status --short"]
 review_hint = "Treat this as a closeout/readiness gate, not as a substitute for task-specific validation."
@@ -69,6 +72,7 @@ review_hint = "Treat this as a closeout/readiness gate, not as a substitute for 
 [workflow_obligations.dogfooding_lane_closeout]
 summary = "At the end of each lane, and whenever actionable friction appears during implementation, run a dogfooding review and route what could have been safer, cheaper, or more efficient."
 stage = "closeout"
+force = "required-before-closeout"
 scope_tags = ["workspace", "planning", "memory", "dogfooding", "self-improvement"]
 commands = [
   "uv run agentic-workspace report --target . --section workflow_obligations --format json",
@@ -81,6 +85,7 @@ review_hint = "Do this without waiting for explicit instruction. Before claiming
 [workflow_obligations.startup_first_contact_routing]
 summary = "Use the compact start query before opening raw planning or routing docs; add config, summary, or preflight only when the start answer leaves that detail unresolved."
 stage = "pre-work"
+force = "recommended"
 scope_tags = ["workspace", "startup", "routing", "planning"]
 commands = [
   "uv run agentic-workspace start --profile tiny --task \"<task>\" --format json",
@@ -90,7 +95,7 @@ review_hint = "Open raw planning state, an active execplan, config, preflight, o
 [workflow_obligations.system_intent_refresh]
 summary = "Refresh declared system-intent sources and the compiled interpretation when higher-level direction changes materially."
 stage = "review"
+force = "recommended"
 scope_tags = ["workspace", "system-intent"]
 commands = ["uv run agentic-workspace system-intent --target . --sync --format json"]
 review_hint = "Treat system intent as directional input and keep the compiled declaration aligned without turning it into active task state."
-
