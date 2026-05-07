@@ -435,7 +435,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
         "manual-handoff",
         "ask-human",
     }
-    assert len(json.dumps(payload, sort_keys=True)) < 17000
+    assert len(json.dumps(payload, sort_keys=True)) < 16600
     assert payload["proof"]["required_commands"] == [
         "make test-workspace",
         "make lint-workspace",

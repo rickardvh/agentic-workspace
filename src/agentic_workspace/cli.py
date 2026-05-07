@@ -9610,18 +9610,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
     proof = payload.get("proof", {})
     if isinstance(proof, dict) and proof.get("kind") == "proof-selection/v1":
-        projected["proof"] = {
-            key: proof.get(key)
-            for key in (
-                "kind",
-                "changed_paths",
-                "selected_lanes",
-                "required_validation_commands",
-                "validation_plan",
-                "escalate_when",
-            )
-            if key in proof
-        }
+        projected["proof"] = _compact_start_proof_payload(proof)
         immediate["next_proof"] = "run the selected required validation commands before closeout"
     cli_compatibility = payload.get("cli_compatibility", {})
     if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {"blocking-drift", "warning-drift"}:
@@ -9668,6 +9657,31 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if "prep_only_handoff" in payload:
         projected["prep_only_handoff"] = _compact_start_prep_only_handoff(payload["prep_only_handoff"])
     return projected
+
+
+def _compact_start_proof_payload(proof: dict[str, Any]) -> dict[str, Any]:
+    compact = {
+        key: proof.get(key)
+        for key in (
+            "kind",
+            "changed_paths",
+            "selected_lanes",
+            "required_commands",
+            "required_validation_commands",
+        )
+        if key in proof
+    }
+    cli_authority_review = proof.get("cli_authority_review", {})
+    if isinstance(cli_authority_review, dict):
+        compact["cli_authority_review"] = {
+            "status": cli_authority_review.get("status", "unknown"),
+            "classifications": cli_authority_review.get("classifications", []),
+            "detail_command": "agentic-workspace proof --profile full --changed <paths> --format json",
+        }
+    changed = proof.get("changed_paths", [])
+    if isinstance(changed, list) and changed:
+        compact["detail_command"] = "agentic-workspace proof --profile full --changed <paths> --format json"
+    return compact
 
 
 def _tiny_durable_intent(value: dict[str, Any]) -> dict[str, Any]:
@@ -10152,11 +10166,12 @@ def _start_payload(
         payload["cli_compatibility"] = cli_compatibility
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths:
-        payload["proof"] = _proof_selection_for_changed_paths(
+        proof_payload = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths,
             target_root=target_root,
             include_durable_intent=False,
         )
+        payload["proof"] = _compact_start_proof_payload(proof_payload)
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     if profile == "tiny":
         payload["cli_invocation"] = _cli_invocation_payload(config=config)
