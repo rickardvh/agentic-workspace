@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import time
+import tomllib
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timezone
@@ -9353,6 +9354,14 @@ def _start_payload(
 ) -> dict[str, Any]:
     startup_template = _CONTEXT_TEMPLATES["startup_context"]
     config = _load_workspace_config(target_root=target_root)
+    if profile == "tiny":
+        return _start_tiny_payload_fast(
+            target_root=target_root,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            config=config,
+            startup_template=startup_template,
+        )
     descriptors = _module_operations()
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     installed_modules = [entry.name for entry in registry if entry.installed]
@@ -9584,6 +9593,280 @@ def _start_payload(
         payload["cli_invocation"] = _cli_invocation_payload(config=config)
         return _tiny_start_payload(payload)
     return payload
+
+
+def _start_tiny_payload_fast(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    task_text: str | None,
+    config: WorkspaceConfig,
+    startup_template: dict[str, Any],
+) -> dict[str, Any]:
+    active_summary = _fast_planning_active_summary(target_root=target_root)
+    active_planning_present = bool(active_summary["todo_active_count"] or active_summary["active_execplan"])
+    next_action_summary = (
+        "Run the compact planning summary before implementation."
+        if active_planning_present
+        else str(startup_template["fallback_next_action"])
+    )
+    primary_command = (
+        _command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=config.cli_invoke)
+        if active_planning_present
+        else None
+    )
+    startup_sequence = [
+        {
+            "id": "entrypoint",
+            "command": None,
+            "surface": config.agent_instructions_file,
+            "why": "configured ordinary repo startup entrypoint",
+        }
+    ]
+    current_need = "continue-active-planning" if active_planning_present else "first-contact-routing"
+    if changed_paths:
+        current_need = "changed-path-startup"
+    elif _is_config_posture_task(task_text):
+        current_need = "config-posture-routing"
+    elif _is_prep_only_handoff_task(task_text):
+        current_need = "prep-only-planning-routing"
+    installed_modules = _fast_installed_modules(target_root=target_root)
+    selected_modules = installed_modules or _preset_modules(_module_operations()).get(config.default_preset, [])
+    payload: dict[str, Any] = {
+        "kind": "startup-context/v1",
+        "target": target_root.as_posix(),
+        "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root, compact=True),
+        "cli_invocation": _cli_invocation_payload(config=config),
+        "startup_sequence": startup_sequence,
+        "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True),
+        "adaptive_routing": {
+            "current_need": current_need,
+            "read_budget": {
+                "profile": "tiny",
+                "raw_file_reads": "only after a detail command points there",
+            },
+            "why": "Tiny startup returns only identity, next action, active-state summary, obligations, and direct detail commands.",
+            "escalate_when": [
+                "changed paths are known",
+                "active planning or handoff state matters",
+                "takeover or recovery is needed",
+            ],
+            "not_needed_now": [
+                "raw planning files",
+                "full summary",
+                "historical audit detail",
+            ],
+            "detail_commands": {
+                "known_changed_paths": "Use task_intent.implement_changed_command after changed paths are known.",
+                "active_state": _command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=config.cli_invoke),
+                "task_scoped_state": _command_with_cli_invoke(
+                    command="agentic-workspace summary --profile compact --task <task> --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "takeover_or_recovery": _command_with_cli_invoke(
+                    command="agentic-workspace preflight --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "startup_reference": _command_with_cli_invoke(
+                    command="agentic-workspace defaults --section startup --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+            },
+        },
+        "feature_tier": _feature_tier_payload(
+            selected_modules=selected_modules,
+            installed_modules=installed_modules or None,
+            resolved_preset=config.default_preset,
+            config=config,
+            compact=True,
+        ),
+        "active_state_summary": active_summary,
+        "package_boundary": _package_boundary_payload(target_root=target_root),
+        "authority_markers": _authority_markers_for_startup(active_execplan=active_summary["active_execplan"]),
+        "immediate_next_allowed_action": {
+            "action": ("continue-active-planning-record" if active_planning_present else "choose-smallest-workflow-shape"),
+            "summary": next_action_summary,
+            "command": primary_command,
+            "run": primary_command,
+            "risk": "read-only routing",
+            "required_inputs": [],
+            "next_proof": "select proof after changed paths are known",
+            "read_first": [primary_command] if primary_command else [],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        },
+        "workflow_obligations": {
+            "status": "not-evaluated",
+            "match_count": 0,
+            "detail_command": _command_with_cli_invoke(command="agentic-workspace preflight --format json", cli_invoke=config.cli_invoke),
+        },
+        "closeout_obligations": {
+            "status": "present",
+            "activation_rule": "closeout obligations apply after implementation or lane closeout, not ordinary first-contact orientation",
+            "detail_command": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section closeout_trust --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+        },
+        "memory_consult": _tiny_memory_consult_payload(config=config),
+        "operating_posture": _operating_posture_payload(config=config, surface="start", compact=True),
+        "skill_routing": _guidance_with_cli_invoke(
+            value=_startup_skill_routing_payload(
+                cli_invoke=config.cli_invoke,
+                enabled_advanced_features=config.advanced_features,
+                compact=True,
+                target_root=target_root,
+                task_text=task_text,
+            ),
+            cli_invoke=config.cli_invoke,
+        ),
+    }
+    startup_review = _workspace_absence_startup_review(target_root=target_root, config=config)
+    if startup_review["status"] == "attention":
+        payload["startup_review"] = startup_review
+    task_intent = _task_intent_carry_forward_payload(task_text=task_text, cli_invoke=config.cli_invoke)
+    if task_intent["status"] == "present":
+        payload["task_intent"] = task_intent
+    task_mentioned_paths = _task_mentioned_existing_paths(task_text=task_text, target_root=target_root)
+    vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
+    if vague_orientation["applies_to_current_task"]:
+        payload["vague_outcome_orientation"] = vague_orientation
+    if task_text or changed_paths:
+        durable_intent = _intent_decision_projection(
+            target_root=target_root,
+            config=config,
+            task_text=task_text,
+            changed_paths=changed_paths,
+            compact=True,
+        )
+        subsystem_projection = durable_intent.get("subsystem_intent", {})
+        subsystem_matched_count = int(subsystem_projection.get("matched_count", 0) or 0) if isinstance(subsystem_projection, dict) else 0
+        if task_text or subsystem_matched_count:
+            payload["durable_intent"] = durable_intent
+    execution_posture = _execution_posture_payload(
+        config=config,
+        changed_paths=_normalize_changed_paths(changed_paths),
+        task_text=task_text,
+    )
+    payload["delegation_decision"] = execution_posture["delegation_decision"]
+    if not active_planning_present and task_mentioned_paths and not changed_paths and not _is_config_posture_task(task_text):
+        implement_command = str(task_intent.get("implement_changed_command", "")) if isinstance(task_intent, dict) else ""
+        if implement_command:
+            implement_command = implement_command.replace("<paths>", " ".join(task_mentioned_paths))
+        else:
+            implement_command = _command_with_cli_invoke(
+                command=f"agentic-workspace implement --profile tiny --changed {' '.join(task_mentioned_paths)} --format json",
+                cli_invoke=config.cli_invoke,
+            )
+        payload["immediate_next_allowed_action"] = {
+            "action": "inspect-known-task-paths",
+            "summary": (
+                "The task text names existing repo paths. Run the tiny implement surface for those paths before broader startup "
+                "or raw workspace reads."
+            ),
+            "command": implement_command,
+            "run": implement_command,
+            "risk": "read-only changed-path routing",
+            "required_inputs": ["target repo", "named path(s)"],
+            "next_proof": "use the proof.required_commands from implement output",
+            "read_first": [implement_command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+            "detected_paths": task_mentioned_paths,
+        }
+    elif not active_planning_present and _is_prep_only_handoff_task(task_text):
+        prep_only = _prep_only_handoff_payload(config=config)
+        payload["prep_only_handoff"] = prep_only
+        payload["immediate_next_allowed_action"] = {
+            "action": "create-prep-only-planning-state",
+            "summary": (
+                "Prep-only durable handoff requested. Run the prep-only new-plan command, create or continue canonical Planning "
+                "state, verify with summary, then stop; do not create product source, tests, fixtures, README feature "
+                "docs, dependencies, or app scaffolding until implementation is requested."
+            ),
+            "command": prep_only["first_command"],
+            "run": prep_only["first_command"],
+            "risk": "planning-only write routing",
+            "required_inputs": ["target repo", "current task"],
+            "next_proof": prep_only["after_write"],
+            "read_first": [],
+            "open_execplan_only_when": "compact summary reports a blocking Planning problem after the prep-only scaffold is created",
+        }
+    elif _is_config_posture_task(task_text):
+        config_command = _command_with_cli_invoke(
+            command="agentic-workspace config --profile tiny --format json", cli_invoke=config.cli_invoke
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": "inspect-effective-config",
+            "summary": (
+                "The task asks about configured operating, reporting, closeout, or delegation posture. "
+                "Run the tiny config surface before raw config files; use compact or full only if the tiny answer is insufficient."
+            ),
+            "command": config_command,
+            "run": config_command,
+            "risk": "read-only config routing",
+            "required_inputs": ["target repo", "current task"],
+            "next_proof": "no file proof unless the task later becomes an edit",
+            "read_first": [config_command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        }
+    normalized_paths = _normalize_changed_paths(changed_paths)
+    if normalized_paths:
+        payload["proof"] = _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths,
+            target_root=target_root,
+            include_durable_intent=False,
+        )
+        payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
+    cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+    if cli_compatibility["configured"]:
+        payload["cli_compatibility"] = cli_compatibility
+    return _tiny_start_payload(payload)
+
+
+def _fast_installed_modules(*, target_root: Path) -> list[str]:
+    workspace_root = target_root / ".agentic-workspace"
+    installed: list[str] = []
+    if (workspace_root / "planning").exists():
+        installed.append("planning")
+    if (workspace_root / "memory").exists():
+        installed.append("memory")
+    return installed
+
+
+def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
+    state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
+    if not state_path.exists():
+        return {"todo_active_count": 0, "active_execplan": None, "planning_status": "unavailable"}
+    try:
+        data = tomllib.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return {"todo_active_count": 0, "active_execplan": None, "planning_status": "unavailable"}
+    todo = data.get("todo", {}) if isinstance(data, dict) else {}
+    active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
+    active_items = active_items if isinstance(active_items, list) else []
+    active_execplan = None
+    if active_items and isinstance(active_items[0], dict):
+        active_execplan = active_items[0].get("surface")
+    return {
+        "todo_active_count": len(active_items),
+        "active_execplan": active_execplan,
+        "planning_status": "present" if active_items else "unavailable",
+    }
+
+
+def _planning_state_has_active_items(*, target_root: Path) -> bool:
+    return bool(_fast_planning_active_summary(target_root=target_root)["todo_active_count"])
+
+
+def _tiny_memory_consult_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/memory-consult/v1",
+        "status": "recommended",
+        "read_first": [".agentic-workspace/memory/repo/index.md"],
+        "do_not_bulk_read": True,
+        "why": "Start with the Memory index, then load only route-matched durable notes when the task or changed paths justify them.",
+        "selection_rule": "after the baseline, load only manifest- or index-routed durable notes from touched files or explicit surfaces",
+        "capture_helper": f"{config.cli_invoke} memory capture-note <slug> --summary <text> --files <changed paths> --format json",
+    }
 
 
 def _compact_start_workflow_obligations(value: Any) -> dict[str, Any]:
@@ -15333,6 +15616,26 @@ def _emit_proof(
     changed_paths: list[str] | None = None,
     profile: str = "full",
 ) -> None:
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    if profile == "tiny" and normalized_paths:
+        answer = _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths,
+            target_root=target_root,
+            include_durable_intent=False,
+        )
+        payload = _tiny_proof_payload(
+            {
+                "profile": "compact-contract-answer/v1",
+                "target": target_root.as_posix(),
+                "selector": {"changed": normalized_paths},
+                "answer": answer,
+            }
+        )
+        if format_name == "json":
+            print(json.dumps(serialise_value(payload), indent=2))
+            return
+        _emit_compact_answer_text(payload)
+        return
     payload = _proof_payload(target_root=target_root, descriptors=descriptors)
     payload = _select_proof_payload(
         payload,
@@ -15808,6 +16111,8 @@ def _validation_plan_for_proof(
 def _active_planning_assurance_for_proof(*, target_root: Path | None) -> dict[str, Any]:
     if target_root is None:
         return {"status": "unavailable", "reason": "requires a target root"}
+    if not _planning_state_has_active_items(target_root=target_root):
+        return {"status": "unavailable", "reason": "no active planning record"}
     try:
         from repo_planning_bootstrap.installer import planning_summary
 
