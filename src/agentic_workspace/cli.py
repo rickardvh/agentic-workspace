@@ -8855,7 +8855,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     identity = payload.get("invoked_cli_identity", {})
     compact_identity = {
         key: identity.get(key)
-        for key in ("kind", "package", "version", "source_class", "target_relation", "compatibility")
+        for key in ("kind", "package", "version", "source_class", "module_path", "target_relation", "compatibility")
         if isinstance(identity, dict) and key in identity
     }
 
@@ -8939,6 +8939,43 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "preferred_routes": preferred_routes,
         },
     }
+    proof = payload.get("proof", {})
+    if isinstance(proof, dict) and proof.get("kind") == "proof-selection/v1":
+        projected["proof"] = {
+            key: proof.get(key)
+            for key in (
+                "kind",
+                "changed_paths",
+                "selected_lanes",
+                "required_validation_commands",
+                "validation_plan",
+                "escalate_when",
+            )
+            if key in proof
+        }
+        immediate["next_proof"] = "run the selected required validation commands before closeout"
+    cli_compatibility = payload.get("cli_compatibility", {})
+    if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {"blocking-drift", "warning-drift"}:
+        projected["cli_compatibility"] = cli_compatibility
+    vague_orientation = payload.get("vague_outcome_orientation", {})
+    if isinstance(vague_orientation, dict) and vague_orientation.get("applies_to_current_task") is True:
+        projected["vague_outcome_orientation"] = vague_orientation
+    durable_intent = payload.get("durable_intent", {})
+    subsystem_intent = durable_intent.get("subsystem_intent", {}) if isinstance(durable_intent, dict) else {}
+    matched_count = int(subsystem_intent.get("matched_count", 0) or 0) if isinstance(subsystem_intent, dict) else 0
+    if isinstance(durable_intent, dict) and durable_intent.get("status") == "present" and matched_count:
+        projected["durable_intent"] = _tiny_durable_intent(durable_intent)
+    if isinstance(task_recommendations, dict) and task_recommendations.get("status") == "recommended":
+        compact_recommendations = []
+        for item in task_recommendations.get("top_recommendations", [])[:2]:
+            if not isinstance(item, dict):
+                continue
+            compact_recommendations.append({key: item.get(key) for key in ("id", "path", "score") if item.get(key) not in ("", None)})
+        projected["skill_routing"]["task_recommendations"] = {
+            "status": task_recommendations.get("status", "recommended"),
+            "top_recommendations": compact_recommendations,
+            "warning_count": task_recommendations.get("warning_count", 0),
+        }
     if isinstance(task_intent, dict) and task_intent.get("status") == "present":
         projected["task_intent"] = {
             "status": "present",
@@ -8962,6 +8999,27 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if "prep_only_handoff" in payload:
         projected["prep_only_handoff"] = _compact_start_prep_only_handoff(payload["prep_only_handoff"])
     return projected
+
+
+def _tiny_durable_intent(value: dict[str, Any]) -> dict[str, Any]:
+    subsystem = value.get("subsystem_intent", {}) if isinstance(value.get("subsystem_intent"), dict) else {}
+    ownership = subsystem.get("ownership_registry", {}) if isinstance(subsystem.get("ownership_registry"), dict) else {}
+    return {
+        "kind": value.get("kind", "agentic-workspace/durable-intent-decision/v1"),
+        "status": value.get("status", "unknown"),
+        "subsystem_intent": {
+            "status": subsystem.get("status", "unknown"),
+            "surface": subsystem.get("surface", ".agentic-workspace/system-intent/subsystems.toml"),
+            "matched_count": subsystem.get("matched_count", 0),
+            "ownership_registry": {key: ownership.get(key) for key in ("status", "surface", "subsystem_count") if key in ownership},
+            "matches": [
+                {key: match.get(key) for key in ("id", "match_source", "needs_review") if isinstance(match, dict) and key in match}
+                for match in subsystem.get("matches", [])[:4]
+                if isinstance(match, dict)
+            ],
+        },
+        "inspect": value.get("inspect", "agentic-workspace report --target ./repo --section durable_intent --format json"),
+    }
 
 
 def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
@@ -8993,7 +9051,27 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
             routed_keys = ("config_effect",)
         for routed_key in routed_keys:
             if routed_key in value:
-                compact[routed_key] = value.get(routed_key)
+                routed_value = value.get(routed_key)
+                if routed_key == "route_obligation" and isinstance(routed_value, dict):
+                    compact[routed_key] = {
+                        key: routed_value.get(key) for key in ("must", "report_if_skipped") if routed_value.get(key) not in ("", None)
+                    }
+                elif routed_key == "config_effect" and isinstance(routed_value, dict):
+                    compact[routed_key] = {
+                        key: routed_value.get(key)
+                        for key in (
+                            "authority",
+                            "source_path",
+                            "configured_delegation_mode",
+                            "delegation_mode",
+                            "safe_to_auto_run_commands",
+                            "disabled_reason",
+                            "execution_authority",
+                        )
+                        if key in routed_value
+                    }
+                else:
+                    compact[routed_key] = routed_value
     if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation", "delegate-bounded-slice"}:
         compact["target"] = value.get("target")
         compact["reason"] = value.get("reason")
@@ -9002,6 +9080,17 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
             compact["handoff_command"] = value.get("handoff_command")
         if value.get("manual_prompt"):
             compact["manual_prompt"] = value.get("manual_prompt")
+        if value.get("delegation_next_step"):
+            next_step = value.get("delegation_next_step")
+            compact["delegation_next_step"] = (
+                {
+                    key: next_step.get(key)
+                    for key in ("status", "action", "target", "command", "execution_methods", "must_report_if_not_run")
+                    if key in next_step
+                }
+                if isinstance(next_step, dict)
+                else next_step
+            )
     return compact
 
 
@@ -9866,6 +9955,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "warnings": path_warnings,
         },
         "proof": {
+            "kind": payload.get("proof", {}).get("kind", "proof-selection/v1")
+            if isinstance(payload.get("proof"), dict)
+            else "proof-selection/v1",
             "required_commands": payload.get("required_validation_commands", []),
             "detail_command": "agentic-workspace proof --profile full --changed <paths> --format json",
         },
@@ -13843,8 +13935,8 @@ def _defaults_payload() -> dict[str, Any]:
                 ),
                 (
                     "If the question is active planning recovery rather than startup order, "
-                    "prefer `agentic-workspace summary --format json` before raw "
-                    "planning state or execplan prose."
+                    "prefer the tiny default `agentic-workspace summary --format json` before raw "
+                    "planning state or execplan prose; use `--profile compact` only when the tiny router is insufficient."
                 ),
             ],
             "workflow_recovery": [
@@ -15167,7 +15259,7 @@ def _run_config_report_adapter(args: argparse.Namespace) -> int:
     _validate_target_root(command_name="config", target_root=target_root)
     _emit_config(
         format_name=args.format,
-        profile=getattr(args, "profile", "full"),
+        profile=getattr(args, "profile", "tiny"),
         config=config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors))),
     )
     return 0
@@ -15188,7 +15280,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         target_root=target_root,
         changed_paths=list(getattr(args, "changed", []) or []),
         task_text=getattr(args, "task", None),
-        profile=getattr(args, "profile", "full"),
+        profile=getattr(args, "profile", "tiny"),
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
@@ -15211,7 +15303,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
         config = _load_workspace_config(target_root=target_root)
         summary["memory_consult"] = _memory_consult_payload(
             target_root=target_root,
-            compact=summary_profile == "compact",
+            compact=summary_profile in {"tiny", "compact"},
             cli_invoke=config.cli_invoke,
         )
     if args.format == "json":
@@ -15234,7 +15326,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         changed_paths=list(getattr(args, "changed", []) or []),
         task_text=task_text,
     )
-    if getattr(args, "profile", "full") == "tiny":
+    if getattr(args, "profile", "tiny") == "tiny":
         payload = _tiny_implement_payload(payload)
     _emit_payload(payload=payload, format_name=args.format)
     return 0

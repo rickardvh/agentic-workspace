@@ -492,11 +492,11 @@
                   "--profile"
                 ],
                 "choices": [
-                  "full",
-                  "tiny"
+                  "tiny",
+                  "full"
                 ],
-                "default": "full",
-                "help": "Startup output profile. Use tiny for the cheapest first-contact routing answer."
+                "default": "tiny",
+                "help": "Startup output profile. Defaults to tiny; use full only when the first-contact routing answer is insufficient."
               },
               {
                 "name": "format",
@@ -589,10 +589,12 @@
                   "--profile"
                 ],
                 "choices": [
+                  "tiny",
                   "compact",
                   "full"
                 ],
-                "default": "compact"
+                "default": "tiny",
+                "help": "Summary output profile. Defaults to tiny; use compact or full for more detail."
               },
               {
                 "name": "task",
@@ -720,11 +722,11 @@
                   "--profile"
                 ],
                 "choices": [
-                  "full",
-                  "tiny"
+                  "tiny",
+                  "full"
                 ],
-                "default": "full",
-                "help": "Implementer output profile. Use tiny for the next decision and proof commands only."
+                "default": "tiny",
+                "help": "Implementer output profile. Defaults to tiny; use full only when bounded implementation needs richer context."
               },
               {
                 "name": "format",
@@ -1943,11 +1945,12 @@
                   "--profile"
                 ],
                 "choices": [
+                  "tiny",
                   "compact",
                   "full"
                 ],
-                "default": "compact",
-                "help": "Summary profile."
+                "default": "tiny",
+                "help": "Summary profile. Defaults to tiny; use compact or full for more detail."
               },
               {
                 "name": "task",

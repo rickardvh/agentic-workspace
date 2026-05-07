@@ -107,7 +107,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     summary_parser = subparsers.add_parser("summary", help="Summarise the active planning surfaces in a machine-readable way.")
     summary_parser.add_argument("--target")
-    summary_parser.add_argument("--profile", choices=("compact", "full"), default="compact")
+    summary_parser.add_argument(
+        "--profile",
+        choices=("tiny", "compact", "full"),
+        default="tiny",
+        help="Output profile. Defaults to tiny; use compact or full for more planning detail.",
+    )
     summary_parser.add_argument("--task", help="Optional task text used to return a task-scoped compact summary.")
     summary_parser.add_argument("--changed", nargs="*", default=[], help="Optional changed paths used to scope compact summary output.")
     summary_parser.add_argument("--format", choices=("text", "json"), default="text")

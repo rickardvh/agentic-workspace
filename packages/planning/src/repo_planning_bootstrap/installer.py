@@ -1785,7 +1785,7 @@ def planning_summary(
         "warnings": [warning.copy() for warning in warnings],
         "warning_count": len(warnings),
     }
-    if profile == "compact":
+    if profile in {"tiny", "compact"}:
         compact_summary = _planning_summary_compact_projection(full_summary)
         if task_text or changed_paths:
             return _planning_summary_task_scoped_projection(
@@ -1793,6 +1793,8 @@ def planning_summary(
                 task_text=task_text,
                 changed_paths=changed_paths or [],
             )
+        if profile == "tiny":
+            return _planning_summary_tiny_projection(compact_summary)
         return compact_summary
     if profile != "full":
         raise ValueError(f"Unsupported planning summary profile: {profile}")
@@ -2776,7 +2778,8 @@ def _planning_record_required_follow_on(planning_record: dict[str, Any]) -> str:
 def _planning_summary_compact_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-summary-compact-schema/v1",
-        "command": "agentic-workspace summary --format json",
+        "command": "agentic-workspace summary --format json --profile compact",
+        "default_tiny_command": "agentic-workspace summary --format json",
         "full_profile_command": "agentic-workspace summary --format json --profile full",
         "shared_fields": [
             "kind",
@@ -2805,6 +2808,30 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "system_intent",
             "roadmap",
             "ownership_review",
+            "warnings",
+            "warning_count",
+        ],
+    }
+
+
+def _planning_summary_tiny_schema() -> dict[str, Any]:
+    return {
+        "schema_version": "planning-summary-tiny-schema/v1",
+        "command": "agentic-workspace summary --format json",
+        "compact_profile_command": "agentic-workspace summary --format json --profile compact",
+        "full_profile_command": "agentic-workspace summary --format json --profile full",
+        "rule": "Tiny is the default active-state router; use compact for handoff/planning contracts and full for audit detail.",
+        "shared_fields": [
+            "kind",
+            "profile",
+            "schema",
+            "todo",
+            "execplans",
+            "planning_surface_health",
+            "execution_readiness",
+            "current_execution_pressure",
+            "decomposition",
+            "detail_commands",
             "warnings",
             "warning_count",
         ],
@@ -3017,6 +3044,79 @@ def _planning_summary_task_scoped_projection(
     if roadmap_matches:
         scoped["roadmap"] = compact_summary.get("roadmap", {})
     return _drop_empty_compact_fields(scoped)
+
+
+def _planning_summary_tiny_projection(compact_summary: dict[str, Any]) -> dict[str, Any]:
+    todo = compact_summary.get("todo", {}) if isinstance(compact_summary.get("todo"), dict) else {}
+    execplans = compact_summary.get("execplans", {}) if isinstance(compact_summary.get("execplans"), dict) else {}
+    planning_surface_health = (
+        compact_summary.get("planning_surface_health", {}) if isinstance(compact_summary.get("planning_surface_health"), dict) else {}
+    )
+    execution_readiness = (
+        compact_summary.get("execution_readiness", {}) if isinstance(compact_summary.get("execution_readiness"), dict) else {}
+    )
+    current_execution_pressure = (
+        compact_summary.get("current_execution_pressure", {}) if isinstance(compact_summary.get("current_execution_pressure"), dict) else {}
+    )
+    decomposition = compact_summary.get("decomposition", {}) if isinstance(compact_summary.get("decomposition"), dict) else {}
+    roadmap = compact_summary.get("roadmap", {}) if isinstance(compact_summary.get("roadmap"), dict) else {}
+    tiny: dict[str, Any] = {
+        "kind": compact_summary.get("kind", "planning-summary/v1"),
+        "profile": "tiny",
+        "schema": _planning_summary_tiny_schema(),
+        "todo": {
+            "active_count": todo.get("active_count", 0),
+            "queued_count": todo.get("queued_count", 0),
+            "active_items": todo.get("active_items", []),
+        },
+        "execplans": {
+            "active_count": execplans.get("active_count", 0),
+            "active_execplans": execplans.get("active_execplans", []),
+        },
+        "planning_surface_health": {
+            key: planning_surface_health[key]
+            for key in (
+                "status",
+                "warning_count",
+                "recommended_next_action",
+                "recovery_required",
+                "unsafe_to_continue_reason",
+                "authoring_affordances",
+            )
+            if key in planning_surface_health
+        },
+        "execution_readiness": {
+            key: execution_readiness[key]
+            for key in ("status", "broad_work_allowed", "direct_work_allowed", "recommendation")
+            if key in execution_readiness
+        },
+        "current_execution_pressure": {
+            key: current_execution_pressure[key]
+            for key in ("status", "recommended_next_action", "active_plan_required")
+            if key in current_execution_pressure
+        },
+        "decomposition": {
+            key: decomposition[key]
+            for key in ("status", "record_count", "ready_lane_count", "recommended_next_action")
+            if key in decomposition
+        },
+        "roadmap": {key: roadmap[key] for key in ("lane_count", "candidate_count", "omitted_candidate_count") if key in roadmap},
+        "detail_commands": {
+            "compact": "agentic-workspace summary --profile compact --format json",
+            "full": "agentic-workspace summary --profile full --format json",
+            "task_scoped": "agentic-workspace summary --profile compact --task <task> --format json",
+            "changed_path_implement": "agentic-workspace implement --changed <paths> --format json",
+        },
+        "warnings": compact_summary.get("warnings", []),
+        "warning_count": compact_summary.get("warning_count", 0),
+    }
+    if int(tiny.get("warning_count", 0) or 0) == 0:
+        tiny.pop("warnings", None)
+    else:
+        tiny_health = tiny.get("planning_surface_health", {})
+        if isinstance(tiny_health, dict) and "warnings" in planning_surface_health:
+            tiny_health["warnings"] = planning_surface_health.get("warnings", [])
+    return _drop_empty_compact_fields(tiny)
 
 
 def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, Any]:

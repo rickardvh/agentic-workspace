@@ -38,7 +38,7 @@
           "path": [
             "kind"
           ],
-          "equals": "implementer-context/v1"
+          "equals": "implementer-context-tiny/v1"
         },
         {
           "path": [

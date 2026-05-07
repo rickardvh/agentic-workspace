@@ -326,14 +326,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           },
           {
             "choices": [
-              "full",
-              "tiny"
+              "tiny",
+              "full"
             ],
-            "default": "full",
+            "default": "tiny",
             "flags": [
               "--profile"
             ],
-            "help": "Startup output profile. Use tiny for the cheapest first-contact routing answer.",
+            "help": "Startup output profile. Defaults to tiny; use full only when the first-contact routing answer is insufficient.",
             "name": "profile"
           },
           {
@@ -423,13 +423,15 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           },
           {
             "choices": [
+              "tiny",
               "compact",
               "full"
             ],
-            "default": "compact",
+            "default": "tiny",
             "flags": [
               "--profile"
             ],
+            "help": "Summary output profile. Defaults to tiny; use compact or full for more detail.",
             "name": "profile"
           },
           {
@@ -554,14 +556,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           },
           {
             "choices": [
-              "full",
-              "tiny"
+              "tiny",
+              "full"
             ],
-            "default": "full",
+            "default": "tiny",
             "flags": [
               "--profile"
             ],
-            "help": "Implementer output profile. Use tiny for the next decision and proof commands only.",
+            "help": "Implementer output profile. Defaults to tiny; use full only when bounded implementation needs richer context.",
             "name": "profile"
           },
           {
@@ -1749,14 +1751,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
         },
         {
           "choices": [
-            "full",
-            "tiny"
+            "tiny",
+            "full"
           ],
-          "default": "full",
+          "default": "tiny",
           "flags": [
             "--profile"
           ],
-          "help": "Startup output profile. Use tiny for the cheapest first-contact routing answer.",
+          "help": "Startup output profile. Defaults to tiny; use full only when the first-contact routing answer is insufficient.",
           "name": "profile"
         },
         {
@@ -1790,13 +1792,15 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
         },
         {
           "choices": [
+            "tiny",
             "compact",
             "full"
           ],
-          "default": "compact",
+          "default": "tiny",
           "flags": [
             "--profile"
           ],
+          "help": "Summary output profile. Defaults to tiny; use compact or full for more detail.",
           "name": "profile"
         },
         {
@@ -1869,14 +1873,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
         },
         {
           "choices": [
-            "full",
-            "tiny"
+            "tiny",
+            "full"
           ],
-          "default": "full",
+          "default": "tiny",
           "flags": [
             "--profile"
           ],
-          "help": "Implementer output profile. Use tiny for the next decision and proof commands only.",
+          "help": "Implementer output profile. Defaults to tiny; use full only when bounded implementation needs richer context.",
           "name": "profile"
         },
         {

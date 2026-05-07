@@ -312,14 +312,14 @@ export const generatedCommandPackage = {
           },
           {
             "choices": [
-              "full",
-              "tiny"
+              "tiny",
+              "full"
             ],
-            "default": "full",
+            "default": "tiny",
             "flags": [
               "--profile"
             ],
-            "help": "Startup output profile. Use tiny for the cheapest first-contact routing answer.",
+            "help": "Startup output profile. Defaults to tiny; use full only when the first-contact routing answer is insufficient.",
             "name": "profile"
           },
           {
@@ -409,13 +409,15 @@ export const generatedCommandPackage = {
           },
           {
             "choices": [
+              "tiny",
               "compact",
               "full"
             ],
-            "default": "compact",
+            "default": "tiny",
             "flags": [
               "--profile"
             ],
+            "help": "Summary output profile. Defaults to tiny; use compact or full for more detail.",
             "name": "profile"
           },
           {
@@ -540,14 +542,14 @@ export const generatedCommandPackage = {
           },
           {
             "choices": [
-              "full",
-              "tiny"
+              "tiny",
+              "full"
             ],
-            "default": "full",
+            "default": "tiny",
             "flags": [
               "--profile"
             ],
-            "help": "Implementer output profile. Use tiny for the next decision and proof commands only.",
+            "help": "Implementer output profile. Defaults to tiny; use full only when bounded implementation needs richer context.",
             "name": "profile"
           },
           {

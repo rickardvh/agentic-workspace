@@ -9,14 +9,14 @@
       "AGENTS.md"
     ],
     "first_queries": [
-      "Use `agentic-workspace summary --format json` first when active planning recovery or compact ownership state is the question.",
+      "Use `agentic-workspace summary --format json` first for the tiny active-state router; add `--profile compact` only when handoff or planning-contract detail is needed.",
       "Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
       "Use `agentic-workspace config --target ./repo --profile tiny --format json` to find the configured startup entrypoint and effective repo posture.",
       "Use `agentic-workspace report --target ./repo --format json` when the question is combined workspace state."
     ],
     "tiny_safe_model": [
       "Start from the configured repo entrypoint (`AGENTS.md` by default), not from module internals or broad docs.",
-      "Ask compact startup queries first: `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --profile tiny --format json`, and `agentic-workspace summary --format json`.",
+      "Ask compact startup queries first: `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --profile tiny --format json`, and the tiny default `agentic-workspace summary --format json`.",
       "Open raw planning state, execplan prose, or deeper routing docs only when those compact answers show that the small model is no longer sufficient."
     ],
     "surface_roles": [
@@ -82,7 +82,7 @@
       }
     ],
     "conditional_reads": [
-      "Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question.",
+      "Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question; expand to `--profile compact` only when the tiny router is insufficient.",
       "Read `.agentic-workspace/planning/state.toml` only when the compact summary shows active work that still needs raw queue detail.",
       "Read the active feature plan in `.agentic-workspace/planning/execplans/` when the task belongs to one.",
       "Read the roadmap data in `.agentic-workspace/planning/state.toml` only when promoting work, reprioritising, or reviewing candidate epics.",

@@ -659,7 +659,7 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
             success_args=["implement", "--target", ".", "--changed", "README.md", "--task", "generated-adapter-proof", "--format", "json"],
             selected_fields=_selected_implement_fields,
             expected_fields={
-                "kind": "implementer-context/v1",
+                "kind": "implementer-context-tiny/v1",
                 "proof_kind": "proof-selection/v1",
             },
         )

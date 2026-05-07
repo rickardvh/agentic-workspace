@@ -191,14 +191,15 @@ export const generatedCommandPackage = {
           },
           {
             "choices": [
+              "tiny",
               "compact",
               "full"
             ],
-            "default": "compact",
+            "default": "tiny",
             "flags": [
               "--profile"
             ],
-            "help": "Summary profile.",
+            "help": "Summary profile. Defaults to tiny; use compact or full for more detail.",
             "name": "profile"
           },
           {

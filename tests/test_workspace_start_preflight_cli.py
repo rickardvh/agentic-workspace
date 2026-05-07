@@ -342,7 +342,22 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
         "candidates = []\n",
     )
 
-    assert cli.main(["start", "--target", str(target), "--changed", "src/agentic_workspace/cli.py", "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--changed",
+                "src/agentic_workspace/cli.py",
+                "--profile",
+                "full",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
 
     payload = json.loads(capsys.readouterr().out)
     _assert_invoked_cli_identity(payload, target_relation="outside-target")
@@ -468,7 +483,7 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert payload["task_intent"]["implement_changed_command"] == (
         f'uv run agentic-workspace implement --profile tiny --changed <paths> --task "{task}" --format json'
     )
-    assert "durable_intent" not in payload
+    assert payload["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
     assert "cli_compatibility" not in payload
     assert "proof" not in payload
     assert len(payload["authority_markers"]) == 1
@@ -523,7 +538,7 @@ def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> No
     assert action["command"] == "uv run agentic-workspace config --profile tiny --format json"
     assert action["read_first"] == [action["command"]]
     assert "tiny config surface" in action["summary"]
-    assert len(json.dumps(payload, sort_keys=True)) < 6700
+    assert len(json.dumps(payload, sort_keys=True)) < 7800
 
 
 def test_start_tiny_compacts_long_task_carry_forward_command(capsys) -> None:
@@ -549,7 +564,7 @@ def test_start_tiny_compacts_long_task_carry_forward_command(capsys) -> None:
     assert "Write the original request once" in payload["task_intent"]["task_file_instruction"]
     assert len(payload["task_intent"]["task_digest"]) == 16
     assert payload["task_intent"]["task_text_length"] == len(task)
-    assert len(json.dumps(payload, sort_keys=True)) < 7200
+    assert len(json.dumps(payload, sort_keys=True)) < 8800
 
 
 def test_start_tiny_routes_prep_only_handoff_to_planning_bridge(tmp_path: Path, capsys) -> None:
@@ -585,7 +600,7 @@ def test_start_tiny_routes_prep_only_handoff_to_planning_bridge(tmp_path: Path, 
     assert ".agentic-workspace/planning/execplans/" in prep_only["allowed_write_scope"]
     assert "tests or fixtures" in prep_only["forbidden_until_implementation_requested"]
     assert "manual JSON polishing or ad hoc validation loops" in prep_only["forbidden_until_implementation_requested"]
-    assert len(json.dumps(payload, sort_keys=True)) < 8200
+    assert len(json.dumps(payload, sort_keys=True)) < 8600
 
 
 def test_start_tiny_routes_paraphrased_prep_only_handoff_to_planning_bridge(tmp_path: Path, capsys) -> None:
@@ -961,7 +976,7 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     summary_output = capsys.readouterr().out
     summary_payload = json.loads(summary_output)
     assert summary_payload.get("kind") == "planning-summary/v1"
-    assert summary_payload.get("profile") == "compact"
+    assert summary_payload.get("profile") == "tiny"
 
     # Step 5: report command should work (though larger output)
     assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0

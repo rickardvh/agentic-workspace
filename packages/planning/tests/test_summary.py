@@ -802,7 +802,8 @@ candidates = [
 
     assert summary["profile"] == "compact"
     assert summary["schema"]["schema_version"] == "planning-summary-compact-schema/v1"
-    assert summary["schema"]["command"] == "agentic-workspace summary --format json"
+    assert summary["schema"]["command"] == "agentic-workspace summary --format json --profile compact"
+    assert summary["schema"]["default_tiny_command"] == "agentic-workspace summary --format json"
     assert summary["schema"]["full_profile_command"] == "agentic-workspace summary --format json --profile full"
     assert summary["machine_first_planning"]["status"] == "markdown-fallback-active"
     assert summary["machine_first_planning"]["active_markdown_fallback_count"] == 1
@@ -3156,7 +3157,7 @@ def test_planning_summary_exposes_ownership_review(tmp_path: Path, capsys) -> No
     assert "Ownership review:" in out
 
 
-def test_summary_command_defaults_to_compact_json_and_accepts_full_profile(tmp_path: Path, capsys) -> None:
+def test_summary_command_defaults_to_tiny_json_and_accepts_full_profile(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
@@ -3182,8 +3183,9 @@ candidates = [
     default_payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
-    assert default_payload["profile"] == "compact"
-    assert default_payload["schema"]["schema_version"] == "planning-summary-compact-schema/v1"
+    assert default_payload["profile"] == "tiny"
+    assert default_payload["schema"]["schema_version"] == "planning-summary-tiny-schema/v1"
+    assert default_payload["schema"]["compact_profile_command"] == "agentic-workspace summary --format json --profile compact"
 
     exit_code = planning_cli.main(["summary", "--target", str(tmp_path), "--format", "json", "--profile", "full"])
     full_payload = json.loads(capsys.readouterr().out)

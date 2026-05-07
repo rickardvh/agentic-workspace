@@ -12,6 +12,8 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
                 "--changed",
                 "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
                 "src/agentic_workspace/cli.py",
+                "--profile",
+                "full",
                 "--format",
                 "json",
             ]
@@ -138,6 +140,8 @@ def test_implement_task_routes_broad_issue_ingestion_to_planning(tmp_path: Path,
                 str(tmp_path),
                 "--task",
                 "ingest and implement all open GitHub issues",
+                "--profile",
+                "full",
                 "--format",
                 "json",
             ]
@@ -155,7 +159,7 @@ def test_implement_task_routes_broad_issue_ingestion_to_planning(tmp_path: Path,
 
 
 def test_implement_task_allows_narrow_single_issue_context(capsys) -> None:
-    assert cli.main(["implement", "--task", "implement issue #424", "--format", "json"]) == 0
+    assert cli.main(["implement", "--task", "implement issue #424", "--profile", "full", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["task_routing"]["status"] == "narrow-external-work"
@@ -229,6 +233,8 @@ def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: 
                 "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
                 "--task",
                 "update delegation config schema",
+                "--profile",
+                "full",
                 "--format",
                 "json",
             ]

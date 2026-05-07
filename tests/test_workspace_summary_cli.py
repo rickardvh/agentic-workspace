@@ -29,7 +29,7 @@ def _minimal_execplan() -> str:
     )
 
 
-def test_workspace_summary_json_defaults_to_compact_profile(tmp_path: Path, capsys) -> None:
+def test_workspace_summary_json_defaults_to_tiny_profile(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
@@ -55,8 +55,9 @@ candidates = [
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
-    assert payload["profile"] == "compact"
-    assert payload["schema"]["schema_version"] == "planning-summary-compact-schema/v1"
+    assert payload["profile"] == "tiny"
+    assert payload["schema"]["schema_version"] == "planning-summary-tiny-schema/v1"
+    assert payload["schema"]["compact_profile_command"] == "agentic-workspace summary --format json --profile compact"
     assert "candidate_lanes" not in payload["roadmap"]
 
 
@@ -98,7 +99,7 @@ candidates = [
         warning["warning_class"] == "historical_work_in_live_planning_state" for warning in payload["planning_surface_health"]["warnings"]
     )
     assert payload["execution_readiness"]["status"] == "narrow-direct-ready"
-    assert payload["autopilot_loop"]["status"] == "blocked"
+    assert payload["schema"]["compact_profile_command"] == "agentic-workspace summary --format json --profile compact"
 
 
 def test_workspace_summary_json_accepts_full_profile(tmp_path: Path, capsys) -> None:
@@ -129,7 +130,7 @@ queued_items = []
     )
     _write(tmp_path / ".agentic-workspace/planning/execplans/lane.plan.json", json.dumps({"kind": "planning-execplan/v1"}))
 
-    exit_code = cli.main(["summary", "--target", str(tmp_path), "--format", "json"])
+    exit_code = cli.main(["summary", "--target", str(tmp_path), "--format", "json", "--profile", "compact"])
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
@@ -281,7 +282,7 @@ candidates = []
         ),
     )
 
-    exit_code = cli.main(["summary", "--target", str(tmp_path), "--format", "json"])
+    exit_code = cli.main(["summary", "--target", str(tmp_path), "--profile", "compact", "--format", "json"])
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
