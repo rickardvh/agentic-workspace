@@ -51,7 +51,7 @@ def test_preflight_command_active_only_returns_compact_planning_state(capsys) ->
 
 def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None:
     """Test that preflight returns bundled startup + config + active state for takeover recovery."""
-    assert cli.main(["preflight", "--format", "json"]) == 0
+    assert cli.main(["preflight", "--profile", "full", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "preflight-response/v1"
@@ -88,6 +88,17 @@ def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None
     assert config["agent_instructions_file"] == "AGENTS.md"
 
 
+def test_preflight_default_returns_tiny_takeover_router(capsys) -> None:
+    assert cli.main(["preflight", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "preflight-response/v1"
+    assert payload["mode"] == "tiny-takeover-router"
+    assert "active_state_summary" in payload
+    assert "startup_guidance" not in payload
+    assert payload["detail_commands"]["full_takeover"].endswith("preflight --target . --profile full --format json")
+
+
 def test_preflight_command_with_target_argument(tmp_path: Path, capsys) -> None:
     """Test that preflight --target works to specify a target repository."""
     target = tmp_path / "repo"
@@ -108,6 +119,8 @@ def test_preflight_task_surfaces_vague_outcome_orientation(capsys) -> None:
                 "preflight",
                 "--task",
                 "I want this repo to feel more trustworthy when agents hand work back after a long task",
+                "--profile",
+                "full",
                 "--format",
                 "json",
             ]
@@ -197,7 +210,7 @@ def test_preflight_surfaces_closeout_workflow_obligations_as_standing_requiremen
         'review_hint = "Surface actionable findings clearly."\n',
     )
 
-    assert cli.main(["preflight", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["preflight", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     obligations = payload["closeout_obligations"]["required_before_lane_closeout"]
@@ -245,6 +258,8 @@ def test_preflight_matches_planless_workflow_obligations_from_task_text(tmp_path
                 str(target),
                 "--task",
                 "Fix workspace workflow obligations during dogfooding closeout without writing a plan",
+                "--profile",
+                "full",
                 "--format",
                 "json",
             ]
@@ -309,7 +324,7 @@ def test_preflight_full_includes_active_todo_without_execplan(tmp_path: Path, ca
         "candidates = []\n",
     )
 
-    assert cli.main(["preflight", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["preflight", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     active_state = payload["active_planning_state"]
@@ -832,6 +847,8 @@ def test_preflight_task_includes_skill_recommendations(tmp_path: Path, capsys) -
                 str(target),
                 "--task",
                 "tighten a new execplan before coding",
+                "--profile",
+                "full",
                 "--format",
                 "json",
             ]
@@ -933,7 +950,7 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     _init_git_repo(target)
 
     # Step 1: defaults command should provide startup guidance with correct commands
-    assert cli.main(["defaults", "--section", "startup", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "startup", "--format", "json"]) == 0
     defaults_output = capsys.readouterr().out
     defaults_payload = json.loads(defaults_output)
 
@@ -953,7 +970,7 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     assert not any("agentic-planning summary" in q for q in queries)
 
     # Step 2: preflight should provide the bundled compact takeover context
-    assert cli.main(["preflight", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["preflight", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
     preflight_output = capsys.readouterr().out
     preflight_payload = json.loads(preflight_output)
     assert preflight_payload.get("kind") == "preflight-response/v1"
@@ -968,8 +985,9 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
     config_output = capsys.readouterr().out
     config_payload = json.loads(config_output)
+    assert config_payload["kind"] == "agentic-workspace/config-tiny/v1"
     assert "workspace" in config_payload
-    assert "mixed_agent" in config_payload
+    assert "next_detail" in config_payload
 
     # Step 4: summary command should work
     assert cli.main(["summary", "--format", "json"]) == 0

@@ -9,6 +9,51 @@ _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from memory_test_support import *
 
 
+def test_memory_report_defaults_to_tiny_profile(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "tiny"
+    assert "state_model" not in payload
+    assert payload["detail_commands"]["full"] == "agentic-memory report --target . --profile full --format json"
+
+
+def test_memory_lifecycle_status_defaults_to_tiny_actions(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "action_count" in payload
+    assert len(payload["actions"]) <= 5
+    assert payload["detail_command"] == "agentic-memory status --target . --profile full --format json"
+
+
+def test_memory_generated_report_uses_compact_target_error_for_ambiguous_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    parent = tmp_path / "parent"
+    child = parent / "child"
+    (parent / ".git").mkdir(parents=True)
+    (child / ".git").mkdir(parents=True)
+    monkeypatch.chdir(child)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["report", "--format", "json"])
+
+    assert excinfo.value.code == 2
+    stderr = capsys.readouterr().err
+    assert "Ambiguous repository root detected" in stderr
+    assert "Retry with --target ." in stderr
+    assert "Traceback" not in stderr
+
+
 def test_memory_freshness_audit_ignores_bootstrap_workspace(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)

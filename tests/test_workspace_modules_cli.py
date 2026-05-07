@@ -8,7 +8,7 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     repo_root = Path("./repo")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(repo_root, []))
 
-    assert cli.main(["modules", "--format", "json"]) == 0
+    assert cli.main(["modules", "--profile", "full", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert [entry["id"] for entry in payload["module_profiles"]] == [
@@ -217,7 +217,7 @@ def test_modules_command_does_not_advertise_current_memory_as_ordinary_surface(t
     target.mkdir()
     _init_git_repo(target)
 
-    assert cli.main(["modules", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["modules", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     memory_module = next(entry for entry in payload["modules"] if entry["name"] == "memory")
@@ -234,7 +234,7 @@ def test_modules_command_reports_installation_state_for_target(monkeypatch, tmp_
     _write((tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"), "{}\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_install_signals(tmp_path, calls))
 
-    assert cli.main(["modules", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["modules", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     planning_module = next(entry for entry in payload["modules"] if entry["name"] == "planning")

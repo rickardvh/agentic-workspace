@@ -35,6 +35,18 @@ export const generatedCommandPackage = {
           },
           {
             "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Output profile. Defaults to tiny; use full for action detail.",
+            "name": "profile"
+          },
+          {
+            "choices": [
               "text",
               "json"
             ],
@@ -121,6 +133,18 @@ export const generatedCommandPackage = {
           },
           {
             "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Output profile. Defaults to tiny; use full for action detail.",
+            "name": "profile"
+          },
+          {
+            "choices": [
               "text",
               "json"
             ],
@@ -199,6 +223,18 @@ export const generatedCommandPackage = {
           },
           {
             "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Output profile. Defaults to tiny; use full for report detail.",
+            "name": "profile"
+          },
+          {
+            "choices": [
               "text",
               "json"
             ],
@@ -274,6 +310,18 @@ export const generatedCommandPackage = {
             ],
             "help": "Target repository path. Defaults to the current directory.",
             "name": "target"
+          },
+          {
+            "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Output profile. Defaults to tiny; use full for fixture detail.",
+            "name": "profile"
           },
           {
             "choices": [

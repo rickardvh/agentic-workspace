@@ -15,6 +15,11 @@
       "required": false
     },
     {
+      "name": "profile",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "format",
       "source": "cli-option",
       "required": false
@@ -63,4 +68,3 @@
   ],
   "migration_status": "draft-contract-only"
 }
-

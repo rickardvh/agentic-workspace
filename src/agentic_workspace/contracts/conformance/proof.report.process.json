@@ -34,28 +34,22 @@
       "field_assertions": [
         {
           "path": [
-            "profile"
-          ],
-          "equals": "compact-contract-answer/v1"
-        },
-        {
-          "path": [
-            "surface"
-          ],
-          "equals": "proof"
-        },
-        {
-          "path": [
-            "matched"
-          ],
-          "equals": true
-        },
-        {
-          "path": [
-            "answer",
             "kind"
           ],
-          "equals": "proof-selection/v1"
+          "equals": "proof-next-decision/v1"
+        },
+        {
+          "path": [
+            "next",
+            "action"
+          ],
+          "equals": "run-validation-command"
+        },
+        {
+          "path": [
+            "detail_command"
+          ],
+          "equals": "agentic-workspace proof --profile full --changed <paths> --format json"
         }
       ]
     },

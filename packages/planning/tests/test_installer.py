@@ -9,6 +9,19 @@ _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from planning_test_support import *
 
 
+def test_planning_report_defaults_to_tiny_profile(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    install_bootstrap(target=target)
+
+    assert planning_cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "tiny"
+    assert "finished_work_inspection" not in payload
+    assert payload["detail_commands"]["full"] == "agentic-planning report --target . --profile full --format json"
+
+
 def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routing() -> None:
     readme_text = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
     bootstrap_agents_text = (installer_mod.payload_root() / "AGENTS.template.md").read_text(encoding="utf-8")

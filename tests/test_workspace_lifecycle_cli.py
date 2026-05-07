@@ -745,7 +745,7 @@ def test_status_real_init_reports_workspace_shared_layer_surfaces(tmp_path: Path
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
 
-    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["status", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     _assert_invoked_cli_identity(payload, target_relation="outside-target")
@@ -764,7 +764,7 @@ def test_status_real_init_reports_workspace_health(tmp_path: Path, capsys) -> No
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
 
-    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["status", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["command"] == "status"
@@ -1135,11 +1135,11 @@ def test_root_lifecycle_fixture_matrix_covers_upgrade_shapes(
     assert upgrade_payload["modules"] == expected_modules
     assert upgrade_payload["lifecycle_plan"]["root_upgrade_front_door"]["selected_modules"] == expected_modules
 
-    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["status", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
     status_payload = json.loads(capsys.readouterr().out)
     assert status_payload["modules"] == expected_modules
 
-    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["doctor", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
     doctor_payload = json.loads(capsys.readouterr().out)
     assert doctor_payload["modules"] == expected_modules
 
@@ -1193,7 +1193,7 @@ def test_root_lifecycle_fixture_matrix_classifies_legacy_residue(tmp_path: Path,
     _write(target / "TODO.md", f"{compat_notice}\n# TODO\n")
     _write(target / "ROADMAP.md", f"{compat_notice}\n# ROADMAP\n")
 
-    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["doctor", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     flattened_actions = [
         action

@@ -2093,7 +2093,7 @@ def main(argv: list[str] | None = None) -> int:
             target_root = _resolve_target_root(args.target) if args.target else None
             if target_root is not None:
                 _validate_target_root(command_name="modules", target_root=target_root)
-            _emit_modules(format_name=args.format, target_root=target_root)
+            _emit_modules(format_name=args.format, target_root=target_root, profile=getattr(args, "profile", "tiny"))
             return 0
         except WorkspaceUsageError as exc:
             parser.error(str(exc))
@@ -2180,6 +2180,7 @@ def main(argv: list[str] | None = None) -> int:
                 target_root=target_root,
                 active_only=getattr(args, "active_only", False),
                 task_text=getattr(args, "task", None),
+                profile=getattr(args, "profile", "tiny"),
             )
             _emit_payload(payload=payload, format_name=args.format)
             return 0
@@ -4891,7 +4892,7 @@ def _run_lifecycle_command(
             repair_actions=repair_actions,
             manual_review_actions=manual_review_actions,
         )
-        if compact_status and command_name == "status":
+        if compact_status and command_name in {"status", "doctor"}:
             payload = _compact_status_payload(payload, cli_invoke=config.cli_invoke)
     return payload
 
@@ -4905,13 +4906,25 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
                 continue
             actions = report.get("actions", [])
             warnings = report.get("warnings", [])
+            compact_actions = []
+            if isinstance(actions, list):
+                for action in actions[:3]:
+                    if isinstance(action, dict):
+                        compact_actions.append(
+                            {
+                                key: action.get(key)
+                                for key in ("kind", "path", "detail", "category", "remediation_kind")
+                                if action.get(key) not in (None, "")
+                            }
+                        )
             compact_reports.append(
                 {
                     "module": report.get("module", ""),
                     "message": report.get("message", ""),
-                    "actions": actions if isinstance(actions, list) else [],
+                    "action_count": len(actions) if isinstance(actions, list) else 0,
+                    "actions": compact_actions,
                     "warning_count": len(warnings) if isinstance(warnings, list) else 0,
-                    "warnings": warnings[:5] if isinstance(warnings, list) else [],
+                    "warnings": warnings[:3] if isinstance(warnings, list) else [],
                     "detail_section": "reports",
                 }
             )
@@ -4951,6 +4964,11 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
     payload["reports"] = compact_reports
     payload["config"] = compact_config
     payload["registry"] = compact_registry
+    for key in ("warnings", "needs_review", "repair_actions", "manual_review_actions"):
+        values = payload.get(key, [])
+        if isinstance(values, list):
+            payload[f"{key}_count"] = len(values)
+            payload[key] = values[:5]
     payload["lifecycle_plan"] = {
         "status": (
             payload.get("lifecycle_plan", {}).get("status", "available") if isinstance(payload.get("lifecycle_plan"), dict) else "available"
@@ -8238,12 +8256,90 @@ def _refresh_github_external_intent_evidence(
     }
 
 
+def _tiny_preflight_payload(payload: dict[str, Any], *, config: WorkspaceConfig) -> dict[str, Any]:
+    active_state = payload.get("active_planning_state", {})
+    todo = active_state.get("todo", {}) if isinstance(active_state, dict) else {}
+    execplans = active_state.get("execplans", {}) if isinstance(active_state, dict) else {}
+    planning_record = active_state.get("planning_record", {}) if isinstance(active_state, dict) else {}
+    active_execplans = execplans.get("active_execplans", []) if isinstance(execplans, dict) else []
+    branch_posture = payload.get("branch_workflow_posture", {})
+    if isinstance(branch_posture, dict):
+        branch_posture = {
+            key: branch_posture.get(key)
+            for key in (
+                "status",
+                "current_branch",
+                "default_branch",
+                "risk",
+                "recommended_next_action",
+                "upstream_divergence",
+                "shared_state_mutation_risk",
+            )
+            if key in branch_posture
+        }
+    local_memory = payload.get("local_memory", {})
+    if isinstance(local_memory, dict):
+        local_memory = {key: local_memory.get(key) for key in ("status", "path", "rule") if key in local_memory}
+    closeout = payload.get("closeout_obligations", {})
+    if isinstance(closeout, dict):
+        closeout = {key: closeout.get(key) for key in ("status", "activation_rule", "detail_command") if key in closeout}
+    posture = payload.get("operating_posture", {})
+    if isinstance(posture, dict):
+        posture = {key: posture.get(key) for key in ("status", "required_behavior_summary", "detail_command") if key in posture}
+    intent = payload.get("durable_intent", {})
+    if isinstance(intent, dict):
+        subsystem = intent.get("subsystem_intent", {})
+        intent = {
+            "status": intent.get("status", "unknown"),
+            "subsystem_intent": {
+                "status": subsystem.get("status", "unknown") if isinstance(subsystem, dict) else "unknown",
+                "matched_count": subsystem.get("matched_count", 0) if isinstance(subsystem, dict) else 0,
+            },
+            "inspect": intent.get("inspect", ""),
+        }
+    return {
+        "kind": payload.get("kind", "preflight-response/v1"),
+        "mode": "tiny-takeover-router",
+        "target": payload.get("target", ""),
+        "issued_at": payload.get("issued_at", ""),
+        "preflight_token": payload.get("preflight_token", ""),
+        "timestamp_hint": payload.get("timestamp_hint", ""),
+        "branch_workflow_posture": branch_posture,
+        "local_memory": local_memory,
+        "workflow_obligations": {
+            "status": payload.get("workflow_obligations", {}).get("status", "unknown")
+            if isinstance(payload.get("workflow_obligations"), dict)
+            else "unknown",
+            "match_count": payload.get("workflow_obligations", {}).get("match_count", 0)
+            if isinstance(payload.get("workflow_obligations"), dict)
+            else 0,
+            "detail_command": "agentic-workspace preflight --profile full --format json",
+        },
+        "closeout_obligations": closeout,
+        "operating_posture": posture,
+        "durable_intent": intent,
+        "active_state_summary": {
+            "todo_active_count": todo.get("active_count", 0) if isinstance(todo, dict) else 0,
+            "active_execplan_count": len(active_execplans) if isinstance(active_execplans, list) else 0,
+            "planning_status": planning_record.get("status", "unavailable") if isinstance(planning_record, dict) else "unavailable",
+        },
+        "detail_commands": {
+            "full_takeover": f"{config.cli_invoke} preflight --target . --profile full --format json",
+            "active_state": f"{config.cli_invoke} preflight --target . --active-only --profile full --format json",
+            "startup": f'{config.cli_invoke} start --target . --profile tiny --task "<task>" --format json',
+            "config": f"{config.cli_invoke} config --target . --profile tiny --format json",
+            "summary": f"{config.cli_invoke} summary --target . --format json",
+        },
+    }
+
+
 def _run_preflight_command(
     *,
     target_root: Path,
     active_only: bool = False,
     task_text: str | None = None,
     changed_paths: list[str] | None = None,
+    profile: str = "tiny",
 ) -> dict[str, Any]:
     """Get compact takeover-safe context: startup + config + active state.
 
@@ -8283,7 +8379,7 @@ def _run_preflight_command(
         # Return only compact active state for polling/monitoring.
         # This remains useful even when the repo has active TODO state but no active execplan.
 
-        return {
+        active_payload = {
             "kind": "preflight-response/v1",
             "mode": "active-state-only",
             "target": target_root.as_posix(),
@@ -8305,6 +8401,7 @@ def _run_preflight_command(
             "active_planning_state": active_state,
             "planning_record": planning_record if isinstance(planning_record, dict) else {"status": "unavailable"},
         }
+        return active_payload
 
     # Full preflight: startup + config + active state for takeover recovery
     # Get startup guidance
@@ -8391,6 +8488,8 @@ def _run_preflight_command(
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
         startup_guidance["startup_guidance"]["vague_outcome_orientation"] = vague_orientation
+    if profile == "tiny":
+        return _tiny_preflight_payload(startup_guidance, config=config)
     return startup_guidance
 
 
@@ -9257,7 +9356,7 @@ def _start_payload(
     descriptors = _module_operations()
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     installed_modules = [entry.name for entry in registry if entry.installed]
-    preflight = _run_preflight_command(target_root=target_root, task_text=task_text, changed_paths=changed_paths)
+    preflight = _run_preflight_command(target_root=target_root, task_text=task_text, changed_paths=changed_paths, profile="full")
     active_state = preflight.get("active_planning_state", {})
     selected_modules = installed_modules or _preset_modules(descriptors).get(config.default_preset, [])
     if not installed_modules and isinstance(active_state, dict):
@@ -13319,10 +13418,10 @@ def _write_json_file(*, destination: Path, payload: dict[str, Any], dry_run: boo
     return destination
 
 
-def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
+def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = "tiny") -> None:
     descriptors = _module_operations()
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
-    payload = {
+    full_payload = {
         "package_footprint": copy.deepcopy(_PACKAGE_FOOTPRINT),
         "component_model": copy.deepcopy(_MODULE_COMPONENT_MODEL),
         "workspace_components": copy.deepcopy(_WORKSPACE_COMPONENTS),
@@ -13362,6 +13461,30 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
             for entry in registry
         ],
     }
+    if profile == "tiny":
+        installed = [entry for entry in registry if entry.installed]
+        payload = {
+            "kind": "agentic-workspace/modules-router/v1",
+            "profile": "tiny",
+            "target": target_root.as_posix() if target_root is not None else None,
+            "active_module_count": len(installed),
+            "active_modules": [entry.name for entry in installed],
+            "available_module_profiles": [
+                {
+                    "id": str(entry.get("id", "")),
+                    "modules": list(entry.get("selected_modules", [])),
+                    "preset": entry.get("preset"),
+                    "default_active": bool(entry.get("default_active", True)),
+                }
+                for entry in _MODULE_PROFILE_ENTRIES
+            ],
+            "detail_commands": {
+                "full": "agentic-workspace modules --target . --profile full --format json",
+                "status": "agentic-workspace status --target . --format json",
+            },
+        }
+    else:
+        payload = full_payload
     _emit_payload(payload=payload, format_name=format_name)
 
 
@@ -14774,10 +14897,34 @@ def _select_defaults_section(payload: dict[str, Any], *, section: str) -> dict[s
     )
 
 
-def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
+def _tiny_defaults_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    sections = sorted(str(key) for key in payload)
+    return {
+        "kind": "agentic-workspace/defaults-router/v1",
+        "profile": "tiny",
+        "summary": "Default-route contract sections are available on demand; request one section or full detail instead of loading the whole contract.",
+        "available_sections": sections,
+        "common_sections": [
+            "startup",
+            "proof_surfaces",
+            "memory_routing",
+            "capability_routing",
+            "closeout_trust",
+            "compact_contract_profile",
+        ],
+        "detail_commands": {
+            "section": "agentic-workspace defaults --section <section> --format json",
+            "full": "agentic-workspace defaults --profile full --format json",
+        },
+    }
+
+
+def _emit_defaults(*, format_name: str, section: str | None = None, profile: str = "tiny") -> None:
     payload = _defaults_payload()
     if section is not None:
         payload = _select_defaults_section(payload, section=section)
+    elif profile == "tiny":
+        payload = _tiny_defaults_payload(payload)
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
         return
@@ -15248,7 +15395,7 @@ def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) ->
 
 
 def _run_defaults_report_adapter(args: argparse.Namespace) -> int:
-    _emit_defaults(format_name=args.format, section=getattr(args, "section", None))
+    _emit_defaults(format_name=args.format, section=getattr(args, "section", None), profile=getattr(args, "profile", "tiny"))
     return 0
 
 
@@ -15269,7 +15416,7 @@ def _run_modules_report_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else None
     if target_root is not None:
         _validate_target_root(command_name="modules", target_root=target_root)
-    _emit_modules(format_name=args.format, target_root=target_root)
+    _emit_modules(format_name=args.format, target_root=target_root, profile=getattr(args, "profile", "tiny"))
     return 0
 
 
@@ -15339,6 +15486,7 @@ def _run_preflight_report_adapter(args: argparse.Namespace) -> int:
         target_root=target_root,
         active_only=bool(getattr(args, "active_only", False)),
         task_text=getattr(args, "task", None),
+        profile=getattr(args, "profile", "tiny"),
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
@@ -15470,6 +15618,7 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
         dry_run=False,
         non_interactive=bool(getattr(args, "non_interactive", False)),
         config=config,
+        compact_status=getattr(args, "profile", "tiny") == "tiny",
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0

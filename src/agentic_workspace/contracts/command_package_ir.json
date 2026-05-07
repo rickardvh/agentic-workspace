@@ -215,6 +215,18 @@
                 "help": "Output format."
               },
               {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "tiny",
+                  "full"
+                ],
+                "default": "tiny",
+                "help": "Defaults output profile. Defaults to tiny section routing; use full to emit the complete default-route contract."
+              },
+              {
                 "name": "section",
                 "flags": [
                   "--section"
@@ -314,8 +326,8 @@
                   "compact",
                   "full"
                 ],
-                "default": "full",
-                "help": "Select compact agent-facing config or full resolved config detail."
+                "default": "tiny",
+                "help": "Config output profile. Defaults to tiny agent-facing posture; use compact or full for more resolved config detail."
               }
             ]
           },
@@ -400,6 +412,18 @@
                 ],
                 "default": "text",
                 "help": "Output format."
+              },
+              {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "tiny",
+                  "full"
+                ],
+                "default": "tiny",
+                "help": "Modules output profile. Defaults to tiny; use full for module registry and component detail."
               }
             ]
           },
@@ -827,6 +851,18 @@
                 "help": "Optional task description used to include task-specific skill recommendations in preflight context."
               },
               {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "tiny",
+                  "full"
+                ],
+                "default": "tiny",
+                "help": "Preflight output profile. Defaults to tiny takeover routing; use full for complete recovery context."
+              },
+              {
                 "name": "format",
                 "flags": [
                   "--format"
@@ -945,8 +981,8 @@
                   "full",
                   "tiny"
                 ],
-                "default": "full",
-                "help": "Proof output profile. Use tiny for the next validation action and command list only."
+                "default": "tiny",
+                "help": "Proof output profile. Defaults to tiny for the next validation action and command list; use full for all proof routing detail."
               },
               {
                 "name": "format",
@@ -1469,6 +1505,18 @@
                 ],
                 "action": "store_true",
                 "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              },
+              {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "tiny",
+                  "full"
+                ],
+                "default": "tiny",
+                "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail."
               }
             ]
           },
@@ -1574,6 +1622,18 @@
                 ],
                 "action": "store_true",
                 "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              },
+              {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "tiny",
+                  "full"
+                ],
+                "default": "tiny",
+                "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail."
               }
             ]
           },
@@ -1679,6 +1739,18 @@
                 ],
                 "action": "store_true",
                 "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              },
+              {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "tiny",
+                  "full"
+                ],
+                "default": "tiny",
+                "help": "Doctor output profile. Defaults to tiny remediation routing; use full for all diagnostic detail."
               }
             ]
           },
@@ -2047,6 +2119,18 @@
                 "help": "Target repository path. Defaults to the current directory."
               },
               {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "tiny",
+                  "full"
+                ],
+                "default": "tiny",
+                "help": "Output profile. Defaults to tiny; use full for audit detail."
+              },
+              {
                 "name": "format",
                 "flags": [
                   "--format"
@@ -2234,6 +2318,18 @@
                 "help": "Target repository path. Defaults to the current directory."
               },
               {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "tiny",
+                  "full"
+                ],
+                "default": "tiny",
+                "help": "Output profile. Defaults to tiny; use full for action detail."
+              },
+              {
                 "name": "format",
                 "flags": [
                   "--format"
@@ -2320,6 +2416,18 @@
                 "help": "Enforce doc-ownership audits even when the repo manifest has not enabled them."
               },
               {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "tiny",
+                  "full"
+                ],
+                "default": "tiny",
+                "help": "Output profile. Defaults to tiny; use full for action detail."
+              },
+              {
                 "name": "format",
                 "flags": [
                   "--format"
@@ -2398,6 +2506,18 @@
                 "help": "Target repository path. Defaults to the current directory."
               },
               {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "tiny",
+                  "full"
+                ],
+                "default": "tiny",
+                "help": "Output profile. Defaults to tiny; use full for report detail."
+              },
+              {
                 "name": "format",
                 "flags": [
                   "--format"
@@ -2474,6 +2594,18 @@
                   "--target"
                 ],
                 "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "profile",
+                "flags": [
+                  "--profile"
+                ],
+                "choices": [
+                  "tiny",
+                  "full"
+                ],
+                "default": "tiny",
+                "help": "Output profile. Defaults to tiny; use full for fixture detail."
               },
               {
                 "name": "format",

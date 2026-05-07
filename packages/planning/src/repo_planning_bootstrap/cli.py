@@ -119,6 +119,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     report_parser = subparsers.add_parser("report", help="Report compact planning module state without reading raw planning files first.")
     report_parser.add_argument("--target")
+    report_parser.add_argument(
+        "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for audit detail."
+    )
     report_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     reconcile_parser = subparsers.add_parser(
@@ -272,6 +275,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "report":
         report = planning_report(target=args.target)
+        if getattr(args, "profile", "tiny") == "tiny":
+            report = _tiny_report(report)
         if args.format == "json":
             print(json.dumps(report, indent=2))
         else:
@@ -442,11 +447,38 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
 
 def _run_report_adapter(args: argparse.Namespace) -> int:
     report = planning_report(target=args.target)
+    if getattr(args, "profile", "tiny") == "tiny":
+        report = _tiny_report(report)
     if args.format == "json":
         print(json.dumps(report, indent=2))
     else:
         _print_report(report)
     return 0
+
+
+def _tiny_report(report: dict) -> dict:
+    status = report.get("status", {})
+    active = report.get("active", {})
+    findings = report.get("findings", [])
+    return {
+        "kind": report.get("kind", "planning-report/v1"),
+        "profile": "tiny",
+        "module": report.get("module", "planning"),
+        "target_root": report.get("target_root", ""),
+        "health": report.get("health", "unknown"),
+        "status": status,
+        "active": {
+            "active_item_count": active.get("active_item_count", 0) if isinstance(active, dict) else 0,
+            "active_execplan_count": active.get("active_execplan_count", 0) if isinstance(active, dict) else 0,
+        },
+        "finding_count": len(findings) if isinstance(findings, list) else 0,
+        "findings": findings[:5] if isinstance(findings, list) else [],
+        "next_action": report.get("next_action", {}),
+        "detail_commands": {
+            "full": "agentic-planning report --target . --profile full --format json",
+            "summary": "agentic-planning summary --target . --format json",
+        },
+    }
 
 
 def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:

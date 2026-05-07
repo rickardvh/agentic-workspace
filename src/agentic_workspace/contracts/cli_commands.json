@@ -16,6 +16,18 @@
             "--target"
           ],
           "help": "Optional repository path used to report installed modules."
+        },
+        {
+          "name": "profile",
+          "flags": [
+            "--profile"
+          ],
+          "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "help": "Modules output profile. Defaults to tiny; use full for module registry and component detail."
         }
       ],
       "role": "module_delegation_front_door",
@@ -198,6 +210,18 @@
       ],
       "options": [
         {
+          "name": "profile",
+          "flags": [
+            "--profile"
+          ],
+          "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "help": "Defaults output profile. Defaults to tiny section routing; use full to emit the complete default-route contract."
+        },
+        {
           "name": "section",
           "flags": [
             "--section"
@@ -256,8 +280,8 @@
             "full",
             "tiny"
           ],
-          "default": "full",
-          "help": "Proof output profile. Use tiny for the next validation action and command list only."
+          "default": "tiny",
+          "help": "Proof output profile. Defaults to tiny for the next validation action and command list; use full for all proof routing detail."
         }
       ],
       "role": "core_context_router",
@@ -331,8 +355,8 @@
             "compact",
             "full"
           ],
-          "default": "full",
-          "help": "Select compact agent-facing config or full resolved config detail."
+          "default": "tiny",
+          "help": "Config output profile. Defaults to tiny agent-facing posture; use compact or full for more resolved config detail."
         }
       ],
       "role": "core_context_router",
@@ -624,6 +648,18 @@
             "--task"
           ],
           "help": "Optional task description used to include task-specific skill recommendations in preflight context."
+        },
+        {
+          "name": "profile",
+          "flags": [
+            "--profile"
+          ],
+          "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "help": "Preflight output profile. Defaults to tiny takeover routing; use full for complete recovery context."
         }
       ],
       "role": "core_context_router",
@@ -713,6 +749,20 @@
       "uses_option_groups": [
         "selection"
       ],
+      "options": [
+        {
+          "name": "profile",
+          "flags": [
+            "--profile"
+          ],
+          "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail."
+        }
+      ],
       "role": "core_lifecycle",
       "audience": "ordinary_host_repo",
       "classification_note": "read-only lifecycle health status"
@@ -722,6 +772,20 @@
       "help": "Report drift, missing surfaces, and recommended remediation.",
       "uses_option_groups": [
         "selection"
+      ],
+      "options": [
+        {
+          "name": "profile",
+          "flags": [
+            "--profile"
+          ],
+          "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "help": "Doctor output profile. Defaults to tiny remediation routing; use full for all diagnostic detail."
+        }
       ],
       "role": "core_lifecycle",
       "audience": "ordinary_host_repo",

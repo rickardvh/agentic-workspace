@@ -298,6 +298,18 @@ export const generatedCommandPackage = {
           },
           {
             "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Output profile. Defaults to tiny; use full for audit detail.",
+            "name": "profile"
+          },
+          {
+            "choices": [
               "text",
               "json"
             ],

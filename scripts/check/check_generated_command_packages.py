@@ -59,25 +59,23 @@ def _selected_config_fields(stdout: str) -> dict[str, object]:
     payload = json.loads(stdout)
     workspace = payload.get("workspace", {}) if isinstance(payload.get("workspace"), dict) else {}
     return {
+        "kind": payload.get("kind"),
+        "profile": payload.get("profile"),
         "exists": payload.get("exists"),
         "agent_instructions_file": workspace.get("agent_instructions_file"),
-        "workflow_artifact_profile": workspace.get("workflow_artifact_profile"),
-        "default_preset": workspace.get("default_preset"),
+        "improvement_latitude": workspace.get("improvement_latitude"),
+        "optimization_bias": workspace.get("optimization_bias"),
     }
 
 
 def _selected_modules_fields(stdout: str) -> dict[str, object]:
     payload = json.loads(stdout)
-    package_footprint = payload.get("package_footprint", {}) if isinstance(payload.get("package_footprint"), dict) else {}
-    component_model = payload.get("component_model", {}) if isinstance(payload.get("component_model"), dict) else {}
-    compatibility = payload.get("feature_tiers_compatibility", {}) if isinstance(payload.get("feature_tiers_compatibility"), dict) else {}
-    modules = payload.get("modules", [])
-    module_names = [module.get("name") for module in modules if isinstance(module, dict)] if isinstance(modules, list) else []
+    active_modules = payload.get("active_modules", [])
     return {
-        "package_footprint_status": package_footprint.get("status"),
-        "component_model_alignment": component_model.get("alignment"),
-        "feature_tiers_compatibility_status": compatibility.get("status"),
-        "module_names": module_names,
+        "kind": payload.get("kind"),
+        "profile": payload.get("profile"),
+        "active_module_count": payload.get("active_module_count"),
+        "active_modules": active_modules,
     }
 
 
@@ -124,12 +122,11 @@ def _selected_preflight_fields(stdout: str) -> dict[str, object]:
 
 def _selected_proof_fields(stdout: str) -> dict[str, object]:
     payload = json.loads(stdout)
-    answer = payload.get("answer", {}) if isinstance(payload.get("answer"), dict) else {}
+    next_action = payload.get("next", {}) if isinstance(payload.get("next"), dict) else {}
     return {
-        "profile": payload.get("profile"),
-        "surface": payload.get("surface"),
-        "matched": payload.get("matched"),
-        "answer_kind": answer.get("kind"),
+        "kind": payload.get("kind"),
+        "next_action": next_action.get("action"),
+        "detail_command": payload.get("detail_command"),
     }
 
 
@@ -387,10 +384,12 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
         except json.JSONDecodeError as exc:
             return [f"runtime primitive failure: canonical config stdout was not JSON: {exc}"]
         expected_config_fields = {
+            "kind": "agentic-workspace/config-tiny/v1",
+            "profile": "tiny",
             "exists": False,
             "agent_instructions_file": "AGENTS.md",
-            "workflow_artifact_profile": "repo-owned",
-            "default_preset": "full",
+            "improvement_latitude": "conservative",
+            "optimization_bias": "balanced",
         }
         if canonical_config_fields != expected_config_fields:
             return [
@@ -457,10 +456,10 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
         except json.JSONDecodeError as exc:
             return [f"runtime primitive failure: canonical modules stdout was not JSON: {exc}"]
         expected_modules_fields = {
-            "package_footprint_status": "intentional-temporary",
-            "component_model_alignment": "mcp-style-adapter-ready",
-            "feature_tiers_compatibility_status": "deprecated-alias",
-            "module_names": ["planning", "memory"],
+            "kind": "agentic-workspace/modules-router/v1",
+            "profile": "tiny",
+            "active_module_count": 0,
+            "active_modules": [],
         }
         if canonical_modules_fields != expected_modules_fields:
             return [
@@ -677,10 +676,9 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
             success_args=["proof", "--target", ".", "--changed", "README.md", "--format", "json"],
             selected_fields=_selected_proof_fields,
             expected_fields={
-                "profile": "compact-contract-answer/v1",
-                "surface": "proof",
-                "matched": True,
-                "answer_kind": "proof-selection/v1",
+                "kind": "proof-next-decision/v1",
+                "next_action": "run-validation-command",
+                "detail_command": "agentic-workspace proof --profile full --changed <paths> --format json",
             },
         )
         compare_adapter(

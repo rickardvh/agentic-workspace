@@ -13,7 +13,7 @@ def test_preset_conflicts_with_modules(tmp_path: Path) -> None:
 
 
 def test_improvement_intake_includes_repair_recurrence_subtype(capsys) -> None:
-    assert cli.main(["defaults", "--section", "improvement_intake", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "improvement_intake", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     subtypes = {item["id"]: item for item in payload["answer"]["payload"]["subtypes"]}
@@ -161,6 +161,8 @@ candidates = []
         cli.main(
             [
                 "proof",
+                "--profile",
+                "full",
                 "--target",
                 str(tmp_path),
                 "--changed",

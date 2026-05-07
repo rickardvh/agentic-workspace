@@ -5,7 +5,7 @@ from tests.workspace_cli_support import *
 
 
 def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys) -> None:
-    assert cli.main(["defaults", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["startup"]["canonical_doc"] == ".agentic-workspace/docs/minimum-operating-model.md"
@@ -510,14 +510,14 @@ def test_defaults_command_routes_through_generated_adapter(monkeypatch, capsys) 
 
     monkeypatch.setitem(cli._GENERATED_RUNTIME_HANDLERS, "defaults.report", fake_defaults_handler)
 
-    assert cli.main(["defaults", "--section", "startup", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "startup", "--format", "json"]) == 0
 
     assert json.loads(capsys.readouterr().out) == {"ok": True}
     assert calls == [("defaults", "json", "startup")]
 
 
 def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -> None:
-    assert cli.main(["defaults"]) == 0
+    assert cli.main(["defaults", "--profile", "full"]) == 0
 
     text = capsys.readouterr().out
     assert "Startup:" in text
@@ -575,7 +575,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
 
 
 def test_defaults_section_selector_returns_compact_contract_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "validation", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "validation", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -594,7 +594,7 @@ def test_defaults_section_selector_returns_compact_contract_answer(capsys) -> No
 
 
 def test_defaults_section_selector_returns_intent_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "intent", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "intent", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -611,7 +611,7 @@ def test_defaults_section_selector_returns_intent_answer(capsys) -> None:
 
 
 def test_defaults_section_selector_returns_agent_aid_storage_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "agent_aid_storage", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "agent_aid_storage", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -668,7 +668,7 @@ def test_defaults_section_selector_returns_agent_aid_storage_answer(capsys) -> N
 
 
 def test_defaults_section_selector_returns_clarification_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "clarification", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "clarification", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -688,7 +688,7 @@ def test_defaults_section_selector_returns_clarification_answer(capsys) -> None:
 
 
 def test_defaults_section_selector_returns_prompt_routing_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "prompt_routing", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "prompt_routing", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -708,7 +708,7 @@ def test_defaults_section_selector_returns_prompt_routing_answer(capsys) -> None
 
 
 def test_defaults_section_selector_returns_relay_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "relay", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "relay", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -731,7 +731,7 @@ def test_defaults_section_selector_returns_relay_answer(capsys) -> None:
 
 
 def test_defaults_section_selector_returns_improvement_latitude_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "improvement_latitude", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "improvement_latitude", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -767,7 +767,7 @@ def test_defaults_section_selector_returns_improvement_latitude_answer(capsys) -
 
 
 def test_defaults_section_selector_returns_surface_value_guardrail(capsys) -> None:
-    assert cli.main(["defaults", "--section", "surface_value_guardrail", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "surface_value_guardrail", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -791,7 +791,7 @@ def test_defaults_section_selector_returns_surface_value_guardrail(capsys) -> No
 
 
 def test_defaults_section_selector_returns_effective_authority_view(capsys) -> None:
-    assert cli.main(["defaults", "--section", "effective_authority", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "effective_authority", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -814,7 +814,7 @@ def test_defaults_section_selector_returns_effective_authority_view(capsys) -> N
 
 
 def test_defaults_section_selector_returns_root_cli_authority_audit(capsys) -> None:
-    assert cli.main(["defaults", "--section", "root_cli_authority", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "root_cli_authority", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -839,7 +839,7 @@ def test_defaults_section_selector_returns_root_cli_authority_audit(capsys) -> N
 
 
 def test_defaults_section_selector_returns_optimization_bias_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "optimization_bias", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "optimization_bias", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -857,7 +857,7 @@ def test_defaults_section_selector_returns_optimization_bias_answer(capsys) -> N
 
 
 def test_defaults_setup_section_selector_returns_compact_contract_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "setup", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "setup", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -871,7 +871,7 @@ def test_defaults_setup_section_selector_returns_compact_contract_answer(capsys)
 
 
 def test_defaults_section_selector_returns_agent_configuration_system_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "agent_configuration_system", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "agent_configuration_system", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -891,7 +891,7 @@ def test_defaults_section_selector_returns_agent_configuration_system_answer(cap
 
 
 def test_defaults_section_selector_returns_agent_configuration_queries_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "agent_configuration_queries", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "agent_configuration_queries", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -906,7 +906,7 @@ def test_defaults_section_selector_returns_agent_configuration_queries_answer(ca
 
 
 def test_defaults_section_selector_returns_agent_configuration_workflow_extensions_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "agent_configuration_workflow_extensions", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "agent_configuration_workflow_extensions", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -925,7 +925,7 @@ def test_defaults_section_selector_returns_agent_configuration_workflow_extensio
 
 
 def test_defaults_setup_findings_promotion_section_selector_returns_compact_contract_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "setup_findings_promotion", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "setup_findings_promotion", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -942,7 +942,7 @@ def test_defaults_setup_findings_promotion_section_selector_returns_compact_cont
 
 
 def test_defaults_improvement_intake_section_selector_returns_unified_router(capsys) -> None:
-    assert cli.main(["defaults", "--section", "improvement_intake", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "improvement_intake", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -981,7 +981,7 @@ def test_defaults_improvement_intake_section_selector_returns_unified_router(cap
 
 
 def test_defaults_improvement_signal_section_selector_returns_signal_contract(capsys) -> None:
-    assert cli.main(["defaults", "--section", "improvement_signal", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "improvement_signal", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -1004,7 +1004,7 @@ def test_defaults_improvement_signal_section_selector_returns_signal_contract(ca
 
 
 def test_defaults_operating_questions_section_selector_returns_compact_contract_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "operating_questions", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "operating_questions", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -1020,7 +1020,7 @@ def test_defaults_operating_questions_section_selector_returns_compact_contract_
 
 
 def test_defaults_install_profiles_section_selector_returns_compact_contract_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "install_profiles", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "install_profiles", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -1039,7 +1039,7 @@ def test_defaults_install_profiles_section_selector_returns_compact_contract_ans
 
 
 def test_defaults_system_intent_section_selector_returns_compact_contract_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "system_intent", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "system_intent", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -1056,7 +1056,7 @@ def test_defaults_system_intent_section_selector_returns_compact_contract_answer
 
 
 def test_defaults_durable_intent_section_selector_explains_lifecycle(capsys) -> None:
-    assert cli.main(["defaults", "--section", "durable_intent", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "durable_intent", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -1070,7 +1070,7 @@ def test_defaults_durable_intent_section_selector_explains_lifecycle(capsys) -> 
 
 
 def test_defaults_delegation_posture_section_selector_returns_compact_contract_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "delegation_posture", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "delegation_posture", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -1084,7 +1084,7 @@ def test_defaults_delegation_posture_section_selector_returns_compact_contract_a
 
 
 def test_defaults_command_reports_runtime_resolution_policy(capsys) -> None:
-    assert cli.main(["defaults", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     rr = payload["mixed_agent"]["runtime_resolution"]
@@ -1111,7 +1111,7 @@ def test_defaults_command_reports_runtime_resolution_policy(capsys) -> None:
 
 
 def test_defaults_command_reports_strong_handoff_packet_template(capsys) -> None:
-    assert cli.main(["defaults", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     shp = payload["mixed_agent"]["strong_handoff_packet"]
@@ -1126,7 +1126,7 @@ def test_defaults_command_reports_strong_handoff_packet_template(capsys) -> None
 
 
 def test_defaults_repair_recovery_section_reports_fault_taxonomy(capsys) -> None:
-    assert cli.main(["defaults", "--section", "repair_recovery", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--profile", "full", "--section", "repair_recovery", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]

@@ -32,24 +32,22 @@
       "field_assertions": [
         {
           "path": [
-            "package_footprint",
-            "status"
+            "kind"
           ],
-          "equals": "intentional-temporary"
+          "equals": "agentic-workspace/modules-router/v1"
         },
         {
           "path": [
-            "component_model",
-            "alignment"
+            "profile"
           ],
-          "equals": "mcp-style-adapter-ready"
+          "equals": "tiny"
         },
         {
           "path": [
-            "feature_tiers_compatibility",
-            "status"
+            "detail_commands",
+            "full"
           ],
-          "equals": "deprecated-alias"
+          "equals": "agentic-workspace modules --target . --profile full --format json"
         }
       ]
     },

@@ -49,6 +49,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           },
           {
             "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Output profile. Defaults to tiny; use full for action detail.",
+            "name": "profile"
+          },
+          {
+            "choices": [
               "text",
               "json"
             ],
@@ -135,6 +147,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           },
           {
             "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Output profile. Defaults to tiny; use full for action detail.",
+            "name": "profile"
+          },
+          {
+            "choices": [
               "text",
               "json"
             ],
@@ -213,6 +237,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           },
           {
             "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Output profile. Defaults to tiny; use full for report detail.",
+            "name": "profile"
+          },
+          {
+            "choices": [
               "text",
               "json"
             ],
@@ -288,6 +324,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Target repository path. Defaults to the current directory.",
             "name": "target"
+          },
+          {
+            "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Output profile. Defaults to tiny; use full for fixture detail.",
+            "name": "profile"
           },
           {
             "choices": [
@@ -638,6 +686,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
         },
         {
           "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Output profile. Defaults to tiny; use full for action detail.",
+          "name": "profile"
+        },
+        {
+          "choices": [
             "text",
             "json"
           ],
@@ -675,6 +735,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
         },
         {
           "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Output profile. Defaults to tiny; use full for action detail.",
+          "name": "profile"
+        },
+        {
+          "choices": [
             "text",
             "json"
           ],
@@ -704,6 +776,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
         },
         {
           "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Output profile. Defaults to tiny; use full for report detail.",
+          "name": "profile"
+        },
+        {
+          "choices": [
             "text",
             "json"
           ],
@@ -730,6 +814,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
+        },
+        {
+          "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Output profile. Defaults to tiny; use full for fixture detail.",
+          "name": "profile"
         },
         {
           "choices": [

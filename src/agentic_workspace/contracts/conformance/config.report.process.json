@@ -45,10 +45,9 @@
         },
         {
           "path": [
-            "workspace",
-            "workflow_artifact_profile"
+            "profile"
           ],
-          "equals": "repo-owned"
+          "equals": "tiny"
         }
       ]
     },

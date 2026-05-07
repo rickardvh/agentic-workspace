@@ -1,0 +1,174 @@
+{
+  "kind": "planning-review/v1",
+  "title": "CLI Command Ergonomics Context-Cost Review",
+  "goal": [
+    "Review non-startup CLI commands for defaults and help text that still encourage excessive routine agent reads."
+  ],
+  "scope": [
+    "agentic-workspace root CLI commands, agentic-planning command defaults, and agentic-memory command defaults that are likely first-contact or routine operation surfaces."
+  ],
+  "non_goals": [
+    "Implement fixes, redesign command contracts, or promote findings into active work during this review pass."
+  ],
+  "review_mode": {
+    "mode": "context-cost",
+    "review question": "Do routine CLI commands default to the smallest useful output, and do help surfaces make expansion paths obvious?",
+    "default finding cap": "2 findings by mode default; exceeded to capture one root-workspace, one lifecycle, and one module-specific issue class from measured evidence.",
+    "inputs inspected first": "AGENTS.md, planning state, CLI command help, command contracts, and measured default JSON output sizes."
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --profile tiny --task ... --format json; command --help for selected CLIs; default JSON size measurements for workspace, planning, and memory commands",
+    "evidence sources": "Measured UTF-8 output byte counts plus command contract defaults and parser help text."
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "src/agentic_workspace/contracts/cli_commands.json",
+      "label": "workspace CLI command contract",
+      "role": "declares root command options and defaults",
+      "locator": "commands: modules, defaults, proof, config, report"
+    },
+    {
+      "kind": "source",
+      "target": "src/agentic_workspace/cli.py",
+      "label": "workspace CLI runtime handlers",
+      "role": "emits default command payloads",
+      "locator": "_run_preflight_command, _emit_config, _emit_proof"
+    },
+    {
+      "kind": "source",
+      "target": "packages/planning/src/repo_planning_bootstrap/cli.py",
+      "label": "planning CLI parser",
+      "role": "declares planning command options",
+      "locator": "summary and report parsers"
+    },
+    {
+      "kind": "source",
+      "target": "packages/memory/src/repo_memory_bootstrap/cli.py",
+      "label": "memory CLI parser",
+      "role": "declares memory command options",
+      "locator": "report, status, doctor, route-report parsers"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Several workspace root commands still default to broad payloads",
+      "summary": "The recent tiny-default work fixed start, implement, and summary, but other root commands still return large JSON by default or lack a profile selector entirely.",
+      "evidence": "Measured defaults: defaults 183588 bytes, config 80129 bytes, preflight 44862 bytes, modules 32260 bytes, status 53374 bytes, doctor 197934 bytes. The contract still declares proof --profile default full and config --profile default full; modules and defaults expose no profile option.",
+      "risk if unchanged": "Agents following documented command names may spend large token budgets before they have enough context to know which subsection they need, weakening the minimum-default principle.",
+      "suggested action": "Normalize root command defaults around tiny/router payloads. Add obvious expansion affordances such as --profile compact/full or --section, and make existing default profile help explicit.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": "roadmap or GitHub issue for root CLI context-cost hardening",
+      "promotion trigger": "Promote if maintainers want to continue the minimum-default CLI lane beyond summary/start/implement.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "Preflight is described as compact but bundles full takeover context without a profile",
+      "summary": "preflight is the documented takeover/recovery route, but its default JSON payload is about 45 KB and the command only offers --active-only, not a tiny takeover router.",
+      "evidence": "uv run agentic-workspace preflight --format json measured 44862 bytes. The help says 'Get compact takeover-safe context' and exposes --active-only, while _run_preflight_command includes startup guidance, resolved config slices, branch posture, local memory, active planning state, obligations, operating posture, and durable intent in one default response.",
+      "risk if unchanged": "Recovery guidance remains expensive exactly when agents are already trying to re-orient, and 'compact' becomes an unreliable word in command help.",
+      "suggested action": "Give preflight a tiny default or --profile tiny/compact/full. The default should return token, risk posture, active-state presence, and detail commands; full takeover bundles should be opt-in.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": "roadmap or GitHub issue for preflight profile split",
+      "promotion trigger": "Promote with root CLI context-cost hardening or when takeover evaluations show over-reading.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "Module CLIs are uneven: planning summary is tiny by default, but planning report and memory reports remain broad",
+      "summary": "Planning summary now matches the compact default model, but adjacent planning and memory commands still expose broad report/status/doctor surfaces without profiles.",
+      "evidence": "Measured defaults: agentic-planning summary 4152 bytes, agentic-planning report 576167 bytes, agentic-memory report --target . 35018 bytes, agentic-memory status --target . 29504 bytes, agentic-memory doctor --target . 55386 bytes, agentic-memory route-report --target . 20789 bytes. Planning report help says 'Report compact planning module state' but exposes no profile option.",
+      "risk if unchanged": "Agents routed from the workspace layer into module CLIs can fall off the compact path and consume very large module reports by default.",
+      "suggested action": "Apply the same output-profile convention to module report/status/doctor commands, with tiny defaults and full detail opt-in. Treat 'report' as a router unless the caller selects full.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": "roadmap or GitHub issue for module CLI context-cost parity",
+      "promotion trigger": "Promote after root CLI defaults are aligned, or sooner if module-level docs continue referencing broad report commands.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "Memory CLI default target detection can fail in nested worktrees",
+      "summary": "Running memory commands without --target from this checkout raises an ambiguous repository root traceback instead of returning a compact usage error.",
+      "evidence": "uv run agentic-memory report --format json raised RepoDetectionError: Ambiguous repository root detected (...agentic-workspace, ...ricka). Pass --target explicitly. The exception escapes through the generated command path.",
+      "risk if unchanged": "Agents can encounter noisy tracebacks during ordinary module use, increasing confusion and wasting context even though the remediation is simple.",
+      "suggested action": "Catch RepoDetectionError in generated memory command handling and surface a one-line argparse-style error with the exact retry command using --target .",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": "roadmap or GitHub issue for module CLI error ergonomics",
+      "promotion trigger": "Promote if memory CLI direct use remains supported for agents, especially in nested or home-directory worktrees.",
+      "post-remediation note shape": "delete"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote root CLI default-profile parity first: config/proof/defaults/modules/status/doctor/preflight should have tiny/router defaults and explicit expansion paths.",
+    "defer": "Module CLI parity can follow once the root command semantics are settled, unless module CLI docs directly route agents to report/status/doctor.",
+    "dismiss": "No finding suggests removing the full payloads; the issue is default selection and discoverability, not the existence of audit detail."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "After promoted issues or roadmap candidates land, keep only the decision summary and measured-before evidence.",
+    "proof surface": "Command contract defaults, CLI help snapshots, and measured JSON byte counts before/after remediation.",
+    "source retention rule": "Store decision, confidence, source refs, and reopen/promote triggers; do not copy issue titles, current status snapshots, long command output, or source summaries unless the copied text is the judgment itself.",
+    "distillation path": "When decisions are promoted into issues, planning state, Memory, docs, contracts, or checks, keep this artifact as evidence/history and remove or summarize reconstructable source context at the next cleanup.",
+    "reconstructable refs": [
+      "review artifact path",
+      "source file locators",
+      "measured command invocations"
+    ],
+    "fields intentionally omitted": [
+      "full command output",
+      "full help output",
+      "generated file snapshots"
+    ]
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run agentic-workspace start --profile tiny --task \"Review other CLI commands for ergonomics issues as well\" --format json",
+    "uv run agentic-workspace --help",
+    "uv run agentic-workspace <command> --help for config, defaults, preflight, modules, status, doctor",
+    "Measured default JSON output sizes for selected workspace, planning, and memory commands"
+  ],
+  "drift_log": [
+    "2026-05-07: Review created after measuring CLI default output sizes and help affordances."
+  ]
+}

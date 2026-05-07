@@ -24,6 +24,11 @@
       "required": false
     },
     {
+      "name": "profile",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "format",
       "source": "cli-option",
       "required": false

@@ -133,6 +133,9 @@ def build_parser() -> argparse.ArgumentParser:
     doctor_parser = subparsers.add_parser("doctor", help="Diagnose bootstrap state and recommended remediation.")
     _add_target_arguments(doctor_parser)
     doctor_parser.add_argument(
+        "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for action detail."
+    )
+    doctor_parser.add_argument(
         "--strict-doc-ownership",
         action="store_true",
         help="Enforce doc-ownership audits even when the repo manifest has not enabled them.",
@@ -142,6 +145,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     status_parser = subparsers.add_parser("status", help="Report whether bootstrap files are present.")
     _add_target_arguments(status_parser)
+    status_parser.add_argument(
+        "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for action detail."
+    )
     _add_format_argument(status_parser)
 
     list_files_parser = subparsers.add_parser("list-files", help="Preview packaged bootstrap files.")
@@ -203,6 +209,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show a compact aggregate routing snapshot derived from checked-in feedback cases and fixtures.",
     )
     _add_target_arguments(route_report_parser)
+    route_report_parser.add_argument(
+        "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for fixture detail."
+    )
     _add_format_argument(route_report_parser)
 
     sync_parser = subparsers.add_parser(
@@ -240,6 +249,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Report compact memory module state without broad note-tree inspection first.",
     )
     _add_target_arguments(report_parser)
+    report_parser.add_argument(
+        "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for report detail."
+    )
     _add_format_argument(report_parser)
 
     create_note_parser = subparsers.add_parser(
@@ -440,12 +452,27 @@ def _handle_doctor(args: argparse.Namespace) -> int:
         primary_test_command=args.primary_test_command,
         other_key_commands=args.other_key_commands,
     )
+    if args.format == "json" and getattr(args, "profile", "tiny") == "tiny":
+        print(
+            json.dumps(
+                _compact_result_dict(result, detail_command="agentic-memory doctor --target . --profile full --format json"), indent=2
+            )
+        )
+        return 0
     _emit_result(result, output_format=args.format)
     return 0
 
 
 def _handle_status(args: argparse.Namespace) -> int:
-    _emit_result(collect_status(target=args.target), output_format=args.format)
+    result = collect_status(target=args.target)
+    if args.format == "json" and getattr(args, "profile", "tiny") == "tiny":
+        print(
+            json.dumps(
+                _compact_result_dict(result, detail_command="agentic-memory status --target . --profile full --format json"), indent=2
+            )
+        )
+        return 0
+    _emit_result(result, output_format=args.format)
     return 0
 
 
@@ -496,7 +523,13 @@ def _handle_route_review(args: argparse.Namespace) -> int:
 
 
 def _handle_route_report(args: argparse.Namespace) -> int:
-    _emit_result(report_routes(target=args.target), output_format=args.format)
+    result = report_routes(target=args.target)
+    if args.format == "json" and getattr(args, "profile", "tiny") == "tiny":
+        payload = _compact_result_dict(result, detail_command="agentic-memory route-report --target . --profile full --format json")
+        payload["route_report_summary"] = result.route_report_summary
+        print(json.dumps(payload, indent=2))
+        return 0
+    _emit_result(result, output_format=args.format)
     return 0
 
 
@@ -507,11 +540,85 @@ def _handle_promotion_report(args: argparse.Namespace) -> int:
 
 def _handle_report(args: argparse.Namespace) -> int:
     report = memory_report(target=args.target)
+    if getattr(args, "profile", "tiny") == "tiny":
+        report = _tiny_memory_report(report)
     if args.format == "json":
         print(json.dumps(report, indent=2))
     else:
         _print_report(report)
     return 0
+
+
+def _compact_result_dict(result, *, detail_command: str) -> dict[str, object]:
+    payload = result.to_dict()
+    actions = payload.get("actions", [])
+    compact_actions: list[dict[str, object]] = []
+    if isinstance(actions, list):
+        for action in actions[:5]:
+            if isinstance(action, dict):
+                compact_actions.append(
+                    {
+                        key: action.get(key)
+                        for key in ("kind", "path", "detail", "category", "remediation_kind", "memory_action")
+                        if action.get(key) not in (None, "")
+                    }
+                )
+    return {
+        "target_root": payload.get("target_root", ""),
+        "dry_run": payload.get("dry_run", False),
+        "mode": payload.get("mode", ""),
+        "message": payload.get("message", ""),
+        "detected_version": payload.get("detected_version"),
+        "bootstrap_version": payload.get("bootstrap_version"),
+        "action_count": len(actions) if isinstance(actions, list) else 0,
+        "actions": compact_actions,
+        "route_summary": payload.get("route_summary", {}),
+        "missing_note_hint": payload.get("missing_note_hint", ""),
+        "review_summary": payload.get("review_summary", {}),
+        "sync_summary": payload.get("sync_summary", {}),
+        "detail_command": detail_command,
+    }
+
+
+def _tiny_memory_report(report: dict[str, object]) -> dict[str, object]:
+    findings = report.get("findings", [])
+    active = report.get("active", {})
+    if isinstance(active, dict):
+        active_map = cast(dict[str, object], active)
+        active = {
+            key: active_map.get(key)
+            for key in ("note_count", "manifest_note_count", "required_count", "optional_count", "routing_only_count")
+            if key in active_map
+        }
+    habitual_pull = report.get("habitual_pull", {})
+    if isinstance(habitual_pull, dict):
+        habitual_pull_map = cast(dict[str, object], habitual_pull)
+        habitual_pull = {
+            key: habitual_pull_map.get(key) for key in ("status", "read_first", "max_notes", "do_not_bulk_read") if key in habitual_pull_map
+        }
+    trust = report.get("trust", {})
+    if isinstance(trust, dict):
+        trust_map = cast(dict[str, object], trust)
+        trust = {key: trust_map.get(key) for key in ("status", "attention_count", "finding_count", "detail_command") if key in trust_map}
+    return {
+        "kind": report.get("kind", "memory-report/v1"),
+        "profile": "tiny",
+        "module": report.get("module", "memory"),
+        "target_root": report.get("target_root", ""),
+        "health": report.get("health", "unknown"),
+        "status": report.get("status", {}),
+        "active": active,
+        "habitual_pull": habitual_pull,
+        "promotion_pressure": report.get("promotion_pressure", {}),
+        "trust": trust,
+        "finding_count": len(findings) if isinstance(findings, list) else 0,
+        "findings": findings[:5] if isinstance(findings, list) else [],
+        "next_action": report.get("next_action", {}),
+        "detail_commands": {
+            "full": "agentic-memory report --target . --profile full --format json",
+            "route": "agentic-memory route --target . --files <paths> --format json",
+        },
+    }
 
 
 def _handle_create_note(args: argparse.Namespace) -> int:
@@ -614,9 +721,12 @@ def _command_key(args: argparse.Namespace) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     argv_list = list(sys.argv[1:] if argv is None else argv)
-    generated_result = _run_generated_cli_package_if_supported(argv_list)
-    if generated_result is not None:
-        return generated_result
+    try:
+        generated_result = _run_generated_cli_package_if_supported(argv_list)
+        if generated_result is not None:
+            return generated_result
+    except RepoDetectionError as exc:
+        build_generated_cli_package_parser().error(_repo_detection_error_message(exc))
 
     parser = build_parser()
     args = parser.parse_args(argv_list)
@@ -631,8 +741,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(f"Unknown command: {args.command}")
         return handler(args)
     except RepoDetectionError as exc:
-        print(f"Error: {exc}")
-        return 2
+        parser.error(_repo_detection_error_message(exc))
 
 
 def _generated_adapter_for_command(command_name: str) -> dict[str, object] | None:
@@ -643,6 +752,10 @@ def _run_generated_cli_package_if_supported(argv: list[str]) -> int | None:
     if not supports_generated_cli_package_command(argv):
         return None
     return run_generated_cli_package_command(argv, _run_generated_cli_operation)
+
+
+def _repo_detection_error_message(exc: RepoDetectionError) -> str:
+    return f"{exc} Retry with --target . when the current directory is the intended repository."
 
 
 def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) -> int:

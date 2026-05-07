@@ -53,6 +53,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "format"
           },
           {
+            "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Defaults output profile. Defaults to tiny section routing; use full to emit the complete default-route contract.",
+            "name": "profile"
+          },
+          {
             "flags": [
               "--section"
             ],
@@ -148,11 +160,11 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
               "compact",
               "full"
             ],
-            "default": "full",
+            "default": "tiny",
             "flags": [
               "--profile"
             ],
-            "help": "Select compact agent-facing config or full resolved config detail.",
+            "help": "Config output profile. Defaults to tiny agent-facing posture; use compact or full for more resolved config detail.",
             "name": "profile"
           }
         ]
@@ -238,6 +250,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Output format.",
             "name": "format"
+          },
+          {
+            "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Modules output profile. Defaults to tiny; use full for module registry and component detail.",
+            "name": "profile"
           }
         ]
       },
@@ -666,6 +690,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           },
           {
             "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Preflight output profile. Defaults to tiny takeover routing; use full for complete recovery context.",
+            "name": "profile"
+          },
+          {
+            "choices": [
               "text",
               "json"
             ],
@@ -779,11 +815,11 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
               "full",
               "tiny"
             ],
-            "default": "full",
+            "default": "tiny",
             "flags": [
               "--profile"
             ],
-            "help": "Proof output profile. Use tiny for the next validation action and command list only.",
+            "help": "Proof output profile. Defaults to tiny for the next validation action and command list; use full for all proof routing detail.",
             "name": "profile"
           },
           {
@@ -1307,6 +1343,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
             "name": "non_interactive"
+          },
+          {
+            "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail.",
+            "name": "profile"
           }
         ]
       },
@@ -1412,6 +1460,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
             "name": "non_interactive"
+          },
+          {
+            "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail.",
+            "name": "profile"
           }
         ]
       },
@@ -1517,6 +1577,18 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
             "name": "non_interactive"
+          },
+          {
+            "choices": [
+              "tiny",
+              "full"
+            ],
+            "default": "tiny",
+            "flags": [
+              "--profile"
+            ],
+            "help": "Doctor output profile. Defaults to tiny remediation routing; use full for all diagnostic detail.",
+            "name": "profile"
           }
         ]
       },
@@ -1639,6 +1711,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "format"
         },
         {
+          "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Defaults output profile. Defaults to tiny section routing; use full to emit the complete default-route contract.",
+          "name": "profile"
+        },
+        {
           "flags": [
             "--section"
           ],
@@ -1680,11 +1764,11 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
             "compact",
             "full"
           ],
-          "default": "full",
+          "default": "tiny",
           "flags": [
             "--profile"
           ],
-          "help": "Select compact agent-facing config or full resolved config detail.",
+          "help": "Config output profile. Defaults to tiny agent-facing posture; use compact or full for more resolved config detail.",
           "name": "profile"
         }
       ]
@@ -1715,6 +1799,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Output format.",
           "name": "format"
+        },
+        {
+          "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Modules output profile. Defaults to tiny; use full for module registry and component detail.",
+          "name": "profile"
         }
       ]
     },
@@ -1929,6 +2025,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
         },
         {
           "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Preflight output profile. Defaults to tiny takeover routing; use full for complete recovery context.",
+          "name": "profile"
+        },
+        {
+          "choices": [
             "text",
             "json"
           ],
@@ -1985,11 +2093,11 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
             "full",
             "tiny"
           ],
-          "default": "full",
+          "default": "tiny",
           "flags": [
             "--profile"
           ],
-          "help": "Proof output profile. Use tiny for the next validation action and command list only.",
+          "help": "Proof output profile. Defaults to tiny for the next validation action and command list; use full for all proof routing detail.",
           "name": "profile"
         },
         {
@@ -2240,6 +2348,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
           "name": "non_interactive"
+        },
+        {
+          "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail.",
+          "name": "profile"
         }
       ]
     },
@@ -2291,6 +2411,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
           "name": "non_interactive"
+        },
+        {
+          "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail.",
+          "name": "profile"
         }
       ]
     },
@@ -2342,6 +2474,18 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
           "name": "non_interactive"
+        },
+        {
+          "choices": [
+            "tiny",
+            "full"
+          ],
+          "default": "tiny",
+          "flags": [
+            "--profile"
+          ],
+          "help": "Doctor output profile. Defaults to tiny remediation routing; use full for all diagnostic detail.",
+          "name": "profile"
         }
       ]
     },
