@@ -8,6 +8,8 @@
   "properties": {
     "kind": { "const": "planning-execplan/v1" },
     "title": { "type": "string" },
+    "execplan_profile": { "$ref": "#/$defs/string_map" },
+    "canonical_core": { "$ref": "#/$defs/string_map" },
     "goal": { "$ref": "#/$defs/string_array" },
     "non_goals": { "$ref": "#/$defs/string_array" },
     "machine_readable_contract": { "type": "object" },
@@ -284,4 +286,3 @@
     }
   }
 }
-

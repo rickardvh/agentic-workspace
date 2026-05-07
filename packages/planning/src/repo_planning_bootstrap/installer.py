@@ -10,7 +10,7 @@ import tomllib
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 from jsonschema import Draft202012Validator
 
@@ -2178,6 +2178,8 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "hard_constraints",
                 "agent_may_decide",
                 "capability_posture",
+                "execplan_profile",
+                "canonical_core",
                 "references",
                 "review_residue",
                 "next_action",
@@ -2215,6 +2217,8 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "role_metadata",
                 "next_role_needed",
                 "intent",
+                "execplan_profile",
+                "canonical_core",
                 "references",
                 "touched_scope",
                 "proof_expectations",
@@ -2342,6 +2346,8 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "hard_constraints",
                 "agent_may_decide",
                 "capability_posture",
+                "execplan_profile",
+                "canonical_core",
                 "references",
                 "review_residue",
                 "next_action",
@@ -3381,6 +3387,8 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "role_metadata",
                 "next_role_needed",
                 "requested_outcome",
+                "execplan_profile",
+                "canonical_core",
                 "next_action",
                 "proof_expectations",
                 "system_intent_alignment",
@@ -3410,6 +3418,8 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "role_metadata",
                 "next_role_needed",
                 "intent",
+                "execplan_profile",
+                "canonical_core",
                 "touched_scope",
                 "proof_expectations",
                 "tool_verification",
@@ -3450,6 +3460,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "role_metadata",
                 "next_role_needed",
                 "requested_outcome",
+                "execplan_profile",
                 "next_action",
                 "read_first",
                 "owned_write_scope",
@@ -6697,19 +6708,23 @@ def _active_intent_contract(
             "reason": "active planning state does not resolve to a live execplan path",
         }
 
+    canonical_core = _execplan_canonical_core(plan_path)
+    execplan_profile = _execplan_profile(plan_path)
     delegated_judgment = _execplan_delegated_judgment(plan_path)
-    requested_outcome = delegated_judgment.get("requested outcome", "").strip()
-    hard_constraints = delegated_judgment.get("hard constraints", "").strip()
-    agent_may_decide = delegated_judgment.get("agent may decide locally", "").strip()
-    escalate_when = delegated_judgment.get("escalate when", "").strip()
+    requested_outcome = str(canonical_core.get("requested_outcome") or delegated_judgment.get("requested outcome", "")).strip()
+    hard_constraints = str(canonical_core.get("hard_constraints") or delegated_judgment.get("hard constraints", "")).strip()
+    agent_may_decide = str(canonical_core.get("agent_may_decide") or delegated_judgment.get("agent may decide locally", "")).strip()
+    escalate_when = str(canonical_core.get("escalate_when") or delegated_judgment.get("escalate when", "")).strip()
     if not requested_outcome or not hard_constraints or not agent_may_decide or not escalate_when:
         return {
             "status": "unavailable",
             "reason": "active execplan is missing delegated-judgment fields",
         }
 
-    touched_scope = _extract_section_bullets(plan_path, "Touched Paths")
-    proof_expectations = _extract_section_bullets(plan_path, "Validation Commands")
+    touched_scope = _canonical_core_string_list(canonical_core, "touched_scope") or _extract_section_bullets(plan_path, "Touched Paths")
+    proof_expectations = _canonical_core_string_list(canonical_core, "proof_expectations") or _extract_section_bullets(
+        plan_path, "Validation Commands"
+    )
     required_tools = [tool for tool in _extract_section_bullets(plan_path, "Required Tools") if tool.lower() not in {"none", "none."}]
     references = _execplan_references(plan_path)
     role_metadata = _planning_state_role_metadata(active_item)
@@ -6738,6 +6753,8 @@ def _active_intent_contract(
             "escalate_when": escalate_when,
         },
         "capability_posture": _execplan_capability_posture(plan_path),
+        "execplan_profile": execplan_profile,
+        "canonical_core": canonical_core,
         "references": references,
         "touched_scope": touched_scope,
         "proof_expectations": proof_expectations,
@@ -6770,9 +6787,13 @@ def _active_resumable_contract(
         }
 
     milestone = _execplan_active_milestone(plan_path)
+    canonical_core = _execplan_canonical_core(plan_path)
     next_action_projection = _execplan_next_action_projection(plan_path)
     current_next_action = next_action_projection["next_action"]
-    completion_criteria = _extract_section_bullets(plan_path, "Completion Criteria")
+    completion_criteria = _canonical_core_string_list(canonical_core, "completion_criteria") or _extract_section_bullets(
+        plan_path,
+        "Completion Criteria",
+    )
     blockers = [item for item in _extract_section_bullets(plan_path, "Blockers") if item.lower() != "none."]
     if not current_next_action or not completion_criteria:
         return {
@@ -6843,7 +6864,11 @@ def _canonical_planning_record(
     threat_failure_aids: list[Any] = []
     review_residue: list[dict[str, Any]] = []
     prep_only_contract: dict[str, Any] = {}
+    canonical_core: dict[str, Any] = {}
+    execplan_profile: dict[str, Any] = {}
     if plan_path is not None:
+        canonical_core = _execplan_canonical_core(plan_path)
+        execplan_profile = _execplan_profile(plan_path)
         proof_report = _execplan_proof_report(plan_path)
         intent_satisfaction = _execplan_intent_satisfaction(plan_path)
         system_intent_alignment = _execplan_system_intent_alignment(plan_path)
@@ -6870,6 +6895,9 @@ def _canonical_planning_record(
             references=list(active_contract.get("references", [])),
         )
     continuation_owner = str(todo_item.get("surface", "")).strip()
+    canonical_continuation_owner = str(canonical_core.get("continuation_owner", "")).strip()
+    if canonical_continuation_owner and canonical_continuation_owner.lower() not in {"none", "n/a"}:
+        continuation_owner = canonical_continuation_owner
     if not continuation_owner and minimal_refs:
         continuation_owner = minimal_refs[-1]
     return {
@@ -6883,6 +6911,8 @@ def _canonical_planning_record(
         "hard_constraints": str(active_contract["intent"]["hard_constraints"]).strip(),
         "agent_may_decide": str(active_contract["intent"]["agent_may_decide"]).strip(),
         "capability_posture": dict(active_contract.get("capability_posture", {})),
+        "execplan_profile": execplan_profile,
+        "canonical_core": canonical_core,
         "role_metadata": dict(active_contract.get("role_metadata", {})),
         "next_role_needed": str(active_contract.get("next_role_needed", "")).strip(),
         "references": list(active_contract.get("references", [])),
@@ -7598,6 +7628,8 @@ def _active_handoff_contract(
         "hard_constraints": str(planning_record.get("hard_constraints", "")).strip(),
         "agent_may_decide": str(planning_record.get("agent_may_decide", "")).strip(),
         "capability_posture": dict(planning_record.get("capability_posture", {})),
+        "execplan_profile": dict(planning_record.get("execplan_profile", {})),
+        "canonical_core": dict(planning_record.get("canonical_core", {})),
         "role_metadata": dict(planning_record.get("role_metadata", {})),
         "next_role_needed": str(planning_record.get("next_role_needed", "")).strip(),
         "references": list(planning_record.get("references", [])),
@@ -7875,6 +7907,7 @@ def promote_todo_item_to_execplan(
             why_now=why_now,
             next_action=next_action,
             done_when=done_when,
+            source_fields=item.fields,
         )
         surface_relative = existing_execplan_record_path.relative_to(target_root)
         updated_fields = dict(item.fields)
@@ -7930,6 +7963,7 @@ def promote_todo_item_to_execplan(
         why_now=why_now,
         next_action=next_action,
         done_when=done_when,
+        source_fields=item.fields,
     )
 
     updated_fields = dict(item.fields)
@@ -8112,6 +8146,11 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
         ".agentic-workspace/planning/execplans/",
         ".agentic-workspace/planning/decompositions/",
     ]
+    canonical_core = plan_record.setdefault("canonical_core", {})
+    canonical_core["next_action"] = next_action
+    canonical_core["proof_expectations"] = list(plan_record["validation_commands"])
+    canonical_core["touched_scope"] = list(plan_record["touched_paths"])
+    canonical_core["completion_criteria"] = list(plan_record["completion_criteria"])
     execution = plan_record.setdefault("machine_readable_contract", {}).setdefault("execution", {})
     execution["next_step"] = next_action
     execution["proof"] = "Summary verification only; product validation belongs to later implementation slices."
@@ -10266,6 +10305,14 @@ def _extract_section_bullets(path: Path, heading: str) -> list[str]:
 def _execplan_next_action_projection(plan_path: Path) -> dict[str, str]:
     record = _load_execplan_record(plan_path)
     if isinstance(record, dict):
+        canonical_core = record.get("canonical_core", {})
+        if isinstance(canonical_core, dict):
+            next_action = str(canonical_core.get("next_action", "")).strip()
+            if next_action:
+                return {
+                    "next_action": next_action,
+                    "source": "canonical_core.next_action",
+                }
         immediate = record.get("immediate_next_action", [])
         if isinstance(immediate, list):
             for item in immediate:
@@ -10294,18 +10341,79 @@ def _execplan_next_action_projection(plan_path: Path) -> dict[str, str]:
     return {"next_action": "", "source": ""}
 
 
+def _execplan_canonical_core(plan_path: Path) -> dict[str, Any]:
+    record = _load_execplan_record(plan_path)
+    if not isinstance(record, dict):
+        return {}
+    canonical_core = record.get("canonical_core", {})
+    return dict(canonical_core) if isinstance(canonical_core, dict) else {}
+
+
+def _execplan_profile(plan_path: Path) -> dict[str, Any]:
+    record = _load_execplan_record(plan_path)
+    if not isinstance(record, dict):
+        return {}
+    profile = record.get("execplan_profile", {})
+    return dict(profile) if isinstance(profile, dict) else {}
+
+
+def _canonical_core_string_list(canonical_core: dict[str, Any], key: str) -> list[str] | None:
+    value = canonical_core.get(key)
+    if not isinstance(value, list):
+        return None
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
 def _execplan_next_action_warnings(*, target_root: Path, plan_files: list[Path]) -> list[dict[str, str]]:
     warnings: list[dict[str, str]] = []
     for plan_path in plan_files:
         record = _load_execplan_record(plan_path)
         if not isinstance(record, dict):
             continue
+        canonical_core = record.get("canonical_core", {})
         machine_contract = record.get("machine_readable_contract", {})
         execution = machine_contract.get("execution", {}) if isinstance(machine_contract, dict) else {}
         machine_next = str(execution.get("next_step", "")).strip() if isinstance(execution, dict) else ""
         raw_immediate = record.get("immediate_next_action", [])
         immediate = [str(item).strip() for item in raw_immediate if str(item).strip()] if isinstance(raw_immediate, list) else []
-        if machine_next and immediate and machine_next != immediate[0]:
+        canonical_next = str(canonical_core.get("next_action", "")).strip() if isinstance(canonical_core, dict) else ""
+        if canonical_next:
+            for source, projected in (
+                ("immediate_next_action[0]", immediate[0] if immediate else ""),
+                ("machine_readable_contract.execution.next_step", machine_next),
+            ):
+                if projected and projected != canonical_next:
+                    warnings.append(
+                        {
+                            "warning_class": "execplan_canonical_projection_drift",
+                            "path": plan_path.relative_to(target_root).as_posix(),
+                            "message": (
+                                f"{source} diverges from canonical_core.next_action; "
+                                "summary uses canonical_core as the authoritative projection source."
+                            ),
+                        }
+                    )
+        if isinstance(canonical_core, dict):
+            for key, legacy_key in (
+                ("proof_expectations", "validation_commands"),
+                ("touched_scope", "touched_paths"),
+                ("completion_criteria", "completion_criteria"),
+            ):
+                canonical_values = _canonical_core_string_list(canonical_core, key)
+                legacy_raw = record.get(legacy_key, [])
+                legacy_values = [str(item).strip() for item in legacy_raw if str(item).strip()] if isinstance(legacy_raw, list) else []
+                if canonical_values and legacy_values and canonical_values != legacy_values:
+                    warnings.append(
+                        {
+                            "warning_class": "execplan_canonical_projection_drift",
+                            "path": plan_path.relative_to(target_root).as_posix(),
+                            "message": (
+                                f"{legacy_key} diverges from canonical_core.{key}; "
+                                "summary uses canonical_core as the authoritative projection source."
+                            ),
+                        }
+                    )
+        if not canonical_next and machine_next and immediate and machine_next != immediate[0]:
             warnings.append(
                 {
                     "warning_class": "execplan_next_action_projection_drift",
@@ -10668,6 +10776,93 @@ def _normalize_status(status: str) -> str:
     return "planned"
 
 
+def _execplan_profile_record(*, task_shape: str) -> dict[str, Any]:
+    task_shapes = {
+        "bounded": [
+            "intent_continuity",
+            "intent_interpretation",
+            "execution_bounds",
+            "stop_conditions",
+            "context_budget",
+            "delegated_judgment",
+        ],
+        "lane": [
+            "intent_continuity",
+            "required_continuation",
+            "iterative_follow_through",
+            "intent_interpretation",
+            "execution_bounds",
+            "stop_conditions",
+            "context_budget",
+            "delegated_judgment",
+        ],
+        "delegation": [
+            "intent_interpretation",
+            "execution_bounds",
+            "stop_conditions",
+            "context_budget",
+            "delegated_judgment",
+            "required_tools",
+        ],
+        "high-assurance": [
+            "adaptive_assurance",
+            "traceability_refs",
+            "control_gates",
+            "implementation_blockers",
+            "test_data_policy",
+            "layer_scaffold",
+            "architecture_decision_promotion",
+            "threat_failure_aids",
+        ],
+        "closeout": [
+            "execution_run",
+            "finished_run_review",
+            "proof_report",
+            "intent_satisfaction",
+            "closure_check",
+            "generated_closeout",
+            "memory_learning_capture",
+            "durable_residue",
+            "task_intent_promotion",
+            "execution_summary",
+            "improvement_signal_review",
+            "closeout_distillation",
+        ],
+    }
+    optional_sections = task_shapes.get(task_shape, task_shapes["bounded"])
+    return {
+        "schema": "execplan-profile/v1",
+        "task_shape": task_shape,
+        "required_core": [
+            "kind",
+            "title",
+            "canonical_core",
+            "goal",
+            "non_goals",
+            "active_milestone",
+            "validation_commands",
+            "completion_criteria",
+        ],
+        "optional_sections": optional_sections,
+        "projection_rule": (
+            "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; "
+            "legacy fields remain compatibility projections."
+        ),
+    }
+
+
+def _execplan_task_shape_from_fields(fields: Mapping[str, Any] | None) -> str:
+    fields = fields or {}
+    normalized_keys = {str(key).strip().lower().replace(" ", "_").replace("-", "_") for key in fields}
+    if any(key in normalized_keys for key in ("adaptive_assurance", "traceability_refs", "control_gates", "implementation_blockers")):
+        return "high-assurance"
+    if any(key in normalized_keys for key in ("owner_role", "review_role", "handoff_ready", "required_tools")):
+        return "delegation"
+    if any(key in normalized_keys for key in ("promotion_signal", "suggested_first_slice", "outcome")):
+        return "lane"
+    return "bounded"
+
+
 def _build_execplan_record_from_todo_item(
     *,
     title: str,
@@ -10676,15 +10871,31 @@ def _build_execplan_record_from_todo_item(
     why_now: str,
     next_action: str,
     done_when: str,
+    source_fields: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     goal = why_now or f"Complete the bounded work for TODO item `{item_id}`."
     immediate = next_action or "Fill the execution contract and begin the first bounded implementation step."
     completion = done_when or f"TODO item `{item_id}` is implemented, validated, and can leave the active queue."
+    proof_expectations = ["Fill in the narrowest command that proves the promoted work."]
+    touched_scope = ["Fill in the concrete files before implementation starts."]
     blocked = "none" if status != "completed" else "n/a"
     ready = "ready" if status != "completed" else "false"
     return {
         "kind": EXECPLAN_RECORD_KIND,
         "title": title,
+        "execplan_profile": _execplan_profile_record(task_shape=_execplan_task_shape_from_fields(source_fields)),
+        "canonical_core": {
+            "requested_outcome": goal,
+            "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+            "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+            "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+            "next_action": immediate,
+            "proof_expectations": proof_expectations,
+            "touched_scope": touched_scope,
+            "completion_criteria": [completion],
+            "continuation_owner": "none",
+            "closeout_decision": "pending",
+        },
         "goal": [goal],
         "non_goals": ["Leave adjacent backlog or follow-on work out of this plan."],
         "machine_readable_contract": {
@@ -10698,10 +10909,10 @@ def _build_execplan_record_from_todo_item(
                 "milestone": item_id,
                 "status": status,
                 "next_step": immediate,
-                "proof": "Fill in the narrowest command that proves the promoted work.",
+                "proof": proof_expectations[0],
             },
             "scope": {
-                "touched": ["Fill in the concrete files before implementation starts."],
+                "touched": touched_scope,
                 "invariants": ["Preserve the planning contract and keep the work bounded to this plan."],
             },
         },
@@ -10775,9 +10986,9 @@ def _build_execplan_record_from_todo_item(
         },
         "immediate_next_action": [immediate],
         "blockers": ["None."],
-        "touched_paths": ["Fill in the concrete files before implementation starts."],
+        "touched_paths": touched_scope,
         "invariants": ["Preserve the planning contract and keep the work bounded to this plan."],
-        "validation_commands": ["Fill in the narrowest command that proves the promoted work."],
+        "validation_commands": proof_expectations,
         "required_tools": ["None."],
         "completion_criteria": [completion],
         "execution_run": {

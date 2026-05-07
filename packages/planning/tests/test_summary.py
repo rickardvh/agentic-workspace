@@ -414,6 +414,41 @@ def test_planning_summary_prefers_canonical_execplan_record_when_markdown_stales
     assert summary["machine_first_planning"]["canonical_active_execplans"] == [".agentic-workspace/planning/execplans/plan-alpha.plan.json"]
 
 
+def test_planning_summary_prefers_execplan_canonical_core_and_warns_on_projection_drift(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+queued_items = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, item_id="plan-alpha", status="in-progress")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["canonical_core"]["next_action"] = "Use the canonical core."
+    record["canonical_core"]["proof_expectations"] = ["uv run pytest canonical.py"]
+    record["canonical_core"]["completion_criteria"] = ["Canonical core wins."]
+    record["immediate_next_action"] = ["Legacy next action."]
+    record["validation_commands"] = ["uv run pytest legacy.py"]
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    warnings = summary["planning_surface_health"]["warnings"]
+
+    assert summary["planning_record"]["next_action"] == "Use the canonical core."
+    assert summary["planning_record"]["proof_expectations"] == ["uv run pytest canonical.py"]
+    assert summary["resumable_contract"]["completion_criteria"] == ["Canonical core wins."]
+    assert summary["resumable_contract"]["current_next_action_source"] == "canonical_core.next_action"
+    assert any(warning["warning_class"] == "execplan_canonical_projection_drift" for warning in warnings)
+
+
 def test_upgrade_backfills_canonical_review_records(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     review_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "review-alpha.md"

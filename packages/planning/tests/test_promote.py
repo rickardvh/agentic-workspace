@@ -35,6 +35,11 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
     record = json.loads(record_path.read_text(encoding="utf-8"))
     todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     assert record["kind"] == "planning-execplan/v1"
+    assert record["execplan_profile"]["task_shape"] == "bounded"
+    assert "canonical_core" in record["execplan_profile"]["required_core"]
+    assert record["canonical_core"]["requested_outcome"] == "this thread needs a bounded execution contract."
+    assert record["canonical_core"]["next_action"] == "sketch the first implementation step."
+    assert record["canonical_core"]["proof_expectations"] == ["Fill in the narrowest command that proves the promoted work."]
     assert record["active_milestone"]["id"] == "direct-item"
     assert record["intent_continuity"]["this slice completes the larger intended outcome"] == "yes"
     assert record["intent_continuity"]["continuation surface"] == "none"
@@ -142,6 +147,8 @@ candidates = []
     assert state_item["status"] == "active"
     assert state_item["surface"] == ".agentic-workspace/planning/execplans/typed-item.plan.json"
     assert summary["planning_surface_health"]["status"] == "clean"
+    assert summary["planning_record"]["execplan_profile"]["task_shape"] == "delegation"
+    assert summary["planning_record"]["canonical_core"]["next_action"] == "promote the typed item."
     assert summary["todo"]["active_items"][0]["handoff_ready"] is True
     assert summary["todo"]["active_items"][0]["maturity"] == "active"
     assert any(action.kind == "created" and action.path == record_path for action in result.actions)

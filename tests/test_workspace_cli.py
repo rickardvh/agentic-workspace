@@ -249,6 +249,7 @@ candidates = []
         next_action="legacy markdown-like next action.",
         done_when="summary uses the machine next step.",
     )
+    record["canonical_core"]["next_action"] = "canonical core next action."
     record["machine_readable_contract"] = {
         "execution": {
             "next_step": "canonical machine next action.",
@@ -261,10 +262,10 @@ candidates = []
 
     summary = planning_installer.planning_summary(target=tmp_path, profile="compact")
 
-    assert summary["planning_record"]["next_action"] == "legacy markdown-like next action."
-    assert summary["resumable_contract"]["current_next_action_source"] == "immediate_next_action[0]"
+    assert summary["planning_record"]["next_action"] == "canonical core next action."
+    assert summary["resumable_contract"]["current_next_action_source"] == "canonical_core.next_action"
     assert any(
-        warning["warning_class"] == "execplan_next_action_projection_drift" for warning in summary["planning_surface_health"]["warnings"]
+        warning["warning_class"] == "execplan_canonical_projection_drift" for warning in summary["planning_surface_health"]["warnings"]
     )
 
 

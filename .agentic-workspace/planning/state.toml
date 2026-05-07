@@ -9,9 +9,7 @@ schema_version = "planning-state/v1"
 work_items = []
 
 [active]
-execplans = [
-  { id = "adaptive-execplan-shape-832-833", maturity = "active", status = "active", priority = "P1", refs = "GitHub #832 #833; .agentic-workspace/planning/reviews/adaptive-execplan-shape-2026-05-07.review.json", title = "Adaptive execplan section profiles and canonical core", outcome = "Execplans use a compact required core with task-shaped optional sections, and repeated projections derive from one canonical source for intent, scope, next action, proof, continuation, and closeout.", reason = "Promoted from adaptive execplan-shape review after TypeScript lane closeout; #832 and #833 are one coherent planning-shape lane.", suggested_first_slice = "Define the canonical core plus task-shaped section profiles, then add compatibility checks that prevent divergent duplicate next-action or proof values.", path = ".agentic-workspace/planning/execplans/adaptive-execplan-shape-832-833.plan.json" },
-]
+execplans = []
 
 [todo]
 active_items = []

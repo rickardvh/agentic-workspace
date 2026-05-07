@@ -1,6 +1,41 @@
 {
   "kind": "planning-execplan/v1",
   "title": "Plan Title",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "",
+    "hard_constraints": "",
+    "agent_may_decide": "",
+    "escalate_when": "",
+    "next_action": "",
+    "proof_expectations": [],
+    "touched_scope": [],
+    "completion_criteria": [],
+    "continuation_owner": "",
+    "closeout_decision": ""
+  },
   "goal": [
     ""
   ],
