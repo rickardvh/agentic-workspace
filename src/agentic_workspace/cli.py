@@ -16042,6 +16042,8 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
         _emit_startup_report(format_name=args.format, target_root=target_root, descriptors=descriptors, config=config)
         return 0
     profile = str(getattr(args, "profile", "router"))
+    if profile == "tiny":
+        profile = "router"
     section = getattr(args, "section", None)
     if section in {"external_work_reconciliation", "external_work_delta"}:
         _ensure_external_intent_cache_if_available(target_root=target_root)

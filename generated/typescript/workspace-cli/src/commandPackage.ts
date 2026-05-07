@@ -1123,13 +1123,14 @@ export const generatedCommandPackage = {
           {
             "choices": [
               "router",
+              "tiny",
               "full"
             ],
             "default": "router",
             "flags": [
               "--profile"
             ],
-            "help": "Select the compact router profile or the full combined report.",
+            "help": "Select the compact router profile or the full combined report. tiny is accepted as an alias for router.",
             "name": "profile"
           },
           {
