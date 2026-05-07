@@ -105,6 +105,16 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert len(encoded) < 4700
 
 
+def test_cli_invoke_rewrites_package_sibling_commands_when_repo_local() -> None:
+    assert (
+        cli._command_with_cli_invoke(
+            command="agentic-planning handoff --target . --format json",
+            cli_invoke="uv run agentic-workspace",
+        )
+        == "uv run agentic-planning handoff --target . --format json"
+    )
+
+
 def test_implement_task_file_preserves_task_intent_for_acceptance_checks(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "src" / "sample_app" / "text.py", "def normalize_cli_text(value):\n    return value.strip()\n")

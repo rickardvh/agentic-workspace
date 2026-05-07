@@ -3266,6 +3266,44 @@ candidates = [
     assert payload["detail_commands"]["broad_compact"] == "agentic-workspace summary --profile compact --format json"
 
 
+def test_task_scoped_summary_prefers_matched_roadmap_when_active_only_matches_generic_words(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "typescript-lane", status = "active", surface = ".agentic-workspace/planning/execplans/typescript-lane.md", why_now = "active lane." }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-831-scoped-generated-surface-repair", status = "next", priority = "P1", title = "Keep generated-surface repair scoped to the reported drift", suggested_first_slice = "Change the generated-handoff repair action." },
+]
+""",
+    )
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "typescript-lane.md", _minimal_execplan())
+
+    exit_code = planning_cli.main(
+        [
+            "summary",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+            "--task",
+            "Implement the prioritized friction lane",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["task_scope"]["recommendation_source"] == "matched-roadmap-candidate"
+    assert payload["task_scope"]["matched_roadmap_candidate"]["id"] == "github-831-scoped-generated-surface-repair"
+
+
 def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(

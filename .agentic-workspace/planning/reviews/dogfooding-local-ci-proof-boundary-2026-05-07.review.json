@@ -1,0 +1,91 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Dogfooding Review: Local Agent And CI Proof Boundary",
+  "goal": [
+    "Review whether the package makes the boundary between local agent proof and CI-owned proof explicit enough for cheap, trustworthy daily work."
+  ],
+  "scope": [
+    "Recent commit-hook, proof-selection, and generated-package proof dogfooding on 2026-05-07.",
+    "Local proof commands that are expensive, serial-sensitive, or better owned by CI."
+  ],
+  "non_goals": [
+    "Remove required safety proof from release or CI workflows.",
+    "Choose a new CI provider or change release gating."
+  ],
+  "review_mode": {
+    "mode": "dogfooding-friction-review",
+    "review question": "Can agents tell which proof is required locally before commit and which proof is intentionally deferred to CI?",
+    "default finding cap": "1",
+    "inputs inspected first": "commit 85f29f0d, GitHub issue #828, proof routing docs, recent local proof failures and reruns"
+  },
+  "review_method": {
+    "commands used": "git status --short; uv run agentic-workspace summary --profile compact --task ... --format json",
+    "evidence sources": "Current thread dogfooding observations; commit 85f29f0d; GitHub issue #828; current planning state"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#829",
+      "label": "promoted local agent versus CI proof boundary friction",
+      "role": "promotion target",
+      "locator": "GitHub issue #829"
+    },
+    {
+      "kind": "commit",
+      "target": "85f29f0d",
+      "label": "tests removed from commit hook and docs proof globs tightened",
+      "role": "partial remediation evidence",
+      "locator": "git commit 85f29f0d"
+    },
+    {
+      "kind": "issue",
+      "target": "#828",
+      "label": "serial package-build proof routing",
+      "role": "related local-proof friction evidence",
+      "locator": "GitHub issue #828"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Proof selection needs an explicit local-agent versus CI-owned responsibility signal",
+      "summary": "Removing tests from the commit hook fixed one concrete overreach, but the package still needs a general way to say whether a check is local pre-commit proof, local closeout proof, serial local proof, or CI-owned proof.",
+      "evidence": "On 2026-05-07, commit 85f29f0d moved tests out of the commit hook because CI checks are sufficient there. The same dogfooding pass produced #828 because package-build proof can fail transiently under parallel local proof while serial reruns pass.",
+      "risk if unchanged": "Agents may pay for heavy local checks that CI already owns, skip necessary local safety proof because all checks feel equally expensive, or misread transient build contention as a product failure.",
+      "suggested action": "Create a proof-boundary lane that exposes proof responsibility classes in package proof recommendations and compact closeout guidance: local-precommit, local-closeout, local-serial, and ci-owned.",
+      "confidence": "high",
+      "source": "dogfooding review on 2026-05-07",
+      "promotion target": "GitHub review issue and roadmap candidate",
+      "promotion trigger": "Promote now because the user explicitly asked to create issues from the general-improvement cases and prioritize friction-related lanes.",
+      "post-remediation note shape": "Intent / What changed / Proof / Remaining risk / Durable residue / Next owner"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote the finding to a review issue and prioritize it with other friction-related proof lanes.",
+    "defer": "Implementation can follow active TypeScript work unless local proof cost blocks the current lane.",
+    "dismiss": "Do not dismiss; the finding has both a fixed example and a remaining related open issue."
+  },
+  "retention": {
+    "closeout shape": "Keep this artifact as compact evidence for the issue and roadmap candidate.",
+    "trigger": "Archive or distill after proof recommendations expose responsibility classes and local closeout uses them.",
+    "proof surface": "Proof selector output, planning surface checks, and a focused route fixture for CI-owned versus local proof.",
+    "source retention rule": "Store decision, confidence, source refs, and reopen/promote triggers; do not copy issue titles, current status snapshots, long command output, or source summaries unless the copied text is the judgment itself.",
+    "distillation path": "When decisions are promoted into issues, planning state, Memory, docs, contracts, or checks, keep this artifact as evidence/history and remove or summarize reconstructable source context at the next cleanup.",
+    "reconstructable refs": [
+      "issue ids",
+      "commit SHAs",
+      "review artifact path"
+    ],
+    "fields intentionally omitted": [
+      "full command output",
+      "issue status snapshots"
+    ]
+  },
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "drift_log": [
+    "2026-05-07: Review created from dogfooding friction and promoted to GitHub issue #829.",
+    "2026-05-07: #829 and #828 implemented in friction-lane pass with proof_responsibility, execution_mode, and ci_relationship metadata on selected proof lanes."
+  ]
+}

@@ -47,3 +47,12 @@ def test_review_issue_body_defaults_dropdowns_and_labels() -> None:
     assert rendered["labels"] == ["review"]
     assert "## Issue kind\nReview / trust gap" in rendered["body"]
     assert "## Should the product absorb this first?\nYes" in rendered["body"]
+
+
+def test_issue_body_normalizes_duplicate_template_title_prefix() -> None:
+    rendered = issue_body.render_issue(kind="review", title="[Review]: Template friction", fields={})
+
+    assert rendered["title"] == "[Review]: Template friction"
+    assert rendered["title_prefix"] == "[Review]:"
+    assert rendered["normalized_title"] == "Template friction"
+    assert rendered["duplicate_prefix_normalized"] is True

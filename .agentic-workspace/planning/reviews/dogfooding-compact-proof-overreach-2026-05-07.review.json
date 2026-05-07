@@ -1,0 +1,98 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Dogfooding Review: Compact Output And Proof Recommendation Overreach",
+  "goal": [
+    "Review whether package-selected compact outputs and proof recommendations are still making agents inspect or override more context than the current task needs."
+  ],
+  "scope": [
+    "Recent dogfooding of startup, proof, planning summary, and GitHub issue intake flows on 2026-05-07.",
+    "Friction observed while closing local-only startup and proof ergonomics work."
+  ],
+  "non_goals": [
+    "Redesign proof routing in this review artifact.",
+    "Change active TypeScript command-generation implementation scope."
+  ],
+  "review_mode": {
+    "mode": "dogfooding-friction-review",
+    "review question": "Do compact workflow outputs and proof recommendations reliably give the smallest trustworthy next action?",
+    "default finding cap": "1",
+    "inputs inspected first": "agentic-workspace start --profile tiny, summary --profile compact, recent commits 70a12a25 and 85f29f0d, current planning state"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --profile tiny --task ... --format json; uv run agentic-workspace summary --profile compact --task ... --format json; git status --short",
+    "evidence sources": "Current thread dogfooding observations; .agentic-workspace/planning/state.toml; GitHub issues #826 #828; commits 70a12a25 and 85f29f0d"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#830",
+      "label": "promoted compact routing and proof recommendation friction",
+      "role": "promotion target",
+      "locator": "GitHub issue #830"
+    },
+    {
+      "kind": "issue",
+      "target": "#826",
+      "label": "repo-local invocation drift in generated companion tools",
+      "role": "related friction evidence",
+      "locator": "GitHub issue #826"
+    },
+    {
+      "kind": "issue",
+      "target": "#828",
+      "label": "package-build proof route contention",
+      "role": "related proof-routing friction evidence",
+      "locator": "GitHub issue #828"
+    },
+    {
+      "kind": "commit",
+      "target": "85f29f0d",
+      "label": "commit hook and proof routing tightening",
+      "role": "recent partial remediation",
+      "locator": "git commit 85f29f0d"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Compact routing still overexposes unrelated active-plan pressure for friction intake tasks",
+      "summary": "The task-scoped compact summary for prioritizing friction-related lanes still returned a TypeScript active-plan next action even though the user asked for review creation, issue promotion, and roadmap ordering. This did not block progress, but it forced manual interpretation of routing output.",
+      "evidence": "On 2026-05-07, `uv run agentic-workspace summary --profile compact --task \"prioritize friction-related lanes\" --format json` reported the active TypeScript execplan as the recommended next action while the startup router had correctly identified planning-review promotion skills for the user task.",
+      "risk if unchanged": "Agents can spend tokens inspecting or following unrelated active execution context before completing friction intake, and may over-trust broad proof or routing recommendations when a smaller planning-only action is intended.",
+      "suggested action": "Add a compact-output/proof-recommendation improvement lane that sharpens task-scoped routing when review, issue-intake, and roadmap-prioritization language is present, including an explicit reason when unrelated active-plan pressure is intentionally shown.",
+      "confidence": "high",
+      "source": "dogfooding review on 2026-05-07",
+      "promotion target": "GitHub review issue and roadmap candidate",
+      "promotion trigger": "Promote now because the user explicitly asked to create issues from the general-improvement cases and prioritize friction-related lanes.",
+      "post-remediation note shape": "Intent / What changed / Proof / Remaining risk / Durable residue / Next owner"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote the finding to a review issue and place it near the top of friction-related roadmap candidates.",
+    "defer": "Implementation should remain deferred behind any friction lane that blocks safe proof or checked-in invocation.",
+    "dismiss": "Do not dismiss; the finding is current and repeatable from compact routing output."
+  },
+  "retention": {
+    "closeout shape": "Keep this artifact as compact evidence for the issue and roadmap candidate.",
+    "trigger": "Archive or distill after the promoted issue lands and the compact route produces a smaller next action for friction-intake tasks.",
+    "proof surface": "Planning surface checks plus a focused compact-summary fixture or command proof.",
+    "source retention rule": "Store decision, confidence, source refs, and reopen/promote triggers; do not copy issue titles, current status snapshots, long command output, or source summaries unless the copied text is the judgment itself.",
+    "distillation path": "When decisions are promoted into issues, planning state, Memory, docs, contracts, or checks, keep this artifact as evidence/history and remove or summarize reconstructable source context at the next cleanup.",
+    "reconstructable refs": [
+      "issue ids",
+      "commit SHAs",
+      "review artifact path"
+    ],
+    "fields intentionally omitted": [
+      "full command output",
+      "issue status snapshots"
+    ]
+  },
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "drift_log": [
+    "2026-05-07: Review created from dogfooding friction and promoted to GitHub issue #830.",
+    "2026-05-07: #830 implemented in friction-lane pass with task-scoped compact summary routing preferring matched roadmap candidates for friction-lane tasks."
+  ]
+}

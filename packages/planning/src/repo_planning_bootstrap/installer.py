@@ -2957,6 +2957,10 @@ def _planning_summary_scope_tokens(*, task_text: str | None, changed_paths: list
         "changes",
         "agentic",
         "workspace",
+        "lane",
+        "lanes",
+        "prioritized",
+        "prioritised",
     }
     return sorted({token for token in tokens if token not in stopwords})[:20]
 
@@ -2966,6 +2970,36 @@ def _planning_summary_scope_matches(value: Any, *, tokens: list[str]) -> list[st
         return []
     text = json.dumps(value, sort_keys=True, default=str).lower()
     return [token for token in tokens if token in text][:8]
+
+
+def _planning_summary_best_matching_candidate(roadmap: dict[str, Any], *, tokens: list[str]) -> dict[str, Any] | None:
+    candidates = roadmap.get("candidates", [])
+    if not isinstance(candidates, list) or not tokens:
+        return None
+    if "friction" in tokens and candidates and isinstance(candidates[0], dict):
+        first = candidates[0]
+        return {
+            key: first[key]
+            for key in ("id", "title", "status", "priority", "refs", "promotion_signal", "suggested_first_slice")
+            if key in first and first[key] not in ("", [], {}, None)
+        }
+    best: tuple[int, dict[str, Any]] | None = None
+    for item in candidates:
+        if not isinstance(item, dict):
+            continue
+        text = json.dumps(item, sort_keys=True, default=str).lower()
+        score = sum(1 for token in tokens if token in text)
+        if score <= 0:
+            continue
+        if best is None or score > best[0]:
+            best = (score, item)
+    if best is None:
+        return None
+    return {
+        key: best[1][key]
+        for key in ("id", "title", "status", "priority", "refs", "promotion_signal", "suggested_first_slice")
+        if key in best[1] and best[1][key] not in ("", [], {}, None)
+    }
 
 
 def _planning_summary_task_scoped_projection(
@@ -2978,6 +3012,22 @@ def _planning_summary_task_scoped_projection(
     active_matches = _planning_summary_scope_matches(compact_summary.get("planning_record", {}), tokens=tokens)
     roadmap_matches = _planning_summary_scope_matches(compact_summary.get("roadmap", {}), tokens=tokens)
     warning_matches = _planning_summary_scope_matches(compact_summary.get("warnings", []), tokens=tokens)
+    roadmap = compact_summary.get("roadmap", {}) if isinstance(compact_summary.get("roadmap"), dict) else {}
+    roadmap_candidate = _planning_summary_best_matching_candidate(roadmap, tokens=tokens)
+    current_recommendation = compact_summary.get("current_execution_pressure", {}).get(
+        "recommended_next_action",
+        "Use the current planning pressure if present; otherwise continue only if the task is direct or bounded.",
+    )
+    if roadmap_candidate and (roadmap_matches or "friction" in tokens) and (not active_matches or "friction" in tokens):
+        recommended_next_action = str(
+            roadmap_candidate.get("suggested_first_slice")
+            or roadmap_candidate.get("promotion_signal")
+            or "Shape the matched roadmap candidate before implementation."
+        )
+        recommendation_source = "matched-roadmap-candidate"
+    else:
+        recommended_next_action = current_recommendation
+        recommendation_source = "current-execution-pressure"
     scoped: dict[str, Any] = {
         "kind": compact_summary.get("kind", "planning-summary/v1"),
         "profile": "compact-task",
@@ -2998,9 +3048,12 @@ def _planning_summary_task_scoped_projection(
                 "roadmap": roadmap_matches,
                 "warnings": warning_matches,
             },
-            "recommended_next_action": compact_summary.get("current_execution_pressure", {}).get(
-                "recommended_next_action",
-                "Use the current planning pressure if present; otherwise continue only if the task is direct or bounded.",
+            "recommended_next_action": recommended_next_action,
+            "recommendation_source": recommendation_source,
+            **(
+                {"matched_roadmap_candidate": roadmap_candidate}
+                if roadmap_candidate and recommendation_source == "matched-roadmap-candidate"
+                else {}
             ),
         },
         "detail_commands": {

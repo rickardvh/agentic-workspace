@@ -2892,6 +2892,7 @@ def _workspace_repair_payload(
                     "Do not make llms.txt a second handbook.",
                     "Do not edit generated adapter doctrine instead of refreshing from source authority.",
                 ],
+                dry_run_first=True,
             )
         )
 
@@ -3068,15 +3069,17 @@ def _workspace_safe_repair_action(
     current_fault_summary: str,
     risk: str,
     do_not: list[str],
+    dry_run_first: bool = False,
 ) -> dict[str, Any]:
     dry_run = _command_with_cli_invoke(
         command=f"agentic-workspace upgrade --target {target_root.as_posix()} --dry-run --format json",
         cli_invoke=cli_invoke,
     )
-    command = _command_with_cli_invoke(
+    apply_command = _command_with_cli_invoke(
         command=f"agentic-workspace upgrade --target {target_root.as_posix()} --format json",
         cli_invoke=cli_invoke,
     )
+    command = dry_run if dry_run_first else apply_command
     proof_after = [
         _command_with_cli_invoke(
             command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json",
@@ -3085,7 +3088,7 @@ def _workspace_safe_repair_action(
     ]
     return {
         "id": id,
-        "action": "run-workspace-upgrade",
+        "action": "inspect-workspace-upgrade-dry-run" if dry_run_first else "run-workspace-upgrade",
         "invariant": invariant,
         "fault_class": fault_class,
         "severity": "warning",
@@ -3095,6 +3098,7 @@ def _workspace_safe_repair_action(
         "command": command,
         "run": command,
         "dry_run": dry_run,
+        **({"apply_after_review": apply_command, "requires_dry_run_review": True} if dry_run_first else {}),
         "proof_after": proof_after,
         "affected_surfaces": affected_surfaces,
         "current_fault_summary": current_fault_summary,
@@ -3102,9 +3106,12 @@ def _workspace_safe_repair_action(
         "merge_repair": {
             "status": "safe-rerender-when-source-authority-is-clear",
             "canonical_source": "installed package payloads, module descriptors, and workspace config",
-            "rerender_command": command,
+            "rerender_command": apply_command,
             "proof_after": proof_after,
-            "rule": "After a merge, repair generated or managed surfaces from canonical source instead of editing generated output by hand.",
+            "rule": (
+                "After a merge, repair generated or managed surfaces from canonical source instead of editing generated output by hand. "
+                "When requires_dry_run_review is true, inspect the dry-run before applying because the lifecycle repair may refresh more than the reported surface."
+            ),
         },
         "recurrence": "first_seen",
         "improvement_signal_candidate": {
@@ -11526,6 +11533,13 @@ def _command_with_cli_invoke(*, command: str | None, cli_invoke: str) -> str | N
         return None
     if command == "agentic-workspace" or command.startswith("agentic-workspace "):
         return f"{cli_invoke}{command.removeprefix('agentic-workspace')}"
+    for sibling_program in ("agentic-planning", "agentic-memory"):
+        if command == sibling_program or command.startswith(f"{sibling_program} "):
+            return _sibling_cli_command_with_invoke(
+                command=command,
+                workspace_cli_invoke=cli_invoke,
+                sibling_program=sibling_program,
+            )
     return command
 
 
@@ -14532,6 +14546,9 @@ def _defaults_payload() -> dict[str, Any]:
                 "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
                 "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
             ],
+            "proof_responsibility": "local-serial",
+            "execution_mode": "serial",
+            "ci_relationship": "CI may repeat generated-package proof; local closeout should run this lane serially to avoid package-build contention.",
             "broaden_when": [
                 "the change also alters runtime CLI behavior outside generated metadata",
                 "the change also touches package installer behavior beyond generated package surfaces",
@@ -14615,6 +14632,9 @@ def _defaults_payload() -> dict[str, Any]:
                 "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md packages/command-generation/README.md",
             ],
             "proof_kind": "diff-review",
+            "proof_responsibility": "local-closeout",
+            "execution_mode": "review",
+            "ci_relationship": "CI is not expected to prove docs intent; local diff review owns the trust question.",
             "broaden_when": [
                 "the docs change updates generated maintainer surfaces, schema reference docs, or package payloads",
                 "the docs change describes behavior whose implementation also changed or needs executable proof",
@@ -14639,6 +14659,9 @@ def _defaults_payload() -> dict[str, Any]:
                 "make lint-workspace",
             ],
             "proof_kind": "targeted-test",
+            "proof_responsibility": "local-closeout",
+            "execution_mode": "parallel-ok",
+            "ci_relationship": "CI may repeat broad tests; local proof should run the selected targeted lane before closeout.",
             "broaden_when": [
                 "the change also touches generated maintainer docs",
                 "the change also touches installed package payloads or shared orchestration boundaries",
@@ -14662,6 +14685,9 @@ def _defaults_payload() -> dict[str, Any]:
                 "make lint-planning",
             ],
             "proof_kind": "targeted-test",
+            "proof_responsibility": "local-closeout",
+            "execution_mode": "parallel-ok",
+            "ci_relationship": "CI may repeat package tests; local proof should run the selected targeted lane before closeout.",
             "broaden_when": [
                 "the change also touches root workspace orchestration",
                 "the change also affects generated maintainer surfaces or installed contract boundaries",
@@ -14682,6 +14708,9 @@ def _defaults_payload() -> dict[str, Any]:
                 "make lint-memory",
             ],
             "proof_kind": "targeted-test",
+            "proof_responsibility": "local-closeout",
+            "execution_mode": "parallel-ok",
+            "ci_relationship": "CI may repeat package tests; local proof should run the selected targeted lane before closeout.",
             "broaden_when": [
                 "the change also touches root workspace orchestration",
                 "the change also affects generated maintainer surfaces or installed contract boundaries",
@@ -14700,6 +14729,9 @@ def _defaults_payload() -> dict[str, Any]:
             "enough_proof": [
                 "agentic-workspace doctor --target ./repo --modules planning --format json",
             ],
+            "proof_responsibility": "local-closeout",
+            "execution_mode": "parallel-ok",
+            "ci_relationship": "CI may not have the live planning state being edited; local proof owns this check.",
             "broaden_when": [
                 "the same change also edits generated maintainer docs or workspace CLI behavior",
             ],
@@ -14716,6 +14748,9 @@ def _defaults_payload() -> dict[str, Any]:
             "enough_proof": [
                 "make maintainer-surfaces",
             ],
+            "proof_responsibility": "local-closeout",
+            "execution_mode": "parallel-ok",
+            "ci_relationship": "CI may repeat maintainer-surface checks; local proof owns generated-surface freshness before closeout.",
             "broaden_when": [
                 "the same change also alters root workspace CLI behavior or package-local logic",
             ],
@@ -17103,6 +17138,9 @@ def _proof_selection_for_changed_paths(
                 "when": lane["when"],
                 "required_commands": lane["enough_proof"],
                 "proof_kind": lane.get("proof_kind", "targeted-test"),
+                "proof_responsibility": lane.get("proof_responsibility", "local-closeout"),
+                "execution_mode": lane.get("execution_mode", "parallel-ok"),
+                "ci_relationship": lane.get("ci_relationship", ""),
                 "recovery_signal": lane.get("recovery_signal", ""),
                 **({"proof_profile": lane["proof_profile"]} if lane.get("proof_profile") else {}),
                 **({"review_aids": lane["review_aids"]} if lane.get("review_aids") else {}),

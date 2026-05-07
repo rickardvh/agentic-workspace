@@ -109,9 +109,20 @@ def render_issue(*, kind: str, title: str, fields: dict[str, str]) -> dict[str, 
             continue
         value = fields.get(field_id, _default_value(item)).strip()
         sections.append(f"## {_field_label(item)}\n{value or 'TODO'}")
-    rendered_title = f"{title_prefix.rstrip()} {title}".strip() if title else title_prefix.rstrip()
+    raw_title = title.strip()
+    normalized_title = raw_title
+    prefix = title_prefix.rstrip()
+    duplicate_prefix_normalized = False
+    if prefix and raw_title.startswith(prefix):
+        normalized_title = raw_title.removeprefix(prefix).strip()
+        duplicate_prefix_normalized = True
+    rendered_title = f"{prefix} {normalized_title}".strip() if normalized_title else prefix
     return {
         "template": TEMPLATE_BY_KIND[kind],
+        "title_prefix": prefix,
+        "input_title": raw_title,
+        "normalized_title": normalized_title,
+        "duplicate_prefix_normalized": duplicate_prefix_normalized,
         "title": rendered_title,
         "labels": [str(label) for label in labels],
         "body": "\n\n".join(sections) + "\n",

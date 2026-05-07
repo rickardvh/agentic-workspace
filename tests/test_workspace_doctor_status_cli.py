@@ -78,8 +78,13 @@ def test_doctor_repair_actions_use_resolved_cli_invoke(tmp_path: Path, capsys) -
     workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
     action = workspace_report["repair_actions"][0]
     assert action["id"] == "refresh-generated-agent-handoff"
+    assert action["action"] == "inspect-workspace-upgrade-dry-run"
+    assert action["requires_dry_run_review"] is True
     assert action["command"].startswith("uv run agentic-workspace upgrade ")
-    assert action["dry_run"].startswith("uv run agentic-workspace upgrade ")
+    assert "--dry-run" in action["command"]
+    assert action["dry_run"] == action["command"]
+    assert action["apply_after_review"].startswith("uv run agentic-workspace upgrade ")
+    assert "--dry-run" not in action["apply_after_review"]
     assert action["proof_after"][0].startswith("uv run agentic-workspace doctor ")
 
 

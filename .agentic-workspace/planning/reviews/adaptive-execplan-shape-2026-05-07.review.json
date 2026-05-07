@@ -1,0 +1,130 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Review: Adaptive Execplan Shape",
+  "goal": [
+    "Review whether execplans can adapt their required fields to task shape so bounded work is cheaper to plan, resume, and close without weakening high-assurance lanes."
+  ],
+  "scope": [
+    ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+    ".agentic-workspace/planning/execplans/typescript-package-runnable-adapters-822-823.plan.json",
+    "one archived representative plan: .agentic-workspace/planning/execplans/archive/context-size-affordances-lane.plan.json"
+  ],
+  "non_goals": [
+    "Do not change the execplan schema in this review.",
+    "Do not alter the active TypeScript lane.",
+    "Do not remove high-assurance fields that are needed for regulated, security-sensitive, or formally constrained tasks."
+  ],
+  "review_mode": {
+    "mode": "planning-surface",
+    "review question": "Can execplans expose a smaller task-shaped core while retaining optional assurance, traceability, delegation, and closeout sections only when they add value?",
+    "default finding cap": "3",
+    "inputs inspected first": "execplan template, active TypeScript execplan, archived context-size affordances execplan"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --profile tiny --task ... --format json; Get-Content .agentic-workspace/planning/skills/planning-review-pass/SKILL.md; Get-Content .agentic-workspace/planning/execplans/TEMPLATE.plan.json; Get-Content representative active and archived execplans",
+    "evidence sources": "User observation on 2026-05-07 plus static inspection of template and representative plan artifacts"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#832",
+      "label": "task-shaped execplan section profiles",
+      "role": "promotion target",
+      "locator": "GitHub issue #832"
+    },
+    {
+      "kind": "issue",
+      "target": "#833",
+      "label": "canonical execplan core and derived projections",
+      "role": "promotion target",
+      "locator": "GitHub issue #833"
+    },
+    {
+      "kind": "template",
+      "target": ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+      "label": "execplan template",
+      "role": "primary evidence",
+      "locator": "top-level sections and closeout fields"
+    },
+    {
+      "kind": "execplan",
+      "target": ".agentic-workspace/planning/execplans/typescript-package-runnable-adapters-822-823.plan.json",
+      "label": "active TypeScript lane plan",
+      "role": "current active-plan evidence",
+      "locator": "machine_readable_contract, execution_bounds, delegated_judgment, active_milestone, immediate_next_action, validation_commands"
+    },
+    {
+      "kind": "execplan",
+      "target": ".agentic-workspace/planning/execplans/archive/context-size-affordances-lane.plan.json",
+      "label": "archived context-size lane plan",
+      "role": "completed-plan evidence",
+      "locator": "intent_continuity, required_continuation, active_milestone, validation_commands, execution_run, proof_report"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Execplan template is shaped like a high-assurance lane even when the task is bounded",
+      "summary": "The template requires or strongly suggests many sections that only matter for some work shapes, including adaptive assurance, traceability refs, test data policy, layer scaffold, architecture decision promotion, threat failure aids, memory capture, task intent promotion, durable residue, and improvement signal review. For ordinary bounded work, many of these become empty placeholders or repeated closeout obligations.",
+      "evidence": "TEMPLATE.plan.json includes high-assurance and governance sections by default after the basic intent, execution, and scope blocks. The active TypeScript plan uses only a subset materially during execution, while several closeout and routing fields remain pending, empty, or duplicated until late in the lane.",
+      "risk if unchanged": "Agents spend tokens creating, reading, and repairing fields that are irrelevant to the current task. The signal-to-noise ratio of the active plan drops, and weaker agents may treat optional governance prompts as mandatory work instead of task-shaped aids.",
+      "suggested action": "Introduce task-shaped execplan profiles or section groups, such as bounded, lane, delegation, high-assurance, and closeout. Keep a compact core contract required for all plans, then attach optional section groups based on assurance level, delegation need, compliance risk, and closeout state.",
+      "confidence": "high",
+      "source": "mixed: user-reported friction plus static planning-surface inspection",
+      "promotion target": "GitHub review issue or roadmap candidate for adaptive execplan shape",
+      "promotion trigger": "Promote when planning-schema or execplan scaffolding is next being changed, or if another lane repeats significant plan-field repair or placeholder cleanup.",
+      "post-remediation note shape": "Retain this review until an adaptive scaffold exists, then shrink to a reference from the promoted issue or schema change."
+    },
+    {
+      "title": "Core execution facts are repeated across too many execplan blocks",
+      "summary": "Outcome, constraints, next action, touched paths, proof commands, scope boundaries, and continuation state appear in several parallel sections. Some repetition helps machine projections, but currently it makes manual plan maintenance error-prone and inflates every read.",
+      "evidence": "The active TypeScript plan repeats next action in machine_readable_contract.execution.next_step, immediate_next_action, active_milestone, execution_bounds, active/resumable/handoff projections from summary, and execution_run/closure fields. Validation appears in execution_bounds.required validation commands, validation_commands, execution_run.validations run, proof_report, and proof_expectations emitted by summary.",
+      "risk if unchanged": "Plans drift internally when one copy is updated and another is missed. Agents must decide which repeated field is authoritative, and plan closeout becomes a repair loop rather than confirmation of an already-correct record.",
+      "suggested action": "Define a smaller authoritative core plus derived projections. For example, store intent, scope, current_next_action, proof_requirements, continuation, and closeout once, then let summary/handoff/rendered views derive repeated phrasing instead of requiring authors to maintain parallel copies.",
+      "confidence": "high",
+      "source": "mixed: user-reported repetition plus static planning-surface inspection",
+      "promotion target": "GitHub review issue or roadmap candidate for execplan field merging",
+      "promotion trigger": "Promote with the adaptive execplan-shape work, especially if state or summary code already needs to touch execplan projection logic.",
+      "post-remediation note shape": "Retain until a canonical core/projection boundary is documented and checked; then shrink or delete."
+    },
+    {
+      "title": "Adaptive assurance should select fields, not only proof burden",
+      "summary": "The existing adaptive_assurance section can express assurance level and proof profiles, but it does not appear to drive which plan sections are necessary for a task. That leaves low-assurance bounded tasks carrying high-assurance structure without using it.",
+      "evidence": "TEMPLATE.plan.json includes adaptive_assurance, but the surrounding traceability, risk, gates, test data policy, and architecture-decision fields are still present as first-class sections in every scaffold. The user separately noted that the config already has an assurance field, which suggests the package has a natural hook for task-shaped plan profiles.",
+      "risk if unchanged": "Assurance remains advisory instead of reducing workflow cost or increasing safety by construction. Low-risk work stays verbose, while genuinely high-assurance work may not get a clearly differentiated scaffold.",
+      "suggested action": "Connect assurance/task shape to execplan scaffold selection: low or bounded plans get a compact core; higher assurance plans automatically include traceability, gates, test data, threat/failure aids, and stricter closeout fields.",
+      "confidence": "medium",
+      "source": "static-analysis with user direction",
+      "promotion target": "Same adaptive execplan-shape issue or roadmap candidate",
+      "promotion trigger": "Promote when assurance config begins affecting workflow behavior beyond advice.",
+      "post-remediation note shape": "Merge into schema/docs once implemented; do not keep as a separate long-lived review finding."
+    }
+  ],
+  "recommendation": {
+    "promote": "Promoted to GitHub #832 and #833 as coherent adaptive-execplan-shape work, prioritized behind the current friction lane.",
+    "defer": "Defer implementation until after the current active TypeScript lane or until plan verbosity directly blocks a lane.",
+    "dismiss": "Do not dismiss; the finding is supported by both maintainer observation and checked-in plan evidence."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "After an adaptive execplan scaffold or canonical core/projection boundary lands.",
+    "proof surface": "Execplan schema/template tests, planning surface checks, and representative bounded/high-assurance scaffold fixtures.",
+    "source retention rule": "Store decision, confidence, source refs, and reopen/promote triggers; do not copy issue titles, current status snapshots, long command output, or source summaries unless the copied text is the judgment itself.",
+    "distillation path": "When promoted into an issue or planning candidate, keep this artifact as evidence/history and shrink once the schema or scaffold owner carries the durable guidance.",
+    "reconstructable refs": [
+      ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+      ".agentic-workspace/planning/execplans/typescript-package-runnable-adapters-822-823.plan.json",
+      ".agentic-workspace/planning/execplans/archive/context-size-affordances-lane.plan.json"
+    ],
+    "fields intentionally omitted": [
+      "full plan contents",
+      "long command output"
+    ]
+  },
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "drift_log": [
+    "2026-05-07: Review created from maintainer observation and representative execplan inspection.",
+    "2026-05-07: Findings promoted to GitHub issues #832 and #833; implementation priority remains behind friction-related lanes."
+  ]
+}
