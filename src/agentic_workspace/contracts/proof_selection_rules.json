@@ -86,6 +86,7 @@
         "README.md"
       ],
       "prefixes": [
+        ".agentic-workspace/docs/",
         "docs/package/",
         "docs/architecture.md",
         "docs/collaboration-safety.md",

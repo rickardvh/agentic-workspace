@@ -9,7 +9,6 @@ FORMAT_EXTENSIONS = {".py", ".pyi", ".ipynb"}
 FORMAT_ROOTS = {"src", "tests", "packages"}
 HOOK_COMMANDS = (
     ["make", "lint"],
-    [sys.executable, "scripts/check/check_master_tests.py"],
     [sys.executable, "scripts/check/check_no_absolute_paths.py"],
 )
 

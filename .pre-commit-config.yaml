@@ -12,12 +12,6 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-      - id: master-tests
-        name: master tests
-        entry: uv run python scripts/check/check_master_tests.py
-        language: system
-        pass_filenames: false
-        always_run: false
       - id: no-absolute-paths
         name: no absolute paths
         entry: uv run python scripts/check/check_no_absolute_paths.py

@@ -14612,7 +14612,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "the trust question is whether the docs diff satisfies the requested outcome without adding misleading guidance",
             ],
             "enough_proof": [
-                "git diff -- README.md docs packages/planning/README.md packages/memory/README.md packages/command-generation/README.md",
+                "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md packages/command-generation/README.md",
             ],
             "proof_kind": "diff-review",
             "broaden_when": [

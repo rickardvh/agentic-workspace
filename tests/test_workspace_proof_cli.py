@@ -497,7 +497,10 @@ def test_proof_changed_selector_routes_readme_to_docs_review(capsys) -> None:
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
-    docs_diff = "git diff -- README.md docs packages/planning/README.md packages/memory/README.md packages/command-generation/README.md"
+    docs_diff = (
+        "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md "
+        "packages/memory/README.md packages/command-generation/README.md"
+    )
     assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review"]
     assert answer["selected_lanes"][0]["proof_kind"] == "diff-review"
     assert answer["required_commands"] == [docs_diff]
@@ -513,7 +516,30 @@ def test_proof_changed_selector_routes_package_readmes_to_docs_review(capsys) ->
     assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review"]
     assert answer["selected_lanes"][0]["proof_kind"] == "diff-review"
     assert "make test-planning" not in answer["required_commands"]
-    assert "git diff -- README.md docs" in answer["required_commands"][0]
+    assert "git diff -- README.md docs .agentic-workspace/docs" in answer["required_commands"][0]
+
+
+def test_proof_changed_selector_routes_installed_docs_to_docs_review(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--profile",
+                "full",
+                "--changed",
+                ".agentic-workspace/docs/agent-installation.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review"]
+    assert answer["selected_lanes"][0]["proof_kind"] == "diff-review"
+    assert ".agentic-workspace/docs" in answer["required_commands"][0]
 
 
 def test_proof_changed_selector_reduces_package_docs_prefix_to_review(capsys) -> None:
@@ -564,7 +590,10 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload)
-    docs_diff = "git diff -- README.md docs packages/planning/README.md packages/memory/README.md packages/command-generation/README.md"
+    docs_diff = (
+        "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md "
+        "packages/memory/README.md packages/command-generation/README.md"
+    )
     assert payload["kind"] == "proof-next-decision/v1"
     assert payload["next"]["command"] == docs_diff
     assert payload["required_commands"] == [docs_diff]
