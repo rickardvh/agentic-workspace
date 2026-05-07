@@ -93,7 +93,7 @@
             "--local-only"
           ],
           "action": "store_true",
-          "help": "Install into `.agentic-workspace/` instead of the repository root."
+          "help": "Install in the normal repository layout while recording `.agentic-workspace/` in git-local exclude metadata."
         },
         {
           "name": "agent_instructions_file",

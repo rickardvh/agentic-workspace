@@ -47,14 +47,16 @@ The installer distinguishes between three classes of files:
 
 ## Local-only Installation
 
-The workspace-level `agentic-workspace install --local-only` command installs the shared workspace surfaces into `.agentic-workspace/` instead of the repository root.
+The workspace-level `agentic-workspace install --local-only` command installs the shared workspace surfaces in the normal repository layout, but records `.agentic-workspace/` in git-local exclude metadata instead of expecting the package surfaces to be checked in.
 
 In local-only mode:
 
 - local package-owned state is recorded in `.agentic-workspace/LOCAL-ONLY.toml`
 - repo-local `.git/info/exclude` is updated to ignore `.agentic-workspace/`
+- `AGENTS.local.md` carries the managed workflow fence
+- `AGENTS.md` is kept to a tiny `AGENTS.local.md` reference when the repo did not already have its own startup file
 - the installed workspace continues to use the same managed planning and memory payloads
-- the regular repository root surfaces remain untouched
+- ordinary checked-in installs do not create `AGENTS.local.md`
 - `agentic-workspace uninstall --local-only` removes the entire `.agentic-workspace/` tree and deletes the git-local exclude block when it was the only residue
 
 For more on lifecycle management, see [`.agentic-workspace/docs/lifecycle-and-config-contract.md`](lifecycle-and-config-contract.md).

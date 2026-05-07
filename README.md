@@ -54,10 +54,10 @@ Lightweight means a small checked-in footprint, no database or service, selectiv
 Choose the smallest preset that solves the repo problem. Start with `memory` unless active planning is the main need.
 
 ```bash
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target ./repo --preset memory
+agentic-workspace init --target ./repo --preset memory
 ```
 
-Use `--preset planning` when active work continuity is the main problem, and `--preset full` only when both durable knowledge and active planning are justified. If you use `pipx` instead of `uvx`, keep the same command shape.
+Use an installed `agentic-workspace` CLI from the target repo's environment when available. If it is unavailable, install the package into that repo or its tool environment first, then rerun the same command. Use `--preset planning` when active work continuity is the main problem, and `--preset full` only when both durable knowledge and active planning are justified. `uvx` or `pipx run` are temporary/debug fallbacks, not the default install path.
 
 ## Presets
 

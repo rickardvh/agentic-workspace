@@ -2301,7 +2301,7 @@ def main(argv: list[str] | None = None) -> int:
             repo_root = _resolve_target_root(args.target)
             _validate_target_root(command_name=args.command, target_root=repo_root, local_only=bool(args.local_only))
             _enforce_preflight_gate(parser=parser, args=args, command_name=args.command)
-            target_root = repo_root / LOCAL_ONLY_INSTALL_ROOT if args.local_only else repo_root
+            target_root = repo_root
             config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
             explicit_agent_instructions_file = getattr(args, "agent_instructions_file", None)
             if explicit_agent_instructions_file:
@@ -2371,7 +2371,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "uninstall" and bool(getattr(args, "local_only", False)):
             local_only_repo_root = _resolve_target_root(args.target)
             _validate_target_root(command_name=args.command, target_root=local_only_repo_root, local_only=True)
-            target_root = local_only_repo_root / LOCAL_ONLY_INSTALL_ROOT
+            target_root = local_only_repo_root
         else:
             target_root = _resolve_target_root(args.target)
             _validate_target_root(command_name=args.command, target_root=target_root)
@@ -3544,6 +3544,9 @@ def _external_agent_handoff_text(
         "- Open raw planning or contract files only when compact commands point there.",
         "",
         "Preferred lifecycle commands:",
+        "- Prefer an installed `agentic-workspace` CLI from the target repo's environment.",
+        "- If unavailable, install the package into that repo or its tool environment before running lifecycle commands.",
+        "- Use `uvx` or `pipx run` only as temporary/debug fallbacks.",
         "- `agentic-workspace defaults --section install_profiles --format json`",
     ]
     if selected_modules == ["planning"]:
@@ -3602,12 +3605,14 @@ def _write_generated_text(*, destination: Path, text: str, dry_run: bool) -> Non
     destination.write_text(text, encoding="utf-8")
 
 
-LOCAL_ONLY_INSTALL_ROOT = Path(".agentic-workspace") / "local-only"
+LOCAL_AGENT_INSTRUCTIONS_FILE = Path("AGENTS.local.md")
+LOCAL_AGENT_REFERENCE_FILE = Path(DEFAULT_AGENT_INSTRUCTIONS_FILE)
+LOCAL_AGENT_REFERENCE_LINE = f"Follow instructions in `{LOCAL_AGENT_INSTRUCTIONS_FILE.as_posix()}` if present."
 EXTERNAL_INTENT_CACHE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 EXTERNAL_INTENT_PLANNING_RELATIVE_PATH = Path(".agentic-workspace") / "planning" / "external-intent-evidence.json"
 EXTERNAL_INTENT_CACHE_CLOSED_RETENTION_DAYS = 7
 LOCAL_ONLY_IGNORE_BLOCK = "# Agentic Workspace local-only storage\n.agentic-workspace/\n"
-LOCAL_ONLY_STATE_FILE = Path("LOCAL-ONLY.toml")
+LOCAL_ONLY_STATE_FILE = Path(".agentic-workspace") / "LOCAL-ONLY.toml"
 
 
 def _repo_git_dir(repo_root: Path) -> Path:
@@ -3642,6 +3647,170 @@ def _local_only_state_path(*, target_root: Path) -> Path:
     return target_root / LOCAL_ONLY_STATE_FILE
 
 
+def _local_agent_instructions_text() -> str:
+    lines = [
+        "# Local Agent Instructions",
+        "",
+        "Authority marker:",
+        "",
+        "- authority: local-adapter",
+        "- canonical_source: `.agentic-workspace/config.toml` and `agentic-workspace start --target . --format json`",
+        "- safe_to_edit: true",
+        "- refresh_command: null",
+        "",
+        WORKSPACE_POINTER_BLOCK,
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _ensure_local_agent_reference_text(text: str) -> tuple[str, bool]:
+    if LOCAL_AGENT_REFERENCE_LINE in text:
+        return text, False
+    if not text:
+        return LOCAL_AGENT_REFERENCE_LINE + "\n", True
+    lines = text.splitlines()
+    trailing_newline = text.endswith("\n")
+    if lines and lines[0].startswith("# "):
+        insert_at = 1
+        while insert_at < len(lines) and lines[insert_at] == "":
+            insert_at += 1
+        lines[insert_at:insert_at] = ["", LOCAL_AGENT_REFERENCE_LINE]
+        updated = "\n".join(lines)
+    else:
+        updated = LOCAL_AGENT_REFERENCE_LINE + "\n\n" + text.rstrip("\n")
+    return updated + ("\n" if trailing_newline or not updated.endswith("\n") else ""), True
+
+
+def _remove_local_agent_reference_text(text: str) -> tuple[str, bool]:
+    pattern = re.compile(r"\n?" + re.escape(LOCAL_AGENT_REFERENCE_LINE) + r"\n?", re.MULTILINE)
+    updated, count = pattern.subn("\n", text, count=1)
+    if count == 0:
+        return text, False
+    updated = re.sub(r"\n{3,}", "\n\n", updated).lstrip("\n")
+    if updated and not updated.endswith("\n"):
+        updated += "\n"
+    return updated, True
+
+
+def _sync_local_agent_startup(*, repo_root: Path, dry_run: bool, replace_reference_file: bool) -> list[dict[str, str]]:
+    actions: list[dict[str, str]] = []
+    local_path = repo_root / LOCAL_AGENT_INSTRUCTIONS_FILE
+    rendered_local = _local_agent_instructions_text()
+    existing_local = local_path.read_text(encoding="utf-8") if local_path.exists() else None
+    if existing_local == rendered_local:
+        actions.append(
+            {
+                "kind": "current",
+                "path": LOCAL_AGENT_INSTRUCTIONS_FILE.as_posix(),
+                "detail": "local startup instructions already current",
+            }
+        )
+    else:
+        if not dry_run:
+            local_path.write_text(rendered_local, encoding="utf-8")
+        actions.append(
+            {
+                "kind": _write_action_kind(dry_run=dry_run, existing=existing_local),
+                "path": LOCAL_AGENT_INSTRUCTIONS_FILE.as_posix(),
+                "detail": "refresh local startup instructions with the managed workspace workflow pointer",
+            }
+        )
+
+    reference_path = repo_root / LOCAL_AGENT_REFERENCE_FILE
+    existing_reference = reference_path.read_text(encoding="utf-8") if reference_path.exists() else ""
+    if replace_reference_file:
+        updated_reference = LOCAL_AGENT_REFERENCE_LINE + "\n"
+        changed = existing_reference != updated_reference
+    else:
+        updated_reference, changed = _ensure_local_agent_reference_text(existing_reference)
+    if changed:
+        if not dry_run:
+            reference_path.write_text(updated_reference, encoding="utf-8")
+        actions.append(
+            {
+                "kind": _write_action_kind(dry_run=dry_run, existing=existing_reference if reference_path.exists() else None),
+                "path": LOCAL_AGENT_REFERENCE_FILE.as_posix(),
+                "detail": (
+                    "refresh root startup entrypoint as a tiny local reference"
+                    if replace_reference_file
+                    else "add tiny local startup reference to AGENTS.local.md"
+                ),
+            }
+        )
+    else:
+        actions.append(
+            {
+                "kind": "current",
+                "path": LOCAL_AGENT_REFERENCE_FILE.as_posix(),
+                "detail": "tiny local startup reference already present",
+            }
+        )
+    return actions
+
+
+def _remove_local_agent_startup(*, repo_root: Path, dry_run: bool) -> list[dict[str, str]]:
+    actions: list[dict[str, str]] = []
+    local_path = repo_root / LOCAL_AGENT_INSTRUCTIONS_FILE
+    if not local_path.exists():
+        actions.append(
+            {
+                "kind": "skipped",
+                "path": LOCAL_AGENT_INSTRUCTIONS_FILE.as_posix(),
+                "detail": "local startup instructions already absent",
+            }
+        )
+    elif local_path.read_text(encoding="utf-8") != _local_agent_instructions_text():
+        actions.append(
+            {
+                "kind": "manual review",
+                "path": LOCAL_AGENT_INSTRUCTIONS_FILE.as_posix(),
+                "detail": "local startup instructions differ from the managed local-only payload",
+            }
+        )
+    else:
+        if not dry_run:
+            local_path.unlink()
+        actions.append(
+            {
+                "kind": "would remove" if dry_run else "removed",
+                "path": LOCAL_AGENT_INSTRUCTIONS_FILE.as_posix(),
+                "detail": "remove managed local startup instructions",
+            }
+        )
+
+    reference_path = repo_root / LOCAL_AGENT_REFERENCE_FILE
+    if not reference_path.exists():
+        actions.append(
+            {
+                "kind": "skipped",
+                "path": LOCAL_AGENT_REFERENCE_FILE.as_posix(),
+                "detail": "root startup reference already absent",
+            }
+        )
+    else:
+        existing_reference = reference_path.read_text(encoding="utf-8")
+        updated_reference, changed = _remove_local_agent_reference_text(existing_reference)
+        if changed:
+            if not dry_run:
+                reference_path.write_text(updated_reference, encoding="utf-8")
+            actions.append(
+                {
+                    "kind": "would update" if dry_run else "updated",
+                    "path": LOCAL_AGENT_REFERENCE_FILE.as_posix(),
+                    "detail": "remove tiny local startup reference",
+                }
+            )
+        else:
+            actions.append(
+                {
+                    "kind": "skipped",
+                    "path": LOCAL_AGENT_REFERENCE_FILE.as_posix(),
+                    "detail": "root startup reference was not present",
+                }
+            )
+    return actions
+
+
 def _write_local_only_state(*, target_root: Path, dry_run: bool) -> dict[str, str]:
     state_path = _local_only_state_path(target_root=target_root)
     rendered_text = _local_only_state_text()
@@ -3658,7 +3827,7 @@ def _write_local_only_state(*, target_root: Path, dry_run: bool) -> dict[str, st
     return {
         "kind": "would create" if dry_run and existing_text is None else "would update" if dry_run else "created",
         "path": LOCAL_ONLY_STATE_FILE.as_posix(),
-        "detail": "record local-only package-owned state inside the package install tree",
+        "detail": "record local-only package-owned state inside the workspace tree",
     }
 
 
@@ -3911,7 +4080,15 @@ def _workspace_init_or_upgrade_report(
         cli_invoke=config.cli_invoke,
     )
     existing_agents = agents_path.read_text(encoding="utf-8") if agents_path.exists() else None
-    if inspection_mode == "install":
+    if local_only_repo_root is not None:
+        actions.extend(
+            _sync_local_agent_startup(
+                repo_root=local_only_repo_root,
+                dry_run=dry_run,
+                replace_reference_file=inspection_mode == "install",
+            )
+        )
+    elif inspection_mode == "install":
         if existing_agents != rendered_agents:
             if not dry_run:
                 agents_path.parent.mkdir(parents=True, exist_ok=True)
@@ -3988,7 +4165,15 @@ def _workspace_init_or_upgrade_report(
 
     handoff_destination = target_root / WORKSPACE_EXTERNAL_AGENT_PATH
     existing_handoff = handoff_destination.read_text(encoding="utf-8") if handoff_destination.exists() else None
-    if existing_handoff == handoff_text:
+    if local_only_repo_root is not None:
+        actions.append(
+            {
+                "kind": "skipped",
+                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
+                "detail": "local-only startup uses AGENTS.local.md and does not create a root external-agent handoff",
+            }
+        )
+    elif existing_handoff == handoff_text:
         actions.append(
             {
                 "kind": "current",
@@ -4091,18 +4276,21 @@ def _workspace_uninstall_report(*, target_root: Path, dry_run: bool, local_only_
             if destination.exists():
                 destination.unlink()
         _prune_empty_parent_dirs(target_root=target_root, relatives=removable)
-        if local_only_repo_root is not None and target_root.exists():
+        if local_only_repo_root is not None:
             actions.append(_remove_local_only_state(target_root=target_root, dry_run=dry_run))
-            shutil.rmtree(target_root)
+            local_workspace_root = target_root / ".agentic-workspace"
+            if local_workspace_root.exists():
+                shutil.rmtree(local_workspace_root)
     if local_only_repo_root is not None:
         if dry_run and target_root.exists():
             actions.append(
                 {
                     "kind": "would remove",
-                    "path": target_root.as_posix(),
-                    "detail": "remove the entire local-only workspace install tree",
+                    "path": ".agentic-workspace",
+                    "detail": "remove the local-only workspace tree",
                 }
             )
+        actions.extend(_remove_local_agent_startup(repo_root=local_only_repo_root, dry_run=dry_run))
         actions.append(_remove_local_only_git_exclude(repo_root=local_only_repo_root, dry_run=dry_run))
         actions.append(_remove_legacy_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
 
@@ -5710,7 +5898,7 @@ def _lifecycle_mutation_safety_payload(
         },
         "local_only_preservation": {
             "status": "explicit-local-only-target" if local_only else "preserve-by-default",
-            "rule": "Repo-local private memory and integration aids are preserved unless --local-only explicitly targets the local-only install tree.",
+            "rule": "Repo-local private memory and integration aids are preserved unless --local-only explicitly targets the local-only workspace tree.",
         },
         "fixture_coverage": [
             {
@@ -14820,8 +15008,17 @@ def _defaults_payload() -> dict[str, Any]:
         "install_profiles": {
             "canonical_doc": "docs/which-package.md",
             "command": "agentic-workspace defaults --section install_profiles --format json",
-            "rule": "Use the public workspace entrypoint and choose the smallest preset that matches the repo's main operating problem.",
+            "rule": (
+                "Use an installed public workspace entrypoint and choose the smallest preset that matches the repo's main "
+                "operating problem."
+            ),
             "default_entrypoint": "agentic-workspace",
+            "cli_availability": {
+                "preferred": "Use `agentic-workspace` already installed in the target repo's environment.",
+                "if_unavailable": "Install `agentic-workspace` into the target repo or its tool environment, then rerun the same lifecycle command.",
+                "temporary_fallback": "`uvx` or `pipx run` may be used for explicit temporary/debug runs, but they are not the default host-repo install path.",
+                "why": "Startup and follow-on work rely on repeated CLI calls, so a stable installed command is cheaper and safer than one-shot no-install runners.",
+            },
             "default_answer": "Start with `memory` when durable repo knowledge is the main problem; choose `planning` for active execution continuity and `full` only when both are justified.",
             "recommendation_order": [
                 "memory",
@@ -14893,6 +15090,7 @@ def _defaults_payload() -> dict[str, Any]:
         "lifecycle": {
             "primary_entrypoint": "agentic-workspace",
             "default_install_command": "agentic-workspace install --target ./repo --preset <memory|planning|full>",
+            "cli_availability_rule": "Prefer the installed `agentic-workspace` command; if missing, install it before bootstrap instead of defaulting to uvx or pipx.",
             "default_setup_posture": "smallest-viable-preset-first",
             "supported_intents": [
                 "set up this repo for Agentic Memory",
@@ -15425,6 +15623,7 @@ def _defaults_payload() -> dict[str, Any]:
         },
         "combined_install": {
             "primary": "agentic-workspace install --target ./repo --preset <memory|planning|full>",
+            "cli_availability_rule": "Use an installed `agentic-workspace` CLI first; install it if unavailable, and reserve uvx/pipx for explicit temporary fallback.",
             "full_when": "Use --preset full only when both active-now planning and durable anti-rediscovery memory are worth the shared footprint.",
             "operating_model": [
                 "Planning owns active-now state.",

@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Callable, NamedTuple
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GENERATOR_SCRIPT_ROOT = REPO_ROOT / "scripts" / "generate"
@@ -15,6 +16,16 @@ if str(GENERATOR_SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(GENERATOR_SCRIPT_ROOT))
 
 from workspace_command_generation import SCHEMA_PATH, SOURCE_PATH, load_workspace_command_package_ir  # noqa: E402
+
+SelectedFields = Callable[[str], dict[str, object]]
+
+
+class AdapterConformanceCase(NamedTuple):
+    conformance_ref: str
+    label: str
+    success_args: list[str]
+    selected_fields: SelectedFields
+    expected_fields: dict[str, object]
 
 
 def _run(command: list[str]) -> int:
@@ -188,6 +199,216 @@ def _selected_doctor_fields(stdout: str) -> dict[str, object]:
     }
 
 
+def _root_workspace_adapter_conformance_cases() -> dict[str, AdapterConformanceCase]:
+    cases = [
+        AdapterConformanceCase(
+            conformance_ref="defaults.report.process",
+            label="defaults",
+            success_args=["defaults", "--section", "startup", "--format", "json"],
+            selected_fields=_selected_defaults_fields,
+            expected_fields={
+                "profile": "compact-contract-answer/v1",
+                "surface": "defaults",
+                "section": "startup",
+                "matched": True,
+                "default_canonical_agent_instructions_file": "AGENTS.md",
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="config.report.process",
+            label="config",
+            success_args=["config", "--target", ".", "--format", "json"],
+            selected_fields=_selected_config_fields,
+            expected_fields={
+                "kind": "agentic-workspace/config-tiny/v1",
+                "profile": "tiny",
+                "exists": False,
+                "agent_instructions_file": "AGENTS.md",
+                "improvement_latitude": "conservative",
+                "optimization_bias": "balanced",
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="modules.report.process",
+            label="modules",
+            success_args=["modules", "--target", ".", "--format", "json"],
+            selected_fields=_selected_modules_fields,
+            expected_fields={
+                "kind": "agentic-workspace/modules-router/v1",
+                "profile": "tiny",
+                "active_module_count": 0,
+                "active_modules": [],
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="start.context.process",
+            label="start",
+            success_args=["start", "--target", ".", "--changed", "README.md", "--format", "json"],
+            selected_fields=_selected_start_fields,
+            expected_fields={
+                "kind": "startup-context/v1",
+                "first_view": "start",
+                "proof_kind": "proof-selection/v1",
+                "changed_paths": ["README.md"],
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="summary.report.process",
+            label="summary",
+            success_args=["summary", "--target", ".", "--profile", "compact", "--format", "json"],
+            selected_fields=_selected_summary_fields,
+            expected_fields={
+                "kind": "planning-summary/v1",
+                "profile": "compact",
+                "machine_first_status": "no-active-execplan",
+                "active_count": 0,
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="implement.context.process",
+            label="implement",
+            success_args=["implement", "--target", ".", "--changed", "README.md", "--task", "generated-adapter-proof", "--format", "json"],
+            selected_fields=_selected_implement_fields,
+            expected_fields={
+                "kind": "implementer-context-tiny/v1",
+                "proof_kind": "proof-selection/v1",
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="preflight.report.process",
+            label="preflight",
+            success_args=["preflight", "--target", ".", "--active-only", "--format", "json"],
+            selected_fields=_selected_preflight_fields,
+            expected_fields={
+                "kind": "preflight-response/v1",
+                "mode": "active-state-only",
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="proof.report.process",
+            label="proof",
+            success_args=["proof", "--target", ".", "--changed", "README.md", "--format", "json"],
+            selected_fields=_selected_proof_fields,
+            expected_fields={
+                "kind": "proof-next-decision/v1",
+                "next_action": "run-validation-command",
+                "detail_command": "agentic-workspace proof --profile full --changed <paths> --format json",
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="ownership.report.process",
+            label="ownership",
+            success_args=["ownership", "--target", ".", "--concern", "startup", "--format", "json"],
+            selected_fields=_selected_ownership_fields,
+            expected_fields={
+                "profile": "compact-contract-answer/v1",
+                "surface": "ownership",
+                "matched": False,
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="skills.report.process",
+            label="skills",
+            success_args=["skills", "--target", ".", "--task", "proof", "--format", "json"],
+            selected_fields=_selected_skills_fields,
+            expected_fields={
+                "task": "proof",
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="report.combined.process",
+            label="report",
+            success_args=["report", "--target", ".", "--profile", "router", "--format", "json"],
+            selected_fields=_selected_report_fields,
+            expected_fields={
+                "kind": "workspace-report-router/v1",
+                "command": "report",
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="reconcile.report.process",
+            label="reconcile",
+            success_args=["reconcile", "--target", ".", "--format", "json"],
+            selected_fields=_selected_reconcile_fields,
+            expected_fields={
+                "kind": "planning-reconcile/v1",
+                "status": "clean",
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="setup.guidance.process",
+            label="setup",
+            success_args=["setup", "--target", ".", "--modules", "planning", "--format", "json"],
+            selected_fields=_selected_setup_fields,
+            expected_fields={
+                "kind": "workspace-setup/v1",
+                "command": "setup",
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="status.report.process",
+            label="status",
+            success_args=["status", "--target", ".", "--modules", "planning", "--format", "json"],
+            selected_fields=_selected_lifecycle_report_fields,
+            expected_fields={
+                "command": "status",
+                "health": "attention-needed",
+            },
+        ),
+        AdapterConformanceCase(
+            conformance_ref="doctor.report.process",
+            label="doctor",
+            success_args=["doctor", "--target", ".", "--modules", "planning", "--format", "json"],
+            selected_fields=_selected_doctor_fields,
+            expected_fields={
+                "command": "doctor",
+                "health": "attention-needed",
+                "repair_plan_kind": "workspace-repair-plan/v1",
+            },
+        ),
+    ]
+    return {case.conformance_ref: case for case in cases}
+
+
+def _runnable_typescript_conformance_cases() -> tuple[list[AdapterConformanceCase], list[str]]:
+    try:
+        ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return [], [f"adapter conformance failed before execution: command-package IR validation failed: {exc}"]
+
+    registry = _root_workspace_adapter_conformance_cases()
+    selected: list[AdapterConformanceCase] = []
+    errors: list[str] = []
+    for package in ir.get("packages", []):
+        if not isinstance(package, dict):
+            continue
+        runnable_typescript = any(
+            isinstance(target, dict)
+            and target.get("kind") == "typescript"
+            and target.get("maturity_level_ref") == "runnable-read-only-adapter"
+            for target in package.get("targets", [])
+        )
+        if not runnable_typescript:
+            continue
+        if package.get("id") != "root-workspace":
+            errors.append(
+                "adapter conformance cannot yet run non-root TypeScript package "
+                f"{package.get('id')!r}; add package-specific runtime shims before marking it runnable"
+            )
+            continue
+        for command in package.get("commands", []):
+            if not isinstance(command, dict):
+                continue
+            command_name = command.get("command", {}).get("name") if isinstance(command.get("command"), dict) else "<unknown>"
+            for conformance_ref in command.get("conformance_refs", []):
+                case = registry.get(str(conformance_ref))
+                if case is None:
+                    errors.append(f"missing generated TypeScript conformance case for {command_name!r} ref {conformance_ref!r}")
+                    continue
+                selected.append(case)
+    return selected, errors
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -218,6 +439,17 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
         (fixture_root / ".git").mkdir(parents=True)
         (fixture_root / ".git" / ".keep").write_text("", encoding="utf-8")
         (fixture_root / "README.md").write_text("# Fixture\n", encoding="utf-8")
+
+        derived_cases, derived_errors = _runnable_typescript_conformance_cases()
+        if derived_errors:
+            return derived_errors
+        derived_refs = {case.conformance_ref for case in derived_cases}
+        supported_refs = set(_root_workspace_adapter_conformance_cases())
+        if derived_refs != supported_refs:
+            return [
+                "adapter conformance coverage drifted from command_package_ir.json; "
+                f"expected runnable TypeScript refs {sorted(derived_refs)!r}, checker supports {sorted(supported_refs)!r}"
+            ]
 
         success_args = ["defaults", "--section", "startup", "--format", "json"]
         canonical = _capture(
@@ -961,4 +1193,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

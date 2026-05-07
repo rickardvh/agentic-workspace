@@ -835,7 +835,7 @@
             "--local-only"
           ],
           "action": "store_true",
-          "help": "Remove the workspace install from `.agentic-workspace/` instead of the repository root."
+          "help": "Remove the local-only workspace state from the normal repository layout."
         }
       ],
       "role": "core_lifecycle",

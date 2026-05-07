@@ -10,7 +10,9 @@ Target repository:
 
 Required steps:
 
-- Do not assume agentic-workspace is already installed; follow the checked-in lifecycle instructions in this repository.
+- Prefer an installed `agentic-workspace` CLI from the target repo's environment when available.
+- If the CLI is unavailable, install the package into the target repo or its tool environment before running lifecycle commands.
+- Treat `uvx` or `pipx run` as temporary/debug fallbacks, not the default host-repo install path.
 - For lifecycle work, use agentic-workspace rather than package-specific CLIs unless package-local debugging is required.
 - After install or adopt, inspect `agentic-workspace config --target ./repo --profile tiny --format json` to find the canonical repo startup entrypoint.
 - For normal work after bootstrap, return to that configured startup file, then inspect `.agentic-workspace/planning/state.toml` and the active execplan only when the active queue points to one.

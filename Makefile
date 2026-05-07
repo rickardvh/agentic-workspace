@@ -14,6 +14,7 @@ COMPACT_RUN = uv run python scripts/check/run_compact_command.py
 	format-check format-check-workspace format-check-memory format-check-planning \
 	verify verify-workspace verify-memory verify-planning \
 	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict structured-file-inventory agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-external-agent-handoff render-schema-reference schema-reference-docs absolute-paths \
+	generated-command-packages generated-command-packages-docker \
 	check check-memory check-planning check-all
 
 help:
@@ -43,6 +44,8 @@ help:
 	@echo "  render-external-agent-handoff  Regenerate the root llms.txt adapter."
 	@echo "  render-schema-reference  Regenerate generated JSON Schema reference docs."
 	@echo "  absolute-paths       Fail if tracked files contain absolute filesystem paths."
+	@echo "  generated-command-packages  Run generated command package proof with compact output."
+	@echo "  generated-command-packages-docker  Run generated command package Docker proof with compact output."
 	@echo "  check                Run the full root validation lane."
 	@echo "  check-memory         Run package-local checks for packages/memory."
 	@echo "  check-planning       Run package-local checks for packages/planning."
@@ -182,6 +185,12 @@ schema-reference-docs:
 absolute-paths:
 	@$(COMPACT_RUN) --label "absolute paths" -- uv run python scripts/check/check_no_absolute_paths.py
 
+generated-command-packages:
+	@uv run python scripts/check/run_generated_command_package_proof.py --all
+
+generated-command-packages-docker:
+	@uv run python scripts/check/run_generated_command_package_proof.py
+
 check-memory: sync-all test-memory lint-memory typecheck-memory verify-memory memory-freshness-strict recurring-friction-ledger
 
 check-planning: sync-all test-planning lint-planning typecheck-planning maintainer-surfaces memory-freshness
@@ -189,4 +198,3 @@ check-planning: sync-all test-planning lint-planning typecheck-planning maintain
 check: sync-all test lint typecheck format-check verify memory-freshness-strict maintainer-surfaces structured-file-inventory agent-aids absolute-paths
 
 check-all: check-memory check-planning
-

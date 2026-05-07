@@ -184,7 +184,7 @@ def test_init_uses_explicit_modules_csv(monkeypatch, tmp_path: Path, capsys) -> 
     assert calls == [("memory", "install", {"target": str(tmp_path), "dry_run": False, "force": False})]
 
 
-def test_install_local_only_uses_agentic_workspace_local_only_root_and_updates_git_exclude(tmp_path: Path, capsys) -> None:
+def test_install_local_only_uses_normal_layout_with_local_startup_indirection(tmp_path: Path, capsys) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     _init_git_repo(repo_root)
@@ -192,14 +192,21 @@ def test_install_local_only_uses_agentic_workspace_local_only_root_and_updates_g
     assert cli.main(["install", "--modules", "planning", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    install_root = repo_root / ".agentic-workspace" / "local-only"
     assert payload["command"] == "install"
-    assert payload["target"] == install_root.as_posix()
-    assert (install_root / "AGENTS.md").exists()
-    assert (install_root / ".agentic-workspace" / "planning" / "state.toml").exists()
-    assert (install_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
-    assert (install_root / ".agentic-workspace" / "local" / "scratch").is_dir()
-    assert (install_root / "LOCAL-ONLY.toml").read_text(encoding="utf-8").startswith('schema_version = 1\nmode = "local-only"')
+    assert payload["target"] == repo_root.as_posix()
+    assert (repo_root / "AGENTS.md").read_text(encoding="utf-8") == "Follow instructions in `AGENTS.local.md` if present.\n"
+    local_agents_text = (repo_root / "AGENTS.local.md").read_text(encoding="utf-8")
+    assert "<!-- agentic-workspace:workflow:start -->" in local_agents_text
+    assert 'start --profile tiny --task "<task>"' in local_agents_text
+    assert (repo_root / ".agentic-workspace" / "planning" / "state.toml").exists()
+    assert (repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+    assert (repo_root / ".agentic-workspace" / "local" / "scratch").is_dir()
+    assert (
+        (repo_root / ".agentic-workspace" / "LOCAL-ONLY.toml")
+        .read_text(encoding="utf-8")
+        .startswith('schema_version = 1\nmode = "local-only"')
+    )
+    assert not (repo_root / "llms.txt").exists()
     git_exclude_text = (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
     assert ".agentic-workspace/" in git_exclude_text
     assert not (repo_root / ".gitignore").exists()
@@ -217,15 +224,14 @@ def test_install_local_only_migrates_legacy_gitignore_residue(tmp_path: Path, ca
     assert cli.main(["install", "--modules", "planning", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    install_root = repo_root / ".agentic-workspace" / "local-only"
     assert payload["command"] == "install"
-    assert payload["target"] == install_root.as_posix()
+    assert payload["target"] == repo_root.as_posix()
     assert not (repo_root / ".gitignore").exists()
-    assert (install_root / "LOCAL-ONLY.toml").exists()
+    assert (repo_root / ".agentic-workspace" / "LOCAL-ONLY.toml").exists()
     assert ".agentic-workspace/" in (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
 
 
-def test_uninstall_local_only_removes_agentic_workspace_local_only_root_and_git_exclude(tmp_path: Path, capsys) -> None:
+def test_uninstall_local_only_removes_workspace_tree_local_startup_and_git_exclude(tmp_path: Path, capsys) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     _init_git_repo(repo_root)
@@ -236,11 +242,11 @@ def test_uninstall_local_only_removes_agentic_workspace_local_only_root_and_git_
     assert cli.main(["uninstall", "--modules", "planning", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    install_root = repo_root / ".agentic-workspace" / "local-only"
     assert payload["command"] == "uninstall"
-    assert payload["target"] == install_root.as_posix()
-    assert not install_root.exists()
-    assert not (install_root / "LOCAL-ONLY.toml").exists()
+    assert payload["target"] == repo_root.as_posix()
+    assert not (repo_root / ".agentic-workspace").exists()
+    assert not (repo_root / "AGENTS.local.md").exists()
+    assert "Follow instructions in `AGENTS.local.md` if present." not in (repo_root / "AGENTS.md").read_text(encoding="utf-8")
     assert ".agentic-workspace/" not in (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
     lifecycle_plan = payload["lifecycle_plan"]
     assert "--local-only" in lifecycle_plan["next_safe_command"]["command"]
@@ -687,6 +693,7 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
     agents_text = (target / "AGENTS.md").read_text(encoding="utf-8")
     assert "<!-- agentic-workspace:workflow:start -->" in agents_text
     assert 'start --profile tiny --task "<task>"' in agents_text
+    assert not (target / "AGENTS.local.md").exists()
     assert "Run `agentic-workspace start --format json`" not in agents_text
     assert "Do not substitute a bare `agentic-workspace` command" in agents_text
     assert "agentic-workspace preflight --format json" not in agents_text
