@@ -96,6 +96,7 @@ def test_preflight_default_returns_tiny_takeover_router(capsys) -> None:
     assert payload["mode"] == "tiny-takeover-router"
     assert "active_state_summary" in payload
     assert "startup_guidance" not in payload
+    assert payload["immediate_next_allowed_action"]["action"] == "recover-orientation"
     assert payload["detail_commands"]["full_takeover"].endswith("preflight --target . --profile full --format json")
 
 
