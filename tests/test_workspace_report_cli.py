@@ -325,6 +325,21 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert posture["boundaries"]["not_blanket_refactor_permission"] is True
 
 
+def test_report_tiny_profile_alias_returns_router(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(target), "--profile", "tiny", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "workspace-report-router/v1"
+    assert payload["report_profile"]["default_profile"] == "router"
+    assert "module_reports" not in payload
+
+
 def test_report_section_returns_config_effect_audit(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

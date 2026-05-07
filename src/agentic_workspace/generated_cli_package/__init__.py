@@ -1137,13 +1137,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           {
             "choices": [
               "router",
+              "tiny",
               "full"
             ],
             "default": "router",
             "flags": [
               "--profile"
             ],
-            "help": "Select the compact router profile or the full combined report.",
+            "help": "Select the compact router profile or the full combined report. tiny is accepted as an alias for router.",
             "name": "profile"
           },
           {
@@ -2253,13 +2254,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
         {
           "choices": [
             "router",
+            "tiny",
             "full"
           ],
           "default": "router",
           "flags": [
             "--profile"
           ],
-          "help": "Select the compact router profile or the full combined report.",
+          "help": "Select the compact router profile or the full combined report. tiny is accepted as an alias for router.",
           "name": "profile"
         },
         {

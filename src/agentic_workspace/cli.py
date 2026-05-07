@@ -8608,6 +8608,97 @@ def _tiny_preflight_payload(payload: dict[str, Any], *, config: WorkspaceConfig)
     }
 
 
+def _tiny_preflight_payload_fast(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    issued_at: str,
+    preflight_token: str,
+    task_text: str | None,
+    changed_paths: list[str] | None,
+) -> dict[str, Any]:
+    active_summary = _fast_planning_active_summary(target_root=target_root)
+    active_execplan_count = 1 if active_summary.get("active_execplan") else 0
+    durable_intent: dict[str, Any] = {
+        "status": "not-evaluated",
+        "subsystem_intent": {"status": "not-evaluated", "matched_count": 0},
+        "inspect": f'{config.cli_invoke} start --target . --profile tiny --task "<task>" --format json',
+    }
+    if task_text or changed_paths:
+        durable_intent = _intent_decision_projection(
+            target_root=target_root,
+            config=config,
+            task_text=task_text,
+            changed_paths=changed_paths,
+            compact=True,
+        )
+        subsystem = durable_intent.get("subsystem_intent", {})
+        durable_intent = {
+            "status": durable_intent.get("status", "unknown"),
+            "subsystem_intent": {
+                "status": subsystem.get("status", "unknown") if isinstance(subsystem, dict) else "unknown",
+                "matched_count": subsystem.get("matched_count", 0) if isinstance(subsystem, dict) else 0,
+            },
+            "inspect": durable_intent.get("inspect", ""),
+        }
+    return {
+        "kind": "preflight-response/v1",
+        "mode": "tiny-takeover-router",
+        "target": target_root.as_posix(),
+        "issued_at": issued_at,
+        "preflight_token": preflight_token,
+        "timestamp_hint": "Use this compact answer to recover orientation; request full takeover context only when needed.",
+        "branch_workflow_posture": {
+            key: value
+            for key, value in _branch_workflow_posture_payload(target_root=target_root).items()
+            if key
+            in {
+                "status",
+                "current_branch",
+                "default_branch",
+                "risk",
+                "recommended_next_action",
+                "upstream_divergence",
+                "shared_state_mutation_risk",
+            }
+        },
+        "local_memory": {key: value for key, value in _local_memory_payload(config=config).items() if key in {"status", "path", "rule"}},
+        "workflow_obligations": {
+            "status": "not-evaluated",
+            "match_count": 0,
+            "detail_command": f"{config.cli_invoke} preflight --profile full --format json",
+        },
+        "closeout_obligations": {
+            "status": "present",
+            "activation_rule": "closeout obligations apply after implementation or lane closeout",
+            "detail_command": f"{config.cli_invoke} report --target ./repo --section closeout_trust --format json",
+        },
+        "operating_posture": _operating_posture_payload(config=config, surface="preflight", compact=True),
+        "durable_intent": durable_intent,
+        "active_state_summary": {
+            "todo_active_count": int(active_summary.get("todo_active_count", 0) or 0),
+            "active_execplan_count": active_execplan_count,
+            "planning_status": active_summary.get("planning_status", "unavailable"),
+        },
+        "immediate_next_allowed_action": {
+            "action": "recover-orientation",
+            "summary": "Use the compact recovery routes below; request full takeover context only if active state or obligations are unclear.",
+            "command": f'{config.cli_invoke} start --target . --profile tiny --task "<task>" --format json',
+            "run": f'{config.cli_invoke} start --target . --profile tiny --task "<task>" --format json',
+            "risk": "read-only recovery routing",
+            "required_inputs": ["current task"],
+            "next_proof": "select proof after changed paths are known",
+        },
+        "detail_commands": {
+            "full_takeover": f"{config.cli_invoke} preflight --target . --profile full --format json",
+            "active_state": f"{config.cli_invoke} preflight --target . --active-only --profile full --format json",
+            "startup": f'{config.cli_invoke} start --target . --profile tiny --task "<task>" --format json',
+            "config": f"{config.cli_invoke} config --target . --profile tiny --format json",
+            "summary": f"{config.cli_invoke} summary --target . --format json",
+        },
+    }
+
+
 def _run_preflight_command(
     *,
     target_root: Path,
@@ -8627,6 +8718,15 @@ def _run_preflight_command(
     issued_epoch = int(time.time())
     issued_at = datetime.fromtimestamp(issued_epoch, tz=timezone.utc).replace(microsecond=0).isoformat()
     preflight_token = _build_preflight_token(issued_at_epoch=issued_epoch)
+    if profile == "tiny" and not active_only:
+        return _tiny_preflight_payload_fast(
+            target_root=target_root,
+            config=config,
+            issued_at=issued_at,
+            preflight_token=preflight_token,
+            task_text=task_text,
+            changed_paths=changed_paths,
+        )
 
     active_state = _preflight_active_state_payload(target_root=target_root)
     planning_record = active_state.get("planning_record", {"status": "unavailable"})
@@ -16152,6 +16252,8 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
         _emit_startup_report(format_name=args.format, target_root=target_root, descriptors=descriptors, config=config)
         return 0
     profile = str(getattr(args, "profile", "router"))
+    if profile == "tiny":
+        profile = "router"
     section = getattr(args, "section", None)
     if section in {"external_work_reconciliation", "external_work_delta"}:
         _ensure_external_intent_cache_if_available(target_root=target_root)
