@@ -3,20 +3,21 @@
     "declaredEntrypoints": [
       "agentic-planning"
     ],
-    "fixtureOnly": true,
+    "effectiveRuntimeCommand": "python -m repo_planning_bootstrap.cli",
+    "fixtureOnly": false,
     "generated": true,
-    "generationStatus": "proof-fixture",
+    "generationStatus": "runnable-read-only-adapter",
     "maturity": {
-      "id": "metadata-proof-fixture",
+      "id": "runnable-read-only-adapter",
       "promotion_requires": [
-        "target package exposes generated parser/help or command invocation glue",
-        "generated metadata remains fresh from command_package_ir.json",
-        "no-direct-edit checks cover generated files"
+        "black-box conformance covers invocation, exit code, output shape, and one failure path",
+        "failure output distinguishes generation drift from adapter and runtime failures",
+        "ordinary Python development remains free of Node or Docker requirements"
       ],
-      "runnable": false,
+      "runnable": true,
       "runtime_backed": false,
-      "summary": "Generated metadata proves projection from the command-package IR but does not provide a runnable CLI entrypoint.",
-      "weak_agent_routing": "forbidden"
+      "summary": "Generated target can be invoked for a selected read-only command and returns observable command output.",
+      "weak_agent_routing": "review-required"
     },
     "program": "agentic-planning",
     "runtimeBinding": {
@@ -51,6 +52,9 @@
       ]
     },
     "source": "src/agentic_workspace/contracts/command_package_ir.json"
+  },
+  "bin": {
+    "agentic-planning": "./src/cli.mjs"
   },
   "name": "@agentic-workspace/planning-cli",
   "private": true,

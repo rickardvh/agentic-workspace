@@ -29,6 +29,15 @@ def _is_runtime_backed_python_target(target: dict[str, Any]) -> bool:
     return target.get("kind") == "python" and target.get("maturity_level_ref") == "runtime-backed-read-only-adapter"
 
 
+def _runtime_command_for_package(package: dict[str, Any], runtime_binding: dict[str, Any]) -> str:
+    package_role = package.get("package_role")
+    if package_role == "planning-module-cli":
+        return "python -m repo_planning_bootstrap.cli"
+    if package_role == "memory-module-cli":
+        return "python -m repo_memory_bootstrap.cli"
+    return str(runtime_binding["default_runtime_command"])
+
+
 def _python_adapter_commands(package: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         command for command in package["commands"] if command.get("status") == "generated" and isinstance(command.get("interface"), dict)
@@ -162,6 +171,7 @@ def _typescript_package_json(
     *,
     source_path: str,
 ) -> str:
+    runtime_command = _runtime_command_for_package(package, runtime_binding)
     payload = {
         "name": target["package_name"],
         "version": "0.0.0-generated",
@@ -175,6 +185,7 @@ def _typescript_package_json(
             "generationStatus": target["generation_status"],
             "maturity": maturity,
             "runtimeBinding": runtime_binding,
+            "effectiveRuntimeCommand": runtime_command,
             "source": source_path,
             "program": package["program"],
             "declaredEntrypoints": target["entrypoints"],
@@ -209,7 +220,7 @@ def _typescript_cli_module(
 ) -> str:
     command_names = sorted(command["command"]["name"] for command in package["commands"])
     rendered_commands = json.dumps(command_names)
-    default_runtime_command = json.dumps(str(runtime_binding["default_runtime_command"]))
+    default_runtime_command = json.dumps(_runtime_command_for_package(package, runtime_binding))
     return (
         "#!/usr/bin/env node\n"
         "// Generated runnable read-only adapter.\n"
@@ -250,6 +261,7 @@ def _typescript_mock_runtime() -> str:
 def _typescript_test(package: dict[str, Any], target: dict[str, Any]) -> str:
     expected_commands = sorted(command["command"]["name"] for command in package["commands"])
     rendered_expected = json.dumps(expected_commands)
+    sample_command = expected_commands[0]
     runnable = _is_runnable_typescript_target(target)
     expected_maturity = target["maturity_level_ref"]
     expected_generation_status = target["generation_status"]
@@ -300,14 +312,14 @@ def _typescript_test(package: dict[str, Any], target: dict[str, Any]) -> str:
             "  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));\n"
             "  const mockRuntime = fileURLToPath(new URL('./mock-runtime.mjs', import.meta.url));\n"
             '  const runtime = `"${process.execPath}" "${mockRuntime}"`;\n'
-            "  const result = spawnSync(process.execPath, [cli, 'defaults', '--format', 'json'], {\n"
+            f"  const result = spawnSync(process.execPath, [cli, {sample_command!r}, '--format', 'json'], {{\n"
             "    encoding: 'utf8',\n"
             "    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: runtime },\n"
             "  });\n"
             "  assert.equal(result.status, 0);\n"
             "  const payload = JSON.parse(result.stdout);\n"
-            "  assert.equal(payload.command, 'defaults');\n"
-            "  assert.deepEqual(payload.args, ['defaults', '--format', 'json']);\n"
+            f"  assert.equal(payload.command, {sample_command!r});\n"
+            f"  assert.deepEqual(payload.args, [{sample_command!r}, '--format', 'json']);\n"
             "});\n"
         )
     return body

@@ -1833,8 +1833,8 @@
             "agentic-planning"
           ],
           "test_environment": "docker",
-          "maturity_level_ref": "metadata-proof-fixture",
-          "generation_status": "proof-fixture"
+          "maturity_level_ref": "runnable-read-only-adapter",
+          "generation_status": "runnable-read-only-adapter"
         }
       ],
       "commands": [
@@ -2295,8 +2295,8 @@
             "agentic-memory"
           ],
           "test_environment": "docker",
-          "maturity_level_ref": "metadata-proof-fixture",
-          "generation_status": "proof-fixture"
+          "maturity_level_ref": "runnable-read-only-adapter",
+          "generation_status": "runnable-read-only-adapter"
         }
       ],
       "commands": [

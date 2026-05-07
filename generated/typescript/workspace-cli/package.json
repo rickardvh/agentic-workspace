@@ -3,6 +3,7 @@
     "declaredEntrypoints": [
       "agentic-workspace"
     ],
+    "effectiveRuntimeCommand": "python -m agentic_workspace.cli",
     "fixtureOnly": false,
     "generated": true,
     "generationStatus": "runnable-read-only-adapter",

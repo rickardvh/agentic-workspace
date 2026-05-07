@@ -32,12 +32,12 @@ test('generated runnable adapter delegates supported command to runtime process'
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
   const mockRuntime = fileURLToPath(new URL('./mock-runtime.mjs', import.meta.url));
   const runtime = `"${process.execPath}" "${mockRuntime}"`;
-  const result = spawnSync(process.execPath, [cli, 'defaults', '--format', 'json'], {
+  const result = spawnSync(process.execPath, [cli, 'config', '--format', 'json'], {
     encoding: 'utf8',
     env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: runtime },
   });
   assert.equal(result.status, 0);
   const payload = JSON.parse(result.stdout);
-  assert.equal(payload.command, 'defaults');
-  assert.deepEqual(payload.args, ['defaults', '--format', 'json']);
+  assert.equal(payload.command, 'config');
+  assert.deepEqual(payload.args, ['config', '--format', 'json']);
 });

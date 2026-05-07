@@ -458,9 +458,9 @@ export const generatedCommandPackage = {
         "agentic-planning"
       ],
       "generated_root": "generated/typescript/planning-cli",
-      "generation_status": "proof-fixture",
+      "generation_status": "runnable-read-only-adapter",
       "kind": "typescript",
-      "maturity_level_ref": "metadata-proof-fixture",
+      "maturity_level_ref": "runnable-read-only-adapter",
       "package_name": "@agentic-workspace/planning-cli",
       "test_environment": "docker"
     }

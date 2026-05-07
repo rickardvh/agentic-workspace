@@ -643,9 +643,9 @@ export const generatedCommandPackage = {
         "agentic-memory"
       ],
       "generated_root": "generated/typescript/memory-cli",
-      "generation_status": "proof-fixture",
+      "generation_status": "runnable-read-only-adapter",
       "kind": "typescript",
-      "maturity_level_ref": "metadata-proof-fixture",
+      "maturity_level_ref": "runnable-read-only-adapter",
       "package_name": "@agentic-workspace/memory-cli",
       "test_environment": "docker"
     }
