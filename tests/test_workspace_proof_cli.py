@@ -112,14 +112,14 @@ def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> No
     answer = payload["answer"]
     assert answer["kind"] == "proof-selection/v1"
     assert answer["selected_lanes"][0]["id"] == "planning_surfaces"
-    assert answer["required_commands"] == ["uv run agentic-workspace doctor --target ./repo --modules planning --format json"]
+    assert answer["required_commands"] == ["uv run agentic-workspace doctor --target . --modules planning --format json"]
     assert answer["validation_plan"]["kind"] == "validation-plan/v1"
     assert answer["validation_plan"]["status"] == "inspect-before-run"
     first_step = answer["validation_plan"]["required"][0]
     assert first_step["order"] == 1
-    assert first_step["command"] == "uv run agentic-workspace doctor --target ./repo --modules planning --format json"
+    assert first_step["command"] == "uv run agentic-workspace doctor --target . --modules planning --format json"
     assert first_step["cwd"] == "."
-    assert first_step["run"].endswith("agentic-workspace doctor --target ./repo --modules planning --format json")
+    assert first_step["run"].endswith("agentic-workspace doctor --target . --modules planning --format json")
     assert first_step["required"] is True
     assert first_step["lane_id"] == "planning_surfaces"
     assert first_step["action"] == "run-validation-command"
@@ -187,8 +187,9 @@ def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, 
 
     payload = json.loads(capsys.readouterr().out)
     step = payload["answer"]["validation_plan"]["required"][0]
-    assert step["command"] == "uv run agentic-workspace doctor --target ./repo --modules planning --format json"
-    assert step["run"] == "uv run agentic-workspace doctor --target ./repo --modules planning --format json"
+    expected_target = tmp_path.as_posix()
+    assert step["command"] == f'uv run agentic-workspace doctor --target "{expected_target}" --modules planning --format json'
+    assert step["run"] == f'uv run agentic-workspace doctor --target "{expected_target}" --modules planning --format json'
 
 
 def test_proof_changed_includes_active_assurance_concern_profiles(tmp_path: Path, capsys) -> None:

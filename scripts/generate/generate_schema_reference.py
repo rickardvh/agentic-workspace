@@ -303,14 +303,24 @@ def render_targets(targets: tuple[ReferenceTarget, ...] = DEFAULT_TARGETS, *, re
     return [(target.output_path, render_schema_reference(target.schema_path, repo_root=repo_root)) for target in targets]
 
 
+def _normalized_generated_content(content: str) -> str:
+    return content.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _needs_generated_write(current: str, next_content: str) -> bool:
+    return _normalized_generated_content(current) != _normalized_generated_content(next_content)
+
+
 def generate(*, targets: tuple[ReferenceTarget, ...] = DEFAULT_TARGETS, repo_root: Path = REPO_ROOT, check: bool = False) -> list[Path]:
     stale: list[Path] = []
     for output_path, content in render_targets(targets, repo_root=repo_root):
         absolute_output_path = repo_root / output_path
+        current = absolute_output_path.read_text(encoding="utf-8") if absolute_output_path.exists() else ""
         if check:
-            current = absolute_output_path.read_text(encoding="utf-8") if absolute_output_path.exists() else ""
-            if current != content:
+            if _needs_generated_write(current, content):
                 stale.append(output_path)
+            continue
+        if absolute_output_path.exists() and not _needs_generated_write(current, content):
             continue
         absolute_output_path.parent.mkdir(parents=True, exist_ok=True)
         absolute_output_path.write_text(content, encoding="utf-8")

@@ -16470,17 +16470,33 @@ def _validation_plan_step(
     return step
 
 
+def _proof_target_argument(target_root: Path | None) -> str:
+    if target_root is None:
+        return "./repo"
+    try:
+        if target_root.resolve() == Path.cwd().resolve():
+            return "."
+    except OSError:
+        pass
+    return _shell_quote(target_root.as_posix())
+
+
+def _proof_command_for_target(*, command: str, target_root: Path | None) -> str:
+    return command.replace("--target ./repo", f"--target {_proof_target_argument(target_root)}")
+
+
 def _validation_plan_for_proof(
     *,
     selected_lanes: list[dict[str, Any]],
     optional_commands: list[str],
+    target_root: Path | None = None,
     cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
     steps: list[dict[str, Any]] = []
     seen_required: set[str] = set()
     for lane in selected_lanes:
         for command in lane.get("enough_proof", []):
-            command_text = str(command)
+            command_text = _proof_command_for_target(command=str(command), target_root=target_root)
             if command_text in seen_required:
                 continue
             seen_required.add(command_text)
@@ -16494,7 +16510,12 @@ def _validation_plan_for_proof(
                 )
             )
     optional_steps = [
-        _validation_plan_step(command=str(command), index=index, required=False, cli_invoke=cli_invoke)
+        _validation_plan_step(
+            command=_proof_command_for_target(command=str(command), target_root=target_root),
+            index=index,
+            required=False,
+            cli_invoke=cli_invoke,
+        )
         for index, command in enumerate(optional_commands, start=1)
     ]
     primary_action = steps[0] if steps else (optional_steps[0] if optional_steps else None)
@@ -16829,7 +16850,13 @@ def _proof_selection_for_changed_paths(
     for lane in selected_lanes:
         lane["proof_kind"] = _proof_kind_for_lane(lane)
         lane["enough_proof"] = [
-            str(_command_with_cli_invoke(command=str(command), cli_invoke=cli_invoke)) for command in lane.get("enough_proof", [])
+            str(
+                _command_with_cli_invoke(
+                    command=_proof_command_for_target(command=str(command), target_root=target_root),
+                    cli_invoke=cli_invoke,
+                )
+            )
+            for command in lane.get("enough_proof", [])
         ]
     required_commands: list[str] = []
     broaden_when: list[str] = []
@@ -16859,7 +16886,15 @@ def _proof_selection_for_changed_paths(
         for command in concern_lane.get("optional_commands", []):
             if command not in optional_commands:
                 optional_commands.append(str(command))
-    optional_commands = [str(_command_with_cli_invoke(command=str(command), cli_invoke=cli_invoke)) for command in optional_commands]
+    optional_commands = [
+        str(
+            _command_with_cli_invoke(
+                command=_proof_command_for_target(command=str(command), target_root=target_root),
+                cli_invoke=cli_invoke,
+            )
+        )
+        for command in optional_commands
+    ]
     proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,
@@ -16881,6 +16916,7 @@ def _proof_selection_for_changed_paths(
         "validation_plan": _validation_plan_for_proof(
             selected_lanes=selected_lanes,
             optional_commands=optional_commands,
+            target_root=target_root,
             cli_invoke=cli_invoke,
         ),
         "broaden_when": broaden_when,
