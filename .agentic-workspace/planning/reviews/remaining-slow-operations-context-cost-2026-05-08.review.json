@@ -1,0 +1,185 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Remaining Slow Operations Context-Cost Review",
+  "goal": [
+    "Identify CLI operations that remain slow after the latest tiny/router optimisation work.",
+    "Separate ordinary first-contact costs from opt-in audit costs so future optimisation can focus on agent ergonomics."
+  ],
+  "scope": [
+    "agentic-workspace root CLI default/tiny/reporting surfaces",
+    "agentic-planning summary/report/status/doctor defaults",
+    "agentic-memory report/status/doctor/route-report defaults"
+  ],
+  "non_goals": [
+    "Implement fixes during this review pass.",
+    "Promote findings into active planning automatically.",
+    "Treat all full audit latency as a defect; full outputs may be expensive when they are explicitly selected."
+  ],
+  "review_mode": {
+    "mode": "context-cost",
+    "review question": "Which remaining CLI operations still cost enough latency or context to disrupt routine agent use, and what source patterns explain the cost?",
+    "default finding cap": "2 findings by mode default; exceeded to capture the three distinct slow-operation classes surfaced by measurement.",
+    "inputs inspected first": "AGENTS.md, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/reviews/README.md, prior CLI ergonomics review, current CLI timing measurements, and implementation hot paths for planning, memory, and workspace report/status/doctor."
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --profile tiny --task \"Create a review for remaining slow operations\" --format json; three-run timing loop over selected workspace, planning, and memory CLI commands; source inspection with rg/Get-Content for command handlers and report constructors.",
+    "evidence sources": "Median wall-clock timings from three subprocess runs, JSON output byte counts from the final run, and static source inspection of report construction paths. Fast baseline medians were defaults 201ms, modules 216ms, implement tiny 222ms, proof tiny 227ms, start tiny 237ms, and preflight 275ms. Slow-operation medians were workspace full report 25124ms, memory report 4853ms, planning report 4781ms, planning summary 4727ms, workspace doctor 3253ms, workspace report router 2497ms, workspace status 2455ms, memory doctor 2430ms, memory route-report 2429ms, and memory status 2366ms."
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": ".agentic-workspace/planning/reviews/cli-command-ergonomics-context-cost-2026-05-07.review.json",
+      "label": "prior CLI ergonomics review",
+      "role": "baseline for already-fixed broad default payload findings",
+      "locator": "findings"
+    },
+    {
+      "kind": "source",
+      "target": "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "label": "planning report construction",
+      "role": "planning_summary builds full summary before compact/tiny projection; planning_report calls planning_summary(target=target)",
+      "locator": "planning_summary, planning_report"
+    },
+    {
+      "kind": "source",
+      "target": "packages/memory/src/repo_memory_bootstrap/installer.py",
+      "label": "memory report construction",
+      "role": "memory_report assembles doctor/current/route/promotion/merge-safety views before CLI tiny projection",
+      "locator": "memory_report"
+    },
+    {
+      "kind": "source",
+      "target": "packages/memory/src/repo_memory_bootstrap/cli.py",
+      "label": "memory CLI report projection",
+      "role": "report handler builds memory_report first, then applies _tiny_memory_report when profile is tiny",
+      "locator": "_handle_report, _tiny_memory_report"
+    },
+    {
+      "kind": "source",
+      "target": "src/agentic_workspace/cli.py",
+      "label": "workspace report and lifecycle wrappers",
+      "role": "workspace report/status/doctor invoke module lifecycle/report constructors before compacting",
+      "locator": "_run_report_command, _run_lifecycle_command, _compact_status_payload"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Planning compact outputs still pay full-summary construction cost",
+      "summary": "agentic-planning summary and report return small outputs, but remain around 4.7-4.8 seconds because compact/tiny projection happens after planning_summary builds the full summary graph.",
+      "evidence": "Three-run medians: agentic-planning summary --target . --format json 4727ms / 5446 bytes; agentic-planning report --target . --format json 4781ms / 3322 bytes. Source inspection shows planning_summary constructs ownership review, decomposition projection, checker warnings, completed/unregistered execplan analysis, intent validation, finished-work inspection, maturity/readiness, hierarchy, handoff, and system-intent payloads before the profile branch returns compact/tiny projections; planning_report calls planning_summary(target=target) without a compact profile.",
+      "risk if unchanged": "Agents can follow a seemingly compact module command and still lose several seconds per orientation or status check. This undermines the tiny/default principle even when token output is controlled.",
+      "suggested action": "Split Planning summary/report construction into direct tiny and compact paths. Avoid expensive checker, finished-work, archive, and full contract assembly unless profile=full or a section needs it. Make planning_report consume compact summary by default.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "GitHub issue or planning roadmap candidate for Planning module latency hardening",
+      "promotion trigger": "Promote when the next CLI ergonomics optimisation lane targets latency rather than payload size.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "Memory tiny report/status/doctor outputs are compact but still build broad report state",
+      "summary": "Memory command outputs are now small, but report/status/doctor still cost about 2.3-4.9 seconds because command handlers assemble broad memory diagnostics before projection.",
+      "evidence": "Three-run medians: agentic-memory report --target . --format json 4853ms / 3213 bytes; status 2366ms / 1821 bytes; doctor 2430ms / 1820 bytes; route-report 2429ms / 3948 bytes. Source inspection shows memory_report loads manifest, runs doctor_bootstrap, current checks/views, report_routes, promotion_report, recurring-friction, durable-fact routing, habitual-pull, state-model, and merge-safety diagnostics. The memory CLI report handler builds memory_report first and then applies _tiny_memory_report for tiny output.",
+      "risk if unchanged": "The package may look token-efficient while still making routine module checks feel sluggish, especially in evaluation loops or repeated agent recovery passes.",
+      "suggested action": "Add direct tiny constructors for memory report/status/doctor. Keep route-report fixture evaluation, promotion remediation, merge-safety, and habitual-pull analysis behind explicit sections or full profile unless the tiny output needs a count or blocking warning.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "GitHub issue or memory roadmap candidate for Memory module latency hardening",
+      "promotion trigger": "Promote alongside Planning latency hardening or when direct memory CLI use appears in agent evaluations.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "Workspace report/status/doctor wrappers inherit module assembly cost before compacting",
+      "summary": "Root workspace status, doctor, and report router outputs are much smaller than before, but still run multi-module lifecycle/report paths before returning compact views.",
+      "evidence": "Three-run medians: agentic-workspace status --format json 2455ms / 8231 bytes; doctor 3253ms / 12787 bytes; report --format json 2497ms / 21128 bytes. Source inspection shows _run_lifecycle_command invokes each selected module command and workspace status before _compact_status_payload, while _run_report_command calls _run_lifecycle_command plus planning_report and memory_report for full report assembly when the full path is requested. The default router is acceptable compared with full report, but it still sits above the subsecond first-contact baseline.",
+      "risk if unchanged": "Agents may learn that root lifecycle/report commands are safe on tokens but slow in repeated loops. The workspace layer also masks whether latency belongs to the orchestrator or to module constructors.",
+      "suggested action": "Make root status/doctor/report router consume module tiny status summaries or cached cheap health facts where possible. Add timing or cost provenance fields so slow root outputs can identify which module or section consumed the budget.",
+      "confidence": "medium",
+      "source": "mixed",
+      "promotion target": "GitHub issue or workspace roadmap candidate for lifecycle/report latency provenance",
+      "promotion trigger": "Promote after module direct tiny constructors exist, or sooner if root lifecycle commands remain above 2s after module fixes.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "Full combined workspace report is very expensive but correctly opt-in",
+      "summary": "agentic-workspace report --profile full took about 25 seconds and emitted about 1 MB. This is not a default-path regression, but it should be treated as an audit command with visible expected cost.",
+      "evidence": "Three-run median: agentic-workspace report --profile full --format json 25124ms / 1044177 bytes. The default report router remained around 2497ms / 21128 bytes, so the high cost is behind an explicit full profile.",
+      "risk if unchanged": "Users and agents may run full report during ordinary investigation without realizing it is a broad audit path, causing avoidable latency and token usage.",
+      "suggested action": "Document full report as an audit/deep diagnostic path and consider adding a lightweight warning or cost hint in router output before recommending --profile full. Do not optimise this ahead of default/tiny paths unless full-report use becomes frequent.",
+      "confidence": "medium",
+      "source": "static-analysis",
+      "promotion target": "documentation or report-router hint if repeated misuse appears",
+      "promotion trigger": "Promote only if evaluations show agents choosing full report unnecessarily.",
+      "post-remediation note shape": "delete"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote Planning and Memory direct-tiny constructors first; both findings have measured latency despite compact output and directly affect module-level ergonomics.",
+    "defer": "Defer workspace wrapper latency until module tiny constructors exist, unless root lifecycle/report commands are the next explicit optimisation lane.",
+    "dismiss": "Do not treat full combined report latency as urgent while it remains explicitly opt-in; document or hint its cost instead."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "After promoted latency issues land or are dismissed, keep only the measurement table and final decision summary.",
+    "proof surface": "Future timing loops over the same command set plus targeted tests for direct tiny constructors.",
+    "source retention rule": "Store decision, confidence, source refs, and reopen/promote triggers; do not copy issue titles, current status snapshots, long command output, or source summaries unless the copied text is the judgment itself.",
+    "distillation path": "When decisions are promoted into issues, planning state, Memory, docs, contracts, or checks, keep this artifact as evidence/history and remove or summarize reconstructable source context at the next cleanup.",
+    "reconstructable refs": [
+      "review artifact path",
+      "source file locators",
+      "timing command list"
+    ],
+    "fields intentionally omitted": [
+      "full command output",
+      "full profiler output",
+      "generated file snapshots"
+    ]
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run agentic-workspace start --profile tiny --task \"Create a review for remaining slow operations\" --format json",
+    "Three-run timing loop over selected agentic-workspace, agentic-planning, and agentic-memory JSON commands",
+    "rg/Get-Content source inspection for planning_summary, planning_report, memory_report, _run_report_command, _run_lifecycle_command, and _compact_status_payload"
+  ],
+  "drift_log": [
+    "2026-05-08: Review created after measuring remaining slow operations following tiny/router latency work."
+  ]
+}
