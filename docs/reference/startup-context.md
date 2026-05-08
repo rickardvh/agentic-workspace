@@ -85,6 +85,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `operating_posture` | object | no |  | Compact statement of the current operating mode and risk posture. |  |  |
 | `delegation_decision` | object | no |  | Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and task signals. |  |  |
 | `task_intent` | object | no |  | Compact task-intent carry-forward guidance for subsequent implement --changed calls. |  |  |
+| `intent_acknowledgement` | object | no |  | Guidance for the middle path between silent inference and clarification halt: state inferred intent, first slice, non-goals, and correction point before non-direct work. |  |  |
 | `durable_intent` | object | no |  | Compact durable task, subsystem, and system intent pressure to consider before implementation. |  |  |
 | `skill_routing` | ref `#/$defs/skill_routing` | yes |  | Skill-discovery route and fallback guidance for task-specific instructions. |  |  |
 | `skill_routing.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |

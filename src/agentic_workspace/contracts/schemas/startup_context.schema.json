@@ -285,6 +285,11 @@
       "description": "Compact task-intent carry-forward guidance for subsequent implement --changed calls.",
       "additionalProperties": true
     },
+    "intent_acknowledgement": {
+      "type": "object",
+      "description": "Guidance for the middle path between silent inference and clarification halt: state inferred intent, first slice, non-goals, and correction point before non-direct work.",
+      "additionalProperties": true
+    },
     "durable_intent": {
       "type": "object",
       "description": "Compact durable task, subsystem, and system intent pressure to consider before implementation."

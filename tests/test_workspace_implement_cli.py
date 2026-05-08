@@ -73,7 +73,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
                 "--changed",
                 "src/agentic_workspace/cli.py",
                 "--task",
-                "apply output profile policy",
+                "implement output profile policy",
                 "--format",
                 "json",
             ]
@@ -96,6 +96,15 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert payload["scope"]["inspect_files"] == ["src/agentic_workspace/cli.py"]
     assert "make test-workspace" in payload["proof"]["required_commands"]
     assert payload["routing"]["work_shape"] == "bounded"
+    acknowledgement = payload["intent_acknowledgement"]
+    assert acknowledgement["decision"] == "proceed-with-stated-assumption"
+    assert acknowledgement["fields"] == [
+        "inferred_intent",
+        "concrete_first_slice",
+        "non_goals_or_deferred_scope",
+        "correction_point",
+    ]
+    assert acknowledgement["proceed_unless_corrected"] is True
     assert payload["delegation_decision"]["status"] == "evaluated"
     assert payload["delegation_decision"]["mode"] in {"suggest", "auto"}
     assert payload["acceptance_reconciliation"]["task_text_available"] is True
@@ -104,7 +113,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert "authority_markers" not in payload
     assert "durable_intent" not in payload
     assert "inference_limits" not in payload
-    assert len(encoded) < 4700
+    assert len(encoded) < 4950
 
 
 def test_cli_invoke_rewrites_package_sibling_commands_when_repo_local() -> None:

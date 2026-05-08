@@ -17,6 +17,7 @@
     "proof",
     "required_validation_commands",
     "acceptance_reconciliation",
+    "intent_acknowledgement",
     "objective_drift",
     "orientation",
     "inference_limits",
@@ -100,6 +101,11 @@
     "acceptance_reconciliation": {
       "$ref": "#/$defs/acceptance_reconciliation",
       "description": "Compact checklist requiring requested outcomes to be reconciled against delivered behavior and proof before closeout."
+    },
+    "intent_acknowledgement": {
+      "type": "object",
+      "description": "Guidance for stating inferred intent, first slice, non-goals, and correction point before non-direct implementation.",
+      "additionalProperties": true
     },
     "objective_drift": {
       "$ref": "#/$defs/objective_drift",

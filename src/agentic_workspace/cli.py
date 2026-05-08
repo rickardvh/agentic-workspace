@@ -9656,7 +9656,27 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         projected["cli_compatibility"] = cli_compatibility
     vague_orientation = payload.get("vague_outcome_orientation", {})
     if isinstance(vague_orientation, dict) and vague_orientation.get("applies_to_current_task") is True:
-        projected["vague_outcome_orientation"] = vague_orientation
+        if isinstance(task_intent, dict) and task_intent.get("task_argument_mode") == "task-file":
+            projected["vague_outcome_orientation"] = {
+                "status": vague_orientation.get("status", "applicable"),
+                "applies_to_current_task": True,
+                "answer_contract": ["state intent/slice/non-goals; proceed unless corrected"],
+                "raw_read_rule": vague_orientation.get("raw_read_rule", ""),
+            }
+        else:
+            projected["vague_outcome_orientation"] = vague_orientation
+    intent_acknowledgement = payload.get("intent_acknowledgement", {})
+    if (
+        isinstance(intent_acknowledgement, dict)
+        and intent_acknowledgement.get("decision") == "proceed-with-stated-assumption"
+        and not (isinstance(task_intent, dict) and task_intent.get("task_argument_mode") == "task-file")
+    ):
+        projected["intent_acknowledgement"] = {
+            "decision": intent_acknowledgement.get("decision"),
+            "fields": intent_acknowledgement.get("before_editing", []),
+            "proceed_unless_corrected": True,
+            "clarify_only_if_blocked": True,
+        }
     durable_intent = payload.get("durable_intent", {})
     subsystem_intent = durable_intent.get("subsystem_intent", {}) if isinstance(durable_intent, dict) else {}
     matched_count = int(subsystem_intent.get("matched_count", 0) or 0) if isinstance(subsystem_intent, dict) else 0
@@ -10140,6 +10160,18 @@ def _start_payload(
         task_text=task_text,
     )
     payload["delegation_decision"] = execution_posture["delegation_decision"]
+    intent_acknowledgement = _intent_acknowledgement_payload(
+        task_text=task_text,
+        execution_posture=execution_posture,
+        vague_orientation=vague_orientation,
+    )
+    if (
+        intent_acknowledgement["decision"] != "silent-ok"
+        and task_intent.get("task_argument_mode") != "task-file"
+        and not _is_config_posture_task(task_text)
+        and not _is_prep_only_handoff_task(task_text)
+    ):
+        payload["intent_acknowledgement"] = intent_acknowledgement
     if not active_planning_present and task_mentioned_paths and not changed_paths and not _is_config_posture_task(task_text):
         implement_command = str(task_intent.get("implement_changed_command", "")) if isinstance(task_intent, dict) else ""
         if implement_command:
@@ -10338,6 +10370,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "skill_routing",
         "task_intent",
         "delegation_decision",
+        "intent_acknowledgement",
         "cli_invocation",
         "durable_intent",
         "workflow_obligations",
@@ -10414,7 +10447,14 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str) -
     matched_count = int(subsystem_intent.get("matched_count", 0) or 0) if isinstance(subsystem_intent, dict) else 0
     if isinstance(durable_intent, dict) and durable_intent.get("status") == "present" and matched_count:
         selected["durable_intent"] = _tiny_durable_intent(durable_intent)
-    for optional_key in ("proof", "path_boundaries", "startup_review", "prep_only_handoff", "vague_outcome_orientation"):
+    for optional_key in (
+        "proof",
+        "path_boundaries",
+        "startup_review",
+        "prep_only_handoff",
+        "vague_outcome_orientation",
+        "intent_acknowledgement",
+    ):
         if optional_key in payload:
             selected[optional_key] = payload[optional_key]
     return selected
@@ -10573,6 +10613,18 @@ def _start_tiny_payload_fast(
         task_text=task_text,
     )
     payload["delegation_decision"] = execution_posture["delegation_decision"]
+    intent_acknowledgement = _intent_acknowledgement_payload(
+        task_text=task_text,
+        execution_posture=execution_posture,
+        vague_orientation=vague_orientation,
+    )
+    if (
+        intent_acknowledgement["decision"] != "silent-ok"
+        and task_intent.get("task_argument_mode") != "task-file"
+        and not _is_config_posture_task(task_text)
+        and not _is_prep_only_handoff_task(task_text)
+    ):
+        payload["intent_acknowledgement"] = intent_acknowledgement
     if not active_planning_present and task_mentioned_paths and not changed_paths and not _is_config_posture_task(task_text):
         implement_command = str(task_intent.get("implement_changed_command", "")) if isinstance(task_intent, dict) else ""
         if implement_command:
@@ -10915,6 +10967,102 @@ def _task_intent_carry_forward_payload(*, task_text: str | None, cli_invoke: str
     }
 
 
+def _intent_acknowledgement_payload(
+    *,
+    task_text: str | None,
+    execution_posture: dict[str, Any],
+    vague_orientation: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    task = str(task_text or "").strip()
+    capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
+    work_shape = capability.get("work_shape") if isinstance(capability, dict) else None
+    task_lower = " ".join(task.lower().split())
+    if not task:
+        return {
+            "kind": "agentic-workspace/intent-acknowledgement/v1",
+            "status": "not-requested",
+            "decision": "silent-ok",
+            "reason": "No task text was provided, so there is no inferred user intent to restate.",
+        }
+
+    direct_markers = (
+        "typo",
+        "spelling",
+        "one-line",
+        "one line",
+        "formatting",
+        "format only",
+        "rename",
+        "fix lint",
+        "fix the lint",
+    )
+    non_direct_markers = (
+        "implement",
+        "improve",
+        "optimise",
+        "optimize",
+        "evaluate",
+        "review",
+        "design",
+        "refactor",
+        "decompose",
+        "plan",
+        "lane",
+        "epic",
+        "workflow",
+        "delegation",
+        "intent",
+        "satisfaction",
+        "handoff",
+        "schema",
+        "contract",
+        "configuration",
+        "config",
+    )
+    vague_applies = bool(isinstance(vague_orientation, dict) and vague_orientation.get("applies_to_current_task"))
+    has_issue_ref = bool(re.search(r"#\d+", task))
+    direct_only = any(marker in task_lower for marker in direct_markers) and not any(marker in task_lower for marker in non_direct_markers)
+    should_state = (
+        vague_applies or has_issue_ref or work_shape in {"lane", "epic"} or any(marker in task_lower for marker in non_direct_markers)
+    )
+    if direct_only or not should_state:
+        return {
+            "kind": "agentic-workspace/intent-acknowledgement/v1",
+            "status": "available",
+            "decision": "silent-ok",
+            "work_shape": work_shape or "unknown",
+            "reason": "Task appears direct enough that a separate stated-assumption preface is optional.",
+            "use_stated_assumption_when": "Use the middle path if the edit stops being obvious, proof becomes non-obvious, or scope starts to widen.",
+        }
+
+    return {
+        "kind": "agentic-workspace/intent-acknowledgement/v1",
+        "status": "recommended",
+        "decision": "proceed-with-stated-assumption",
+        "work_shape": work_shape or "unknown",
+        "rule": (
+            "Before editing non-direct, vague-outcome, bounded, lane, or epic work, briefly state the inferred intent "
+            "and first slice, then proceed unless corrected."
+        ),
+        "before_editing": [
+            "inferred_intent",
+            "concrete_first_slice",
+            "non_goals_or_deferred_scope",
+            "correction_point",
+        ],
+        "correction_point": "Say that you will proceed on the stated interpretation unless the user corrects it.",
+        "silent_inference_ok_when": "The change is direct, local, low-risk, and validation is obvious.",
+        "ask_human_when": (
+            "Stop for clarification only when the intent, authority boundary, safety risk, or required input blocks "
+            "choosing a bounded first slice."
+        ),
+        "template": (
+            "Inferred intent: <outcome>. First slice: <bounded work>. Non-goals/deferred: <scope>. "
+            "I will proceed on that interpretation unless corrected."
+        ),
+    }
+
+
 def _read_task_text_from_file(*, target_root: Path, task_file: str | None) -> str | None:
     if not task_file:
         return None
@@ -11011,6 +11159,7 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         changed_paths=normalized_paths,
         task_text=task_text,
     )
+    vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     implement_current_need = "changed-path-implementation" if normalized_paths else "unknown-scope-routing"
     payload = {
         "kind": "implementer-context/v1",
@@ -11066,6 +11215,11 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         "proof": proof,
         "required_validation_commands": proof["required_commands"],
         "acceptance_reconciliation": _acceptance_reconciliation_prompt_payload(task_text=task_text),
+        "intent_acknowledgement": _intent_acknowledgement_payload(
+            task_text=task_text,
+            execution_posture=execution_posture,
+            vague_orientation=vague_orientation,
+        ),
         "objective_drift": _objective_drift_payload(
             target_root=target_root,
             changed_paths=normalized_paths,
@@ -11160,13 +11314,14 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     execution_posture = payload.get("execution_posture", {})
     capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
     runtime_resolution = execution_posture.get("runtime_resolution", {}) if isinstance(execution_posture, dict) else {}
+    intent_acknowledgement = payload.get("intent_acknowledgement", {})
     detail_commands = {
         "full_context": "agentic-workspace implement --profile full --changed <paths> --format json",
         "proof_detail": "agentic-workspace proof --profile full --changed <paths> --format json",
         "task_scoped_state": "agentic-workspace summary --profile compact --changed <paths> --format json",
         "takeover_or_recovery": "agentic-workspace preflight --format json",
     }
-    return {
+    projected = {
         "kind": "implementer-context-tiny/v1",
         "target": payload.get("target"),
         "adaptive_routing": _tiny_adaptive_routing_payload(
@@ -11219,6 +11374,14 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "detail_command": detail_commands["full_context"],
         "detail_commands": detail_commands,
     }
+    if isinstance(intent_acknowledgement, dict) and intent_acknowledgement.get("decision") == "proceed-with-stated-assumption":
+        projected["intent_acknowledgement"] = {
+            "decision": intent_acknowledgement.get("decision"),
+            "fields": intent_acknowledgement.get("before_editing", []),
+            "proceed_unless_corrected": True,
+            "clarify_only_if_blocked": True,
+        }
+    return projected
 
 
 def _tiny_acceptance_reconciliation(value: Any) -> dict[str, Any]:
@@ -14815,6 +14978,8 @@ def _vague_outcome_orientation_payload(*, task_text: str | None, cli_invoke: str
         ],
         "answer_contract": [
             "state the inferred intended outcome",
+            "state the concrete first slice and non-goals before editing",
+            "say you will proceed on that interpretation unless corrected",
             "name the first repo-visible surface or compact command to inspect",
             "define satisfaction evidence before choosing an implementation",
             "separate one possible solution from the intended outcome",

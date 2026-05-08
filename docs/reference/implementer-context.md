@@ -49,6 +49,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `acceptance_reconciliation.compact_closeout_prompt` | string | yes |  | Short prompt agents can use before final answer or lane closeout. |  |  |
 | `acceptance_reconciliation.task_text_available` | boolean | yes |  | Whether the CLI invocation included task text to reconcile. |  |  |
 | `acceptance_reconciliation.task_carry_forward_hint` | string | yes |  | Short reminder to preserve task text across start and implement calls. |  |  |
+| `intent_acknowledgement` | object | yes |  | Guidance for stating inferred intent, first slice, non-goals, and correction point before non-direct implementation. |  |  |
 | `objective_drift` | object | yes |  | Heuristic warning when changed files do not mention explicit requested outcomes. |  |  |
 | `objective_drift.kind` | const `"agentic-workspace/objective-drift/v1"` | yes |  | Discriminator for the lightweight objective-drift heuristic. |  |  |
 | `objective_drift.status` | string | yes |  | Whether requested task terms appear missing from changed surfaces. |  |  |

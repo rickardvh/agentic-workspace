@@ -859,8 +859,66 @@ def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -
     payload = json.loads(capsys.readouterr().out)
     orientation = payload["vague_outcome_orientation"]
     assert orientation["status"] == "applicable"
+    assert "say you will proceed on that interpretation unless corrected" in orientation["answer_contract"]
     assert orientation["raw_read_rule"].startswith("Open raw .agentic-workspace files only after compact output")
     assert "skill_routing" in payload
+
+
+def test_start_task_surfaces_stated_assumption_middle_path(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Improve onboarding so agents stop drifting from user intent",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    acknowledgement = payload["intent_acknowledgement"]
+    assert acknowledgement["decision"] == "proceed-with-stated-assumption"
+    assert acknowledgement["fields"] == [
+        "inferred_intent",
+        "concrete_first_slice",
+        "non_goals_or_deferred_scope",
+        "correction_point",
+    ]
+    assert acknowledgement["proceed_unless_corrected"] is True
+    assert acknowledgement["clarify_only_if_blocked"] is True
+
+
+def test_start_direct_task_keeps_stated_assumption_out_of_default(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Fix a typo in README.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "intent_acknowledgement" not in payload
 
 
 def test_start_task_includes_compact_skill_recommendations(tmp_path: Path, capsys) -> None:
