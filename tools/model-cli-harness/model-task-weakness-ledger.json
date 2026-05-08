@@ -1,7 +1,7 @@
 {
   "schema": "agentic-workspace/model-cli-harness-weakness-ledger/v1",
   "purpose": "Compact maintainer ledger for repeated model-task workflow weaknesses found through the source-checkout-only harness.",
-  "updated_at": "2026-05-04",
+  "updated_at": "2026-05-08",
   "entries": [
     {
       "id": "prep-only-broad-work-product-scaffold",
@@ -88,6 +88,28 @@
       ],
       "product_owner": "Planning summary and model CLI harness maintainers",
       "next_probe": "Run planning-artifact-integrity after summary/template or planning-only guidance changes; latest Copilot rerun created canonical state/decomposition/execplan with no semantic warnings beyond expected fixture mutation.",
+      "priority": "high"
+    },
+    {
+      "id": "capability-routing-decision-followthrough",
+      "area": "workspace",
+      "scenario": "capability-fit-routing",
+      "models": [
+        "gpt-5.3-codex-spark"
+      ],
+      "status": "active-monitoring",
+      "failure_classes": [
+        "delegation_decision ignored or not evidenced",
+        "handoff packet missing required worker fields",
+        "local absolute path leaked in final response"
+      ],
+      "evidence_refs": [
+        "GitHub issue #847",
+        "tools/model-cli-harness/suites/copilot-workflow-smoke.json::capability-fit-routing",
+        "scratch/model-cli-harness/20260508T220836Z-copilot-workflow-smoke-codex-summary.json"
+      ],
+      "product_owner": "Workspace delegation routing and model CLI harness maintainers",
+      "next_probe": "Run capability-fit-routing after delegation_decision or handoff-packet wording changes; latest Codex Spark run followed four of six variants and flagged two ignored/misread cases.",
       "priority": "high"
     }
   ]

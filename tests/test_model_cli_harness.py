@@ -1898,6 +1898,72 @@ def test_model_cli_harness_scores_capability_fit_scenario_mutations() -> None:
     assert any("edited files during a no-edit capability-fit" in warning["message"] for warning in warnings)
 
 
+def test_model_cli_harness_records_capability_routing_followed() -> None:
+    harness = _load_harness()
+
+    evaluation = harness._capability_routing_evaluation(
+        scenario_id="capability-fit-routing",
+        prompt_variant_id="weak-target-high-judgment",
+        result={"final_message": "Escalate to a stronger planner before implementation."},
+        warnings=[],
+    )
+
+    assert evaluation["status"] == "followed"
+    assert evaluation["followed_delegation_decision"] is True
+    assert evaluation["expected_action"] == "escalate-or-handoff-before-execution"
+    assert evaluation["startup_or_config_evidence_used"] is True
+
+
+def test_model_cli_harness_records_capability_routing_ignored_with_feedback_status() -> None:
+    harness = _load_harness()
+
+    evaluation = harness._capability_routing_evaluation(
+        scenario_id="capability-fit-routing",
+        prompt_variant_id="handoff-packet-contents",
+        result={"final_message": "I will tell the next executor to do the work."},
+        warnings=[
+            {
+                "warning_class": "model_cli_semantic_workflow_failure",
+                "message": "The handoff packet variant omitted key worker-packet fields.",
+            },
+            {
+                "warning_class": "model_cli_metadata_scoring_failure",
+                "message": "The agent did not execute a required command.",
+            },
+        ],
+        postmortem_feedback={
+            "status": "unsupported",
+            "warnings": [{"warning_class": "model_cli_postmortem_feedback_unsupported"}],
+        },
+    )
+
+    assert evaluation["status"] == "ignored-or-misread"
+    assert evaluation["followed_delegation_decision"] is False
+    assert evaluation["expected_action"] == "prepare-complete-worker-packet-and-return-contract"
+    assert evaluation["semantic_failure_count"] == 1
+    assert evaluation["required_command_miss_count"] == 1
+    assert evaluation["postmortem_feedback"]["status"] == "unsupported"
+    assert evaluation["postmortem_feedback"]["warning_count"] == 1
+
+
+def test_model_cli_harness_aggregates_capability_routing_evaluations() -> None:
+    harness = _load_harness()
+
+    summary = harness._aggregate_capability_routing_evaluations(
+        [
+            {"capability_routing_evaluation": {"status": "followed"}},
+            {"capability_routing_evaluation": {"status": "ignored-or-misread"}},
+            {"capability_routing_evaluation": {"status": "followed-with-hygiene-warning"}},
+        ]
+    )
+
+    assert summary["status"] == "present"
+    assert summary["result_count"] == 3
+    assert summary["followed_count"] == 1
+    assert summary["ignored_or_misread_count"] == 1
+    assert summary["followed_with_hygiene_warning_count"] == 1
+
+
 def test_model_cli_harness_scores_intent_satisfaction_conflation() -> None:
     harness = _load_harness()
 

@@ -1867,6 +1867,113 @@ def _classify_suite_findings(results: list[dict[str, Any]]) -> dict[str, Any]:
     return {"finding_count": len(findings), "findings": findings}
 
 
+def _capability_routing_expected_action(prompt_variant_id: str) -> str:
+    return {
+        "weak-target-high-judgment": "escalate-or-handoff-before-execution",
+        "weak-target-ambiguous-inspection": "inspect-then-escalate-or-handoff",
+        "strong-target-mechanical": "down-route-when-cheaper-fit-is-safe",
+        "strong-target-mechanical-unclear-proof": "inspect-proof-and-source-authority-before-downrouting",
+        "post-run-self-review": "ask-for-rationale-evidence-trust-and-prevention",
+        "handoff-packet-contents": "prepare-complete-worker-packet-and-return-contract",
+    }.get(prompt_variant_id, "follow-visible-delegation-decision")
+
+
+def _result_response_excerpt(result: dict[str, Any], *, max_chars: int = 700) -> str:
+    text = ""
+    final_message = result.get("final_message")
+    if isinstance(final_message, str) and final_message.strip():
+        text = final_message.strip()
+    else:
+        stdout = result.get("stdout")
+        if isinstance(stdout, str):
+            text = stdout.strip()
+    return text[:max_chars]
+
+
+def _capability_routing_evaluation(
+    *,
+    scenario_id: str,
+    prompt_variant_id: str,
+    result: dict[str, Any],
+    warnings: list[dict[str, Any]],
+    postmortem_feedback: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    if scenario_id != "capability-fit-routing":
+        return None
+    semantic_failures = [
+        warning
+        for warning in warnings
+        if warning.get("warning_class") == "model_cli_semantic_workflow_failure"
+    ]
+    required_command_misses = [
+        warning
+        for warning in warnings
+        if warning.get("warning_class") == "model_cli_metadata_scoring_failure"
+        and "did not execute a required command" in str(warning.get("message", "")).lower()
+    ]
+    local_path_leaks = [
+        warning
+        for warning in warnings
+        if warning.get("warning_class") == "model_cli_metadata_scoring_failure"
+        and "local absolute path" in str(warning.get("message", "")).lower()
+    ]
+    if semantic_failures or required_command_misses:
+        status = "ignored-or-misread"
+    elif local_path_leaks:
+        status = "followed-with-hygiene-warning"
+    else:
+        status = "followed"
+    feedback_status = "not-requested"
+    feedback_warning_count = 0
+    if isinstance(postmortem_feedback, dict):
+        feedback_status = str(postmortem_feedback.get("status", "available"))
+        feedback_warning_count = len(postmortem_feedback.get("warnings", [])) if isinstance(postmortem_feedback.get("warnings"), list) else 0
+    return {
+        "kind": "agentic-workspace/capability-routing-evaluation/v1",
+        "status": status,
+        "expected_action": _capability_routing_expected_action(prompt_variant_id),
+        "followed_delegation_decision": status == "followed",
+        "startup_or_config_evidence_used": not bool(required_command_misses),
+        "semantic_failure_count": len(semantic_failures),
+        "required_command_miss_count": len(required_command_misses),
+        "local_path_leak_count": len(local_path_leaks),
+        "misread_or_ignored_evidence": [
+            str(warning.get("message", "")) for warning in [*semantic_failures, *required_command_misses, *local_path_leaks]
+        ],
+        "agent_response_excerpt": _result_response_excerpt(result),
+        "postmortem_feedback": {
+            "status": feedback_status,
+            "warning_count": feedback_warning_count,
+            "needed_when": "semantic failures or required command misses indicate the decision was ignored or misread",
+        },
+    }
+
+
+def _aggregate_capability_routing_evaluations(results: list[dict[str, Any]]) -> dict[str, Any]:
+    evaluations = [
+        result.get("capability_routing_evaluation")
+        for result in results
+        if isinstance(result.get("capability_routing_evaluation"), dict)
+    ]
+    statuses: dict[str, int] = {}
+    for evaluation in evaluations:
+        status = str(evaluation.get("status", "unknown"))
+        statuses[status] = statuses.get(status, 0) + 1
+    return {
+        "kind": "agentic-workspace/capability-routing-evaluation-summary/v1",
+        "status": "present" if evaluations else "not-applicable",
+        "result_count": len(evaluations),
+        "status_counts": statuses,
+        "ignored_or_misread_count": statuses.get("ignored-or-misread", 0),
+        "followed_count": statuses.get("followed", 0),
+        "followed_with_hygiene_warning_count": statuses.get("followed-with-hygiene-warning", 0),
+        "evaluation_rule": (
+            "A capability-fit result follows delegation guidance only when it uses the required startup/config evidence "
+            "and avoids semantic routing failures; hygiene warnings are tracked separately."
+        ),
+    }
+
+
 def _load_result_payload(path: Path) -> dict[str, Any]:
     if path.is_dir():
         run_json = path / "run.json"
@@ -2131,6 +2238,15 @@ def run_suite(
                             "warnings": _postmortem_feedback_warnings(result=postmortem_result),
                             "share_path": str(postmortem_share),
                         }
+                capability_evaluation = _capability_routing_evaluation(
+                    scenario_id=scenario_id,
+                    prompt_variant_id=prompt_variant_id,
+                    result=result,
+                    warnings=invocation["warnings"],
+                    postmortem_feedback=invocation.get("postmortem_feedback"),
+                )
+                if capability_evaluation is not None:
+                    invocation["capability_routing_evaluation"] = capability_evaluation
             else:
                 invocation["result"] = {
                     "status": "dry-run",
@@ -2162,6 +2278,7 @@ def run_suite(
     payload["usage_summary"] = _aggregate_usage_summaries(run_results)
     payload["package_read_surface_summary"] = _aggregate_package_read_surface_summaries(run_results)
     payload["finding_classification"] = _classify_suite_findings(run_results)
+    payload["capability_routing_evaluation"] = _aggregate_capability_routing_evaluations(run_results)
     _write_json(output_root / f"{_now_id()}-{suite_id}-{adapter_id}-summary.json", payload)
     return payload
 
