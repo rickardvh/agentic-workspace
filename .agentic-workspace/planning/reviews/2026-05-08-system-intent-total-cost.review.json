@@ -48,14 +48,14 @@
       "suggested action": "Defer until the next evaluation lane; if cost claims become central again, prefer a compact evaluation ledger summary over new prose doctrine.",
       "confidence": "medium",
       "source": "mixed",
-      "promotion target": "evaluation lane or maintainer docs",
-      "promotion trigger": "A future optimization loop lacks enough cost evidence to decide whether a workflow surface should stay, shrink, or move behind an opt-in profile.",
+      "promotion target": "GitHub #848",
+      "promotion trigger": "Promoted by maintainer request to file actionable findings as issues.",
       "post-remediation note shape": "shrink"
     }
   ],
   "recommendation": {
-    "promote": "none",
-    "defer": "Use next evaluation work to strengthen cost evidence if decisions need it.",
+    "promote": "GitHub #848",
+    "defer": "Implementation remains inactive until the issue is selected for execution.",
     "dismiss": "Do not add measurement machinery solely from this review."
   },
   "retention": {

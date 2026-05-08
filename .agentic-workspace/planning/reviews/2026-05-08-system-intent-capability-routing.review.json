@@ -48,14 +48,14 @@
       "suggested action": "Do not promote immediately; use future evaluation loops to see whether delegation_decision is actually followed by target agents.",
       "confidence": "medium",
       "source": "mixed",
-      "promotion target": "planning roadmap or evaluation lane",
-      "promotion trigger": "A target-model evaluation shows repeated disregard for delegation_decision or overmatch escalation guidance after the latest workflow changes.",
+      "promotion target": "GitHub #847",
+      "promotion trigger": "Promoted by maintainer request to file actionable findings as issues.",
       "post-remediation note shape": "retain until evaluated"
     }
   ],
   "recommendation": {
-    "promote": "none",
-    "defer": "Next evaluation loop should explicitly score whether target agents follow visible delegation/escalation guidance.",
+    "promote": "GitHub #847",
+    "defer": "Implementation remains inactive until the issue is selected for execution.",
     "dismiss": "Do not create a delegation issue from this review alone."
   },
   "retention": {

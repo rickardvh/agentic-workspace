@@ -48,14 +48,14 @@
       "suggested action": "Defer promotion until repeated in another lane; if repeated, improve generator defaults or preflight diagnostics for the specific surface that caused the failure.",
       "confidence": "medium",
       "source": "mixed",
-      "promotion target": "planning roadmap or generator/diagnostic issue",
-      "promotion trigger": "A second near-term lane has to learn required package-owned artifact shape from validation failures instead of CLI guidance or scaffold defaults.",
+      "promotion target": "GitHub #849",
+      "promotion trigger": "Promoted by maintainer request to file actionable findings as issues.",
       "post-remediation note shape": "retain until repeated or dismissed"
     }
   ],
   "recommendation": {
-    "promote": "none",
-    "defer": "Track whether this repeats in the next implementation or review lane.",
+    "promote": "GitHub #849",
+    "defer": "Implementation remains inactive until the issue is selected for execution.",
     "dismiss": "Do not create a broad construction-cheapness issue without repeated evidence."
   },
   "retention": {
