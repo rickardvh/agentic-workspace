@@ -181,7 +181,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "the change also touches generated maintainer docs" in workspace_lane["broaden_when"]
     assert "the narrow lane cannot prove the change on its own" in workspace_lane["escalate_when"]
     planning_surface_lane = next(lane for lane in payload["validation"]["lanes"] if lane["id"] == "planning_surfaces")
-    assert planning_surface_lane["enough_proof"] == ["agentic-workspace doctor --target ./repo --modules planning --format json"]
+    assert planning_surface_lane["enough_proof"] == [
+        "agentic-planning summary --target ./repo --verbose --format json",
+        "agentic-workspace doctor --target ./repo --modules planning --format json",
+    ]
     assert payload["validation"]["escalation_rule"] == (
         "Broaden validation only when the narrower lane stops proving the touched contract or the change crosses boundaries."
     )

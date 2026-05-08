@@ -15032,6 +15032,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "the trust question is planning-surface shape or drift only",
             ],
             "enough_proof": [
+                "agentic-planning summary --target ./repo --verbose --format json",
                 "agentic-workspace doctor --target ./repo --modules planning --format json",
             ],
             "proof_responsibility": "local-closeout",
