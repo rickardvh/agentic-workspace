@@ -139,6 +139,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for action detail."
     )
     doctor_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Alias for broad diagnostic output; equivalent to --profile full.",
+    )
+    doctor_parser.add_argument(
         "--strict-doc-ownership",
         action="store_true",
         help="Enforce doc-ownership audits even when the repo manifest has not enabled them.",
@@ -150,6 +155,11 @@ def build_parser() -> argparse.ArgumentParser:
     _add_target_arguments(status_parser)
     status_parser.add_argument(
         "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for action detail."
+    )
+    status_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Alias for broad diagnostic output; equivalent to --profile full.",
     )
     _add_format_argument(status_parser)
 
@@ -254,6 +264,11 @@ def build_parser() -> argparse.ArgumentParser:
     _add_target_arguments(report_parser)
     report_parser.add_argument(
         "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for report detail."
+    )
+    report_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Alias for broad diagnostic output; equivalent to --profile full.",
     )
     _add_format_argument(report_parser)
 
@@ -444,7 +459,7 @@ def _handle_uninstall(args: argparse.Namespace) -> int:
 
 
 def _handle_doctor(args: argparse.Namespace) -> int:
-    if args.format == "json" and getattr(args, "profile", "tiny") == "tiny":
+    if args.format == "json" and not getattr(args, "verbose", False) and getattr(args, "profile", "tiny") == "tiny":
         print(json.dumps(_tiny_memory_lifecycle_payload(target=args.target, command="doctor"), indent=2))
         return 0
     result = doctor_bootstrap(
@@ -463,7 +478,7 @@ def _handle_doctor(args: argparse.Namespace) -> int:
 
 
 def _handle_status(args: argparse.Namespace) -> int:
-    if args.format == "json" and getattr(args, "profile", "tiny") == "tiny":
+    if args.format == "json" and not getattr(args, "verbose", False) and getattr(args, "profile", "tiny") == "tiny":
         print(json.dumps(_tiny_memory_lifecycle_payload(target=args.target, command="status"), indent=2))
         return 0
     result = collect_status(target=args.target)
@@ -532,11 +547,11 @@ def _handle_promotion_report(args: argparse.Namespace) -> int:
 
 
 def _handle_report(args: argparse.Namespace) -> int:
-    if args.format == "json" and getattr(args, "profile", "tiny") == "tiny":
+    if args.format == "json" and not getattr(args, "verbose", False) and getattr(args, "profile", "tiny") == "tiny":
         print(json.dumps(_tiny_memory_report_fast(target=args.target), indent=2))
         return 0
     report = memory_report(target=args.target)
-    if getattr(args, "profile", "tiny") == "tiny":
+    if not getattr(args, "verbose", False) and getattr(args, "profile", "tiny") == "tiny":
         report = _tiny_memory_report(report)
     if args.format == "json":
         print(json.dumps(report, indent=2))

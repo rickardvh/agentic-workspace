@@ -1274,7 +1274,7 @@ def test_model_cli_harness_counts_gemini_shell_stats_with_command_response_as_ex
         result={
             "stdout": json.dumps(
                 {
-                    "response": "I inspected the repository configuration via `agentic-workspace config --target . --profile tiny --format json`.",
+                    "response": "I inspected the repository configuration via `agentic-workspace config --target . --format json`.",
                     "stats": {"tools": {"byName": {"run_shell_command": {"count": 1}}}},
                 }
             ),

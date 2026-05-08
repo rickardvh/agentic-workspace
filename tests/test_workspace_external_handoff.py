@@ -14,11 +14,10 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
     assert "Ordinary path:" in text
     assert 'agentic-workspace start --task "<task>" --format json' in text
     assert "agentic-workspace preflight --format json" in text
-    assert "agentic-workspace config --target ./repo --profile tiny --format json" in text
+    assert "agentic-workspace config --target ./repo --format json" in text
     assert "agentic-workspace summary --format json" in text
-    assert "agentic-workspace proof --profile tiny --changed <paths> --format json" in text
+    assert "agentic-workspace proof --changed <paths> --format json" in text
     assert "Prefer an installed `agentic-workspace` CLI from the target repo's environment." in text
-    assert "Use `uvx` or `pipx run` only as temporary/debug fallbacks." in text
     assert "agentic-workspace defaults --section install_profiles --format json" in text
     assert "Use `full` only when both Memory and Planning are explicitly desired." not in text
     assert "`AGENTS.md` remains the repo startup entrypoint" in text
@@ -32,13 +31,15 @@ def test_external_agent_handoff_text_demotes_broad_routing_until_compact_startup
 
     start_index = text.index('agentic-workspace start --task "<task>" --format json')
     preflight_index = text.index("agentic-workspace preflight --format json")
-    config_index = text.index("agentic-workspace config --target ./repo --profile tiny --format json")
+    config_index = text.index("agentic-workspace config --target ./repo --format json")
     summary_index = text.index("agentic-workspace summary --format json")
 
     assert start_index < preflight_index
     assert start_index < config_index
     assert start_index < summary_index
     assert "When needed:" in text
+    assert "Add `--select <field[,field...]>`" in text
+    assert "Add `--verbose` only for broad diagnostics." in text
     assert "Open raw planning or contract files only when compact commands point there." in text
 
 

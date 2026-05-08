@@ -88,7 +88,7 @@
       "Read `.agentic-workspace/docs/routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.",
       "Do not bulk-read all planning surfaces for ordinary execution work; start from `agentic-workspace summary --format json` and then the one relevant active plan.",
       "Read only the repo docs explicitly referenced by that route.",
-      "When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json`. For configuration and routing, prefer `agentic-workspace defaults --section startup --format json` and `agentic-workspace config --target ./repo --profile tiny --format json` before broader prose."
+      "When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json`. For configuration and routing, prefer `agentic-workspace defaults --section startup --format json` and `agentic-workspace config --target ./repo --format json` before broader prose."
     ],
     "small_task_mode": [
       "For very local changes, skip plans unless this manifest, the active plan, or the nearest descendant `AGENTS.md` says they are needed.",

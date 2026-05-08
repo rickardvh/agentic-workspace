@@ -41,6 +41,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "primitive_refs": [
         "workspace.root.resolve",
         "workspace.config.load",
+        "output.fields.select",
         "workspace.config.emit"
       ]
     },
@@ -523,6 +524,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "primitive_refs": [
         "workspace.root.resolve",
         "planning.summary.load",
+        "output.fields.select",
         "output.emit"
       ]
     },

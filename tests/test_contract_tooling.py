@@ -914,7 +914,9 @@ def test_generated_adapter_live_cli_parity_catches_missing_contract_option(monke
 
     errors = module._validate_generated_adapter_live_cli_parity({"adapters": [memory_adapter]})
 
-    assert errors == ["generated adapter memory.status.cli live parser has CLI option(s) missing from operation contract: profile, target"]
+    assert errors == [
+        "generated adapter memory.status.cli live parser has CLI option(s) missing from operation contract: profile, target, verbose"
+    ]
 
 
 def test_validated_contract_loader_reports_contract_and_schema(monkeypatch, tmp_path: Path) -> None:

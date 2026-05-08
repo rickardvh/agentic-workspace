@@ -104,6 +104,11 @@ def build_parser() -> argparse.ArgumentParser:
     for command in ("doctor", "status"):
         command_parser = subparsers.add_parser(command)
         command_parser.add_argument("--target")
+        command_parser.add_argument(
+            "--verbose",
+            action="store_true",
+            help="Emit broad diagnostic output when the command has compact defaults.",
+        )
         command_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     summary_parser = subparsers.add_parser("summary", help="Summarise the active planning surfaces in a machine-readable way.")
@@ -114,6 +119,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="tiny",
         help="Output profile. Defaults to tiny; use compact or full for more planning detail.",
     )
+    summary_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Alias for broad diagnostic output; equivalent to --profile full.",
+    )
     summary_parser.add_argument("--task", help="Optional task text used to return a task-scoped compact summary.")
     summary_parser.add_argument("--changed", nargs="*", default=[], help="Optional changed paths used to scope compact summary output.")
     summary_parser.add_argument("--format", choices=("text", "json"), default="text")
@@ -122,6 +132,11 @@ def build_parser() -> argparse.ArgumentParser:
     report_parser.add_argument("--target")
     report_parser.add_argument(
         "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for audit detail."
+    )
+    report_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Alias for broad diagnostic output; equivalent to --profile full.",
     )
     report_parser.add_argument("--format", choices=("text", "json"), default="text")
 
@@ -262,7 +277,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "status":
         return _emit(collect_status(target=args.target), args.format)
     if args.command == "summary":
-        summary_profile = args.profile if args.format == "json" else "full"
+        summary_profile = "full" if getattr(args, "verbose", False) else args.profile if args.format == "json" else "full"
         summary = planning_summary(
             target=args.target,
             profile=summary_profile,
@@ -276,7 +291,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "report":
         report = (
-            planning_report_tiny(target=args.target) if getattr(args, "profile", "tiny") == "tiny" else planning_report(target=args.target)
+            planning_report_tiny(target=args.target)
+            if not getattr(args, "verbose", False) and getattr(args, "profile", "tiny") == "tiny"
+            else planning_report(target=args.target)
         )
         if args.format == "json":
             print(json.dumps(report, indent=2))
@@ -432,7 +449,7 @@ def _run_doctor_report_adapter(args: argparse.Namespace) -> int:
 
 
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
-    summary_profile = args.profile if args.format == "json" else "full"
+    summary_profile = "full" if getattr(args, "verbose", False) else args.profile if args.format == "json" else "full"
     summary = planning_summary(
         target=args.target,
         profile=summary_profile,
@@ -447,7 +464,11 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
 
 
 def _run_report_adapter(args: argparse.Namespace) -> int:
-    report = planning_report_tiny(target=args.target) if getattr(args, "profile", "tiny") == "tiny" else planning_report(target=args.target)
+    report = (
+        planning_report_tiny(target=args.target)
+        if not getattr(args, "verbose", False) and getattr(args, "profile", "tiny") == "tiny"
+        else planning_report(target=args.target)
+    )
     if args.format == "json":
         print(json.dumps(report, indent=2))
     else:

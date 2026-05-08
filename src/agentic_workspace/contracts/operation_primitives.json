@@ -135,6 +135,10 @@
       "summary": "Emit compiled system-intent declaration status and metadata in the requested format."
     },
     {
+      "id": "output.fields.select",
+      "summary": "Select exact top-level or dotted JSON fields before rendering output."
+    },
+    {
       "id": "output.emit",
       "summary": "Render text or JSON output according to the operation format option."
     },

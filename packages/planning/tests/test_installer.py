@@ -46,7 +46,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "<effective-cli> summary --format json" in bootstrap_agents_text
     assert "<effective-cli> defaults --section startup --format json" in bootstrap_agents_text
     assert (
-        "Use `<effective-cli> config --target . --profile tiny --format json` when the configured entrypoint, posture, or workflow obligations matter; use `--profile compact` only when the tiny answer is insufficient."
+        "Use `<effective-cli> config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter; add `--select <field[,field...]>` for exact detail."
         in bootstrap_agents_text
     )
     assert "do not substitute bare `agentic-workspace`" in bootstrap_agents_text
@@ -79,7 +79,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
         for item in manifest_payload["bootstrap"]["conditional_reads"]
     )
     assert any(
-        "prefer `agentic-workspace defaults --section startup --format json` and `agentic-workspace config --target ./repo --profile tiny --format json` before broader prose"
+        "prefer `agentic-workspace defaults --section startup --format json` and `agentic-workspace config --target ./repo --format json` before broader prose"
         in item
         for item in manifest_payload["bootstrap"]["conditional_reads"]
     )

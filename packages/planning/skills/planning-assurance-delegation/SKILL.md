@@ -9,8 +9,8 @@ Use this skill when task risk or model fit affects whether work should stay dire
 
 ## Route
 
-1. Run `agentic-workspace config --target . --profile tiny --format json`; use `--profile compact` only when the tiny answer is insufficient.
-2. Run `agentic-workspace summary --target . --format json --profile compact`.
+1. Run `agentic-workspace config --target . --format json`; use `--select <field[,field...]>` when exact detail is needed.
+2. Run `agentic-workspace summary --target . --format json`.
 3. Classify risk, proof cost, ambiguity, and capability fit before implementation.
 4. Record the chosen assurance/delegation posture in the active execplan when planned work continues.
 5. Use `agentic-planning handoff --target . --format json` only after the plan is bounded enough for a worker.

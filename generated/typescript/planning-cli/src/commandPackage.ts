@@ -34,6 +34,14 @@ export const generatedCommandPackage = {
             "name": "target"
           },
           {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit broad diagnostic output for debugging or audit detail.",
+            "name": "verbose"
+          },
+          {
             "choices": [
               "text",
               "json"
@@ -110,6 +118,14 @@ export const generatedCommandPackage = {
             ],
             "help": "Target repository path. Defaults to the current directory.",
             "name": "target"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit broad diagnostic output for debugging or audit detail.",
+            "name": "verbose"
           },
           {
             "choices": [
@@ -219,6 +235,14 @@ export const generatedCommandPackage = {
             "nargs": "*"
           },
           {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit broad diagnostic output for debugging or audit detail.",
+            "name": "verbose"
+          },
+          {
             "choices": [
               "text",
               "json"
@@ -307,6 +331,14 @@ export const generatedCommandPackage = {
             ],
             "help": "Output profile. Defaults to tiny; use full for audit detail.",
             "name": "profile"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit broad diagnostic output for debugging or audit detail.",
+            "name": "verbose"
           },
           {
             "choices": [

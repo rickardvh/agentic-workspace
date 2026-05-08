@@ -97,7 +97,7 @@ def test_preflight_default_returns_tiny_takeover_router(capsys) -> None:
     assert "active_state_summary" in payload
     assert "startup_guidance" not in payload
     assert payload["immediate_next_allowed_action"]["action"] == "recover-orientation"
-    assert payload["detail_commands"]["full_takeover"].endswith("preflight --target . --profile full --format json")
+    assert payload["detail_commands"]["full_takeover"].endswith("preflight --target . --verbose --format json")
 
 
 def test_preflight_command_with_target_argument(tmp_path: Path, capsys) -> None:
@@ -485,7 +485,7 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert payload["context_router"]["detail_commands"]["takeover_or_recovery"] == "agentic-workspace preflight --format json"
     assert payload["active_state_summary"]["todo_active_count"] >= 0
     assert payload["immediate_next_allowed_action"]["action"] in {"choose-smallest-workflow-shape", "continue-active-planning-record"}
-    assert "implement --profile tiny --changed <paths>" in payload["task_intent"]["implement_changed_command"]
+    assert "implement --changed <paths>" in payload["task_intent"]["implement_changed_command"]
     assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
     assert payload["delegation_decision"]["status"] == "evaluated"
     assert payload["delegation_decision"]["mode"] in {"suggest", "auto"}
@@ -498,7 +498,7 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     }
     assert payload["task_intent"]["status"] == "present"
     assert payload["task_intent"]["implement_changed_command"] == (
-        f'uv run agentic-workspace implement --profile tiny --changed <paths> --task "{task}" --format json'
+        f'uv run agentic-workspace implement --changed <paths> --task "{task}" --format json'
     )
     assert payload["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
     assert "cli_compatibility" not in payload
@@ -524,7 +524,7 @@ def test_start_default_returns_selector_first_router(capsys) -> None:
     assert payload["active_state_summary"]["todo_active_count"] >= 0
     assert payload["skill_routing"]["preferred_routes"]
     assert payload["task_intent"]["implement_changed_command"] == (
-        f'uv run agentic-workspace implement --profile tiny --changed <paths> --task "{task}" --format json'
+        f'uv run agentic-workspace implement --changed <paths> --task "{task}" --format json'
     )
     assert "available_selectors" in payload["drill_down"]
     assert "cli_invocation" in payload["drill_down"]["available_selectors"]
@@ -595,7 +595,7 @@ def test_start_tiny_routes_existing_task_paths_to_implement_surface(tmp_path: Pa
     assert action["action"] == "inspect-known-task-paths"
     assert action["detected_paths"] == ["README.md"]
     assert action["command"] == (
-        'agentic-workspace implement --profile tiny --changed README.md --task "Prepare for a narrow README.md wording edit, but do not edit files yet." --format json'
+        'agentic-workspace implement --changed README.md --task "Prepare for a narrow README.md wording edit, but do not edit files yet." --format json'
     )
     assert action["read_first"] == [action["command"]]
 

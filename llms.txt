@@ -13,24 +13,23 @@ Ordinary path:
 - Read `AGENTS.md` first.
 - Run `agentic-workspace start --task "<task>" --format json` for compact startup context.
 - Run `agentic-workspace summary --format json` when active work or roadmap state matters.
-- Run `agentic-workspace proof --profile tiny --changed <paths> --format json` before claiming validation.
+- Run `agentic-workspace proof --changed <paths> --format json` before claiming validation.
 
 When needed:
 - `agentic-workspace preflight --format json` for takeover context.
-- `agentic-workspace config --target ./repo --profile tiny --format json` for configured posture or obligations.
-- `agentic-workspace report --target ./repo --format json` for health, warnings, and selectors.
+- `agentic-workspace config --target ./repo --format json` for configured posture or obligations.
+- Add `--select <field[,field...]>` when one or two exact fields are needed.
+- Add `--verbose` only for broad diagnostics.
 - Open raw planning or contract files only when compact commands point there.
 
 Preferred lifecycle commands:
 - Prefer an installed `agentic-workspace` CLI from the target repo's environment.
-- If unavailable, install the package into that repo or its tool environment before running lifecycle commands.
-- Use `uvx` or `pipx run` only as temporary/debug fallbacks.
 - `agentic-workspace defaults --section install_profiles --format json`
 - `agentic-workspace install --target ./repo --preset memory`
 - `agentic-workspace install --target ./repo --preset planning`
 - `agentic-workspace install --target ./repo --preset full`
 - Use `full` only when both Memory and Planning are explicitly desired.
-- `agentic-workspace config --target ./repo --profile tiny --format json`
+- `agentic-workspace config --target ./repo --format json`
 - `agentic-workspace summary --format json`
 - `agentic-workspace report --target ./repo --format json`
 

@@ -1,7 +1,7 @@
 # Agentic Workspace managed config.
 # Edit this file directly only when changing repo-owned policy.
 # Reference: .agentic-workspace/docs/workspace-config-contract.md
-# Check resolved config: uv run agentic-workspace config --target . --profile tiny --format json
+# Check resolved config: uv run agentic-workspace config --target . --format json
 
 schema_version = 1
 

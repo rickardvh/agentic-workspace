@@ -114,7 +114,7 @@ def test_init_seeds_schema_valid_workspace_config(monkeypatch, tmp_path: Path, c
     assert config_text.startswith("# Agentic Workspace managed config.\n")
     assert "# Edit this file directly only when changing repo-owned policy." in config_text
     assert "# Reference: .agentic-workspace/docs/workspace-config-contract.md" in config_text
-    assert "# Check resolved config: agentic-workspace config --target . --profile tiny --format json" in config_text
+    assert "# Check resolved config: agentic-workspace config --target . --format json" in config_text
     assert 'default_preset = "planning"' in config_text
     assert payload["config"]["exists"] is True
     assert payload["config"]["edit_reference"]["reference_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
@@ -731,9 +731,9 @@ def test_install_real_init_generates_llms_with_compact_startup_path_first(tmp_pa
     llms_text = (target / "llms.txt").read_text(encoding="utf-8")
     start_index = llms_text.index('agentic-workspace start --task "<task>" --format json')
     preflight_index = llms_text.index("agentic-workspace preflight --format json")
-    config_index = llms_text.index("agentic-workspace config --target ./repo --profile tiny --format json")
+    config_index = llms_text.index("agentic-workspace config --target ./repo --format json")
     summary_index = llms_text.index("agentic-workspace summary --format json")
-    proof_index = llms_text.index("agentic-workspace proof --profile tiny --changed <paths> --format json")
+    proof_index = llms_text.index("agentic-workspace proof --changed <paths> --format json")
     raw_index = llms_text.index("Open raw planning or contract files only when compact commands point there.")
 
     assert "Ordinary path:" in llms_text

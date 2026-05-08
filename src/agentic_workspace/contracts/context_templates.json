@@ -21,7 +21,7 @@
         "why": "active planning state before raw planning reads"
       }
     ],
-        "fallback_next_action": "Choose direct, bounded, lane, or epic yourself from the user request; do not ask the human to choose unless risk or ambiguity blocks classification. If changed paths are already known, run agentic-workspace implement --profile tiny --changed <paths> --format json. Run summary only when active planning or handoff state matters.",
+        "fallback_next_action": "Choose direct, bounded, lane, or epic yourself from the user request; do not ask the human to choose unless risk or ambiguity blocks classification. If changed paths are already known, run agentic-workspace implement --changed <paths> --format json. Run summary only when active planning or handoff state matters.",
     "open_execplan_only_when": "the compact summary points to an active execplan or the task needs active sequencing detail"
   },
   "implementer_context": {

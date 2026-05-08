@@ -46,6 +46,14 @@ export const generatedCommandPackage = {
             "name": "profile"
           },
           {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit broad diagnostic output for debugging or audit detail.",
+            "name": "verbose"
+          },
+          {
             "choices": [
               "text",
               "json"
@@ -144,6 +152,14 @@ export const generatedCommandPackage = {
             "name": "profile"
           },
           {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit broad diagnostic output for debugging or audit detail.",
+            "name": "verbose"
+          },
+          {
             "choices": [
               "text",
               "json"
@@ -232,6 +248,14 @@ export const generatedCommandPackage = {
             ],
             "help": "Output profile. Defaults to tiny; use full for report detail.",
             "name": "profile"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit broad diagnostic output for debugging or audit detail.",
+            "name": "verbose"
           },
           {
             "choices": [

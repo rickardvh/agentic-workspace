@@ -229,6 +229,14 @@
                 "help": "Defaults output profile. Defaults to tiny section routing; use full to emit the complete default-route contract."
               },
               {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit the complete default-route contract. Prefer --section or default output for ordinary lookup."
+              },
+              {
                 "name": "section",
                 "flags": [
                   "--section"
@@ -330,6 +338,21 @@
                 ],
                 "default": "tiny",
                 "help": "Config output profile. Defaults to tiny agent-facing posture; use compact or full for more resolved config detail."
+              },
+              {
+                "name": "select",
+                "flags": [
+                  "--select"
+                ],
+                "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit full resolved config detail. Prefer default output or targeted fields for ordinary posture checks."
               }
             ]
           },
@@ -342,6 +365,7 @@
             "primitive_refs": [
               "workspace.root.resolve",
               "workspace.config.load",
+              "output.fields.select",
               "workspace.config.emit"
             ]
           },
@@ -426,6 +450,14 @@
                 ],
                 "default": "tiny",
                 "help": "Modules output profile. Defaults to tiny; use full for module registry and component detail."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit full module registry and component detail. Prefer the default output for ordinary routing."
               }
             ]
           },
@@ -637,6 +669,21 @@
                 "help": "Summary output profile. Defaults to tiny; use compact or full for more detail."
               },
               {
+                "name": "select",
+                "flags": [
+                  "--select"
+                ],
+                "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit full planning summary detail. Prefer selectors/default routing for ordinary startup."
+              },
+              {
                 "name": "task",
                 "flags": [
                   "--task"
@@ -675,6 +722,7 @@
             "primitive_refs": [
               "workspace.root.resolve",
               "planning.summary.load",
+              "output.fields.select",
               "output.emit"
             ]
           },
@@ -767,6 +815,14 @@
                 ],
                 "default": "tiny",
                 "help": "Implementer output profile. Defaults to tiny; use full only when bounded implementation needs richer context."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit full implementer context. Prefer the default output for ordinary bounded implementation."
               },
               {
                 "name": "format",
@@ -877,6 +933,14 @@
                 ],
                 "default": "tiny",
                 "help": "Preflight output profile. Defaults to tiny takeover routing; use full for complete recovery context."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit complete takeover/recovery context. Prefer default output for ordinary recovery routing."
               },
               {
                 "name": "format",
@@ -999,6 +1063,14 @@
                 ],
                 "default": "tiny",
                 "help": "Proof output profile. Defaults to tiny for the next validation action and command list; use full for all proof routing detail."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit all proof routing detail. Prefer the default changed-path proof answer for ordinary validation."
               },
               {
                 "name": "format",
@@ -1326,6 +1398,14 @@
                 "help": "Select the compact router profile or the full combined report. tiny is accepted as an alias for router."
               },
               {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit the full combined workspace report. Prefer default router output or --section for ordinary inspection."
+              },
+              {
                 "name": "section",
                 "flags": [
                   "--section"
@@ -1651,6 +1731,14 @@
                 ],
                 "default": "tiny",
                 "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit all module lifecycle status detail. Prefer default output for ordinary health routing."
               }
             ]
           },
@@ -1768,6 +1856,14 @@
                 ],
                 "default": "tiny",
                 "help": "Doctor output profile. Defaults to tiny remediation routing; use full for all diagnostic detail."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit all diagnostic detail. Prefer default output for ordinary remediation routing."
               }
             ]
           },
@@ -1873,6 +1969,14 @@
                 "help": "Target repository path. Defaults to the current directory."
               },
               {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit broad diagnostic output for debugging or audit detail."
+              },
+              {
                 "name": "format",
                 "flags": [
                   "--format"
@@ -1949,6 +2053,14 @@
                   "--target"
                 ],
                 "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit broad diagnostic output for debugging or audit detail."
               },
               {
                 "name": "format",
@@ -2058,6 +2170,14 @@
                 "help": "Optional changed paths used to scope compact summary output."
               },
               {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit broad diagnostic output for debugging or audit detail."
+              },
+              {
                 "name": "format",
                 "flags": [
                   "--format"
@@ -2146,6 +2266,14 @@
                 ],
                 "default": "tiny",
                 "help": "Output profile. Defaults to tiny; use full for audit detail."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit broad diagnostic output for debugging or audit detail."
               },
               {
                 "name": "format",
@@ -2347,6 +2475,14 @@
                 "help": "Output profile. Defaults to tiny; use full for action detail."
               },
               {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit broad diagnostic output for debugging or audit detail."
+              },
+              {
                 "name": "format",
                 "flags": [
                   "--format"
@@ -2445,6 +2581,14 @@
                 "help": "Output profile. Defaults to tiny; use full for action detail."
               },
               {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit broad diagnostic output for debugging or audit detail."
+              },
+              {
                 "name": "format",
                 "flags": [
                   "--format"
@@ -2533,6 +2677,14 @@
                 ],
                 "default": "tiny",
                 "help": "Output profile. Defaults to tiny; use full for report detail."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit broad diagnostic output for debugging or audit detail."
               },
               {
                 "name": "format",

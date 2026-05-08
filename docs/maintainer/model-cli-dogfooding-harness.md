@@ -158,7 +158,7 @@ Postmortem feedback must be isolated from the copied repo and tool access. Adapt
 Inspect `run.json`, the CLI transcript, the copied repo diff, and package diagnostics. Useful signals:
 
 - startup: did the agent read `AGENTS.md` and route to `.agentic-workspace/WORKFLOW.md` or CLI help?
-- CLI-first use: did it run `agentic-workspace implement --profile tiny --changed <paths>` for known-path work, `agentic-workspace start --task "<task>"` for ordinary first contact, or an equivalent compact route before broad work?
+- CLI-first use: did it run `agentic-workspace implement --changed <paths>` for known-path work, `agentic-workspace start --task "<task>"` for ordinary first contact, or an equivalent compact route before broad work?
 - planning shape: did it use schema-backed records or invent PM-shaped artifacts?
 - state safety: did it notice unsupported `state.toml` activation shapes?
 - proof: did it select a narrow proof command instead of guessing?

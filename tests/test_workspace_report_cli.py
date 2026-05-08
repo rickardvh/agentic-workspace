@@ -106,9 +106,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["execution_shape"]["task_shape"]["id"] == "direct-or-no-active-plan"
     assert payload["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
     assert payload["execution_shape"]["recommendation"]["id"] == "stay-direct"
-    assert payload["execution_shape"]["recommendation"]["consult"] == [
-        "agentic-workspace config --target ./repo --profile tiny --format json"
-    ]
+    assert payload["execution_shape"]["recommendation"]["consult"] == ["agentic-workspace config --target ./repo --format json"]
     assert payload["next_action"]["summary"] == "No immediate action"
     assert not any(
         item["surface"] == ".agentic-workspace/docs/capability-aware-execution.md" for item in payload["discovery"]["memory_candidates"]
@@ -231,7 +229,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     ordinary_path = payload["report_profile"]["ordinary_agent_path"]
     assert ordinary_path["entry_command"] == "agentic-workspace start --target ./repo --format json"
     assert ordinary_path["current_work_command"] == "agentic-workspace summary --format json"
-    assert ordinary_path["proof_command"] == "agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json"
+    assert ordinary_path["proof_command"] == "agentic-workspace proof --target ./repo --changed <paths> --format json"
     recovery = ordinary_path["off_happy_path_recovery"]
     assert recovery["kind"] == "workspace-off-happy-path-recovery/v1"
     assert set(recovery["scenario_ids"]) >= {
@@ -394,7 +392,7 @@ def test_report_router_uses_resolved_cli_invoke_for_copyable_commands(tmp_path: 
     assert ordinary_path["entry_command"] == "uv run agentic-workspace start --target ./repo --format json"
     assert ordinary_path["state_command"] == "uv run agentic-workspace report --target ./repo --format json"
     assert ordinary_path["current_work_command"] == "uv run agentic-workspace summary --format json"
-    assert ordinary_path["proof_command"] == "uv run agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json"
+    assert ordinary_path["proof_command"] == "uv run agentic-workspace proof --target ./repo --changed <paths> --format json"
     recovery = ordinary_path["off_happy_path_recovery"]
     assert recovery["recover_by_default"] == "uv run agentic-workspace start --target ./repo --format json"
     assert payload["section_hints"][0]["command"].startswith("uv run agentic-workspace report ")
@@ -2317,7 +2315,7 @@ def test_default_command_outputs_stay_router_sized(tmp_path: Path, capsys) -> No
     assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
     status_payload = json.loads(capsys.readouterr().out)
     assert "mixed_agent" not in status_payload["config"]
-    assert status_payload["config"]["detail_command"] == "agentic-workspace config --target ./repo --profile tiny --format json"
+    assert status_payload["config"]["detail_command"] == "agentic-workspace config --target ./repo --format json"
     assert status_payload["deeper_detail"]["report_command"] == "agentic-workspace report --target ./repo --profile full --format json"
     assert status_payload["cost_provenance"]["classification"] == "compact-after-lifecycle"
     assert status_payload["cost_provenance"]["module_count"] >= 1

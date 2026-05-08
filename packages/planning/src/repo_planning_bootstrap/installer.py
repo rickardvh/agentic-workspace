@@ -3037,9 +3037,13 @@ def _planning_summary_tiny_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-summary-tiny-schema/v1",
         "command": "agentic-workspace summary --format json",
-        "compact_profile_command": "agentic-workspace summary --format json --profile compact",
-        "full_profile_command": "agentic-workspace summary --format json --profile full",
-        "rule": "Tiny is the default active-state router; use compact for handoff/planning contracts and full for audit detail.",
+        "select_command": "agentic-workspace summary --select <field.path> --format json",
+        "verbose_command": "agentic-workspace summary --verbose --format json",
+        "compatibility_profile_commands": {
+            "compact": "agentic-workspace summary --format json --profile compact",
+            "full": "agentic-workspace summary --format json --profile full",
+        },
+        "rule": "Default summary is the active-state router; use --select for exact fields and --verbose only for diagnostic detail.",
         "shared_fields": [
             "kind",
             "profile",
@@ -3172,11 +3176,19 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
                 "omitted_candidate_count": max(0, len(roadmap_candidates) - 3),
             },
             "detail_commands": {
-                "compact": "agentic-workspace summary --profile compact --format json",
-                "full": "agentic-workspace summary --profile full --format json",
+                "select": "agentic-workspace summary --select <field.path> --format json",
+                "verbose": "agentic-workspace summary --verbose --format json",
                 "task_scoped": "agentic-workspace summary --profile compact --task <task> --format json",
                 "changed_path_implement": "agentic-workspace implement --changed <paths> --format json",
             },
+            "available_selectors": [
+                "todo.active_count",
+                "execplans.active_count",
+                "planning_surface_health",
+                "execution_readiness",
+                "current_execution_pressure",
+                "roadmap",
+            ],
             "warning_count": warning_count,
         }
     )
@@ -3404,7 +3416,7 @@ def _planning_summary_task_scoped_projection(
             "broad_compact": "agentic-workspace summary --profile compact --format json",
             "full_planning": "agentic-workspace summary --profile full --format json",
             "active_execplan": "Open the active execplan only when planning_record.status is present or planning_surface_health says recovery is required.",
-            "changed_path_implement": "agentic-workspace implement --profile tiny --changed <paths> --format json",
+            "changed_path_implement": "agentic-workspace implement --changed <paths> --format json",
         },
         "todo": {
             "active_count": compact_summary.get("todo", {}).get("active_count", 0),

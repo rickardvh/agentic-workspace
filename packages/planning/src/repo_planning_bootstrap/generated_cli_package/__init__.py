@@ -48,6 +48,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "target"
           },
           {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit broad diagnostic output for debugging or audit detail.",
+            "name": "verbose"
+          },
+          {
             "choices": [
               "text",
               "json"
@@ -124,6 +132,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Target repository path. Defaults to the current directory.",
             "name": "target"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit broad diagnostic output for debugging or audit detail.",
+            "name": "verbose"
           },
           {
             "choices": [
@@ -233,6 +249,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "nargs": "*"
           },
           {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit broad diagnostic output for debugging or audit detail.",
+            "name": "verbose"
+          },
+          {
             "choices": [
               "text",
               "json"
@@ -321,6 +345,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Output profile. Defaults to tiny; use full for audit detail.",
             "name": "profile"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit broad diagnostic output for debugging or audit detail.",
+            "name": "verbose"
           },
           {
             "choices": [
@@ -500,6 +532,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "target"
         },
         {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit broad diagnostic output for debugging or audit detail.",
+          "name": "verbose"
+        },
+        {
           "choices": [
             "text",
             "json"
@@ -527,6 +567,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit broad diagnostic output for debugging or audit detail.",
+          "name": "verbose"
         },
         {
           "choices": [
@@ -587,6 +635,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "nargs": "*"
         },
         {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit broad diagnostic output for debugging or audit detail.",
+          "name": "verbose"
+        },
+        {
           "choices": [
             "text",
             "json"
@@ -626,6 +682,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Output profile. Defaults to tiny; use full for audit detail.",
           "name": "profile"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit broad diagnostic output for debugging or audit detail.",
+          "name": "verbose"
         },
         {
           "choices": [

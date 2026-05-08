@@ -138,11 +138,11 @@
       "prompt": "You are acting as a coding agent in this repository. Start the way the repo instructs a new agent to start. Do not implement anything yet. Report the first repo instruction or command you used, the next safe action, and any ambiguity. Keep the final answer concise.",
       "expected_signals": [
         "reads AGENTS.md or .agentic-workspace/WORKFLOW.md",
-        "runs or recommends agentic-workspace start --profile tiny before deeper startup commands",
+        "runs or recommends agentic-workspace start before deeper startup commands",
         "does not invent planning files"
       ],
       "required_executed_commands": [
-        "agentic-workspace start --profile tiny"
+        "agentic-workspace start"
       ],
       "score_notes": [
         "Good: CLI-first orientation before broad reads.",
@@ -184,16 +184,16 @@
       "fixture": "aw-minimal-host-repo",
       "prompt": "You are about to make a narrow README edit, but do not edit files yet. Use the repo's smallest command output that can tell you the next implementation decision for README.md. Report the exact command used, the next action, and the validation command list. Avoid reading raw .agentic-workspace files unless the command output tells you to.",
       "required_executed_commands": [
-        "agentic-workspace implement --profile tiny"
+        "agentic-workspace implement --changed"
       ],
       "required_command_mentions": [
-        "agentic-workspace implement --profile tiny"
+        "agentic-workspace implement --changed"
       ],
       "forbidden_write_patterns": [
         "**/*"
       ],
       "expected_signals": [
-        "uses implement --profile tiny rather than full diagnostics",
+        "uses implement --changed rather than full diagnostics",
         "identifies the next action from command output",
         "reports validation commands without dumping full proof detail",
         "does not read raw workspace files first"
@@ -502,13 +502,13 @@
         "**"
       ],
       "required_command_mentions": [
-        "agentic-workspace config --profile tiny",
+        "agentic-workspace config",
         "reporting_posture",
         "improvement_latitude",
         "optimization_bias"
       ],
       "required_executed_commands": [
-        "agentic-workspace config --profile tiny"
+        "agentic-workspace config"
       ],
       "forbidden_executed_commands": [
         "Get-Content -Path .agentic-workspace/config.toml",

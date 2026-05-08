@@ -726,9 +726,7 @@ def test_proof_changed_selector_accepts_existing_durable_surface_update(tmp_path
     assert review["flagged_count"] == 0
     assert review["reviewed_paths"][0]["surface_class"] == "workspace_contract_surface"
     assert review["reviewed_paths"][0]["result"] == "accepted"
-    assert (
-        review["review_gate"]["ordinary_path"] == "agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json"
-    )
+    assert review["review_gate"]["ordinary_path"] == "agentic-workspace proof --target ./repo --changed <paths> --format json"
 
 
 def test_proof_changed_selector_flags_additive_only_durable_surface(tmp_path: Path, capsys) -> None:

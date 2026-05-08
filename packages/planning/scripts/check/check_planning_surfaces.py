@@ -1140,7 +1140,9 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             "generated compatibility adapter",
             "read `agents.md`",
             'agentic-workspace start --task "<task>" --format json',
-            "agentic-workspace proof --profile tiny --changed <paths> --format json",
+            "agentic-workspace proof --changed <paths> --format json",
+            "--select <field[,field...]>",
+            "--verbose",
             "open raw planning or contract files only when compact commands point there",
         )
     ):

@@ -1,4 +1,4 @@
-# CLI Output Profiles
+# CLI Output Selection
 
 Agentic Workspace commands should return the smallest answer that lets an agent take the next correct step.
 
@@ -9,38 +9,34 @@ The default design rule is next-decision first:
 - surface blockers, warnings, or ambiguity that change the action
 - hide diagnostics, inventories, provenance, and long explanations unless they change the action
 
-## Profiles
+## Default And Drill-Down
 
-Use these profiles consistently when a command has more than one useful output shape.
+The ordinary command output should be small. When an agent needs one or two exact fields, prefer `--select <field.path>` over a broader payload. Use `--verbose` for diagnostic, inventory, provenance, and audit detail.
 
-| Profile | Purpose |
-| --- | --- |
-| `tiny` | A next-decision card for cold start, weak agents, or narrow execution. |
-| `compact` | Bounded operational context that may include current state and routing detail. |
-| `full` | Diagnostic, inventory, provenance, and contract detail for review or debugging. |
+Legacy `--profile` flags remain accepted for compatibility, but new docs and workflow guidance should not teach profile escalation as the normal path.
 
-Healthy or normal data should usually be absent from `tiny`. Examples include normal package identity, normal package boundaries, module inventories, empty obligation counts, inactive closeout policy, and full authority marker records.
+Healthy or normal data should usually be absent from default output. Examples include normal package identity, normal package boundaries, module inventories, empty obligation counts, inactive closeout policy, and full authority marker records.
 
 Abnormal data should remain visible when it changes the next step. Examples include blocking compatibility drift, path authority warnings, missing changed paths, proof blockers, and active planning state that must be followed before implementation.
 
 ## Command Guidance
 
-Use `implement --profile tiny --changed <paths>` before `start` when the user or current context already names the changed paths. Use `start --task "<task>"` for ordinary first contact when the path scope is unknown.
+Use `implement --changed <paths>` before `start` when the user or current context already names the changed paths. Use `start --task "<task>"` for ordinary first contact when the path scope is unknown.
 
 | Command | Smallest ordinary surface | Deeper surface |
 | --- | --- | --- |
 | `start` | `start --task "<task>" --format json` | `start --verbose --format json` |
-| `implement` | `implement --profile tiny --changed <paths> --format json` | `implement --profile full --changed <paths> --format json` |
-| `proof` | `proof --profile tiny --changed <paths> --format json` | `proof --profile full --changed <paths> --format json` |
-| `summary` | `summary --profile compact --format json` | `summary --profile full --format json` |
-| `config` | `config --profile tiny --format json` | `config --profile compact --format json`, then `config --profile full --format json` |
-| `report` | default router profile or `--section <name>` | `report --profile full --format json` |
+| `implement` | `implement --changed <paths> --format json` | `implement --verbose --changed <paths> --format json` |
+| `proof` | `proof --changed <paths> --format json` | `proof --verbose --changed <paths> --format json` |
+| `summary` | `summary --format json` | `summary --select <field.path> --format json` or `summary --verbose --format json` |
+| `config` | `config --format json` | `config --select <field.path> --format json` or `config --verbose --format json` |
+| `report` | default router or `--section <name>` | `report --verbose --format json` |
 
-Commands that do not yet expose a `tiny` profile should still follow the same rule: the ordinary output should answer the command's immediate question first, then point to a detail command when more context is needed.
+Commands that do not yet expose `--select` should still follow the same rule: the ordinary output should answer the command's immediate question first, then point to a detail command when more context is needed.
 
 ## Regression Rule
 
-When adding a new CLI command or expanding an existing payload, add or update tests that protect the smallest profile from becoming a diagnostics dump. A useful test checks both:
+When adding a new CLI command or expanding an existing payload, add or update tests that protect the default output from becoming a diagnostics dump. A useful test checks both:
 
 - required next-decision fields are present
 - inactive diagnostics or provenance fields are absent

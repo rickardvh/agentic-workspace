@@ -21,7 +21,7 @@ The worker may be:
 1. `AGENTS.md`
 2. `.agentic-workspace/planning/state.toml`
 3. the active execplan
-4. `agentic-workspace config --target . --profile tiny --format json`
+4. `agentic-workspace config --target . --format json`
 5. `agentic-workspace defaults --section relay --format json`
 6. `agentic-planning handoff --format json`
 

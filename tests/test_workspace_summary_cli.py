@@ -57,7 +57,8 @@ candidates = [
     assert exit_code == 0
     assert payload["profile"] == "tiny"
     assert payload["schema"]["schema_version"] == "planning-summary-tiny-schema/v1"
-    assert payload["schema"]["compact_profile_command"] == "agentic-workspace summary --format json --profile compact"
+    assert payload["schema"]["select_command"] == "agentic-workspace summary --select <field.path> --format json"
+    assert payload["schema"]["verbose_command"] == "agentic-workspace summary --verbose --format json"
     assert "candidate_lanes" not in payload["roadmap"]
 
 
@@ -99,7 +100,7 @@ candidates = [
         warning["warning_class"] == "historical_work_in_live_planning_state" for warning in payload["planning_surface_health"]["warnings"]
     )
     assert payload["execution_readiness"]["status"] == "narrow-direct-ready"
-    assert payload["schema"]["compact_profile_command"] == "agentic-workspace summary --format json --profile compact"
+    assert payload["schema"]["select_command"] == "agentic-workspace summary --select <field.path> --format json"
 
 
 def test_workspace_summary_json_accepts_full_profile(tmp_path: Path, capsys) -> None:

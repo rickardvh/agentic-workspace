@@ -17,7 +17,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["edit_reference"]["generated_reference_doc"] == "docs/reference/workspace-config.md"
     assert payload["edit_reference"]["source_schema"] == "src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
     assert "# Agentic Workspace managed config." in payload["edit_reference"]["managed_header"]
-    assert payload["edit_reference"]["check_command"] == "agentic-workspace config --target . --profile tiny --format json"
+    assert payload["edit_reference"]["check_command"] == "agentic-workspace config --target . --format json"
     assert payload["workspace"]["default_preset"] == "full"
     assert payload["workspace"]["agent_instructions_file"] == "AGENTS.md"
     assert payload["workspace"]["agent_instructions_file_source"] == "product-default"
@@ -121,7 +121,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
             ],
             "discovery": [
                 "agentic-workspace defaults --section agent_aid_storage --format json",
-                "agentic-workspace config --target ./repo --profile tiny --format json",
+                "agentic-workspace config --target ./repo --format json",
                 "agentic-workspace report --target ./repo --section agent_aids --format json",
             ],
         },
@@ -239,7 +239,7 @@ safe_to_auto_run_commands = false
     assert payload["local_runtime"]["delegation_mode"] == {"value": "suggest", "source": "local-override"}
     assert payload["local_runtime"]["clarification_mode"] == {"value": "ask-first", "source": "local-override"}
     assert payload["local_runtime"]["safe_to_auto_run_commands"] == {"value": False, "source": "local-override"}
-    assert payload["edit_reference"]["check_command"] == "agentic-workspace config --target . --profile tiny --format json"
+    assert payload["edit_reference"]["check_command"] == "agentic-workspace config --target . --format json"
     assert payload["full_profile_command"] == "agentic-workspace config --target . --profile full --format json"
     assert len(output) < 10000
 
@@ -297,7 +297,8 @@ requires_human_verification_on_pr = true
     assert payload["local_runtime"]["clarification_mode"] == {"value": "ask-first", "source": "local-override"}
     assert payload["local_runtime"]["safe_to_auto_run_commands"] == {"value": False, "source": "local-override"}
     assert payload["local_runtime"]["requires_human_verification_on_pr"] == {"value": True, "source": "local-override"}
-    assert payload["next_detail"]["compact"].endswith("agentic-workspace config --target . --profile compact --format json")
+    assert payload["next_detail"]["select"].endswith("agentic-workspace config --target . --select <field.path> --format json")
+    assert payload["next_detail"]["verbose"].endswith("agentic-workspace config --target . --verbose --format json")
     assert "config_effect_audit" not in payload
     assert len(output) < 3000
 

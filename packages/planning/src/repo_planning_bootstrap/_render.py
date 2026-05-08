@@ -27,10 +27,7 @@ def render_quickstart(_manifest: dict[str, Any]) -> str:
     lines.append("## Route")
     lines.append("")
     lines.append("- Read `AGENTS.md` first.")
-    lines.append(
-        "- If changed paths are already known, run "
-        "`uv run agentic-workspace implement --profile tiny --changed <paths> --format json` first."
-    )
+    lines.append("- If changed paths are already known, run `uv run agentic-workspace implement --changed <paths> --format json` first.")
     lines.append('- Otherwise, run `uv run agentic-workspace start --task "<task>" --format json` for compact startup context.')
     lines.append("- Run `uv run agentic-workspace summary --format json` only when active planning or roadmap state matters.")
     lines.append("- Run `uv run agentic-workspace preflight --format json` only when you need bundled takeover or recovery context.")
@@ -59,7 +56,7 @@ def render_routing(_manifest: dict[str, Any]) -> str:
     lines.append("- Read `AGENTS.md` first.")
     lines.append("- Use `tools/AGENT_QUICKSTART.md` for the ordinary startup path.")
     lines.append(
-        "- Run `uv run agentic-workspace implement --profile tiny --changed <paths> --format json` when paths are known; "
+        "- Run `uv run agentic-workspace implement --changed <paths> --format json` when paths are known; "
         'otherwise run `uv run agentic-workspace start --task "<task>" --format json`.'
     )
     lines.append("- Run `uv run agentic-workspace summary --format json` when active planning state matters.")

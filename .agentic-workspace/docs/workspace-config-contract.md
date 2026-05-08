@@ -19,8 +19,8 @@ Treat Agentic Workspace as a repo-owned agent configuration system with four con
 | Class | Purpose | Primary owner | Compact query |
 | --- | --- | --- | --- |
 | Startup and adapter policy | Canonical startup entrypoint, prose adapter role, and runtime-artifact profile. | workspace config plus this contract | `agentic-workspace defaults --section startup --format json` |
-| Workspace policy | Repo-owned default preset, improvement latitude, optimization bias, advanced-feature opt-ins, and update intent. | `.agentic-workspace/config.toml` | `agentic-workspace config --target ./repo --profile tiny --format json` |
-| Local invocation and integration aids | Optional machine-local CLI invocation and vendor/runtime helpers that make local compliance cheaper without becoming shared truth. | `.agentic-workspace/config.local.toml` plus `.agentic-workspace/local/integrations/` | `agentic-workspace config --target ./repo --profile tiny --format json` |
+| Workspace policy | Repo-owned default preset, improvement latitude, optimization bias, advanced-feature opt-ins, and update intent. | `.agentic-workspace/config.toml` | `agentic-workspace config --target ./repo --format json` |
+| Local invocation and integration aids | Optional machine-local CLI invocation and vendor/runtime helpers that make local compliance cheaper without becoming shared truth. | `.agentic-workspace/config.local.toml` plus `.agentic-workspace/local/integrations/` | `agentic-workspace config --target ./repo --format json` |
 | Local-only memory | Optional machine-local continuity notes that stay advisory and outside shared repo authority. | `.agentic-workspace/local/memory.toml` | `agentic-workspace report --target ./repo --format json` |
 | Module attachment | Which behavior modules exist, what they own, and how they compose without merging ownership. | module descriptors plus `.agentic-workspace/OWNERSHIP.toml` | `agentic-workspace ownership --target ./repo --format json`; `agentic-workspace modules --format json` |
 | Module state | Active planning state and durable memory state that consume the substrate but stay module-owned. | planning and memory surfaces | `agentic-workspace report --target ./repo --format json` |
@@ -51,7 +51,7 @@ Do not treat prose surfaces as the primary authority once the structured substra
 
 Agentic Workspace surfaces use short headers to distinguish repo-owned policy from package-owned state.
 
-`.agentic-workspace/config.toml` is repo-owned policy. Its installed header says agents may edit it directly only when changing repo policy, and should use `agentic-workspace config --target . --profile tiny --format json` to inspect the resolved effective view before relying on a setting. Use `--profile compact` or `--profile full` only when the tiny answer is insufficient.
+`.agentic-workspace/config.toml` is repo-owned policy. Its installed header says agents may edit it directly only when changing repo policy, and should use `agentic-workspace config --target . --format json` to inspect the resolved effective view before relying on a setting. Use `--select <field[,field...]>` for exact detail and `--verbose` only for broad diagnostics.
 
 Package-owned state surfaces, such as `.agentic-workspace/planning/state.toml`, use a stricter header. When the CLI is available, inspect them through `agentic-workspace summary --format json` and mutate through the package command named by that output instead of freehanding file structure.
 
@@ -74,7 +74,7 @@ It must not absorb module-owned domain rules or mutate planning/memory state as 
 Prefer the smallest compact query that answers the current configuration question:
 
 1. `agentic-workspace defaults --section agent_configuration_system --format json`
-2. `agentic-workspace config --target ./repo --profile tiny --format json`
+2. `agentic-workspace config --target ./repo --format json`
 3. `agentic-workspace ownership --target ./repo --format json`
 4. `agentic-workspace modules --format json`
 5. `agentic-workspace report --target ./repo --format json`
@@ -87,7 +87,7 @@ The structured substrate should answer a small number of high-value questions ch
 
 | Query class | Ask first | Deeper only if needed |
 | --- | --- | --- |
-| Startup path | `agentic-workspace defaults --section startup --format json` | `agentic-workspace config --target ./repo --profile tiny --format json`, then `--profile compact` or `AGENTS.md` only if needed |
+| Startup path | `agentic-workspace defaults --section startup --format json` | `agentic-workspace config --target ./repo --format json`, then `--select <field.path>` or `AGENTS.md` only if needed |
 | Active behavior modules | `agentic-workspace ownership --target ./repo --format json` | `agentic-workspace modules --format json`, then `agentic-workspace report --target ./repo --format json` |
 | Proof and ownership rules | `agentic-workspace ownership --target ./repo --format json` | `agentic-workspace defaults --section validation --format json`, then `agentic-workspace report --target ./repo --format json` |
 | Repo-local current work | `agentic-workspace summary --format json` | `agentic-workspace report --target ./repo --format json`, then the active execplan only if summary points there |

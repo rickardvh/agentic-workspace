@@ -65,6 +65,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "profile"
           },
           {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit the complete default-route contract. Prefer --section or default output for ordinary lookup.",
+            "name": "verbose"
+          },
+          {
             "flags": [
               "--section"
             ],
@@ -166,6 +174,21 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Config output profile. Defaults to tiny agent-facing posture; use compact or full for more resolved config detail.",
             "name": "profile"
+          },
+          {
+            "flags": [
+              "--select"
+            ],
+            "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed.",
+            "name": "select"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit full resolved config detail. Prefer default output or targeted fields for ordinary posture checks.",
+            "name": "verbose"
           }
         ]
       },
@@ -201,6 +224,7 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
         "primitive_refs": [
           "workspace.root.resolve",
           "workspace.config.load",
+          "output.fields.select",
           "workspace.config.emit"
         ]
       },
@@ -262,6 +286,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Modules output profile. Defaults to tiny; use full for module registry and component detail.",
             "name": "profile"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit full module registry and component detail. Prefer the default output for ordinary routing.",
+            "name": "verbose"
           }
         ]
       },
@@ -474,6 +506,21 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           },
           {
             "flags": [
+              "--select"
+            ],
+            "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed.",
+            "name": "select"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit full planning summary detail. Prefer selectors/default routing for ordinary startup.",
+            "name": "verbose"
+          },
+          {
+            "flags": [
               "--task"
             ],
             "help": "Optional task text used to return a task-scoped compact summary.",
@@ -533,6 +580,7 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
         "primitive_refs": [
           "workspace.root.resolve",
           "planning.summary.load",
+          "output.fields.select",
           "output.emit"
         ]
       },
@@ -603,6 +651,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Implementer output profile. Defaults to tiny; use full only when bounded implementation needs richer context.",
             "name": "profile"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit full implementer context. Prefer the default output for ordinary bounded implementation.",
+            "name": "verbose"
           },
           {
             "choices": [
@@ -713,6 +769,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Preflight output profile. Defaults to tiny takeover routing; use full for complete recovery context.",
             "name": "profile"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit complete takeover/recovery context. Prefer default output for ordinary recovery routing.",
+            "name": "verbose"
           },
           {
             "choices": [
@@ -835,6 +899,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Proof output profile. Defaults to tiny for the next validation action and command list; use full for all proof routing detail.",
             "name": "profile"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit all proof routing detail. Prefer the default changed-path proof answer for ordinary validation.",
+            "name": "verbose"
           },
           {
             "choices": [
@@ -1162,6 +1234,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "profile"
           },
           {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit the full combined workspace report. Prefer default router output or --section for ordinary inspection.",
+            "name": "verbose"
+          },
+          {
             "flags": [
               "--section"
             ],
@@ -1487,6 +1567,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail.",
             "name": "profile"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit all module lifecycle status detail. Prefer default output for ordinary health routing.",
+            "name": "verbose"
           }
         ]
       },
@@ -1604,6 +1692,14 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Doctor output profile. Defaults to tiny remediation routing; use full for all diagnostic detail.",
             "name": "profile"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit all diagnostic detail. Prefer default output for ordinary remediation routing.",
+            "name": "verbose"
           }
         ]
       },
@@ -1738,6 +1834,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "profile"
         },
         {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit the complete default-route contract. Prefer --section or default output for ordinary lookup.",
+          "name": "verbose"
+        },
+        {
           "flags": [
             "--section"
           ],
@@ -1785,6 +1889,21 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Config output profile. Defaults to tiny agent-facing posture; use compact or full for more resolved config detail.",
           "name": "profile"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed.",
+          "name": "select"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit full resolved config detail. Prefer default output or targeted fields for ordinary posture checks.",
+          "name": "verbose"
         }
       ]
     },
@@ -1826,6 +1945,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Modules output profile. Defaults to tiny; use full for module registry and component detail.",
           "name": "profile"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit full module registry and component detail. Prefer the default output for ordinary routing.",
+          "name": "verbose"
         }
       ]
     },
@@ -1930,6 +2057,21 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
         },
         {
           "flags": [
+            "--select"
+          ],
+          "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed.",
+          "name": "select"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit full planning summary detail. Prefer selectors/default routing for ordinary startup.",
+          "name": "verbose"
+        },
+        {
+          "flags": [
             "--task"
           ],
           "help": "Optional task text used to return a task-scoped compact summary.",
@@ -2009,6 +2151,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "profile"
         },
         {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit full implementer context. Prefer the default output for ordinary bounded implementation.",
+          "name": "verbose"
+        },
+        {
           "choices": [
             "text",
             "json"
@@ -2063,6 +2213,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Preflight output profile. Defaults to tiny takeover routing; use full for complete recovery context.",
           "name": "profile"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit complete takeover/recovery context. Prefer default output for ordinary recovery routing.",
+          "name": "verbose"
         },
         {
           "choices": [
@@ -2128,6 +2286,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Proof output profile. Defaults to tiny for the next validation action and command list; use full for all proof routing detail.",
           "name": "profile"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit all proof routing detail. Prefer the default changed-path proof answer for ordinary validation.",
+          "name": "verbose"
         },
         {
           "choices": [
@@ -2293,6 +2459,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "profile"
         },
         {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit the full combined workspace report. Prefer default router output or --section for ordinary inspection.",
+          "name": "verbose"
+        },
+        {
           "flags": [
             "--section"
           ],
@@ -2453,6 +2627,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail.",
           "name": "profile"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit all module lifecycle status detail. Prefer default output for ordinary health routing.",
+          "name": "verbose"
         }
       ]
     },
@@ -2516,6 +2698,14 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Doctor output profile. Defaults to tiny remediation routing; use full for all diagnostic detail.",
           "name": "profile"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit all diagnostic detail. Prefer default output for ordinary remediation routing.",
+          "name": "verbose"
         }
       ]
     },

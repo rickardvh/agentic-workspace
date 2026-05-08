@@ -44,7 +44,7 @@ Treat `start`, `summary`, `report`, `defaults`, and `preflight` as context-route
 Default startup path for an agent maintainer:
 
 1. Read `AGENTS.md`.
-2. If changed paths are already known, run `agentic-workspace implement --profile tiny --changed <paths> --format json` for the smallest bounded implementer context.
+2. If changed paths are already known, run `agentic-workspace implement --changed <paths> --format json` for the smallest bounded implementer context.
 3. Otherwise, run `agentic-workspace start --task "<task>" --format json` for the ordinary compact startup context.
 4. If the question is startup order or first-contact routing, ask `agentic-workspace defaults --section startup --format json` before broader prose.
 5. If you need the current planning state, ask `agentic-workspace summary --format json` before opening raw planning files.
@@ -52,7 +52,7 @@ Default startup path for an agent maintainer:
 7. Open `.agentic-workspace/planning/state.toml` only when compact output points there or you are directly maintaining planning state.
 8. If `.agentic-workspace/planning/state.toml` points at an active execplan and the compact surfaces are insufficient, read that plan before editing code.
 9. If you are handing the active slice to another executor, derive the worker contract from `agentic-workspace summary --format json` rather than drafting a fresh ad hoc prompt.
-10. Use `agentic-workspace config --target ./repo --profile tiny --format json` to inspect effective mixed-agent posture and local machine/runtime overrides in `.agentic-workspace/config.local.toml`; use compact/full only when the tiny answer is insufficient.
+10. Use `agentic-workspace config --target ./repo --format json` to inspect effective mixed-agent posture and local machine/runtime overrides in `.agentic-workspace/config.local.toml`; use `--select <field.path>` when one field is needed or `--verbose` for broad diagnostics.
 11. Read package-local `AGENTS.md` only for the package you will touch.
 12. Use this playbook to pick the right ownership surface and narrow validation lane.
 

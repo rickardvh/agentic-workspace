@@ -121,7 +121,7 @@ def _write_planning_surfaces(tmp_path: Path) -> None:
 # Agent Instructions
 
 <!-- agentic-workspace:workflow:start -->
-Before answering or editing non-trivial requests, including read-only workflow, config, delegation, or action-safety decisions, use the effective CLI invocation from `agentic-workspace start --format json` / `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present. Run `<effective-cli> implement --profile tiny --changed <paths> --format json` when changed paths are known; otherwise run `<effective-cli> start --task "<task>" --format json` using the user's request as `<task>`. Do not substitute a bare `agentic-workspace` command when local config names a repo-local invocation; PATH may resolve a stale installed selector. Do not open raw `.agentic-workspace` files before this command; follow `immediate_next_allowed_action` and `skill_routing` first. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If unavailable, read `.agentic-workspace/WORKFLOW.md`.
+Before answering or editing non-trivial requests, including read-only workflow, config, delegation, or action-safety decisions, use the effective CLI invocation from `agentic-workspace start --format json` / `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present. Run `<effective-cli> implement --changed <paths> --format json` when changed paths are known; otherwise run `<effective-cli> start --task "<task>" --format json` using the user's request as `<task>`. Do not substitute a bare `agentic-workspace` command when local config names a repo-local invocation; PATH may resolve a stale installed selector. Do not open raw `.agentic-workspace` files before this command; follow `immediate_next_allowed_action` and `skill_routing` first. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If unavailable, read `.agentic-workspace/WORKFLOW.md`.
 <!-- agentic-workspace:workflow:end -->
 """,
     )
@@ -135,9 +135,11 @@ Generated compatibility adapter.
 Ordinary path:
 - Read `AGENTS.md` first.
 - Run `agentic-workspace start --task "<task>" --format json` for compact startup context.
-- Run `agentic-workspace proof --profile tiny --changed <paths> --format json` before claiming validation.
+- Run `agentic-workspace proof --changed <paths> --format json` before claiming validation.
 
 When needed:
+- Add `--select <field[,field...]>` when one or two exact fields are needed.
+- Add `--verbose` only for broad diagnostics.
 - Open raw planning or contract files only when compact commands point there.
 """,
     )

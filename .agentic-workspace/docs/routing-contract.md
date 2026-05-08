@@ -7,8 +7,8 @@ This contract defines how to enter the repository, orient quickly, and pick the 
 Use the following order for a fresh entry:
 
 1. **High-Efficiency Entry**: Use the [Cold-Start Protocol](cold-start-protocol.md) for a <3 turn activation.
-2. **Configured Startup File**: Check `agentic-workspace config --target ./repo --profile tiny --format json` for the entrypoint (default `AGENTS.md`).
-3. **Tiny State**: Read `agentic-workspace summary --format json` first to see the minimum active-state router; use `--profile compact` only when a handoff or planning contract needs more detail.
+2. **Configured Startup File**: Check `agentic-workspace config --target ./repo --format json` for the entrypoint (default `AGENTS.md`).
+3. **Small State**: Read `agentic-workspace summary --format json` first to see the active-state router; use `--select <field[,field...]>` when a handoff or planning contract needs exact detail.
 4. **Active Queue**: Read `.agentic-workspace/planning/state.toml` only when the summary shows active work that still needs raw queue detail.
 5. **Compact Queries**: Before reading broad prose, use:
    - `agentic-workspace defaults --section startup --format json`: For startup order and surface roles.
@@ -19,7 +19,7 @@ Use the following order for a fresh entry:
 Ordinary work should begin from one small operating model:
 
 - one startup entrypoint: `AGENTS.md` by default
-- one compact query path: `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --profile tiny --format json`, and the tiny default `agentic-workspace summary --format json`
+- one compact query path: `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --format json`, and the tiny default `agentic-workspace summary --format json`
 - one rule for deeper reads: load broader prose or module-specific surfaces only when the task crosses a real boundary
 
 Use [minimum-operating-model.md](minimum-operating-model.md) for the compact module-boundary and escalation-cue contract.

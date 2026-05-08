@@ -21,7 +21,7 @@ Query the current execution context, or use changed paths when the task already 
 
 - **Command**: `agentic-workspace summary --format json`
 - **Output**: Identifies the active plan, current milestone, and any blockers.
-- **Alternative command**: `agentic-workspace implement --profile tiny --changed <paths> --format json`
+- **Alternative command**: `agentic-workspace implement --changed <paths> --format json`
 - **Output**: Returns bounded implementer context, proof routes, path authority, and projection shape for the changed surface.
 
 ### Turn 3: Activate and Execute

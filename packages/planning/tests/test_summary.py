@@ -3308,7 +3308,8 @@ candidates = [
     assert exit_code == 0
     assert default_payload["profile"] == "tiny"
     assert default_payload["schema"]["schema_version"] == "planning-summary-tiny-schema/v1"
-    assert default_payload["schema"]["compact_profile_command"] == "agentic-workspace summary --format json --profile compact"
+    assert default_payload["schema"]["select_command"] == "agentic-workspace summary --select <field.path> --format json"
+    assert default_payload["schema"]["verbose_command"] == "agentic-workspace summary --verbose --format json"
 
     exit_code = planning_cli.main(["summary", "--target", str(tmp_path), "--format", "json", "--profile", "full"])
     full_payload = json.loads(capsys.readouterr().out)

@@ -741,7 +741,7 @@ def _ordinary_agent_path_payload(
         "state_command": _command_with_cli_invoke("agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke),
         "current_work_command": _command_with_cli_invoke("agentic-workspace summary --format json", cli_invoke=cli_invoke),
         "proof_command": _command_with_cli_invoke(
-            "agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json", cli_invoke=cli_invoke
+            "agentic-workspace proof --target ./repo --changed <paths> --format json", cli_invoke=cli_invoke
         ),
         "deep_detail_rule": "Open section, memory, planning, or review artifacts only when compact output points there.",
         "current_signal": {
@@ -795,7 +795,7 @@ def _off_happy_path_recovery_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) ->
                 "misuse": "agent changes a generated adapter or executable CLI surface directly",
                 "recovery_signal": "proof selector generated-command or direct-cli-edit review",
                 "recover_by": _command_with_cli_invoke(
-                    "agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json", cli_invoke=cli_invoke
+                    "agentic-workspace proof --target ./repo --changed <paths> --format json", cli_invoke=cli_invoke
                 ),
             },
             {
@@ -803,7 +803,7 @@ def _off_happy_path_recovery_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) ->
                 "misuse": "agent hand-authors a durable docs/planning/memory artifact without a compact proof route",
                 "recovery_signal": "proof selector surface_value_review",
                 "recover_by": _command_with_cli_invoke(
-                    "agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json", cli_invoke=cli_invoke
+                    "agentic-workspace proof --target ./repo --changed <paths> --format json", cli_invoke=cli_invoke
                 ),
             },
         ],

@@ -214,10 +214,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     ]
     assert ".agentic-workspace/bootstrap-handoff.md" in payload["recovery"]["handoff_surfaces"]
     assert ".agentic-workspace/bootstrap-handoff.json" in payload["recovery"]["handoff_surfaces"]
-    assert (
-        payload["recovery"]["effective_output_posture"]["command"]
-        == "agentic-workspace config --target ./repo --profile tiny --format json"
-    )
+    assert payload["recovery"]["effective_output_posture"]["command"] == "agentic-workspace config --target ./repo --format json"
     assert payload["recovery"]["effective_output_posture"]["field"] == "workspace.optimization_bias"
     assert payload["completion"]["rule"] == (
         "When a completed slice came from state.toml, clear the matched queue residue in the same pass."
@@ -432,7 +429,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "decomposition adjustment",
     ]
     assert payload["config"]["path"] == ".agentic-workspace/config.toml"
-    assert payload["config"]["command"] == "agentic-workspace config --target ./repo --profile tiny --format json"
+    assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
     assert "workspace.default_preset" in payload["config"]["supported_fields"]
     assert "workspace.improvement_latitude" in payload["config"]["supported_fields"]
     assert "workspace.optimization_bias" in payload["config"]["supported_fields"]
@@ -517,7 +514,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
             '`agentic-workspace start --task "<task>" --format json`, then '
             "`agentic-workspace preflight --format json`, "
             "`agentic-workspace defaults --section startup --format json`, "
-            "`agentic-workspace config --target ./repo --profile tiny --format json`, and "
+            "`agentic-workspace config --target ./repo --format json`, and "
             "`agentic-workspace summary --format json` before broader "
             "prose or repo-local workaround guidance."
         ),
@@ -585,9 +582,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Combined install:" in text
     assert "Recovery:" in text
     assert "docs/environment-recovery-contract.md" in text
-    assert (
-        "effective output posture: agentic-workspace config --target ./repo --profile tiny --format json -> workspace.optimization_bias"
-    ) in text
+    assert ("effective output posture: agentic-workspace config --target ./repo --format json -> workspace.optimization_bias") in text
     assert "Completion:" in text
     assert "Config:" in text
     assert "Workflow artifact adapters:" in text
@@ -810,9 +805,7 @@ def test_defaults_section_selector_returns_surface_value_guardrail(capsys) -> No
     assert answer["authority_classes"][0]["class"] == "authoritative"
     assert "first-line thing to remember" in answer["review_result"]["reject_when"][1]
     assert answer["review_gate"]["answer_field"] == "surface_value_review"
-    assert (
-        answer["review_gate"]["ordinary_path"] == "agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json"
-    )
+    assert answer["review_gate"]["ordinary_path"] == "agentic-workspace proof --target ./repo --changed <paths> --format json"
 
 
 def test_defaults_section_selector_returns_effective_authority_view(capsys) -> None:

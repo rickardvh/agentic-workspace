@@ -12,6 +12,65 @@ def test_preset_conflicts_with_modules(tmp_path: Path) -> None:
     assert excinfo.value.code == 2
 
 
+def test_verbose_aliases_full_diagnostic_output_for_major_workspace_commands(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "README.md").write_text("# Fixture\n", encoding="utf-8")
+
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    cases = [
+        (["defaults", "--verbose", "--format", "json"], lambda payload: "startup" in payload),
+        (["modules", "--target", str(tmp_path), "--verbose", "--format", "json"], lambda payload: "module_profiles" in payload),
+        (["summary", "--target", str(tmp_path), "--verbose", "--format", "json"], lambda payload: payload["profile"] == "full"),
+        (["report", "--target", str(tmp_path), "--verbose", "--format", "json"], lambda payload: payload["kind"] == "workspace-report/v1"),
+        (["config", "--target", str(tmp_path), "--verbose", "--format", "json"], lambda payload: payload["target"] == tmp_path.as_posix()),
+        (
+            ["preflight", "--target", str(tmp_path), "--verbose", "--format", "json"],
+            lambda payload: payload["mode"] == "full-takeover-context",
+        ),
+        (["proof", "--target", str(tmp_path), "--verbose", "--format", "json"], lambda payload: "default_routes" in payload),
+        (
+            ["implement", "--target", str(tmp_path), "--verbose", "--changed", "README.md", "--format", "json"],
+            lambda payload: payload["kind"] == "implementer-context/v1",
+        ),
+        (["status", "--target", str(tmp_path), "--verbose", "--format", "json"], lambda payload: payload["health"] == "healthy"),
+        (["doctor", "--target", str(tmp_path), "--verbose", "--format", "json"], lambda payload: payload["health"] == "healthy"),
+    ]
+
+    for argv, assertion in cases:
+        assert cli.main(argv) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert assertion(payload), argv
+
+
+def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["summary", "--target", str(tmp_path), "--select", "target_root,todo.active_count", "--format", "json"]) == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["kind"] == "agentic-workspace/selected-output/v1"
+    assert summary["source_command"] == "summary"
+    assert Path(summary["values"]["target_root"]) == tmp_path
+    assert summary["values"]["todo.active_count"] == 0
+    assert summary["missing"] == []
+
+    assert (
+        cli.main(
+            ["config", "--target", str(tmp_path), "--select", "workspace.default_preset,mixed_agent.runtime_resolution", "--format", "json"]
+        )
+        == 0
+    )
+    config = json.loads(capsys.readouterr().out)
+    assert config["kind"] == "agentic-workspace/selected-output/v1"
+    assert config["source_command"] == "config"
+    assert config["values"]["workspace.default_preset"] == "full"
+    assert "recommendation" in config["values"]["mixed_agent.runtime_resolution"]
+    assert config["missing"] == []
+
+
 def test_improvement_intake_includes_repair_recurrence_subtype(capsys) -> None:
     assert cli.main(["defaults", "--profile", "full", "--section", "improvement_intake", "--format", "json"]) == 0
 

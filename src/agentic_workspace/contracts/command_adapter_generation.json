@@ -228,6 +228,7 @@
         "primitive_refs": [
           "workspace.root.resolve",
           "workspace.config.load",
+          "output.fields.select",
           "workspace.config.emit"
         ]
       },
@@ -474,6 +475,7 @@
         "primitive_refs": [
           "workspace.root.resolve",
           "planning.summary.load",
+          "output.fields.select",
           "output.emit"
         ]
       },
@@ -2231,4 +2233,3 @@
     }
   ]
 }
-
