@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys as _sys
 
 # ruff: noqa: F403,F405
+from datetime import date
 from pathlib import Path as _Path
 
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
@@ -317,13 +318,16 @@ def test_planning_cli_create_review_writes_valid_review_record(tmp_path: Path, c
 
     assert result == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload["message"] == "Create review record 'lane-closeout'"
-    record_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "lane-closeout.review.json"
+    today = date.today().isoformat()
+    assert payload["message"] == f"Create review record '{today}-lane-closeout'"
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / f"{today}-lane-closeout.review.json"
     record = json.loads(record_path.read_text(encoding="utf-8"))
     assert record["kind"] == "planning-review/v1"
     assert record["title"] == "Lane Closeout"
     assert record["scope"] == ["#372"]
     assert record["classification"] == "closeout"
+    assert record["retention"]["closeout shape"] == "shrink"
+    assert "findings promoted" in record["retention"]["trigger"]
     assert record["review_mode"]["mode"] == "closeout"
     assert record["findings"] == []
     assert record["prose_templates"]["review_finding"]["field_map"]["Evidence"] == "findings[].evidence + findings[].source"
@@ -378,7 +382,57 @@ def test_planning_cli_create_review_dry_run_does_not_write(tmp_path: Path, capsy
     assert result == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["actions"][0]["kind"] == "would create"
-    assert not (tmp_path / ".agentic-workspace" / "planning" / "reviews" / "future-review.review.json").exists()
+    today = date.today().isoformat()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "reviews" / f"{today}-future-review.review.json").exists()
+
+
+def test_planning_cli_create_review_preserves_date_prefixed_slug(tmp_path: Path, capsys) -> None:
+    today = date.today().isoformat()
+    result = planning_cli.main(
+        [
+            "create-review",
+            f"{today}-future-review",
+            "--title",
+            "Future Review",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ]
+    )
+
+    assert result == 0
+    capsys.readouterr()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "reviews" / f"{today}-future-review.review.json").exists()
+
+
+def test_planning_tiny_summary_uses_fast_path_without_checker(tmp_path: Path, monkeypatch) -> None:
+    install_bootstrap(target=tmp_path)
+
+    def fail_checker(_target_root: Path) -> list[dict[str, object]]:
+        raise AssertionError("tiny summary should not run the full planning checker")
+
+    monkeypatch.setattr(installer_mod, "_run_planning_checker", fail_checker)
+
+    summary = planning_summary(target=tmp_path, profile="tiny")
+
+    assert summary["profile"] == "tiny"
+    assert summary["planning_surface_health"]["status"] == "clean"
+
+
+def test_planning_tiny_report_uses_fast_summary_path(tmp_path: Path, monkeypatch) -> None:
+    install_bootstrap(target=tmp_path)
+
+    def fail_checker(_target_root: Path) -> list[dict[str, object]]:
+        raise AssertionError("tiny report should not run the full planning checker")
+
+    monkeypatch.setattr(installer_mod, "_run_planning_checker", fail_checker)
+
+    report = installer_mod.planning_report_tiny(target=tmp_path)
+
+    assert report["kind"] == "planning-module-report/v1"
+    assert report["profile"] == "tiny"
+    assert report["status"]["active_todo_count"] == 0
 
 
 def test_planning_summary_prefers_canonical_execplan_record_when_markdown_stales(tmp_path: Path) -> None:

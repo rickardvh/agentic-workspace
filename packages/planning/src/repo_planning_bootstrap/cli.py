@@ -36,6 +36,7 @@ from repo_planning_bootstrap.installer import (
     planning_handoff,
     planning_reconcile,
     planning_report,
+    planning_report_tiny,
     planning_summary,
     promote_todo_item_to_execplan,
     uninstall_bootstrap,
@@ -274,9 +275,9 @@ def main(argv: list[str] | None = None) -> int:
             _print_summary(summary)
         return 0
     if args.command == "report":
-        report = planning_report(target=args.target)
-        if getattr(args, "profile", "tiny") == "tiny":
-            report = _tiny_report(report)
+        report = (
+            planning_report_tiny(target=args.target) if getattr(args, "profile", "tiny") == "tiny" else planning_report(target=args.target)
+        )
         if args.format == "json":
             print(json.dumps(report, indent=2))
         else:
@@ -446,9 +447,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
 
 
 def _run_report_adapter(args: argparse.Namespace) -> int:
-    report = planning_report(target=args.target)
-    if getattr(args, "profile", "tiny") == "tiny":
-        report = _tiny_report(report)
+    report = planning_report_tiny(target=args.target) if getattr(args, "profile", "tiny") == "tiny" else planning_report(target=args.target)
     if args.format == "json":
         print(json.dumps(report, indent=2))
     else:

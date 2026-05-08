@@ -22,6 +22,23 @@ def test_memory_report_defaults_to_tiny_profile(tmp_path: Path, capsys) -> None:
     assert payload["detail_commands"]["full"] == "agentic-memory report --target . --profile full --format json"
 
 
+def test_memory_report_tiny_does_not_build_full_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    def fail_full_report(*, target=None):
+        raise AssertionError("tiny memory report should not build the full report")
+
+    monkeypatch.setattr(cli, "memory_report", fail_full_report)
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "tiny"
+    assert payload["active"]["note_count"] >= 1
+
+
 def test_memory_lifecycle_status_defaults_to_tiny_actions(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
@@ -33,6 +50,39 @@ def test_memory_lifecycle_status_defaults_to_tiny_actions(tmp_path: Path, capsys
     assert "action_count" in payload
     assert len(payload["actions"]) <= 5
     assert payload["detail_command"] == "agentic-memory status --target . --profile full --format json"
+
+
+def test_memory_lifecycle_tiny_does_not_collect_full_status(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    def fail_collect_status(*, target=None):
+        raise AssertionError("tiny status should not collect full lifecycle status")
+
+    monkeypatch.setattr(cli, "collect_status", fail_collect_status)
+
+    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["health"] == "healthy"
+    assert payload["active"]["note_count"] >= 1
+
+
+def test_memory_route_report_tiny_does_not_evaluate_fixtures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    def fail_report_routes(*, target=None):
+        raise AssertionError("tiny route-report should not evaluate route fixtures")
+
+    monkeypatch.setattr(cli, "report_routes", fail_report_routes)
+
+    assert cli.main(["route-report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["route_report_summary"]["detail"].startswith("Run full route-report")
 
 
 def test_memory_generated_report_uses_compact_target_error_for_ambiguous_root(

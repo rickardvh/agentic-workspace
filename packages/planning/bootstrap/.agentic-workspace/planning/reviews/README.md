@@ -55,6 +55,7 @@ Each review artifact should stay compact and include:
 
 Use the template in this directory and prefer one bounded review question per file.
 Prefer `TEMPLATE.review.json` plus a rendered Markdown view when you want the review to stay queryable and machine-usable.
+New review records created by `agentic-planning create-review` use date-prefixed filenames such as `2026-05-08-remaining-slow-operations-context-cost.review.json` so ordinary directory sorting groups reviews by creation date. Existing suffix-dated review files remain valid and do not need to be renamed.
 
 ## Constrained Prose
 
@@ -121,6 +122,14 @@ Record a compact `Retention` block in the canonical review record.
 - `Proof surface` should name where later trust should come from after the live review artifact shrinks or disappears.
 
 Keep this block short. It exists to prevent review artifacts from becoming a parallel archive once their findings have been promoted, deferred, or dismissed.
+After a review is acted upon, ask what information still needs to live here. Durable conclusions should move to the stronger owner: issues, active or candidate Planning state, canonical docs, checks, or Memory. The review record should then follow its retention shape:
+
+- `retain` when it is still the best evidence surface for unresolved analysis.
+- `shrink` when findings were promoted but a compact decision and evidence stub remain useful.
+- `stub` when only pointers to issues, commits, docs, checks, Memory, or Planning state need to survive.
+- `delete` when the review has no remaining durable value after promotion, dismissal, or supersession.
+
+Do not create a second review archive by default. Old review artifacts may remain as they are, but new and acted-upon reviews should avoid keeping full analysis residue in the hot reviews directory unless the retention block explains why.
 
 If the review needs materially more findings than the default cap, split the work or justify the exception explicitly.
 

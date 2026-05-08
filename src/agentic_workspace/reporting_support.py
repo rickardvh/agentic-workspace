@@ -131,6 +131,12 @@ def report_profile_payload(*, context_router: dict[str, Any], cli_invoke: str = 
         "full_profile_command": _command_with_cli_invoke(
             "agentic-workspace report --target ./repo --profile full --format json", cli_invoke=cli_invoke
         ),
+        "full_profile_cost": {
+            "classification": "deep-audit",
+            "expected_cost": "high",
+            "use_when": "only when router fields or a selected section are insufficient for audit, retention, or cross-module diagnosis",
+            "avoid_for": "ordinary startup, first-contact orientation, and narrow implementation routing",
+        },
         "section_command": _command_with_cli_invoke(
             "agentic-workspace report --target ./repo --section <section> --format json", cli_invoke=cli_invoke
         ),
@@ -474,6 +480,7 @@ def _compact_report_profile(value: dict[str, Any]) -> dict[str, Any]:
             "section_selector",
             "default_command",
             "full_profile_command",
+            "full_profile_cost",
             "section_command",
             "rule",
             "decision_grade_fields",

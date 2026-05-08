@@ -4,6 +4,7 @@ import argparse
 import json
 import shutil
 import sys
+import tomllib
 from pathlib import Path
 from typing import Any, cast
 
@@ -20,6 +21,7 @@ from repo_memory_bootstrap.generated_cli_package import (
 from repo_memory_bootstrap.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 from repo_memory_bootstrap.installer import (
     BOOTSTRAP_WORKSPACE_ROOT,
+    MANIFEST_PATH,
     RepoDetectionError,
     adopt_bootstrap,
     check_current_memory,
@@ -37,6 +39,7 @@ from repo_memory_bootstrap.installer import (
     migrate_layout,
     promotion_report,
     report_routes,
+    resolve_target_root,
     resolve_upgrade_source,
     review_routes,
     route_memory,
@@ -441,6 +444,9 @@ def _handle_uninstall(args: argparse.Namespace) -> int:
 
 
 def _handle_doctor(args: argparse.Namespace) -> int:
+    if args.format == "json" and getattr(args, "profile", "tiny") == "tiny":
+        print(json.dumps(_tiny_memory_lifecycle_payload(target=args.target, command="doctor"), indent=2))
+        return 0
     result = doctor_bootstrap(
         target=args.target,
         strict_doc_ownership=args.strict_doc_ownership,
@@ -452,26 +458,15 @@ def _handle_doctor(args: argparse.Namespace) -> int:
         primary_test_command=args.primary_test_command,
         other_key_commands=args.other_key_commands,
     )
-    if args.format == "json" and getattr(args, "profile", "tiny") == "tiny":
-        print(
-            json.dumps(
-                _compact_result_dict(result, detail_command="agentic-memory doctor --target . --profile full --format json"), indent=2
-            )
-        )
-        return 0
     _emit_result(result, output_format=args.format)
     return 0
 
 
 def _handle_status(args: argparse.Namespace) -> int:
-    result = collect_status(target=args.target)
     if args.format == "json" and getattr(args, "profile", "tiny") == "tiny":
-        print(
-            json.dumps(
-                _compact_result_dict(result, detail_command="agentic-memory status --target . --profile full --format json"), indent=2
-            )
-        )
+        print(json.dumps(_tiny_memory_lifecycle_payload(target=args.target, command="status"), indent=2))
         return 0
+    result = collect_status(target=args.target)
     _emit_result(result, output_format=args.format)
     return 0
 
@@ -523,12 +518,10 @@ def _handle_route_review(args: argparse.Namespace) -> int:
 
 
 def _handle_route_report(args: argparse.Namespace) -> int:
-    result = report_routes(target=args.target)
     if args.format == "json" and getattr(args, "profile", "tiny") == "tiny":
-        payload = _compact_result_dict(result, detail_command="agentic-memory route-report --target . --profile full --format json")
-        payload["route_report_summary"] = result.route_report_summary
-        print(json.dumps(payload, indent=2))
+        print(json.dumps(_tiny_route_report_payload(target=args.target), indent=2))
         return 0
+    result = report_routes(target=args.target)
     _emit_result(result, output_format=args.format)
     return 0
 
@@ -539,6 +532,9 @@ def _handle_promotion_report(args: argparse.Namespace) -> int:
 
 
 def _handle_report(args: argparse.Namespace) -> int:
+    if args.format == "json" and getattr(args, "profile", "tiny") == "tiny":
+        print(json.dumps(_tiny_memory_report_fast(target=args.target), indent=2))
+        return 0
     report = memory_report(target=args.target)
     if getattr(args, "profile", "tiny") == "tiny":
         report = _tiny_memory_report(report)
@@ -577,6 +573,156 @@ def _compact_result_dict(result, *, detail_command: str) -> dict[str, object]:
         "review_summary": payload.get("review_summary", {}),
         "sync_summary": payload.get("sync_summary", {}),
         "detail_command": detail_command,
+    }
+
+
+def _tiny_memory_manifest_counts(*, target_root: Path) -> dict[str, object]:
+    manifest_path = target_root / MANIFEST_PATH
+    if not manifest_path.exists():
+        return {
+            "status": "missing",
+            "note_count": 0,
+            "required_count": 0,
+            "optional_count": 0,
+            "routing_only_count": 0,
+            "path": MANIFEST_PATH.as_posix(),
+        }
+    try:
+        payload = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return {
+            "status": "invalid",
+            "note_count": 0,
+            "required_count": 0,
+            "optional_count": 0,
+            "routing_only_count": 0,
+            "path": MANIFEST_PATH.as_posix(),
+        }
+    notes = payload.get("notes", {}) if isinstance(payload, dict) else {}
+    note_values = list(notes.values()) if isinstance(notes, dict) else []
+    required_count = 0
+    optional_count = 0
+    routing_only_count = 0
+    for note in note_values:
+        if not isinstance(note, dict):
+            continue
+        note_map = cast(dict[str, object], note)
+        relevance = str(note_map.get("task_relevance", "")).strip().lower()
+        if relevance == "required":
+            required_count += 1
+        elif relevance == "optional":
+            optional_count += 1
+        if bool(note_map.get("routing_only", False)):
+            routing_only_count += 1
+    return {
+        "status": "present",
+        "note_count": len(note_values),
+        "required_count": required_count,
+        "optional_count": optional_count,
+        "routing_only_count": routing_only_count,
+        "path": MANIFEST_PATH.as_posix(),
+    }
+
+
+def _tiny_memory_lifecycle_payload(*, target: str | Path | None, command: str) -> dict[str, object]:
+    target_root = resolve_target_root(target)
+    counts = _tiny_memory_manifest_counts(target_root=target_root)
+    health = "healthy" if counts["status"] == "present" else "attention-needed"
+    return {
+        "target_root": str(target_root),
+        "dry_run": command == "doctor",
+        "mode": "",
+        "message": "Status report" if command == "status" else "Doctor report",
+        "health": health,
+        "detected_version": None,
+        "bootstrap_version": None,
+        "action_count": 0 if health == "healthy" else 1,
+        "actions": []
+        if health == "healthy"
+        else [
+            {
+                "kind": counts["status"],
+                "path": counts["path"],
+                "detail": "memory manifest is not readable; run full doctor for remediation detail",
+            }
+        ],
+        "active": counts,
+        "detail_command": f"agentic-memory {command} --target . --profile full --format json",
+    }
+
+
+def _tiny_memory_report_fast(*, target: str | Path | None) -> dict[str, object]:
+    target_root = resolve_target_root(target)
+    counts = _tiny_memory_manifest_counts(target_root=target_root)
+    health = "healthy" if counts["status"] == "present" else "attention-needed"
+    findings = []
+    if health != "healthy":
+        findings.append(
+            {
+                "severity": "warning",
+                "path": counts["path"],
+                "message": "Memory manifest is not readable; run full report for remediation detail.",
+            }
+        )
+    return {
+        "kind": "memory-module-report/v1",
+        "profile": "tiny",
+        "module": "memory",
+        "target_root": str(target_root),
+        "health": health,
+        "status": {
+            "detected_version": None,
+            "bootstrap_version": None,
+            "note_count": counts["note_count"],
+            "manifest_status": counts["status"],
+        },
+        "active": {
+            "note_count": counts["note_count"],
+            "manifest_note_count": counts["note_count"],
+            "required_count": counts["required_count"],
+            "optional_count": counts["optional_count"],
+            "routing_only_count": counts["routing_only_count"],
+        },
+        "habitual_pull": {
+            "status": "available" if counts["status"] == "present" else "unavailable",
+            "read_first": [".agentic-workspace/memory/repo/index.md"],
+            "do_not_bulk_read": True,
+        },
+        "promotion_pressure": {
+            "status": "not-evaluated",
+            "detail_command": "agentic-memory report --target . --profile full --format json",
+        },
+        "trust": {"status": "not-evaluated", "detail_command": "agentic-memory report --target . --profile full --format json"},
+        "finding_count": len(findings),
+        "findings": findings,
+        "next_action": {
+            "summary": "No immediate memory action." if health == "healthy" else "Run full memory report for remediation detail.",
+            "commands": [] if health == "healthy" else ["agentic-memory report --target . --profile full --format json"],
+        },
+        "detail_commands": {
+            "full": "agentic-memory report --target . --profile full --format json",
+            "route": "agentic-memory route --target . --files <paths> --format json",
+        },
+    }
+
+
+def _tiny_route_report_payload(*, target: str | Path | None) -> dict[str, object]:
+    target_root = resolve_target_root(target)
+    feedback_path = target_root / ".agentic-workspace" / "memory" / "repo" / "current" / "routing-feedback.md"
+    fixtures_root = target_root / "tests" / "fixtures" / "routing"
+    fixture_count = len(list(fixtures_root.glob("*.json"))) if fixtures_root.exists() else 0
+    feedback_present = feedback_path.exists()
+    return {
+        "target_root": str(target_root),
+        "dry_run": True,
+        "message": "Routing report",
+        "health": "healthy",
+        "route_report_summary": {
+            "feedback": {"status": "present" if feedback_present else "missing", "path": feedback_path.as_posix()},
+            "fixtures": {"status": "present" if fixture_count else "missing", "fixture_count": fixture_count},
+            "detail": "Run full route-report for fixture evaluation and feedback-case matching.",
+        },
+        "detail_command": "agentic-memory route-report --target . --profile full --format json",
     }
 
 

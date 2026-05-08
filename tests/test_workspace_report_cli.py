@@ -221,6 +221,8 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert payload["schema"]["section_command"] == "agentic-workspace report --target ./repo --section <section> --format json"
     assert payload["report_profile"]["default_profile"] == "router"
     assert payload["report_profile"]["full_profile"] == "full"
+    assert payload["report_profile"]["full_profile_cost"]["classification"] == "deep-audit"
+    assert payload["report_profile"]["full_profile_cost"]["expected_cost"] == "high"
     assert payload["report_profile"]["context_router"]["first_view"] == "start"
     assert payload["report_profile"]["config_enforcement"]["detail_section"] == "config_enforcement"
     assert payload["report_profile"]["config_effect_audit"]["detail_section"] == "config_effect_audit"
@@ -2316,6 +2318,8 @@ def test_default_command_outputs_stay_router_sized(tmp_path: Path, capsys) -> No
     assert "mixed_agent" not in status_payload["config"]
     assert status_payload["config"]["detail_command"] == "agentic-workspace config --target ./repo --profile tiny --format json"
     assert status_payload["deeper_detail"]["report_command"] == "agentic-workspace report --target ./repo --profile full --format json"
+    assert status_payload["cost_provenance"]["classification"] == "compact-after-lifecycle"
+    assert status_payload["cost_provenance"]["module_count"] >= 1
 
 
 def test_report_surfaces_large_file_hotspots_as_repo_friction_evidence(tmp_path: Path, capsys) -> None:

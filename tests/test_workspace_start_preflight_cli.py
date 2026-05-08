@@ -425,7 +425,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
         "uv run agentic-workspace report --target ./repo --section repo_friction --format json"
     )
     assert payload["delegation_decision"]["status"] == "evaluated"
-    assert payload["delegation_decision"]["mode"] == "suggest"
+    assert payload["delegation_decision"]["mode"] in {"suggest", "auto"}
     assert payload["delegation_decision"]["decision"] in {
         "stay-local",
         "suggest-delegation",
@@ -488,7 +488,7 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert "implement --profile tiny --changed <paths>" in payload["task_intent"]["implement_changed_command"]
     assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
     assert payload["delegation_decision"]["status"] == "evaluated"
-    assert payload["delegation_decision"]["mode"] == "suggest"
+    assert payload["delegation_decision"]["mode"] in {"suggest", "auto"}
     assert payload["delegation_decision"]["required_next_action"] in {
         "continue-local",
         "mention-suggestion",

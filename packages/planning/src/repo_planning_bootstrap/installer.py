@@ -905,8 +905,11 @@ def create_review_record(
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     safe_slug = _safe_review_slug(slug)
-    record_path = target_root / PLANNING_MANAGED_ROOT / "reviews" / f"{safe_slug}.review.json"
-    result = InstallResult(target_root=target_root, message=f"Create review record '{safe_slug}'", dry_run=dry_run)
+    review_name = _review_record_filename(safe_slug)
+    record_path = target_root / PLANNING_MANAGED_ROOT / "reviews" / review_name
+    result = InstallResult(
+        target_root=target_root, message=f"Create review record '{review_name[: -len('.review.json')]}'", dry_run=dry_run
+    )
     if record_path.exists():
         result.add("manual review", record_path, "review record already exists; choose a new slug or edit intentionally")
         return result
@@ -928,6 +931,13 @@ def _safe_review_slug(slug: str) -> str:
     if not normalized:
         raise ValueError("review slug must contain at least one alphanumeric character")
     return normalized
+
+
+def _review_record_filename(safe_slug: str, *, today: date | None = None) -> str:
+    prefix = (today or date.today()).isoformat()
+    if safe_slug.startswith(f"{prefix}-"):
+        return f"{safe_slug}.review.json"
+    return f"{prefix}-{safe_slug}.review.json"
 
 
 def _new_review_record(*, title: str, scope: str, classification: str) -> dict[str, Any]:
@@ -957,9 +967,9 @@ def _new_review_record(*, title: str, scope: str, classification: str) -> dict[s
             "dismiss": "pending",
         },
         "retention": {
-            "closeout shape": "shrink or archive after findings are routed",
-            "trigger": "review complete",
-            "proof surface": "this review record plus routed follow-up residue",
+            "closeout shape": "shrink",
+            "trigger": "findings promoted, dismissed, or superseded",
+            "proof surface": "routed issues, planning state, docs, checks, Memory, or a compact retained review stub",
         },
         "prose_templates": _default_prose_templates(),
         "validation_commands": [],
@@ -1516,6 +1526,8 @@ def planning_summary(
     changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     target_root = resolve_target_root(target)
+    if profile == "tiny" and not task_text and not changed_paths:
+        return _planning_summary_tiny_fast(target_root=target_root)
     todo_path = target_root / "TODO.md"
     legacy_todo_path = target_root / PLANNING_STATE_PATH
     roadmap_path = target_root / "ROADMAP.md"
@@ -2005,6 +2017,45 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
         "next_action": {
             "summary": next_action,
             "commands": commands,
+        },
+    }
+
+
+def planning_report_tiny(*, target: str | Path | None = None) -> dict[str, Any]:
+    summary = planning_summary(target=target, profile="tiny")
+    todo = summary.get("todo", {}) if isinstance(summary.get("todo"), dict) else {}
+    execplans = summary.get("execplans", {}) if isinstance(summary.get("execplans"), dict) else {}
+    health_payload = summary.get("planning_surface_health", {}) if isinstance(summary.get("planning_surface_health"), dict) else {}
+    warning_count = int(summary.get("warning_count", 0) or 0)
+    health = "attention-needed" if warning_count else ("active" if todo.get("active_count") or execplans.get("active_count") else "healthy")
+    next_summary = str(health_payload.get("recommended_next_action") or "No active planning work right now.")
+    return {
+        "kind": "planning-module-report/v1",
+        "profile": "tiny",
+        "module": "planning",
+        "target_root": summary.get("target_root", ""),
+        "health": health,
+        "status": {
+            "active_todo_count": todo.get("active_count", 0),
+            "queued_todo_count": todo.get("queued_count", 0),
+            "active_execplan_count": execplans.get("active_count", 0),
+            "roadmap_lane_count": summary.get("roadmap", {}).get("lane_count", 0) if isinstance(summary.get("roadmap"), dict) else 0,
+            "roadmap_candidate_count": summary.get("roadmap", {}).get("candidate_count", 0)
+            if isinstance(summary.get("roadmap"), dict)
+            else 0,
+            "warning_count": warning_count,
+        },
+        "active": {
+            "active_items": todo.get("active_items", []),
+            "active_execplans": execplans.get("active_execplans", []),
+        },
+        "finding_count": warning_count,
+        "findings": [],
+        "next_action": {"summary": next_summary, "commands": []},
+        "detail_commands": {
+            "full": "agentic-planning report --target . --profile full --format json",
+            "summary": "agentic-planning summary --target . --format json",
+            "compact_summary": "agentic-planning summary --target . --profile compact --format json",
         },
     }
 
@@ -2854,6 +2905,131 @@ def _planning_summary_tiny_schema() -> dict[str, Any]:
             "warning_count",
         ],
     }
+
+
+def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
+    state = _read_state_from_toml(target_root) or {}
+    if state:
+        active_items = _state_active_items(state)
+        queued_items = _state_queued_items(state)
+        roadmap_lanes = _state_roadmap_lanes(state)
+        roadmap_candidates = _state_roadmap_candidates(state)
+    else:
+        active_items = []
+        queued_items = []
+        roadmap_lanes = []
+        roadmap_candidates = []
+        todo_lines, todo_items = _read_todo_items(target_root / PLANNING_STATE_PATH)
+        if not todo_items:
+            todo_lines, todo_items = _read_todo_items(target_root / "TODO.md")
+        for item in todo_items:
+            status = item.fields.get("status", "").lower()
+            target = active_items if ("in-progress" in status or "active" in status or "ongoing" in status) else queued_items
+            if target is queued_items and status in {"completed", "done", "closed"}:
+                continue
+            target.append(
+                {
+                    "id": item.fields.get("id", ""),
+                    "surface": item.fields.get("surface", ""),
+                    "why_now": item.fields.get("why now", ""),
+                    "status": item.fields.get("status", ""),
+                }
+            )
+        roadmap_lanes = _roadmap_candidate_lanes(target_root / "ROADMAP.md")
+        roadmap_candidates = _roadmap_candidates(target_root / "ROADMAP.md")
+    execplan_dir = target_root / ".agentic-workspace" / "planning" / "execplans"
+    active_execplans: list[dict[str, str]] = []
+    if execplan_dir.exists():
+        seen_stems: set[str] = set()
+        plan_files: list[Path] = []
+        for path in sorted(execplan_dir.glob("*.plan.json")):
+            if path.name == "TEMPLATE.plan.json":
+                continue
+            seen_stems.add(path.name[: -len(".plan.json")])
+            plan_files.append(path)
+        for path in sorted(execplan_dir.glob("*.md")):
+            if path.name in {"README.md", "TEMPLATE.md"} or path.stem in seen_stems:
+                continue
+            plan_files.append(path)
+        for path in plan_files:
+            status = _execplan_status(path)
+            if status and status not in {"completed", "done", "closed", "planned", "pending", "not-started"}:
+                active_execplans.append({"path": path.relative_to(target_root).as_posix(), "status": status})
+    planning_warnings = _planning_state_v1_warnings(target_root=target_root, state=state if state else None)
+    planning_surface_health = _planning_surface_health(planning_warnings)
+    warning_count = int(planning_surface_health.get("warning_count", 0) or 0)
+    health_status = str(planning_surface_health.get("status") or "clean")
+    if not warning_count and (active_items or active_execplans):
+        health_status = "active"
+    recommendation = "No active planning work right now."
+    if active_items:
+        first = active_items[0]
+        recommendation = str(first.get("next_action") or first.get("why_now") or "Continue the active planning item.")
+    elif active_execplans:
+        recommendation = "Continue the active execplan or run compact summary for handoff detail."
+    elif roadmap_lanes or roadmap_candidates:
+        recommendation = "Promote the next candidate only when the next bounded slice is ready."
+    if active_execplans:
+        readiness_status = "planning-backed"
+        broad_work_allowed = True
+    elif active_items:
+        readiness_status = "active-item-without-execplan"
+        broad_work_allowed = False
+    elif roadmap_lanes or roadmap_candidates:
+        readiness_status = "roadmap-needs-promotion"
+        broad_work_allowed = False
+    else:
+        readiness_status = "narrow-direct-ready"
+        broad_work_allowed = False
+    return _drop_empty_compact_fields(
+        {
+            "kind": "planning-summary/v1",
+            "profile": "tiny",
+            "schema": _planning_summary_tiny_schema(),
+            "target_root": str(target_root),
+            "todo": {
+                "active_count": len(active_items),
+                "queued_count": len(queued_items),
+                "active_items": _compact_active_items(active_items),
+            },
+            "execplans": {
+                "active_count": len(active_execplans),
+                "active_execplans": active_execplans,
+            },
+            "planning_surface_health": {
+                "status": health_status,
+                "warning_count": warning_count,
+                "recommended_next_action": planning_surface_health.get("recommended_next_action", recommendation)
+                if warning_count
+                else recommendation,
+                "warnings": planning_surface_health.get("warnings", [])[:3] if warning_count else [],
+            },
+            "execution_readiness": {
+                "status": readiness_status,
+                "broad_work_allowed": broad_work_allowed,
+                "direct_work_allowed": True,
+                "recommendation": {"summary": recommendation},
+            },
+            "current_execution_pressure": {
+                "status": "present" if active_items or active_execplans else "quiet",
+                "recommended_next_action": recommendation,
+                "active_plan_required": bool(active_items or active_execplans),
+            },
+            "decomposition": {"status": "not-evaluated", "detail": "Use compact or full summary for decomposition detail."},
+            "roadmap": {
+                "lane_count": len(roadmap_lanes),
+                "candidate_count": len(roadmap_candidates),
+                "omitted_candidate_count": max(0, len(roadmap_candidates) - 3),
+            },
+            "detail_commands": {
+                "compact": "agentic-workspace summary --profile compact --format json",
+                "full": "agentic-workspace summary --profile full --format json",
+                "task_scoped": "agentic-workspace summary --profile compact --task <task> --format json",
+                "changed_path_implement": "agentic-workspace implement --changed <paths> --format json",
+            },
+            "warning_count": warning_count,
+        }
+    )
 
 
 def _payload_has_nonzero_number(value: Any) -> bool:

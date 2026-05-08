@@ -5182,6 +5182,15 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
             command="agentic-workspace report --target ./repo --profile full --format json", cli_invoke=cli_invoke
         ),
     }
+    payload["cost_provenance"] = {
+        "classification": "compact-after-lifecycle",
+        "module_count": len(compact_reports),
+        "source": "workspace lifecycle invokes selected module lifecycle reports before compact projection",
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section operational_compression --format json",
+            cli_invoke=cli_invoke,
+        ),
+    }
     command_name = str(payload.get("command", "status") or "status")
     if str(payload.get("health", "")) == "healthy":
         payload["next_action"] = {
@@ -8672,26 +8681,27 @@ def _refresh_github_external_intent_evidence(
             target_root=target_root,
             refreshed_at=refreshed_at,
         )
-    next_payload = {
+    refresh_metadata: dict[str, Any] = {
+        "adapter": "github-gh-cli",
+        "repository": resolved_repo,
+        "refreshed_at": refreshed_at,
+        "item_count": len(items),
+        "open_count": sum(1 for item in items if item["status"] == "open"),
+        "closed_count": sum(1 for item in items if item["status"] == "closed"),
+        "fetched_item_count": fetched_item_count,
+        "fetched_open_count": fetched_open_count,
+        "fetched_closed_count": fetched_closed_count,
+        "limit": resolved_limit,
+        "state": resolved_state,
+        "state_source": state_source,
+        "limit_source": limit_source,
+        "command": f"gh issue list --state {resolved_state} --json number,title,state,url,labels,createdAt,updatedAt,closedAt,body,comments",
+    }
+    next_payload: dict[str, Any] = {
         "kind": "planning-external-intent-evidence/v1",
         "systems": ["github"],
         "refreshed_at": refreshed_at,
-        "refresh_metadata": {
-            "adapter": "github-gh-cli",
-            "repository": resolved_repo,
-            "refreshed_at": refreshed_at,
-            "item_count": len(items),
-            "open_count": sum(1 for item in items if item["status"] == "open"),
-            "closed_count": sum(1 for item in items if item["status"] == "closed"),
-            "fetched_item_count": fetched_item_count,
-            "fetched_open_count": fetched_open_count,
-            "fetched_closed_count": fetched_closed_count,
-            "limit": resolved_limit,
-            "state": resolved_state,
-            "state_source": state_source,
-            "limit_source": limit_source,
-            "command": f"gh issue list --state {resolved_state} --json number,title,state,url,labels,createdAt,updatedAt,closedAt,body,comments",
-        },
+        "refresh_metadata": refresh_metadata,
         "items": items,
     }
     if cache_compaction is not None:

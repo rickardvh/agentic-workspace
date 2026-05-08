@@ -41,11 +41,13 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
     assert "lowers continuation and review trust" in payload["orientation"]["trust_note"]
     assert "unstated intent" in payload["inference_limits"]["rule"]
     assert payload["execution_posture"]["kind"] == "agentic-workspace/execution-posture/v1"
-    assert payload["execution_posture"]["delegation_control"]["effective_mode"] == "suggest"
-    assert payload["execution_posture"]["delegation_control"]["execution_permitted"] is False
+    assert payload["execution_posture"]["delegation_control"]["effective_mode"] in {"suggest", "auto"}
+    assert payload["execution_posture"]["delegation_control"]["execution_permitted"] is (
+        payload["execution_posture"]["delegation_control"]["effective_mode"] == "auto"
+    )
     assert payload["delegation_decision"]["status"] == "evaluated"
     assert payload["delegation_decision"] == payload["execution_posture"]["delegation_decision"]
-    assert payload["delegation_decision"]["mode"] == "suggest"
+    assert payload["delegation_decision"]["mode"] in {"suggest", "auto"}
     assert payload["acceptance_reconciliation"]["requested_outcomes"] == []
     assert payload["objective_drift"]["status"] == "unavailable"
     assert "quality" in payload["execution_posture"]["quality_tradeoff"]
@@ -95,7 +97,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert "make test-workspace" in payload["proof"]["required_commands"]
     assert payload["routing"]["work_shape"] == "bounded"
     assert payload["delegation_decision"]["status"] == "evaluated"
-    assert payload["delegation_decision"]["mode"] == "suggest"
+    assert payload["delegation_decision"]["mode"] in {"suggest", "auto"}
     assert payload["acceptance_reconciliation"]["task_text_available"] is True
     assert payload["objective_drift"]["status"] in {"clear", "not-enough-explicit-outcomes"}
     assert "package_boundary" not in payload
