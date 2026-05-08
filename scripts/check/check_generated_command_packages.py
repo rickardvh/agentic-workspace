@@ -113,11 +113,15 @@ def _selected_modules_fields(stdout: str) -> dict[str, object]:
 
 def _selected_start_fields(stdout: str) -> dict[str, object]:
     payload = json.loads(stdout)
-    context_router = payload.get("context_router", {}) if isinstance(payload.get("context_router"), dict) else {}
+    next_action = (
+        payload.get("immediate_next_allowed_action", {})
+        if isinstance(payload.get("immediate_next_allowed_action"), dict)
+        else {}
+    )
     proof = payload.get("proof", {}) if isinstance(payload.get("proof"), dict) else {}
     return {
         "kind": payload.get("kind"),
-        "first_view": context_router.get("first_view"),
+        "next_action": next_action.get("action"),
         "proof_kind": proof.get("kind"),
         "changed_paths": proof.get("changed_paths"),
     }
@@ -282,7 +286,7 @@ def _root_workspace_adapter_conformance_cases() -> dict[str, AdapterConformanceC
             selected_fields=_selected_start_fields,
             expected_fields={
                 "kind": "startup-context/v1",
-                "first_view": "start",
+                "next_action": "choose-smallest-workflow-shape",
                 "proof_kind": "proof-selection/v1",
                 "changed_paths": ["README.md"],
             },

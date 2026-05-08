@@ -11,7 +11,7 @@ Generated compatibility adapter. Canonical startup behavior lives in `AGENTS.md`
 
 Ordinary path:
 - Read `AGENTS.md` first.
-- Run `agentic-workspace start --profile tiny --task "<task>" --format json` for compact startup context.
+- Run `agentic-workspace start --task "<task>" --format json` for compact startup context.
 - Run `agentic-workspace summary --format json` when active work or roadmap state matters.
 - Run `agentic-workspace proof --profile tiny --changed <paths> --format json` before claiming validation.
 

@@ -88,7 +88,7 @@ stage = "pre-work"
 force = "recommended"
 scope_tags = ["workspace", "startup", "routing", "planning"]
 commands = [
-  "uv run agentic-workspace start --profile tiny --task \"<task>\" --format json",
+  "uv run agentic-workspace start --task \"<task>\" --format json",
 ]
 review_hint = "Open raw planning state, an active execplan, config, preflight, or deeper routing docs only when the compact start answer points there."
 

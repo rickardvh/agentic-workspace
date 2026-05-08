@@ -822,7 +822,7 @@
       "named_consumer": "external agents and runtimes that look for the conventional llms.txt handoff file",
       "checked_in_justification": "Stable compatibility entrypoint for agents that cannot run package discovery before first contact.",
       "freshness_check": "make maintainer-surfaces",
-      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --profile tiny --task \"<task>\" --format json -> summary/proof as needed",
+      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --task \"<task>\" --format json -> summary/proof as needed",
       "removal_or_demotion_path": "remove when external-agent handoff conventions no longer require a stable root file",
       "max_bytes": 4000
     },
@@ -832,7 +832,7 @@
       "named_consumer": "installed planning module lifecycle and root maintainer-surface renderers",
       "checked_in_justification": "Installed planning payload manifest used as the local source for generated weak-agent adapters.",
       "freshness_check": "uv run agentic-workspace doctor --target . --modules planning --format json",
-      "ordinary_agent_route": "agentic-workspace start --profile tiny --task \"<task>\" --format json or summary --format json",
+      "ordinary_agent_route": "agentic-workspace start --task \"<task>\" --format json or summary --format json",
       "removal_or_demotion_path": "demote when installed planning lifecycle can reconstruct adapter metadata without a stable manifest path",
       "max_bytes": 20000
     },
@@ -842,7 +842,7 @@
       "named_consumer": "weak-agent and source-checkout compatibility readers under tools/",
       "checked_in_justification": "Compatibility mirror for agents that inspect tools/ before package commands are available.",
       "freshness_check": "make maintainer-surfaces",
-      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --profile tiny --task \"<task>\" --format json",
+      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --task \"<task>\" --format json",
       "removal_or_demotion_path": "remove when tools/ weak-agent adapters are no longer a supported first-contact shape",
       "max_bytes": 20000
     },
@@ -852,7 +852,7 @@
       "named_consumer": "weak-agent static quickstart readers",
       "checked_in_justification": "Small generated compatibility adapter for agents that need a Markdown route before running commands.",
       "freshness_check": "make maintainer-surfaces",
-      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --profile tiny --task \"<task>\" --format json",
+      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --task \"<task>\" --format json",
       "removal_or_demotion_path": "remove when AGENTS.md plus compact commands cover weak-agent startup without a tools quickstart",
       "max_bytes": 5000
     },
@@ -862,7 +862,7 @@
       "named_consumer": "secondary weak-agent static routing readers",
       "checked_in_justification": "Small generated compatibility adapter for agents that need a Markdown route map after quickstart.",
       "freshness_check": "make maintainer-surfaces",
-      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --profile tiny --task \"<task>\" --format json",
+      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --task \"<task>\" --format json",
       "removal_or_demotion_path": "merge into or remove after AGENT_QUICKSTART if secondary routing stops lowering startup cost",
       "max_bytes": 6000
     },

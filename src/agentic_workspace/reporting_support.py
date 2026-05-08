@@ -737,9 +737,7 @@ def _ordinary_agent_path_payload(
     warning_count = len(findings)
     ordinary_path: dict[str, Any] = {
         "status": "ready",
-        "entry_command": _command_with_cli_invoke(
-            "agentic-workspace start --target ./repo --profile tiny --format json", cli_invoke=cli_invoke
-        ),
+        "entry_command": _command_with_cli_invoke("agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
         "state_command": _command_with_cli_invoke("agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke),
         "current_work_command": _command_with_cli_invoke("agentic-workspace summary --format json", cli_invoke=cli_invoke),
         "proof_command": _command_with_cli_invoke(
@@ -760,9 +758,7 @@ def _ordinary_agent_path_payload(
         "status": recovery.get("status", "available"),
         "scenario_ids": [str(item.get("id", "")) for item in scenarios if isinstance(item, dict)],
         "detail_section": "report_profile",
-        "recover_by_default": _command_with_cli_invoke(
-            "agentic-workspace start --target ./repo --profile tiny --format json", cli_invoke=cli_invoke
-        ),
+        "recover_by_default": _command_with_cli_invoke("agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
     }
     return ordinary_path
 
@@ -777,9 +773,7 @@ def _off_happy_path_recovery_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) ->
                 "id": "opened-report-before-start",
                 "misuse": "agent starts from report detail before compact startup",
                 "recovery_signal": "report_profile.ordinary_agent_path.entry_command",
-                "recover_by": _command_with_cli_invoke(
-                    "agentic-workspace start --target ./repo --profile tiny --format json", cli_invoke=cli_invoke
-                ),
+                "recover_by": _command_with_cli_invoke("agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
             },
             {
                 "id": "opened-deep-review-artifact",

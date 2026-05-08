@@ -45,7 +45,7 @@ Default startup path for an agent maintainer:
 
 1. Read `AGENTS.md`.
 2. If changed paths are already known, run `agentic-workspace implement --profile tiny --changed <paths> --format json` for the smallest bounded implementer context.
-3. Otherwise, run `agentic-workspace start --profile tiny --task "<task>" --format json` for the ordinary compact startup context.
+3. Otherwise, run `agentic-workspace start --task "<task>" --format json` for the ordinary compact startup context.
 4. If the question is startup order or first-contact routing, ask `agentic-workspace defaults --section startup --format json` before broader prose.
 5. If you need the current planning state, ask `agentic-workspace summary --format json` before opening raw planning files.
 6. If you need the combined workspace state, ask `agentic-workspace report --target ./repo --format json` before reading raw module files.

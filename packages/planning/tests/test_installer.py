@@ -41,7 +41,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "`Execution Summary`" in readme_text
     assert "Required continuation for an unfinished larger intended outcome" in readme_text
     assert "Keep this file thin." in bootstrap_agents_text
-    assert '<effective-cli> start --profile tiny --task "<task>" --format json' in bootstrap_agents_text
+    assert '<effective-cli> start --task "<task>" --format json' in bootstrap_agents_text
     assert "<effective-cli> preflight --format json" in bootstrap_agents_text
     assert "<effective-cli> summary --format json" in bootstrap_agents_text
     assert "<effective-cli> defaults --section startup --format json" in bootstrap_agents_text
@@ -56,14 +56,14 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "## Authority Table" not in quickstart_text
     assert "## Escalation Table" not in quickstart_text
     assert "Generated, non-authoritative helper" in quickstart_text
-    assert 'agentic-workspace start --profile tiny --task "<task>" --format json' in quickstart_text
+    assert 'agentic-workspace start --task "<task>" --format json' in quickstart_text
     assert "agentic-workspace preflight --format json" in quickstart_text
     assert "## Routing Table" not in routing_text
     assert "Secondary generated adapter" in routing_text
     assert "## Use" in routing_text
     assert "## Compact Queries" not in routing_text
     assert "agentic-workspace preflight --format json" not in routing_text
-    assert 'agentic-workspace start --profile tiny --task "<task>" --format json' in routing_text
+    assert 'agentic-workspace start --task "<task>" --format json' in routing_text
     assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
     assert any(
         "Use `agentic-workspace summary --format json` first when active planning recovery or compact ownership state is the question."

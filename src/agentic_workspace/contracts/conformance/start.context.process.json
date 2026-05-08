@@ -41,10 +41,10 @@
         },
         {
           "path": [
-            "context_router",
-            "first_view"
+            "drill_down",
+            "rule"
           ],
-          "equals": "start"
+          "equals": "Use --select <field[,field...]> for exact fields; use --verbose only for broad diagnostics."
         },
         {
           "path": [

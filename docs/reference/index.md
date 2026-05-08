@@ -6,7 +6,7 @@ Do not hand-edit generated pages. Update the source schema and regenerate the re
 
 ## Host-Repo Runtime Outputs
 
-- [Startup context](startup-context.md): `agentic-workspace start --profile tiny --task "<task>" --format json` for first contact when changed paths are not yet known; use `--profile full` for full context.
+- [Startup context](startup-context.md): `agentic-workspace start --task "<task>" --format json` for first contact when changed paths are not yet known; use `--select` for exact fields or `--verbose` for broad diagnostics.
 - [Implementer context](implementer-context.md): `agentic-workspace implement --profile tiny --changed <paths> --format json` for path-scoped work when changed paths are already known.
 - [Workspace report](workspace-report.md): `agentic-workspace report --format json`.
 - [Compact contract answer](compact-contract-answer.md): shared compact selector answer envelope.

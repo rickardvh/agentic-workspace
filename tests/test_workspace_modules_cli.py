@@ -429,5 +429,5 @@ def test_workspace_agents_template_keeps_descriptor_guidance_out_of_root_entrypo
     assert "Read `signals.md` when the signals module is installed." not in rendered
     assert "Signal routing: `signals.md`" not in rendered
     assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." not in rendered
-    assert 'start --profile tiny --task "<task>"' in rendered
+    assert 'start --task "<task>"' in rendered
     assert "## Module Notes" not in rendered

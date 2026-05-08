@@ -1103,7 +1103,7 @@ class WorkspaceArgumentParser(argparse.ArgumentParser):
                 suggestion_text = ", ".join(suggestions)
                 message = f"{message}\nDid you mean: {suggestion_text}?"
             message = (
-                f"{message}\nStartup tip: run 'agentic-workspace start --profile tiny --task \"<task>\" --format json' for normal startup "
+                f"{message}\nStartup tip: run 'agentic-workspace start --task \"<task>\" --format json' for normal startup "
                 "or 'agentic-workspace preflight --format json' to recover a compact takeover context."
             )
         super().error(message)
@@ -2149,11 +2149,15 @@ def main(argv: list[str] | None = None) -> int:
         try:
             target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
             _validate_target_root(command_name="start", target_root=target_root)
+            start_profile = "full" if getattr(args, "verbose", False) else getattr(args, "profile", None)
             payload = _start_payload(
                 target_root=target_root,
                 changed_paths=list(getattr(args, "changed", []) or []),
                 task_text=getattr(args, "task", None),
+                profile=(start_profile or "tiny") if getattr(args, "select", None) else start_profile,
             )
+            if getattr(args, "select", None):
+                payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="start")
             _emit_payload(payload=payload, format_name=args.format)
             return 0
         except WorkspaceUsageError as exc:
@@ -3540,7 +3544,7 @@ def _external_agent_handoff_text(
         "",
         "Ordinary path:",
         f"- Read `{agent_instructions_file}` first.",
-        '- Run `agentic-workspace start --profile tiny --task "<task>" --format json` for compact startup context.',
+        '- Run `agentic-workspace start --task "<task>" --format json` for compact startup context.',
         "- Run `agentic-workspace summary --format json` when active work or roadmap state matters.",
         "- Run `agentic-workspace proof --profile tiny --changed <paths> --format json` before claiming validation.",
         "",
@@ -4479,9 +4483,7 @@ def _context_router_family_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE, comp
     views = [
         {
             "view": "start",
-            "command": _command_with_cli_invoke(
-                command="agentic-workspace start --target ./repo --profile tiny --format json", cli_invoke=cli_invoke
-            ),
+            "command": _command_with_cli_invoke(command="agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
             "use_when": "repo entry",
         },
         {
@@ -9032,7 +9034,7 @@ def _run_preflight_command(
             "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True),
             "entrypoint": startup_payload.get("default_canonical_agent_instructions_file", "AGENTS.md"),
             "entry_query": _command_with_cli_invoke(
-                command=str(tiny_safe_model.get("entry_query", 'agentic-workspace start --profile tiny --task "<task>" --format json')),
+                command=str(tiny_safe_model.get("entry_query", 'agentic-workspace start --task "<task>" --format json')),
                 cli_invoke=config.cli_invoke,
             ),
             "primary_next_action": {
@@ -9949,18 +9951,21 @@ def _start_payload(
     target_root: Path,
     changed_paths: list[str],
     task_text: str | None = None,
-    profile: str = "full",
+    profile: str | None = None,
 ) -> dict[str, Any]:
     startup_template = _CONTEXT_TEMPLATES["startup_context"]
     config = _load_workspace_config(target_root=target_root)
-    if profile == "tiny":
-        return _start_tiny_payload_fast(
+    if profile in {None, "tiny"}:
+        payload = _start_tiny_payload_fast(
             target_root=target_root,
             changed_paths=changed_paths,
             task_text=task_text,
             config=config,
             startup_template=startup_template,
         )
+        if profile is None:
+            return _selector_first_start_payload(payload, cli_invoke=config.cli_invoke)
+        return payload
     descriptors = _module_operations()
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     installed_modules = [entry.name for entry in registry if entry.installed]
@@ -10193,6 +10198,148 @@ def _start_payload(
         payload["cli_invocation"] = _cli_invocation_payload(config=config)
         return _tiny_start_payload(payload)
     return payload
+
+
+def _selector_tokens(select: str | None) -> list[str]:
+    if not select:
+        return []
+    tokens: list[str] = []
+    seen: set[str] = set()
+    for raw in select.split(","):
+        token = raw.strip()
+        if not token or token in seen:
+            continue
+        tokens.append(token)
+        seen.add(token)
+    return tokens
+
+
+def _field_by_path(payload: Any, path: str) -> tuple[bool, Any]:
+    current = payload
+    for part in path.split("."):
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+            continue
+        if isinstance(current, list):
+            try:
+                current = current[int(part)]
+                continue
+            except (ValueError, IndexError):
+                return False, None
+        return False, None
+    return True, copy.deepcopy(current)
+
+
+def _select_payload_fields(payload: dict[str, Any], *, select: str | None, source_command: str) -> dict[str, Any]:
+    selectors = _selector_tokens(select)
+    values: dict[str, Any] = {}
+    missing: list[str] = []
+    for selector in selectors:
+        found, value = _field_by_path(payload, selector)
+        if found:
+            values[selector] = value
+        else:
+            missing.append(selector)
+    return {
+        "kind": "agentic-workspace/selected-output/v1",
+        "source_command": source_command,
+        "source_kind": payload.get("kind"),
+        "target": payload.get("target"),
+        "selectors": selectors,
+        "values": values,
+        "missing": missing,
+        "selector_rule": "Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing.",
+        "available_selectors": _available_selectors_for_payload(payload),
+    }
+
+
+def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
+    preferred = [
+        "immediate_next_allowed_action",
+        "active_state_summary",
+        "skill_routing",
+        "task_intent",
+        "delegation_decision",
+        "cli_invocation",
+        "durable_intent",
+        "workflow_obligations",
+        "closeout_obligations",
+        "proof",
+        "path_boundaries",
+        "drill_down",
+    ]
+    return [selector for selector in preferred if selector in payload]
+
+
+def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict[str, Any]:
+    skill_routing = payload.get("skill_routing", {}) if isinstance(payload.get("skill_routing"), dict) else {}
+    task_recommendations = skill_routing.get("task_recommendations", {}) if isinstance(skill_routing, dict) else {}
+    preferred_routes = list(skill_routing.get("preferred_routes", [])[:2]) if isinstance(skill_routing, dict) else []
+    if isinstance(task_recommendations, dict) and task_recommendations.get("top_recommendations"):
+        preferred_routes = [
+            {"task_shape": "current task", "skill": str(item.get("id", ""))}
+            for item in task_recommendations.get("top_recommendations", [])[:2]
+            if isinstance(item, dict) and item.get("id")
+        ]
+    selected: dict[str, Any] = {
+        "kind": payload["kind"],
+        "target": ".",
+        "immediate_next_allowed_action": payload["immediate_next_allowed_action"],
+        "active_state_summary": payload["active_state_summary"],
+        "skill_routing": {
+            "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
+            "rule": skill_routing.get("rule", "Use listed skills only when directly relevant; otherwise proceed from the next action.")
+            if isinstance(skill_routing, dict)
+            else "Use listed skills only when directly relevant; otherwise proceed from the next action.",
+            "query": skill_routing.get("query", 'agentic-workspace skills --target ./repo --task "<task>" --format json')
+            if isinstance(skill_routing, dict)
+            else 'agentic-workspace skills --target ./repo --task "<task>" --format json',
+            "preferred_routes": preferred_routes,
+        },
+        "drill_down": {
+            "rule": "Use --select <field[,field...]> for exact fields; use --verbose only for broad diagnostics.",
+            "examples": [
+                _command_with_cli_invoke(
+                    command="agentic-workspace start --select cli_invocation,durable_intent --format json",
+                    cli_invoke=cli_invoke,
+                ),
+                _command_with_cli_invoke(
+                    command="agentic-workspace start --select workflow_obligations,closeout_obligations --format json",
+                    cli_invoke=cli_invoke,
+                ),
+            ],
+            "available_selectors": _available_selectors_for_payload(payload),
+        },
+    }
+    if isinstance(task_recommendations, dict) and task_recommendations.get("status") == "recommended":
+        selected["skill_routing"]["task_recommendations"] = {
+            "status": task_recommendations.get("status", "recommended"),
+            "top_recommendations": [
+                {key: item.get(key) for key in ("id", "path", "score") if item.get(key) not in ("", None)}
+                for item in task_recommendations.get("top_recommendations", [])[:2]
+                if isinstance(item, dict)
+            ],
+        }
+    if "task_intent" in payload:
+        selected["task_intent"] = payload["task_intent"]
+    delegation = payload.get("delegation_decision", {})
+    if isinstance(delegation, dict) and delegation.get("decision") not in {"", None, "stay-local"}:
+        selected["delegation_decision"] = delegation
+    cli_invocation = payload.get("cli_invocation", {})
+    if isinstance(cli_invocation, dict) and cli_invocation.get("mismatch"):
+        selected["cli_invocation"] = cli_invocation
+    cli_compatibility = payload.get("cli_compatibility", {})
+    if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {"blocking-drift", "warning-drift"}:
+        selected["cli_compatibility"] = cli_compatibility
+    durable_intent = payload.get("durable_intent", {})
+    subsystem_intent = durable_intent.get("subsystem_intent", {}) if isinstance(durable_intent, dict) else {}
+    matched_count = int(subsystem_intent.get("matched_count", 0) or 0) if isinstance(subsystem_intent, dict) else 0
+    if isinstance(durable_intent, dict) and durable_intent.get("status") == "present" and matched_count:
+        selected["durable_intent"] = _tiny_durable_intent(durable_intent)
+    for optional_key in ("proof", "path_boundaries", "startup_review", "prep_only_handoff", "vague_outcome_orientation"):
+        if optional_key in payload:
+            selected[optional_key] = payload[optional_key]
+    return selected
 
 
 def _start_tiny_payload_fast(
@@ -11992,7 +12139,7 @@ def _config_effect_audit_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             payload_fields = ["cli_compatibility"]
         elif field.startswith("runtime|handoff|safety|delegation_targets"):
             concrete_commands = [
-                command('agentic-workspace start --target ./repo --profile tiny --task "<task>" --format json'),
+                command('agentic-workspace start --target ./repo --task "<task>" --format json'),
                 command("agentic-workspace implement --target ./repo --profile tiny --changed <paths> --format json"),
             ]
             payload_fields = ["delegation_decision", "mixed_agent.runtime_resolution"]
@@ -14479,7 +14626,7 @@ def _startup_skill_routing_payload(
         "advanced_route_rule": "Review and external-intake skills are surfaced only when the repo enables the matching reusable diagnostic feature. Source-checkout-only maintainer skills stay outside shipped feature tiers.",
         "fallback_when_skills_unavailable": [
             "follow AGENTS.md and .agentic-workspace/WORKFLOW.md",
-            'use agentic-workspace start --profile tiny --task "<task>" --format json for ordinary first contact',
+            'use agentic-workspace start --task "<task>" --format json for ordinary first contact',
             "use agentic-workspace summary --format json before raw planning reads",
         ],
         "preferred_routes": core_routes + advanced_routes,
@@ -14845,7 +14992,7 @@ def _defaults_payload() -> dict[str, Any]:
             "canonical_doc": ".agentic-workspace/docs/minimum-operating-model.md",
             "context_router": _context_router_family_payload(),
             "primary": [
-                'For ordinary first contact, run `agentic-workspace start --profile tiny --task "<task>" --format json`.',
+                'For ordinary first contact, run `agentic-workspace start --task "<task>" --format json`.',
                 "Use `agentic-workspace implement --profile tiny --changed <paths> --format json` when changed paths are already known.",
                 "For takeover or recovery context, run `agentic-workspace preflight --format json`.",
                 "Read the configured root startup file from `agentic-workspace config --target ./repo --profile tiny --format json` (default `AGENTS.md`).",
@@ -14855,9 +15002,9 @@ def _defaults_payload() -> dict[str, Any]:
             "tiny_safe_model": {
                 "summary": "Start from one repo entrypoint, one ordinary startup query, and conditional deeper reads.",
                 "entrypoint": "AGENTS.md",
-                "entry_query": 'agentic-workspace start --profile tiny --task "<task>" --format json',
+                "entry_query": 'agentic-workspace start --task "<task>" --format json',
                 "first_compact_queries": [
-                    'agentic-workspace start --target ./repo --profile tiny --task "<task>" --format json',
+                    'agentic-workspace start --target ./repo --task "<task>" --format json',
                     "agentic-workspace implement --profile tiny --changed <paths> --format json",
                     "agentic-workspace config --target ./repo --profile tiny --format json",
                     "agentic-workspace summary --format json",
@@ -14906,7 +15053,7 @@ def _defaults_payload() -> dict[str, Any]:
             "first_queries": [
                 {
                     "question": "What is the ordinary first-contact path?",
-                    "command": 'agentic-workspace start --profile tiny --task "<task>" --format json',
+                    "command": 'agentic-workspace start --task "<task>" --format json',
                     "field": "immediate_next_allowed_action",
                     "why": "start bundles ordinary startup routing, active-state summary, and task-specific skill recommendations",
                 },
@@ -15040,7 +15187,7 @@ def _defaults_payload() -> dict[str, Any]:
             "workflow_recovery": [
                 (
                     "When takeover or recovery is unclear, prefer "
-                    '`agentic-workspace start --profile tiny --task "<task>" --format json`, then '
+                    '`agentic-workspace start --task "<task>" --format json`, then '
                     "`agentic-workspace preflight --format json`, "
                     "`agentic-workspace defaults --section startup --format json`, "
                     "`agentic-workspace config --target ./repo --profile tiny --format json`, and "
@@ -16462,12 +16609,15 @@ def _run_modules_report_adapter(args: argparse.Namespace) -> int:
 def _run_start_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="start", target_root=target_root)
+    start_profile = "full" if getattr(args, "verbose", False) else getattr(args, "profile", None)
     payload = _start_payload(
         target_root=target_root,
         changed_paths=list(getattr(args, "changed", []) or []),
         task_text=getattr(args, "task", None),
-        profile=getattr(args, "profile", "tiny"),
+        profile=(start_profile or "tiny") if getattr(args, "select", None) else start_profile,
     )
+    if getattr(args, "select", None):
+        payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="start")
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 
@@ -18153,7 +18303,7 @@ def _product_managed_enclave_payload(*, target_root: Path, ownership_payload: di
             "rule": "ordinary startup reads AGENTS.md and compact commands; broad enclave scans are only for selected ownership, report, or module operations",
             "ordinary_entrypoints": [
                 "AGENTS.md",
-                'agentic-workspace start --profile tiny --task "<task>" --format json',
+                'agentic-workspace start --task "<task>" --format json',
                 "agentic-workspace implement --profile tiny --changed <paths> --format json",
                 "agentic-workspace summary --format json",
                 "agentic-workspace preflight --format json for takeover/recovery",

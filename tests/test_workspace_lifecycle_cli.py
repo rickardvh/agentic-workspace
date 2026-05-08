@@ -197,7 +197,7 @@ def test_install_local_only_uses_normal_layout_with_local_startup_indirection(tm
     assert (repo_root / "AGENTS.md").read_text(encoding="utf-8") == "Follow instructions in `AGENTS.local.md` if present.\n"
     local_agents_text = (repo_root / "AGENTS.local.md").read_text(encoding="utf-8")
     assert "<!-- agentic-workspace:workflow:start -->" in local_agents_text
-    assert 'start --profile tiny --task "<task>"' in local_agents_text
+    assert 'start --task "<task>"' in local_agents_text
     assert (repo_root / ".agentic-workspace" / "planning" / "state.toml").exists()
     assert (repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert (repo_root / ".agentic-workspace" / "local" / "scratch").is_dir()
@@ -692,7 +692,7 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
     assert "Do not create planning files" in workflow_text
     agents_text = (target / "AGENTS.md").read_text(encoding="utf-8")
     assert "<!-- agentic-workspace:workflow:start -->" in agents_text
-    assert 'start --profile tiny --task "<task>"' in agents_text
+    assert 'start --task "<task>"' in agents_text
     assert not (target / "AGENTS.local.md").exists()
     assert "Run `agentic-workspace start --format json`" not in agents_text
     assert "Do not substitute a bare `agentic-workspace` command" in agents_text
@@ -716,7 +716,7 @@ def test_install_real_init_can_use_gemini_as_root_startup_entrypoint(tmp_path: P
     assert (target / "GEMINI.md").exists()
     assert not (target / "AGENTS.md").exists()
     gemini_text = (target / "GEMINI.md").read_text(encoding="utf-8")
-    assert 'start --profile tiny --task "<task>"' in gemini_text
+    assert 'start --task "<task>"' in gemini_text
     assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." not in gemini_text
     assert "Read `GEMINI.md` first." in (target / "llms.txt").read_text(encoding="utf-8")
 
@@ -729,7 +729,7 @@ def test_install_real_init_generates_llms_with_compact_startup_path_first(tmp_pa
     assert cli.main(["init", "--target", str(target)]) == 0
 
     llms_text = (target / "llms.txt").read_text(encoding="utf-8")
-    start_index = llms_text.index('agentic-workspace start --profile tiny --task "<task>" --format json')
+    start_index = llms_text.index('agentic-workspace start --task "<task>" --format json')
     preflight_index = llms_text.index("agentic-workspace preflight --format json")
     config_index = llms_text.index("agentic-workspace config --target ./repo --profile tiny --format json")
     summary_index = llms_text.index("agentic-workspace summary --format json")
@@ -1276,7 +1276,7 @@ def test_upgrade_preserves_repo_owned_agents_content_outside_workspace_fence(tmp
     assert "Keep this repo-specific guidance." in updated
     assert "More local instructions." in updated
     assert "<!-- agentic-workspace:workflow:start -->" in updated
-    assert 'start --profile tiny --task "<task>"' in updated
+    assert 'start --task "<task>"' in updated
 
 
 def test_upgrade_dry_run_syncs_module_update_source_metadata_from_repo_config(tmp_path: Path, capsys) -> None:

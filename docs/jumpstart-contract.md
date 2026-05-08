@@ -7,7 +7,7 @@ Jumpstart is the bounded post-bootstrap phase for a newly installed or adopted A
 Start with compact routing:
 
 ```bash
-agentic-workspace start --profile tiny --target . --task "<task>" --format json
+agentic-workspace start --target . --task "<task>" --format json
 agentic-workspace setup --target . --format json
 ```
 

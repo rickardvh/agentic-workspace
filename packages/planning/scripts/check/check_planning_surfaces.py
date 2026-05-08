@@ -1101,7 +1101,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
 
     required_agents_fragments = (
         "<!-- agentic-workspace:workflow:start -->",
-        "<effective-cli> start --profile tiny --task",
+        "<effective-cli> start --task",
         "config.local.toml",
         "immediate_next_allowed_action",
         "skill_routing",
@@ -1120,7 +1120,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         )
 
     if (
-        'agentic-workspace start --profile tiny --task "<task>" --format json' not in quickstart_text
+        'agentic-workspace start --task "<task>" --format json' not in quickstart_text
         or "agentic-workspace summary --format json" not in quickstart_text
         or "do not bulk-read all planning surfaces" not in quickstart_text
         or "## authority table" in quickstart_text
@@ -1139,7 +1139,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         for fragment in (
             "generated compatibility adapter",
             "read `agents.md`",
-            'agentic-workspace start --profile tiny --task "<task>" --format json',
+            'agentic-workspace start --task "<task>" --format json',
             "agentic-workspace proof --profile tiny --changed <paths> --format json",
             "open raw planning or contract files only when compact commands point there",
         )

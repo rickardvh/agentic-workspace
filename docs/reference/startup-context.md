@@ -13,7 +13,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | (root) | object | yes |  | Startup routing payload returned when an agent needs the minimum safe context for entering or resuming work in a repository. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `kind` | const `"startup-context/v1"` | yes |  | Discriminator for the startup context payload shape. |  |  |
 | `target` | string | yes |  | Resolved target repository for the startup decision. |  |  |
-| `invoked_cli_identity` | ref `#/$defs/invoked_cli_identity` | yes |  | Observed identity of the Agentic Workspace CLI that produced this payload. |  |  |
+| `invoked_cli_identity` | ref `#/$defs/invoked_cli_identity` | no |  | Observed identity of the Agentic Workspace CLI that produced this payload. |  |  |
 | `invoked_cli_identity.kind` | const `"agentic-workspace/invoked-cli-identity/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
 | `invoked_cli_identity.package` | const `"agentic-workspace"` | yes |  | Fixed package value required by this contract. |  |  |
 | `invoked_cli_identity.version` | string | yes |  | Version text value used by this contract. |  |  |
@@ -55,20 +55,20 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `cli_invocation.mismatch.invoked_target_relation` | string | yes |  | Whether the invoked CLI module appears inside or outside the target repo. |  |  |
 | `cli_invocation.mismatch.required_next_action` | string | yes |  | Immediate correction step before relying on the startup payload. |  |  |
 | `cli_invocation.mismatch.trust` | string | yes |  | Trust posture to apply until the invocation mismatch is resolved. |  |  |
-| `startup_sequence` | array of object | yes |  | Ordered surfaces and commands an agent should use before opening broader repo context. |  |  |
-| `feature_tier` | object | yes |  | Resolved feature tier and package footprint for the target repository. |  |  |
-| `context_router` | object | yes |  | Available compact context-router views and when to use each one. |  |  |
-| `adaptive_routing` | object | yes |  | Machine-readable need classification, read budget, and escalation detail commands for this startup packet. |  |  |
+| `startup_sequence` | array of object | no |  | Ordered surfaces and commands an agent should use before opening broader repo context. |  |  |
+| `feature_tier` | object | no |  | Resolved feature tier and package footprint for the target repository. |  |  |
+| `context_router` | object | no |  | Available compact context-router views and when to use each one. |  |  |
+| `adaptive_routing` | object | no |  | Machine-readable need classification, read budget, and escalation detail commands for this startup packet. |  |  |
 | `active_state_summary` | object | yes |  | Small active-work projection used to decide whether raw planning state needs to be opened. |  |  |
 | `active_state_summary.todo_active_count` | integer | yes |  | Todo active count numeric value used by this contract. |  |  |
 | `active_state_summary.active_execplan` | string \| null | yes |  | Active execplan contract value used by this contract. |  |  |
 | `active_state_summary.planning_status` | string | yes |  | Planning status text value used by this contract. |  |  |
-| `package_boundary` | ref `#/$defs/package_boundary` | yes |  | Current package/root boundary information for the command invocation. |  |  |
+| `package_boundary` | ref `#/$defs/package_boundary` | no |  | Current package/root boundary information for the command invocation. |  |  |
 | `package_boundary.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
 | `package_boundary.cwd` | string | yes |  | Working directory context used when running the command. |  |  |
 | `package_boundary.warning` | string \| null | yes |  | Warning contract value used by this contract. |  |  |
 | `package_boundary.package_root` | string | no |  | Package root text value used by this contract. |  |  |
-| `authority_markers` | array of ref `#/$defs/authority_marker` | yes |  | Authority markers relevant to startup, ownership, and safe editing. |  |  |
+| `authority_markers` | array of ref `#/$defs/authority_marker` | no |  | Authority markers relevant to startup, ownership, and safe editing. |  |  |
 | `immediate_next_allowed_action` | object | yes |  | Next bounded action the agent may take without reading broader surfaces. |  |  |
 | `immediate_next_allowed_action.action` | string | yes |  | Action text value used by this contract. |  |  |
 | `immediate_next_allowed_action.summary` | string | yes |  | Short human-readable summary for this entry. |  |  |
@@ -79,14 +79,14 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `immediate_next_allowed_action.next_proof` | string | yes |  | Next proof text value used by this contract. |  |  |
 | `immediate_next_allowed_action.read_first` | array of string | yes |  | Ordered read first entries used by this contract. |  |  |
 | `immediate_next_allowed_action.open_execplan_only_when` | string | yes |  | Open execplan only when text value used by this contract. |  |  |
-| `workflow_obligations` | object | yes |  | Repo-configured workflow obligations relevant to the startup context. |  |  |
-| `closeout_obligations` | object | yes |  | Closeout obligations that may apply before claiming work is complete. |  |  |
+| `workflow_obligations` | object | no |  | Repo-configured workflow obligations relevant to the startup context. |  |  |
+| `closeout_obligations` | object | no |  | Closeout obligations that may apply before claiming work is complete. |  |  |
 | `memory_consult` | object | no |  | Memory lookup guidance for durable repo knowledge when startup context says it is relevant. |  |  |
-| `operating_posture` | object | yes |  | Compact statement of the current operating mode and risk posture. |  |  |
+| `operating_posture` | object | no |  | Compact statement of the current operating mode and risk posture. |  |  |
 | `delegation_decision` | object | no |  | Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and task signals. |  |  |
 | `task_intent` | object | no |  | Compact task-intent carry-forward guidance for subsequent implement --changed calls. |  |  |
 | `durable_intent` | object | no |  | Compact durable task, subsystem, and system intent pressure to consider before implementation. |  |  |
-| `skill_routing` | ref `#/$defs/skill_routing` | no |  | Skill-discovery route and fallback guidance for task-specific instructions. |  |  |
+| `skill_routing` | ref `#/$defs/skill_routing` | yes |  | Skill-discovery route and fallback guidance for task-specific instructions. |  |  |
 | `skill_routing.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
 | `skill_routing.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
 | `skill_routing.query` | string | yes |  | Query text value used by this contract. |  |  |
@@ -97,5 +97,6 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `skill_routing.fallback_when_skills_unavailable_count` | integer | no |  | Fallback when skills unavailable count numeric value used by this contract. |  |  |
 | `skill_routing.fallback_detail` | string | no |  | Fallback detail text value used by this contract. |  |  |
 | `skill_routing.preferred_routes` | array of object | yes |  | Ordered preferred routes entries used by this contract. |  |  |
+| `drill_down` | object | no |  | Selector-first affordances for requesting omitted startup detail without widening the whole output. |  |  |
 | `proof` | object | no |  | Proof-selection summary for the current startup or changed-path context. |  |  |
 | `path_boundaries` | array of ref `#/$defs/path_boundary` | no |  | Path-level ownership or package-boundary warnings that constrain the next action. |  |  |

@@ -333,7 +333,7 @@ def test_preflight_full_includes_active_todo_without_execplan(tmp_path: Path, ca
     assert active_state["todo"]["active_count"] == 1
     assert active_state["todo"]["active_items"][0]["next_action"] == "land the preflight fix."
     guidance = payload["startup_guidance"]
-    assert guidance["entry_query"] == 'uv run agentic-workspace start --profile tiny --task "<task>" --format json'
+    assert guidance["entry_query"] == 'uv run agentic-workspace start --task "<task>" --format json'
     assert guidance["escalation_rules"][0]["load_next"][0] == "uv run agentic-workspace defaults --section startup --format json"
     assert guidance["skill_routing"]["preferred_routes"][0]["fallback"] == "uv run agentic-workspace summary --format json"
 
@@ -382,7 +382,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["startup_sequence"][0]["surface"] == "AGENTS.md"
     assert payload["startup_sequence"][1]["command"] == "uv run agentic-workspace preflight --format json"
     assert payload["startup_sequence"][2]["command"] == "uv run agentic-workspace summary --format json"
-    assert payload["context_router"]["views"][0]["command"] == "uv run agentic-workspace start --target ./repo --profile tiny --format json"
+    assert payload["context_router"]["views"][0]["command"] == "uv run agentic-workspace start --target ./repo --format json"
     assert payload["feature_tier"]["active"]["id"] == "planning"
     assert payload["feature_tier"]["active"]["modules"] == ["planning"]
     assert payload["feature_tier"]["active"]["source"] == "selected_modules"
@@ -504,6 +504,43 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert "cli_compatibility" not in payload
     assert "proof" not in payload
     assert len(payload["authority_markers"]) == 1
+
+
+def test_start_default_returns_selector_first_router(capsys) -> None:
+    task = "Promote actionable findings to issues"
+    assert cli.main(["start", "--task", task, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    encoded = json.dumps(payload, sort_keys=True)
+    assert len(encoded) < 3600
+    assert payload["kind"] == "startup-context/v1"
+    assert "adaptive_routing" not in payload
+    assert "context_router" not in payload
+    assert "invoked_cli_identity" not in payload
+    assert payload["immediate_next_allowed_action"]["action"] in {
+        "choose-smallest-workflow-shape",
+        "continue-active-planning-record",
+    }
+    assert payload["active_state_summary"]["todo_active_count"] >= 0
+    assert payload["skill_routing"]["preferred_routes"]
+    assert payload["task_intent"]["implement_changed_command"] == (
+        f'uv run agentic-workspace implement --profile tiny --changed <paths> --task "{task}" --format json'
+    )
+    assert "available_selectors" in payload["drill_down"]
+    assert "cli_invocation" in payload["drill_down"]["available_selectors"]
+
+
+def test_start_select_returns_requested_startup_fields(capsys) -> None:
+    task = "Promote actionable findings to issues"
+    assert cli.main(["start", "--task", task, "--select", "cli_invocation,durable_intent.missing", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["source_kind"] == "startup-context/v1"
+    assert payload["selectors"] == ["cli_invocation", "durable_intent.missing"]
+    assert payload["values"]["cli_invocation"]["primary"] == "uv run agentic-workspace"
+    assert payload["missing"] == ["durable_intent.missing"]
+    assert "skill_routing" in payload["available_selectors"]
 
 
 def test_start_tiny_flags_repo_local_cli_invocation_mismatch(tmp_path: Path, capsys) -> None:
@@ -984,7 +1021,7 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     # Verify the entry and follow-up compact queries use agentic-workspace (not stale bootstrap)
     tiny_safe = startup_answer.get("tiny_safe_model", {})
     assert tiny_safe.get("entrypoint") == "AGENTS.md"
-    assert tiny_safe.get("entry_query") == 'agentic-workspace start --profile tiny --task "<task>" --format json'
+    assert tiny_safe.get("entry_query") == 'agentic-workspace start --task "<task>" --format json'
     queries = tiny_safe.get("first_compact_queries", [])
     assert not any("agentic-workspace preflight --format json" in q for q in queries)
     assert any("agentic-workspace start --target ./repo" in q for q in queries)
@@ -999,7 +1036,7 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     preflight_payload = json.loads(preflight_output)
     assert preflight_payload.get("kind") == "preflight-response/v1"
     assert "startup_guidance" in preflight_payload
-    assert preflight_payload["startup_guidance"]["entry_query"] == 'agentic-workspace start --profile tiny --task "<task>" --format json'
+    assert preflight_payload["startup_guidance"]["entry_query"] == 'agentic-workspace start --task "<task>" --format json'
     assert "agentic-workspace preflight --format json" not in preflight_payload["startup_guidance"]["first_compact_queries"]
     assert preflight_payload["startup_guidance"]["escalation_rules"][0]["load_next"][0].startswith("agentic-workspace ")
     assert "resolved_config" in preflight_payload

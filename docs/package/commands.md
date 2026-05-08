@@ -9,7 +9,7 @@ For machine-readable agent use, prefer the smallest output profile that answers 
 | Command | Use when |
 | --- | --- |
 | `agentic-workspace init --target ./repo --preset memory` | bootstrap the smallest common durable-knowledge install |
-| `agentic-workspace start --target ./repo --profile tiny --task "<task>" --format json` | begin ordinary work from the smallest startup decision card |
+| `agentic-workspace start --target ./repo --task "<task>" --format json` | begin ordinary work from the smallest startup decision card |
 | `agentic-workspace summary --target ./repo --format json` | inspect active planning, handoff, and continuation state |
 | `agentic-workspace preflight --target ./repo --format json` | bundle startup defaults, config, and active state for takeover |
 | `agentic-workspace implement --target ./repo --profile tiny --changed <paths> --format json` | inspect the next implementation decision, path warnings, and required proof commands |

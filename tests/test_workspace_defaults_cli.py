@@ -20,10 +20,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["startup"]["default_canonical_agent_instructions_file"] == "AGENTS.md"
     assert payload["startup"]["supported_agent_instructions_files"] == ["AGENTS.md", "CLAUDE.md", "GEMINI.md", ".cursorrules"]
     assert payload["startup"]["tiny_safe_model"]["entrypoint"] == "AGENTS.md"
-    assert payload["startup"]["tiny_safe_model"]["entry_query"] == 'agentic-workspace start --profile tiny --task "<task>" --format json'
+    assert payload["startup"]["tiny_safe_model"]["entry_query"] == 'agentic-workspace start --task "<task>" --format json'
     assert (
         payload["startup"]["tiny_safe_model"]["first_compact_queries"][0]
-        == 'agentic-workspace start --target ./repo --profile tiny --task "<task>" --format json'
+        == 'agentic-workspace start --target ./repo --task "<task>" --format json'
     )
     assert payload["startup"]["tiny_safe_model"]["deeper_reads_become_valid_when"][0].startswith("the active summary points")
     vague_route = payload["startup"]["vague_outcome_route"]
@@ -37,7 +37,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "optional intake evidence" in work_gate["external_tracker_rule"]
     assert "adaptive_assurance" in work_gate["assurance_rule"]
     assert ".agentic-workspace/planning/state.toml" not in payload["startup"]["primary"][2]
-    assert payload["startup"]["first_queries"][0]["command"] == 'agentic-workspace start --profile tiny --task "<task>" --format json'
+    assert payload["startup"]["first_queries"][0]["command"] == 'agentic-workspace start --task "<task>" --format json'
     assert payload["startup"]["first_queries"][0]["field"] == "immediate_next_allowed_action"
     assert payload["startup"]["first_queries"][1]["command"] == "agentic-workspace defaults --section startup --format json"
     assert payload["startup"]["first_queries"][2]["field"] == "workspace.agent_instructions_file"
@@ -514,7 +514,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["startup"]["workflow_recovery"] == [
         (
             "When takeover or recovery is unclear, prefer "
-            '`agentic-workspace start --profile tiny --task "<task>" --format json`, then '
+            '`agentic-workspace start --task "<task>" --format json`, then '
             "`agentic-workspace preflight --format json`, "
             "`agentic-workspace defaults --section startup --format json`, "
             "`agentic-workspace config --target ./repo --profile tiny --format json`, and "

@@ -14,7 +14,7 @@ def test_invalid_command_shows_preflight_fallback_hint(capsys) -> None:
     assert excinfo.value.code == 2
     stderr = capsys.readouterr().err
     assert "Did you mean: preflight?" in stderr
-    assert 'agentic-workspace start --profile tiny --task "<task>" --format json' in stderr
+    assert 'agentic-workspace start --task "<task>" --format json' in stderr
     assert "agentic-workspace preflight --format json" in stderr
 
 

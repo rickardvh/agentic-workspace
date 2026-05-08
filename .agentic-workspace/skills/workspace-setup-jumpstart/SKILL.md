@@ -9,7 +9,7 @@ Use this skill when Agentic Workspace was newly installed or adopted in a lived-
 
 ## Route
 
-1. Run `agentic-workspace start --profile tiny --target . --task "<task>" --format json`.
+1. Run `agentic-workspace start --target . --task "<task>" --format json`.
 2. Run `agentic-workspace setup --target . --format json` for bounded post-bootstrap setup guidance.
 3. Treat setup as pre-write and pre-seed discovery. Do not bulk-import docs, backlog, or prose.
 4. Inspect only surfaces named by setup output, by the task, or by a durable mature-repo jumpstart memory note.

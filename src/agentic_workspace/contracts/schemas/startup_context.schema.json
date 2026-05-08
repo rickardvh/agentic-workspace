@@ -7,18 +7,9 @@
   "required": [
     "kind",
     "target",
-    "invoked_cli_identity",
-    "startup_sequence",
-    "context_router",
-    "adaptive_routing",
-    "feature_tier",
     "active_state_summary",
-    "package_boundary",
-    "authority_markers",
     "immediate_next_allowed_action",
-    "workflow_obligations",
-    "closeout_obligations",
-    "operating_posture"
+    "skill_routing"
   ],
   "properties": {
     "kind": {
@@ -301,6 +292,11 @@
     "skill_routing": {
       "$ref": "#/$defs/skill_routing",
       "description": "Skill-discovery route and fallback guidance for task-specific instructions."
+    },
+    "drill_down": {
+      "type": "object",
+      "description": "Selector-first affordances for requesting omitted startup detail without widening the whole output.",
+      "additionalProperties": true
     },
     "proof": {
       "type": "object",

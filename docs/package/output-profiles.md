@@ -25,11 +25,11 @@ Abnormal data should remain visible when it changes the next step. Examples incl
 
 ## Command Guidance
 
-Use `implement --profile tiny --changed <paths>` before `start` when the user or current context already names the changed paths. Use `start --profile tiny --task "<task>"` for ordinary first contact when the path scope is unknown.
+Use `implement --profile tiny --changed <paths>` before `start` when the user or current context already names the changed paths. Use `start --task "<task>"` for ordinary first contact when the path scope is unknown.
 
 | Command | Smallest ordinary surface | Deeper surface |
 | --- | --- | --- |
-| `start` | `start --profile tiny --task "<task>" --format json` | `start --profile full --format json` |
+| `start` | `start --task "<task>" --format json` | `start --verbose --format json` |
 | `implement` | `implement --profile tiny --changed <paths> --format json` | `implement --profile full --changed <paths> --format json` |
 | `proof` | `proof --profile tiny --changed <paths> --format json` | `proof --profile full --changed <paths> --format json` |
 | `summary` | `summary --profile compact --format json` | `summary --profile full --format json` |

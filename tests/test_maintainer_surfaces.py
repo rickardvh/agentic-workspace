@@ -121,7 +121,7 @@ def _write_planning_surfaces(tmp_path: Path) -> None:
 # Agent Instructions
 
 <!-- agentic-workspace:workflow:start -->
-Before answering or editing non-trivial requests, including read-only workflow, config, delegation, or action-safety decisions, use the effective CLI invocation from `agentic-workspace start --format json` / `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present. Run `<effective-cli> implement --profile tiny --changed <paths> --format json` when changed paths are known; otherwise run `<effective-cli> start --profile tiny --task "<task>" --format json` using the user's request as `<task>`. Do not substitute a bare `agentic-workspace` command when local config names a repo-local invocation; PATH may resolve a stale installed selector. Do not open raw `.agentic-workspace` files before this command; follow `immediate_next_allowed_action` and `skill_routing` first. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If unavailable, read `.agentic-workspace/WORKFLOW.md`.
+Before answering or editing non-trivial requests, including read-only workflow, config, delegation, or action-safety decisions, use the effective CLI invocation from `agentic-workspace start --format json` / `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present. Run `<effective-cli> implement --profile tiny --changed <paths> --format json` when changed paths are known; otherwise run `<effective-cli> start --task "<task>" --format json` using the user's request as `<task>`. Do not substitute a bare `agentic-workspace` command when local config names a repo-local invocation; PATH may resolve a stale installed selector. Do not open raw `.agentic-workspace` files before this command; follow `immediate_next_allowed_action` and `skill_routing` first. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If unavailable, read `.agentic-workspace/WORKFLOW.md`.
 <!-- agentic-workspace:workflow:end -->
 """,
     )
@@ -134,7 +134,7 @@ Generated compatibility adapter.
 
 Ordinary path:
 - Read `AGENTS.md` first.
-- Run `agentic-workspace start --profile tiny --task "<task>" --format json` for compact startup context.
+- Run `agentic-workspace start --task "<task>" --format json` for compact startup context.
 - Run `agentic-workspace proof --profile tiny --changed <paths> --format json` before claiming validation.
 
 When needed:
@@ -450,9 +450,9 @@ def test_contributor_playbook_routes_first_contact_through_compact_queries() -> 
     text = (WORKSPACE_ROOT / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
     startup_section = text.split("## Start Here", 1)[1].split("##", 1)[0].lower()
 
-    assert 'agentic-workspace start --profile tiny --task "<task>" --format json' in startup_section
+    assert 'agentic-workspace start --task "<task>" --format json' in startup_section
     assert "agentic-workspace summary --format json" in startup_section
-    assert startup_section.index('agentic-workspace start --profile tiny --task "<task>" --format json') < startup_section.index(
+    assert startup_section.index('agentic-workspace start --task "<task>" --format json') < startup_section.index(
         ".agentic-workspace/planning/state.toml"
     )
     assert "only when compact output points there" in startup_section
@@ -494,7 +494,7 @@ def test_rendered_routing_adapter_stays_secondary_and_compact() -> None:
 
     assert "Secondary generated adapter" in text
     assert "Prefer `AGENTS.md`, then `tools/AGENT_QUICKSTART.md`." in text
-    assert 'uv run agentic-workspace start --profile tiny --task "<task>" --format json' in text
+    assert 'uv run agentic-workspace start --task "<task>" --format json' in text
     assert "uv run agentic-workspace summary --format json" in text
     assert "uv run agentic-workspace preflight --format json" not in text
     assert "uv run agentic-workspace report --target . --format json" not in text

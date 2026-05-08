@@ -62,7 +62,7 @@ def test_model_cli_harness_extracts_package_read_surface_summary() -> None:
                     "type": "item.completed",
                     "item": {
                         "type": "command_execution",
-                        "command": "pwsh -Command 'agentic-workspace start --profile tiny --format json'",
+                        "command": "pwsh -Command 'agentic-workspace start --format json'",
                         "aggregated_output": '{\n  "kind": "startup-context/v1"\n}\n',
                         "exit_code": 0,
                         "status": "completed",
@@ -126,10 +126,7 @@ def test_model_cli_harness_does_not_mark_task_punctuation_as_mixed_package_comma
             "type": "item.completed",
             "item": {
                 "type": "command_execution",
-                "command": (
-                    'pwsh -Command "agentic-workspace start --profile tiny '
-                    '--task \\"Redesign policy; provide safe next action\\" --format json"'
-                ),
+                "command": ('pwsh -Command "agentic-workspace start --task \\"Redesign policy; provide safe next action\\" --format json"'),
                 "aggregated_output": "{}\n",
                 "exit_code": 0,
                 "status": "completed",
@@ -234,7 +231,7 @@ def test_model_cli_harness_can_inject_repo_startup_instructions(tmp_path: Path) 
     fixture = tmp_path / "fixtures" / "repo"
     fixture.mkdir(parents=True)
     (fixture / "AGENTS.md").write_text(
-        '<!-- agentic-workspace:workflow:start -->\nRun `agentic-workspace start --profile tiny --task "<task>" --format json` using the user request as `<task>`.\n<!-- agentic-workspace:workflow:end -->\n',
+        '<!-- agentic-workspace:workflow:start -->\nRun `agentic-workspace start --task "<task>" --format json` using the user request as `<task>`.\n<!-- agentic-workspace:workflow:end -->\n',
         encoding="utf-8",
     )
     suite = tmp_path / "suites" / "suite.json"
@@ -272,7 +269,7 @@ def test_model_cli_harness_can_inject_repo_startup_instructions(tmp_path: Path) 
     prompt = payload["results"][0]["prompt"]
     assert prompt.startswith("Do the task.\n\n")
     assert "Repository startup instruction from AGENTS.md to apply before non-trivial requests:" in prompt
-    assert 'start --profile tiny --task "<task>"' in prompt
+    assert 'start --task "<task>"' in prompt
 
 
 def test_model_cli_harness_uses_postmortem_command_without_repo_context(tmp_path: Path, monkeypatch) -> None:
@@ -668,7 +665,7 @@ def test_model_cli_harness_marks_agentic_workspace_permission_denied_as_adapter_
             "returncode": 0,
             "stdout": "",
             "stderr": "",
-            "final_message": "agentic-workspace start --profile tiny: Permission denied and could not request permission from user",
+            "final_message": "agentic-workspace start: Permission denied and could not request permission from user",
         },
         repo_path=repo,
         mutation_summary={"status": "clean"},
@@ -687,7 +684,7 @@ def test_model_cli_harness_marks_missing_shell_tool_as_adapter_limitation(tmp_pa
     warnings = harness._execution_warnings(
         result={
             "returncode": 0,
-            "stdout": "I would run `agentic-workspace start --profile tiny --format json`.",
+            "stdout": "I would run `agentic-workspace start --format json`.",
             "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
         },
         repo_path=repo,
@@ -983,7 +980,7 @@ def test_model_cli_harness_flags_no_aw_baseline_contamination(tmp_path: Path) ->
                             "type": "item.completed",
                             "item": {
                                 "type": "command_execution",
-                                "command": "agentic-workspace start --profile tiny --format json",
+                                "command": "agentic-workspace start --format json",
                             },
                         }
                     ),
@@ -1023,10 +1020,10 @@ def test_model_cli_harness_does_not_score_missing_workspace_execution_when_tool_
     warnings = harness._metadata_workflow_warnings(
         scenario={
             "id": "startup-orientation",
-            "required_executed_commands": ["agentic-workspace start --profile tiny"],
+            "required_executed_commands": ["agentic-workspace start"],
         },
         result={
-            "stdout": "I attempted `agentic-workspace start --profile tiny --format json`.",
+            "stdout": "I attempted `agentic-workspace start --format json`.",
             "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
         },
         mutation_summary={"status": "clean"},
@@ -1210,7 +1207,7 @@ def test_model_cli_harness_accepts_configured_and_bare_workspace_command_equival
     warnings = harness._metadata_workflow_warnings(
         scenario={
             "id": "startup-orientation",
-            "required_executed_commands": ["uv run agentic-workspace start --profile tiny"],
+            "required_executed_commands": ["uv run agentic-workspace start"],
         },
         result={
             "stdout": json.dumps(
@@ -1218,7 +1215,7 @@ def test_model_cli_harness_accepts_configured_and_bare_workspace_command_equival
                     "type": "item.completed",
                     "item": {
                         "type": "command_execution",
-                        "command": 'agentic-workspace start --profile tiny --task "Fix README" --format json',
+                        "command": 'agentic-workspace start --task "Fix README" --format json',
                     },
                 }
             ),

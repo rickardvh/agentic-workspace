@@ -229,7 +229,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert payload["report_profile"]["config_effect_audit"]["warning_count"] == 0
     assert payload["report_profile"]["decision_grade_fields"][0] == "health"
     ordinary_path = payload["report_profile"]["ordinary_agent_path"]
-    assert ordinary_path["entry_command"] == "agentic-workspace start --target ./repo --profile tiny --format json"
+    assert ordinary_path["entry_command"] == "agentic-workspace start --target ./repo --format json"
     assert ordinary_path["current_work_command"] == "agentic-workspace summary --format json"
     assert ordinary_path["proof_command"] == "agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json"
     recovery = ordinary_path["off_happy_path_recovery"]
@@ -241,7 +241,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
         "direct-generated-adapter-edit",
         "hand-authored-durable-artifact",
     }
-    assert recovery["recover_by_default"] == "agentic-workspace start --target ./repo --profile tiny --format json"
+    assert recovery["recover_by_default"] == "agentic-workspace start --target ./repo --format json"
     assert "report_profile.ordinary_agent_path" in payload["report_profile"]["decision_grade_fields"]
     guard = payload["report_profile"]["router_shape_guard"]
     assert guard["status"] == "active"
@@ -391,12 +391,12 @@ def test_report_router_uses_resolved_cli_invoke_for_copyable_commands(tmp_path: 
     assert payload["schema"]["full_profile_command"] == "uv run agentic-workspace report --target ./repo --profile full --format json"
     assert payload["report_profile"]["default_command"] == "uv run agentic-workspace report --target ./repo --format json"
     ordinary_path = payload["report_profile"]["ordinary_agent_path"]
-    assert ordinary_path["entry_command"] == "uv run agentic-workspace start --target ./repo --profile tiny --format json"
+    assert ordinary_path["entry_command"] == "uv run agentic-workspace start --target ./repo --format json"
     assert ordinary_path["state_command"] == "uv run agentic-workspace report --target ./repo --format json"
     assert ordinary_path["current_work_command"] == "uv run agentic-workspace summary --format json"
     assert ordinary_path["proof_command"] == "uv run agentic-workspace proof --target ./repo --profile tiny --changed <paths> --format json"
     recovery = ordinary_path["off_happy_path_recovery"]
-    assert recovery["recover_by_default"] == "uv run agentic-workspace start --target ./repo --profile tiny --format json"
+    assert recovery["recover_by_default"] == "uv run agentic-workspace start --target ./repo --format json"
     assert payload["section_hints"][0]["command"].startswith("uv run agentic-workspace report ")
     if "maintenance_pressure" in payload:
         assert payload["maintenance_pressure"]["subcategories"][0]["section_command"].startswith("uv run agentic-workspace report ")

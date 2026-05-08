@@ -12,7 +12,7 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
     assert "- safe_to_edit: false" in text
     assert "Generated compatibility adapter" in text
     assert "Ordinary path:" in text
-    assert 'agentic-workspace start --profile tiny --task "<task>" --format json' in text
+    assert 'agentic-workspace start --task "<task>" --format json' in text
     assert "agentic-workspace preflight --format json" in text
     assert "agentic-workspace config --target ./repo --profile tiny --format json" in text
     assert "agentic-workspace summary --format json" in text
@@ -30,7 +30,7 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
 def test_external_agent_handoff_text_demotes_broad_routing_until_compact_startup_fails() -> None:
     text = cli._external_agent_handoff_text(selected_modules=["planning"])
 
-    start_index = text.index('agentic-workspace start --profile tiny --task "<task>" --format json')
+    start_index = text.index('agentic-workspace start --task "<task>" --format json')
     preflight_index = text.index("agentic-workspace preflight --format json")
     config_index = text.index("agentic-workspace config --target ./repo --profile tiny --format json")
     summary_index = text.index("agentic-workspace summary --format json")
@@ -70,5 +70,5 @@ def test_external_agent_handoff_text_reports_workflow_artifact_profile() -> None
 
     assert "Workflow artifact profile: gemini." in text
     assert "Generated compatibility adapter" in text
-    assert 'agentic-workspace start --profile tiny --task "<task>" --format json' in text
+    assert 'agentic-workspace start --task "<task>" --format json' in text
     assert "Keep canonical authority in contracts, config, planning, Memory, and checks, not this adapter." in text

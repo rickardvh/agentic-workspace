@@ -339,12 +339,26 @@ export const generatedCommandPackage = {
               "tiny",
               "full"
             ],
-            "default": "tiny",
             "flags": [
               "--profile"
             ],
-            "help": "Startup output profile. Defaults to tiny; use full only when the first-contact routing answer is insufficient.",
+            "help": "Compatibility output profile. Omit for selector-first default output; use full only for broad diagnostics.",
             "name": "profile"
+          },
+          {
+            "flags": [
+              "--select"
+            ],
+            "help": "Comma-separated startup fields to return, such as cli_invocation,durable_intent,skill_routing.",
+            "name": "select"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit broad diagnostic startup output. Prefer --select for ordinary detail.",
+            "name": "verbose"
           },
           {
             "choices": [
