@@ -48,6 +48,13 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `cli_invocation.source` | string | yes |  | Where the preferred invocation was resolved from. |  |  |
 | `cli_invocation.bare_command` | string | yes |  | Default executable name agents may try first. |  |  |
 | `cli_invocation.fallback_when_unavailable` | string | yes |  | Compact recovery guidance when the bare command is not on PATH. |  |  |
+| `cli_invocation.mismatch` | object | no |  | Attention payload shown when startup detects a likely stale or wrong CLI invocation. |  |  |
+| `cli_invocation.mismatch.status` | string | yes |  | Whether the invocation identity needs attention before non-trivial work. |  |  |
+| `cli_invocation.mismatch.reasons` | array of string | yes |  | Compact reasons the invoked CLI may not match the repo's expected invocation. |  |  |
+| `cli_invocation.mismatch.invoked_source_class` | string | yes |  | Class of CLI module that produced this startup payload. |  |  |
+| `cli_invocation.mismatch.invoked_target_relation` | string | yes |  | Whether the invoked CLI module appears inside or outside the target repo. |  |  |
+| `cli_invocation.mismatch.required_next_action` | string | yes |  | Immediate correction step before relying on the startup payload. |  |  |
+| `cli_invocation.mismatch.trust` | string | yes |  | Trust posture to apply until the invocation mismatch is resolved. |  |  |
 | `startup_sequence` | array of object | yes |  | Ordered surfaces and commands an agent should use before opening broader repo context. |  |  |
 | `feature_tier` | object | yes |  | Resolved feature tier and package footprint for the target repository. |  |  |
 | `context_router` | object | yes |  | Available compact context-router views and when to use each one. |  |  |

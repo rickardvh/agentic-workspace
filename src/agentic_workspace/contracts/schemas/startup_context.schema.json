@@ -66,6 +66,48 @@
         "fallback_when_unavailable": {
           "type": "string",
           "description": "Compact recovery guidance when the bare command is not on PATH."
+        },
+        "mismatch": {
+          "type": "object",
+          "required": [
+            "status",
+            "reasons",
+            "invoked_source_class",
+            "invoked_target_relation",
+            "required_next_action",
+            "trust"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "description": "Whether the invocation identity needs attention before non-trivial work."
+            },
+            "reasons": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Compact reasons the invoked CLI may not match the repo's expected invocation."
+            },
+            "invoked_source_class": {
+              "type": "string",
+              "description": "Class of CLI module that produced this startup payload."
+            },
+            "invoked_target_relation": {
+              "type": "string",
+              "description": "Whether the invoked CLI module appears inside or outside the target repo."
+            },
+            "required_next_action": {
+              "type": "string",
+              "description": "Immediate correction step before relying on the startup payload."
+            },
+            "trust": {
+              "type": "string",
+              "description": "Trust posture to apply until the invocation mismatch is resolved."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Attention payload shown when startup detects a likely stale or wrong CLI invocation."
         }
       },
       "additionalProperties": false,

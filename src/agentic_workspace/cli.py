@@ -10552,7 +10552,10 @@ _TASK_STOPWORDS = {
 
 
 def _cli_invocation_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
-    payload = {
+    target_root = config.target_root or Path.cwd()
+    identity = _invoked_cli_identity_payload(target_root=target_root, compact=True)
+    local_config_path = target_root / config_lib.WORKSPACE_LOCAL_CONFIG_PATH
+    payload: dict[str, Any] = {
         "kind": "agentic-workspace/cli-invocation/v1",
         "primary": config.cli_invoke,
         "source": config.cli_invoke_source,
@@ -10563,6 +10566,31 @@ def _cli_invocation_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         payload["stale_bare_command_warning"] = (
             "Do not substitute the bare command for primary; PATH may resolve a stale installed selector outside this repo."
         )
+    mismatch_reasons: list[str] = []
+    if config.cli_invoke_source == "local-override" and identity["target_relation"] == "outside-target":
+        mismatch_reasons.append("invoked CLI module is outside the target repo")
+    if identity["source_class"] == "installed-package" and _is_agentic_workspace_source_checkout(config.target_root):
+        mismatch_reasons.append("target repo looks like an agentic-workspace source checkout but invocation came from an installed package")
+    if config.cli_invoke_source == "product-default" and local_config_path.exists():
+        mismatch_reasons.append(".agentic-workspace/config.local.toml exists but did not supply workspace.cli_invoke")
+    if (
+        config.cli_invoke_source == "product-default"
+        and identity["source_class"] == "installed-package"
+        and identity["target_relation"] == "outside-target"
+    ):
+        mismatch_reasons.append("no repo-local invocation override is active; bare PATH may be stale for this repo")
+    if mismatch_reasons:
+        payload["mismatch"] = {
+            "status": "attention",
+            "reasons": mismatch_reasons,
+            "invoked_source_class": identity["source_class"],
+            "invoked_target_relation": identity["target_relation"],
+            "required_next_action": (
+                "Rerun startup with the configured cli_invocation.primary when it is repo-local; otherwise inspect "
+                ".agentic-workspace/config.local.toml [workspace].cli_invoke before non-trivial edits."
+            ),
+            "trust": "lower-trust-until-confirmed",
+        }
     return payload
 
 

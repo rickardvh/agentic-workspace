@@ -506,6 +506,28 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert len(payload["authority_markers"]) == 1
 
 
+def test_start_tiny_flags_repo_local_cli_invocation_mismatch(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+
+    assert cli.main(["start", "--target", str(target), "--profile", "tiny", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    invocation = payload["cli_invocation"]
+    assert invocation["primary"] == "uv run agentic-workspace"
+    assert invocation["source"] == "local-override"
+    assert invocation["mismatch"]["status"] == "attention"
+    assert invocation["mismatch"]["invoked_target_relation"] == "outside-target"
+    assert "outside the target repo" in invocation["mismatch"]["reasons"][0]
+    assert invocation["mismatch"]["trust"] == "lower-trust-until-confirmed"
+    assert "configured cli_invocation.primary" in invocation["mismatch"]["required_next_action"]
+
+
 def test_start_tiny_keeps_moderate_task_carry_forward_command_executable(capsys) -> None:
     task = (
         "Add robust CSV row importing to this Python package. Implement import_rows_from_csv(text, *, "

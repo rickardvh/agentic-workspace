@@ -2092,34 +2092,95 @@ def planning_reconcile(*, target: str | Path | None = None) -> dict[str, Any]:
     state = _read_state_from_toml(target_root) or {}
     roadmap = state.get("roadmap", {})
     lanes = roadmap.get("lanes", []) if isinstance(roadmap, dict) else []
+    candidates = roadmap.get("candidates", []) if isinstance(roadmap, dict) else []
     closed_lanes: list[dict[str, Any]] = []
+    closed_candidates: list[dict[str, Any]] = []
     if isinstance(lanes, list):
         for lane in lanes:
             if not isinstance(lane, dict):
                 continue
-            issue_refs = [str(item).strip() for item in lane.get("issues", []) if str(item).strip()]
+            issue_refs = sorted(_planning_item_issue_refs(lane))
             if not issue_refs:
                 continue
             matched = [external_items_by_id.get(ref) for ref in issue_refs]
             if matched and all(isinstance(item, dict) and _external_status_is_closed(item.get("status")) for item in matched):
                 closed_lanes.append(
                     {
+                        "path": PLANNING_STATE_PATH.as_posix(),
+                        "surface": "roadmap.lanes",
                         "id": str(lane.get("id", "")).strip(),
                         "title": str(lane.get("title", "")).strip(),
                         "refs": issue_refs,
-                        "recommended_action": "remove or archive this roadmap lane unless a fresh planning owner remains",
+                        "cleanup_action": "remove-roadmap-lane",
+                        "safe_to_prune": True,
+                        "recommended_action": "remove this roadmap lane unless a fresh planning owner remains",
                     }
                 )
+    if isinstance(candidates, list):
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            issue_refs = sorted(_planning_item_issue_refs(candidate))
+            if not issue_refs:
+                continue
+            matched = [external_items_by_id.get(ref) for ref in issue_refs]
+            if matched and all(isinstance(item, dict) and _external_status_is_closed(item.get("status")) for item in matched):
+                closed_candidates.append(
+                    {
+                        "path": PLANNING_STATE_PATH.as_posix(),
+                        "surface": "roadmap.candidates",
+                        "id": str(candidate.get("id", "")).strip(),
+                        "title": str(candidate.get("title") or candidate.get("summary") or "").strip(),
+                        "refs": issue_refs,
+                        "cleanup_action": "remove-roadmap-candidate",
+                        "safe_to_prune": True,
+                        "recommended_action": "remove this roadmap candidate unless a fresh planning owner remains",
+                    }
+                )
+
+    stale_decompositions = _stale_completed_decomposition_records(
+        target_root=target_root,
+        external_items_by_id=external_items_by_id,
+    )
 
     recommendations: list[str] = []
     if completed_execplans:
         recommendations.append("Archive completed live execplans or return them to active status.")
-    if closed_lanes:
-        recommendations.append("Prune roadmap lanes whose supplied external-work items are all closed or resolved.")
+    if closed_lanes or closed_candidates:
+        recommendations.append("Prune roadmap entries whose supplied external-work items are all closed or resolved.")
+    if stale_decompositions:
+        recommendations.append("Prune or archive decomposition records whose linked external-work items are all closed or resolved.")
     if current_external_work.get("untracked_open_count", 0):
         recommendations.append("Route open external-work items into active or candidate checked-in planning state.")
     if not recommendations:
         recommendations.append("No reconcile cleanup found from supplied provider-agnostic evidence.")
+    stale_artifacts = [
+        *[
+            {
+                "kind": "completed-live-execplan",
+                "path": str(plan.get("path", "")),
+                "id": str(plan.get("id", "") or Path(str(plan.get("path", ""))).name),
+                "status": str(plan.get("status", "")),
+                "cleanup_action": "archive-plan",
+                "safe_to_prune": False,
+                "recommended_action": "archive with agentic-planning archive-plan",
+            }
+            for plan in completed_execplans
+        ],
+        *[{"kind": "closed-roadmap-lane", **item} for item in closed_lanes],
+        *[{"kind": "closed-roadmap-candidate", **item} for item in closed_candidates],
+        *[{"kind": "closed-decomposition-record", **item} for item in stale_decompositions],
+    ]
+    cleanup_targets = [
+        {
+            key: item[key]
+            for key in ("kind", "path", "surface", "id", "refs", "cleanup_action", "safe_to_prune", "recommended_action")
+            if key in item and item[key] not in ("", [], {}, None)
+        }
+        for item in stale_artifacts
+    ]
+    stale_artifact_count = len(stale_artifacts)
+    status = "attention-needed" if stale_artifact_count or current_external_work.get("untracked_open_count", 0) else "clean"
 
     return {
         "kind": "planning-reconcile/v1",
@@ -2131,9 +2192,19 @@ def planning_reconcile(*, target: str | Path | None = None) -> dict[str, Any]:
             ),
         },
         "target_root": str(target_root),
-        "status": "attention-needed"
-        if completed_execplans or closed_lanes or current_external_work.get("untracked_open_count", 0)
-        else "clean",
+        "status": status,
+        "completed_work_reconciliation": {
+            "kind": "planning-completed-work-reconciliation/v1",
+            "status": "stale-artifacts" if stale_artifact_count else "clean",
+            "stale_artifact_count": stale_artifact_count,
+            "cleanup_target_count": len(cleanup_targets),
+            "cleanup_targets": cleanup_targets,
+            "rule": (
+                "Closed external-work references may only prune live planning state when every explicit issue/ref on that "
+                "artifact resolves to a closed external item; ambiguous artifacts are reported, not deleted."
+            ),
+            "apply_command": "No automatic prune command is available yet; remove exact safe_to_prune targets or archive completed execplans explicitly.",
+        },
         "external_work_state": current_external_work,
         "historical_audit_references": historical_audit_references,
         "stale_forward_state": {
@@ -2146,6 +2217,8 @@ def planning_reconcile(*, target: str | Path | None = None) -> dict[str, Any]:
                 for plan in completed_execplans
             ],
             "closed_roadmap_lanes": closed_lanes,
+            "closed_roadmap_candidates": closed_candidates,
+            "closed_decomposition_records": stale_decompositions,
         },
         "recommendations": recommendations,
     }
@@ -2767,6 +2840,75 @@ def _planning_decomposition_projection(*, target_root: Path, decomposition_dir: 
             "while ready implementation slices are promoted into execplans."
         ),
     }
+
+
+def _decomposition_issue_refs(payload: dict[str, Any]) -> set[str]:
+    refs: set[str] = set()
+    for value in (payload.get("title", ""), payload.get("larger_intended_outcome", ""), payload.get("notes", "")):
+        token = _reference_issue_token(str(value))
+        if token:
+            refs.add(token)
+        refs.update(_issue_refs_from_text(str(value)))
+    raw_references = payload.get("references", [])
+    if isinstance(raw_references, list):
+        for raw in raw_references:
+            if isinstance(raw, dict):
+                target = str(raw.get("target", ""))
+                token = _reference_issue_token(target)
+                if token:
+                    refs.add(token)
+                refs.update(_issue_refs_from_text(target))
+            else:
+                token = _reference_issue_token(str(raw))
+                if token:
+                    refs.add(token)
+                refs.update(_issue_refs_from_text(str(raw)))
+    raw_lanes = payload.get("candidate_lanes", [])
+    if isinstance(raw_lanes, list):
+        for raw_lane in raw_lanes:
+            if not isinstance(raw_lane, dict):
+                continue
+            refs.update(_planning_item_issue_refs(raw_lane, text_fields=("id", "title", "outcome", "owner_surface", "proof")))
+    return refs
+
+
+def _stale_completed_decomposition_records(
+    *,
+    target_root: Path,
+    external_items_by_id: dict[str, Any],
+) -> list[dict[str, Any]]:
+    decomposition_dir = target_root / ".agentic-workspace" / "planning" / "decompositions"
+    if not decomposition_dir.exists():
+        return []
+    stale_records: list[dict[str, Any]] = []
+    for path in sorted(decomposition_dir.glob("*.decomposition.json")):
+        if path.name == "TEMPLATE.decomposition.json":
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict) or payload.get("kind") != "planning-decomposition/v1":
+            continue
+        issue_refs = sorted(_decomposition_issue_refs(payload))
+        if not issue_refs:
+            continue
+        matched = [external_items_by_id.get(ref) for ref in issue_refs]
+        if matched and all(isinstance(item, dict) and _external_status_is_closed(item.get("status")) for item in matched):
+            stale_records.append(
+                {
+                    "path": path.relative_to(target_root).as_posix(),
+                    "surface": "planning.decompositions",
+                    "id": path.name[: -len(".decomposition.json")],
+                    "title": str(payload.get("title", "")).strip(),
+                    "refs": issue_refs,
+                    "status": str(payload.get("status", "")).strip(),
+                    "cleanup_action": "remove-decomposition-record",
+                    "safe_to_prune": True,
+                    "recommended_action": "remove this decomposition record unless a fresh planning owner remains",
+                }
+            )
+    return stale_records
 
 
 def _autopilot_loop_status(
@@ -6400,6 +6542,11 @@ def _planning_surface_reference_index(target_root: Path) -> dict[str, str]:
             path
             for path in sorted((target_root / ".agentic-workspace" / "planning" / "reviews").glob("*.review.json"))
             if path.name != "TEMPLATE.review.json"
+        ],
+        *[
+            path
+            for path in sorted((target_root / ".agentic-workspace" / "planning" / "decompositions").glob("*.decomposition.json"))
+            if path.name != "TEMPLATE.decomposition.json"
         ],
     ]
     for path in candidate_paths:

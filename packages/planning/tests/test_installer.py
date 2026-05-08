@@ -106,8 +106,30 @@ lanes = [
   { id = "closed-lane", title = "Closed lane", priority = "first", issues = ["EXT-1"], outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "None." },
   { id = "mixed-lane", title = "Mixed lane", priority = "second", issues = ["EXT-1", "EXT-2"], outcome = "Mixed.", reason = "Mixed.", promotion_signal = "None.", suggested_first_slice = "None." },
 ]
-candidates = []
+candidates = [
+  { id = "closed-candidate", title = "Closed candidate", priority = "third", refs = "EXT-1", outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "None." },
+]
 """,
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/decompositions/closed-migration.decomposition.json",
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Closed migration EXT-1",
+                "status": "complete",
+                "larger_intended_outcome": "Complete EXT-1",
+                "non_goals": [],
+                "candidate_lanes": [],
+                "dependency_assumptions": [],
+                "parallelization_assumptions": [],
+                "proof_expectations": [],
+                "promotion_rule": "",
+                "references": [{"kind": "issue", "target": "EXT-1", "role": "related-work"}],
+                "notes": "",
+            },
+            indent=2,
+        ),
     )
     _write_external_intent_evidence(
         tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
@@ -143,6 +165,20 @@ candidates = []
     closed_lanes = reconcile["stale_forward_state"]["closed_roadmap_lanes"]
     assert [lane["id"] for lane in closed_lanes] == ["closed-lane"]
     assert closed_lanes[0]["refs"] == ["EXT-1"]
+    closed_candidates = reconcile["stale_forward_state"]["closed_roadmap_candidates"]
+    assert [candidate["id"] for candidate in closed_candidates] == ["closed-candidate"]
+    closed_decompositions = reconcile["stale_forward_state"]["closed_decomposition_records"]
+    assert [record["id"] for record in closed_decompositions] == ["closed-migration"]
+    completed = reconcile["completed_work_reconciliation"]
+    assert completed["status"] == "stale-artifacts"
+    assert completed["stale_artifact_count"] == 3
+    cleanup_targets = completed["cleanup_targets"]
+    assert [target["cleanup_action"] for target in cleanup_targets] == [
+        "remove-roadmap-lane",
+        "remove-roadmap-candidate",
+        "remove-decomposition-record",
+    ]
+    assert all(target["safe_to_prune"] is True for target in cleanup_targets)
 
 
 def test_planning_cli_reconcile_outputs_provider_agnostic_state(tmp_path: Path, capsys) -> None:
