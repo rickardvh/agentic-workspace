@@ -2125,29 +2125,40 @@ def main(argv: list[str] | None = None) -> int:
             from repo_planning_bootstrap.cli import _print_summary
             from repo_planning_bootstrap.installer import format_summary_json, planning_summary
 
-            summary_profile = (
-                "full" if getattr(args, "select", None) else _diagnostic_profile(args, default="tiny") if args.format == "json" else "full"
-            )
-            summary = planning_summary(
-                target=target_root.as_posix(),
-                profile=summary_profile,
-                task_text=getattr(args, "task", None),
-                changed_paths=list(getattr(args, "changed", []) or []),
-            )
-            if isinstance(summary, dict):
-                config = _load_workspace_config(target_root=target_root)
-                summary["memory_consult"] = _memory_consult_payload(
+            config = _load_workspace_config(target_root=target_root)
+            changed_paths = list(getattr(args, "changed", []) or [])
+            if getattr(args, "select", None):
+                payload = _select_summary_payload(
                     target_root=target_root,
-                    compact=summary_profile == "compact",
+                    select=getattr(args, "select"),
+                    task_text=getattr(args, "task", None),
+                    changed_paths=changed_paths,
+                    planning_summary=planning_summary,
                     cli_invoke=config.cli_invoke,
                 )
-            if getattr(args, "select", None):
-                payload = _select_payload_fields(summary, select=getattr(args, "select"), source_command="summary")
                 _emit_payload(payload=payload, format_name=args.format)
-            elif args.format == "json":
-                print(format_summary_json(summary))
             else:
-                _print_summary(summary)
+                summary_profile = _diagnostic_profile(args, default="tiny") if args.format == "json" else "full"
+                summary = planning_summary(
+                    target=target_root.as_posix(),
+                    profile=summary_profile,
+                    task_text=getattr(args, "task", None),
+                    changed_paths=changed_paths,
+                )
+                if isinstance(summary, dict):
+                    summary["memory_consult"] = (
+                        _memory_consult_payload(
+                            target_root=target_root,
+                            compact=False,
+                            cli_invoke=config.cli_invoke,
+                        )
+                        if summary_profile == "full"
+                        else _tiny_memory_consult_payload(config=config)
+                    )
+                if args.format == "json":
+                    print(format_summary_json(summary))
+                else:
+                    _print_summary(summary)
             return 0
         except ImportError:
             parser.error("The planning module must be installed to use the summary command.")
@@ -10254,6 +10265,7 @@ def _select_payload_fields(payload: dict[str, Any], *, select: str | None, sourc
         "kind": "agentic-workspace/selected-output/v1",
         "source_command": source_command,
         "source_kind": payload.get("kind"),
+        "source_profile": payload.get("profile"),
         "target": payload.get("target"),
         "selectors": selectors,
         "values": values,
@@ -10261,6 +10273,62 @@ def _select_payload_fields(payload: dict[str, Any], *, select: str | None, sourc
         "selector_rule": "Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing.",
         "available_selectors": _available_selectors_for_payload(payload),
     }
+
+
+def _select_summary_payload(
+    *,
+    target_root: Path,
+    select: str,
+    task_text: str | None,
+    changed_paths: list[str],
+    planning_summary: Any,
+    cli_invoke: str,
+) -> dict[str, Any]:
+    tiny_summary = planning_summary(
+        target=target_root.as_posix(),
+        profile="tiny",
+        task_text=task_text,
+        changed_paths=changed_paths,
+    )
+    if isinstance(tiny_summary, dict):
+        tiny_summary["memory_consult"] = (
+            _memory_consult_payload(
+                target_root=target_root,
+                changed_paths=changed_paths,
+                compact=True,
+                cli_invoke=cli_invoke,
+            )
+            if changed_paths
+            else _tiny_memory_consult_payload(config=_load_workspace_config(target_root=target_root))
+        )
+    selected = _select_payload_fields(tiny_summary, select=select, source_command="summary")
+    if not selected["missing"]:
+        selected["selection_cost"] = {
+            "profile_loaded": "tiny",
+            "fallback_profile_loaded": False,
+            "rule": "Summary selectors use the small summary first and only load broad detail when selected fields are absent.",
+        }
+        return selected
+
+    full_summary = planning_summary(
+        target=target_root.as_posix(),
+        profile="full",
+        task_text=task_text,
+        changed_paths=changed_paths,
+    )
+    if isinstance(full_summary, dict):
+        full_summary["memory_consult"] = _memory_consult_payload(
+            target_root=target_root,
+            compact=False,
+            cli_invoke=cli_invoke,
+        )
+    selected = _select_payload_fields(full_summary, select=select, source_command="summary")
+    selected["selection_cost"] = {
+        "profile_loaded": "full",
+        "fallback_profile_loaded": True,
+        "rule": "One or more selected fields were outside the small summary, so broad detail was loaded.",
+    }
+    return selected
 
 
 def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
@@ -16639,29 +16707,40 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     from repo_planning_bootstrap.cli import _print_summary
     from repo_planning_bootstrap.installer import format_summary_json, planning_summary
 
-    summary_profile = (
-        "full" if getattr(args, "select", None) else _diagnostic_profile(args, default="tiny") if args.format == "json" else "full"
-    )
-    summary = planning_summary(
-        target=target_root.as_posix(),
-        profile=summary_profile,
-        task_text=getattr(args, "task", None),
-        changed_paths=list(getattr(args, "changed", []) or []),
-    )
-    if isinstance(summary, dict):
-        config = _load_workspace_config(target_root=target_root)
-        summary["memory_consult"] = _memory_consult_payload(
+    config = _load_workspace_config(target_root=target_root)
+    changed_paths = list(getattr(args, "changed", []) or [])
+    if getattr(args, "select", None):
+        payload = _select_summary_payload(
             target_root=target_root,
-            compact=summary_profile in {"tiny", "compact"},
+            select=getattr(args, "select"),
+            task_text=getattr(args, "task", None),
+            changed_paths=changed_paths,
+            planning_summary=planning_summary,
             cli_invoke=config.cli_invoke,
         )
-    if getattr(args, "select", None):
-        payload = _select_payload_fields(summary, select=getattr(args, "select"), source_command="summary")
         _emit_payload(payload=payload, format_name=args.format)
-    elif args.format == "json":
-        print(format_summary_json(summary))
     else:
-        _print_summary(summary)
+        summary_profile = _diagnostic_profile(args, default="tiny") if args.format == "json" else "full"
+        summary = planning_summary(
+            target=target_root.as_posix(),
+            profile=summary_profile,
+            task_text=getattr(args, "task", None),
+            changed_paths=changed_paths,
+        )
+        if isinstance(summary, dict):
+            summary["memory_consult"] = (
+                _memory_consult_payload(
+                    target_root=target_root,
+                    compact=False,
+                    cli_invoke=config.cli_invoke,
+                )
+                if summary_profile == "full"
+                else _tiny_memory_consult_payload(config=config)
+            )
+        if args.format == "json":
+            print(format_summary_json(summary))
+        else:
+            _print_summary(summary)
     return 0
 
 
