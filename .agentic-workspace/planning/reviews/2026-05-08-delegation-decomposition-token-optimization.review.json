@@ -1,0 +1,179 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Delegation Decomposition Token Optimization Review",
+  "date": "2026-05-08",
+  "goal": [
+    "Review how task decomposition and Planning should better support delegation that saves tokens only when quality, proof, and review trust remain safe.",
+    "Check whether exploration-style delegation is missing from the current planner/implementer/validator framing."
+  ],
+  "scope": [
+    "Planning decomposition, delegation posture, orchestrator workflow, capability-aware execution, local config effects, and delegation-facing CLI outputs."
+  ],
+  "non_goals": [
+    "Do not implement delegation changes in this review pass.",
+    "Do not require every auto-mode task to delegate.",
+    "Do not hard-bind shared repo policy to one vendor, model, or runtime-specific subagent mechanism."
+  ],
+  "classification": "context-cost",
+  "review_mode": {
+    "mode": "context-cost",
+    "review question": "How can decomposition and Planning make safe token-saving delegation more obvious after a plan exists, including exploration tasks?",
+    "default finding cap": "2 findings for context-cost; expanded to 3 because post-decomposition routing, exploration, and feedback/outcome evidence are distinct gates.",
+    "inputs inspected first": "agentic-workspace start --profile tiny; planning review/orchestrator skills; capability-aware execution docs; delegation posture contract; capability contract; defaults delegation_posture and relay outputs; relevant CLI/test references for delegation decisions."
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --profile tiny --task \"Create a review of how task decomposition and planning could better be used for delegation to save tokens without compromising quality, including exploration delegation gaps\" --format json; Get-Content planning review/orchestrator skills; rg delegation/exploration/capability signals; uv run agentic-workspace config --profile tiny --format json; uv run agentic-workspace defaults --section delegation_posture --format json; uv run agentic-workspace defaults --section relay --format json",
+    "evidence sources": "Static review of shipped delegation docs and skills plus live startup/config/defaults routing from the current repo. Runtime-policy comparison used only as design input: Codex-style delegation commonly includes bounded sidecar exploration, while current package surfaces emphasize planner/implementer/validator."
+  },
+  "references": [
+    {
+      "kind": "doc",
+      "target": ".agentic-workspace/docs/capability-aware-execution.md",
+      "label": "Capability-aware execution",
+      "role": "Defines quality-first capability fit and token-saving boundaries",
+      "locator": "Delegation-Friendly; Practical Test; Delegation And Model Neutrality"
+    },
+    {
+      "kind": "doc",
+      "target": ".agentic-workspace/docs/delegation-posture-contract.md",
+      "label": "Delegation posture contract",
+      "role": "Defines planner/implementer/validator split and handoff packets",
+      "locator": "Rule; Capability Posture; Capability Handoff Packets"
+    },
+    {
+      "kind": "skill",
+      "target": ".agentic-workspace/planning/skills/planning-orchestrator-workflow/SKILL.md",
+      "label": "Planning orchestrator workflow",
+      "role": "Active workflow for planner-to-worker execution",
+      "locator": "Workflow; Worker Contract; Output"
+    },
+    {
+      "kind": "command",
+      "target": "agentic-workspace defaults --section delegation_posture --format json",
+      "label": "Delegation posture defaults",
+      "role": "Machine-readable delegation posture summary",
+      "locator": "preferred_split; capability_posture_fields"
+    },
+    {
+      "kind": "command",
+      "target": "agentic-workspace defaults --section relay --format json",
+      "label": "Relay defaults",
+      "role": "Machine-readable planner-to-bounded-executor handoff contract",
+      "locator": "planner_role; implementer_role; worker_boundary"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Post-decomposition delegation is not explicit enough",
+      "summary": "The package can classify a whole request as needing stronger planning, but after a plan or execplan narrows the work it does not require a second routing pass that asks which sub-slices are now safe for cheaper execution.",
+      "evidence": "The live start output for this review selected auto mode and stronger-planner-style escalation. Existing docs say delegation is useful when a stronger planner can reduce ambiguity for a smaller implementer, and relay defaults define planner and implementer roles. However, the compact startup/implement path surfaces one delegation decision for the current task rather than a decomposition-indexed set of candidate sub-slices with costs, risks, and target fit.",
+      "risk if unchanged": "Strong agents will keep doing all work locally once they have a plan, even when mechanical implementation, focused verification, or sidecar inspection could be safely delegated. Conversely, weak agents may still treat a broad task as globally delegable rather than waiting for the plan to isolate safe slices.",
+      "suggested action": "Add a post-decomposition delegation review surface that runs after promotion/decomposition/execplan creation and emits per-slice routing candidates: keep-local, delegate-exploration, delegate-implementation, delegate-validation, escalate-review, or no-safe-route. Include expected token-saving class, quality risk, proof burden, required read-first refs, write scope, stop conditions, and return contract.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "roadmap candidate or issue for decomposition-indexed delegation recommendations",
+      "promotion trigger": "Promote when the next delegation lane starts, or sooner if more dogfooding shows auto-mode strong agents repeatedly skip safe downrouting after planning.",
+      "post-remediation note shape": "shrink to a short pointer once a post-decomposition delegation surface is implemented and covered by tests"
+    },
+    {
+      "title": "Exploration is missing as a first-class delegation task",
+      "summary": "The shipped delegation vocabulary centers on planner, implementer, and validator, but autonomous agent delegation commonly uses bounded exploration as a separate sidecar role.",
+      "evidence": "Delegation posture defaults return preferred_split = planner, implementer, validator. The orchestrator skill also frames the split around planner and worker execution. The current docs mention inspection evidence, but not an explorer role with a no-write contract. By contrast, common subagent policy patterns treat explorers as useful for concrete codebase questions that can run in parallel without blocking the orchestrator's immediate next step.",
+      "risk if unchanged": "The orchestrator lacks a cheap, safe option for repo inspection tasks such as locating ownership, checking generated-output drift, summarizing test coverage, or finding likely affected files. Those tasks can consume many tokens when done by the main agent, but are often safe for cheaper agents if they are read-only, bounded, and return compact evidence.",
+      "suggested action": "Extend the delegation posture and handoff packet vocabulary with an `explorer` or `inspection` task class. It should default to read-only, no mutation, bounded file/command scope, compact answer shape, and explicit stop conditions. The planner should use it for sidecar questions that materially reduce uncertainty while the main agent continues non-overlapping work.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "roadmap candidate or issue for exploration delegation role and handoff packet",
+      "promotion trigger": "Promote with the post-decomposition delegation lane or the next model-evaluation loop focused on token cost.",
+      "post-remediation note shape": "delete after exploration is represented in docs, defaults, skill routing, and tests"
+    },
+    {
+      "title": "Delegation outcome evidence is not tied back to decomposition quality",
+      "summary": "The package has delegation target metadata and local outcome evidence, but reviews/plans do not clearly ask whether a slice was delegated, whether it saved cost safely, or whether failures indicate that decomposition was poor.",
+      "evidence": "The delegation posture contract references `.agentic-workspace/delegation-outcomes.json` and states token saving is valid only after proof and review trust remain safe. The orchestrator skill asks output to record whether delegation stayed direct, internal, or external and what overhead remained. It does not yet connect those outcomes to structured decomposition improvements such as smaller slices, clearer validation, or better explorer prompts.",
+      "risk if unchanged": "Delegation decisions remain one-off judgment. The system will not learn which slice shapes are too broad for cheap agents, which exploration prompts pay back, or when direct execution is cheaper than handoff overhead.",
+      "suggested action": "Add a lightweight delegation postmortem field to execplans/reviews or the handoff return contract: route chosen, route skipped reason, expected savings, actual friction, proof result, quality concern, and decomposition adjustment. Aggregate repeated signals into review or roadmap candidates rather than forcing delegation by policy.",
+      "confidence": "medium",
+      "source": "static-analysis",
+      "promotion target": "roadmap candidate or issue for delegation outcome feedback into decomposition",
+      "promotion trigger": "Promote after at least one more real delegated/did-not-delegate dogfooding loop confirms the fields are useful and not noisy.",
+      "post-remediation note shape": "shrink after outcome feedback is represented in templates and compact reports"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote a bounded lane to add post-decomposition delegation recommendations and an exploration/inspection delegation role. Treat it as an ergonomics and token-cost optimization lane, not as a mandate to delegate every auto-mode task.",
+    "defer": "Defer broad automation that schedules or executes arbitrary delegated tasks. Keep auto delegation constrained by local config, task fit, proof burden, and human-control mode.",
+    "dismiss": "Do not add policy saying all auto-mode tasks should delegate. The correct policy is quality-first downrouting only when the planned slice is cheap to hand off and safe to prove."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "findings promoted, dismissed, or superseded",
+    "proof surface": "future issues, updated delegation posture docs/defaults, orchestrator skill changes, tests, and model-evaluation evidence",
+    "source retention rule": "Keep the three decisions and evidence refs; do not retain long grep output or copied runtime policy text.",
+    "distillation path": "Promote actionable findings to Planning/GitHub issues; move stable delegation terminology into docs/defaults; keep this review only as a compact decision stub after remediation.",
+    "reconstructable refs": [
+      ".agentic-workspace/docs/capability-aware-execution.md",
+      ".agentic-workspace/docs/delegation-posture-contract.md",
+      ".agentic-workspace/planning/skills/planning-orchestrator-workflow/SKILL.md",
+      "agentic-workspace defaults --section delegation_posture --format json",
+      "agentic-workspace defaults --section relay --format json"
+    ],
+    "fields intentionally omitted": [
+      "full command output",
+      "local absolute paths",
+      "runtime-private policy wording",
+      "vendor-specific target recommendations"
+    ]
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run agentic-workspace start --profile tiny --task \"Create a review of how task decomposition and planning could better be used for delegation to save tokens without compromising quality, including exploration delegation gaps\" --format json",
+    "uv run agentic-workspace config --profile tiny --format json",
+    "uv run agentic-workspace defaults --section delegation_posture --format json",
+    "uv run agentic-workspace defaults --section relay --format json",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "drift_log": [
+    "2026-05-08: Review record created by create-review.",
+    "2026-05-08: Filled review after comparing package delegation surfaces with common autonomous delegation patterns, especially bounded exploration."
+  ]
+}
