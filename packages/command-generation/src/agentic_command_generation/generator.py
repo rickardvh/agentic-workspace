@@ -22,7 +22,11 @@ def _maturity_levels(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def _is_runnable_typescript_target(target: dict[str, Any]) -> bool:
-    return target.get("maturity_level_ref") == "runnable-read-only-adapter"
+    return target.get("maturity_level_ref") in {"runnable-read-only-adapter", "weak-agent-safe-adapter"}
+
+
+def _is_weak_agent_safe_typescript_target(target: dict[str, Any]) -> bool:
+    return target.get("maturity_level_ref") == "weak-agent-safe-adapter"
 
 
 def _is_runtime_backed_python_target(target: dict[str, Any]) -> bool:
@@ -221,6 +225,9 @@ def _typescript_cli_module(
     command_names = sorted(command["command"]["name"] for command in package["commands"])
     rendered_commands = json.dumps(command_names)
     default_runtime_command = json.dumps(_runtime_command_for_package(package, runtime_binding))
+    weak_agent_safe = _is_weak_agent_safe_typescript_target(target)
+    weak_agent_status = "allowed-read-only" if weak_agent_safe else "review-required"
+    recovery_command = f"{target['entrypoints'][0]} --help"
     return (
         "#!/usr/bin/env node\n"
         "// Generated runnable read-only adapter.\n"
@@ -236,16 +243,27 @@ def _typescript_cli_module(
         "if (!command || command === '--help' || command === '-h') {\n"
         f"  console.log(`Usage: {target['entrypoints'][0]} <command> [options]`);\n"
         "  console.log(`Supported generated commands: ${Array.from(supportedCommands).join(', ')}`);\n"
+        f"  console.log('Weak-agent routing: {weak_agent_status}');\n"
+        "  console.log('Recovery: use a supported generated command or route back to the canonical Python CLI.');\n"
         "  process.exit(0);\n"
         "}\n\n"
         "if (!supportedCommands.has(command)) {\n"
         "  console.error(`Unsupported generated command: ${command}`);\n"
+        f"  console.error('Recovery: run {recovery_command} and choose one of the supported generated commands.');\n"
         "  process.exit(2);\n"
         "}\n\n"
-        f"const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME || {default_runtime_command};\n"
-        "const result = spawnSync(runtimeCommand, argv, { encoding: 'utf8', shell: true, maxBuffer: 16 * 1024 * 1024 });\n"
+        f"const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? {default_runtime_command};\n"
+        "let result;\n"
+        "try {\n"
+        "  result = spawnSync(runtimeCommand, argv, { encoding: 'utf8', shell: true, maxBuffer: 16 * 1024 * 1024 });\n"
+        "} catch (error) {\n"
+        "  console.error(`Adapter runtime handoff failed: ${error.message}`);\n"
+        "  console.error('Recovery: verify AGENTIC_WORKSPACE_RUNTIME or run the canonical Python CLI directly.');\n"
+        "  process.exit(1);\n"
+        "}\n"
         "if (result.error) {\n"
         "  console.error(`Adapter runtime handoff failed: ${result.error.message}`);\n"
+        "  console.error('Recovery: verify AGENTIC_WORKSPACE_RUNTIME or run the canonical Python CLI directly.');\n"
         "  process.exit(1);\n"
         "}\n"
         "if (result.stdout) writeSync(1, result.stdout);\n"
@@ -263,8 +281,10 @@ def _typescript_test(package: dict[str, Any], target: dict[str, Any]) -> str:
     rendered_expected = json.dumps(expected_commands)
     sample_command = expected_commands[0]
     runnable = _is_runnable_typescript_target(target)
+    weak_agent_safe = _is_weak_agent_safe_typescript_target(target)
     expected_maturity = target["maturity_level_ref"]
     expected_generation_status = target["generation_status"]
+    expected_weak_agent_routing = "allowed-read-only" if weak_agent_safe else "review-required"
     imports = "import assert from 'node:assert/strict';\nimport test from 'node:test';\n"
     if runnable:
         imports += "import { spawnSync } from 'node:child_process';\nimport { fileURLToPath } from 'node:url';\n"
@@ -294,7 +314,7 @@ def _typescript_test(package: dict[str, Any], target: dict[str, Any]) -> str:
         body += (
             "  assert.equal(metadata.fixtureOnly, false);\n"
             "  assert.equal(metadata.maturity.runnable, true);\n"
-            "  assert.equal(metadata.maturity.weak_agent_routing, 'review-required');\n"
+            f"  assert.equal(metadata.maturity.weak_agent_routing, {expected_weak_agent_routing!r});\n"
             "  assert.ok(packageJson.bin);\n"
         )
     else:
@@ -320,6 +340,35 @@ def _typescript_test(package: dict[str, Any], target: dict[str, Any]) -> str:
             "  const payload = JSON.parse(result.stdout);\n"
             f"  assert.equal(payload.command, {sample_command!r});\n"
             f"  assert.deepEqual(payload.args, [{sample_command!r}, '--format', 'json']);\n"
+            "});\n"
+            "\n"
+            "test('generated runnable adapter exposes routing status and recovery guidance', () => {\n"
+            "  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));\n"
+            "  const result = spawnSync(process.execPath, [cli, '--help'], { encoding: 'utf8' });\n"
+            "  assert.equal(result.status, 0);\n"
+            "  assert.match(result.stdout, /Supported generated commands:/);\n"
+            f"  assert.match(result.stdout, /Weak-agent routing: {expected_weak_agent_routing}/);\n"
+            "  assert.match(result.stdout, /Recovery:/);\n"
+            "});\n"
+            "\n"
+            "test('generated runnable adapter rejects unsupported commands with recovery guidance', () => {\n"
+            "  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));\n"
+            "  const result = spawnSync(process.execPath, [cli, '__unsupported__'], { encoding: 'utf8' });\n"
+            "  assert.equal(result.status, 2);\n"
+            "  assert.equal(result.stdout, '');\n"
+            "  assert.match(result.stderr, /Unsupported generated command: __unsupported__/);\n"
+            "  assert.match(result.stderr, /Recovery:/);\n"
+            "});\n"
+            "\n"
+            "test('generated runnable adapter maps runtime handoff failure with recovery guidance', () => {\n"
+            "  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));\n"
+            f"  const result = spawnSync(process.execPath, [cli, {sample_command!r}], {{\n"
+            "    encoding: 'utf8',\n"
+            "    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: '' },\n"
+            "  });\n"
+            "  assert.equal(result.status, 1);\n"
+            "  assert.match(result.stderr, /Adapter runtime handoff failed:/);\n"
+            "  assert.match(result.stderr, /Recovery:/);\n"
             "});\n"
         )
     return body

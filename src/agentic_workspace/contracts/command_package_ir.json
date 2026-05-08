@@ -76,9 +76,11 @@
           "runtime_backed": true,
           "weak_agent_routing": "allowed-read-only",
           "promotion_requires": [
-            "help, errors, and recovery guidance route weak agents back to compact safe paths",
-            "black-box conformance covers normal and off-happy-path read-only behavior",
-            "proof route advertises the target as weak-agent-safe"
+            "help output identifies supported generated commands and the weak-agent routing status",
+            "unsupported command errors give a compact recovery path instead of leaving agents to infer next steps",
+            "runtime handoff failures are classified as adapter runtime handoff failures with recovery guidance",
+            "black-box conformance covers normal read-only behavior, unsupported command recovery, and runtime handoff failure mapping",
+            "generated-package proof advertises the target as weak-agent-safe only after these checks pass"
           ]
         },
         {
@@ -164,8 +166,8 @@
             "agentic-workspace"
           ],
           "test_environment": "docker",
-          "maturity_level_ref": "runnable-read-only-adapter",
-          "generation_status": "runnable-read-only-adapter"
+          "maturity_level_ref": "weak-agent-safe-adapter",
+          "generation_status": "weak-agent-safe-adapter"
         },
         {
           "kind": "bash",

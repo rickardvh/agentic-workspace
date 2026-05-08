@@ -412,6 +412,9 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     assert answer["selected_lanes"][0]["id"] == "generated_command_packages"
     assert answer["selected_lanes"][0]["proof_responsibility"] == "local-serial"
     assert answer["selected_lanes"][0]["execution_mode"] == "serial"
+    weak_agent_routing = answer["selected_lanes"][0]["weak_agent_safe_routing"]
+    assert weak_agent_routing["status"] == "proof-gated"
+    assert "generated-package static plus conformance proof pass" in weak_agent_routing["rule"]
     assert "serially" in answer["selected_lanes"][0]["ci_relationship"]
     assert [lane["id"] for lane in answer["selected_lanes"]] == ["generated_command_packages", "cli_authority"]
     assert "route back through command-package checks" in answer["selected_lanes"][0]["recovery_signal"]

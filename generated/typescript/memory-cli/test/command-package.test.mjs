@@ -41,3 +41,32 @@ test('generated runnable adapter delegates supported command to runtime process'
   assert.equal(payload.command, 'doctor');
   assert.deepEqual(payload.args, ['doctor', '--format', 'json']);
 });
+
+test('generated runnable adapter exposes routing status and recovery guidance', () => {
+  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
+  const result = spawnSync(process.execPath, [cli, '--help'], { encoding: 'utf8' });
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /Supported generated commands:/);
+  assert.match(result.stdout, /Weak-agent routing: review-required/);
+  assert.match(result.stdout, /Recovery:/);
+});
+
+test('generated runnable adapter rejects unsupported commands with recovery guidance', () => {
+  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
+  const result = spawnSync(process.execPath, [cli, '__unsupported__'], { encoding: 'utf8' });
+  assert.equal(result.status, 2);
+  assert.equal(result.stdout, '');
+  assert.match(result.stderr, /Unsupported generated command: __unsupported__/);
+  assert.match(result.stderr, /Recovery:/);
+});
+
+test('generated runnable adapter maps runtime handoff failure with recovery guidance', () => {
+  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
+  const result = spawnSync(process.execPath, [cli, 'doctor'], {
+    encoding: 'utf8',
+    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: '' },
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Adapter runtime handoff failed:/);
+  assert.match(result.stderr, /Recovery:/);
+});

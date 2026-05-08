@@ -6,18 +6,20 @@
     "effectiveRuntimeCommand": "python -m agentic_workspace.cli",
     "fixtureOnly": false,
     "generated": true,
-    "generationStatus": "runnable-read-only-adapter",
+    "generationStatus": "weak-agent-safe-adapter",
     "maturity": {
-      "id": "runnable-read-only-adapter",
+      "id": "weak-agent-safe-adapter",
       "promotion_requires": [
-        "black-box conformance covers invocation, exit code, output shape, and one failure path",
-        "failure output distinguishes generation drift from adapter and runtime failures",
-        "ordinary Python development remains free of Node or Docker requirements"
+        "help output identifies supported generated commands and the weak-agent routing status",
+        "unsupported command errors give a compact recovery path instead of leaving agents to infer next steps",
+        "runtime handoff failures are classified as adapter runtime handoff failures with recovery guidance",
+        "black-box conformance covers normal read-only behavior, unsupported command recovery, and runtime handoff failure mapping",
+        "generated-package proof advertises the target as weak-agent-safe only after these checks pass"
       ],
       "runnable": true,
-      "runtime_backed": false,
-      "summary": "Generated target can be invoked for a selected read-only command and returns observable command output.",
-      "weak_agent_routing": "review-required"
+      "runtime_backed": true,
+      "summary": "Generated target is safe to route to weaker agents for supported read-only commands.",
+      "weak_agent_routing": "allowed-read-only"
     },
     "program": "agentic-workspace",
     "runtimeBinding": {

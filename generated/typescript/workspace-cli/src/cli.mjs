@@ -15,18 +15,29 @@ const command = argv[0];
 if (!command || command === '--help' || command === '-h') {
   console.log(`Usage: agentic-workspace <command> [options]`);
   console.log(`Supported generated commands: ${Array.from(supportedCommands).join(', ')}`);
+  console.log('Weak-agent routing: allowed-read-only');
+  console.log('Recovery: use a supported generated command or route back to the canonical Python CLI.');
   process.exit(0);
 }
 
 if (!supportedCommands.has(command)) {
   console.error(`Unsupported generated command: ${command}`);
+  console.error('Recovery: run agentic-workspace --help and choose one of the supported generated commands.');
   process.exit(2);
 }
 
-const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME || "python -m agentic_workspace.cli";
-const result = spawnSync(runtimeCommand, argv, { encoding: 'utf8', shell: true, maxBuffer: 16 * 1024 * 1024 });
+const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? "python -m agentic_workspace.cli";
+let result;
+try {
+  result = spawnSync(runtimeCommand, argv, { encoding: 'utf8', shell: true, maxBuffer: 16 * 1024 * 1024 });
+} catch (error) {
+  console.error(`Adapter runtime handoff failed: ${error.message}`);
+  console.error('Recovery: verify AGENTIC_WORKSPACE_RUNTIME or run the canonical Python CLI directly.');
+  process.exit(1);
+}
 if (result.error) {
   console.error(`Adapter runtime handoff failed: ${result.error.message}`);
+  console.error('Recovery: verify AGENTIC_WORKSPACE_RUNTIME or run the canonical Python CLI directly.');
   process.exit(1);
 }
 if (result.stdout) writeSync(1, result.stdout);

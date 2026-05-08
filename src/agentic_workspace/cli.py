@@ -7323,7 +7323,10 @@ def _generated_output_footprint(*, target: Any) -> dict[str, Any]:
         classified.update(path for path in generated_relatives if _relative_is_under(path, root))
     unclassified = [path for path in generated_relatives if path not in classified]
     freshness_missing = not (generator_path.is_file() and check_path.is_file() and command_package_ir_path.is_file())
-    runnable_count = sum(1 for surface in generated_surfaces if surface.get("role") == "runnable-read-only-adapter")
+    runnable_count = sum(
+        1 for surface in generated_surfaces if surface.get("role") in {"runnable-read-only-adapter", "weak-agent-safe-adapter"}
+    )
+    weak_agent_safe_count = sum(1 for surface in generated_surfaces if surface.get("role") == "weak-agent-safe-adapter")
     proof_fixture_count = sum(1 for surface in generated_surfaces if surface.get("role") == "proof-fixture")
     status = "attention" if freshness_missing or unclassified else "measured"
 
@@ -7336,6 +7339,7 @@ def _generated_output_footprint(*, target: Any) -> dict[str, Any]:
         "role_counts": role_counts,
         "proof_fixture_count": proof_fixture_count,
         "runnable_adapter_count": runnable_count,
+        "weak_agent_safe_adapter_count": weak_agent_safe_count,
         "unclassified_generated_output_count": len(unclassified),
         "sample_unclassified_generated_outputs": unclassified[:5],
         "freshness": {
@@ -7368,6 +7372,8 @@ def _generated_target_role(target_info: dict[str, Any]) -> str:
     maturity = str(target_info.get("maturity_level_ref") or "").lower()
     if status == "deferred" or maturity == "deferred":
         return "deferred-target"
+    if "weak-agent-safe" in status or "weak-agent-safe" in maturity:
+        return "weak-agent-safe-adapter"
     if "runnable" in status or "runnable" in maturity:
         return "runnable-read-only-adapter"
     if "fixture" in status or "fixture" in maturity or "supported-now" in status:
@@ -14585,6 +14591,18 @@ def _defaults_payload() -> dict[str, Any]:
                 "Generated adapter/package changes must route back through command-package checks and conformance proof "
                 "instead of being trusted as hand edits."
             ),
+            "weak_agent_safe_routing": {
+                "status": "proof-gated",
+                "rule": (
+                    "Generated targets are weak-agent safe only when command_package_ir selects weak-agent-safe-adapter "
+                    "and generated-package static plus conformance proof pass."
+                ),
+                "checks": [
+                    "help output includes supported commands and routing status",
+                    "unsupported command errors include recovery guidance",
+                    "runtime handoff failures include recovery guidance",
+                ],
+            },
         },
         {
             "id": "cli_authority",
@@ -17170,6 +17188,7 @@ def _proof_selection_for_changed_paths(
                 **({"proof_profile": lane["proof_profile"]} if lane.get("proof_profile") else {}),
                 **({"review_aids": lane["review_aids"]} if lane.get("review_aids") else {}),
                 **({"subsystem": lane["subsystem"]} if lane.get("subsystem") else {}),
+                **({"weak_agent_safe_routing": lane["weak_agent_safe_routing"]} if lane.get("weak_agent_safe_routing") else {}),
             }
             for lane in selected_lanes
         ],

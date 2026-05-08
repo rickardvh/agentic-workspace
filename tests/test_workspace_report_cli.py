@@ -766,8 +766,8 @@ def test_operational_compression_classifies_generated_output_footprint(tmp_path:
                         {
                             "kind": "typescript",
                             "generated_root": "generated/typescript/workspace-cli",
-                            "generation_status": "runnable-read-only-adapter",
-                            "maturity_level_ref": "runnable-read-only-adapter",
+                            "generation_status": "weak-agent-safe-adapter",
+                            "maturity_level_ref": "weak-agent-safe-adapter",
                             "test_environment": "docker",
                         },
                     ],
@@ -806,11 +806,12 @@ def test_operational_compression_classifies_generated_output_footprint(tmp_path:
     assert generated["artifact_count"] >= 5
     assert generated["proof_fixture_count"] == 1
     assert generated["runnable_adapter_count"] == 1
+    assert generated["weak_agent_safe_adapter_count"] == 1
     assert generated["unclassified_generated_output_count"] == 0
     assert generated["freshness"]["status"] == "check-available"
     surfaces = {surface["id"]: surface for surface in generated["generated_surfaces"]}
     assert surfaces["root-workspace:python"]["role"] == "proof-fixture"
-    assert surfaces["root-workspace:typescript"]["role"] == "runnable-read-only-adapter"
+    assert surfaces["root-workspace:typescript"]["role"] == "weak-agent-safe-adapter"
     assert surfaces["typescript:proof-container-support"]["role"] == "proof-container-support"
 
 

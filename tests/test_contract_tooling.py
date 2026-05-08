@@ -230,6 +230,9 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert maturity["metadata-proof-fixture"]["weak_agent_routing"] == "forbidden"
     assert maturity["runnable-read-only-adapter"]["runnable"] is True
     assert "black-box conformance" in " ".join(maturity["runnable-read-only-adapter"]["promotion_requires"])
+    assert maturity["weak-agent-safe-adapter"]["weak_agent_routing"] == "allowed-read-only"
+    assert "unsupported command errors" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
+    assert "runtime handoff failures" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert runtime_binding["selected_model"] == "generated parser/help with process handoff to canonical Python CLI"
     assert "operation primitive implementation" in runtime_binding["runtime_owns"]
     assert "argv spelling and help rendering" in runtime_binding["target_projection_owns"]
@@ -245,8 +248,8 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert targets["python"]["maturity_level_ref"] == "runtime-backed-read-only-adapter"
     assert targets["python"]["generation_status"] == "runtime-backed-read-only-adapter"
     assert targets["typescript"]["test_environment"] == "docker"
-    assert targets["typescript"]["maturity_level_ref"] == "runnable-read-only-adapter"
-    assert targets["typescript"]["generation_status"] == "runnable-read-only-adapter"
+    assert targets["typescript"]["maturity_level_ref"] == "weak-agent-safe-adapter"
+    assert targets["typescript"]["generation_status"] == "weak-agent-safe-adapter"
     assert targets["bash"]["generation_status"] == "deferred"
     assert targets["bash"]["maturity_level_ref"] == "deferred"
     assert targets["powershell"]["generation_status"] == "deferred"
@@ -697,9 +700,9 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert package_json["bin"] == {"agentic-workspace": "./src/cli.mjs"}
     assert package_json["agenticWorkspace"]["generated"] is True
     assert package_json["agenticWorkspace"]["fixtureOnly"] is False
-    assert package_json["agenticWorkspace"]["generationStatus"] == "runnable-read-only-adapter"
-    assert package_json["agenticWorkspace"]["maturity"]["id"] == "runnable-read-only-adapter"
-    assert package_json["agenticWorkspace"]["maturity"]["weak_agent_routing"] == "review-required"
+    assert package_json["agenticWorkspace"]["generationStatus"] == "weak-agent-safe-adapter"
+    assert package_json["agenticWorkspace"]["maturity"]["id"] == "weak-agent-safe-adapter"
+    assert package_json["agenticWorkspace"]["maturity"]["weak_agent_routing"] == "allowed-read-only"
     assert package_json["agenticWorkspace"]["maturity"]["runnable"] is True
     assert package_json["agenticWorkspace"]["maturity"]["promotion_requires"]
     assert (
@@ -726,8 +729,13 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert "maxBuffer: 16 * 1024 * 1024" in cli_text
     assert "writeSync(1, result.stdout)" in cli_text
     assert "writeSync(2, result.stderr)" in cli_text
+    assert "Weak-agent routing: allowed-read-only" in cli_text
+    assert "Unsupported generated command" in cli_text
+    assert "Adapter runtime handoff failed" in cli_text
     assert "generated package metadata exposes expected commands" in test_text
     assert "generated runnable adapter delegates supported command to runtime process" in test_text
+    assert "generated runnable adapter exposes routing status and recovery guidance" in test_text
+    assert "generated runnable adapter maps runtime handoff failure with recovery guidance" in test_text
 
 
 def test_generated_typescript_package_adapters_are_runnable() -> None:

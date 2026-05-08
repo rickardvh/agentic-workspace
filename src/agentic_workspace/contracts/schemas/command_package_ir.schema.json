@@ -281,6 +281,7 @@
             "proof-fixture",
             "runnable-read-only-adapter",
             "runtime-backed-read-only-adapter",
+            "weak-agent-safe-adapter",
             "deferred"
           ],
           "description": "Allowed generation status value for routing or validation."

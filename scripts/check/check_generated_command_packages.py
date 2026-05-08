@@ -32,6 +32,7 @@ class RunnableTypescriptConformanceCase(NamedTuple):
     package_id: str
     program: str
     cli: Path
+    weak_agent_safe: bool
     case: AdapterConformanceCase
 
 
@@ -527,7 +528,7 @@ def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptCon
             for target in package.get("targets", [])
             if isinstance(target, dict)
             and target.get("kind") == "typescript"
-            and target.get("maturity_level_ref") == "runnable-read-only-adapter"
+            and target.get("maturity_level_ref") in {"runnable-read-only-adapter", "weak-agent-safe-adapter"}
         ]
         if not runnable_typescript_targets:
             continue
@@ -553,6 +554,7 @@ def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptCon
                         package_id=package_id,
                         program=str(package.get("program", "")),
                         cli=cli,
+                        weak_agent_safe=target.get("maturity_level_ref") == "weak-agent-safe-adapter",
                         case=case,
                     )
                 )
@@ -686,16 +688,52 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
 
         for runnable_case in derived_cases:
             compare_adapter(runnable_case)
+            help_result = _capture(
+                [node, str(runnable_case.cli), "--help"],
+                cwd=fixture_root,
+                env=_conformance_env(runtime=runtime_for_package(runnable_case.package_id)),
+            )
+            expected_routing = "allowed-read-only" if runnable_case.weak_agent_safe else "review-required"
+            if (
+                help_result.returncode != 0
+                or "Supported generated commands:" not in help_result.stdout
+                or f"Weak-agent routing: {expected_routing}" not in help_result.stdout
+                or "Recovery:" not in help_result.stdout
+            ):
+                errors.append(
+                    f"adapter failure: {runnable_case.package_id} help guidance drifted; "
+                    f"exit={help_result.returncode}, stdout={help_result.stdout!r}, stderr={help_result.stderr!r}"
+                )
             unsupported = _capture(
                 [node, str(runnable_case.cli), "__unsupported__", "--format", "json"],
                 cwd=fixture_root,
                 env=_conformance_env(runtime=runtime_for_package(runnable_case.package_id)),
             )
-            if unsupported.returncode != 2 or "Unsupported generated command" not in unsupported.stderr or unsupported.stdout.strip():
+            if (
+                unsupported.returncode != 2
+                or "Unsupported generated command" not in unsupported.stderr
+                or "Recovery:" not in unsupported.stderr
+                or unsupported.stdout.strip()
+            ):
                 errors.append(
                     f"adapter failure: {runnable_case.package_id} unsupported command refusal drifted; "
                     f"exit={unsupported.returncode}, stdout={unsupported.stdout!r}, stderr={unsupported.stderr!r}"
                 )
+            if runnable_case.weak_agent_safe:
+                handoff_failure = _capture(
+                    [node, str(runnable_case.cli), *runnable_case.case.success_args],
+                    cwd=fixture_root,
+                    env=_conformance_env(runtime=""),
+                )
+                if (
+                    handoff_failure.returncode != 1
+                    or "Adapter runtime handoff failed:" not in handoff_failure.stderr
+                    or "Recovery:" not in handoff_failure.stderr
+                ):
+                    errors.append(
+                        f"adapter failure: {runnable_case.package_id} weak-agent-safe runtime handoff recovery drifted; "
+                        f"exit={handoff_failure.returncode}, stdout={handoff_failure.stdout!r}, stderr={handoff_failure.stderr!r}"
+                    )
 
     return errors
 
@@ -790,14 +828,17 @@ def _validate_static_surfaces() -> list[str]:
             payload = json.loads(package_json_path.read_text(encoding="utf-8"))
             metadata = payload.get("agenticWorkspace", {})
             maturity = metadata.get("maturity", {})
-            is_runnable = maturity.get("id") == "runnable-read-only-adapter"
+            is_runnable = maturity.get("id") in {"runnable-read-only-adapter", "weak-agent-safe-adapter"}
+            is_weak_agent_safe = maturity.get("id") == "weak-agent-safe-adapter"
             if not maturity.get("summary") or not maturity.get("promotion_requires"):
                 errors.append(f"generated/typescript/{package}/package.json maturity is missing summary or promotion criteria")
             if is_runnable and not (package_root / "src" / "cli.mjs").is_file():
                 errors.append(f"generated/typescript/{package}/src/cli.mjs is missing for runnable target")
             if is_runnable and "bin" not in payload:
                 errors.append(f"generated/typescript/{package}/package.json is missing bin entry for runnable target")
-            if is_runnable and maturity.get("weak_agent_routing") != "review-required":
+            if is_weak_agent_safe and maturity.get("weak_agent_routing") != "allowed-read-only":
+                errors.append(f"generated/typescript/{package}/package.json weak-agent-safe target is missing allowed-read-only routing")
+            if is_runnable and not is_weak_agent_safe and maturity.get("weak_agent_routing") != "review-required":
                 errors.append(f"generated/typescript/{package}/package.json runnable target is missing review-required weak-agent routing")
             if not is_runnable and (maturity.get("weak_agent_routing") != "forbidden" or maturity.get("runnable") is not False):
                 errors.append(f"generated/typescript/{package}/package.json maturity does not mark proof fixture as non-runnable")
@@ -875,6 +916,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(error)
             return 1
         print("[ok] generated command package adapter conformance")
+        print("[ok] weak-agent-safe generated adapter routing checks passed")
     docker_status = 0
     if args.docker:
         docker_status = _run_docker(
