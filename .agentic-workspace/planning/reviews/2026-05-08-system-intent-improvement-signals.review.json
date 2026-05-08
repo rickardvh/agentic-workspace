@@ -1,0 +1,72 @@
+{
+  "kind": "planning-review/v1",
+  "title": "System intent satisfaction: improvement signals",
+  "date": "2026-05-08",
+  "scope": [
+    "Governing intent: Convert repeated steering, proof confusion, handoff repair, context overload, or late failure into product improvement signals."
+  ],
+  "classification": "doctrine-refresh",
+  "goal": [
+    "Assess whether feedback and dogfooding findings have a disciplined route into product improvement."
+  ],
+  "non_goals": [
+    "Do not create issues for this review unless a concrete repeated failure is found.",
+    "Do not treat every analysis opportunity as a queue item."
+  ],
+  "review_mode": {
+    "mode": "doctrine-refresh",
+    "review question": "Does the package route repeated friction into issues, reviews, roadmap, docs, Memory, checks, or contracts without creating speculative queue churn?",
+    "default finding cap": "2",
+    "inputs inspected first": "dogfooding feedback docs, planning review README, recent issue-driven workflow evidence"
+  },
+  "review_method": {
+    "commands used": "rg friction/improvement/signal/dogfooding/review across docs and planning review guidance; gh issue list --state open --limit 40 --json number,title,labels,updatedAt",
+    "evidence sources": "docs/maintainer/dogfooding-feedback.md; .agentic-workspace/planning/reviews/README.md; recent #844 #845 #846 closeout flow"
+  },
+  "references": [
+    {
+      "kind": "intent",
+      "target": ".agentic-workspace/system-intent/intent.toml",
+      "label": "System intent mirror",
+      "role": "authoritative intent",
+      "locator": "governing_intents[7]"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/maintainer/dogfooding-feedback.md",
+      "label": "Dogfooding feedback",
+      "role": "improvement routing evidence",
+      "locator": "improvement signal guidance"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Satisfaction is high, with queue discipline as the important constraint",
+      "summary": "The repo has explicit dogfooding and review-promotion guidance, and recent work promoted concrete findings into issues before implementation. The system also warns not to convert concept opportunity into backlog by default.",
+      "evidence": "planning review README says friction-confirmed findings have higher trust, staged promotion is required, and weak/duplicate findings should be dismissed; dogfooding feedback says concept opportunity alone is not enough; #844-#846 were filed, implemented, validated, and closed.",
+      "risk if unchanged": "The improvement loop can still overproduce review artifacts or issues if agents promote every plausible idea rather than repeated or evidence-backed friction.",
+      "suggested action": "Keep current policy; only promote if future agents create speculative issue churn without friction evidence.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "review-promotion lane if issue/review churn recurs",
+      "promotion trigger": "Multiple new review findings or issues lack friction, proof, or explicit maintainer override.",
+      "post-remediation note shape": "shrink"
+    }
+  ],
+  "recommendation": {
+    "promote": "none",
+    "defer": "Watch issue/review churn during future optimization loops.",
+    "dismiss": "No new improvement-signal mechanism is needed now."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "superseded by a review-promotion audit",
+    "proof surface": "dogfooding feedback docs, planning review rules, issue closeout trail"
+  },
+  "validation_commands": [
+    "gh issue list --state open --limit 40 --json number,title,labels,updatedAt"
+  ],
+  "drift_log": [
+    "2026-05-08: Review created and filled from durable-intent doctrine pass."
+  ]
+}

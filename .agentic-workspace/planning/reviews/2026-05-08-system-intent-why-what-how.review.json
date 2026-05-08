@@ -1,0 +1,72 @@
+{
+  "kind": "planning-review/v1",
+  "title": "System intent satisfaction: why/what/how separation",
+  "date": "2026-05-08",
+  "scope": [
+    "Governing intent: Keep human-owned why separate from system-shaped what and implementation-level how."
+  ],
+  "classification": "doctrine-refresh",
+  "goal": [
+    "Assess whether intent, planning, and execution surfaces preserve the why/what/how separation."
+  ],
+  "non_goals": [
+    "Do not redesign intent schemas in this review.",
+    "Do not promote task-specific preferences into durable system intent."
+  ],
+  "review_mode": {
+    "mode": "doctrine-refresh",
+    "review question": "Do current surfaces keep durable human intent separate from task shaping and implementation detail?",
+    "default finding cap": "2",
+    "inputs inspected first": "system intent mirror, subsystem intent store, execplan template shape, closeout fields"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace report --target . --section durable_intent --format json; rg intent/why/what/how across system-intent and planning docs",
+    "evidence sources": ".agentic-workspace/system-intent/intent.toml; .agentic-workspace/system-intent/subsystems.toml; .agentic-workspace/planning/reviews/README.md"
+  },
+  "references": [
+    {
+      "kind": "intent",
+      "target": ".agentic-workspace/system-intent/intent.toml",
+      "label": "System intent mirror",
+      "role": "authoritative intent",
+      "locator": "governing_intents[1]"
+    },
+    {
+      "kind": "intent",
+      "target": ".agentic-workspace/system-intent/subsystems.toml",
+      "label": "Subsystem intent store",
+      "role": "scoped durable intent evidence",
+      "locator": "planning and memory records"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Satisfaction is high, but generated planning scaffolds still need disciplined closeout",
+      "summary": "Durable system and subsystem intent are explicitly decision pressure, while planning artifacts own bounded task execution and closeout. The separation is conceptually strong.",
+      "evidence": "durable_intent report states durable intent is not active task state; subsystem intent rule says scoped intent is not active task state by default; planning review rules prohibit using review artifacts as execplans, memory notes, or canonical docs.",
+      "risk if unchanged": "Agents may still blur the layers when a generated plan scaffold contains fields for intent, proof, closeout, and promotion in one file.",
+      "suggested action": "Keep closeout validation strict about task intent satisfaction versus durable-intent promotion; promote only if future agents repeatedly treat scaffold fields as durable authority.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "planning roadmap if repeated layer confusion reappears",
+      "promotion trigger": "A dogfooding report shows an agent promoted implementation detail into system/subsystem intent or treated durable intent as active task state.",
+      "post-remediation note shape": "stub"
+    }
+  ],
+  "recommendation": {
+    "promote": "none",
+    "defer": "Monitor future closeout and task-intent-promotion mistakes.",
+    "dismiss": "No current evidence requires a new issue."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "superseded by a concrete workflow-confusion finding",
+    "proof surface": "durable_intent report and planning closeout fields"
+  },
+  "validation_commands": [
+    "uv run agentic-workspace report --target . --section durable_intent --format json"
+  ],
+  "drift_log": [
+    "2026-05-08: Review created and filled from durable-intent doctrine pass."
+  ]
+}

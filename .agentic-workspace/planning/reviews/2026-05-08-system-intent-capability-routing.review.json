@@ -1,0 +1,72 @@
+{
+  "kind": "planning-review/v1",
+  "title": "System intent satisfaction: capability routing",
+  "date": "2026-05-08",
+  "scope": [
+    "Governing intent: Make weaker agents safer and spend stronger reasoning on judgment, shaping, review, and recovery rather than orchestration waste."
+  ],
+  "classification": "doctrine-refresh",
+  "goal": [
+    "Assess whether current workflow outputs make capability-aware routing concrete enough to affect agent decisions."
+  ],
+  "non_goals": [
+    "Do not add or retune local delegation targets.",
+    "Do not force delegation when local execution is cheaper and safer."
+  ],
+  "review_mode": {
+    "mode": "doctrine-refresh",
+    "review question": "Does the package make capability fit visible without making delegation an eager default?",
+    "default finding cap": "2",
+    "inputs inspected first": "startup delegation_decision, capability-aware execution docs, local config reference"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --profile tiny --task \"Make a review each on the satisfaction of the main system intents\" --format json; rg delegation/capability/handoff across docs and reference docs",
+    "evidence sources": ".agentic-workspace/docs/capability-aware-execution.md; docs/reference/workspace-local-override.md; startup delegation_decision payload"
+  },
+  "references": [
+    {
+      "kind": "intent",
+      "target": ".agentic-workspace/system-intent/intent.toml",
+      "label": "System intent mirror",
+      "role": "authoritative intent",
+      "locator": "governing_intents[2]"
+    },
+    {
+      "kind": "doc",
+      "target": ".agentic-workspace/docs/capability-aware-execution.md",
+      "label": "Capability-aware execution",
+      "role": "routing doctrine",
+      "locator": "quality fit and token saving sections"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Satisfaction is medium: routing is visible, but behavior still depends on executor discipline",
+      "summary": "Startup emitted a concrete stay-local delegation decision for this task, and docs express quality-over-cost routing. That is useful, but the system still cannot guarantee weak agents will obey capability warnings unless they consult startup or a wrapper forces it.",
+      "evidence": "start --profile tiny returned delegation_decision with mode auto, decision stay-local, quality risk medium, and token savings none. Capability docs say quality fit comes first and token saving is valid only when proof/review trust remain safe.",
+      "risk if unchanged": "Weak agents may remain confidently wrong on overmatched work, and strong agents may still do cheap mechanical work themselves unless the startup decision is made unavoidable.",
+      "suggested action": "Do not promote immediately; use future evaluation loops to see whether delegation_decision is actually followed by target agents.",
+      "confidence": "medium",
+      "source": "mixed",
+      "promotion target": "planning roadmap or evaluation lane",
+      "promotion trigger": "A target-model evaluation shows repeated disregard for delegation_decision or overmatch escalation guidance after the latest workflow changes.",
+      "post-remediation note shape": "retain until evaluated"
+    }
+  ],
+  "recommendation": {
+    "promote": "none",
+    "defer": "Next evaluation loop should explicitly score whether target agents follow visible delegation/escalation guidance.",
+    "dismiss": "Do not create a delegation issue from this review alone."
+  },
+  "retention": {
+    "closeout shape": "retain",
+    "trigger": "next capability-routing evaluation confirms or supersedes the concern",
+    "proof surface": "evaluation ledger and startup delegation_decision output"
+  },
+  "validation_commands": [
+    "uv run agentic-workspace start --profile tiny --task \"Make a review each on the satisfaction of the main system intents\" --format json"
+  ],
+  "drift_log": [
+    "2026-05-08: Review created and filled from durable-intent doctrine pass."
+  ]
+}

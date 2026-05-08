@@ -1,0 +1,72 @@
+{
+  "kind": "planning-review/v1",
+  "title": "System intent satisfaction: total completion cost",
+  "date": "2026-05-08",
+  "scope": [
+    "Governing intent: Reduce total successful-completion cost across restart, handoff, review, and proof loops."
+  ],
+  "classification": "doctrine-refresh",
+  "goal": [
+    "Assess whether package behavior optimizes total successful-completion cost rather than local step cost."
+  ],
+  "non_goals": [
+    "Do not run a fresh benchmark.",
+    "Do not treat token count as the only cost signal."
+  ],
+  "review_mode": {
+    "mode": "doctrine-refresh",
+    "review question": "Does current workflow guidance make total completion cost visible enough to influence decisions?",
+    "default finding cap": "2",
+    "inputs inspected first": "README thesis, startup delegation decision, capability-aware execution docs, maintainer dogfooding guidance"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --profile tiny --task \"Make a review each on the satisfaction of the main system intents\" --format json; rg cost/token/overhead/proof/handoff across README and docs",
+    "evidence sources": "README.md; .agentic-workspace/docs/capability-aware-execution.md; docs/maintainer/dogfooding-feedback.md; startup delegation_decision"
+  },
+  "references": [
+    {
+      "kind": "intent",
+      "target": ".agentic-workspace/system-intent/intent.toml",
+      "label": "System intent mirror",
+      "role": "authoritative intent",
+      "locator": "governing_intents[4]"
+    },
+    {
+      "kind": "doc",
+      "target": "README.md",
+      "label": "README thesis",
+      "role": "public cost framing",
+      "locator": "amortized coordination framing"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Satisfaction is medium-high, but evidence remains more qualitative than measured",
+      "summary": "The product thesis now honestly frames overhead as an investment, and startup/delegation output can avoid unnecessary planning or delegation. The remaining weakness is that cost improvement is still mostly judged through dogfooding and evaluation notes rather than a compact recurring report.",
+      "evidence": "README says the package adds small intentional coordination overhead; startup chose stay-local with token_savings_expected none for this task; capability docs say delegation should happen only when handoff costs less than rediscovery.",
+      "risk if unchanged": "Without periodic measured or ledger-backed cost evidence, the package may keep optimizing perceived ergonomics while missing total successful-completion regressions.",
+      "suggested action": "Defer until the next evaluation lane; if cost claims become central again, prefer a compact evaluation ledger summary over new prose doctrine.",
+      "confidence": "medium",
+      "source": "mixed",
+      "promotion target": "evaluation lane or maintainer docs",
+      "promotion trigger": "A future optimization loop lacks enough cost evidence to decide whether a workflow surface should stay, shrink, or move behind an opt-in profile.",
+      "post-remediation note shape": "shrink"
+    }
+  ],
+  "recommendation": {
+    "promote": "none",
+    "defer": "Use next evaluation work to strengthen cost evidence if decisions need it.",
+    "dismiss": "Do not add measurement machinery solely from this review."
+  },
+  "retention": {
+    "closeout shape": "retain",
+    "trigger": "superseded by a focused evaluation-ledger or cost report review",
+    "proof surface": "evaluation ledger, startup output, and capability-aware execution docs"
+  },
+  "validation_commands": [
+    "uv run agentic-workspace start --profile tiny --task \"Make a review each on the satisfaction of the main system intents\" --format json"
+  ],
+  "drift_log": [
+    "2026-05-08: Review created and filled from durable-intent doctrine pass."
+  ]
+}

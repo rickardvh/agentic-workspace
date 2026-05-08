@@ -1,0 +1,73 @@
+{
+  "kind": "planning-review/v1",
+  "title": "System intent satisfaction: structured answers",
+  "date": "2026-05-08",
+  "scope": [
+    "Governing intent: Prefer compact queryable state, declared config, and normalized operational mirrors over prose-first operation whenever one structured answer is enough."
+  ],
+  "classification": "doctrine-refresh",
+  "goal": [
+    "Assess whether routine orientation now routes through compact structured outputs."
+  ],
+  "non_goals": [
+    "Do not audit every CLI command output size.",
+    "Do not replace all prose docs with structured records."
+  ],
+  "review_mode": {
+    "mode": "doctrine-refresh",
+    "review question": "Are the main startup and durable-intent paths structured and compact enough to avoid prose-first operation?",
+    "default finding cap": "2",
+    "inputs inspected first": "start tiny output, durable_intent report, reference docs"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --profile tiny --task \"Make a review each on the satisfaction of the main system intents\" --format json; uv run agentic-workspace report --target . --section durable_intent --format json; rg compact/queryable/defaults/report references",
+    "evidence sources": "startup context payload; durable_intent compact report; docs/reference/startup-context.md; .agentic-workspace/docs/compact-contract-profile.md"
+  },
+  "references": [
+    {
+      "kind": "intent",
+      "target": ".agentic-workspace/system-intent/intent.toml",
+      "label": "System intent mirror",
+      "role": "authoritative intent",
+      "locator": "governing_intents[3]"
+    },
+    {
+      "kind": "doc",
+      "target": ".agentic-workspace/docs/compact-contract-profile.md",
+      "label": "Compact contract profile",
+      "role": "structured answer evidence",
+      "locator": "root"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Satisfaction is high for first-contact routing",
+      "summary": "The default path provided compact structured startup, durable intent, delegation, and next-action fields without requiring raw workspace reads.",
+      "evidence": "start --profile tiny returned adaptive_routing, immediate_next_allowed_action, delegation_decision, skill_routing, vague_outcome_orientation, and durable_intent; durable_intent report gave a compact contract answer with decision tests and references.",
+      "risk if unchanged": "The remaining risk is unevenness in less-used command profiles, not the main startup path assessed here.",
+      "suggested action": "Keep command ergonomics evaluation focused on secondary surfaces rather than reopening first-contact routing.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": "none",
+      "promotion trigger": "Only promote if a future command-ergonomics loop finds a routine path still returning broad prose-first output by default.",
+      "post-remediation note shape": "shrink"
+    }
+  ],
+  "recommendation": {
+    "promote": "none",
+    "defer": "Continue evaluating secondary commands opportunistically.",
+    "dismiss": "No new first-contact structured-answer work is indicated."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "superseded by a newer CLI ergonomics review",
+    "proof surface": "startup-context schema/reference docs and compact command outputs"
+  },
+  "validation_commands": [
+    "uv run agentic-workspace start --profile tiny --task \"Make a review each on the satisfaction of the main system intents\" --format json",
+    "uv run agentic-workspace report --target . --section durable_intent --format json"
+  ],
+  "drift_log": [
+    "2026-05-08: Review created and filled from durable-intent doctrine pass."
+  ]
+}

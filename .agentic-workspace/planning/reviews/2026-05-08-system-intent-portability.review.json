@@ -1,0 +1,72 @@
+{
+  "kind": "planning-review/v1",
+  "title": "System intent satisfaction: portability",
+  "date": "2026-05-08",
+  "scope": [
+    "Governing intent: Keep package contracts portable across host repos, languages, agents, vendors, and local dogfooding environments."
+  ],
+  "classification": "doctrine-refresh",
+  "goal": [
+    "Assess whether portability is represented as contracts and boundaries rather than local dogfooding assumptions."
+  ],
+  "non_goals": [
+    "Do not implement additional non-Python adapters.",
+    "Do not change local delegation target configuration."
+  ],
+  "review_mode": {
+    "mode": "doctrine-refresh",
+    "review question": "Are portability claims backed by contract surfaces and local-boundary language?",
+    "default finding cap": "2",
+    "inputs inspected first": "README, extension boundary docs, generated/reference docs, local override schema"
+  },
+  "review_method": {
+    "commands used": "rg portability/vendor/language/local/dogfooding/generated/type across README, docs, reference docs, and workspace docs",
+    "evidence sources": "README.md; docs/extension-boundary.md; docs/ecosystem-roadmap.md; docs/reference/workspace-local-override.md; .agentic-workspace/docs/capability-aware-execution.md"
+  },
+  "references": [
+    {
+      "kind": "intent",
+      "target": ".agentic-workspace/system-intent/intent.toml",
+      "label": "System intent mirror",
+      "role": "authoritative intent",
+      "locator": "governing_intents[6]"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/extension-boundary.md",
+      "label": "Extension boundary",
+      "role": "portability evidence",
+      "locator": "selective adoption and non-core module notes"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Satisfaction is medium: the contract posture is portable, but implementation proof is still uneven",
+      "summary": "The docs and schemas avoid hard-coding a single vendor/model and local config keeps delegation targets local. The strongest implementation path remains the Python/source-checkout workflow, so portability is better expressed than fully proven.",
+      "evidence": "Local override schema treats model/provider as opaque local metadata; capability docs are tool/vendor neutral; extension-boundary docs say first-party shapes are proven but non-core extension proof remains limited.",
+      "risk if unchanged": "Dogfooding convenience can become hidden product assumption, especially around Python CLI behavior, local uv invocation, and specific model capability labels.",
+      "suggested action": "Keep portability work tied to concrete adapter or clean-room evaluation lanes rather than broad doctrine.",
+      "confidence": "medium",
+      "source": "static-analysis",
+      "promotion target": "adapter/evaluation roadmap only when a concrete portability lane is active",
+      "promotion trigger": "A non-Python adapter or non-Codex/Copilot/Gemini evaluation exposes a contract that is still Python- or vendor-shaped.",
+      "post-remediation note shape": "retain until superseded"
+    }
+  ],
+  "recommendation": {
+    "promote": "none",
+    "defer": "Use future adapter/evaluation lanes to test the portability claim.",
+    "dismiss": "Do not create generic portability work without a concrete target."
+  },
+  "retention": {
+    "closeout shape": "retain",
+    "trigger": "superseded by a focused adapter portability review or implementation lane",
+    "proof surface": "adapter contracts, clean-room install proof, and local override schema"
+  },
+  "validation_commands": [
+    "rg portability README.md docs .agentic-workspace/docs"
+  ],
+  "drift_log": [
+    "2026-05-08: Review created and filled from durable-intent doctrine pass."
+  ]
+}

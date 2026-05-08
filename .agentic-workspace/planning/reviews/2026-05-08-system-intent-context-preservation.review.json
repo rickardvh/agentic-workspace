@@ -1,0 +1,72 @@
+{
+  "kind": "planning-review/v1",
+  "title": "System intent satisfaction: context preservation",
+  "date": "2026-05-08",
+  "scope": [
+    "Governing intent: Preserve only the context that is expensive to rediscover and necessary for safe continuation."
+  ],
+  "classification": "doctrine-refresh",
+  "goal": [
+    "Assess whether current package surfaces satisfy the context-preservation intent."
+  ],
+  "non_goals": [
+    "Do not open a new remediation lane from this review alone.",
+    "Do not treat every useful fact as Memory-worthy."
+  ],
+  "review_mode": {
+    "mode": "doctrine-refresh",
+    "review question": "Does the current package preserve costly continuation context without over-preserving one-off execution detail?",
+    "default finding cap": "2",
+    "inputs inspected first": "startup durable_intent report, system intent mirror, README, memory index, planning review guidance"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --profile tiny --task \"Make a review each on the satisfaction of the main system intents\" --format json; uv run agentic-workspace report --target . --section durable_intent --format json; rg intent/context/proof/handoff terms across README, docs, and .agentic-workspace surfaces",
+    "evidence sources": ".agentic-workspace/system-intent/intent.toml; README.md; .agentic-workspace/memory/repo/index.md; .agentic-workspace/docs/module-map.md; .agentic-workspace/planning/reviews/README.md"
+  },
+  "references": [
+    {
+      "kind": "intent",
+      "target": ".agentic-workspace/system-intent/intent.toml",
+      "label": "System intent mirror",
+      "role": "authoritative intent",
+      "locator": "governing_intents[0]"
+    },
+    {
+      "kind": "doc",
+      "target": ".agentic-workspace/docs/module-map.md",
+      "label": "Module map",
+      "role": "module ownership evidence",
+      "locator": "Planning and Memory summaries"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Satisfaction is high, with review-residue pressure as the main watchpoint",
+      "summary": "The package now has clear boundaries for active Planning, durable Memory, compact startup routing, and closeout distillation, which directly supports preserving only costly continuation context.",
+      "evidence": "README frames the package around context that disappears between sessions; Memory index says planning/status owns active intent; module-map says completed execplans should be distilled and removed; review README says acted-upon review artifacts should shrink, stub, or delete.",
+      "risk if unchanged": "If review artifacts keep accumulating after promotion, they can become a second archive of context that is no longer necessary for continuation.",
+      "suggested action": "Keep using closeout/review retention checks as the main guard; promote a cleanup issue only if acted-upon reviews repeatedly remain full-size.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "planning roadmap only if repeated stale-review residue is observed",
+      "promotion trigger": "A future reconcile/review pass finds multiple acted-upon reviews that still carry reconstructable source context.",
+      "post-remediation note shape": "shrink"
+    }
+  ],
+  "recommendation": {
+    "promote": "none",
+    "defer": "Watch review artifact retention during future closeout and reconcile passes.",
+    "dismiss": "No immediate implementation issue is justified by this review alone."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "review-residue concern is promoted, dismissed, or superseded by a stronger reconcile signal",
+    "proof surface": "planning reconcile output, review retention checks, Memory routing docs"
+  },
+  "validation_commands": [
+    "uv run agentic-workspace report --target . --section durable_intent --format json"
+  ],
+  "drift_log": [
+    "2026-05-08: Review created and filled from durable-intent doctrine pass."
+  ]
+}

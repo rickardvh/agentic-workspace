@@ -1,0 +1,72 @@
+{
+  "kind": "planning-review/v1",
+  "title": "System intent satisfaction: construction cheapness",
+  "date": "2026-05-08",
+  "scope": [
+    "Governing intent: Make correct package-surface construction cheap by design so validation confirms rather than teaches shape."
+  ],
+  "classification": "doctrine-refresh",
+  "goal": [
+    "Assess whether package-owned artifacts are easy to construct correctly before validation runs."
+  ],
+  "non_goals": [
+    "Do not add new generators or schemas from this review alone.",
+    "Do not treat all validation failures as design failures."
+  ],
+  "review_mode": {
+    "mode": "doctrine-refresh",
+    "review question": "Does current tooling make correct artifact shape obvious enough that validation is mostly confirmation?",
+    "default finding cap": "2",
+    "inputs inspected first": "create-review output, startup guidance, schema reference generation, recent validation behavior"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-planning create-review for each review skeleton; make check after implementation lane; rg template/schema/reference guidance",
+    "evidence sources": ".agentic-workspace/planning/reviews/TEMPLATE.review.json; .agentic-workspace/planning/reviews/README.md; docs/reference/startup-context.md; make check behavior from previous lane"
+  },
+  "references": [
+    {
+      "kind": "intent",
+      "target": ".agentic-workspace/system-intent/intent.toml",
+      "label": "System intent mirror",
+      "role": "authoritative intent",
+      "locator": "governing_intents[8]"
+    },
+    {
+      "kind": "template",
+      "target": ".agentic-workspace/planning/reviews/TEMPLATE.review.json",
+      "label": "Review template",
+      "role": "construction affordance",
+      "locator": "root"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Satisfaction is medium: scaffolds help, but validation still teaches some required details",
+      "summary": "The create-review command produced valid dated skeletons quickly, and schema/reference checks catch drift. However, recent work still hit validation to discover missing schema documentation and closeout field wording, showing construction is not yet entirely cheap by design.",
+      "evidence": "create-review created the nine review records with sortable filenames; previous implementation lane required make check to reveal stale startup reference docs; archive-plan required exact active_milestone and follow-on wording before closeout.",
+      "risk if unchanged": "Agents may continue relying on validation failures as the authoring interface for package-owned surfaces, which costs tokens and weakens first-pass success.",
+      "suggested action": "Defer promotion until repeated in another lane; if repeated, improve generator defaults or preflight diagnostics for the specific surface that caused the failure.",
+      "confidence": "medium",
+      "source": "mixed",
+      "promotion target": "planning roadmap or generator/diagnostic issue",
+      "promotion trigger": "A second near-term lane has to learn required package-owned artifact shape from validation failures instead of CLI guidance or scaffold defaults.",
+      "post-remediation note shape": "retain until repeated or dismissed"
+    }
+  ],
+  "recommendation": {
+    "promote": "none",
+    "defer": "Track whether this repeats in the next implementation or review lane.",
+    "dismiss": "Do not create a broad construction-cheapness issue without repeated evidence."
+  },
+  "retention": {
+    "closeout shape": "retain",
+    "trigger": "repeated validation-as-authoring friction confirms or disproves the concern",
+    "proof surface": "generator output, validation failures, and scaffold defaults"
+  },
+  "validation_commands": [
+    "uv run agentic-planning create-review --help"
+  ],
+  "drift_log": [
+    "2026-05-08: Review created and filled from durable-intent doctrine pass."
+  ]
+}

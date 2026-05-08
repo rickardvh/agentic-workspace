@@ -1,0 +1,72 @@
+{
+  "kind": "planning-review/v1",
+  "title": "System intent satisfaction: quiet ownership",
+  "date": "2026-05-08",
+  "scope": [
+    "Governing intent: Stay quiet, repo-native, low-residue, and sharply bounded in ownership."
+  ],
+  "classification": "doctrine-refresh",
+  "goal": [
+    "Assess whether the package avoids becoming visible workflow residue or ambiguous ownership."
+  ],
+  "non_goals": [
+    "Do not inventory every shipped payload file.",
+    "Do not propose module removals from this review alone."
+  ],
+  "review_mode": {
+    "mode": "doctrine-refresh",
+    "review question": "Do ownership and startup surfaces keep the workspace quiet and bounded despite a growing package surface?",
+    "default finding cap": "2",
+    "inputs inspected first": "README, module map, ownership docs, startup tiny output, review retention guidance"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --profile tiny --task \"Make a review each on the satisfaction of the main system intents\" --format json; rg ownership/residue/quiet/module-map references",
+    "evidence sources": "README.md; .agentic-workspace/docs/module-map.md; .agentic-workspace/docs/ownership-authority-contract.md; .agentic-workspace/planning/reviews/README.md"
+  },
+  "references": [
+    {
+      "kind": "intent",
+      "target": ".agentic-workspace/system-intent/intent.toml",
+      "label": "System intent mirror",
+      "role": "authoritative intent",
+      "locator": "governing_intents[5]"
+    },
+    {
+      "kind": "doc",
+      "target": ".agentic-workspace/docs/module-map.md",
+      "label": "Module map",
+      "role": "ownership evidence",
+      "locator": "workspace/planning/memory sections"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Satisfaction is medium-high, with surface growth still the main pressure",
+      "summary": "Startup is quiet and repo-native, and module ownership is clearer than earlier iterations. However, the number of docs, skills, reviews, and generated references means low-residue depends on compact routers and retention discipline continuing to work.",
+      "evidence": "README defines lightweight as small checked-in footprint and compact outputs, not zero overhead; start tiny avoided raw file reads; module-map separates workspace, planning, and memory; review README explicitly warns against a second review archive.",
+      "risk if unchanged": "New useful surfaces can accumulate faster than obsolete surfaces shrink, making the package feel like a visible framework despite compact startup.",
+      "suggested action": "Do not promote now; use retention and source-payload checks as the enforcement points, and promote only when a concrete surface-growth problem recurs.",
+      "confidence": "medium",
+      "source": "mixed",
+      "promotion target": "review-promotion or source-payload-install review",
+      "promotion trigger": "A future audit finds first-line startup/docs requiring agents to read multiple overlapping surfaces for one ordinary decision.",
+      "post-remediation note shape": "shrink"
+    }
+  ],
+  "recommendation": {
+    "promote": "none",
+    "defer": "Keep watching surface count and first-line read requirements.",
+    "dismiss": "No immediate cleanup issue is supported by this review alone."
+  },
+  "retention": {
+    "closeout shape": "retain",
+    "trigger": "next review-promotion or source-payload audit confirms or supersedes the surface-growth pressure",
+    "proof surface": "startup output, module map, source-payload checks, review retention records"
+  },
+  "validation_commands": [
+    "uv run agentic-workspace start --profile tiny --task \"Make a review each on the satisfaction of the main system intents\" --format json"
+  ],
+  "drift_log": [
+    "2026-05-08: Review created and filled from durable-intent doctrine pass."
+  ]
+}
