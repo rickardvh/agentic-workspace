@@ -30,6 +30,9 @@ def test_execplan_template_surfaces_archive_closeout_terminal_values() -> None:
     assert template["durable_residue"]["status"] == "none"
     assert template["task_intent_promotion"]["decision"] == "pending"
     assert "subsystem-intent" in template["task_intent_promotion"]["accepted values"]
+    assert template["post_decomposition_delegation"]["status"] == "pending"
+    assert "delegate-exploration" in template["post_decomposition_delegation"]["route candidates"]
+    assert "actual friction" in template["delegation_outcome_feedback"]
     assert template["improvement_signal_review"]["source"] == "operating_posture"
     assert "reported-only/routed" in template["improvement_signal_review"]["guidance"]
 
@@ -730,7 +733,10 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["handoff_contract"]["return_with"]["execution_run_fields"][0] == "run status"
     assert summary["handoff_contract"]["return_with"]["execution_run_fields"][5] == "changed surfaces"
     assert summary["handoff_contract"]["return_with"]["execution_summary_fields"][3] == "post-work posterity capture"
-    assert summary["handoff_contract"]["worker_contract"]["allowed_execution_methods"][1] == "external cli or api"
+    assert summary["handoff_contract"]["worker_contract"]["allowed_execution_methods"][1] == "read-only exploration"
+    assert summary["handoff_contract"]["worker_contract"]["worker_owns_by_default"][0] == (
+        "read-only exploration for one explicit question when assigned"
+    )
     assert summary["roadmap"]["candidate_count"] == 1
     assert summary["roadmap"]["candidates"] == [
         {
@@ -3216,6 +3222,8 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "intent_interpretation" in summary["schema"]["view_fields"]["planning_record"]
     assert "execution_run" in summary["schema"]["view_fields"]["planning_record"]
     assert "finished_run_review" in summary["schema"]["view_fields"]["planning_record"]
+    assert "delegation_outcome_feedback" in summary["schema"]["view_fields"]["planning_record"]
+    assert "post_decomposition_delegation" in summary["schema"]["view_fields"]["planning_record"]
     assert "tool_verification" in summary["schema"]["view_fields"]["planning_record"]
     assert "system_intent_alignment" in summary["schema"]["view_fields"]["planning_record"]
     assert "tool_verification" in summary["schema"]["view_fields"]["resumable_contract"]
@@ -3246,6 +3254,8 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "pre_work_config_pull" in summary["schema"]["view_fields"]["handoff_contract"]
     assert "pre_work_memory_pull" in summary["schema"]["view_fields"]["handoff_contract"]
     assert "system_intent_alignment" in summary["schema"]["view_fields"]["handoff_contract"]
+    assert "post_decomposition_delegation" in summary["schema"]["view_fields"]["handoff_contract"]
+    assert "delegation_outcome_feedback" in summary["schema"]["view_fields"]["handoff_contract"]
 
 
 def test_planning_summary_exposes_ownership_review(tmp_path: Path, capsys) -> None:

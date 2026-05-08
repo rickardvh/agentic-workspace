@@ -20,7 +20,8 @@
       "execution_bounds",
       "stop_conditions",
       "context_budget",
-      "delegated_judgment"
+      "delegated_judgment",
+      "post_decomposition_delegation"
     ],
     "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
   },
@@ -113,6 +114,12 @@
     "hard constraints": "",
     "agent may decide locally": "",
     "escalate when": ""
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After the slice is bounded, choose whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
   },
   "adaptive_assurance": {
     "level": "low",
@@ -226,6 +233,15 @@
     "config compliance": "",
     "misinterpretation risk": "",
     "follow-on decision": ""
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "",
+    "route skipped reason": "",
+    "expected savings": "",
+    "actual friction": "",
+    "proof result": "",
+    "quality concern": "",
+    "decomposition adjustment": ""
   },
   "proof_report": {
     "validation proof": "",

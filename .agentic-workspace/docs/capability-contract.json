@@ -25,6 +25,11 @@
       "surface": ".agentic-workspace/planning/execplans/",
       "recommendation": "Promote to execplan; write contract before implementation."
     },
+    "exploration_probe": {
+      "trigger": "one bounded repo-inspection question would avoid broad rereads or unsafe implementation",
+      "surface": "capability handoff packet",
+      "recommendation": "Delegate read-only inspection only; return evidence, uncertainty, next read, and stop before edits."
+    },
     "autopilot_milestone": {
       "trigger": "bounded by active execplan milestone",
       "surface": ".agentic-workspace/planning/execplans/",
@@ -43,6 +48,7 @@
   },
   "capability_fit_rules": {
     "weak_target_mismatch": "weak targets below the recommended strength for boundary-shaping or reasoning-heavy work escalate before execution",
+    "explorer_boundary": "explorer targets stay read-only and answer one bounded inspection question rather than implementing or deciding product direction",
     "strong_target_overqualified": "strong targets above the recommended strength for mechanical-follow-through work down-route when a cheaper configured target fits and proof remains clear",
     "quality_over_cost": "token saving is valid only when capability fit, proof, and review trust remain safe"
   }

@@ -209,6 +209,7 @@ EXECPLAN_SECTION_ORDER: tuple[tuple[str, str, str], ...] = (
     ("Stop Conditions", "stop_conditions", "dict"),
     ("Context Budget", "context_budget", "dict"),
     ("Delegated Judgment", "delegated_judgment", "dict"),
+    ("Post-Decomposition Delegation", "post_decomposition_delegation", "dict"),
     ("Adaptive Assurance", "adaptive_assurance", "dict"),
     ("Traceability Refs", "traceability_refs", "dict"),
     ("Control Gates", "control_gates", "list"),
@@ -232,6 +233,7 @@ EXECPLAN_SECTION_ORDER: tuple[tuple[str, str, str], ...] = (
     ("Completion Criteria", "completion_criteria", "list"),
     ("Execution Run", "execution_run", "dict"),
     ("Finished-Run Review", "finished_run_review", "dict"),
+    ("Delegation Outcome Feedback", "delegation_outcome_feedback", "dict"),
     ("Proof Report", "proof_report", "dict"),
     ("Intent Satisfaction", "intent_satisfaction", "dict"),
     ("System Intent Alignment", "system_intent_alignment", "dict"),
@@ -1197,6 +1199,7 @@ def _build_execplan_record_from_markdown(plan_path: Path) -> dict[str, Any]:
         "stop_conditions": _extract_kv_fields(_section_lines(lines, "Stop Conditions")),
         "context_budget": _extract_kv_fields(_section_lines(lines, "Context Budget")),
         "delegated_judgment": _extract_kv_fields(_section_lines(lines, "Delegated Judgment")),
+        "post_decomposition_delegation": _extract_kv_fields(_section_lines(lines, "Post-Decomposition Delegation")),
         "references": _extract_reference_section(plan_path, "References"),
         "capability_posture": _extract_kv_fields(_section_lines(lines, "Capability Posture")),
         "active_milestone": _extract_kv_fields(_section_lines(lines, "Active Milestone")),
@@ -1211,6 +1214,7 @@ def _build_execplan_record_from_markdown(plan_path: Path) -> dict[str, Any]:
         "completion_criteria": _extract_section_bullets(plan_path, "Completion Criteria"),
         "execution_run": _extract_kv_fields(_section_lines(lines, "Execution Run")),
         "finished_run_review": _extract_kv_fields(_section_lines(lines, "Finished-Run Review")),
+        "delegation_outcome_feedback": _extract_kv_fields(_section_lines(lines, "Delegation Outcome Feedback")),
         "proof_report": _extract_kv_fields(_section_lines(lines, "Proof Report")),
         "intent_satisfaction": _extract_kv_fields(_section_lines(lines, "Intent Satisfaction")),
         "system_intent_alignment": _extract_kv_fields(_section_lines(lines, "System Intent Alignment")),
@@ -2233,6 +2237,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "canonical_core",
                 "references",
                 "review_residue",
+                "post_decomposition_delegation",
                 "next_action",
                 "proof_expectations",
                 "proof_report",
@@ -2245,6 +2250,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "stop_conditions",
                 "execution_run",
                 "finished_run_review",
+                "delegation_outcome_feedback",
                 "adaptive_assurance",
                 "traceability_refs",
                 "control_gates",
@@ -2401,6 +2407,8 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "canonical_core",
                 "references",
                 "review_residue",
+                "post_decomposition_delegation",
+                "delegation_outcome_feedback",
                 "next_action",
                 "completion_criteria",
                 "read_first",
@@ -7040,6 +7048,8 @@ def _canonical_planning_record(
     stop_conditions: dict[str, str] = {}
     execution_run: dict[str, str] = {}
     finished_run_review: dict[str, str] = {}
+    post_decomposition_delegation: dict[str, str] = {}
+    delegation_outcome_feedback: dict[str, str] = {}
     adaptive_assurance: dict[str, Any] = {}
     traceability_refs: dict[str, Any] = {}
     control_gates: list[Any] = []
@@ -7067,6 +7077,8 @@ def _canonical_planning_record(
         stop_conditions = _execplan_stop_conditions(plan_path)
         execution_run = _execplan_execution_run(plan_path)
         finished_run_review = _execplan_finished_run_review(plan_path)
+        post_decomposition_delegation = _execplan_post_decomposition_delegation(plan_path)
+        delegation_outcome_feedback = _execplan_delegation_outcome_feedback(plan_path)
         adaptive_assurance = _execplan_raw_dict(plan_path, "adaptive_assurance")
         traceability_refs = _execplan_raw_dict(plan_path, "traceability_refs")
         control_gates = _execplan_raw_list(plan_path, "control_gates")
@@ -7105,6 +7117,7 @@ def _canonical_planning_record(
         "next_role_needed": str(active_contract.get("next_role_needed", "")).strip(),
         "references": list(active_contract.get("references", [])),
         "review_residue": review_residue,
+        "post_decomposition_delegation": post_decomposition_delegation,
         "next_action": str(resumable_contract["current_next_action"]).strip(),
         "proof_expectations": list(resumable_contract.get("proof_expectations", [])),
         "proof_report": proof_report,
@@ -7117,6 +7130,7 @@ def _canonical_planning_record(
         "stop_conditions": stop_conditions,
         "execution_run": execution_run,
         "finished_run_review": finished_run_review,
+        "delegation_outcome_feedback": delegation_outcome_feedback,
         "adaptive_assurance": adaptive_assurance,
         "traceability_refs": traceability_refs,
         "control_gates": control_gates,
@@ -7822,6 +7836,8 @@ def _active_handoff_contract(
         "next_role_needed": str(planning_record.get("next_role_needed", "")).strip(),
         "references": list(planning_record.get("references", [])),
         "review_residue": list(planning_record.get("review_residue", [])),
+        "post_decomposition_delegation": dict(planning_record.get("post_decomposition_delegation", {})),
+        "delegation_outcome_feedback": dict(planning_record.get("delegation_outcome_feedback", {})),
         "next_action": str(planning_record.get("next_action", "")).strip(),
         "completion_criteria": list(planning_record.get("completion_criteria", [])),
         "read_first": list(planning_record.get("minimal_refs", [])),
@@ -7878,14 +7894,25 @@ def _active_handoff_contract(
                 "misinterpretation risk",
                 "follow-on decision",
             ],
+            "delegation_outcome_feedback_fields": [
+                "route chosen",
+                "route skipped reason",
+                "expected savings",
+                "actual friction",
+                "proof result",
+                "quality concern",
+                "decomposition adjustment",
+            ],
         },
         "worker_contract": {
             "allowed_execution_methods": [
                 "internal delegation",
+                "read-only exploration",
                 "external cli or api",
                 "single-agent fallback",
             ],
             "worker_owns_by_default": [
+                "read-only exploration for one explicit question when assigned",
                 "bounded implementation inside the owned write scope",
                 "narrow validation named by the handoff",
                 "checked-in updates inside owned surfaces when explicitly assigned",
@@ -10973,6 +11000,7 @@ def _execplan_profile_record(*, task_shape: str) -> dict[str, Any]:
             "stop_conditions",
             "context_budget",
             "delegated_judgment",
+            "post_decomposition_delegation",
         ],
         "lane": [
             "intent_continuity",
@@ -10983,6 +11011,7 @@ def _execplan_profile_record(*, task_shape: str) -> dict[str, Any]:
             "stop_conditions",
             "context_budget",
             "delegated_judgment",
+            "post_decomposition_delegation",
         ],
         "delegation": [
             "intent_interpretation",
@@ -10990,6 +11019,7 @@ def _execplan_profile_record(*, task_shape: str) -> dict[str, Any]:
             "stop_conditions",
             "context_budget",
             "delegated_judgment",
+            "post_decomposition_delegation",
             "required_tools",
         ],
         "high-assurance": [
@@ -11005,6 +11035,7 @@ def _execplan_profile_record(*, task_shape: str) -> dict[str, Any]:
         "closeout": [
             "execution_run",
             "finished_run_review",
+            "delegation_outcome_feedback",
             "proof_report",
             "intent_satisfaction",
             "closure_check",
@@ -11157,6 +11188,12 @@ def _build_execplan_record_from_todo_item(
             "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
             "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
         },
+        "post_decomposition_delegation": {
+            "status": "pending",
+            "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+            "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+            "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+        },
         "system_intent_alignment": {
             "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
             "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
@@ -11198,6 +11235,15 @@ def _build_execplan_record_from_todo_item(
             "config compliance": "pending",
             "misinterpretation risk": "pending",
             "follow-on decision": "pending",
+        },
+        "delegation_outcome_feedback": {
+            "route chosen": "pending",
+            "route skipped reason": "pending",
+            "expected savings": "pending",
+            "actual friction": "pending",
+            "proof result": "pending",
+            "quality concern": "pending",
+            "decomposition adjustment": "pending",
         },
         "proof_report": {
             "validation proof": "pending",
@@ -11411,6 +11457,14 @@ def _execplan_context_budget(path: Path) -> dict[str, str]:
     return _extract_kv_fields(_section_lines(lines, "Context Budget"))
 
 
+def _execplan_post_decomposition_delegation(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "post_decomposition_delegation")
+    if record is not None:
+        return record
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Post-Decomposition Delegation"))
+
+
 def _execplan_prep_only_contract(path: Path) -> dict[str, Any]:
     record = _load_execplan_record(path) or {}
     machine_contract = record.get("machine_readable_contract", {})
@@ -11461,6 +11515,14 @@ def _execplan_finished_run_review(path: Path) -> dict[str, str]:
         return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Finished-Run Review"))
+
+
+def _execplan_delegation_outcome_feedback(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "delegation_outcome_feedback")
+    if record is not None:
+        return record
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Delegation Outcome Feedback"))
 
 
 def _execplan_active_milestone(path: Path) -> dict[str, str]:

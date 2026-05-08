@@ -11,6 +11,7 @@ This skill is agent-agnostic.
 The worker may be:
 
 - an internal delegated agent
+- a read-only explorer for one bounded inspection question
 - a local model run through CLI or API
 - another vendor executor reached through CLI or API
 - the same agent continuing directly when delegation is not worth it
@@ -28,20 +29,23 @@ The worker may be:
 
 1. Confirm the task is planning-backed and bounded enough for delegation.
 2. Inspect the effective mixed-agent posture from local config.
-3. If delegation is not supported or not worthwhile, stay direct.
-4. If delegation is worthwhile, derive the worker handoff from `agentic-planning handoff --format json`.
-5. Choose any execution method that preserves that contract:
+3. After decomposition, classify each slice as `keep-local`, `delegate-exploration`, `delegate-implementation`, `delegate-validation`, `escalate-review`, or `no-safe-route`.
+4. If delegation is not supported or not worthwhile, stay direct and record the skipped reason.
+5. If delegation is worthwhile, derive the worker handoff from `agentic-planning handoff --format json`.
+6. Choose any execution method that preserves that contract:
    - internal delegation when the environment supports it and prefers it
+   - read-only exploration when one bounded question can avoid broad rereads
    - external CLI or API handoff when another executor is cheaper or more available
    - direct single-agent fallback when delegation would cost more than it saves
-6. Give the worker only the delegated handoff contract plus any explicit assignment for cleanup or commit.
-7. Keep lane shaping, roadmap routing, and issue decisions with the orchestrator unless they are explicitly delegated.
-8. Mirror durable residue back into checked-in planning before review, handoff, or session end.
+7. Give the worker only the delegated handoff contract plus any explicit assignment for cleanup or commit.
+8. Keep lane shaping, roadmap routing, and issue decisions with the orchestrator unless they are explicitly delegated.
+9. Mirror durable residue and delegation outcome feedback back into checked-in planning before review, handoff, or session end.
 
 ## Worker Contract
 
 Default worker ownership:
 
+- read-only exploration for one explicit question when assigned
 - bounded implementation
 - narrow validation
 - checked-in updates inside explicitly assigned owned surfaces
@@ -68,5 +72,8 @@ For each orchestrated run, record:
 - whether delegation stayed direct, internal, or external
 - which bounded slice was delegated
 - what the handoff contract contained
+- route skipped reason when direct work was chosen
+- expected token savings, actual friction, proof result, and quality concern
+- any decomposition adjustment learned from the delegation outcome
 - what overhead remained
 - what workflow improvement signal, if any, should survive in checked-in planning or review residue

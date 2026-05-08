@@ -152,12 +152,15 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["relay"]["canonical_doc"] == ".agentic-workspace/docs/delegation-posture-contract.md"
     assert payload["relay"]["command"] == "agentic-workspace defaults --section relay --format json"
     assert payload["relay"]["rule"] == (
-        "Use a strong planner to normalize the vague prompt, then hand the compact contract to a bounded executor without prescribing the execution method."
+        "Use a strong planner to normalize the vague prompt, then hand compact exploration, implementation, or validation contracts to bounded executors without prescribing the execution method."
     )
     assert payload["relay"]["handoff_command"] == "agentic-planning handoff --format json"
     assert payload["relay"]["execution_methods"][1]["id"] == "external cli or api"
     assert payload["relay"]["planner_role"]["summary"] == (
         "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract."
+    )
+    assert payload["relay"]["explorer_role"]["summary"] == (
+        "answer one bounded repo-inspection question without owning writes or implementation direction."
     )
     assert payload["relay"]["memory_bridge"]["summary"] == (
         "when routed Memory is installed, borrow durable repo understanding before freezing the compact contract."
@@ -379,9 +382,17 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["delegation_posture"]["command"] == "agentic-workspace defaults --section delegation_posture --format json"
     assert payload["delegation_posture"]["rule"] == (
         "Use the effective mixed-agent posture to decide whether to keep work direct, "
-        "split it into planner/implementer/validator subtasks, or escalate to a stronger planner."
+        "split it into planner/explorer/implementer/validator subtasks, or escalate to a stronger planner."
     )
-    assert payload["delegation_posture"]["preferred_split"] == ["planner", "implementer", "validator"]
+    assert payload["delegation_posture"]["preferred_split"] == ["planner", "explorer", "implementer", "validator"]
+    assert payload["delegation_posture"]["post_decomposition_checkpoint"]["route_candidates"] == [
+        "keep-local",
+        "delegate-exploration",
+        "delegate-implementation",
+        "delegate-validation",
+        "escalate-review",
+        "no-safe-route",
+    ]
     assert payload["delegation_posture"]["config_controls"] == [
         ".agentic-workspace/config.local.toml runtime.supports_internal_delegation",
         ".agentic-workspace/config.local.toml runtime.strong_planner_available",
@@ -410,6 +421,15 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "classification authority",
         "self-assessment authority",
         "why",
+    ]
+    assert payload["delegation_posture"]["outcome_feedback_fields"] == [
+        "route chosen",
+        "route skipped reason",
+        "expected savings",
+        "actual friction",
+        "proof result",
+        "quality concern",
+        "decomposition adjustment",
     ]
     assert payload["config"]["path"] == ".agentic-workspace/config.toml"
     assert payload["config"]["command"] == "agentic-workspace config --target ./repo --profile tiny --format json"
@@ -1084,7 +1104,8 @@ def test_defaults_delegation_posture_section_selector_returns_compact_contract_a
     assert payload["selector"] == {"section": "delegation_posture"}
     assert payload["matched"] is True
     assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/delegation-posture-contract.md"
-    assert payload["answer"]["preferred_split"] == ["planner", "implementer", "validator"]
+    assert payload["answer"]["preferred_split"] == ["planner", "explorer", "implementer", "validator"]
+    assert "delegate-exploration" in payload["answer"]["post_decomposition_checkpoint"]["route_candidates"]
     assert ".agentic-workspace/docs/delegation-posture-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
@@ -1112,6 +1133,7 @@ def test_defaults_command_reports_runtime_resolution_policy(capsys) -> None:
     assert "required_action=escalate-before-execution" in rr["self_assessment"]["cannot_override"]
     packets = payload["mixed_agent"]["capability_handoff_packets"]
     assert "weak_target_escalation" in packets["packet_types"]
+    assert "exploration_probe" in packets["packet_types"]
     assert "strong_target_downrouting" in packets["packet_types"]
     assert "no_safe_route" in packets["packet_types"]
 

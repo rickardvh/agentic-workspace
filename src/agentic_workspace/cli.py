@@ -13340,7 +13340,7 @@ def _relay_contract_payload() -> dict[str, Any]:
     return {
         "canonical_doc": ".agentic-workspace/docs/delegation-posture-contract.md",
         "command": "agentic-workspace defaults --section relay --format json",
-        "rule": "Use a strong planner to normalize the vague prompt, then hand the compact contract to a bounded executor without prescribing the execution method.",
+        "rule": "Use a strong planner to normalize the vague prompt, then hand compact exploration, implementation, or validation contracts to bounded executors without prescribing the execution method.",
         "selection_rule": (
             "Use the effective mixed-agent posture from agentic-workspace config, then keep the same handoff contract whether execution stays internal, external over cli or api, or direct."
         ),
@@ -13351,6 +13351,14 @@ def _relay_contract_payload() -> dict[str, Any]:
                 "clarify the request with the smallest repo-context follow-up",
                 "choose the narrow proof lane and owner surface",
                 "preserve escalation boundaries before the handoff freezes",
+            ],
+        },
+        "explorer_role": {
+            "summary": "answer one bounded repo-inspection question without owning writes or implementation direction.",
+            "does": [
+                "inspect only the listed files, commands, or planning surfaces",
+                "return compact evidence, uncertainty, and the next recommended read",
+                "stop before editing, broad synthesis, or product-shape decisions",
             ],
         },
         "implementer_role": {
@@ -13377,6 +13385,7 @@ def _relay_contract_payload() -> dict[str, Any]:
         ],
         "worker_boundary": {
             "worker_owns_by_default": [
+                "read-only exploration for one explicit question when assigned",
                 "bounded implementation inside the delegated write scope",
                 "narrow validation named by the handoff",
                 "cleanup and commit only when explicitly assigned and still bounded",
@@ -15565,13 +15574,37 @@ def _defaults_payload() -> dict[str, Any]:
             "command": "agentic-workspace defaults --section delegation_posture --format json",
             "rule": (
                 "Use the effective mixed-agent posture to decide whether to keep work direct, "
-                "split it into planner/implementer/validator subtasks, or escalate to a stronger planner."
+                "split it into planner/explorer/implementer/validator subtasks, or escalate to a stronger planner."
             ),
             "preferred_split": [
                 "planner",
+                "explorer",
                 "implementer",
                 "validator",
             ],
+            "post_decomposition_checkpoint": {
+                "rule": "After a decomposition or execplan exists, revisit each bounded slice for safe token-saving or quality-improving routes.",
+                "route_candidates": [
+                    "keep-local",
+                    "delegate-exploration",
+                    "delegate-implementation",
+                    "delegate-validation",
+                    "escalate-review",
+                    "no-safe-route",
+                ],
+                "required_fields": [
+                    "slice id",
+                    "route",
+                    "reason",
+                    "quality risk",
+                    "token-saving class",
+                    "read-first refs",
+                    "write scope",
+                    "proof burden",
+                    "stop conditions",
+                    "return contract",
+                ],
+            },
             "config_controls": [
                 ".agentic-workspace/config.local.toml runtime.supports_internal_delegation",
                 ".agentic-workspace/config.local.toml runtime.strong_planner_available",
@@ -15600,6 +15633,15 @@ def _defaults_payload() -> dict[str, Any]:
                 "classification authority",
                 "self-assessment authority",
                 "why",
+            ],
+            "outcome_feedback_fields": [
+                "route chosen",
+                "route skipped reason",
+                "expected savings",
+                "actual friction",
+                "proof result",
+                "quality concern",
+                "decomposition adjustment",
             ],
         },
         "skill_discovery": {
@@ -18970,6 +19012,11 @@ def _capability_handoff_packet_templates() -> dict[str, Any]:
                 "use_when": "A weak or underfit target encounters boundary-shaping, reasoning-heavy, high-proof, or forbidden work.",
                 "receiver": "strong planner, human, or configured escalation target",
                 "must_not": "execute the overmatched target as executor of record",
+            },
+            "exploration_probe": {
+                "use_when": "The current executor needs one bounded repo-inspection answer before planning, implementation, or validation can stay compact.",
+                "receiver": "read-only explorer or cheaper inspection-capable target",
+                "must_not": "edit files, decide product direction, or synthesize beyond the assigned question.",
             },
             "strong_target_downrouting": {
                 "use_when": "A strong target is overqualified for mechanical-follow-through work and a cheaper configured target fits.",

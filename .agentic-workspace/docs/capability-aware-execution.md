@@ -2,7 +2,7 @@
 
 This document defines the planning contract for matching task shape to execution capability.
 
-Use it when deciding whether a task should stay a cheap direct task, be promoted into a checked-in execplan, be delegated to a smaller implementer after planning, or stop for escalation.
+Use it when deciding whether a task should stay a cheap direct task, be promoted into a checked-in execplan, be delegated to a read-only explorer or smaller implementer after planning, or stop for escalation.
 
 This contract is task-shape based. It does not depend on vendor-specific model names.
 
@@ -41,6 +41,7 @@ What this document adds is capability fit:
 - how much execution support the task actually needs
 - whether the cheap path is still safe
 - whether stronger planning is warranted first
+- whether a read-only exploration probe would prevent broad rereads
 - whether delegation is likely to save cost
 - when an agent should stop and escalate instead of continuing wastefully
 
@@ -128,12 +129,14 @@ Recommended shape:
 Use this when:
 
 - a stronger planner can cheaply reduce ambiguity for a smaller implementer
+- one bounded repo-inspection question can be answered by a read-only explorer without giving it implementation authority
 - the handoff artifact is likely to cost less than re-deriving the task
 - the execution slice after planning is narrow and mechanically clear
 
 Recommended shape:
 
 - let the stronger path write the compact plan, classification, or handoff
+- delegate read-only exploration before implementation when the missing information is narrow and evidence-based
 - let the cheaper path implement if the environment supports delegation
 - keep delegation optional; the same task must still be explainable for a single agent operating alone
 - do not assume the user should have to choose the delegating or implementing executor explicitly
@@ -239,6 +242,7 @@ The durable question is what task shape the current execution path can safely su
 Capability mismatch cuts both ways:
 
 - A weak target should escalate when the task needs stronger planning, boundary judgment, or a validation story it cannot reliably supply.
+- An explorer target should stay read-only and return evidence, uncertainty, and the next recommended read for one bounded question.
 - A strong target should down-route mechanical work when a cheaper configured target can do it safely and the proof lane is clear.
 - If no safe better-fit route exists, stay with the current executor and make the reason explicit rather than forcing delegation.
 
@@ -294,9 +298,10 @@ Ask these questions in order:
 2. If yes, is the cheapest safe path enough, or does it need medium reasoning?
 3. If no, would a compact checked-in execplan reduce enough ambiguity or restart cost to justify itself?
 4. If a stronger planner is available, would planning first let a cheaper implementer succeed safely?
-5. If stronger capability still seems necessary, can better decomposition, validation, or checked-in guidance make the work cheaper first?
-6. Would the better-looking solution silently widen the requested outcome, owned surface, or time horizon?
-7. If yes, should that widening be promoted or escalated explicitly instead of being done implicitly?
-8. If not, should execution stop and escalate instead of continuing?
+5. Would a read-only exploration probe answer one missing repo question more cheaply than broad local rereading?
+6. If stronger capability still seems necessary, can better decomposition, validation, or checked-in guidance make the work cheaper first?
+7. Would the better-looking solution silently widen the requested outcome, owned surface, or time horizon?
+8. If yes, should that widening be promoted or escalated explicitly instead of being done implicitly?
+9. If not, should execution stop and escalate instead of continuing?
 
 That is the capability-aware execution contract for the first planning slice.

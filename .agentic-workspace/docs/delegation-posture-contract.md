@@ -1,6 +1,6 @@
 # Delegation Posture Contract
 
-This page defines the bounded mixed-agent posture for task-by-task routing between direct execution, planner/implementer/validator splitting, and stronger-planner escalation.
+This page defines the bounded mixed-agent posture for task-by-task routing between direct execution, planner/explorer/implementer/validator splitting, and stronger-planner escalation.
 
 Use it when you want the repo to make delegation preference queryable without turning config into a scheduler.
 
@@ -13,7 +13,8 @@ Use it when you want the repo to make delegation preference queryable without tu
 ## Rule
 
 - Prefer direct execution when the task is cheap and self-sufficient.
-- Prefer a planner/implementer/validator split when a compact handoff or bounded execplan reduces cost or risk.
+- Prefer a planner/explorer/implementer/validator split when a compact handoff or bounded execplan reduces cost or risk.
+- Use read-only exploration when one bounded repo-inspection question can prevent broad rereads or unsafe implementation.
 - Escalate to a stronger planner when the current path is no longer safe or the task shape would otherwise force re-derivation.
 - Down-route to a cheaper bounded executor when a strong target would be overqualified for mechanical work and proof remains clear.
 - Do not silently widen the requested outcome.
@@ -29,9 +30,10 @@ Use `agentic-planning handoff --format json` when the question is what the activ
   "delegation_posture": {
     "canonical_doc": ".agentic-workspace/docs/delegation-posture-contract.md",
     "command": "agentic-workspace defaults --section delegation_posture --format json",
-    "rule": "Use the effective mixed-agent posture to decide whether to keep work direct, split it into planner/implementer/validator subtasks, or escalate to a stronger planner.",
+    "rule": "Use the effective mixed-agent posture to decide whether to keep work direct, split it into planner/explorer/implementer/validator subtasks, or escalate to a stronger planner.",
     "preferred_split": [
       "planner",
+      "explorer",
       "implementer",
       "validator"
     ],
@@ -59,7 +61,7 @@ The text form should stay short and stable:
 - `doc: .agentic-workspace/docs/delegation-posture-contract.md`
 - `command: agentic-workspace defaults --section delegation_posture --format json`
 - `rule: Use the effective mixed-agent posture to decide whether to keep work direct, split it, or escalate.`
-- `preferred split: planner -> implementer -> validator`
+- `preferred split: planner -> explorer -> implementer -> validator`
 - `config controls: .agentic-workspace/config.local.toml runtime, handoff, optional delegation-target posture fields, and local delegation outcome evidence`
 
 ## Capability Posture
@@ -102,11 +104,27 @@ Delegation posture controls how this happens:
 
 Saving tokens is a valid goal only after task fit, proof expectations, and review trust remain safe.
 
+## Post-Decomposition Checkpoint
+
+Once a decomposition or execplan exists, revisit delegation from the bounded slices rather than the vague original prompt. For each slice, choose one of:
+
+- `keep-local`
+- `delegate-exploration`
+- `delegate-implementation`
+- `delegate-validation`
+- `escalate-review`
+- `no-safe-route`
+
+Record the reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract. This is the point where token saving can become concrete without weakening quality.
+
+At closeout, record lightweight outcome feedback: route chosen, route skipped reason, expected savings, actual friction, proof result, quality concern, and any decomposition adjustment. Repeated feedback should improve future decomposition and routing.
+
 ## Capability Handoff Packets
 
 Use capability-aware handoff packets when the runtime route is no longer simple direct execution:
 
 - `weak_target_escalation`: an underfit target must stop and hand off to a stronger planner, human, or configured escalation target.
+- `exploration_probe`: a read-only target answers one bounded repo-inspection question and returns evidence, uncertainty, and recommended next read.
 - `strong_target_downrouting`: a strong target should hand mechanical work to a cheaper bounded executor when proof remains clear.
 - `manual_human_clarification`: the next decision depends on human intent, ownership boundary, or acceptable autonomy.
 - `strong_reviewer_fallback`: cheap implementation may proceed, but review or proof interpretation needs stronger reasoning.

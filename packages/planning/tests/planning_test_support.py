@@ -387,6 +387,13 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 - Agent may decide locally: Bounded decomposition, validation tightening, and plan-local residue routing.
 - Escalate when: The requested outcome, owned surface, time horizon, or meaningful validation story would change.
 
+## Post-Decomposition Delegation
+
+- Status: evaluated
+- Decision rule: choose direct, exploration, implementation, validation, stronger review, or no safe route from the bounded slice.
+- Route candidates: keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route
+- Required evidence: route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract.
+
 ## Capability Posture
 
 - Execution class: mechanical-follow-through
@@ -440,6 +447,16 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 ## Finished-Run Review
 
 {finished_run_review}
+
+## Delegation Outcome Feedback
+
+- Route chosen: keep-local
+- Route skipped reason: handoff would cost more than this one-file checker slice.
+- Expected savings: none
+- Actual friction: none
+- Proof result: pending
+- Quality concern: none
+- Decomposition adjustment: none
 
 ## Execution Summary
 

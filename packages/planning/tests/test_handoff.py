@@ -220,6 +220,9 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
     assert handoff["handoff_contract"]["next_action"] == "Add one checker."
     assert handoff["handoff_contract"]["capability_posture"]["execution class"] == "mechanical-follow-through"
     assert handoff["handoff_contract"]["capability_posture"]["recommended strength"] == "weak"
+    assert handoff["handoff_contract"]["post_decomposition_delegation"]["status"] == "evaluated"
+    assert "delegate-exploration" in handoff["handoff_contract"]["post_decomposition_delegation"]["route candidates"]
+    assert handoff["handoff_contract"]["delegation_outcome_feedback"]["route chosen"] == "keep-local"
     assert handoff["handoff_contract"]["context_budget"]["status"] == "present"
     assert handoff["handoff_contract"]["intent_interpretation"]["status"] == "present"
     assert handoff["handoff_contract"]["execution_bounds"]["allowed paths"] == "scripts/check/check_planning_surfaces.py"
@@ -227,6 +230,15 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
     assert handoff["handoff_contract"]["return_with"]["execution_summary_fields"][3] == "post-work posterity capture"
     assert handoff["handoff_contract"]["return_with"]["finished_run_review_fields"][0] == "review status"
     assert handoff["handoff_contract"]["return_with"]["finished_run_review_fields"][4] == "config compliance"
+    assert handoff["handoff_contract"]["return_with"]["delegation_outcome_feedback_fields"] == [
+        "route chosen",
+        "route skipped reason",
+        "expected savings",
+        "actual friction",
+        "proof result",
+        "quality concern",
+        "decomposition adjustment",
+    ]
     assert handoff["handoff_contract"]["return_with"]["prose_templates"]["handoff_or_closeout"]["sections"] == [
         "Intent",
         "What changed",
@@ -235,6 +247,10 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
         "Durable residue",
         "Next owner",
     ]
+    assert handoff["handoff_contract"]["worker_contract"]["allowed_execution_methods"][1] == "read-only exploration"
+    assert handoff["handoff_contract"]["worker_contract"]["worker_owns_by_default"][0] == (
+        "read-only exploration for one explicit question when assigned"
+    )
     assert handoff["handoff_contract"]["worker_contract"]["worker_must_not_own_by_default"][0] == "roadmap routing"
 
 

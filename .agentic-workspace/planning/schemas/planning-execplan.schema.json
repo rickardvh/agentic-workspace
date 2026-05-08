@@ -21,6 +21,7 @@
     "stop_conditions": { "$ref": "#/$defs/string_map" },
     "context_budget": { "$ref": "#/$defs/string_map" },
     "delegated_judgment": { "$ref": "#/$defs/string_map" },
+    "post_decomposition_delegation": { "$ref": "#/$defs/string_map" },
     "adaptive_assurance": {
       "type": "object",
       "additionalProperties": false,
@@ -128,6 +129,7 @@
     "completion_criteria": { "$ref": "#/$defs/string_array" },
     "execution_run": { "$ref": "#/$defs/string_map" },
     "finished_run_review": { "$ref": "#/$defs/string_map" },
+    "delegation_outcome_feedback": { "$ref": "#/$defs/string_map" },
     "proof_report": { "$ref": "#/$defs/string_map" },
     "intent_satisfaction": { "$ref": "#/$defs/string_map" },
     "system_intent_alignment": { "$ref": "#/$defs/string_map" },
