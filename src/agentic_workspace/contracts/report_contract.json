@@ -32,6 +32,7 @@
     "execution_shape",
     "maintenance_pressure",
     "operational_compression",
+    "successful_completion_cost",
     "closeout_trust",
     "external_work_reconciliation",
     "external_work_delta",
@@ -59,6 +60,7 @@
     "surface one provider-agnostic external-work reconciliation answer before provider-specific details",
     "make each config setting's actual force inspectable instead of relying on setting names alone",
     "let optimization bias change rendering density, not canonical truth or execution method",
-    "route improvement signals through one intake model before promoting them to work, memory, docs, checks, or dismissal"
+    "route improvement signals through one intake model before promoting them to work, memory, docs, checks, or dismissal",
+    "make recent successful-completion cost evidence inspectable without broad dogfooding or review archaeology"
   ]
 }

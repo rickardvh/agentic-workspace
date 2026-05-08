@@ -6178,6 +6178,10 @@ def _run_report_command(
         ),
         "findings": aggregated_findings,
         "closeout_trust": closeout_trust,
+        "successful_completion_cost": _successful_completion_cost_payload(
+            target_root=target_root,
+            cli_invoke=config.cli_invoke,
+        ),
         "external_work_reconciliation": external_work_reconciliation,
         "external_work_delta": external_work_delta,
         "next_action": next_action,
@@ -6291,6 +6295,7 @@ def _run_report_router_command(
             external_work_delta=external_work_delta,
             cli_invoke=config.cli_invoke,
         ),
+        "successful_completion_cost": _successful_completion_cost_router_payload(cli_invoke=config.cli_invoke),
         "surface_value_guardrail": _surface_value_guardrail_payload(),
         "next_action": next_action,
         "findings": findings,
@@ -6342,6 +6347,344 @@ def _report_router_execution_shape_fast(*, config: WorkspaceConfig) -> dict[str,
             ],
         },
         "deviation_rule": "Do not implement roadmap or autopilot lanes from router context alone; promote active planning first.",
+    }
+
+
+def _successful_completion_cost_router_payload(*, cli_invoke: str) -> dict[str, Any]:
+    return {
+        "kind": "workspace-successful-completion-cost/v1",
+        "status": "available",
+        "advisory_only": True,
+        "summary": "Recent model CLI evaluation cost evidence is available as a drill-down section when optimization tradeoffs matter.",
+        "section_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section successful_completion_cost --format json",
+            cli_invoke=cli_invoke,
+        ),
+    }
+
+
+def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
+    summary_dir = target_root / "scratch" / "model-cli-harness"
+    summary_files = sorted(
+        summary_dir.glob("*summary.json") if summary_dir.exists() else [],
+        key=lambda path: (path.stat().st_mtime, path.name),
+        reverse=True,
+    )
+    summaries: list[dict[str, Any]] = []
+    skipped_count = 0
+    for path in summary_files[:8]:
+        try:
+            raw_payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            skipped_count += 1
+            continue
+        if not isinstance(raw_payload, dict):
+            skipped_count += 1
+            continue
+        summaries.append(_successful_completion_cost_run_summary(payload=raw_payload, path=path, target_root=target_root))
+
+    usage_totals = _successful_completion_cost_usage_totals(summaries)
+    package_totals = _successful_completion_cost_package_totals(summaries)
+    outcome_totals = _successful_completion_cost_outcome_totals(summaries)
+    weakness_ledger = _successful_completion_cost_weakness_ledger(target_root=target_root)
+    evidence_count = len(summaries)
+    signals: list[dict[str, Any]] = []
+    if outcome_totals["warning_run_count"]:
+        signals.append(
+            {
+                "severity": "advisory",
+                "id": "rework-pressure",
+                "message": "Some recent runs had warnings or semantic findings; optimize for first-pass success before adding surface area.",
+                "count": outcome_totals["warning_run_count"],
+            }
+        )
+    if package_totals["largest_command_output_bytes"] > 10000:
+        signals.append(
+            {
+                "severity": "advisory",
+                "id": "large-package-output",
+                "message": "At least one package command output exceeded the compact-output target.",
+                "count": package_totals["largest_command_output_bytes"],
+            }
+        )
+    if weakness_ledger.get("active_high_priority_count"):
+        signals.append(
+            {
+                "severity": "advisory",
+                "id": "active-high-priority-weaknesses",
+                "message": "The weakness ledger still has high-priority active monitoring entries.",
+                "count": weakness_ledger["active_high_priority_count"],
+            }
+        )
+    return {
+        "kind": "workspace-successful-completion-cost/v1",
+        "status": "present" if evidence_count else "no-evidence",
+        "advisory_only": True,
+        "rule": (
+            "Use this as maintainer evidence for surface-cost tradeoffs. It is not a formal benchmark, CI gate, or model leaderboard."
+        ),
+        "evidence": {
+            "summary_dir": "scratch/model-cli-harness",
+            "summary_count": evidence_count,
+            "skipped_summary_count": skipped_count,
+            "included_recent_limit": 8,
+            "weakness_ledger": weakness_ledger,
+        },
+        "totals": {
+            "token_and_request_cost": usage_totals,
+            "package_read_overhead": package_totals,
+            "proof_and_rework_cost": outcome_totals,
+        },
+        "recent_runs": [_successful_completion_cost_compact_run(summary) for summary in summaries[:3]],
+        "signals": signals,
+        "decision_questions": [
+            "Did the package reduce total successful-completion work, including retries and proof?",
+            "Is the next optimization a smaller default output, a clearer selector, or stronger workflow guidance?",
+            "Is a high-read or high-token surface still needed by default, or should it move behind a section selector?",
+        ],
+        "section_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section successful_completion_cost --format json",
+            cli_invoke=cli_invoke,
+        ),
+    }
+
+
+def _successful_completion_cost_run_summary(*, payload: dict[str, Any], path: Path, target_root: Path) -> dict[str, Any]:
+    usage = payload.get("usage_summary", {})
+    usage = usage if isinstance(usage, dict) else {}
+    package_read = payload.get("package_read_surface_summary", {})
+    package_read = package_read if isinstance(package_read, dict) else {}
+    finding_classification = payload.get("finding_classification", {})
+    finding_classification = finding_classification if isinstance(finding_classification, dict) else {}
+    capability = payload.get("capability_routing_evaluation", {})
+    capability = capability if isinstance(capability, dict) else {}
+    followthrough = payload.get("completion_followthrough", {})
+    followthrough = followthrough if isinstance(followthrough, dict) else {}
+    results = _list_payload(payload.get("results"))
+    warning_result_count = 0
+    failed_result_count = 0
+    mutated_result_count = 0
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        warnings = _list_payload(result.get("warnings"))
+        if warnings:
+            warning_result_count += 1
+        returncode = result.get("returncode")
+        if isinstance(returncode, int) and returncode != 0:
+            failed_result_count += 1
+        mutation_summary = result.get("mutation_summary", {})
+        mutation_summary = mutation_summary if isinstance(mutation_summary, dict) else {}
+        if str(mutation_summary.get("status", "")) not in {"", "clean"}:
+            mutated_result_count += 1
+    finding_count = _as_int(finding_classification.get("finding_count"))
+    ignored_count = _as_int(capability.get("ignored_or_misread_count"))
+    result_count = _as_int(payload.get("result_count") or usage.get("result_count") or len(results))
+    turn_count = _as_int(usage.get("turn_count"))
+    if not turn_count:
+        for result in results:
+            if isinstance(result, dict):
+                result_usage = result.get("usage_summary", {})
+                if isinstance(result_usage, dict):
+                    turn_count += _as_int(result_usage.get("turn_count"))
+    try:
+        evidence_ref = path.resolve().relative_to(target_root.resolve()).as_posix()
+    except ValueError:
+        evidence_ref = path.as_posix()
+    return {
+        "evidence_ref": evidence_ref,
+        "adapter": payload.get("adapter", ""),
+        "model": payload.get("model", ""),
+        "result_count": result_count,
+        "token_and_request_cost": {
+            "status": usage.get("status", "absent"),
+            "input_tokens": _as_int(usage.get("input_tokens")),
+            "uncached_input_tokens": _as_int(usage.get("uncached_input_tokens")),
+            "cached_input_tokens": _as_int(usage.get("cached_input_tokens")),
+            "output_tokens": _as_int(usage.get("output_tokens")),
+            "reasoning_output_tokens": _as_int(usage.get("reasoning_output_tokens")),
+            "total_billable_proxy_tokens": _as_int(usage.get("total_billable_proxy_tokens")),
+            "request_or_turn_count": turn_count,
+        },
+        "package_read_overhead": {
+            "status": package_read.get("status", "absent"),
+            "command_count": _as_int(package_read.get("command_count")),
+            "output_bytes": _as_int(package_read.get("output_bytes")),
+            "output_lines": _as_int(package_read.get("output_lines")),
+            "largest_command_output_bytes": _as_int(package_read.get("largest_command_output_bytes")),
+            "mixed_command_count": _as_int(package_read.get("mixed_command_count")),
+            "precision": package_read.get("precision", ""),
+        },
+        "proof_and_rework_cost": {
+            "finding_count": finding_count,
+            "warning_result_count": warning_result_count,
+            "failed_result_count": failed_result_count,
+            "mutated_result_count": mutated_result_count,
+            "capability_ignored_or_misread_count": ignored_count,
+            "first_pass_proxy": "clean"
+            if not (finding_count or warning_result_count or failed_result_count or ignored_count)
+            else "rework-likely",
+            "pushed_to_completion_status": followthrough.get("status", "not-recorded"),
+        },
+    }
+
+
+def _successful_completion_cost_compact_run(summary: dict[str, Any]) -> dict[str, Any]:
+    token_cost = summary.get("token_and_request_cost", {})
+    token_cost = token_cost if isinstance(token_cost, dict) else {}
+    package_cost = summary.get("package_read_overhead", {})
+    package_cost = package_cost if isinstance(package_cost, dict) else {}
+    proof_cost = summary.get("proof_and_rework_cost", {})
+    proof_cost = proof_cost if isinstance(proof_cost, dict) else {}
+    return {
+        "evidence_ref": summary.get("evidence_ref", ""),
+        "adapter": summary.get("adapter", ""),
+        "model": summary.get("model", ""),
+        "result_count": summary.get("result_count", 0),
+        "token_and_request_cost": {
+            "total_billable_proxy_tokens": _as_int(token_cost.get("total_billable_proxy_tokens")),
+            "uncached_input_tokens": _as_int(token_cost.get("uncached_input_tokens")),
+            "output_tokens": _as_int(token_cost.get("output_tokens")),
+            "request_or_turn_count": _as_int(token_cost.get("request_or_turn_count")),
+        },
+        "package_read_overhead": {
+            "command_count": _as_int(package_cost.get("command_count")),
+            "output_bytes": _as_int(package_cost.get("output_bytes")),
+            "largest_command_output_bytes": _as_int(package_cost.get("largest_command_output_bytes")),
+        },
+        "proof_and_rework_cost": {
+            "finding_count": _as_int(proof_cost.get("finding_count")),
+            "warning_result_count": _as_int(proof_cost.get("warning_result_count")),
+            "failed_result_count": _as_int(proof_cost.get("failed_result_count")),
+            "capability_ignored_or_misread_count": _as_int(proof_cost.get("capability_ignored_or_misread_count")),
+            "first_pass_proxy": proof_cost.get("first_pass_proxy", "unknown"),
+            "pushed_to_completion_status": proof_cost.get("pushed_to_completion_status", "not-recorded"),
+        },
+    }
+
+
+def _successful_completion_cost_usage_totals(summaries: list[dict[str, Any]]) -> dict[str, Any]:
+    totals = {
+        "status": "present" if summaries else "no-evidence",
+        "run_count": len(summaries),
+        "input_tokens": 0,
+        "uncached_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0,
+        "total_billable_proxy_tokens": 0,
+        "request_or_turn_count": 0,
+    }
+    for summary in summaries:
+        cost = summary.get("token_and_request_cost", {})
+        cost = cost if isinstance(cost, dict) else {}
+        for key in (
+            "input_tokens",
+            "uncached_input_tokens",
+            "cached_input_tokens",
+            "output_tokens",
+            "reasoning_output_tokens",
+            "total_billable_proxy_tokens",
+            "request_or_turn_count",
+        ):
+            totals[key] = _as_int(totals.get(key)) + _as_int(cost.get(key))
+    return totals
+
+
+def _successful_completion_cost_package_totals(summaries: list[dict[str, Any]]) -> dict[str, Any]:
+    totals = {
+        "status": "present" if summaries else "no-evidence",
+        "run_count": len(summaries),
+        "command_count": 0,
+        "output_bytes": 0,
+        "output_lines": 0,
+        "largest_command_output_bytes": 0,
+        "mixed_command_count": 0,
+    }
+    for summary in summaries:
+        cost = summary.get("package_read_overhead", {})
+        cost = cost if isinstance(cost, dict) else {}
+        totals["command_count"] += _as_int(cost.get("command_count"))
+        totals["output_bytes"] += _as_int(cost.get("output_bytes"))
+        totals["output_lines"] += _as_int(cost.get("output_lines"))
+        totals["largest_command_output_bytes"] = max(
+            totals["largest_command_output_bytes"],
+            _as_int(cost.get("largest_command_output_bytes")),
+        )
+        totals["mixed_command_count"] += _as_int(cost.get("mixed_command_count"))
+    return totals
+
+
+def _successful_completion_cost_outcome_totals(summaries: list[dict[str, Any]]) -> dict[str, Any]:
+    totals = {
+        "status": "present" if summaries else "no-evidence",
+        "run_count": len(summaries),
+        "result_count": 0,
+        "finding_count": 0,
+        "warning_result_count": 0,
+        "failed_result_count": 0,
+        "mutated_result_count": 0,
+        "capability_ignored_or_misread_count": 0,
+        "clean_first_pass_proxy_count": 0,
+        "warning_run_count": 0,
+        "pushed_to_completion_count": 0,
+        "completion_followthrough_status_counts": {},
+        "pushed_to_completion_note": "Uses model CLI harness completion_followthrough when present; older summaries may report not-recorded.",
+    }
+    for summary in summaries:
+        proof = summary.get("proof_and_rework_cost", {})
+        proof = proof if isinstance(proof, dict) else {}
+        finding_count = _as_int(proof.get("finding_count"))
+        warning_result_count = _as_int(proof.get("warning_result_count"))
+        failed_result_count = _as_int(proof.get("failed_result_count"))
+        ignored_count = _as_int(proof.get("capability_ignored_or_misread_count"))
+        totals["result_count"] += _as_int(summary.get("result_count"))
+        totals["finding_count"] += finding_count
+        totals["warning_result_count"] += warning_result_count
+        totals["failed_result_count"] += failed_result_count
+        totals["mutated_result_count"] += _as_int(proof.get("mutated_result_count"))
+        totals["capability_ignored_or_misread_count"] += ignored_count
+        if finding_count or warning_result_count or failed_result_count or ignored_count:
+            totals["warning_run_count"] += 1
+        else:
+            totals["clean_first_pass_proxy_count"] += 1
+        status = str(proof.get("pushed_to_completion_status") or "not-recorded")
+        status_counts = totals["completion_followthrough_status_counts"]
+        if isinstance(status_counts, dict):
+            status_counts[status] = _as_int(status_counts.get(status)) + 1
+        if status == "pushed-to-completion":
+            totals["pushed_to_completion_count"] += 1
+    return totals
+
+
+def _successful_completion_cost_weakness_ledger(*, target_root: Path) -> dict[str, Any]:
+    ledger_path = target_root / "tools" / "model-cli-harness" / "model-task-weakness-ledger.json"
+    if not ledger_path.exists():
+        return {"status": "absent", "path": "tools/model-cli-harness/model-task-weakness-ledger.json"}
+    try:
+        payload = json.loads(ledger_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "status": "unreadable",
+            "path": "tools/model-cli-harness/model-task-weakness-ledger.json",
+            "reason": str(exc),
+        }
+    entries = _list_payload(payload.get("entries") if isinstance(payload, dict) else [])
+    active_entries = [
+        entry
+        for entry in entries
+        if isinstance(entry, dict) and str(entry.get("status", "")).lower() not in {"fixed-monitoring", "closed", "done"}
+    ]
+    high_priority_active = [
+        entry for entry in active_entries if isinstance(entry, dict) and str(entry.get("priority", "")).lower() == "high"
+    ]
+    return {
+        "status": "present",
+        "path": "tools/model-cli-harness/model-task-weakness-ledger.json",
+        "entry_count": len(entries),
+        "active_count": len(active_entries),
+        "active_high_priority_count": len(high_priority_active),
+        "sample_active_ids": [str(entry.get("id", "")) for entry in active_entries[:5] if isinstance(entry, dict)],
     }
 
 

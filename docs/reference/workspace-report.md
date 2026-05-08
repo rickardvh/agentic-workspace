@@ -72,6 +72,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `surface_value_guardrail` | object | yes |  | Durable-surface review guardrail for avoiding unnecessary new surfaces. |  |  |
 | `effective_authority` | object | yes |  | Resolved authority hierarchy for workspace, module, and repo-owned surfaces. |  |  |
 | `operational_compression` | object | yes |  | Compression signals that keep ordinary agent startup and reporting cheap. |  |  |
+| `successful_completion_cost` | object | yes |  | Recent model CLI evaluation cost, package-read overhead, and rework signals for advisory optimization decisions. |  |  |
 | `maintenance_pressure` | object | yes |  | Maintainer-facing pressure signals and optional follow-up routes. |  |  |
 | `closeout_trust` | object | yes |  | Trust signals for whether recent or current work can be safely closed. |  |  |
 | `external_work_reconciliation` | object | yes |  | Provider-agnostic reconciliation between checked-in planning and external work evidence. |  |  |

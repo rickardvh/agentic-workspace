@@ -34,6 +34,7 @@
     "effective_authority",
     "maintenance_pressure",
     "operational_compression",
+    "successful_completion_cost",
     "closeout_trust",
     "external_work_reconciliation",
     "external_work_delta",
@@ -210,6 +211,10 @@
     "operational_compression": {
       "type": "object",
       "description": "Compression signals that keep ordinary agent startup and reporting cheap."
+    },
+    "successful_completion_cost": {
+      "type": "object",
+      "description": "Recent model CLI evaluation cost, package-read overhead, and rework signals for advisory optimization decisions."
     },
     "maintenance_pressure": {
       "type": "object",

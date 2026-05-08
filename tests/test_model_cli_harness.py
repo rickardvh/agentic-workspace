@@ -224,7 +224,23 @@ def test_model_cli_harness_dry_run_copies_fixture_and_renders_command(tmp_path: 
     assert str(REPO_ROOT) in result["prompt"]
     assert (Path(result["run_root"]) / "run.json").exists()
     assert len(Path(result["run_root"]).name) < 90
+    assert payload["completion_followthrough"]["status"] == "dry-run"
+    assert payload["completion_followthrough"]["source"] == "default-dry-run"
     assert payload["package_read_surface_summary"]["status"] == "absent"
+
+
+def test_model_cli_harness_records_explicit_completion_followthrough() -> None:
+    harness = _load_harness()
+
+    payload = harness._completion_followthrough_payload(
+        execute=True,
+        completion_followthrough="pushed-to-completion",
+    )
+
+    assert payload["kind"] == "agentic-workspace/model-cli-completion-followthrough/v1"
+    assert payload["status"] == "pushed-to-completion"
+    assert payload["source"] == "cli-argument"
+    assert payload["advisory_only"] is True
 
 
 def test_model_cli_harness_can_inject_repo_startup_instructions(tmp_path: Path) -> None:

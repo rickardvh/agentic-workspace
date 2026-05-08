@@ -52,6 +52,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "workflow_obligations" in payload["schema"]["shared_fields"]
     assert "execution_shape" in payload["schema"]["shared_fields"]
     assert "external_work_delta" in payload["schema"]["shared_fields"]
+    assert "successful_completion_cost" in payload["schema"]["shared_fields"]
     assert "module_reports" in payload["schema"]["shared_fields"]
     assert payload["selected_modules"] == ["planning", "memory"]
     assert payload["installed_modules"] == ["planning", "memory"]
@@ -708,6 +709,83 @@ def test_report_section_selector_returns_operational_compression_measures(tmp_pa
     assert classes["archived_execplans"]["role"] == "historical evidence"
     assert classes["durable_memory_notes"]["role"] == "durable knowledge"
     assert classes["generated_outputs"]["role"] == "derived reproducible artifact"
+
+
+def test_report_section_selector_returns_successful_completion_cost_summary(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write_json(
+        target / "scratch" / "model-cli-harness" / "20260508T220836Z-suite-codex-summary.json",
+        {
+            "adapter": "codex",
+            "model": "gpt-5.3-codex-spark",
+            "result_count": 2,
+            "usage_summary": {
+                "status": "present",
+                "input_tokens": 1000,
+                "uncached_input_tokens": 300,
+                "cached_input_tokens": 700,
+                "output_tokens": 120,
+                "reasoning_output_tokens": 80,
+                "total_billable_proxy_tokens": 500,
+            },
+            "package_read_surface_summary": {
+                "status": "present",
+                "command_count": 3,
+                "output_bytes": 1200,
+                "output_lines": 42,
+                "largest_command_output_bytes": 800,
+                "mixed_command_count": 0,
+                "precision": "direct",
+            },
+            "finding_classification": {"finding_count": 1},
+            "capability_routing_evaluation": {"ignored_or_misread_count": 1},
+            "completion_followthrough": {
+                "kind": "agentic-workspace/model-cli-completion-followthrough/v1",
+                "status": "pushed-to-completion",
+            },
+            "results": [
+                {"warnings": [], "returncode": 0, "mutation_summary": {"status": "clean"}},
+                {"warnings": [{"message": "rework"}], "returncode": 0, "mutation_summary": {"status": "modified"}},
+            ],
+        },
+    )
+    _write_json(
+        target / "tools" / "model-cli-harness" / "model-task-weakness-ledger.json",
+        {
+            "schema": "agentic-workspace/model-cli-harness-weakness-ledger/v1",
+            "entries": [
+                {"id": "capability-routing-decision-followthrough", "status": "active-monitoring", "priority": "high"},
+                {"id": "memory-context-skipped-or-bulk-read", "status": "fixed-monitoring", "priority": "medium"},
+            ],
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "successful_completion_cost", "--format", "json"]) == 0
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert captured.err == ""
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["selector"] == {"section": "successful_completion_cost"}
+    answer = payload["answer"]
+    assert answer["kind"] == "workspace-successful-completion-cost/v1"
+    assert answer["advisory_only"] is True
+    assert "not a formal benchmark" in answer["rule"]
+    assert answer["evidence"]["summary_count"] == 1
+    assert answer["evidence"]["weakness_ledger"]["active_high_priority_count"] == 1
+    totals = answer["totals"]
+    assert totals["token_and_request_cost"]["total_billable_proxy_tokens"] == 500
+    assert totals["package_read_overhead"]["command_count"] == 3
+    assert totals["proof_and_rework_cost"]["warning_run_count"] == 1
+    assert totals["proof_and_rework_cost"]["capability_ignored_or_misread_count"] == 1
+    assert totals["proof_and_rework_cost"]["pushed_to_completion_count"] == 1
+    assert answer["recent_runs"][0]["proof_and_rework_cost"]["first_pass_proxy"] == "rework-likely"
+    assert answer["recent_runs"][0]["proof_and_rework_cost"]["pushed_to_completion_status"] == "pushed-to-completion"
+    assert any(signal["id"] == "rework-pressure" for signal in answer["signals"])
 
 
 def test_operational_compression_reports_artifact_footprint_pressure(tmp_path: Path, capsys) -> None:

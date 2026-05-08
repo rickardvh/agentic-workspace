@@ -174,6 +174,7 @@ def report_profile_payload(*, context_router: dict[str, Any], cli_invoke: str = 
             "memory_consult",
             "improvement_intake",
             "external_work_reconciliation",
+            "successful_completion_cost",
             "maintenance_pressure",
         ],
         "router_shape_guard": {
@@ -501,14 +502,15 @@ def _compact_report_section_hints(hints: list[dict[str, Any]]) -> list[dict[str,
         "operating_posture": 3,
         "external_work_reconciliation": 4,
         "module_reports": 5,
-        "findings": 6,
+        "successful_completion_cost": 6,
+        "findings": 7,
     }
     ordered = sorted(
         hints,
         key=lambda item: (priority.get(str(item.get("section", "")), 99), str(item.get("section", ""))),
     )
     compact: list[dict[str, Any]] = []
-    for item in ordered[:7]:
+    for item in ordered[:8]:
         compact.append(
             {key: item[key] for key in ("section", "why_now", "command", "volume", "advanced_feature") if key in item}
             | ({"purpose_summary": str(item.get("purpose", ""))[:96]} if item.get("purpose") else {})
@@ -817,6 +819,7 @@ def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_C
         "durable_intent": "task, subsystem, and system intent pressure relevant to decisions before implementation or closeout",
         "maintenance_pressure": "one compact router for audit, retention, footprint, external-evidence, and closeout residue",
         "operational_compression": "falsifiable advisory measures for whether surfaces reduce total operational cost",
+        "successful_completion_cost": "recent model CLI evaluation cost, package-read overhead, and first-pass versus rework evidence",
         "findings": "raw warnings and attention signals grouped in router warning_summary",
         "module_reports": "deep planning and memory module reports",
         "reports": "workspace lifecycle report detail",
@@ -845,6 +848,7 @@ def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_C
         "durable_intent": "inspect now when task intent may generalize into durable system or subsystem direction",
         "maintenance_pressure": "inspect now only when residue, retention, or closeout pressure affects the active lane",
         "operational_compression": "inspect now when assessing whether package surfaces are reducing total work",
+        "successful_completion_cost": "inspect now when deciding whether workflow surfaces should stay default, shrink, or move behind selectors",
         "findings": "inspect now because warnings are present" if findings else "skip unless diagnosing an absent-warning state",
         "module_reports": "deep detail; inspect only when a compact router field points to planning or memory internals",
         "reports": "deep lifecycle detail; inspect only for report/debug work",

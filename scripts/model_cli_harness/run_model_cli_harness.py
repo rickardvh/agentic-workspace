@@ -2038,6 +2038,25 @@ def compare_results(*, baseline_path: Path, current_path: Path) -> dict[str, Any
     }
 
 
+def _completion_followthrough_payload(*, execute: bool, completion_followthrough: str | None) -> dict[str, Any]:
+    if completion_followthrough:
+        status = completion_followthrough
+        source = "cli-argument"
+    elif execute:
+        status = "first-pass-attempt"
+        source = "default-executed-run"
+    else:
+        status = "dry-run"
+        source = "default-dry-run"
+    return {
+        "kind": "agentic-workspace/model-cli-completion-followthrough/v1",
+        "status": status,
+        "source": source,
+        "advisory_only": True,
+        "rule": "This describes how the evaluation run was pursued; it is not a benchmark score or pass/fail gate.",
+    }
+
+
 def run_suite(
     *,
     suite_path: Path,
@@ -2051,6 +2070,7 @@ def run_suite(
     allow_environment_blocked: bool = False,
     prompt_variant: str | None = None,
     postmortem_feedback: bool = False,
+    completion_followthrough: str | None = None,
 ) -> dict[str, Any]:
     suite = _load_json(suite_path)
     suite_id = str(suite.get("id", suite_path.stem))
@@ -2272,6 +2292,10 @@ def run_suite(
         "adapter": adapter_id,
         "model": resolved_model,
         "execute": execute,
+        "completion_followthrough": _completion_followthrough_payload(
+            execute=execute,
+            completion_followthrough=completion_followthrough,
+        ),
         "result_count": len(run_results),
         "results": run_results,
     }
@@ -2311,6 +2335,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="After an executed scenario, ask the agent for compact feedback on its workflow choices and package ergonomics.",
     )
+    parser.add_argument(
+        "--completion-followthrough",
+        choices=["first-pass-attempt", "retry-loop", "pushed-to-completion", "incomplete", "blocked", "unknown"],
+        help="Advisory completion mode for the run summary when known; used by cost/reporting surfaces.",
+    )
     parser.add_argument("--compare-baseline", type=Path, help="Compare a baseline run JSON, run directory, or summary JSON.")
     parser.add_argument("--compare-current", type=Path, help="Compare a current run JSON, run directory, or summary JSON.")
     parser.add_argument("--format", choices=["text", "json"], default="text")
@@ -2340,6 +2369,7 @@ def main(argv: list[str] | None = None) -> int:
                 allow_environment_blocked=args.allow_environment_blocked,
                 prompt_variant=args.prompt_variant,
                 postmortem_feedback=args.postmortem_feedback,
+                completion_followthrough=args.completion_followthrough,
             )
     except Exception as exc:  # noqa: BLE001
         if args.format == "json":
