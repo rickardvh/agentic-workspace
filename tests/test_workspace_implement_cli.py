@@ -87,7 +87,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     adaptive = payload["adaptive_routing"]
     assert adaptive["current_need"] == "changed-path-next-action"
     assert adaptive["read_budget"]["profile"] == "tiny"
-    assert adaptive["detail_commands"]["task_scoped_state"].startswith("agentic-workspace summary --profile compact")
+    assert adaptive["detail_commands"]["task_scoped_state"].startswith("agentic-workspace summary --changed")
     assert "raw workspace files" in adaptive["not_needed_now"]
     assert payload["next"]["action"] == "Inspect only the listed files and run the required validation commands."
     assert payload["next"]["command"] == "make test-workspace"
@@ -464,10 +464,35 @@ def test_implement_supports_selector_drilldown(tmp_path: Path, capsys) -> None:
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selected-output/v1"
-    assert payload["missing"] == []
+    assert "missing" not in payload
+    assert "available_selectors" not in payload
+    assert payload["values"]["delegation_decision.required_next_action"] == "execute-when-safe"
+    assert payload["values"]["delegation_decision.delegation_next_step.must_report_if_not_run"] is True
+
+
+def test_implement_selector_reports_available_fields_for_missing_selector(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--select",
+                "does_not_exist",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["missing"] == ["does_not_exist"]
     assert "delegation_decision" in payload["available_selectors"]
     assert "next" in payload["available_selectors"]
     assert "scope" in payload["available_selectors"]
     assert "proof" in payload["available_selectors"]
-    assert payload["values"]["delegation_decision.required_next_action"] == "execute-when-safe"
-    assert payload["values"]["delegation_decision.delegation_next_step.must_report_if_not_run"] is True

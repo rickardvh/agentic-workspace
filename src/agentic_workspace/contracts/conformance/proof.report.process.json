@@ -49,7 +49,7 @@
           "path": [
             "detail_command"
           ],
-          "equals": "agentic-workspace proof --profile full --changed <paths> --format json"
+          "equals": "agentic-workspace proof --verbose --changed <paths> --format json"
         }
       ]
     },

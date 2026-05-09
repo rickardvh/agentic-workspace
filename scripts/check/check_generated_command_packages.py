@@ -331,7 +331,7 @@ def _root_workspace_adapter_conformance_cases() -> dict[str, AdapterConformanceC
             expected_fields={
                 "kind": "proof-next-decision/v1",
                 "next_action": "run-validation-command",
-                "detail_command": "agentic-workspace proof --profile full --changed <paths> --format json",
+                "detail_command": "agentic-workspace proof --verbose --changed <paths> --format json",
             },
         ),
         AdapterConformanceCase(

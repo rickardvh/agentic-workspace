@@ -536,8 +536,7 @@ def test_start_select_returns_requested_startup_fields(capsys) -> None:
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selected-output/v1"
-    assert payload["source_kind"] == "startup-context/v1"
-    assert payload["selectors"] == ["cli_invocation", "durable_intent.missing"]
+    assert payload["source_command"] == "start"
     assert payload["values"]["cli_invocation"]["primary"] == "uv run agentic-workspace"
     assert payload["missing"] == ["durable_intent.missing"]
     assert "skill_routing" in payload["available_selectors"]

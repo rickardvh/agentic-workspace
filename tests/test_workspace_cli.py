@@ -53,16 +53,14 @@ def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys
     summary = json.loads(capsys.readouterr().out)
     assert summary["kind"] == "agentic-workspace/selected-output/v1"
     assert summary["source_command"] == "summary"
-    assert summary["source_profile"] == "tiny"
     assert summary["selection_cost"]["profile_loaded"] == "tiny"
     assert summary["selection_cost"]["fallback_profile_loaded"] is False
     assert Path(summary["values"]["target_root"]) == tmp_path
     assert summary["values"]["todo.active_count"] == 0
-    assert summary["missing"] == []
+    assert "missing" not in summary
 
     assert cli.main(["summary", "--target", str(tmp_path), "--select", "planning_record", "--format", "json"]) == 0
     summary_full_field = json.loads(capsys.readouterr().out)
-    assert summary_full_field["source_profile"] == "full"
     assert summary_full_field["selection_cost"]["profile_loaded"] == "full"
     assert summary_full_field["selection_cost"]["fallback_profile_loaded"] is True
     assert "planning_record" in summary_full_field["values"]
@@ -78,7 +76,7 @@ def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys
     assert config["source_command"] == "config"
     assert config["values"]["workspace.default_preset"] == "full"
     assert "recommendation" in config["values"]["mixed_agent.runtime_resolution"]
-    assert config["missing"] == []
+    assert "missing" not in config
 
 
 def test_improvement_intake_includes_repair_recurrence_subtype(capsys) -> None:
