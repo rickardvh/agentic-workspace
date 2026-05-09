@@ -254,6 +254,49 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
     assert handoff["handoff_contract"]["worker_contract"]["worker_must_not_own_by_default"][0] == "roadmap routing"
 
 
+def test_planning_handoff_includes_manual_external_relay_prompt_for_epic_intent_shaping(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "product-epic", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/product-epic.plan.json", why_now = "shape product intent before implementation." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record = installer_mod._build_execplan_record_from_todo_item(
+        title="Product Epic",
+        item_id="product-epic",
+        status="in-progress",
+        why_now="shape product intent before implementation.",
+        next_action="Clarify the product intent and user policy boundaries before implementation.",
+        done_when="first implementation slice can be shaped safely.",
+    )
+    record["execplan_profile"]["task_shape"] = "epic"
+    record["canonical_core"]["requested_outcome"] = "Clarify product intent and user policy boundaries before implementation."
+    installer_mod._write_execplan_record(
+        record_path=tmp_path / ".agentic-workspace/planning/execplans/product-epic.plan.json",
+        record=record,
+    )
+
+    handoff = planning_handoff(target=tmp_path)
+
+    relay = handoff["manual_external_relay"]
+    assert relay["status"] == "appropriate"
+    assert relay["interrupt_cost"] == "human-relay-required"
+    assert "not asked to code" in relay["ready_to_forward_prompt"]["copy_paste"]
+    assert "Do not write code" in relay["ready_to_forward_prompt"]["constraints"][0]
+
+
 def test_planning_handoff_command_emits_json(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(

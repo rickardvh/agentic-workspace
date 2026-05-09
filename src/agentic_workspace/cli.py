@@ -10125,10 +10125,12 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
     compact = {key: value.get(key) for key in common_keys if key in value}
     decision = str(value.get("decision", ""))
     config_effect = value.get("config_effect")
+    manual_external_relay = value.get("manual_external_relay")
     config_changes_effective_behavior = isinstance(config_effect, dict) and (
         config_effect.get("configured_delegation_mode") != config_effect.get("delegation_mode")
         or config_effect.get("disabled_reason") not in (None, "")
         or config_effect.get("safe_to_auto_run_commands") is False
+        or (isinstance(manual_external_relay, dict) and manual_external_relay.get("target_kind") == "manual-external")
     )
     if decision != "stay-local" or value.get("required_next_action") != "continue-local" or config_changes_effective_behavior:
         routed_keys = ("route_obligation", "config_effect")
@@ -10160,6 +10162,11 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
     if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation", "delegate-bounded-slice"}:
         compact["target"] = value.get("target")
         compact["reason"] = value.get("reason")
+    if isinstance(manual_external_relay, dict) and manual_external_relay.get("target_kind") == "manual-external":
+        relay = manual_external_relay
+        compact["manual_external_relay"] = {
+            key: relay.get(key) for key in ("kind", "status", "target_kind", "target", "interrupt_cost", "reason", "rule") if key in relay
+        }
     if decision in {"suggest-escalation", "delegate-bounded-slice", "manual-handoff", "ask-human"}:
         if value.get("handoff_command"):
             compact["handoff_command"] = value.get("handoff_command")
@@ -12021,6 +12028,12 @@ def _delegation_next_action_decision(
     clarification_mode = str(clarification_control.get("effective_mode", "suggest"))
     selected_target = execution_posture.get("selected_target")
     target_name = str(selected_target.get("name")) if isinstance(selected_target, dict) and selected_target.get("name") else None
+    target_execution_methods = (
+        list(selected_target.get("execution_methods", []))
+        if isinstance(selected_target, dict) and selected_target.get("execution_methods")
+        else []
+    )
+    target_location = str(selected_target.get("location", "")) if isinstance(selected_target, dict) else ""
     capability_status = str(capability.get("status", "unknown")) if isinstance(capability, dict) else "unknown"
     posture = capability.get("posture", {}) if isinstance(capability, dict) else {}
     work_shape = capability.get("work_shape") or (posture.get("work shape") if isinstance(posture, dict) else None)
@@ -12035,6 +12048,16 @@ def _delegation_next_action_decision(
     handoff_command: str | None = None
     manual_prompt: dict[str, Any] | None = None
     mode_effect = "Delegation mode is suggest by default: surface the decision, but do not delegate automatically."
+    manual_external_relay = _manual_external_relay_payload(
+        task_text=task_text,
+        changed_paths=changed_paths,
+        work_shape=str(work_shape or ""),
+        proof_burden=str(proof_burden or ""),
+        target_name=target_name,
+        target_location=target_location,
+        target_execution_methods=target_execution_methods,
+        reason=reasons[0],
+    )
 
     downrouting = runtime_resolution.get("downrouting_guardrail", {})
     downrouting_active = isinstance(downrouting, dict) and downrouting.get("status") == "active"
@@ -12073,6 +12096,16 @@ def _delegation_next_action_decision(
             )
         ]
 
+    if (
+        decision in {"suggest-escalation", "manual-handoff"}
+        and manual_external_relay.get("target_kind") == "manual-external"
+        and manual_external_relay.get("status") == "not-appropriate"
+    ):
+        decision = "stay-local"
+        required_next_action = "continue-local"
+        handoff_command = None
+        reasons = [str(manual_external_relay.get("reason", "Manual external relay is not appropriate for this task shape."))]
+
     if mode == "off":
         mode_effect = "delegation.mode is off: do not use local delegation targets."
         if decision in {"suggest-delegation", "suggest-downroute"}:
@@ -12086,6 +12119,13 @@ def _delegation_next_action_decision(
         mode_effect = "delegation.mode is auto and safety permits execution within target-profile limits."
         if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation"}:
             required_next_action = "execute-when-safe"
+
+    if (
+        decision in {"suggest-escalation", "manual-handoff"}
+        and manual_external_relay.get("target_kind") == "manual-external"
+        and manual_external_relay.get("status") == "appropriate"
+    ):
+        required_next_action = "prepare-manual-handoff"
 
     if decision in {
         "suggest-delegation",
@@ -12112,6 +12152,8 @@ def _delegation_next_action_decision(
             "expected_output": "A short decision, constraint list, or answer the current agent can apply directly.",
             "return_to": "Paste the answer back into the current agent session for integration.",
         }
+    if manual_external_relay.get("ready_to_forward_prompt") and decision in {"suggest-escalation", "manual-handoff"}:
+        manual_prompt = dict(manual_external_relay["ready_to_forward_prompt"])
     delegation_next_step: dict[str, Any] | None = None
     if decision in {
         "suggest-delegation",
@@ -12129,6 +12171,11 @@ def _delegation_next_action_decision(
             "execution_methods": selected_target.get("execution_methods", []) if isinstance(selected_target, dict) else [],
             "must_report_if_not_run": required_next_action == "execute-when-safe",
             "scope_rule": "Delegate only a bounded slice with unchanged proof expectations; otherwise stay local and state why.",
+            "manual_external_relay": {
+                key: manual_external_relay.get(key)
+                for key in ("status", "target_kind", "interrupt_cost", "use_when", "avoid_when", "reason")
+                if key in manual_external_relay
+            },
             "return_contract": [
                 "what changed",
                 "proof run and result",
@@ -12149,6 +12196,9 @@ def _delegation_next_action_decision(
     elif required_next_action == "execute-when-safe":
         must = "Execute only when local auto mode, target profile, scope, and proof constraints all remain satisfied."
         must_not = "Do not widen scope, lower proof, or use a target outside its configured execution methods."
+    elif required_next_action == "prepare-manual-handoff":
+        must = "Prepare the ready-to-forward manual relay prompt and ask the human to send it only if the interruption is worth it."
+        must_not = "Do not treat manual external relay as callable automation or use it for pure code-local questions."
     elif required_next_action == "stop-and-ask-human":
         must = "Stop and ask for the bounded missing input before continuing."
         must_not = "Do not guess the missing human intent or ownership boundary."
@@ -12172,9 +12222,13 @@ def _delegation_next_action_decision(
         "safe_to_auto_run_commands": delegation_control.get("safe_to_auto_run_commands"),
         "disabled_reason": delegation_control.get("disabled_reason"),
         "execution_authority": (
-            "auto-execution-permitted"
-            if mode == "auto" and delegation_control.get("execution_permitted") is True
-            else "suggest-or-handoff-only"
+            "manual-relay-only"
+            if manual_external_relay.get("target_kind") == "manual-external"
+            else (
+                "auto-execution-permitted"
+                if mode == "auto" and delegation_control.get("execution_permitted") is True
+                else "suggest-or-handoff-only"
+            )
         ),
         "human_control": "auto execution requires local safety permission; otherwise surface suggest/handoff first.",
     }
@@ -12200,10 +12254,124 @@ def _delegation_next_action_decision(
         "handoff_surface": _delegation_handoff_surface(command=handoff_command) if handoff_command else None,
         "delegation_next_step": delegation_next_step,
         "manual_prompt": manual_prompt,
+        "manual_external_relay": manual_external_relay,
         "route_obligation": route_obligation,
         "human_control_summary": (
             "Local posture may suggest delegation or clarification, but only auto mode may execute without a human handoff."
         ),
+    }
+
+
+def _manual_external_relay_payload(
+    *,
+    task_text: str | None,
+    changed_paths: list[str],
+    work_shape: str,
+    proof_burden: str,
+    target_name: str | None,
+    target_location: str,
+    target_execution_methods: list[Any],
+    reason: str,
+) -> dict[str, Any]:
+    method_set = {str(method) for method in target_execution_methods}
+    target_kind = "manual-external" if "manual" in method_set and target_location in {"external", "either", ""} else "not-manual-external"
+    use_when = [
+        "early epic, lane, or domain shaping before implementation starts",
+        "product, policy, user, regulatory, or domain understanding beyond the codebase",
+        "a compact high-judgment question where a general-purpose model can improve framing before code work",
+    ]
+    avoid_when = [
+        "pure code implementation, debugging, refactoring, tests, or changed-path review",
+        "late workflow stages after changed paths already define the local proof surface",
+        "questions a repository-aware coding agent or code-focused delegate should answer from the codebase",
+        "when interrupting the human is unlikely to improve quality or reduce total work",
+    ]
+    base = {
+        "kind": "agentic-workspace/manual-external-relay/v1",
+        "target_kind": target_kind,
+        "target": target_name,
+        "interrupt_cost": "human-relay-required",
+        "rule": "Manual external relay is a human-interrupting escalation path, not ordinary delegation.",
+        "use_when": use_when,
+        "avoid_when": avoid_when,
+    }
+    if target_kind != "manual-external":
+        return {**base, "status": "not-applicable", "reason": "selected target is not a manual external relay target"}
+
+    task_lower = " ".join((task_text or "").lower().split())
+    changed_path_text = " ".join(path.lower() for path in changed_paths)
+    code_local_terms = {
+        "implement",
+        "fix",
+        "debug",
+        "refactor",
+        "test",
+        "lint",
+        "typecheck",
+        "schema",
+        "contract",
+        "cli",
+        "python",
+        "typescript",
+        "code",
+    }
+    domain_terms = {
+        "domain",
+        "product",
+        "user",
+        "users",
+        "customer",
+        "policy",
+        "legal",
+        "regulatory",
+        "compliance",
+        "intent",
+        "purpose",
+        "strategy",
+        "thesis",
+        "epic",
+        "requirements",
+    }
+    code_local_signal = bool(changed_paths) or any(term in task_lower or term in changed_path_text for term in code_local_terms)
+    domain_signal = any(term in task_lower for term in domain_terms)
+    early_broad_signal = not changed_paths and (work_shape in {"lane", "epic"} or domain_signal)
+    if code_local_signal and not domain_signal:
+        return {
+            **base,
+            "status": "not-appropriate",
+            "reason": "Manual external relay is not appropriate for pure code-local or changed-path work; continue with the coding agent or a code-focused delegate.",
+        }
+    if not early_broad_signal:
+        return {
+            **base,
+            "status": "not-appropriate",
+            "reason": "Manual external relay is reserved for early broad/domain/intent shaping before implementation changes are underway.",
+        }
+    question = task_text.strip() if task_text else "Clarify the broad domain or product intent before implementation planning."
+    return {
+        **base,
+        "status": "appropriate",
+        "reason": "The task appears early and broad enough that external general-purpose domain/intent review may improve framing.",
+        "ready_to_forward_prompt": {
+            "kind": "agentic-workspace/manual-external-relay-prompt/v1",
+            "target": target_name or "external-strong-general-purpose-model",
+            "copy_paste": (
+                "You are being consulted before implementation, not asked to code. "
+                f"Question: {question}\n\n"
+                "Please answer only at the domain/product/intent level. Do not inspect or speculate about repository code. "
+                "Return: (1) the likely intended outcome, (2) assumptions to confirm, (3) risks or constraints larger than the codebase, "
+                "(4) a compact recommendation for how the coding agent should shape the first implementation slice."
+            ),
+            "constraints": [
+                "Do not write code or propose code-local implementation details.",
+                "Keep the answer compact and actionable for the current coding agent.",
+                "State uncertainty explicitly.",
+            ],
+            "return_to": "Paste the answer back into the current coding-agent session; the coding agent remains responsible for repo implementation and proof.",
+            "source_reason": reason,
+            "proof_burden": proof_burden,
+            "work_shape": work_shape,
+        },
     }
 
 

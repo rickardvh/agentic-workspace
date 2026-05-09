@@ -366,3 +366,54 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
     assert decision["delegation_next_step"]["must_report_if_not_run"] is True
     assert decision["delegation_next_step"]["execution_methods"] == ["cli"]
     assert "bounded work" in decision["reason"]
+
+
+def test_implement_suppresses_manual_external_relay_for_code_local_changed_paths(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "auto"',
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = true",
+                "",
+                "[delegation_targets.chatgpt]",
+                'strength = "strong"',
+                'location = "external"',
+                'capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed"]',
+                'execution_methods = ["manual"]',
+            ]
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/package/feature.py",
+                "--task",
+                "Implement schema and CLI behavior for the feature",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    decision = json.loads(capsys.readouterr().out)["delegation_decision"]
+    assert decision["decision"] == "stay-local"
+    assert decision["required_next_action"] == "continue-local"
+    relay = decision["manual_external_relay"]
+    assert relay["status"] == "not-appropriate"
+    assert "code-local" in relay["reason"]
+    assert decision["config_effect"]["execution_authority"] == "manual-relay-only"
+    assert "manual_prompt" not in decision
+    assert "handoff_command" not in decision

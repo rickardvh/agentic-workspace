@@ -795,6 +795,56 @@ def test_start_tiny_surfaces_auto_delegation_safety_gate(tmp_path: Path, capsys)
     assert "safe_to_auto_run_commands" in config_effect["disabled_reason"]
 
 
+def test_start_tiny_prepares_manual_external_relay_for_early_epic_shaping(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "auto"',
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = true",
+                "",
+                "[delegation_targets.chatgpt]",
+                'strength = "strong"',
+                'location = "external"',
+                'capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed"]',
+                'execution_methods = ["manual"]',
+            ]
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Shape an epic around product intent and user-facing policy before implementation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    decision = json.loads(capsys.readouterr().out)["delegation_decision"]
+    assert decision["required_next_action"] == "prepare-manual-handoff"
+    assert decision["delegation_next_step"]["status"] == "prepare-or-report"
+    assert decision["config_effect"]["execution_authority"] == "manual-relay-only"
+    relay = decision["manual_external_relay"]
+    assert relay["status"] == "appropriate"
+    assert relay["interrupt_cost"] == "human-relay-required"
+    assert decision["manual_prompt"]["kind"] == "agentic-workspace/manual-external-relay-prompt/v1"
+    assert "not asked to code" in decision["manual_prompt"]["copy_paste"]
+    assert "Do not write code" in decision["manual_prompt"]["constraints"][0]
+
+
 def test_start_tiny_keeps_config_effect_when_auto_mode_is_safety_downgraded(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(

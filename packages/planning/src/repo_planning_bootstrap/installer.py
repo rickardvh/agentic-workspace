@@ -2066,13 +2066,71 @@ def planning_report_tiny(*, target: str | Path | None = None) -> dict[str, Any]:
 
 def planning_handoff(*, target: str | Path | None = None) -> dict[str, Any]:
     summary = planning_summary(target=target)
+    handoff_contract = summary.get("handoff_contract", {})
     return {
         "kind": "planning-handoff/v1",
         "schema": _planning_handoff_schema(),
         "target_root": summary["target_root"],
-        "handoff_contract": summary.get("handoff_contract", {}),
+        "handoff_contract": handoff_contract,
+        "manual_external_relay": _planning_manual_external_relay(handoff_contract),
         "warnings": [warning.copy() for warning in summary.get("warnings", [])],
         "warning_count": int(summary.get("warning_count", 0)),
+    }
+
+
+def _planning_manual_external_relay(handoff_contract: Any) -> dict[str, Any]:
+    if not isinstance(handoff_contract, dict) or handoff_contract.get("status") != "present":
+        return {
+            "kind": "planning-manual-external-relay/v1",
+            "status": "unavailable",
+            "reason": "requires a present active planning handoff contract",
+        }
+    task_shape = str(handoff_contract.get("execplan_profile", {}).get("task_shape", "")).strip()
+    requested_outcome = str(handoff_contract.get("requested_outcome", "")).strip()
+    next_action = str(handoff_contract.get("next_action", "")).strip()
+    owned_scope = [str(path) for path in handoff_contract.get("owned_write_scope", [])]
+    broad_or_domain = task_shape in {"lane", "epic"} or any(
+        term in f"{requested_outcome} {next_action}".lower()
+        for term in ("domain", "product", "user", "policy", "intent", "strategy", "requirements", "epic")
+    )
+    if owned_scope and not broad_or_domain:
+        return {
+            "kind": "planning-manual-external-relay/v1",
+            "status": "not-appropriate",
+            "reason": "active handoff is code-local or already implementation-bounded; use coding-agent execution or code-focused delegation",
+            "avoid_when": [
+                "pure code implementation or changed-path review",
+                "late execution after owned write scope is already known",
+            ],
+        }
+    if not broad_or_domain:
+        return {
+            "kind": "planning-manual-external-relay/v1",
+            "status": "not-appropriate",
+            "reason": "manual external relay is reserved for early broad/domain/intent shaping",
+        }
+    question = requested_outcome or next_action or "Clarify broad intent before implementation planning."
+    return {
+        "kind": "planning-manual-external-relay/v1",
+        "status": "appropriate",
+        "interrupt_cost": "human-relay-required",
+        "rule": "Use only when early broad/domain/intent judgment is worth interrupting the human; do not use for pure code questions.",
+        "ready_to_forward_prompt": {
+            "kind": "planning-manual-external-relay-prompt/v1",
+            "copy_paste": (
+                "You are being consulted before implementation, not asked to code. "
+                f"Question: {question}\n\n"
+                "Please answer only at the domain/product/intent level. Do not inspect or speculate about repository code. "
+                "Return: (1) intended outcome, (2) assumptions to confirm, (3) risks or constraints larger than the codebase, "
+                "(4) recommended shape of the first implementation slice."
+            ),
+            "constraints": [
+                "Do not write code or propose code-local implementation details.",
+                "Keep the answer compact and actionable.",
+                "State uncertainty explicitly.",
+            ],
+            "return_to": "Paste the answer back into the current coding-agent session; the coding agent remains responsible for implementation and proof.",
+        },
     }
 
 
