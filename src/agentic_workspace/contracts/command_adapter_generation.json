@@ -556,6 +556,7 @@
           "workspace.root.resolve",
           "implementer.context.assemble",
           "output.profile.select",
+          "output.fields.select",
           "output.emit"
         ]
       },
@@ -609,6 +610,7 @@
           "target root resolution",
           "implementer context assembly",
           "changed-path proof selection",
+          "field selection",
           "output emission"
         ]
       },

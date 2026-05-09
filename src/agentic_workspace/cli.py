@@ -2194,6 +2194,8 @@ def main(argv: list[str] | None = None) -> int:
             )
             if _diagnostic_profile(args, default="tiny") == "tiny":
                 payload = _tiny_implement_payload(payload)
+            if getattr(args, "select", None):
+                payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
             _emit_payload(payload=payload, format_name=args.format)
             return 0
         except WorkspaceUsageError as exc:
@@ -10726,6 +10728,12 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "workflow_obligations",
         "closeout_obligations",
         "proof",
+        "next",
+        "scope",
+        "routing",
+        "acceptance_reconciliation",
+        "objective_drift",
+        "detail_commands",
         "path_boundaries",
         "drill_down",
     ]
@@ -12169,7 +12177,7 @@ def _delegation_next_action_decision(
             "target": target_name,
             "command": handoff_command,
             "execution_methods": selected_target.get("execution_methods", []) if isinstance(selected_target, dict) else [],
-            "must_report_if_not_run": required_next_action == "execute-when-safe",
+            "must_report_if_not_run": required_next_action in {"execute-when-safe", "prepare-manual-handoff"},
             "scope_rule": "Delegate only a bounded slice with unchanged proof expectations; otherwise stay local and state why.",
             "manual_external_relay": {
                 key: manual_external_relay.get(key)
@@ -17436,6 +17444,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     )
     if _diagnostic_profile(args, default="tiny") == "tiny":
         payload = _tiny_implement_payload(payload)
+    if getattr(args, "select", None):
+        payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 

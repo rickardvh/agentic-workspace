@@ -147,6 +147,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
         "workspace.root.resolve",
         "implementer.context.assemble",
         "output.profile.select",
+        "output.fields.select",
         "output.emit"
       ]
     },

@@ -627,6 +627,13 @@ export const generatedCommandPackage = {
             "name": "task_file"
           },
           {
+            "flags": [
+              "--select"
+            ],
+            "help": "Return only comma-separated top-level or dotted JSON fields from the implementer context. Prefer this when one or a few fields are needed.",
+            "name": "select"
+          },
+          {
             "choices": [
               "tiny",
               "full"
@@ -693,6 +700,7 @@ export const generatedCommandPackage = {
           "workspace.root.resolve",
           "implementer.context.assemble",
           "output.profile.select",
+          "output.fields.select",
           "output.emit"
         ]
       },

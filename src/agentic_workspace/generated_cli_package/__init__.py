@@ -641,6 +641,13 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "task_file"
           },
           {
+            "flags": [
+              "--select"
+            ],
+            "help": "Return only comma-separated top-level or dotted JSON fields from the implementer context. Prefer this when one or a few fields are needed.",
+            "name": "select"
+          },
+          {
             "choices": [
               "tiny",
               "full"
@@ -707,6 +714,7 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           "workspace.root.resolve",
           "implementer.context.assemble",
           "output.profile.select",
+          "output.fields.select",
           "output.emit"
         ]
       },
@@ -2137,6 +2145,13 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Optional repo-local file containing task text; use this instead of repeating long task prompts.",
           "name": "task_file"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Return only comma-separated top-level or dotted JSON fields from the implementer context. Prefer this when one or a few fields are needed.",
+          "name": "select"
         },
         {
           "choices": [

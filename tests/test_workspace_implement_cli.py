@@ -417,3 +417,57 @@ def test_implement_suppresses_manual_external_relay_for_code_local_changed_paths
     assert decision["config_effect"]["execution_authority"] == "manual-relay-only"
     assert "manual_prompt" not in decision
     assert "handoff_command" not in decision
+
+
+def test_implement_supports_selector_drilldown(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "auto"',
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = true",
+                "",
+                "[delegation_targets.mini]",
+                'strength = "medium"',
+                'location = "local"',
+                'task_fit = ["bounded implementation"]',
+                'capability_classes = ["mechanical-follow-through"]',
+                'execution_methods = ["cli"]',
+            ]
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--task",
+                "Implement bounded text helper behavior",
+                "--select",
+                "delegation_decision.required_next_action,delegation_decision.delegation_next_step.must_report_if_not_run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["missing"] == []
+    assert "delegation_decision" in payload["available_selectors"]
+    assert "next" in payload["available_selectors"]
+    assert "scope" in payload["available_selectors"]
+    assert "proof" in payload["available_selectors"]
+    assert payload["values"]["delegation_decision.required_next_action"] == "execute-when-safe"
+    assert payload["values"]["delegation_decision.delegation_next_step.must_report_if_not_run"] is True
