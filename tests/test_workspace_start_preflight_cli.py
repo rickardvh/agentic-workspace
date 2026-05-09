@@ -834,6 +834,10 @@ def test_start_tiny_prepares_manual_external_relay_for_early_epic_shaping(tmp_pa
 
     decision = json.loads(capsys.readouterr().out)["delegation_decision"]
     assert decision["required_next_action"] == "prepare-manual-handoff"
+    effort = decision["effort_recommendation"]
+    assert effort["orchestrator"] == "medium"
+    assert effort["planner"] == "external-high-judgment"
+    assert effort["cost_posture"] == "human-interrupt-only-if-worth-it"
     assert decision["delegation_next_step"]["status"] == "prepare-or-report"
     assert decision["delegation_next_step"]["must_report_if_not_run"] is True
     assert decision["config_effect"]["execution_authority"] == "manual-relay-only"

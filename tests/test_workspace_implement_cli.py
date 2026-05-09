@@ -358,6 +358,10 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
     assert decision["target"] == "mini"
     assert decision["required_next_action"] == "execute-when-safe"
     assert decision["token_savings_expected"] == "likely"
+    effort = decision["effort_recommendation"]
+    assert effort["cost_posture"] == "save-tokens-where-safe"
+    assert effort["orchestrator"] == "medium"
+    assert effort["implementer"] == "medium delegate"
     assert decision["route_obligation"]["must"].startswith("Execute only when local auto mode")
     assert decision["config_effect"]["authority"] == "local-config"
     assert decision["config_effect"]["execution_authority"] == "auto-execution-permitted"
@@ -411,6 +415,11 @@ def test_implement_suppresses_manual_external_relay_for_code_local_changed_paths
     decision = json.loads(capsys.readouterr().out)["delegation_decision"]
     assert decision["decision"] == "stay-local"
     assert decision["required_next_action"] == "continue-local"
+    assert decision["effort_recommendation"]["orchestrator"] == "medium"
+    assert decision["effort_recommendation"]["implementer"] == "medium"
+    assert decision["effort_recommendation"]["validator"] == "high"
+    assert decision["effort_recommendation"]["cost_posture"] == "quality-first"
+    assert "target" not in decision["effort_recommendation"]
     relay = decision["manual_external_relay"]
     assert relay["status"] == "not-appropriate"
     assert "code-local" in relay["reason"]
@@ -454,7 +463,7 @@ def test_implement_supports_selector_drilldown(tmp_path: Path, capsys) -> None:
                 "--task",
                 "Implement bounded text helper behavior",
                 "--select",
-                "delegation_decision.required_next_action,delegation_decision.delegation_next_step.must_report_if_not_run",
+                "delegation_decision.required_next_action,delegation_decision.delegation_next_step.must_report_if_not_run,delegation_decision.effort_recommendation.cost_posture",
                 "--format",
                 "json",
             ]
@@ -468,6 +477,7 @@ def test_implement_supports_selector_drilldown(tmp_path: Path, capsys) -> None:
     assert "available_selectors" not in payload
     assert payload["values"]["delegation_decision.required_next_action"] == "execute-when-safe"
     assert payload["values"]["delegation_decision.delegation_next_step.must_report_if_not_run"] is True
+    assert payload["values"]["delegation_decision.effort_recommendation.cost_posture"] == "save-tokens-where-safe"
 
 
 def test_implement_selector_reports_available_fields_for_missing_selector(tmp_path: Path, capsys) -> None:

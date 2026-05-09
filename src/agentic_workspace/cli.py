@@ -10123,8 +10123,11 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
         "quality_risk",
         "token_savings_expected",
         "required_next_action",
+        "effort_recommendation",
     )
     compact = {key: value.get(key) for key in common_keys if key in value}
+    if isinstance(compact.get("effort_recommendation"), dict):
+        compact["effort_recommendation"] = _compact_effort_recommendation(compact["effort_recommendation"])
     decision = str(value.get("decision", ""))
     config_effect = value.get("config_effect")
     manual_external_relay = value.get("manual_external_relay")
@@ -10186,6 +10189,20 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
                 else next_step
             )
     return compact
+
+
+def _compact_effort_recommendation(value: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value.get(key)
+        for key in (
+            "orchestrator",
+            "planner",
+            "implementer",
+            "validator",
+            "cost_posture",
+        )
+        if value.get(key) not in (None, "")
+    }
 
 
 def _compact_start_prep_only_handoff(value: Any) -> dict[str, Any]:
@@ -12040,6 +12057,7 @@ def _delegation_next_action_decision(
         else []
     )
     target_location = str(selected_target.get("location", "")) if isinstance(selected_target, dict) else ""
+    target_strength = str(selected_target.get("strength", "")) if isinstance(selected_target, dict) else ""
     capability_status = str(capability.get("status", "unknown")) if isinstance(capability, dict) else "unknown"
     posture = capability.get("posture", {}) if isinstance(capability, dict) else {}
     work_shape = capability.get("work_shape") or (posture.get("work shape") if isinstance(posture, dict) else None)
@@ -12238,6 +12256,12 @@ def _delegation_next_action_decision(
         ),
         "human_control": "auto execution requires local safety permission; otherwise surface suggest/handoff first.",
     }
+    quality_risk = "high" if proof_burden == "high" else ("medium" if proof_burden == "non-obvious" else "low")
+    token_savings_expected = (
+        "likely"
+        if decision in {"suggest-downroute", "delegate-bounded-slice"}
+        else ("possible" if decision == "suggest-delegation" else "none")
+    )
 
     return {
         "kind": "agentic-workspace/delegation-next-action/v1",
@@ -12245,14 +12269,23 @@ def _delegation_next_action_decision(
         "mode": mode,
         "clarification_mode": clarification_mode,
         "decision": decision,
-        "target": target_name,
+        "target": target_name if decision != "stay-local" else None,
         "work_shape": work_shape,
         "proof_burden": proof_burden,
-        "quality_risk": "high" if proof_burden == "high" else ("medium" if proof_burden == "non-obvious" else "low"),
-        "token_savings_expected": "likely"
-        if decision in {"suggest-downroute", "delegate-bounded-slice"}
-        else ("possible" if decision == "suggest-delegation" else "none"),
+        "quality_risk": quality_risk,
+        "token_savings_expected": token_savings_expected,
         "required_next_action": required_next_action,
+        "effort_recommendation": _effort_recommendation_payload(
+            work_shape=str(work_shape or "unknown"),
+            proof_burden=str(proof_burden or "unknown"),
+            quality_risk=quality_risk,
+            decision=decision,
+            required_next_action=required_next_action,
+            token_savings_expected=token_savings_expected,
+            target_name=target_name if decision != "stay-local" else None,
+            target_strength=target_strength,
+            manual_external_relay=manual_external_relay,
+        ),
         "mode_effect": mode_effect,
         "config_effect": config_effect,
         "reason": reasons[0],
@@ -12265,6 +12298,75 @@ def _delegation_next_action_decision(
         "human_control_summary": (
             "Local posture may suggest delegation or clarification, but only auto mode may execute without a human handoff."
         ),
+    }
+
+
+def _effort_recommendation_payload(
+    *,
+    work_shape: str,
+    proof_burden: str,
+    quality_risk: str,
+    decision: str,
+    required_next_action: str,
+    token_savings_expected: str,
+    target_name: str | None,
+    target_strength: str,
+    manual_external_relay: dict[str, Any],
+) -> dict[str, Any]:
+    """Recommend cost/effort posture from already-computed routing signals."""
+    orchestrator = "medium"
+    planner = "none"
+    implementer = "medium"
+    validator = "medium"
+    cost_posture = "balanced"
+    escalation_trigger = "escalate only if inspection reveals broader uncertainty, high risk, or proof gaps"
+    rationale: list[str] = [f"work_shape={work_shape}", f"proof_burden={proof_burden}", f"quality_risk={quality_risk}"]
+
+    if work_shape == "direct" and proof_burden == "obvious":
+        implementer = "low"
+        validator = "low"
+        cost_posture = "minimize-cost"
+        escalation_trigger = "escalate only if the direct task turns out not to be direct"
+    elif work_shape == "bounded" and proof_burden in {"obvious", "non-obvious"}:
+        implementer = "medium"
+        validator = "medium" if proof_burden == "non-obvious" else "low"
+        cost_posture = "bounded-medium"
+    elif work_shape in {"lane", "epic"} or proof_burden == "high" or quality_risk == "high":
+        planner = "high" if work_shape != "epic" else "xhigh"
+        implementer = "medium-after-plan" if work_shape in {"lane", "epic"} else "medium"
+        validator = "high"
+        cost_posture = "quality-first"
+        escalation_trigger = "use a high-effort planner before implementation when scope, intent, architecture, or proof remains unsettled"
+
+    if decision in {"suggest-downroute", "delegate-bounded-slice"} and target_name:
+        implementer = f"{target_strength or 'configured'} delegate"
+        cost_posture = "save-tokens-where-safe"
+        rationale.append(f"token_savings_expected={token_savings_expected}")
+    elif decision in {"suggest-escalation", "manual-handoff"}:
+        planner = "high"
+        cost_posture = "buy-quality-before-coding"
+    if (
+        manual_external_relay.get("target_kind") == "manual-external"
+        and manual_external_relay.get("status") == "appropriate"
+        and required_next_action == "prepare-manual-handoff"
+    ):
+        planner = "external-high-judgment"
+        cost_posture = "human-interrupt-only-if-worth-it"
+        escalation_trigger = "prepare the manual relay prompt early, before code-local work consumes the question"
+        rationale.append("manual_external_relay=appropriate")
+
+    return {
+        "kind": "agentic-workspace/effort-recommendation/v1",
+        "status": "evaluated",
+        "principle": "Start with cheap routing, then spend higher reasoning effort only where it improves quality or safely saves tokens.",
+        "orchestrator": orchestrator,
+        "planner": planner,
+        "implementer": implementer,
+        "validator": validator,
+        "cost_posture": cost_posture,
+        "escalation_trigger": escalation_trigger,
+        "target": target_name,
+        "reason": "; ".join(rationale),
     }
 
 
