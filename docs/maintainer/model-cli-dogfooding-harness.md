@@ -136,6 +136,21 @@ Executed run results include two different cost signals:
 
 Use `package_read_surface_summary` when optimising package output size. Use `usage_summary` as a broader provider/runtime context signal; it may include adapter scaffolding, cached context, prompt injection, and model-runtime overhead that the package cannot directly control.
 
+Use pushed-to-completion follow-ups when a realistic human would keep steering the same agent until the intended outcome is actually complete. Each `--follow-up-prompt` is recorded as another request, with its own prompt, command, transcript, share file, result, and usage summary under `followups/`. Add `--completion-validation-command` to record final validation separately from first-pass success:
+
+```powershell
+uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+  --adapter gemini `
+  --model gemini-3-flash-preview `
+  --scenario csv-import-hard `
+  --execute `
+  --completion-followthrough pushed-to-completion `
+  --follow-up-prompt "Run the test suite and fix any failing objective you missed." `
+  --completion-validation-command "uv run pytest -q"
+```
+
+The per-run `completion_loop` distinguishes `first_pass_success`, `eventual_success`, `requests_to_completion`, `final_validation_status`, and cumulative usage. Use it for adaptive optimisation loops; it is not a deterministic benchmark score.
+
 Use postmortem feedback during real optimisation loops when a run exposes ambiguous routing, excess file reads, surprising confidence, or high token use. The follow-up prompt asks the same agent why it chose its workflow and commands, what was ambiguous or too verbose, what package surface would have made the next step obvious, and what would reduce token usage without reducing safety or proof quality:
 
 ```powershell

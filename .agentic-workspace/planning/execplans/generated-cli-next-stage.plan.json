@@ -1,0 +1,334 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generated CLI next stage",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Plan and implement the next generated-CLI stage tracked by GitHub #880 after the Python generated package relocation.",
+    "hard_constraints": "Do not collapse all generated-CLI work into one broad rewrite. Pick one bounded stage with concrete acceptance, preserve the Python generated package behavior, and keep reusable generated-CLI code under the intended generated hierarchy.",
+    "agent_may_decide": "The exact first bounded stage, likely TypeScript CLI usability/hardening or shared generated CLI contract cleanup, after inspecting current generated surfaces and issue context.",
+    "escalate_when": "A correct next stage requires changing the generated-CLI product direction, publishing strategy, or multi-language hierarchy agreed with the user.",
+    "next_action": "Shape GitHub #880 into the first bounded generated-CLI implementation slice, then implement and prove that slice.",
+    "proof_expectations": [
+      "uv run agentic-workspace summary --target . --format json --select planning_surface_health,warnings,warning_count",
+      "uv run pytest tests/test_model_cli_harness.py -q",
+      "make test-workspace",
+      "make lint-workspace"
+    ],
+    "touched_scope": [
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/generated-cli-next-stage.plan.json",
+      "generated/",
+      "src/agentic_workspace/",
+      "packages/"
+    ],
+    "completion_criteria": [
+      "GitHub #880 is decomposed into a bounded first generated-CLI implementation stage.",
+      "The selected stage is implemented without regressing the Python generated package path.",
+      "Tests and maintainer proof demonstrate the generated-CLI stage is usable or the remaining blocker is explicitly routed."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Advance generated CLIs beyond the Python relocation by selecting and implementing the next bounded stage."
+  ],
+  "non_goals": [
+    "Do not rewrite every generated CLI surface in one slice.",
+    "Do not move unique repo source into generated directories before generated CLIs have truly landed."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Plan and implement the next generated-CLI stage tracked by GitHub #880 after the Python generated package relocation.",
+      "constraints": "Keep the slice bounded; preserve Python generated package behavior and intended generated hierarchy.",
+      "latitude": "Choose the first bounded generated-CLI stage after inspecting current generated surfaces and issue context.",
+      "escalation": "Escalate if the stage requires changing generated-CLI product direction, publishing strategy, or multi-language hierarchy."
+    },
+    "execution": {
+      "milestone": "generated-cli-next-stage",
+      "status": "active",
+      "next_step": "Shape GitHub #880 into the first bounded generated-CLI implementation slice, then implement and prove that slice.",
+      "proof": "Planning summary plus targeted generated-CLI/workspace tests for the selected slice."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/generated-cli-next-stage.plan.json",
+        "generated/",
+        "src/agentic_workspace/",
+        "packages/"
+      ],
+      "invariants": [
+        "One generated-CLI stage at a time.",
+        "Generated surfaces should remain clearly distinct from source unique to this repo."
+      ]
+    },
+    "planning_mode": {
+      "prep_only": false,
+      "halt_after_summary": false,
+      "halt_instruction": "Continue only after shaping the next generated-CLI stage into a bounded implementation slice.",
+      "minimal_success_criteria": [
+        "first generated-CLI stage selected",
+        "implementation scope and proof are bounded",
+        "Python generated package behavior remains protected"
+      ],
+      "manual_tightening_policy": "tighten the plan only enough to support the next bounded implementation slice",
+      "allowed_outputs": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/<id>.plan.json",
+        ".agentic-workspace/planning/decompositions/<id>.decomposition.json"
+      ],
+      "forbidden_outputs": [
+        "README",
+        "PLANNING_STATE",
+        "HANDOFF",
+        "SLICES",
+        "package",
+        "dependency",
+        "src",
+        "public",
+        "database",
+        "schema",
+        "app scaffold"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "GitHub #880",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Generated CLI next stage",
+    "inferred intended outcome": "Plan and implement the next generated-CLI stage tracked by GitHub #880 after the Python generated package relocation.",
+    "chosen concrete what": "Shape #880 into one bounded generated-CLI implementation slice before editing generated CLI surfaces.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Planning surfaces plus generated CLI sources/tests selected during #880 shaping.",
+    "max changed files": "Keep the first stage reviewable; decompose if it spans unrelated generated CLI languages or packaging surfaces.",
+    "required validation commands": "uv run agentic-workspace summary --target . --format json --select planning_surface_health,warnings,warning_count; make test-workspace; make lint-workspace",
+    "ask-before-refactor threshold": "Any move of unique repo source into generated directories or a broad multi-language generated CLI rewrite.",
+    "stop before touching": "Unrelated package modules, deferred relocation #661, or broad source hierarchy moves.",
+    "manual JSON validation": "Do not run ad hoc JSON validation loops; use summary or package checks."
+  },
+  "stop_conditions": {
+    "stop when": "The selected generated-CLI stage is complete and proven, or the stage must be split.",
+    "escalate when boundary reached": "The next stage requires product-direction or hierarchy decisions beyond #880.",
+    "escalate on scope drift": "The work turns into broad generated CLI replacement or unrelated package relocation.",
+    "escalate on proof failure": "Selected proof cannot demonstrate generated-CLI usability."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Plan and implement the next generated-CLI stage tracked by GitHub #880 after the Python generated package relocation.",
+    "hard constraints": "Keep the next stage bounded and preserve generated hierarchy decisions.",
+    "agent may decide locally": "Choose the first implementation slice, touched paths, and proof commands once current generated CLI surfaces are inspected.",
+    "escalate when": "A better-looking fix changes generated CLI product direction or broad source hierarchy."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #880",
+      "label": "GitHub #880",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "generated-cli-next-stage",
+    "status": "active",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Shape GitHub #880 into the first bounded generated-CLI implementation slice, then implement and prove that slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/generated-cli-next-stage.plan.json",
+    "generated/",
+    "src/agentic_workspace/",
+    "packages/"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json --select planning_surface_health,warnings,warning_count",
+    "uv run pytest tests/test_model_cli_harness.py -q",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "GitHub #880 is decomposed into a bounded first generated-CLI implementation stage.",
+    "The selected stage is implemented without regressing the Python generated package path.",
+    "Tests and maintainer proof demonstrate the generated-CLI stage is usable or the remaining blocker is explicitly routed."
+  ],
+  "execution_run": {
+    "run status": "not-run-yet",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "next-stage planning scaffold created; implementation has not started",
+    "scope touched": "planning state and execplan scaffold",
+    "changed surfaces": "planning state and generated-cli-next-stage execplan",
+    "validations run": "pending",
+    "result for continuation": "continue from this scaffolded execplan",
+    "next step": "Shape GitHub #880 into the first bounded generated-CLI implementation slice, then implement and prove that slice."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "pending"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "pending",
+    "proof achieved now": "pending",
+    "evidence for \"proof achieved\" state": ""
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub #880",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-10: Scaffolded by agentic-planning new-plan."
+  ],
+  "control_gates": [
+    {
+      "id": "prep-only-halt",
+      "owner_role": "implementation",
+      "required_for": [
+        "before any product or handoff file creation"
+      ],
+      "status": "pending",
+      "evidence": [
+        "agentic-workspace summary --target . --profile compact --format json"
+      ],
+      "blocking": true,
+      "next_action": "HALT: prep-only mode active. Create Planning state, run agentic-workspace summary --target . --profile compact --format json, then stop. Do not manually tighten or revalidate generated JSON unless summary reports a blocking Planning problem. Do not create product files, scaffolds, README, PLANNING_STATE, or handoff documentation."
+    }
+  ]
+}

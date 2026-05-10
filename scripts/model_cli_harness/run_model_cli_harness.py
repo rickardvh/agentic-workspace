@@ -8,13 +8,15 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
+import signal
 import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SUITE = REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
@@ -161,30 +163,90 @@ def _prepare_fixture(*, suite_path: Path, scenario: dict[str, Any], paths: Harne
         )
 
 
+def _terminate_process_tree(pid: int) -> None:
+    if os.name == "nt":
+        subprocess.run(  # noqa: S603
+            ["taskkill", "/PID", str(pid), "/T", "/F"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except (AttributeError, ProcessLookupError, PermissionError):
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+
+
 def _run_command(command: list[str], *, cwd: Path, timeout_seconds: int, env: dict[str, str] | None = None) -> dict[str, Any]:
     resolved_command = list(command)
     executable = shutil.which(resolved_command[0])
     if executable is not None:
         resolved_command[0] = executable
-    completed = subprocess.run(  # noqa: S603
+    creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+    start_new_session = os.name != "nt"
+    process = subprocess.Popen(  # noqa: S603
         resolved_command,
         cwd=cwd,
         text=True,
         encoding="utf-8",
         errors="replace",
-        capture_output=True,
-        timeout=timeout_seconds,
-        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         env=env,
+        creationflags=creationflags,
+        start_new_session=start_new_session,
     )
+    timed_out = False
+    try:
+        stdout, stderr = process.communicate(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        _terminate_process_tree(process.pid)
+        stdout, stderr = process.communicate()
     return {
         "command": resolved_command,
         "original_command": command,
         "cwd": str(cwd),
-        "returncode": completed.returncode,
-        "stdout": completed.stdout,
-        "stderr": completed.stderr,
+        "returncode": process.returncode,
+        "stdout": stdout,
+        "stderr": stderr,
+        "status": "adapter_blocked" if timed_out else "completed",
+        "timed_out": timed_out,
     }
+
+
+def _json_objects_from_lines(text: str) -> Iterable[dict[str, Any]]:
+    for line in text.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(event, dict):
+            yield event
+
+
+def _json_document(text: str) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _has_usable_model_output(result: dict[str, Any]) -> bool:
+    return bool(str(result.get("stdout") or "").strip() or str(result.get("final_message") or "").strip())
+
+
+def _classify_result_status(result: dict[str, Any]) -> str:
+    if result.get("timed_out"):
+        return "adapter_blocked"
+    if isinstance(result.get("returncode"), int) and result["returncode"] != 0 and not _has_usable_model_output(result):
+        return "runtime_failed"
+    return str(result.get("status") or "completed")
 
 
 def _with_git_ceiling(env: dict[str, str], *, run_root: Path) -> dict[str, str]:
@@ -362,11 +424,34 @@ def _usage_summary_from_stdout(stdout: str) -> dict[str, Any]:
         "reasoning_output_tokens": 0,
     }
     event_count = 0
-    for line in stdout.splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
+    provider_stats: dict[str, Any] | None = None
+    document = _json_document(stdout.strip())
+    if document is not None:
+        stats = document.get("stats")
+        if isinstance(stats, dict):
+            provider_stats = stats
+    for event in _json_objects_from_lines(stdout):
+        stats = event.get("stats")
+        if provider_stats is None and isinstance(stats, dict):
+            provider_stats = stats
+    provider_total_tokens = 0
+    if provider_stats is not None:
+        token_candidates = (
+            ("input_tokens", ("input_tokens", "inputTokens", "promptTokenCount")),
+            ("output_tokens", ("output_tokens", "outputTokens", "candidatesTokenCount")),
+        )
+        for output_key, candidate_keys in token_candidates:
+            for candidate_key in candidate_keys:
+                value = provider_stats.get(candidate_key)
+                if isinstance(value, int | float):
+                    totals[output_key] += int(value)
+                    break
+        for candidate_key in ("total_tokens", "totalTokens", "totalTokenCount"):
+            value = provider_stats.get(candidate_key)
+            if isinstance(value, int | float):
+                provider_total_tokens = int(value)
+                break
+    for event in _json_objects_from_lines(stdout):
         if event.get("type") != "turn.completed":
             continue
         usage = event.get("usage")
@@ -378,13 +463,19 @@ def _usage_summary_from_stdout(stdout: str) -> dict[str, Any]:
             if isinstance(value, int | float):
                 totals[key] += int(value)
     uncached_input = max(0, totals["input_tokens"] - totals["cached_input_tokens"])
-    return {
+    summary = {
         "status": "present" if event_count else "absent",
         "turn_count": event_count,
         **totals,
         "uncached_input_tokens": uncached_input,
         "total_billable_proxy_tokens": uncached_input + totals["output_tokens"] + totals["reasoning_output_tokens"],
     }
+    if provider_stats is not None:
+        summary["status"] = "present"
+        summary["provider_stats"] = provider_stats
+        if provider_total_tokens:
+            summary["provider_total_tokens"] = provider_total_tokens
+    return summary
 
 
 def _is_agentic_workspace_command(command: str) -> bool:
@@ -421,13 +512,7 @@ def _package_read_surface_summary_from_stdout(stdout: str) -> dict[str, Any]:
     output_lines = 0
     mixed_command_count = 0
     commands: list[dict[str, Any]] = []
-    for line in stdout.splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if not isinstance(event, dict):
-            continue
+    for event in _json_objects_from_lines(stdout):
         item = event.get("item")
         if not isinstance(item, dict) or item.get("type") != "command_execution":
             continue
@@ -534,26 +619,18 @@ def _response_text(result: dict[str, Any]) -> str:
     if isinstance(stdout, str):
         stripped = stdout.strip()
         if stripped.startswith("{"):
-            try:
-                payload = json.loads(stripped)
-            except json.JSONDecodeError:
-                payload = None
+            payload = _json_document(stripped)
             if isinstance(payload, dict) and isinstance(payload.get("response"), str):
                 parts.append(payload["response"])
-        for line in stdout.splitlines():
-            try:
-                event = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(event, dict):
-                data = event.get("data")
-                if isinstance(data, dict) and isinstance(data.get("content"), str):
-                    parts.append(data["content"])
-                message = event.get("message")
-                if isinstance(message, str):
-                    parts.append(message)
-                elif isinstance(message, dict) and isinstance(message.get("content"), str):
-                    parts.append(message["content"])
+        for event in _json_objects_from_lines(stdout):
+            data = event.get("data")
+            if isinstance(data, dict) and isinstance(data.get("content"), str):
+                parts.append(data["content"])
+            message = event.get("message")
+            if isinstance(message, str):
+                parts.append(message)
+            elif isinstance(message, dict) and isinstance(message.get("content"), str):
+                parts.append(message["content"])
         if not parts:
             parts.append(stdout)
     if isinstance(stderr, str):
@@ -571,19 +648,10 @@ def _scored_agent_response_text(result: dict[str, Any]) -> str:
     if isinstance(stdout, str):
         stripped = stdout.strip()
         if stripped.startswith("{"):
-            try:
-                payload = json.loads(stripped)
-            except json.JSONDecodeError:
-                payload = None
+            payload = _json_document(stripped)
             if isinstance(payload, dict) and isinstance(payload.get("response"), str):
                 parts.append(payload["response"])
-        for line in stdout.splitlines():
-            try:
-                event = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if not isinstance(event, dict):
-                continue
+        for event in _json_objects_from_lines(stdout):
             if isinstance(event.get("response"), str):
                 parts.append(event["response"])
             data = event.get("data")
@@ -912,12 +980,7 @@ def _executed_command_text(result: dict[str, Any]) -> str:
         if not isinstance(source, str):
             continue
         command_fragments.extend(_copilot_markdown_shell_commands(source))
-        for line in source.splitlines():
-            try:
-                event = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(event, dict):
+        for event in _json_objects_from_lines(source):
                 command = event.get("command")
                 if isinstance(command, str):
                     command_fragments.append(command)
@@ -926,9 +989,8 @@ def _executed_command_text(result: dict[str, Any]) -> str:
                     item_command = item.get("command")
                     if isinstance(item_command, str):
                         command_fragments.append(item_command)
-        try:
-            payload = json.loads(source)
-        except json.JSONDecodeError:
+        payload = _json_document(source)
+        if payload is None:
             continue
         if isinstance(payload, dict):
             response = payload.get("response")
@@ -1676,6 +1738,20 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
                 "message": f"The model CLI exited with status {returncode}.",
             }
         )
+    if result.get("timed_out") or result.get("status") == "adapter_blocked":
+        warnings.append(
+            {
+                "warning_class": "model_cli_adapter_blocked",
+                "message": "The model CLI adapter timed out or could not produce a usable run result.",
+            }
+        )
+    if result.get("status") == "runtime_failed":
+        warnings.append(
+            {
+                "warning_class": "model_cli_runtime_failed",
+                "message": "The model CLI process failed before producing usable model output.",
+            }
+        )
     if result.get("capture_warning"):
         warnings.append(
             {
@@ -1753,11 +1829,7 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
             }
         )
     failed_commands: list[str] = []
-    for line in stdout_text.splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
+    for event in _json_objects_from_lines(stdout_text):
         event_text = json.dumps(event)
         if "pwsh.exe" in event_text and "not recognized" in event_text:
             warnings.append(
@@ -1828,7 +1900,9 @@ def _finding_base_classes(warning_key: str) -> list[str]:
     if warning_class in {
         "model_cli_provider_error",
         "model_cli_runtime_stderr",
+        "model_cli_runtime_failed",
         "model_cli_adapter_tooling_limitation",
+        "model_cli_adapter_blocked",
         "model_cli_permission_denied",
     }:
         return ["environment_or_provider"]
@@ -2057,6 +2131,39 @@ def _completion_followthrough_payload(*, execute: bool, completion_followthrough
     }
 
 
+def _aggregate_turn_usage(turns: list[dict[str, Any]]) -> dict[str, Any]:
+    return _aggregate_usage_summaries([{"usage_summary": turn.get("usage_summary", {})} for turn in turns])
+
+
+def _completion_loop_summary(
+    *,
+    execute: bool,
+    first_warnings: list[dict[str, Any]],
+    followup_turns: list[dict[str, Any]],
+    validation_results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    requests_to_completion = 1 + len(followup_turns) if execute else 0
+    final_validation_status = "not-run"
+    if validation_results:
+        final_validation_status = "passed" if all(result.get("returncode") == 0 for result in validation_results) else "failed"
+    blocking_warning_classes = {"model_cli_adapter_blocked", "model_cli_runtime_failed", "model_cli_model_not_found"}
+    blocked = any(warning.get("warning_class") in blocking_warning_classes for warning in first_warnings)
+    first_pass_success = execute and not first_warnings and final_validation_status in {"not-run", "passed"}
+    eventual_success = execute and not blocked and final_validation_status != "failed"
+    return {
+        "kind": "agentic-workspace/model-cli-completion-loop/v1",
+        "status": "recorded" if execute else "not-run",
+        "first_pass_success": bool(first_pass_success),
+        "eventual_success": bool(eventual_success),
+        "requests_to_completion": requests_to_completion,
+        "followup_request_count": len(followup_turns),
+        "final_validation_status": final_validation_status,
+        "cumulative_usage_summary": _aggregate_turn_usage(followup_turns),
+        "followup_turns": followup_turns,
+        "validation_results": validation_results,
+    }
+
+
 def run_suite(
     *,
     suite_path: Path,
@@ -2071,6 +2178,8 @@ def run_suite(
     prompt_variant: str | None = None,
     postmortem_feedback: bool = False,
     completion_followthrough: str | None = None,
+    follow_up_prompts: list[str] | None = None,
+    completion_validation_commands: list[list[str]] | None = None,
 ) -> dict[str, Any]:
     suite = _load_json(suite_path)
     suite_id = str(suite.get("id", suite_path.stem))
@@ -2191,6 +2300,7 @@ def run_suite(
                 result = _run_command(command, cwd=paths.repo_path, timeout_seconds=effective_timeout, env=adapter_env)
                 if paths.share_path.exists():
                     result["final_message"] = paths.share_path.read_text(encoding="utf-8")
+                result["status"] = _classify_result_status(result)
                 _copy_transcript(str(result.get("stdout", "")), paths.transcript_path)
                 mutation_summary = _snapshot_diff(baseline_snapshot, _file_snapshot(paths.repo_path))
                 invocation["usage_summary"] = _usage_summary_from_stdout(str(result.get("stdout", "")))
@@ -2267,6 +2377,76 @@ def run_suite(
                 )
                 if capability_evaluation is not None:
                     invocation["capability_routing_evaluation"] = capability_evaluation
+                followup_turns: list[dict[str, Any]] = []
+                for index, followup_prompt_template in enumerate(follow_up_prompts or [], start=2):
+                    followup_dir = paths.run_root / "followups"
+                    followup_dir.mkdir(parents=True, exist_ok=True)
+                    followup_share = followup_dir / f"turn-{index}.md"
+                    followup_transcript = followup_dir / f"turn-{index}.jsonl"
+                    followup_prompt = _render_prompt(followup_prompt_template, replacements={**replacements, "previous_share_path": str(paths.share_path)})
+                    followup_replacements = {
+                        **replacements,
+                        "prompt": followup_prompt,
+                        "share_path": str(followup_share),
+                        "transcript_path": str(followup_transcript),
+                    }
+                    followup_command = _render_list(command_template, replacements=followup_replacements)
+                    followup_result = _run_command(
+                        followup_command,
+                        cwd=paths.repo_path,
+                        timeout_seconds=effective_timeout,
+                        env=adapter_env,
+                    )
+                    if followup_share.exists():
+                        followup_result["final_message"] = followup_share.read_text(encoding="utf-8")
+                    followup_result["status"] = _classify_result_status(followup_result)
+                    _copy_transcript(str(followup_result.get("stdout", "")), followup_transcript)
+                    followup_turn = {
+                        "turn": index,
+                        "prompt": followup_prompt,
+                        "command": followup_command,
+                        "result": followup_result,
+                        "usage_summary": _usage_summary_from_stdout(str(followup_result.get("stdout", ""))),
+                        "transcript_path": str(followup_transcript),
+                        "share_path": str(followup_share),
+                    }
+                    _write_json(followup_dir / f"turn-{index}.json", followup_turn)
+                    followup_turns.append(followup_turn)
+                validation_results: list[dict[str, Any]] = []
+                for validation_command in completion_validation_commands or []:
+                    validation_results.append(
+                        _run_command(
+                            _render_list(validation_command, replacements=replacements),
+                            cwd=paths.repo_path,
+                            timeout_seconds=effective_timeout,
+                            env=adapter_env,
+                        )
+                    )
+                invocation["completion_loop"] = _completion_loop_summary(
+                    execute=execute,
+                    first_warnings=invocation["warnings"],
+                    followup_turns=[
+                        {
+                            "turn": 1,
+                            "prompt": prompt,
+                            "command": command,
+                            "result": result,
+                            "usage_summary": invocation["usage_summary"],
+                            "transcript_path": str(paths.transcript_path),
+                            "share_path": str(paths.share_path),
+                        },
+                        *followup_turns,
+                    ][1:],
+                    validation_results=validation_results,
+                )
+                invocation["completion_loop"]["cumulative_usage_summary"] = _aggregate_turn_usage(
+                    [
+                        {
+                            "usage_summary": invocation["usage_summary"],
+                        },
+                        *followup_turns,
+                    ]
+                )
             else:
                 invocation["result"] = {
                     "status": "dry-run",
@@ -2276,6 +2456,12 @@ def run_suite(
                 invocation["usage_summary"] = {"status": "not-run"}
                 invocation["package_read_surface_summary"] = {"status": "not-run"}
                 invocation["warnings"] = []
+                invocation["completion_loop"] = _completion_loop_summary(
+                    execute=False,
+                    first_warnings=[],
+                    followup_turns=[],
+                    validation_results=[],
+                )
             invocation["quality_signals"] = _quality_signals(
                 scenario_id=scenario_id,
                 mutation_summary=invocation.get("mutation_summary"),
@@ -2303,6 +2489,15 @@ def run_suite(
     payload["package_read_surface_summary"] = _aggregate_package_read_surface_summaries(run_results)
     payload["finding_classification"] = _classify_suite_findings(run_results)
     payload["capability_routing_evaluation"] = _aggregate_capability_routing_evaluations(run_results)
+    completion_loops = [result.get("completion_loop") for result in run_results if isinstance(result.get("completion_loop"), dict)]
+    payload["completion_loop_summary"] = {
+        "kind": "agentic-workspace/model-cli-completion-loop-summary/v1",
+        "status": "present" if completion_loops else "absent",
+        "result_count": len(completion_loops),
+        "requests_to_completion_total": sum(int(loop.get("requests_to_completion", 0) or 0) for loop in completion_loops),
+        "eventual_success_count": sum(1 for loop in completion_loops if loop.get("eventual_success") is True),
+        "first_pass_success_count": sum(1 for loop in completion_loops if loop.get("first_pass_success") is True),
+    }
     _write_json(output_root / f"{_now_id()}-{suite_id}-{adapter_id}-summary.json", payload)
     return payload
 
@@ -2340,6 +2535,18 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["first-pass-attempt", "retry-loop", "pushed-to-completion", "incomplete", "blocked", "unknown"],
         help="Advisory completion mode for the run summary when known; used by cost/reporting surfaces.",
     )
+    parser.add_argument(
+        "--follow-up-prompt",
+        action="append",
+        default=[],
+        help="Human-style follow-up prompt to run after the first pass. May be repeated for pushed-to-completion evaluations.",
+    )
+    parser.add_argument(
+        "--completion-validation-command",
+        action="append",
+        default=[],
+        help="Validation command string to run after follow-up turns. Repeat for multiple commands.",
+    )
     parser.add_argument("--compare-baseline", type=Path, help="Compare a baseline run JSON, run directory, or summary JSON.")
     parser.add_argument("--compare-current", type=Path, help="Compare a current run JSON, run directory, or summary JSON.")
     parser.add_argument("--format", choices=["text", "json"], default="text")
@@ -2370,6 +2577,8 @@ def main(argv: list[str] | None = None) -> int:
                 prompt_variant=args.prompt_variant,
                 postmortem_feedback=args.postmortem_feedback,
                 completion_followthrough=args.completion_followthrough,
+                follow_up_prompts=args.follow_up_prompt,
+                completion_validation_commands=[shlex.split(command) for command in args.completion_validation_command],
             )
     except Exception as exc:  # noqa: BLE001
         if args.format == "json":

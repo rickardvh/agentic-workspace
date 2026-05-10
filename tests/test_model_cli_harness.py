@@ -53,6 +53,40 @@ def test_model_cli_harness_extracts_token_usage_summary() -> None:
     }
 
 
+def test_model_cli_harness_tolerates_gemini_string_events_and_stats() -> None:
+    harness = _load_harness()
+    stdout = "\n".join(
+        [
+            json.dumps("provider banner"),
+            json.dumps(
+                {
+                    "response": "Done.",
+                    "stats": {
+                        "inputTokens": 7,
+                        "outputTokens": 3,
+                        "totalTokenCount": 10,
+                        "tools": {"byName": {"run_shell_command": {"count": 1}}},
+                    },
+                }
+            ),
+        ]
+    )
+
+    usage = harness._usage_summary_from_stdout(stdout)
+    warnings = harness._execution_warnings(
+        result={"returncode": 0, "stdout": stdout, "stderr": ""},
+        repo_path=REPO_ROOT,
+        mutation_summary={"status": "clean"},
+    )
+
+    assert usage["status"] == "present"
+    assert usage["input_tokens"] == 7
+    assert usage["output_tokens"] == 3
+    assert usage["provider_total_tokens"] == 10
+    assert usage["provider_stats"]["tools"]["byName"]["run_shell_command"]["count"] == 1
+    assert warnings == []
+
+
 def test_model_cli_harness_extracts_package_read_surface_summary() -> None:
     harness = _load_harness()
     stdout = "\n".join(
@@ -241,6 +275,66 @@ def test_model_cli_harness_records_explicit_completion_followthrough() -> None:
     assert payload["status"] == "pushed-to-completion"
     assert payload["source"] == "cli-argument"
     assert payload["advisory_only"] is True
+
+
+def test_model_cli_harness_records_pushed_to_completion_turns(tmp_path: Path) -> None:
+    fixture = tmp_path / "fixtures" / "repo"
+    fixture.mkdir(parents=True)
+    (fixture / "AGENTS.md").write_text("Plain test repo.\n", encoding="utf-8")
+    suite = tmp_path / "suites" / "suite.json"
+    suite.parent.mkdir()
+    suite.write_text(
+        json.dumps(
+            {
+                "schema": "agentic-workspace/model-cli-harness-suite/v1",
+                "id": "unit",
+                "adapters": {
+                    "fake": {
+                        "default_model": "fake-model",
+                        "timeout_seconds": 10,
+                        "block_on_preflight_failure": False,
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            "import json,sys; print(json.dumps({'response': sys.argv[1], 'stats': {'inputTokens': 1, 'outputTokens': 2, 'totalTokenCount': 3}}))",
+                            "{prompt}",
+                        ],
+                    }
+                },
+                "scenarios": [
+                    {
+                        "id": "completion",
+                        "fixture": "repo",
+                        "prompt": "first",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    harness = _load_harness()
+
+    payload = harness.run_suite(
+        suite_path=suite,
+        adapter_id="fake",
+        model=None,
+        scenario_filter="completion",
+        execute=True,
+        output_root=tmp_path / "out",
+        timeout_seconds=None,
+        follow_up_prompts=["second"],
+        completion_validation_commands=[[sys.executable, "-c", "print('ok')"]],
+    )
+
+    result = payload["results"][0]
+    loop = result["completion_loop"]
+    assert loop["requests_to_completion"] == 2
+    assert loop["followup_request_count"] == 1
+    assert loop["final_validation_status"] == "passed"
+    assert loop["cumulative_usage_summary"]["input_tokens"] == 2
+    assert loop["cumulative_usage_summary"]["output_tokens"] == 4
+    assert Path(loop["followup_turns"][0]["transcript_path"]).exists()
+    assert payload["completion_loop_summary"]["requests_to_completion_total"] == 2
 
 
 def test_model_cli_harness_can_inject_repo_startup_instructions(tmp_path: Path) -> None:
@@ -570,6 +664,37 @@ def test_model_cli_harness_resolves_path_shims(tmp_path: Path, monkeypatch) -> N
     assert result["command"][0].lower().endswith("fake-cli.cmd")
     assert result["original_command"] == ["fake-cli", "--version"]
     assert "resolved" in result["stdout"]
+
+
+def test_model_cli_harness_timeout_returns_adapter_blocked(tmp_path: Path, monkeypatch) -> None:
+    harness = _load_harness()
+    killed: list[int] = []
+    monkeypatch.setattr(harness, "_terminate_process_tree", lambda pid: killed.append(pid))
+
+    result = harness._run_command(
+        [sys.executable, "-c", "import time; time.sleep(2)"],
+        cwd=tmp_path,
+        timeout_seconds=0.1,
+    )
+
+    assert result["status"] == "adapter_blocked"
+    assert result["timed_out"] is True
+    assert killed
+
+
+def test_model_cli_harness_runtime_failure_gets_structured_status(tmp_path: Path) -> None:
+    harness = _load_harness()
+
+    result = {
+        "returncode": 3221225477,
+        "stdout": "",
+        "stderr": "",
+    }
+    result["status"] = harness._classify_result_status(result)
+    warnings = harness._execution_warnings(result=result, repo_path=tmp_path, mutation_summary={"status": "clean"})
+
+    assert result["status"] == "runtime_failed"
+    assert "model_cli_runtime_failed" in {warning["warning_class"] for warning in warnings}
 
 
 def test_model_cli_harness_extracts_execution_warnings(tmp_path: Path) -> None:
