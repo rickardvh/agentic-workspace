@@ -19,7 +19,7 @@ def test_memory_report_defaults_to_tiny_profile(tmp_path: Path, capsys) -> None:
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "tiny"
     assert "state_model" not in payload
-    assert payload["detail_commands"]["full"] == "agentic-memory report --target . --profile full --format json"
+    assert payload["detail_commands"]["full"] == "agentic-memory report --target . --verbose --format json"
 
 
 def test_memory_report_tiny_does_not_build_full_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
@@ -49,7 +49,7 @@ def test_memory_lifecycle_status_defaults_to_tiny_actions(tmp_path: Path, capsys
     payload = json.loads(capsys.readouterr().out)
     assert "action_count" in payload
     assert len(payload["actions"]) <= 5
-    assert payload["detail_command"] == "agentic-memory status --target . --profile full --format json"
+    assert payload["detail_command"] == "agentic-memory status --target . --verbose --format json"
 
 
 def test_memory_lifecycle_tiny_does_not_collect_full_status(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:

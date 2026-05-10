@@ -294,11 +294,11 @@ def _root_workspace_adapter_conformance_cases() -> dict[str, AdapterConformanceC
         AdapterConformanceCase(
             conformance_ref="summary.report.process",
             label="summary",
-            success_args=["summary", "--target", ".", "--profile", "compact", "--format", "json"],
+            success_args=["summary", "--target", ".", "--verbose", "--format", "json"],
             selected_fields=_selected_summary_fields,
             expected_fields={
                 "kind": "planning-summary/v1",
-                "profile": "compact",
+                "profile": "full",
                 "machine_first_status": "no-active-execplan",
                 "active_count": 0,
             },
@@ -357,7 +357,7 @@ def _root_workspace_adapter_conformance_cases() -> dict[str, AdapterConformanceC
         AdapterConformanceCase(
             conformance_ref="report.combined.process",
             label="report",
-            success_args=["report", "--target", ".", "--profile", "router", "--format", "json"],
+            success_args=["report", "--target", ".", "--format", "json"],
             selected_fields=_selected_report_fields,
             expected_fields={
                 "kind": "workspace-report-router/v1",
@@ -428,7 +428,7 @@ def _planning_adapter_conformance_cases() -> dict[str, AdapterConformanceCase]:
         AdapterConformanceCase(
             conformance_ref="planning.summary.process",
             label="planning summary",
-            success_args=["summary", "--target", ".", "--profile", "compact", "--format", "json"],
+            success_args=["summary", "--target", ".", "--verbose", "--format", "json"],
             selected_fields=_selected_summary_fields,
             expected_fields=None,
         ),

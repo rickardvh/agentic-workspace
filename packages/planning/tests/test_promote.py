@@ -626,11 +626,11 @@ def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: P
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "shop-prep.plan.json"
     record = json.loads(record_path.read_text(encoding="utf-8"))
 
-    assert any("--profile compact --format json" in action["detail"] for action in payload["actions"] if action["kind"] == "next")
+    assert any("--verbose --format json" in action["detail"] for action in payload["actions"] if action["kind"] == "next")
     assert any("prep-only route" in action["detail"] and "manual JSON tightening" in action["detail"] for action in payload["actions"])
     assert any("after summary verification, stop" in action["detail"] for action in payload["actions"] if action["kind"] == "next")
     assert record["immediate_next_action"] == [
-        "Run agentic-workspace summary --target . --profile compact --format json, confirm the planning state is clean, then stop without product scaffolding."
+        "Run agentic-workspace summary --target . --verbose --format json, confirm the planning state is clean, then stop without product scaffolding."
     ]
     assert record["machine_readable_contract"]["planning_mode"]["prep_only"] is True
     assert "task_intent_promotion" not in record
@@ -640,7 +640,7 @@ def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: P
     assert "PLANNING_STATE" in record["machine_readable_contract"]["planning_mode"]["halt_instruction"]
     assert record["machine_readable_contract"]["planning_mode"]["minimal_success_criteria"] == [
         "prep-only execplan registered in Planning state",
-        "agentic-workspace summary --target . --profile compact --format json exits successfully",
+        "agentic-workspace summary --target . --verbose --format json exits successfully",
         "only canonical Planning surfaces changed",
     ]
     assert "defer during prep-only" in record["machine_readable_contract"]["planning_mode"]["manual_tightening_policy"]
@@ -649,12 +649,10 @@ def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: P
     assert "src" in record["machine_readable_contract"]["planning_mode"]["forbidden_outputs"]
     assert record["control_gates"][0]["id"] == "prep-only-halt"
     assert record["control_gates"][0]["blocking"] is True
-    assert record["control_gates"][0]["evidence"] == ["agentic-workspace summary --target . --profile compact --format json"]
+    assert record["control_gates"][0]["evidence"] == ["agentic-workspace summary --target . --verbose --format json"]
     assert record["execution_bounds"]["stop before touching"].startswith("README, PLANNING_STATE, HANDOFF, SLICES")
     assert "src/" in record["execution_bounds"]["stop before touching"]
-    assert (
-        record["execution_bounds"]["required validation commands"] == "agentic-workspace summary --target . --profile compact --format json"
-    )
+    assert record["execution_bounds"]["required validation commands"] == "agentic-workspace summary --target . --verbose --format json"
     assert "ad hoc JSON validation loops" in record["execution_bounds"]["manual JSON validation"]
     assert record["touched_paths"] == [
         ".agentic-workspace/planning/state.toml",

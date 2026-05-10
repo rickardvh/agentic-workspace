@@ -523,7 +523,7 @@
             "description": "Active and archived execution plans, opened only when compact state points there.",
             "read_only": true,
             "source": ".agentic-workspace/planning/execplans",
-            "command": "agentic-workspace summary --profile full --format json",
+            "command": "agentic-workspace summary --verbose --format json",
             "result_schema": "typed-validator:planning-execplan"
           }
         ],

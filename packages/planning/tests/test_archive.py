@@ -1463,7 +1463,7 @@ def test_planning_report_prints_closure_evidence(tmp_path: Path, capsys) -> None
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan(status="completed"))
 
-    exit_code = planning_cli.main(["report", "--target", str(tmp_path), "--profile", "full"])
+    exit_code = planning_cli.main(["report", "--target", str(tmp_path), "--verbose"])
     out = capsys.readouterr().out
 
     assert exit_code == 0

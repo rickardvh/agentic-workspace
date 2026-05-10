@@ -129,7 +129,7 @@ def report_profile_payload(*, context_router: dict[str, Any], cli_invoke: str = 
         "section_selector": "--section <top-level-field>",
         "default_command": _command_with_cli_invoke("agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke),
         "full_profile_command": _command_with_cli_invoke(
-            "agentic-workspace report --target ./repo --profile full --format json", cli_invoke=cli_invoke
+            "agentic-workspace report --target ./repo --verbose --format json", cli_invoke=cli_invoke
         ),
         "full_profile_cost": {
             "classification": "deep-audit",
@@ -142,7 +142,7 @@ def report_profile_payload(*, context_router: dict[str, Any], cli_invoke: str = 
         ),
         "rule": (
             "Default report output should route to decision-grade current state before exposing high-volume "
-            "module detail. Use --profile full or --section when deeper data is needed."
+            "module detail. Use --verbose or --section when deeper data is needed."
         ),
         "high_volume_sections": [
             {
@@ -198,7 +198,7 @@ def select_report_payload(
 ) -> dict[str, Any]:
     if section:
         if profile != "router":
-            raise WorkspaceUsageError("report selectors are mutually exclusive; use either --profile or --section.")
+            raise WorkspaceUsageError("report detail selectors are mutually exclusive; use either --verbose or --section.")
         resolved_section, answer = _resolve_report_section(payload, section)
         if answer is None:
             raise WorkspaceUsageError(_unknown_report_section_message(section, payload))
@@ -212,14 +212,14 @@ def select_report_payload(
             answer=answer,
             refs=[
                 ".agentic-workspace/docs/reporting-contract.md",
-                "agentic-workspace report --target ./repo --profile full --format json",
+                "agentic-workspace report --target ./repo --verbose --format json",
             ],
         )
     if profile == "full":
         return payload
     if profile == "router":
         return report_router_payload(payload, context_router=context_router, cli_invoke=cli_invoke)
-    raise WorkspaceUsageError("report --profile must be one of: router, full")
+    raise WorkspaceUsageError("report detail mode must be either router or full")
 
 
 def _resolve_report_section(payload: dict[str, Any], section: str) -> tuple[str, Any | None]:
@@ -265,7 +265,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         strict_gate = answer.get("strict_closeout_gate", {})
         strict_gate = strict_gate if isinstance(strict_gate, dict) else {}
         detail_command = _command_with_cli_invoke(
-            "agentic-workspace report --target ./repo --profile full --format json",
+            "agentic-workspace report --target ./repo --verbose --format json",
             cli_invoke=cli_invoke,
         )
         return {
@@ -404,7 +404,7 @@ def report_router_payload(
         "schema": {
             "schema_version": "workspace-report-router-schema/v1",
             "full_profile_command": _command_with_cli_invoke(
-                "agentic-workspace report --target ./repo --profile full --format json", cli_invoke=cli_invoke
+                "agentic-workspace report --target ./repo --verbose --format json", cli_invoke=cli_invoke
             ),
             "section_command": _command_with_cli_invoke(
                 "agentic-workspace report --target ./repo --section <section> --format json", cli_invoke=cli_invoke
@@ -444,7 +444,7 @@ def report_router_payload(
         },
         "deeper_detail": {
             "full_profile_command": _command_with_cli_invoke(
-                "agentic-workspace report --target ./repo --profile full --format json", cli_invoke=cli_invoke
+                "agentic-workspace report --target ./repo --verbose --format json", cli_invoke=cli_invoke
             ),
             "section_command": _command_with_cli_invoke(
                 "agentic-workspace report --target ./repo --section <section> --format json", cli_invoke=cli_invoke

@@ -220,19 +220,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "target"
           },
           {
-            "choices": [
-              "tiny",
-              "compact",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Summary profile. Defaults to tiny; use compact or full for more detail.",
-            "name": "profile"
-          },
-          {
             "flags": [
               "--task"
             ],
@@ -333,18 +320,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Target repository path. Defaults to the current directory.",
             "name": "target"
-          },
-          {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Output profile. Defaults to tiny; use full for audit detail.",
-            "name": "profile"
           },
           {
             "action": "store_true",
@@ -606,19 +581,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "target"
         },
         {
-          "choices": [
-            "tiny",
-            "compact",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Summary profile. Defaults to tiny; use compact or full for more detail.",
-          "name": "profile"
-        },
-        {
           "flags": [
             "--task"
           ],
@@ -670,18 +632,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
-        },
-        {
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Output profile. Defaults to tiny; use full for audit detail.",
-          "name": "profile"
         },
         {
           "action": "store_true",

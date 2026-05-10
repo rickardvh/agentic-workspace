@@ -7,7 +7,7 @@ from tests.workspace_cli_support import *
 def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     _assert_invoked_cli_identity(payload, target_relation="outside-target")
@@ -185,7 +185,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     ]
 
 
-def test_config_command_reports_compact_profile_for_agent_startup(tmp_path: Path, capsys) -> None:
+def test_config_command_reports_selected_fields_for_agent_startup(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
         tmp_path / ".agentic-workspace/config.toml",
@@ -221,27 +221,30 @@ safe_to_auto_run_commands = false
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--target", str(tmp_path), "--profile", "compact", "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "config",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "workspace.improvement_latitude,workspace.optimization_bias,workspace.workflow_obligations,warnings,target,config_path",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
 
     output = capsys.readouterr().out
     payload = json.loads(output)
-    assert payload["kind"] == "agentic-workspace/config-compact/v1"
-    assert payload["profile"] == "compact"
-    assert payload["warnings"] == []
-    assert payload["target"] == "."
-    assert payload["config_path"] == ".agentic-workspace/config.toml"
-    assert "mixed_agent" not in payload
-    assert payload["workspace"]["improvement_latitude"] == "proactive"
-    assert payload["workspace"]["optimization_bias"] == "agent-efficiency"
-    assert payload["workspace"]["workflow_obligations"][0]["id"] == "closeout_proof"
-    assert payload["reporting_posture"]["repo_policy"]["improvement_latitude"] == "proactive"
-    assert payload["reporting_posture"]["citation_rule"].startswith("Final answers should cite repo-relative")
-    assert payload["local_runtime"]["delegation_mode"] == {"value": "suggest", "source": "local-override"}
-    assert payload["local_runtime"]["clarification_mode"] == {"value": "ask-first", "source": "local-override"}
-    assert payload["local_runtime"]["safe_to_auto_run_commands"] == {"value": False, "source": "local-override"}
-    assert payload["edit_reference"]["check_command"] == "agentic-workspace config --target . --format json"
-    assert payload["full_profile_command"] == "agentic-workspace config --target . --profile full --format json"
-    assert len(output) < 10000
+    values = payload["values"]
+    assert values["warnings"] == []
+    assert Path(values["target"]).name == tmp_path.name
+    assert Path(values["config_path"]).as_posix().endswith(".agentic-workspace/config.toml")
+    assert values["workspace.improvement_latitude"] == "proactive"
+    assert values["workspace.optimization_bias"] == "agent-efficiency"
+    assert values["workspace.workflow_obligations"][0]["id"] == "closeout_proof"
 
 
 def test_config_command_reports_tiny_profile_for_config_posture(tmp_path: Path, capsys) -> None:
@@ -282,7 +285,7 @@ requires_human_verification_on_pr = true
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--target", str(tmp_path), "--profile", "tiny", "--format", "json"]) == 0
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
 
     output = capsys.readouterr().out
     payload = json.loads(output)
@@ -311,7 +314,7 @@ def test_config_command_accepts_reporting_improvement_latitude_mode(tmp_path: Pa
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["improvement_latitude"] == "reporting"
@@ -325,7 +328,7 @@ def test_config_command_accepts_agent_efficiency_optimization_bias(tmp_path: Pat
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["optimization_bias"] == "agent-efficiency"
@@ -344,7 +347,7 @@ default_level = "medium"
 """,
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     partial = json.loads(capsys.readouterr().out)
     assert partial["assurance"]["onboarding"]["status"] == "partial"
@@ -366,7 +369,7 @@ review_aids = []
 """,
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     usable = json.loads(capsys.readouterr().out)
     assert usable["assurance"]["onboarding"]["status"] == "usable"
@@ -381,7 +384,7 @@ def test_config_command_reports_enabled_advanced_features(tmp_path: Path, capsys
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["advanced_features"] == ["review_artifacts", "external_adapters"]
@@ -401,7 +404,7 @@ def test_config_command_reports_workflow_obligations_from_repo_config(tmp_path: 
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["workflow_obligations"][0]["id"] == "adapter_surface_refresh"
@@ -423,7 +426,7 @@ def test_config_command_accepts_explicit_workflow_obligation_force(tmp_path: Pat
         'commands = ["agentic-workspace report --target . --section config_effect_audit --format json"]\n',
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     obligation = payload["workspace"]["workflow_obligations"][0]
@@ -442,7 +445,7 @@ def test_config_command_reports_system_intent_source_declaration(tmp_path: Path,
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["system_intent"]["sources"] == ["SYSTEM_INTENT.md", "docs/product-direction.md"]
@@ -458,7 +461,7 @@ def test_config_command_warns_about_unsupported_top_level_repo_config_fields(tmp
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["warnings"] == [".agentic-workspace/config.toml contains unsupported top-level field(s): unsupported_top_level."]
@@ -470,7 +473,7 @@ def test_config_command_autodetects_conservative_system_intent_sources_when_no_e
     (tmp_path / "AGENTS.md").write_text("# Repo Instructions\n", encoding="utf-8")
     (tmp_path / "llms.txt").write_text("Repo direction hint\n", encoding="utf-8")
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["system_intent"]["sources"] == ["README.md", "AGENTS.md", "llms.txt"]
@@ -482,7 +485,7 @@ def test_config_command_autodetects_existing_supported_agent_instructions_file(t
     _init_git_repo(tmp_path)
     (tmp_path / "GEMINI.md").write_text("# Gemini\n")
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["agent_instructions_file"] == "GEMINI.md"
@@ -494,7 +497,7 @@ def test_config_command_autodetects_claude_agent_instructions_file(tmp_path: Pat
     _init_git_repo(tmp_path)
     (tmp_path / "CLAUDE.md").write_text("# Claude\n", encoding="utf-8")
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["agent_instructions_file"] == "CLAUDE.md"
@@ -506,7 +509,7 @@ def test_config_command_autodetects_legacy_cursor_rules_file(tmp_path: Path, cap
     _init_git_repo(tmp_path)
     (tmp_path / ".cursorrules").write_text("Use repo conventions.\n", encoding="utf-8")
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["agent_instructions_file"] == ".cursorrules"
@@ -522,7 +525,7 @@ def test_config_command_accepts_custom_agent_instructions_file(tmp_path: Path, c
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["agent_instructions_file"] == "docs/agent-instructions.md"
@@ -541,7 +544,7 @@ def test_config_command_discovers_workspace_root_from_subdirectory(tmp_path: Pat
     previous_cwd = Path.cwd()
     monkeypatch.chdir(nested)
     try:
-        assert cli.main(["config", "--profile", "full", "--format", "json"]) == 0
+        assert cli.main(["config", "--verbose", "--format", "json"]) == 0
     finally:
         monkeypatch.chdir(previous_cwd)
 
@@ -573,7 +576,7 @@ def test_config_command_surfaces_unknown_local_override_fields_as_warnings(tmp_p
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["mixed_agent"]["local_override"]["exists"] is True
@@ -606,7 +609,7 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["exists"] is True
@@ -640,7 +643,7 @@ def test_config_command_reports_reserved_local_override_presence_without_applyin
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["mixed_agent"]["local_override"]["exists"] is True
@@ -661,7 +664,7 @@ def test_config_command_reports_local_only_memory_override(tmp_path: Path, capsy
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     local_memory = payload["mixed_agent"]["local_memory"]
@@ -690,7 +693,7 @@ def test_config_command_reports_narrow_local_override_fields_with_source_attribu
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["mixed_agent"]["effective_posture"]["strong_planner_available"] == {
@@ -743,7 +746,7 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     targets = payload["mixed_agent"]["delegation_targets"]
@@ -808,7 +811,7 @@ def test_config_command_rejects_invalid_local_target_reasoning_profile(tmp_path:
     )
 
     with pytest.raises(SystemExit):
-        cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"])
+        cli.main(["config", "--verbose", "--target", str(target), "--format", "json"])
     assert "reasoning_profile must be one of" in capsys.readouterr().err
 
 
@@ -835,7 +838,7 @@ def test_config_command_reports_local_delegation_control_mode(tmp_path: Path, ca
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     control = payload["mixed_agent"]["delegation_control"]
@@ -859,7 +862,7 @@ def test_config_command_rejects_invalid_local_delegation_control_mode(tmp_path: 
     )
 
     with pytest.raises(SystemExit):
-        cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"])
+        cli.main(["config", "--verbose", "--target", str(target), "--format", "json"])
     assert "delegation.mode must be one of" in capsys.readouterr().err
 
 
@@ -868,7 +871,7 @@ def test_config_command_reports_runtime_resolution_for_no_posture(tmp_path: Path
     target.mkdir()
     _init_git_repo(target)
 
-    assert cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     rr = payload["mixed_agent"]["runtime_resolution"]
@@ -904,7 +907,7 @@ def test_config_command_runtime_resolution_recommends_external_delegation_when_s
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     # Without posture the default resolution is generated; just confirm structure is valid
@@ -1125,7 +1128,7 @@ def test_config_command_accepts_manual_external_delegation_target(tmp_path: Path
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     targets = payload["mixed_agent"]["delegation_targets"]["profiles"]
@@ -1150,7 +1153,7 @@ def test_config_command_rejects_invalid_local_delegation_target_strength(tmp_pat
     )
 
     with pytest.raises(SystemExit):
-        cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"])
+        cli.main(["config", "--verbose", "--target", str(target), "--format", "json"])
     assert "strength must be one of" in capsys.readouterr().err
 
 
@@ -1163,7 +1166,7 @@ def test_config_command_accepts_utf8_bom_local_override(tmp_path: Path, capsys) 
         encoding="utf-8-sig",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["mixed_agent"]["delegation_targets"]["profiles"][0]["name"] == "fast_docs"
@@ -1259,7 +1262,7 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
         encoding="utf-8",
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     targets = payload["mixed_agent"]["delegation_targets"]
@@ -1285,7 +1288,7 @@ def test_repo_config_cli_invoke_is_ignored_as_machine_local_policy(tmp_path: Pat
         'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["cli_invoke"] == "agentic-workspace"
@@ -1308,7 +1311,7 @@ def test_config_reports_satisfied_repo_owned_cli_compatibility_expectation(tmp_p
         'command = "uv run agentic-workspace"\n',
     )
 
-    assert cli.main(["config", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     compatibility = _assert_cli_compatibility(payload, status="satisfied")

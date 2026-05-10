@@ -206,19 +206,6 @@ export const generatedCommandPackage = {
             "name": "target"
           },
           {
-            "choices": [
-              "tiny",
-              "compact",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Summary profile. Defaults to tiny; use compact or full for more detail.",
-            "name": "profile"
-          },
-          {
             "flags": [
               "--task"
             ],
@@ -319,18 +306,6 @@ export const generatedCommandPackage = {
             ],
             "help": "Target repository path. Defaults to the current directory.",
             "name": "target"
-          },
-          {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Output profile. Defaults to tiny; use full for audit detail.",
-            "name": "profile"
           },
           {
             "action": "store_true",

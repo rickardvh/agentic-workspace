@@ -20,7 +20,7 @@ def test_proof_command_reports_routes_and_current_health(tmp_path: Path, monkeyp
         },
     )
 
-    assert cli.main(["proof", "--profile", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["canonical_doc"] == ".agentic-workspace/docs/proof-surfaces-contract.md"
@@ -48,7 +48,7 @@ def test_proof_route_selector_returns_compact_contract_answer(tmp_path: Path, mo
         },
     )
 
-    assert cli.main(["proof", "--profile", "full", "--target", str(tmp_path), "--route", "workspace_proof", "--format", "json"]) == 0
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--route", "workspace_proof", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -77,7 +77,7 @@ def test_proof_current_selector_returns_compact_contract_answer(tmp_path: Path, 
         },
     )
 
-    assert cli.main(["proof", "--profile", "full", "--target", str(tmp_path), "--current", "--format", "json"]) == 0
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--current", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -94,7 +94,7 @@ def test_proof_route_selector_smoke_works_without_mocked_lifecycle(tmp_path: Pat
     assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
     capsys.readouterr()
 
-    assert cli.main(["proof", "--profile", "full", "--target", str(target), "--route", "workspace_proof", "--format", "json"]) == 0
+    assert cli.main(["proof", "--verbose", "--target", str(target), "--route", "workspace_proof", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
@@ -104,7 +104,7 @@ def test_proof_route_selector_smoke_works_without_mocked_lifecycle(tmp_path: Pat
 
 
 def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> None:
-    assert cli.main(["proof", "--profile", "full", "--changed", ".agentic-workspace/planning/state.toml", "--format", "json"]) == 0
+    assert cli.main(["proof", "--verbose", "--changed", ".agentic-workspace/planning/state.toml", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["surface"] == "proof"
@@ -140,8 +140,6 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
         cli.main(
             [
                 "proof",
-                "--profile",
-                "tiny",
                 "--changed",
                 "src/agentic_workspace/cli.py",
                 "--format",
@@ -175,8 +173,7 @@ def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, 
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--target",
                 str(tmp_path),
                 "--changed",
@@ -264,8 +261,7 @@ candidates = []
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--target",
                 str(tmp_path),
                 "--changed",
@@ -366,8 +362,7 @@ candidates = []
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--target",
                 str(tmp_path),
                 "--changed",
@@ -399,8 +394,7 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--changed",
                 "generated/typescript/workspace-cli/src/commandPackage.ts",
                 "--format",
@@ -452,8 +446,7 @@ def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(cap
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--changed",
                 "src/agentic_workspace/contracts/structured_file_inventory.json",
                 "scripts/check/check_structured_file_inventory.py",
@@ -481,8 +474,7 @@ def test_proof_changed_selector_routes_agent_aid_changes_to_manifest_lane(capsys
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--changed",
                 ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json",
                 ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py",
@@ -502,7 +494,7 @@ def test_proof_changed_selector_routes_agent_aid_changes_to_manifest_lane(capsys
 
 
 def test_proof_changed_selector_routes_readme_to_docs_review(capsys) -> None:
-    assert cli.main(["proof", "--profile", "full", "--changed", "README.md", "--format", "json"]) == 0
+    assert cli.main(["proof", "--verbose", "--changed", "README.md", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
@@ -518,7 +510,7 @@ def test_proof_changed_selector_routes_readme_to_docs_review(capsys) -> None:
 
 
 def test_proof_changed_selector_routes_package_readmes_to_docs_review(capsys) -> None:
-    assert cli.main(["proof", "--profile", "full", "--changed", "packages/planning/README.md", "--format", "json"]) == 0
+    assert cli.main(["proof", "--verbose", "--changed", "packages/planning/README.md", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
@@ -533,8 +525,7 @@ def test_proof_changed_selector_routes_installed_docs_to_docs_review(capsys) -> 
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--changed",
                 ".agentic-workspace/docs/agent-installation.md",
                 "--format",
@@ -552,7 +543,7 @@ def test_proof_changed_selector_routes_installed_docs_to_docs_review(capsys) -> 
 
 
 def test_proof_changed_selector_reduces_package_docs_prefix_to_review(capsys) -> None:
-    assert cli.main(["proof", "--profile", "full", "--changed", "packages/planning/docs/usage.md", "--format", "json"]) == 0
+    assert cli.main(["proof", "--verbose", "--changed", "packages/planning/docs/usage.md", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
@@ -575,8 +566,7 @@ def test_proof_changed_selector_does_not_escalate_review_only_cross_lane_changes
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--changed",
                 "packages/planning/README.md",
                 "src/agentic_workspace/contracts/proof_selection_rules.json",
@@ -595,7 +585,7 @@ def test_proof_changed_selector_does_not_escalate_review_only_cross_lane_changes
 
 
 def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> None:
-    assert cli.main(["proof", "--profile", "tiny", "--changed", "README.md", "--format", "json"]) == 0
+    assert cli.main(["proof", "--changed", "README.md", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload)
@@ -611,7 +601,7 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
 
 
 def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
-    assert cli.main(["proof", "--profile", "full", "--changed", "src/agentic_workspace/cli.py", "--format", "json"]) == 0
+    assert cli.main(["proof", "--verbose", "--changed", "src/agentic_workspace/cli.py", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
@@ -642,8 +632,7 @@ def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> No
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--changed",
                 "src/agentic_workspace/contracts/proof_selection_rules.json",
                 "src/agentic_workspace/cli.py",
@@ -671,8 +660,7 @@ def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--changed",
                 "packages/planning/src/repo_planning_bootstrap/installer.py",
                 "src/agentic_workspace/cli.py",
@@ -708,8 +696,7 @@ def test_proof_changed_selector_accepts_existing_durable_surface_update(tmp_path
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--target",
                 str(tmp_path),
                 "--changed",
@@ -737,8 +724,7 @@ def test_proof_changed_selector_flags_additive_only_durable_surface(tmp_path: Pa
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--target",
                 str(tmp_path),
                 "--changed",
@@ -776,8 +762,7 @@ def test_proof_changed_selector_accepts_deleted_durable_surface(tmp_path: Path, 
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--target",
                 str(tmp_path),
                 "--changed",

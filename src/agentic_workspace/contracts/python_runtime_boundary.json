@@ -63,7 +63,7 @@
         "agentic_workspace.cli"
       ],
       "runtime_surfaces": [
-        "report --profile router",
+        "report",
         "report --section",
         "report section hints"
       ],

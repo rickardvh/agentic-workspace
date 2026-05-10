@@ -1123,7 +1123,7 @@ def _read_surface_quality_signals(
     used_start = "agentic-workspace start" in executed or "agentic-workspace start" in response
     used_implement = "agentic-workspace implement" in executed or "agentic-workspace implement" in response
     used_summary = "agentic-workspace summary" in executed or "agentic-workspace summary" in response
-    used_full = "--profile full" in executed or "--profile full" in response
+    used_full = "--verbose" in executed or "--verbose" in response
     raw_workspace_reads = len(re.findall(r"\.agentic-workspace/(?:planning|memory|docs|workflow|config)", response))
     signals: list[dict[str, str]] = [
         {

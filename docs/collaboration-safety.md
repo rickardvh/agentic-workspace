@@ -75,7 +75,7 @@ Do not turn generated surfaces into a second handbook during conflict resolution
 
 Use compact diagnostics before closeout or push:
 
-- `agentic-workspace summary --target . --profile compact --format json` exposes `planning_surface_health.collaboration_pressure`.
+- `agentic-workspace summary --target . --verbose --format json` exposes `planning_surface_health.collaboration_pressure`.
 - `agentic-workspace report --target . --format json` exposes `branch_workflow_posture.shared_state_mutation_risk`.
 - `agentic-memory report --target . --format json` exposes `merge_safety` when Memory is installed.
 

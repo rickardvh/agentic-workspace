@@ -76,7 +76,7 @@ def test_workspace_lifecycle_smoke() -> None:
         )
         assert json.loads(status.stdout)["health"] == "healthy"
 
-    modules = _run("agentic-workspace", "modules", "--profile", "full", "--format", "json", cwd=WORKSPACE_ROOT)
+    modules = _run("agentic-workspace", "modules", "--verbose", "--format", "json", cwd=WORKSPACE_ROOT)
     module_payload = json.loads(modules.stdout)
     assert {entry["id"] for entry in module_payload["module_profiles"]} >= {"planning", "memory"}
 

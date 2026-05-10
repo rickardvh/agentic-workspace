@@ -53,7 +53,7 @@ When normal work is blocked by repo-state ambiguity, interrupted bootstrap, or e
 
 ## 4. Relationship to Tooling
 
-- `agentic-workspace config --target ./repo --profile tiny --format json`: Inspect effective posture and configuration; use compact/full only when the tiny answer is insufficient.
+- `agentic-workspace config --target ./repo --format json`: Inspect effective posture and configuration; use compact/full only when the tiny answer is insufficient.
 - `agentic-workspace doctor --target ./repo`: Identify and remediate environment drift.
 - `agentic-workspace status --target ./repo`: Check module and repo-state health.
 - `agentic-workspace upgrade --target ./repo --dry-run --format json`: Ordinary safe first step for host-repo updates.

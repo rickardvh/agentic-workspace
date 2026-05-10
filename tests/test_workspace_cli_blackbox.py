@@ -49,7 +49,7 @@ def test_blackbox_near_miss_command_guides_to_startup() -> None:
 
 
 def test_blackbox_selector_conflict_guides_to_correct_usage() -> None:
-    result = _run_cli("report", "--profile", "full", "--section", "agent_aids", "--format", "json", cwd=Path.cwd())
+    result = _run_cli("report", "--verbose", "--section", "agent_aids", "--format", "json", cwd=Path.cwd())
 
-    _assert_usage_error_without_traceback(result, expected="report selectors are mutually exclusive")
-    assert "use either --profile or --section" in result.stderr
+    _assert_usage_error_without_traceback(result, expected="report detail selectors are mutually exclusive")
+    assert "use either --verbose or --section" in result.stderr

@@ -9,8 +9,7 @@
       "summary",
       "--target",
       ".",
-      "--profile",
-      "compact",
+      "--verbose",
       "--format",
       "json"
     ],
@@ -42,7 +41,7 @@
           "path": [
             "profile"
           ],
-          "equals": "compact"
+          "equals": "full"
         },
         {
           "path": [

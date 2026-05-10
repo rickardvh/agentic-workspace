@@ -21,6 +21,36 @@ def test_contract_tooling_check_passes() -> None:
     assert module.main([]) == 0
 
 
+def test_command_contracts_do_not_expose_profile_flags() -> None:
+    def walk_options(value: object) -> list[dict[str, object]]:
+        if isinstance(value, dict):
+            found: list[dict[str, object]] = []
+            options = value.get("options")
+            if isinstance(options, list):
+                found.extend(option for option in options if isinstance(option, dict))
+            for nested in value.values():
+                found.extend(walk_options(nested))
+            return found
+        if isinstance(value, list):
+            found: list[dict[str, object]] = []
+            for nested in value:
+                found.extend(walk_options(nested))
+            return found
+        return []
+
+    manifests = [
+        contract_tooling.cli_commands_manifest(),
+        contract_tooling.command_package_ir_manifest(),
+    ]
+
+    assert not [
+        option
+        for manifest in manifests
+        for option in walk_options(manifest)
+        if option.get("name") == "profile" or "--profile" in option.get("flags", [])
+    ]
+
+
 def test_contract_inventory_declares_owner_choice_model() -> None:
     manifest = contract_tooling.contract_inventory_manifest()
     concern_classes = {entry["id"]: entry for entry in manifest["owner_choice_model"]["concern_classes"]}
@@ -625,7 +655,7 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
     assert run_generated_command(["config", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["modules", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["start", "--target", ".", "--changed", "README.md", "--format", "json"], runtime_handler) == 0
-    assert run_generated_command(["summary", "--target", ".", "--profile", "compact", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["summary", "--target", ".", "--verbose", "--format", "json"], runtime_handler) == 0
     assert (
         run_generated_command(
             ["implement", "--target", ".", "--changed", "README.md", "--task", "generated-adapter-proof", "--format", "json"],
@@ -637,7 +667,7 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
     assert run_generated_command(["proof", "--target", ".", "--changed", "README.md", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["ownership", "--target", ".", "--concern", "startup", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["skills", "--target", ".", "--task", "proof", "--format", "json"], runtime_handler) == 0
-    assert run_generated_command(["report", "--target", ".", "--profile", "router", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["report", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["reconcile", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["setup", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["status", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
@@ -673,7 +703,7 @@ def test_package_generated_python_command_packages_parse_status_runtime_operatio
 
     assert run_planning_generated_command(["status", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_planning_generated_command(["doctor", "--target", ".", "--format", "json"], runtime_handler) == 0
-    assert run_planning_generated_command(["summary", "--target", ".", "--profile", "compact", "--format", "json"], runtime_handler) == 0
+    assert run_planning_generated_command(["summary", "--target", ".", "--verbose", "--format", "json"], runtime_handler) == 0
     assert run_planning_generated_command(["report", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_planning_generated_command(["reconcile", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_memory_generated_command(["status", "--target", ".", "--format", "json"], runtime_handler) == 0
@@ -916,9 +946,7 @@ def test_generated_adapter_live_cli_parity_catches_missing_contract_option(monke
 
     errors = module._validate_generated_adapter_live_cli_parity({"adapters": [memory_adapter]})
 
-    assert errors == [
-        "generated adapter memory.status.cli live parser has CLI option(s) missing from operation contract: profile, target, verbose"
-    ]
+    assert errors == ["generated adapter memory.status.cli live parser has CLI option(s) missing from operation contract: target, verbose"]
 
 
 def test_validated_contract_loader_reports_contract_and_schema(monkeypatch, tmp_path: Path) -> None:

@@ -11,12 +11,12 @@ noticing and following advice.
 
 The review used these surfaces:
 
-- `agentic-workspace start --profile tiny --format json`
-- `agentic-workspace config --target . --profile compact --format json`
+- `agentic-workspace start --format json`
+- `agentic-workspace config --target . --verbose --format json`
 - `agentic-workspace report --section workflow_obligations --format json`
 - `agentic-workspace report --section repo_friction --format json`
 - `agentic-workspace report --section output_contract --format json`
-- `agentic-workspace implement --profile tiny --changed ... --format json`
+- `agentic-workspace implement --changed ... --format json`
 
 ## Summary
 

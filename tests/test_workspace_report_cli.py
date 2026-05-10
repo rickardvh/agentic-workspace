@@ -31,7 +31,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     _assert_invoked_cli_identity(payload, target_relation="outside-target")
@@ -216,7 +216,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "workspace-report-router/v1"
-    assert payload["schema"]["full_profile_command"] == "agentic-workspace report --target ./repo --profile full --format json"
+    assert payload["schema"]["full_profile_command"] == "agentic-workspace report --target ./repo --verbose --format json"
     assert payload["schema"]["section_command"] == "agentic-workspace report --target ./repo --section <section> --format json"
     assert payload["report_profile"]["default_profile"] == "router"
     assert payload["report_profile"]["full_profile"] == "full"
@@ -316,7 +316,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert historical_reviews["status"] == "evidence-only"
     assert "not ordinary operating input" in historical_reviews["role"]
     assert "retention_policy_status" in historical_reviews
-    assert historical_reviews["detail"].endswith("report --target ./repo --profile full --format json")
+    assert historical_reviews["detail"].endswith("report --target ./repo --verbose --format json")
 
     assert cli.main(["report", "--target", str(target), "--section", "operating_posture", "--format", "json"]) == 0
     posture_payload = json.loads(capsys.readouterr().out)
@@ -333,7 +333,7 @@ def test_report_tiny_profile_alias_returns_router(tmp_path: Path, capsys) -> Non
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
 
-    assert cli.main(["report", "--target", str(target), "--profile", "tiny", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "workspace-report-router/v1"
@@ -387,7 +387,7 @@ def test_report_router_uses_resolved_cli_invoke_for_copyable_commands(tmp_path: 
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["schema"]["full_profile_command"] == "uv run agentic-workspace report --target ./repo --profile full --format json"
+    assert payload["schema"]["full_profile_command"] == "uv run agentic-workspace report --target ./repo --verbose --format json"
     assert payload["report_profile"]["default_command"] == "uv run agentic-workspace report --target ./repo --format json"
     ordinary_path = payload["report_profile"]["ordinary_agent_path"]
     assert ordinary_path["entry_command"] == "uv run agentic-workspace start --target ./repo --format json"
@@ -577,7 +577,7 @@ def test_report_surfaces_review_retention_cleanup_pressure(tmp_path: Path, capsy
     assert historical_summary["retention_candidate_count"] >= 2
     assert "historical_review_artifacts" not in closeout_payload["answer"]
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     full_payload = json.loads(capsys.readouterr().out)
     retention = full_payload["closeout_trust"]["historical_review_artifacts"]["retention_policy"]
@@ -1141,7 +1141,7 @@ def test_report_routes_roadmap_backed_work_to_planning_before_broad_execution(tm
         encoding="utf-8",
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     execution_shape = payload["execution_shape"]
@@ -1168,7 +1168,7 @@ def test_report_surfaces_default_branch_commit_risk(tmp_path: Path, capsys) -> N
     capsys.readouterr()
     _set_git_branch(target, current="master", default="master")
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert "branch_workflow_posture" in payload["schema"]["shared_fields"]
@@ -1201,7 +1201,7 @@ def test_report_branch_posture_flags_changed_workspace_shared_state(tmp_path: Pa
         'kind = "agentic-planning-state"\nschema_version = "planning-state/v1"\n',
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     risk = payload["branch_workflow_posture"]["shared_state_mutation_risk"]
@@ -1300,7 +1300,7 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
         encoding="utf-8",
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["closeout_trust"]["strict_closeout_gate"]["status"] == "allowed"
@@ -1434,7 +1434,7 @@ def test_report_closeout_trust_lowers_trust_when_active_plan_has_no_package_evid
         encoding="utf-8",
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     closeout = payload["closeout_trust"]
@@ -1465,7 +1465,7 @@ def test_report_surfaces_local_only_memory_status(tmp_path: Path, capsys) -> Non
         encoding="utf-8",
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     local_memory = payload["local_memory"]
@@ -1504,7 +1504,7 @@ def test_report_handles_modules_with_empty_findings_lists(tmp_path: Path, monkey
     monkeypatch.setattr(planning_installer, "planning_report", _planning_report_without_findings)
     monkeypatch.setattr(memory_installer, "memory_report", _memory_report_without_findings)
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["findings"] == []
@@ -1538,7 +1538,7 @@ def test_report_surfaces_planning_intent_validation_findings(tmp_path: Path, cap
         encoding="utf-8",
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert any("Open external planning item EXT-quiet-open" in finding["message"] for finding in payload["findings"])
@@ -2066,7 +2066,7 @@ def test_report_surfaces_finished_work_inspection_findings(tmp_path: Path, capsy
         encoding="utf-8",
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert any("Archived closeout" in finding["message"] for finding in payload["findings"])
@@ -2102,7 +2102,7 @@ def test_report_surfaces_compact_lower_trust_closeout_summary(tmp_path: Path, ca
         encoding="utf-8",
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["closeout_trust"]["status"] == "present"
@@ -2216,7 +2216,7 @@ def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path,
         encoding="utf-8",
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     standing_classes = {item["class"]: item for item in payload["standing_intent"]["effective_view"]["items"]}
@@ -2315,7 +2315,7 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
         encoding="utf-8",
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     execution_shape = payload["execution_shape"]
@@ -2341,7 +2341,7 @@ def test_report_surfaces_agent_efficiency_output_contract_from_repo_config(tmp_p
         encoding="utf-8",
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["output_contract"]["optimization_bias"] == "agent-efficiency"
@@ -2394,7 +2394,7 @@ def test_default_command_outputs_stay_router_sized(tmp_path: Path, capsys) -> No
     status_payload = json.loads(capsys.readouterr().out)
     assert "mixed_agent" not in status_payload["config"]
     assert status_payload["config"]["detail_command"] == "agentic-workspace config --target ./repo --format json"
-    assert status_payload["deeper_detail"]["report_command"] == "agentic-workspace report --target ./repo --profile full --format json"
+    assert status_payload["deeper_detail"]["report_command"] == "agentic-workspace report --target ./repo --verbose --format json"
     assert status_payload["cost_provenance"]["classification"] == "compact-after-lifecycle"
     assert status_payload["cost_provenance"]["module_count"] >= 1
 
@@ -2410,7 +2410,7 @@ def test_report_surfaces_large_file_hotspots_as_repo_friction_evidence(tmp_path:
     (target / "src").mkdir()
     (target / "src" / "big_module.py").write_text("\n".join(f"line_{index}" for index in range(450)) + "\n")
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["repo_friction"]["policy_mode"] == "balanced"
@@ -2443,7 +2443,7 @@ def test_report_does_not_promote_regenerable_cache_as_large_file_friction(tmp_pa
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     cache_path.write_text("\n".join(f"line_{index}" for index in range(950)) + "\n", encoding="utf-8")
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     large_files = payload["repo_friction"]["large_file_hotspots"]
@@ -2468,7 +2468,7 @@ def test_report_surfaces_concept_hotspots_as_repo_friction_evidence(tmp_path: Pa
         encoding="utf-8",
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["repo_friction"]["concept_surface_hotspots"]["count"] == 1
@@ -2500,7 +2500,7 @@ def test_report_consumes_external_codebase_map_when_present(tmp_path: Path, caps
         encoding="utf-8",
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["repo_friction"]["evidence_classes"] == [
@@ -2554,7 +2554,7 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
         encoding="utf-8",
     )
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["repo_friction"]["evidence_classes"] == [
@@ -2593,7 +2593,7 @@ def test_report_surfaces_reporting_only_repo_friction_posture(tmp_path: Path, ca
     (target / "docs").mkdir()
     (target / "docs" / "big_note.md").write_text("\n".join(f"line_{index}" for index in range(450)) + "\n")
 
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["repo_friction"]["policy_mode"] == "reporting"

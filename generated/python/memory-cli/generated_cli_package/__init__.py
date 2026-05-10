@@ -48,18 +48,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "target"
           },
           {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Output profile. Defaults to tiny; use full for action detail.",
-            "name": "profile"
-          },
-          {
             "action": "store_true",
             "flags": [
               "--verbose"
@@ -154,18 +142,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "strict_doc_ownership"
           },
           {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Output profile. Defaults to tiny; use full for action detail.",
-            "name": "profile"
-          },
-          {
             "action": "store_true",
             "flags": [
               "--verbose"
@@ -252,18 +228,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "target"
           },
           {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Output profile. Defaults to tiny; use full for report detail.",
-            "name": "profile"
-          },
-          {
             "action": "store_true",
             "flags": [
               "--verbose"
@@ -348,18 +312,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Target repository path. Defaults to the current directory.",
             "name": "target"
-          },
-          {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Output profile. Defaults to tiny; use full for fixture detail.",
-            "name": "profile"
           },
           {
             "choices": [
@@ -709,18 +661,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "target"
         },
         {
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Output profile. Defaults to tiny; use full for action detail.",
-          "name": "profile"
-        },
-        {
           "action": "store_true",
           "flags": [
             "--verbose"
@@ -766,18 +706,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "strict_doc_ownership"
         },
         {
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Output profile. Defaults to tiny; use full for action detail.",
-          "name": "profile"
-        },
-        {
           "action": "store_true",
           "flags": [
             "--verbose"
@@ -815,18 +743,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "target"
         },
         {
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Output profile. Defaults to tiny; use full for report detail.",
-          "name": "profile"
-        },
-        {
           "action": "store_true",
           "flags": [
             "--verbose"
@@ -862,18 +778,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
-        },
-        {
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Output profile. Defaults to tiny; use full for fixture detail.",
-          "name": "profile"
         },
         {
           "choices": [

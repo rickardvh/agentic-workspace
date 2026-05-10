@@ -1310,7 +1310,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
     new_plan_command = f"agentic-planning new-plan --id <id> --title <title>{target_arg} --activate --format json"
     prep_only_new_plan_command = f"agentic-planning new-plan --id <id> --title <title>{target_arg} --activate --prep-only --format json"
     promote_command = f"agentic-planning promote-to-plan <item-id>{target_arg} --format json"
-    summary_command = f"agentic-workspace summary{target_arg} --profile compact --format json"
+    summary_command = f"agentic-workspace summary{target_arg} --verbose --format json"
     return {
         "kind": "agentic-workspace/planning-help/v1",
         "summary": "Planning files are checked-in execution authority, but their outer structure is package-owned.",
@@ -5205,7 +5205,7 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
     payload["deeper_detail"] = {
         "config_command": _command_with_cli_invoke(command="agentic-workspace config --target ./repo --format json", cli_invoke=cli_invoke),
         "report_command": _command_with_cli_invoke(
-            command="agentic-workspace report --target ./repo --profile full --format json", cli_invoke=cli_invoke
+            command="agentic-workspace report --target ./repo --verbose --format json", cli_invoke=cli_invoke
         ),
     }
     payload["cost_provenance"] = {
@@ -5226,7 +5226,7 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
         }
     else:
         detail_command = _command_with_cli_invoke(
-            command=f"agentic-workspace {command_name} --target ./repo --profile full --format json",
+            command=f"agentic-workspace {command_name} --target ./repo --verbose --format json",
             cli_invoke=cli_invoke,
         )
         if command_name == "status":
@@ -9355,7 +9355,7 @@ def _tiny_preflight_payload_fast(
     durable_intent: dict[str, Any] = {
         "status": "not-evaluated",
         "subsystem_intent": {"status": "not-evaluated", "matched_count": 0},
-        "inspect": f'{config.cli_invoke} start --target . --profile tiny --task "<task>" --format json',
+        "inspect": f'{config.cli_invoke} start --target . --task "<task>" --format json',
     }
     if task_text or changed_paths:
         durable_intent = _intent_decision_projection(
@@ -9399,7 +9399,7 @@ def _tiny_preflight_payload_fast(
         "workflow_obligations": {
             "status": "not-evaluated",
             "match_count": 0,
-            "detail_command": f"{config.cli_invoke} preflight --profile full --format json",
+            "detail_command": f"{config.cli_invoke} preflight --verbose --format json",
         },
         "closeout_obligations": {
             "status": "present",
@@ -10474,9 +10474,7 @@ def _is_config_posture_task(task_text: str | None) -> bool:
 
 def _prep_only_handoff_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     planning_command = _command_with_cli_invoke(command="agentic-workspace planning --format json", cli_invoke=config.cli_invoke)
-    summary_command = _command_with_cli_invoke(
-        command="agentic-workspace summary --profile compact --format json", cli_invoke=config.cli_invoke
-    )
+    summary_command = _command_with_cli_invoke(command="agentic-workspace summary --verbose --format json", cli_invoke=config.cli_invoke)
     new_plan_template = _command_with_cli_invoke(
         command="agentic-planning new-plan --id <id> --title <title> --target . --activate --prep-only --format json",
         cli_invoke=config.cli_invoke,
@@ -10787,7 +10785,7 @@ def _start_payload(
         }
     elif _is_config_posture_task(task_text):
         config_command = _command_with_cli_invoke(
-            command="agentic-workspace config --profile tiny --format json",
+            command="agentic-workspace config --format json",
             cli_invoke=config.cli_invoke,
         )
         payload["immediate_next_allowed_action"] = {
@@ -11285,9 +11283,7 @@ def _start_tiny_payload_fast(
             "open_execplan_only_when": "compact summary reports a blocking Planning problem after the prep-only scaffold is created",
         }
     elif _is_config_posture_task(task_text):
-        config_command = _command_with_cli_invoke(
-            command="agentic-workspace config --profile tiny --format json", cli_invoke=config.cli_invoke
-        )
+        config_command = _command_with_cli_invoke(command="agentic-workspace config --format json", cli_invoke=config.cli_invoke)
         payload["immediate_next_allowed_action"] = {
             "action": "inspect-effective-config",
             "summary": (
@@ -13174,7 +13170,7 @@ def _config_enforcement_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             {
                 "field": "cli_compatibility.*",
                 "command": _command_with_cli_invoke(
-                    command="agentic-workspace config --target ./repo --profile compact --format json",
+                    command="agentic-workspace config --target ./repo --verbose --format json",
                     cli_invoke=config.cli_invoke,
                 ),
                 "field_path": "cli_compatibility",
@@ -13279,7 +13275,7 @@ def _config_effect_audit_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             ]
             payload_fields = ["update.modules", "module freshness"]
         else:
-            concrete_commands = [command("agentic-workspace config --target ./repo --profile compact --format json")]
+            concrete_commands = [command("agentic-workspace config --target ./repo --verbose --format json")]
             payload_fields = used_by
 
         return {
@@ -15684,7 +15680,7 @@ def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = 
                 for entry in _MODULE_PROFILE_ENTRIES
             ],
             "detail_commands": {
-                "full": "agentic-workspace modules --target . --profile full --format json",
+                "full": "agentic-workspace modules --target . --verbose --format json",
                 "status": "agentic-workspace status --target . --format json",
             },
         }
@@ -16254,7 +16250,7 @@ def _defaults_payload() -> dict[str, Any]:
                     "cue": "The task needs active sequencing, blockers, proof expectations, promotion decisions, or cross-session continuation.",
                     "load_next": [
                         "agentic-workspace summary --format json",
-                        "agentic-workspace summary --format json --profile full",
+                        "agentic-workspace summary --format json --verbose",
                         ".agentic-workspace/planning/state.toml only when the summary points there",
                         ".agentic-workspace/planning/execplans/ only when the summary points at an active execplan",
                     ],
@@ -16304,7 +16300,7 @@ def _defaults_payload() -> dict[str, Any]:
                 (
                     "If the question is active planning recovery rather than startup order, "
                     "prefer the tiny default `agentic-workspace summary --format json` before raw "
-                    "planning state or execplan prose; use `--profile compact` only when the tiny router is insufficient."
+                    "planning state or execplan prose; use `--verbose` only when the tiny router is insufficient."
                 ),
             ],
             "workflow_recovery": [
@@ -17220,7 +17216,7 @@ def _tiny_defaults_payload(payload: dict[str, Any]) -> dict[str, Any]:
         ],
         "detail_commands": {
             "section": "agentic-workspace defaults --section <section> --format json",
-            "full": "agentic-workspace defaults --profile full --format json",
+            "full": "agentic-workspace defaults --verbose --format json",
         },
     }
 
@@ -17628,7 +17624,7 @@ def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
         },
         "required_commands": [],
         "warnings": [],
-        "detail_command": "agentic-workspace proof --profile full --format json",
+        "detail_command": "agentic-workspace proof --verbose --format json",
     }
 
 
@@ -20843,7 +20839,7 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "reasons": runtime_resolution["reasons"],
             },
         },
-        "full_profile_command": f"{workspace['cli_invoke']} config --target . --profile full --format json",
+        "full_profile_command": f"{workspace['cli_invoke']} config --target . --verbose --format json",
     }
 
 
@@ -20882,7 +20878,7 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "next_detail": {
             "select": f"{workspace['cli_invoke']} config --target . --select <field.path> --format json",
             "verbose": f"{workspace['cli_invoke']} config --target . --verbose --format json",
-            "compatibility_compact": f"{workspace['cli_invoke']} config --target . --profile compact --format json",
+            "compatibility_compact": f"{workspace['cli_invoke']} config --target . --verbose --format json",
         },
         "available_selectors": [
             "workspace.default_preset",

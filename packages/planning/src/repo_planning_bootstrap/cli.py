@@ -114,15 +114,9 @@ def build_parser() -> argparse.ArgumentParser:
     summary_parser = subparsers.add_parser("summary", help="Summarise the active planning surfaces in a machine-readable way.")
     summary_parser.add_argument("--target")
     summary_parser.add_argument(
-        "--profile",
-        choices=("tiny", "compact", "full"),
-        default="tiny",
-        help="Output profile. Defaults to tiny; use compact or full for more planning detail.",
-    )
-    summary_parser.add_argument(
         "--verbose",
         action="store_true",
-        help="Alias for broad diagnostic output; equivalent to --profile full.",
+        help="Emit broad diagnostic planning detail.",
     )
     summary_parser.add_argument("--task", help="Optional task text used to return a task-scoped compact summary.")
     summary_parser.add_argument("--changed", nargs="*", default=[], help="Optional changed paths used to scope compact summary output.")
@@ -131,12 +125,9 @@ def build_parser() -> argparse.ArgumentParser:
     report_parser = subparsers.add_parser("report", help="Report compact planning module state without reading raw planning files first.")
     report_parser.add_argument("--target")
     report_parser.add_argument(
-        "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for audit detail."
-    )
-    report_parser.add_argument(
         "--verbose",
         action="store_true",
-        help="Alias for broad diagnostic output; equivalent to --profile full.",
+        help="Emit broad diagnostic report detail.",
     )
     report_parser.add_argument("--format", choices=("text", "json"), default="text")
 
@@ -277,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "status":
         return _emit(collect_status(target=args.target), args.format)
     if args.command == "summary":
-        summary_profile = "full" if getattr(args, "verbose", False) else args.profile if args.format == "json" else "full"
+        summary_profile = "full" if getattr(args, "verbose", False) or args.format != "json" else "tiny"
         summary = planning_summary(
             target=args.target,
             profile=summary_profile,
@@ -290,11 +281,7 @@ def main(argv: list[str] | None = None) -> int:
             _print_summary(summary)
         return 0
     if args.command == "report":
-        report = (
-            planning_report_tiny(target=args.target)
-            if not getattr(args, "verbose", False) and getattr(args, "profile", "tiny") == "tiny"
-            else planning_report(target=args.target)
-        )
+        report = planning_report_tiny(target=args.target) if not getattr(args, "verbose", False) else planning_report(target=args.target)
         if args.format == "json":
             print(json.dumps(report, indent=2))
         else:
@@ -450,7 +437,7 @@ def _run_doctor_report_adapter(args: argparse.Namespace) -> int:
 
 
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
-    summary_profile = "full" if getattr(args, "verbose", False) else args.profile if args.format == "json" else "full"
+    summary_profile = "full" if getattr(args, "verbose", False) or args.format != "json" else "tiny"
     summary = planning_summary(
         target=args.target,
         profile=summary_profile,
@@ -465,11 +452,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
 
 
 def _run_report_adapter(args: argparse.Namespace) -> int:
-    report = (
-        planning_report_tiny(target=args.target)
-        if not getattr(args, "verbose", False) and getattr(args, "profile", "tiny") == "tiny"
-        else planning_report(target=args.target)
-    )
+    report = planning_report_tiny(target=args.target) if not getattr(args, "verbose", False) else planning_report(target=args.target)
     if args.format == "json":
         print(json.dumps(report, indent=2))
     else:
@@ -496,7 +479,7 @@ def _tiny_report(report: dict) -> dict:
         "findings": findings[:5] if isinstance(findings, list) else [],
         "next_action": report.get("next_action", {}),
         "detail_commands": {
-            "full": "agentic-planning report --target . --profile full --format json",
+            "full": "agentic-planning report --target . --verbose --format json",
             "summary": "agentic-planning summary --target . --format json",
         },
     }

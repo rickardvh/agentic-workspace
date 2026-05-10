@@ -19,7 +19,7 @@ def test_planning_report_defaults_to_tiny_profile(tmp_path: Path, capsys) -> Non
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "tiny"
     assert "finished_work_inspection" not in payload
-    assert payload["detail_commands"]["full"] == "agentic-planning report --target . --profile full --format json"
+    assert payload["detail_commands"]["full"] == "agentic-planning report --target . --verbose --format json"
 
 
 def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routing() -> None:

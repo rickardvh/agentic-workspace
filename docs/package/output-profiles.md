@@ -13,7 +13,7 @@ The default design rule is next-decision first:
 
 The ordinary command output should be small. When an agent needs one or two exact fields, prefer `--select <field.path>` over a broader payload. Use `--verbose` for diagnostic, inventory, provenance, and audit detail.
 
-Legacy `--profile` flags remain accepted for compatibility, but new docs and workflow guidance should not teach profile escalation as the normal path.
+Do not keep a parallel profile compatibility path. If a command needs more detail, expose an exact selector such as `--select` or `--section`, and reserve `--verbose` for diagnostics.
 
 Healthy or normal data should usually be absent from default output. Examples include normal package identity, normal package boundaries, module inventories, empty obligation counts, inactive closeout policy, and full authority marker records.
 

@@ -93,6 +93,25 @@ The structured substrate should answer a small number of high-value questions ch
 | Repo-local current work | `agentic-workspace summary --format json` | `agentic-workspace report --target ./repo --format json`, then the active execplan only if summary points there |
 | Relevant subinstructions | `agentic-workspace defaults --section agent_configuration_queries --format json` | `agentic-workspace report --target ./repo --format json`, then only the module-local docs or runbooks already in scope |
 
+## Operational Authority Ladder
+
+When multiple surfaces mention the same operating question, use this ladder to avoid adding another equivalent route.
+Command output owns the first live answer; docs explain the contract behind that answer; raw files are authoring or recovery surfaces only after a compact command points there.
+
+| Operating question | Canonical command first | Owning contract doc | Raw/detail surface only when routed |
+| --- | --- | --- | --- |
+| How should an agent start? | `agentic-workspace start --task "<task>" --format json` | `.agentic-workspace/docs/workspace-config-contract.md` | `AGENTS.md`, `.agentic-workspace/WORKFLOW.md` |
+| What active work or handoff exists? | `agentic-workspace summary --format json` | `.agentic-workspace/docs/execution-flow-contract.md` | `.agentic-workspace/planning/state.toml`, active execplans |
+| Which proof should run? | `agentic-workspace proof --changed <paths> --format json` | `.agentic-workspace/docs/proof-surfaces-contract.md` | repo check scripts, package/module proof docs |
+| Which config or local invocation matters? | `agentic-workspace config --target ./repo --format json --select <field>` | `.agentic-workspace/docs/workspace-config-contract.md` | `.agentic-workspace/config.toml`, `.agentic-workspace/config.local.toml` |
+| Who owns a surface? | `agentic-workspace ownership --target ./repo --path <path> --format json` | `.agentic-workspace/docs/ownership-authority-contract.md` | `.agentic-workspace/OWNERSHIP.toml` |
+| Which durable memory is relevant? | `agentic-memory route --task "<task>" --format json` or workspace memory routing when exposed | `.agentic-workspace/memory/WORKFLOW.md` | routed memory notes only |
+| How should a slice close out? | `agentic-planning archive-plan <plan> --prepare-closeout --format json` | `.agentic-workspace/docs/execution-flow-contract.md` | active execplan closeout fields, issue comments |
+| Which module lifecycle repair is needed? | `agentic-workspace doctor --target ./repo --format json` | `.agentic-workspace/docs/lifecycle-and-config-contract.md` | module doctor reports and managed payload files |
+
+Before adding a new startup, routing, proof, closeout, or lifecycle surface, name which row it replaces, merges, demotes, or removes.
+If it cannot name one, keep the new material explanatory and link to the owning command/doc instead of making it a new first-step route.
+
 Selective loading means:
 
 - prefer one compact answer over broad rereads

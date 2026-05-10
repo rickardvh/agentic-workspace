@@ -13,9 +13,9 @@ If the current request is prep-only handoff, the goal is cheaper durable state, 
 
 1. Prefer `agentic-planning new-plan --id <id> --title <title> --target . --activate --format json` for new active work.
 2. If a planning item already exists, use `agentic-planning promote-to-plan <item-id> --target . --format json`.
-3. For prep-only handoff, use `agentic-planning new-plan --id <id> --title <title> --target . --activate --prep-only --format json`, then run `agentic-workspace summary --target . --profile compact --format json` and stop unless summary reports a blocking Planning problem.
+3. For prep-only handoff, use `agentic-planning new-plan --id <id> --title <title> --target . --activate --prep-only --format json`, then run `agentic-workspace summary --target . --verbose --format json` and stop unless summary reports a blocking Planning problem.
 4. For implementation work, tighten the scaffold before implementation: goal, non-goals, touched paths, execution bounds, validation commands, completion criteria, assurance/delegation posture, and stop conditions.
-5. Run `agentic-workspace summary --target . --format json --profile compact` before editing product files.
+5. Run `agentic-workspace summary --target . --format json --verbose` before editing product files.
 
 ## Guardrails
 

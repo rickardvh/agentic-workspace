@@ -103,12 +103,12 @@ candidates = [
     assert payload["schema"]["select_command"] == "agentic-workspace summary --select <field.path> --format json"
 
 
-def test_workspace_summary_json_accepts_full_profile(tmp_path: Path, capsys) -> None:
+def test_workspace_summary_json_accepts_verbose_detail(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
 
-    exit_code = cli.main(["summary", "--target", str(tmp_path), "--format", "json", "--profile", "full"])
+    exit_code = cli.main(["summary", "--target", str(tmp_path), "--format", "json", "--verbose"])
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
@@ -131,7 +131,7 @@ queued_items = []
     )
     _write(tmp_path / ".agentic-workspace/planning/execplans/lane.plan.json", json.dumps({"kind": "planning-execplan/v1"}))
 
-    exit_code = cli.main(["summary", "--target", str(tmp_path), "--format", "json", "--profile", "compact"])
+    exit_code = cli.main(["summary", "--target", str(tmp_path), "--format", "json", "--verbose"])
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
@@ -283,7 +283,7 @@ candidates = []
         ),
     )
 
-    exit_code = cli.main(["summary", "--target", str(tmp_path), "--profile", "compact", "--format", "json"])
+    exit_code = cli.main(["summary", "--target", str(tmp_path), "--verbose", "--format", "json"])
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
@@ -293,7 +293,6 @@ candidates = []
     assert reconciliation["freshness"]["trust_scope"] == "snapshot"
     assert reconciliation["freshness"]["refresh_after_mutation"] is True
     assert "external-intent refresh-github" in reconciliation["freshness"]["refresh_command"]
-    assert "refresh_metadata" not in reconciliation["freshness"]
-    assert "path" not in reconciliation["freshness"]
-    assert "profile full" in reconciliation["detail"]
+    assert reconciliation["freshness"]["refresh_metadata"]["adapter"] == "manual-fixture"
+    assert reconciliation["freshness"]["path"] == ".agentic-workspace/local/cache/external-intent-evidence.json"
     assert reconciliation["external_work_state"]["open_count"] == 1

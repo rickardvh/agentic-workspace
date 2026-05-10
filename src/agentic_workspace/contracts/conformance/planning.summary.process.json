@@ -9,8 +9,7 @@
       "summary",
       "--target",
       ".",
-      "--profile",
-      "compact",
+      "--verbose",
       "--format",
       "json"
     ],

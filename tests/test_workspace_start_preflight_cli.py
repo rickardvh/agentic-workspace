@@ -51,7 +51,7 @@ def test_preflight_command_active_only_returns_compact_planning_state(capsys) ->
 
 def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None:
     """Test that preflight returns bundled startup + config + active state for takeover recovery."""
-    assert cli.main(["preflight", "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["preflight", "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "preflight-response/v1"
@@ -120,8 +120,7 @@ def test_preflight_task_surfaces_vague_outcome_orientation(capsys) -> None:
                 "preflight",
                 "--task",
                 "I want this repo to feel more trustworthy when agents hand work back after a long task",
-                "--profile",
-                "full",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -211,7 +210,7 @@ def test_preflight_surfaces_closeout_workflow_obligations_as_standing_requiremen
         'review_hint = "Surface actionable findings clearly."\n',
     )
 
-    assert cli.main(["preflight", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["preflight", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     obligations = payload["closeout_obligations"]["required_before_lane_closeout"]
@@ -259,8 +258,7 @@ def test_preflight_matches_planless_workflow_obligations_from_task_text(tmp_path
                 str(target),
                 "--task",
                 "Fix workspace workflow obligations during dogfooding closeout without writing a plan",
-                "--profile",
-                "full",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -325,7 +323,7 @@ def test_preflight_full_includes_active_todo_without_execplan(tmp_path: Path, ca
         "candidates = []\n",
     )
 
-    assert cli.main(["preflight", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["preflight", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     active_state = payload["active_planning_state"]
@@ -366,8 +364,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
                 str(target),
                 "--changed",
                 "src/agentic_workspace/cli.py",
-                "--profile",
-                "full",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -454,48 +451,18 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
 
 def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     task = "Start the way the repo instructs a new agent to start. Do not implement anything yet."
-    assert cli.main(["start", "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+    assert cli.main(["start", "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload, sort_keys=True)
     assert len(encoded) < 7800
     assert payload["kind"] == "startup-context/v1"
-    adaptive = payload["adaptive_routing"]
-    assert adaptive["current_need"] in {"first-contact-routing", "continue-active-planning"}
-    assert adaptive["read_budget"]["profile"] == "tiny"
-    assert adaptive["read_budget"]["raw_file_reads"].startswith("only after")
-    assert "task_scoped_state" in adaptive["detail_commands"]
-    assert "raw planning files" in adaptive["not_needed_now"]
-    assert payload["cli_invocation"]["primary"].endswith("agentic-workspace")
-    assert "config.local.toml" in payload["cli_invocation"]["fallback_when_unavailable"]
-    assert "stale installed selector" in payload["cli_invocation"]["stale_bare_command_warning"]
-    assert payload["startup_sequence"] == [
-        {
-            "id": "entrypoint",
-            "command": None,
-            "surface": "AGENTS.md",
-            "why": "configured ordinary repo startup entrypoint",
-        }
-    ]
-    assert payload["context_router"]["first_view"] == "start"
-    assert (
-        payload["context_router"]["detail_commands"]["known_changed_paths"]
-        == "Use task_intent.implement_changed_command after changed paths are known."
-    )
-    assert payload["context_router"]["detail_commands"]["takeover_or_recovery"] == "agentic-workspace preflight --format json"
+    assert payload["drill_down"]["rule"].startswith("Use --select")
+    assert "cli_invocation" in payload["drill_down"]["available_selectors"]
     assert payload["active_state_summary"]["todo_active_count"] >= 0
     assert payload["immediate_next_allowed_action"]["action"] in {"choose-smallest-workflow-shape", "continue-active-planning-record"}
     assert "implement --changed <paths>" in payload["task_intent"]["implement_changed_command"]
     assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
-    assert payload["delegation_decision"]["status"] == "evaluated"
-    assert payload["delegation_decision"]["mode"] in {"suggest", "auto"}
-    assert payload["delegation_decision"]["required_next_action"] in {
-        "continue-local",
-        "mention-suggestion",
-        "prepare-handoff",
-        "execute-when-safe",
-        "stop-and-ask-human",
-    }
     assert payload["task_intent"]["status"] == "present"
     assert payload["task_intent"]["implement_changed_command"] == (
         f'uv run agentic-workspace implement --changed <paths> --task "{task}" --format json'
@@ -503,7 +470,7 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert payload["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
     assert "cli_compatibility" not in payload
     assert "proof" not in payload
-    assert len(payload["authority_markers"]) == 1
+    assert "authority_markers" not in payload
 
 
 def test_start_default_returns_selector_first_router(capsys) -> None:
@@ -551,7 +518,7 @@ def test_start_tiny_flags_repo_local_cli_invocation_mismatch(tmp_path: Path, cap
         'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
     )
 
-    assert cli.main(["start", "--target", str(target), "--profile", "tiny", "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     invocation = payload["cli_invocation"]
@@ -573,7 +540,7 @@ def test_start_tiny_keeps_moderate_task_carry_forward_command_executable(capsys)
         "update README with a concise usage example, and run the relevant tests."
     )
 
-    assert cli.main(["start", "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+    assert cli.main(["start", "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     command = payload["task_intent"]["implement_changed_command"]
@@ -587,7 +554,7 @@ def test_start_tiny_routes_existing_task_paths_to_implement_surface(tmp_path: Pa
     _write(tmp_path / "README.md", "fixture\n")
 
     task = "Prepare for a narrow README.md wording edit, but do not edit files yet."
-    assert cli.main(["start", "--target", str(tmp_path), "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     action = payload["immediate_next_allowed_action"]
@@ -605,12 +572,12 @@ def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> No
         "Keep the answer aligned with the repo's configured operating and reporting posture."
     )
 
-    assert cli.main(["start", "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+    assert cli.main(["start", "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     action = payload["immediate_next_allowed_action"]
     assert action["action"] == "inspect-effective-config"
-    assert action["command"] == "uv run agentic-workspace config --profile tiny --format json"
+    assert action["command"] == "uv run agentic-workspace config --format json"
     assert action["read_first"] == [action["command"]]
     assert "tiny config surface" in action["summary"]
     assert len(json.dumps(payload, sort_keys=True)) < 8100
@@ -627,7 +594,7 @@ def test_start_tiny_compacts_long_task_carry_forward_command(capsys) -> None:
         * 5
     )
 
-    assert cli.main(["start", "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+    assert cli.main(["start", "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     command = payload["task_intent"]["implement_changed_command"]
@@ -653,21 +620,21 @@ def test_start_tiny_routes_prep_only_handoff_to_planning_bridge(tmp_path: Path, 
         "I want this repository to support importing rows from CSV files, but do not implement the feature yet. "
         "Prepare enough durable state that a later coding pass can safely start from a bounded first slice."
     )
-    assert cli.main(["start", "--target", str(target), "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     action = payload["immediate_next_allowed_action"]
     assert action["action"] == "create-prep-only-planning-state"
     assert action["command"].startswith("agentic-planning new-plan")
     assert "--prep-only" in action["command"]
-    assert action["next_proof"] == "agentic-workspace summary --profile compact --format json"
+    assert action["next_proof"] == "agentic-workspace summary --verbose --format json"
     assert action["read_first"] == []
     assert "do not create product source" in action["summary"]
     prep_only = payload["prep_only_handoff"]
     assert prep_only["first_command"].startswith("agentic-planning new-plan")
     assert prep_only["reference_command"] == "agentic-workspace planning --format json"
     assert "--prep-only" in prep_only["preferred_mutation_command_template"]
-    assert prep_only["after_write"] == "agentic-workspace summary --profile compact --format json"
+    assert prep_only["after_write"] == "agentic-workspace summary --verbose --format json"
     assert prep_only["stop_after_summary"] is True
     assert "no" in prep_only["open_execplan_after_creation"]
     assert "defer unless summary reports" in prep_only["manual_execplan_tightening"]
@@ -686,7 +653,7 @@ def test_start_tiny_routes_paraphrased_prep_only_handoff_to_planning_bridge(tmp_
     capsys.readouterr()
 
     task = "Prepare repository state for future CSV row import feature without implementing it"
-    assert cli.main(["start", "--target", str(target), "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["immediate_next_allowed_action"]["action"] == "create-prep-only-planning-state"
@@ -701,7 +668,7 @@ def test_start_tiny_routes_groundwork_without_implementation_to_prep_only(tmp_pa
     capsys.readouterr()
 
     task = "Prepare groundwork for CSV row import support without implementing feature"
-    assert cli.main(["start", "--target", str(target), "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     action = payload["immediate_next_allowed_action"]
@@ -718,7 +685,7 @@ def test_start_tiny_routes_durable_plan_state_without_code_to_prep_only(tmp_path
     capsys.readouterr()
 
     task = "Prepare durable implementation plan/state for CSV row import feature with no code changes yet"
-    assert cli.main(["start", "--target", str(target), "--profile", "tiny", "--task", task, "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     action = payload["immediate_next_allowed_action"]
@@ -740,7 +707,7 @@ def test_start_tiny_respects_ask_first_clarification_mode(tmp_path: Path, capsys
         ),
     )
 
-    assert cli.main(["start", "--target", str(tmp_path), "--profile", "tiny", "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     decision = payload["delegation_decision"]
@@ -773,8 +740,6 @@ def test_start_tiny_surfaces_auto_delegation_safety_gate(tmp_path: Path, capsys)
                 "start",
                 "--target",
                 str(tmp_path),
-                "--profile",
-                "tiny",
                 "--task",
                 "redesign workflow delegation policy",
                 "--format",
@@ -872,10 +837,10 @@ def test_start_tiny_keeps_config_effect_when_auto_mode_is_safety_downgraded(tmp_
                 "start",
                 "--target",
                 str(tmp_path),
-                "--profile",
-                "tiny",
                 "--task",
                 "Can this request be automatically delegated to a cheaper executor under local settings?",
+                "--select",
+                "delegation_decision",
                 "--format",
                 "json",
             ]
@@ -884,7 +849,7 @@ def test_start_tiny_keeps_config_effect_when_auto_mode_is_safety_downgraded(tmp_
     )
 
     payload = json.loads(capsys.readouterr().out)
-    decision = payload["delegation_decision"]
+    decision = payload["values"]["delegation_decision"]
     assert decision["decision"] == "stay-local"
     assert decision["config_effect"]["delegation_mode"] == "suggest"
     assert decision["config_effect"]["safe_to_auto_run_commands"] is False
@@ -1020,8 +985,7 @@ def test_preflight_task_includes_skill_recommendations(tmp_path: Path, capsys) -
                 str(target),
                 "--task",
                 "tighten a new execplan before coding",
-                "--profile",
-                "full",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -1098,7 +1062,7 @@ def test_start_surfaces_preserved_agentic_workspace_absence_instructions(tmp_pat
     assert cli.main(["init", "--target", str(tmp_path), "--preset", "full", "--format", "json"]) == 0
     capsys.readouterr()
 
-    assert cli.main(["start", "--target", str(tmp_path), "--profile", "tiny", "--task", "Orient and fix README", "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Orient and fix README", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["startup_review"]["status"] == "attention"
@@ -1123,7 +1087,7 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     _init_git_repo(target)
 
     # Step 1: defaults command should provide startup guidance with correct commands
-    assert cli.main(["defaults", "--profile", "full", "--section", "startup", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--verbose", "--section", "startup", "--format", "json"]) == 0
     defaults_output = capsys.readouterr().out
     defaults_payload = json.loads(defaults_output)
 
@@ -1143,7 +1107,7 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     assert not any("agentic-planning summary" in q for q in queries)
 
     # Step 2: preflight should provide the bundled compact takeover context
-    assert cli.main(["preflight", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["preflight", "--target", str(target), "--verbose", "--format", "json"]) == 0
     preflight_output = capsys.readouterr().out
     preflight_payload = json.loads(preflight_output)
     assert preflight_payload.get("kind") == "preflight-response/v1"
@@ -1170,7 +1134,7 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     assert summary_payload.get("profile") == "tiny"
 
     # Step 5: report command should work (though larger output)
-    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
     report_output = capsys.readouterr().out
     # Don't parse full report, just verify it produces output
     assert report_output  # Report should produce output

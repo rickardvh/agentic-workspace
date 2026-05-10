@@ -26,7 +26,7 @@ def test_planning_help_command_returns_lifecycle_guidance(capsys) -> None:
     assert any("new-plan" in command for command in payload["lifecycle_commands"])
     assert "schema-valid scaffold" in payload["post_new_plan_tightening"]["rule"]
     assert "execution_bounds" in payload["post_new_plan_tightening"]["tighten_before_implementation"]
-    assert "--profile compact" in payload["post_new_plan_tightening"]["after_write"]
+    assert "--verbose" in payload["post_new_plan_tightening"]["after_write"]
     assert "one lane at a time" in payload["sequential_lane_execution"]["rule"]
     assert "unrelated lanes" in payload["sequential_lane_execution"]["do_not"]
     assert "new-plan" in payload["durable_state_bridge"]["preferred_command"]

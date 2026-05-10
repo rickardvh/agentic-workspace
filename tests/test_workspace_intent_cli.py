@@ -230,8 +230,7 @@ def test_proof_changed_paths_include_subsystem_proof_hints(tmp_path: Path, monke
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--target",
                 str(tmp_path),
                 "--changed",

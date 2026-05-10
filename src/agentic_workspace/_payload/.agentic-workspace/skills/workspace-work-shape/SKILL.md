@@ -9,8 +9,8 @@ Use this skill before implementation when task size, proof cost, handoff needs, 
 
 ## Route
 
-1. Run `agentic-workspace start --profile tiny --target . --task "<task>" --format json`.
-2. If changed paths are known, run `agentic-workspace implement --profile tiny --target . --changed <paths> --format json`.
+1. Run `agentic-workspace start --target . --task "<task>" --format json`.
+2. If changed paths are known, run `agentic-workspace implement --target . --changed <paths> --format json`.
 3. Run `agentic-workspace preflight --target . --format json` only for takeover, recovery, or uncertain state.
 4. For vague outcome prompts, resolve the intended outcome before naming a solution:
    - What user-visible failure or cost should be reduced?

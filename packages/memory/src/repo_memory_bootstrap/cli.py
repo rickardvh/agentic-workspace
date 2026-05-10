@@ -136,12 +136,9 @@ def build_parser() -> argparse.ArgumentParser:
     doctor_parser = subparsers.add_parser("doctor", help="Diagnose bootstrap state and recommended remediation.")
     _add_target_arguments(doctor_parser)
     doctor_parser.add_argument(
-        "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for action detail."
-    )
-    doctor_parser.add_argument(
         "--verbose",
         action="store_true",
-        help="Alias for broad diagnostic output; equivalent to --profile full.",
+        help="Emit broad diagnostic action detail.",
     )
     doctor_parser.add_argument(
         "--strict-doc-ownership",
@@ -154,12 +151,9 @@ def build_parser() -> argparse.ArgumentParser:
     status_parser = subparsers.add_parser("status", help="Report whether bootstrap files are present.")
     _add_target_arguments(status_parser)
     status_parser.add_argument(
-        "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for action detail."
-    )
-    status_parser.add_argument(
         "--verbose",
         action="store_true",
-        help="Alias for broad diagnostic output; equivalent to --profile full.",
+        help="Emit broad diagnostic action detail.",
     )
     _add_format_argument(status_parser)
 
@@ -222,9 +216,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show a compact aggregate routing snapshot derived from checked-in feedback cases and fixtures.",
     )
     _add_target_arguments(route_report_parser)
-    route_report_parser.add_argument(
-        "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for fixture detail."
-    )
+    route_report_parser.add_argument("--verbose", action="store_true", help="Emit full route-report fixture detail.")
     _add_format_argument(route_report_parser)
 
     sync_parser = subparsers.add_parser(
@@ -263,12 +255,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_target_arguments(report_parser)
     report_parser.add_argument(
-        "--profile", choices=("tiny", "full"), default="tiny", help="Output profile. Defaults to tiny; use full for report detail."
-    )
-    report_parser.add_argument(
         "--verbose",
         action="store_true",
-        help="Alias for broad diagnostic output; equivalent to --profile full.",
+        help="Emit broad diagnostic report detail.",
     )
     _add_format_argument(report_parser)
 
@@ -459,7 +448,7 @@ def _handle_uninstall(args: argparse.Namespace) -> int:
 
 
 def _handle_doctor(args: argparse.Namespace) -> int:
-    if args.format == "json" and not getattr(args, "verbose", False) and getattr(args, "profile", "tiny") == "tiny":
+    if args.format == "json" and not getattr(args, "verbose", False):
         print(json.dumps(_tiny_memory_lifecycle_payload(target=args.target, command="doctor"), indent=2))
         return 0
     result = doctor_bootstrap(
@@ -478,7 +467,7 @@ def _handle_doctor(args: argparse.Namespace) -> int:
 
 
 def _handle_status(args: argparse.Namespace) -> int:
-    if args.format == "json" and not getattr(args, "verbose", False) and getattr(args, "profile", "tiny") == "tiny":
+    if args.format == "json" and not getattr(args, "verbose", False):
         print(json.dumps(_tiny_memory_lifecycle_payload(target=args.target, command="status"), indent=2))
         return 0
     result = collect_status(target=args.target)
@@ -533,7 +522,7 @@ def _handle_route_review(args: argparse.Namespace) -> int:
 
 
 def _handle_route_report(args: argparse.Namespace) -> int:
-    if args.format == "json" and getattr(args, "profile", "tiny") == "tiny":
+    if args.format == "json" and not getattr(args, "verbose", False):
         print(json.dumps(_tiny_route_report_payload(target=args.target), indent=2))
         return 0
     result = report_routes(target=args.target)
@@ -547,11 +536,11 @@ def _handle_promotion_report(args: argparse.Namespace) -> int:
 
 
 def _handle_report(args: argparse.Namespace) -> int:
-    if args.format == "json" and not getattr(args, "verbose", False) and getattr(args, "profile", "tiny") == "tiny":
+    if args.format == "json" and not getattr(args, "verbose", False):
         print(json.dumps(_tiny_memory_report_fast(target=args.target), indent=2))
         return 0
     report = memory_report(target=args.target)
-    if not getattr(args, "verbose", False) and getattr(args, "profile", "tiny") == "tiny":
+    if not getattr(args, "verbose", False):
         report = _tiny_memory_report(report)
     if args.format == "json":
         print(json.dumps(report, indent=2))
@@ -662,7 +651,7 @@ def _tiny_memory_lifecycle_payload(*, target: str | Path | None, command: str) -
             }
         ],
         "active": counts,
-        "detail_command": f"agentic-memory {command} --target . --profile full --format json",
+        "detail_command": f"agentic-memory {command} --target . --verbose --format json",
     }
 
 
@@ -705,17 +694,17 @@ def _tiny_memory_report_fast(*, target: str | Path | None) -> dict[str, object]:
         },
         "promotion_pressure": {
             "status": "not-evaluated",
-            "detail_command": "agentic-memory report --target . --profile full --format json",
+            "detail_command": "agentic-memory report --target . --verbose --format json",
         },
-        "trust": {"status": "not-evaluated", "detail_command": "agentic-memory report --target . --profile full --format json"},
+        "trust": {"status": "not-evaluated", "detail_command": "agentic-memory report --target . --verbose --format json"},
         "finding_count": len(findings),
         "findings": findings,
         "next_action": {
             "summary": "No immediate memory action." if health == "healthy" else "Run full memory report for remediation detail.",
-            "commands": [] if health == "healthy" else ["agentic-memory report --target . --profile full --format json"],
+            "commands": [] if health == "healthy" else ["agentic-memory report --target . --verbose --format json"],
         },
         "detail_commands": {
-            "full": "agentic-memory report --target . --profile full --format json",
+            "full": "agentic-memory report --target . --verbose --format json",
             "route": "agentic-memory route --target . --files <paths> --format json",
         },
     }
@@ -737,7 +726,7 @@ def _tiny_route_report_payload(*, target: str | Path | None) -> dict[str, object
             "fixtures": {"status": "present" if fixture_count else "missing", "fixture_count": fixture_count},
             "detail": "Run full route-report for fixture evaluation and feedback-case matching.",
         },
-        "detail_command": "agentic-memory route-report --target . --profile full --format json",
+        "detail_command": "agentic-memory route-report --target . --verbose --format json",
     }
 
 
@@ -776,7 +765,7 @@ def _tiny_memory_report(report: dict[str, object]) -> dict[str, object]:
         "findings": findings[:5] if isinstance(findings, list) else [],
         "next_action": report.get("next_action", {}),
         "detail_commands": {
-            "full": "agentic-memory report --target . --profile full --format json",
+            "full": "agentic-memory report --target . --verbose --format json",
             "route": "agentic-memory route --target . --files <paths> --format json",
         },
     }

@@ -34,18 +34,6 @@ export const generatedCommandPackage = {
             "name": "target"
           },
           {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Output profile. Defaults to tiny; use full for action detail.",
-            "name": "profile"
-          },
-          {
             "action": "store_true",
             "flags": [
               "--verbose"
@@ -140,18 +128,6 @@ export const generatedCommandPackage = {
             "name": "strict_doc_ownership"
           },
           {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Output profile. Defaults to tiny; use full for action detail.",
-            "name": "profile"
-          },
-          {
             "action": "store_true",
             "flags": [
               "--verbose"
@@ -238,18 +214,6 @@ export const generatedCommandPackage = {
             "name": "target"
           },
           {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Output profile. Defaults to tiny; use full for report detail.",
-            "name": "profile"
-          },
-          {
             "action": "store_true",
             "flags": [
               "--verbose"
@@ -334,18 +298,6 @@ export const generatedCommandPackage = {
             ],
             "help": "Target repository path. Defaults to the current directory.",
             "name": "target"
-          },
-          {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Output profile. Defaults to tiny; use full for fixture detail.",
-            "name": "profile"
           },
           {
             "choices": [

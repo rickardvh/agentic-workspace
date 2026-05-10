@@ -14,7 +14,7 @@ def test_status_detects_installed_modules_by_default(monkeypatch, tmp_path: Path
     _write((tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"), "{}\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: descriptors)
 
-    assert cli.main(["status", "--profile", "full", "--target", str(tmp_path)]) == 0
+    assert cli.main(["status", "--verbose", "--target", str(tmp_path)]) == 0
 
     assert calls == [("planning", "status", {"target": str(tmp_path)})]
 
@@ -29,7 +29,7 @@ def test_doctor_emits_affordance_shaped_repair_and_manual_review_actions(tmp_pat
     agents_path = target / "AGENTS.md"
     agents_path.write_text(agents_path.read_text(encoding="utf-8").replace(cli.WORKSPACE_POINTER_BLOCK, ""), encoding="utf-8")
 
-    assert cli.main(["doctor", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
@@ -72,7 +72,7 @@ def test_doctor_repair_actions_use_resolved_cli_invoke(tmp_path: Path, capsys) -
     )
     (target / "llms.txt").unlink()
 
-    assert cli.main(["doctor", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
@@ -103,7 +103,7 @@ def test_doctor_routes_workspace_merge_conflict_markers_to_manual_review(tmp_pat
         '<<<<<<< ours\nkind = "agentic-planning-state"\n=======\nkind = "agentic-planning-state"\n>>>>>>> theirs\n',
     )
 
-    assert cli.main(["doctor", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     manual_actions = payload["manual_review_actions"]
@@ -134,12 +134,12 @@ def test_doctor_promotes_safe_module_lifecycle_repairs_for_missing_memory_templa
     setup_payload = json.loads(capsys.readouterr().out)
     assert setup_payload["health"] == "attention-needed"
 
-    assert cli.main(["status", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["status", "--verbose", "--target", str(target), "--format", "json"]) == 0
     status_payload = json.loads(capsys.readouterr().out)
     assert status_payload["health"] == "attention-needed"
     assert any("memory-note.template.md" in item for item in status_payload["needs_review"])
 
-    assert cli.main(["doctor", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
     doctor_payload = json.loads(capsys.readouterr().out)
     assert doctor_payload["health"] == "attention-needed"
     repair = next(action for action in doctor_payload["repair_actions"] if action["id"] == "apply-safe-memory-lifecycle-repair")
@@ -156,7 +156,7 @@ def test_doctor_module_filter_checks_llms_against_installed_modules(tmp_path: Pa
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
 
-    assert cli.main(["doctor", "--profile", "full", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert "llms.txt: external-agent handoff file differs from the current workspace contract" not in payload["warnings"]
@@ -173,7 +173,7 @@ def test_status_flags_missing_workspace_shared_layer(tmp_path: Path, capsys) -> 
     (target / ".agentic-workspace" / "WORKFLOW.md").unlink()
     capsys.readouterr()
 
-    assert cli.main(["status", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["status", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["health"] == "attention-needed"
@@ -188,7 +188,7 @@ def test_doctor_flags_missing_workspace_shared_layer(tmp_path: Path, capsys) -> 
     (target / ".agentic-workspace" / "OWNERSHIP.toml").unlink()
     capsys.readouterr()
 
-    assert cli.main(["doctor", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["health"] == "attention-needed"
@@ -221,7 +221,7 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     (tmp_path / "llms.txt").write_text(cli._external_agent_handoff_text(selected_modules=["planning", "memory"]))
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
-    assert cli.main(["doctor", "--profile", "full", "--modules", "planning,memory", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["doctor", "--verbose", "--modules", "planning,memory", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["command"] == "doctor"
@@ -252,7 +252,7 @@ def test_status_warns_when_redundant_memory_pointer_block_remains(tmp_path: Path
     )
     capsys.readouterr()
 
-    assert cli.main(["status", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["status", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["health"] == "attention-needed"
@@ -267,7 +267,7 @@ def test_doctor_real_init_preserves_package_contract_shortlists_in_reports(tmp_p
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
 
-    assert cli.main(["doctor", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     planning_report = next(report for report in payload["reports"] if report["module"] == "planning")
@@ -295,7 +295,7 @@ def test_doctor_text_output_shows_package_contract_shortlists(tmp_path: Path, ca
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
 
-    assert cli.main(["doctor", "--profile", "full", "--target", str(target)]) == 0
+    assert cli.main(["doctor", "--verbose", "--target", str(target)]) == 0
 
     output = capsys.readouterr().out
     assert "[planning] Doctor report" in output
@@ -313,7 +313,7 @@ def test_doctor_real_init_reports_stale_planning_generated_residue(tmp_path: Pat
     (target / "tools" / "AGENT_ROUTING.md").write_text("stale generated routing\n")
     capsys.readouterr()
 
-    assert cli.main(["doctor", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["health"] == "healthy"
@@ -331,7 +331,7 @@ def test_status_reports_advisory_cli_compatibility_drift(tmp_path: Path, capsys)
         'schema_version = 1\n\n[cli_compatibility]\nenforcement = "advisory"\nexact_version = "999.0.0"\n',
     )
 
-    assert cli.main(["status", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["status", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     compatibility = _assert_cli_compatibility(payload, status="advisory-drift")
@@ -363,7 +363,7 @@ def test_status_and_doctor_compact_outputs_include_machine_next_action(tmp_path:
     assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
     doctor_payload = json.loads(capsys.readouterr().out)
     assert doctor_payload["next_action"]["action"] == "inspect-repair-or-full-detail"
-    assert doctor_payload["next_action"]["command"] == "agentic-workspace doctor --target ./repo --profile full --format json"
+    assert doctor_payload["next_action"]["command"] == "agentic-workspace doctor --target ./repo --verbose --format json"
     assert doctor_payload["next_action"]["run"] == doctor_payload["next_action"]["command"]
 
 
@@ -378,7 +378,7 @@ def test_doctor_reports_cli_executable_drift_with_concrete_next_action(tmp_path:
         'schema_version = 1\n\n[cli_compatibility]\nenforcement = "blocking"\nexact_version = "999.0.0"\n',
     )
 
-    assert cli.main(["doctor", "--profile", "full", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     compatibility = _assert_cli_compatibility(payload, status="blocking-drift")
@@ -396,7 +396,7 @@ def test_doctor_json_does_not_report_dry_run_actions_as_mutations(monkeypatch, t
     _init_git_repo(tmp_path)
     monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
 
-    assert cli.main(["doctor", "--profile", "full", "--modules", "planning", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["doctor", "--verbose", "--modules", "planning", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["created"] == []
@@ -422,7 +422,7 @@ def test_status_warns_when_module_update_source_metadata_drifts_from_repo_config
         encoding="utf-8",
     )
 
-    assert cli.main(["status", "--profile", "full", "--modules", "planning", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["status", "--verbose", "--modules", "planning", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["health"] == "attention-needed"

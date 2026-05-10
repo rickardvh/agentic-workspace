@@ -1601,9 +1601,7 @@ def test_model_cli_harness_quality_signals_flag_read_surface_over_read() -> None
         mutation_summary={"status": "changed", "modified": ["README.md"]},
         warnings=[],
         result={
-            "stdout": json.dumps(
-                {"response": "I ran agentic-workspace summary --profile full and read .agentic-workspace/planning/state.toml."}
-            )
+            "stdout": json.dumps({"response": "I ran agentic-workspace summary --verbose and read .agentic-workspace/planning/state.toml."})
         },
     )
 

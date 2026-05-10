@@ -9,8 +9,6 @@
       "report",
       "--target",
       ".",
-      "--profile",
-      "router",
       "--format",
       "json"
     ],

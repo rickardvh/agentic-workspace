@@ -18,18 +18,6 @@
           "help": "Optional repository path used to report installed modules."
         },
         {
-          "name": "profile",
-          "flags": [
-            "--profile"
-          ],
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "help": "Modules output profile. Defaults to tiny; use full for module registry and component detail."
-        },
-        {
           "name": "verbose",
           "flags": [
             "--verbose"
@@ -55,19 +43,6 @@
             "--target"
           ],
           "help": "Optional repository path to read summary from."
-        },
-        {
-          "name": "profile",
-          "flags": [
-            "--profile"
-          ],
-          "choices": [
-            "tiny",
-            "compact",
-            "full"
-          ],
-          "default": "tiny",
-          "help": "Summary output profile. Defaults to tiny; use compact or full for more detail."
         },
         {
           "name": "select",
@@ -168,17 +143,6 @@
           ],
           "action": "store_true",
           "help": "Emit broad diagnostic startup output. Prefer --select for ordinary detail."
-        },
-        {
-          "name": "profile",
-          "flags": [
-            "--profile"
-          ],
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "help": "Compatibility output profile. Omit for selector-first default output; use full only for broad diagnostics."
         }
       ],
       "role": "core_context_router",
@@ -230,18 +194,6 @@
           "help": "Return only comma-separated top-level or dotted JSON fields from the implementer context. Prefer this when one or a few fields are needed."
         },
         {
-          "name": "profile",
-          "flags": [
-            "--profile"
-          ],
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "help": "Implementer output profile. Defaults to tiny; use full only when bounded implementation needs richer context."
-        },
-        {
           "name": "verbose",
           "flags": [
             "--verbose"
@@ -261,18 +213,6 @@
         "format"
       ],
       "options": [
-        {
-          "name": "profile",
-          "flags": [
-            "--profile"
-          ],
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "help": "Defaults output profile. Defaults to tiny section routing; use full to emit the complete default-route contract."
-        },
         {
           "name": "verbose",
           "flags": [
@@ -346,18 +286,6 @@
           "help": "Return exact comma-separated field paths from the proof answer."
         },
         {
-          "name": "profile",
-          "flags": [
-            "--profile"
-          ],
-          "choices": [
-            "full",
-            "tiny"
-          ],
-          "default": "tiny",
-          "help": "Proof output profile. Defaults to tiny for the next validation action and command list; use full for all proof routing detail."
-        },
-        {
           "name": "verbose",
           "flags": [
             "--verbose"
@@ -426,19 +354,6 @@
             "--target"
           ],
           "help": "Optional repository path used to resolve repo-owned config."
-        },
-        {
-          "name": "profile",
-          "flags": [
-            "--profile"
-          ],
-          "choices": [
-            "tiny",
-            "compact",
-            "full"
-          ],
-          "default": "tiny",
-          "help": "Config output profile. Defaults to tiny agent-facing posture; use compact or full for more resolved config detail."
         },
         {
           "name": "select",
@@ -599,19 +514,6 @@
           "help": "Return the high-signal orientation block for fresh agents."
         },
         {
-          "name": "profile",
-          "flags": [
-            "--profile"
-          ],
-          "choices": [
-            "router",
-            "tiny",
-            "full"
-          ],
-          "default": "router",
-          "help": "Select the compact router profile or the full combined report. tiny is accepted as an alias for router."
-        },
-        {
           "name": "verbose",
           "flags": [
             "--verbose"
@@ -756,18 +658,6 @@
           "help": "Optional task description used to include task-specific skill recommendations in preflight context."
         },
         {
-          "name": "profile",
-          "flags": [
-            "--profile"
-          ],
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "help": "Preflight output profile. Defaults to tiny takeover routing; use full for complete recovery context."
-        },
-        {
           "name": "verbose",
           "flags": [
             "--verbose"
@@ -865,18 +755,6 @@
       ],
       "options": [
         {
-          "name": "profile",
-          "flags": [
-            "--profile"
-          ],
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail."
-        },
-        {
           "name": "verbose",
           "flags": [
             "--verbose"
@@ -896,18 +774,6 @@
         "selection"
       ],
       "options": [
-        {
-          "name": "profile",
-          "flags": [
-            "--profile"
-          ],
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "help": "Doctor output profile. Defaults to tiny remediation routing; use full for all diagnostic detail."
-        },
         {
           "name": "verbose",
           "flags": [

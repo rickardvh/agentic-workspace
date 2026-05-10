@@ -47,7 +47,7 @@
             "detail_commands",
             "full"
           ],
-          "equals": "agentic-workspace modules --target . --profile full --format json"
+          "equals": "agentic-workspace modules --target . --verbose --format json"
         }
       ]
     },

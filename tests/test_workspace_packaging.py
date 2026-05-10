@@ -189,10 +189,10 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:
             "start",
             "--target",
             str(target),
-            "--profile",
-            "tiny",
             "--task",
             "fresh package proof",
+            "--select",
+            "invoked_cli_identity,active_state_summary,immediate_next_allowed_action",
             "--format",
             "json",
         )
@@ -202,8 +202,7 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:
             "summary",
             "--target",
             str(target),
-            "--profile",
-            "compact",
+            "--verbose",
             "--format",
             "json",
         )
@@ -213,8 +212,6 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:
             "implement",
             "--target",
             str(target),
-            "--profile",
-            "tiny",
             "--changed",
             "README.md",
             "--task",
@@ -228,8 +225,6 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:
             "proof",
             "--target",
             str(target),
-            "--profile",
-            "tiny",
             "--changed",
             "README.md",
             "--format",
@@ -247,10 +242,10 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:
 
     assert init_payload["command"] == "init"
     assert init_payload["preset"] == "full"
-    assert start_payload["kind"] == "startup-context/v1"
-    assert start_payload["invoked_cli_identity"]["source_class"] == "installed-package"
+    assert start_payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert start_payload["values"]["invoked_cli_identity"]["source_class"] == "installed-package"
     assert summary_payload["kind"] == "planning-summary/v1"
-    assert summary_payload["profile"] == "compact"
+    assert summary_payload["profile"] == "full"
     assert implement_payload["kind"] == "implementer-context-tiny/v1"
     assert proof_payload["kind"] == "proof-next-decision/v1"
     assert doctor_payload["health"] == "healthy"

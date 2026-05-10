@@ -168,7 +168,7 @@ def test_report_sections_expose_authority_and_compliance_boundaries(tmp_path: Pa
 
 
 def test_improvement_intake_includes_repair_recurrence_subtype(capsys) -> None:
-    assert cli.main(["defaults", "--profile", "full", "--section", "improvement_intake", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--verbose", "--section", "improvement_intake", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     subtypes = {item["id"]: item for item in payload["answer"]["payload"]["subtypes"]}
@@ -190,8 +190,6 @@ def test_summary_task_scoped_profile_omits_historical_audit_detail(tmp_path: Pat
                 "summary",
                 "--target",
                 str(target),
-                "--profile",
-                "compact",
                 "--task",
                 "Implement adaptive read action routing",
                 "--changed",
@@ -316,8 +314,7 @@ candidates = []
         cli.main(
             [
                 "proof",
-                "--profile",
-                "full",
+                "--verbose",
                 "--target",
                 str(tmp_path),
                 "--changed",

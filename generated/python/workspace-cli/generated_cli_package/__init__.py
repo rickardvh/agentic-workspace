@@ -53,18 +53,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "format"
           },
           {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Defaults output profile. Defaults to tiny section routing; use full to emit the complete default-route contract.",
-            "name": "profile"
-          },
-          {
             "action": "store_true",
             "flags": [
               "--verbose"
@@ -170,19 +158,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "format"
           },
           {
-            "choices": [
-              "tiny",
-              "compact",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Config output profile. Defaults to tiny agent-facing posture; use compact or full for more resolved config detail.",
-            "name": "profile"
-          },
-          {
             "flags": [
               "--select"
             ],
@@ -283,18 +258,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "format"
           },
           {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Modules output profile. Defaults to tiny; use full for module registry and component detail.",
-            "name": "profile"
-          },
-          {
             "action": "store_true",
             "flags": [
               "--verbose"
@@ -386,17 +349,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Optional task description used to include task-specific skill recommendations in startup context.",
             "name": "task"
-          },
-          {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "flags": [
-              "--profile"
-            ],
-            "help": "Compatibility output profile. Omit for selector-first default output; use full only for broad diagnostics.",
-            "name": "profile"
           },
           {
             "flags": [
@@ -497,19 +449,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Optional repository path to read summary from.",
             "name": "target"
-          },
-          {
-            "choices": [
-              "tiny",
-              "compact",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Summary output profile. Defaults to tiny; use compact or full for more detail.",
-            "name": "profile"
           },
           {
             "flags": [
@@ -655,18 +594,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "select"
           },
           {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Implementer output profile. Defaults to tiny; use full only when bounded implementation needs richer context.",
-            "name": "profile"
-          },
-          {
             "action": "store_true",
             "flags": [
               "--verbose"
@@ -772,18 +699,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Optional task description used to include task-specific skill recommendations in preflight context.",
             "name": "task"
-          },
-          {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Preflight output profile. Defaults to tiny takeover routing; use full for complete recovery context.",
-            "name": "profile"
           },
           {
             "action": "store_true",
@@ -909,18 +824,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Return exact comma-separated field paths from the proof answer.",
             "name": "select"
-          },
-          {
-            "choices": [
-              "full",
-              "tiny"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Proof output profile. Defaults to tiny for the next validation action and command list; use full for all proof routing detail.",
-            "name": "profile"
           },
           {
             "action": "store_true",
@@ -1244,19 +1147,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "startup"
           },
           {
-            "choices": [
-              "router",
-              "tiny",
-              "full"
-            ],
-            "default": "router",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Select the compact router profile or the full combined report. tiny is accepted as an alias for router.",
-            "name": "profile"
-          },
-          {
             "action": "store_true",
             "flags": [
               "--verbose"
@@ -1461,18 +1351,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
             "name": "non_interactive"
-          },
-          {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail.",
-            "name": "profile"
           }
         ]
       },
@@ -1578,18 +1456,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
             "name": "non_interactive"
-          },
-          {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail.",
-            "name": "profile"
           },
           {
             "action": "store_true",
@@ -1703,18 +1569,6 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
             "name": "non_interactive"
-          },
-          {
-            "choices": [
-              "tiny",
-              "full"
-            ],
-            "default": "tiny",
-            "flags": [
-              "--profile"
-            ],
-            "help": "Doctor output profile. Defaults to tiny remediation routing; use full for all diagnostic detail.",
-            "name": "profile"
           },
           {
             "action": "store_true",
@@ -1845,18 +1699,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "format"
         },
         {
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Defaults output profile. Defaults to tiny section routing; use full to emit the complete default-route contract.",
-          "name": "profile"
-        },
-        {
           "action": "store_true",
           "flags": [
             "--verbose"
@@ -1908,19 +1750,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "format"
         },
         {
-          "choices": [
-            "tiny",
-            "compact",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Config output profile. Defaults to tiny agent-facing posture; use compact or full for more resolved config detail.",
-          "name": "profile"
-        },
-        {
           "flags": [
             "--select"
           ],
@@ -1965,18 +1794,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "format"
         },
         {
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Modules output profile. Defaults to tiny; use full for module registry and component detail.",
-          "name": "profile"
-        },
-        {
           "action": "store_true",
           "flags": [
             "--verbose"
@@ -2016,17 +1833,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Optional task description used to include task-specific skill recommendations in startup context.",
           "name": "task"
-        },
-        {
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "flags": [
-            "--profile"
-          ],
-          "help": "Compatibility output profile. Omit for selector-first default output; use full only for broad diagnostics.",
-          "name": "profile"
         },
         {
           "flags": [
@@ -2071,19 +1877,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Optional repository path to read summary from.",
           "name": "target"
-        },
-        {
-          "choices": [
-            "tiny",
-            "compact",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Summary output profile. Defaults to tiny; use compact or full for more detail.",
-          "name": "profile"
         },
         {
           "flags": [
@@ -2176,18 +1969,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "select"
         },
         {
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Implementer output profile. Defaults to tiny; use full only when bounded implementation needs richer context.",
-          "name": "profile"
-        },
-        {
           "action": "store_true",
           "flags": [
             "--verbose"
@@ -2238,18 +2019,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Optional task description used to include task-specific skill recommendations in preflight context.",
           "name": "task"
-        },
-        {
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Preflight output profile. Defaults to tiny takeover routing; use full for complete recovery context.",
-          "name": "profile"
         },
         {
           "action": "store_true",
@@ -2318,18 +2087,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Return exact comma-separated field paths from the proof answer.",
           "name": "select"
-        },
-        {
-          "choices": [
-            "full",
-            "tiny"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Proof output profile. Defaults to tiny for the next validation action and command list; use full for all proof routing detail.",
-          "name": "profile"
         },
         {
           "action": "store_true",
@@ -2490,19 +2247,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "name": "startup"
         },
         {
-          "choices": [
-            "router",
-            "tiny",
-            "full"
-          ],
-          "default": "router",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Select the compact router profile or the full combined report. tiny is accepted as an alias for router.",
-          "name": "profile"
-        },
-        {
           "action": "store_true",
           "flags": [
             "--verbose"
@@ -2596,18 +2340,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
           "name": "non_interactive"
-        },
-        {
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail.",
-          "name": "profile"
         }
       ]
     },
@@ -2659,18 +2391,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
           "name": "non_interactive"
-        },
-        {
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Status output profile. Defaults to tiny health routing; use full for all module lifecycle detail.",
-          "name": "profile"
         },
         {
           "action": "store_true",
@@ -2730,18 +2450,6 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
           "name": "non_interactive"
-        },
-        {
-          "choices": [
-            "tiny",
-            "full"
-          ],
-          "default": "tiny",
-          "flags": [
-            "--profile"
-          ],
-          "help": "Doctor output profile. Defaults to tiny remediation routing; use full for all diagnostic detail.",
-          "name": "profile"
         },
         {
           "action": "store_true",

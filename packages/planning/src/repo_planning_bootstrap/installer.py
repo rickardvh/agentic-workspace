@@ -1637,6 +1637,7 @@ def planning_summary(
         )
     )
     warnings.extend(_execplan_next_action_warnings(target_root=target_root, plan_files=plan_files))
+    warnings.extend(_execplan_mode_residue_warnings(target_root=target_root, plan_files=plan_files))
     drift = _detect_payload_drift(target_root)
     warnings.extend(drift)
 
@@ -2057,9 +2058,9 @@ def planning_report_tiny(*, target: str | Path | None = None) -> dict[str, Any]:
         "findings": [],
         "next_action": {"summary": next_summary, "commands": []},
         "detail_commands": {
-            "full": "agentic-planning report --target . --profile full --format json",
+            "full": "agentic-planning report --target . --verbose --format json",
             "summary": "agentic-planning summary --target . --format json",
-            "compact_summary": "agentic-planning summary --target . --profile compact --format json",
+            "compact_summary": "agentic-planning summary --target . --verbose --format json",
         },
     }
 
@@ -2297,7 +2298,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             ".agentic-workspace/docs/finished-work-inspection-contract.md",
             ".agentic-workspace/planning/execplans/README.md",
         ],
-        "command": "agentic-workspace summary --format json --profile full",
+        "command": "agentic-workspace summary --format json --verbose",
         "shared_fields": [
             "kind",
             "schema",
@@ -2659,7 +2660,7 @@ def _execution_readiness_payload(
             "use_when": "Asked to prepare broad work for later continuation, without implementation.",
             "required_action": "Create or continue canonical checked-in Planning state, verify with summary, then stop; do not stop at a proposal or start implementation.",
             "preferred_command": "agentic-planning new-plan --id <id> --title <title> --activate --prep-only",
-            "after_write": "agentic-workspace summary --target . --profile compact --format json",
+            "after_write": "agentic-workspace summary --target . --verbose --format json",
             "minimal_success_criteria": [
                 "new-plan --prep-only exits successfully",
                 "agentic-workspace summary reports active Planning state",
@@ -3055,9 +3056,9 @@ def _planning_record_required_follow_on(planning_record: dict[str, Any]) -> str:
 def _planning_summary_compact_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-summary-compact-schema/v1",
-        "command": "agentic-workspace summary --format json --profile compact",
+        "command": "agentic-workspace summary --format json --verbose",
         "default_tiny_command": "agentic-workspace summary --format json",
-        "full_profile_command": "agentic-workspace summary --format json --profile full",
+        "full_profile_command": "agentic-workspace summary --format json --verbose",
         "shared_fields": [
             "kind",
             "profile",
@@ -3097,9 +3098,9 @@ def _planning_summary_tiny_schema() -> dict[str, Any]:
         "command": "agentic-workspace summary --format json",
         "select_command": "agentic-workspace summary --select <field.path> --format json",
         "verbose_command": "agentic-workspace summary --verbose --format json",
-        "compatibility_profile_commands": {
-            "compact": "agentic-workspace summary --format json --profile compact",
-            "full": "agentic-workspace summary --format json --profile full",
+        "detail_commands": {
+            "verbose": "agentic-workspace summary --format json --verbose",
+            "select": "agentic-workspace summary --select <field.path> --format json",
         },
         "rule": "Default summary is the active-state router; use --select for exact fields and --verbose only for diagnostic detail.",
         "shared_fields": [
@@ -3236,7 +3237,7 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
             "detail_commands": {
                 "select": "agentic-workspace summary --select <field.path> --format json",
                 "verbose": "agentic-workspace summary --verbose --format json",
-                "task_scoped": "agentic-workspace summary --profile compact --task <task> --format json",
+                "task_scoped": "agentic-workspace summary --verbose --task <task> --format json",
                 "changed_path_implement": "agentic-workspace implement --changed <paths> --format json",
             },
             "available_selectors": [
@@ -3447,8 +3448,8 @@ def _planning_summary_task_scoped_projection(
         "profile": "compact-task",
         "schema": {
             "schema_version": "planning-summary-compact-task-schema/v1",
-            "command": "agentic-workspace summary --profile compact --task <task> --format json",
-            "full_profile_command": "agentic-workspace summary --profile full --format json",
+            "command": "agentic-workspace summary --verbose --task <task> --format json",
+            "full_profile_command": "agentic-workspace summary --verbose --format json",
             "rule": "Task-scoped summary keeps current planning state, matching signals, and detail commands; unrelated historical audit detail stays omitted.",
         },
         "target_root": compact_summary.get("target_root", ""),
@@ -3471,8 +3472,8 @@ def _planning_summary_task_scoped_projection(
             ),
         },
         "detail_commands": {
-            "broad_compact": "agentic-workspace summary --profile compact --format json",
-            "full_planning": "agentic-workspace summary --profile full --format json",
+            "broad_compact": "agentic-workspace summary --verbose --format json",
+            "full_planning": "agentic-workspace summary --verbose --format json",
             "active_execplan": "Open the active execplan only when planning_record.status is present or planning_surface_health says recovery is required.",
             "changed_path_implement": "agentic-workspace implement --changed <paths> --format json",
         },
@@ -3569,9 +3570,9 @@ def _planning_summary_tiny_projection(compact_summary: dict[str, Any]) -> dict[s
         },
         "roadmap": {key: roadmap[key] for key in ("lane_count", "candidate_count", "omitted_candidate_count") if key in roadmap},
         "detail_commands": {
-            "compact": "agentic-workspace summary --profile compact --format json",
-            "full": "agentic-workspace summary --profile full --format json",
-            "task_scoped": "agentic-workspace summary --profile compact --task <task> --format json",
+            "compact": "agentic-workspace summary --verbose --format json",
+            "full": "agentic-workspace summary --verbose --format json",
+            "task_scoped": "agentic-workspace summary --verbose --task <task> --format json",
             "changed_path_implement": "agentic-workspace implement --changed <paths> --format json",
         },
         "warnings": compact_summary.get("warnings", []),
@@ -3639,7 +3640,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "recommended_next_action",
                 "No dangling larger intent or lower-trust closeout signals detected.",
             ),
-            "detail": "Use `agentic-workspace summary --format json --profile full` for reconciliation detail.",
+            "detail": "Use `agentic-workspace summary --format json --verbose` for reconciliation detail.",
         }
     finished_work_inspection_contract = dict(summary.get("finished_work_inspection_contract", {}))
     if "derived_follow_up_candidates" in finished_work_inspection_contract:
@@ -3660,7 +3661,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "recommended_next_action",
                 "No suspicious finished-work signals detected.",
             ),
-            "detail": "Use `agentic-workspace summary --format json --profile full` for finished-work inspection detail.",
+            "detail": "Use `agentic-workspace summary --format json --verbose` for finished-work inspection detail.",
         }
     system_intent = dict(summary.get("system_intent", {}))
     idle_unavailable_reason = (
@@ -4080,7 +4081,7 @@ def _compact_intent_validation_for_summary(contract: dict[str, Any]) -> dict[str
             if isinstance(landed_open, dict) and key in landed_open
         },
         "recommended_next_action": contract.get("recommended_next_action", ""),
-        "detail": "Use `agentic-workspace summary --format json --profile full` for intent-validation samples and reconciliation detail.",
+        "detail": "Use `agentic-workspace summary --format json --verbose` for intent-validation samples and reconciliation detail.",
     }
 
 
@@ -4106,7 +4107,7 @@ def _compact_finished_work_for_summary(contract: dict[str, Any]) -> dict[str, An
             if key in counts
         },
         "recommended_next_action": contract.get("recommended_next_action", ""),
-        "detail": "Use `agentic-workspace summary --format json --profile full` for finished-work inspection detail, samples, and derived follow-up detail.",
+        "detail": "Use `agentic-workspace summary --format json --verbose` for finished-work inspection detail, samples, and derived follow-up detail.",
     }
     if int(counts.get("routed_continuation_count", 0) or 0) > 0 and int(counts.get("derived_follow_up_candidate_count", 0) or 0) == 0:
         compact["derived_follow_up_candidates"] = []
@@ -4200,7 +4201,7 @@ def _compact_historical_audit_pressure(
         "full_profile_candidate_count": len(full_candidates),
         "recommended_next_action": recommendation,
         "rule": "Historical audit residue is recoverable evidence; compact summary ranks it behind current execution unless it directly matches the active lane.",
-        "detail": "Use `agentic-workspace summary --format json --profile full` for historical audit samples.",
+        "detail": "Use `agentic-workspace summary --format json --verbose` for historical audit samples.",
     }
 
 
@@ -4298,7 +4299,7 @@ def _compact_closeout_reconciliation(reconciliation: Any) -> dict[str, Any]:
         "counts": reconciliation.get("counts", {}),
         "sample_items_by_state": sample_items_by_state,
         "omitted_item_count": max(0, sum(len(value) for value in items_by_state.values()) - displayed_item_count),
-        "detail": "Use `agentic-workspace summary --format json --profile full` for full reconciliation sources and item ids.",
+        "detail": "Use `agentic-workspace summary --format json --verbose` for full reconciliation sources and item ids.",
     }
 
 
@@ -4315,7 +4316,7 @@ def _compact_landed_open_issue_reconciliation(reconciliation: Any) -> dict[str, 
         "counts": reconciliation.get("counts", {}),
         "sample_items": items[:max_items],
         "omitted_item_count": max(0, len(items) - max_items),
-        "detail": "Use `agentic-workspace summary --format json --profile full` for full landed-open issue evidence.",
+        "detail": "Use `agentic-workspace summary --format json --verbose` for full landed-open issue evidence.",
     }
 
 
@@ -4347,7 +4348,7 @@ def _compact_external_work_reconciliation(reconciliation: Any) -> dict[str, Any]
         "closeout_state": reconciliation.get("closeout_state", {}),
         "landed_open_state": reconciliation.get("landed_open_state", {}),
         "recommended_next_action": reconciliation.get("recommended_next_action", ""),
-        "detail": "Use `agentic-workspace summary --format json --profile full` for provider rules and source detail.",
+        "detail": "Use `agentic-workspace summary --format json --verbose` for provider rules and source detail.",
     }
 
 
@@ -4365,7 +4366,7 @@ def _compact_current_external_work(current_external_work: Any) -> dict[str, Any]
         "provider_count": current_external_work.get("provider_count", 0),
         "sample_items": items[:max_items],
         "omitted_item_count": max(0, len(items) - max_items),
-        "detail": "Use `agentic-workspace summary --format json --profile full` for all external work items.",
+        "detail": "Use `agentic-workspace summary --format json --verbose` for all external work items.",
     }
     if "invalid_reason" in current_external_work:
         compact["invalid_reason"] = current_external_work["invalid_reason"]
@@ -4401,7 +4402,7 @@ def _compact_finished_work_inspection(contract: dict[str, Any]) -> dict[str, Any
     counts["omitted_inspection_count"] = omitted_inspection_count
     compact["counts"] = counts
     if omitted_count or omitted_inspection_count:
-        compact["detail"] = "Use `agentic-workspace summary --format json --profile full` for all finished-work inspection detail."
+        compact["detail"] = "Use `agentic-workspace summary --format json --verbose` for all finished-work inspection detail."
     return compact
 
 
@@ -4455,7 +4456,7 @@ def _compact_historical_audit_references(historical: Any) -> dict[str, Any]:
         "likely_premature_closeout_count": historical.get("likely_premature_closeout_count", 0),
         "sources_omitted": source_count,
         "rule": historical.get("rule", ""),
-        "detail": "Use `agentic-workspace summary --format json --profile full` for historical review source paths.",
+        "detail": "Use `agentic-workspace summary --format json --verbose` for historical review source paths.",
     }
 
 
@@ -4521,7 +4522,7 @@ def _planning_surface_health(
                 "schema-preserving correction; do not delete state.toml or execplans as the first move."
             ),
             "recovery_sequence": [
-                "Run `agentic-workspace summary --target . --format json --profile full` and read `planning_surface_health.warnings`.",
+                "Run `agentic-workspace summary --target . --format json --verbose` and read `planning_surface_health.warnings`.",
                 "Classify the warning as unsupported state shape, invalid plan content, missing file reference, or stale salvageable record.",
                 "Prefer package lifecycle commands when they apply; otherwise edit only the named warning path and preserve evidence.",
                 "Rerun `agentic-workspace summary --target . --format json` before continuing implementation.",
@@ -8523,7 +8524,7 @@ def create_execplan_scaffold(
         result.add("would create" if not record_path.exists() else "would update", record_path, "schema-valid execplan scaffold")
         if activate or queue:
             result.add("would update", state_path, f"register '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
-        result.add("next", target_root / PLANNING_STATE_PATH, "run `agentic-workspace summary --target . --profile compact --format json`")
+        result.add("next", target_root / PLANNING_STATE_PATH, "run `agentic-workspace summary --target . --verbose --format json`")
         result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
         return result
 
@@ -8533,7 +8534,7 @@ def create_execplan_scaffold(
     if activate or queue:
         _write_state_to_toml(target_root, updated_state)
         result.add("updated", state_path, f"registered '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
-    result.add("next", state_path, "run `agentic-workspace summary --target . --profile compact --format json`")
+    result.add("next", state_path, "run `agentic-workspace summary --target . --verbose --format json`")
     result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
     if prep_only:
         result.add(
@@ -8561,7 +8562,7 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
     # Drop closeout-only prompts that have repeatedly tempted agents into
     # polishing generated JSON during a handoff-only pass.
     plan_record.pop("task_intent_promotion", None)
-    next_action = "Run agentic-workspace summary --target . --profile compact --format json, confirm the planning state is clean, then stop without product scaffolding."
+    next_action = "Run agentic-workspace summary --target . --verbose --format json, confirm the planning state is clean, then stop without product scaffolding."
     done_when = "Canonical Planning state exists, summary verifies it, and no product source, package, dependency, README, handoff, or app scaffold files were created."
     plan_record["goal"] = [
         "Prepare durable checked-in Planning state for later continuation without implementing or scaffolding the product."
@@ -8572,7 +8573,7 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
     ]
     plan_record["immediate_next_action"] = [next_action]
     plan_record["completion_criteria"] = [done_when]
-    plan_record["validation_commands"] = ["agentic-workspace summary --target . --profile compact --format json"]
+    plan_record["validation_commands"] = ["agentic-workspace summary --target . --verbose --format json"]
     plan_record["touched_paths"] = [
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans/",
@@ -8596,13 +8597,13 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
     planning_mode["prep_only"] = True
     planning_mode["halt_after_summary"] = True
     planning_mode["halt_instruction"] = (
-        "HALT: prep-only mode active. Create Planning state, run agentic-workspace summary --target . --profile compact --format json, "
+        "HALT: prep-only mode active. Create Planning state, run agentic-workspace summary --target . --verbose --format json, "
         "then stop. Do not manually tighten or revalidate generated JSON unless summary reports a blocking Planning problem. "
         "Do not create product files, scaffolds, README, PLANNING_STATE, or handoff documentation."
     )
     planning_mode["minimal_success_criteria"] = [
         "prep-only execplan registered in Planning state",
-        "agentic-workspace summary --target . --profile compact --format json exits successfully",
+        "agentic-workspace summary --target . --verbose --format json exits successfully",
         "only canonical Planning surfaces changed",
     ]
     planning_mode["manual_tightening_policy"] = "defer during prep-only handoff unless summary reports a blocking Planning problem"
@@ -8630,7 +8631,7 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
             "owner_role": "implementation",
             "required_for": ["before any product or handoff file creation"],
             "status": "pending",
-            "evidence": ["agentic-workspace summary --target . --profile compact --format json"],
+            "evidence": ["agentic-workspace summary --target . --verbose --format json"],
             "blocking": True,
             "next_action": planning_mode["halt_instruction"],
         }
@@ -8638,7 +8639,7 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
     plan_record["execution_bounds"] = {
         "allowed paths": ".agentic-workspace/planning/state.toml, .agentic-workspace/planning/execplans/, and .agentic-workspace/planning/decompositions/ only.",
         "max changed files": "Planning records only; stop if implementation scaffolding seems necessary.",
-        "required validation commands": "agentic-workspace summary --target . --profile compact --format json",
+        "required validation commands": "agentic-workspace summary --target . --verbose --format json",
         "ask-before-refactor threshold": "Any product, dependency, documentation, schema, database, source, public, or app scaffold file.",
         "stop before touching": "README, PLANNING_STATE, HANDOFF, SLICES, package files, dependency manifests, src/, public/, database files, schema files, or app code.",
         "manual JSON validation": "Do not run ad hoc JSON validation loops; use summary or package checks.",
@@ -10513,7 +10514,7 @@ def _warning_remediation(warning_class: str) -> str | None:
         "todo_plan_required_hint": "This direct task has grown beyond direct-task shape; scaffold an execplan for it.",
         "todo_broken_surface_reference": "Repair Surface so it points at a live .agentic-workspace/planning/execplans path, or remove the stale item.",
         "planning_state_unsupported_activation_shape": (
-            "Run `agentic-workspace summary --target . --format json --profile full`, then migrate string execplan references "
+            "Run `agentic-workspace summary --target . --format json --verbose`, then migrate string execplan references "
             "to supported `todo.active_items` objects or create a replacement with `agentic-planning new-plan`; "
             "do not delete state.toml as the first move."
         ),
@@ -10530,6 +10531,10 @@ def _warning_remediation(warning_class: str) -> str | None:
         "execplan_next_action_projection_drift": (
             "Update machine_readable_contract.execution.next_step, or make immediate_next_action[0] match it; "
             "compact summary uses immediate_next_action[0] when both are present."
+        ),
+        "execplan_stale_mode_residue": (
+            "Remove stale prep-only halt gates and validation text from the active plan, or mark the plan explicitly "
+            "as prep-only again before handing it off."
         ),
         "execplan_missing_file_reference": (
             "Update active plan next actions and references so they point only to existing files, or create the referenced "
@@ -10857,6 +10862,47 @@ def _execplan_next_action_warnings(*, target_root: Path, plan_files: list[Path])
                 }
             )
         warnings.extend(_execplan_missing_reference_warnings(target_root=target_root, plan_path=plan_path, record=record))
+    return warnings
+
+
+def _execplan_mode_residue_warnings(*, target_root: Path, plan_files: list[Path]) -> list[dict[str, str]]:
+    warnings: list[dict[str, str]] = []
+    for plan_path in plan_files:
+        record = _load_execplan_record(plan_path)
+        if not isinstance(record, dict):
+            continue
+        machine_contract = record.get("machine_readable_contract", {})
+        planning_mode = machine_contract.get("planning_mode", {}) if isinstance(machine_contract, dict) else {}
+        prep_only = bool(planning_mode.get("prep_only", False)) if isinstance(planning_mode, dict) else False
+        if prep_only:
+            continue
+        residue_sources: list[str] = []
+        for gate in record.get("control_gates", []):
+            if not isinstance(gate, dict):
+                continue
+            gate_id = str(gate.get("id", "")).strip().lower()
+            gate_text = json.dumps(gate, sort_keys=True).lower()
+            if gate_id == "prep-only-halt" or "prep-only mode active" in gate_text:
+                residue_sources.append("control_gates")
+                break
+        for field_name in ("immediate_next_action", "validation_commands"):
+            raw_values = record.get(field_name, [])
+            if isinstance(raw_values, list) and any("prep-only mode active" in str(item).lower() for item in raw_values):
+                residue_sources.append(field_name)
+        if residue_sources:
+            warnings.append(
+                {
+                    "warning_class": "execplan_stale_mode_residue",
+                    "path": plan_path.relative_to(target_root).as_posix(),
+                    "message": (
+                        f"Plan is not marked prep-only but still contains prep-only halt residue in {', '.join(_dedupe(residue_sources))}."
+                    ),
+                    "suggested_fix": (
+                        "Remove stale prep-only halt gates and validation text from the active plan, or mark the plan "
+                        "explicitly as prep-only again before handoff."
+                    ),
+                }
+            )
     return warnings
 
 

@@ -617,7 +617,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
 
     assert summary["kind"] == "planning-summary/v1"
     assert summary["schema"]["schema_version"] == "planning-summary-schema/v1"
-    assert summary["schema"]["command"] == "agentic-workspace summary --format json --profile full"
+    assert summary["schema"]["command"] == "agentic-workspace summary --format json --verbose"
     assert "planning_record" in summary["schema"]["shared_fields"]
     assert "machine_first_planning" in summary["schema"]["shared_fields"]
     assert "planning_surface_health" in summary["schema"]["shared_fields"]
@@ -897,9 +897,9 @@ candidates = [
 
     assert summary["profile"] == "compact"
     assert summary["schema"]["schema_version"] == "planning-summary-compact-schema/v1"
-    assert summary["schema"]["command"] == "agentic-workspace summary --format json --profile compact"
+    assert summary["schema"]["command"] == "agentic-workspace summary --format json --verbose"
     assert summary["schema"]["default_tiny_command"] == "agentic-workspace summary --format json"
-    assert summary["schema"]["full_profile_command"] == "agentic-workspace summary --format json --profile full"
+    assert summary["schema"]["full_profile_command"] == "agentic-workspace summary --format json --verbose"
     assert summary["machine_first_planning"]["status"] == "markdown-fallback-active"
     assert summary["machine_first_planning"]["active_markdown_fallback_count"] == 1
     assert summary["execution_readiness"]["status"] == "planning-backed"
@@ -1223,6 +1223,32 @@ def test_planning_summary_warns_when_execplan_next_action_references_missing_fil
 
     assert any(warning["warning_class"] == "execplan_missing_file_reference" for warning in warnings)
     assert any("plan.md" in warning["message"] for warning in warnings)
+
+
+def test_planning_summary_warns_when_non_prep_plan_keeps_prep_only_residue(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(plan_path)
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["control_gates"] = [
+        {
+            "id": "prep-only-halt",
+            "owner_role": "implementation",
+            "required_for": ["before implementation"],
+            "status": "pending",
+            "evidence": [],
+            "blocking": True,
+            "next_action": "HALT: prep-only mode active.",
+        }
+    ]
+    record["machine_readable_contract"]["planning_mode"] = {"prep_only": False}
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    warnings = summary["planning_surface_health"]["warnings"]
+
+    assert any(warning["warning_class"] == "execplan_stale_mode_residue" for warning in warnings)
+    assert summary["planning_surface_health"]["status"] == "not-clean"
 
 
 def test_planning_summary_ignores_jsx_tags_in_execplan_next_action(tmp_path: Path) -> None:
@@ -1835,10 +1861,10 @@ def test_planning_summary_does_not_treat_historical_followups_as_current_work(tm
     assert contract["current_external_work"]["open_count"] == 0
     assert contract["historical_audit_references"]["follow_up_open_count"] == 1
     assert "sources" not in contract["historical_audit_references"]
-    assert "full` for historical review source paths" in contract["historical_audit_references"]["detail"]
+    assert "--verbose` for historical review source paths" in contract["historical_audit_references"]["detail"]
     assert contract["closeout_reconciliation"]["counts"]["follow_up_open_count"] == 1
     assert "items_by_state" not in contract["closeout_reconciliation"]
-    assert "full` for full reconciliation sources" in contract["closeout_reconciliation"]["detail"]
+    assert "--verbose` for full reconciliation sources" in contract["closeout_reconciliation"]["detail"]
     assert contract["recommended_next_action"] == "No dangling larger intent or lower-trust closeout signals detected."
 
 
@@ -3280,7 +3306,7 @@ def test_planning_summary_exposes_ownership_review(tmp_path: Path, capsys) -> No
     assert "Ownership review:" in out
 
 
-def test_summary_command_defaults_to_tiny_json_and_accepts_full_profile(tmp_path: Path, capsys) -> None:
+def test_summary_command_defaults_to_tiny_json_and_accepts_verbose_detail(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
@@ -3311,13 +3337,13 @@ candidates = [
     assert default_payload["schema"]["select_command"] == "agentic-workspace summary --select <field.path> --format json"
     assert default_payload["schema"]["verbose_command"] == "agentic-workspace summary --verbose --format json"
 
-    exit_code = planning_cli.main(["summary", "--target", str(tmp_path), "--format", "json", "--profile", "full"])
+    exit_code = planning_cli.main(["summary", "--target", str(tmp_path), "--format", "json", "--verbose"])
     full_payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
     assert full_payload["profile"] == "full"
     assert full_payload["schema"]["schema_version"] == "planning-summary-schema/v1"
-    assert full_payload["schema"]["command"] == "agentic-workspace summary --format json --profile full"
+    assert full_payload["schema"]["command"] == "agentic-workspace summary --format json --verbose"
     assert "candidate_lanes" in full_payload["roadmap"]
 
 
@@ -3363,7 +3389,7 @@ candidates = [
     assert payload["task_scope"]["changed_paths"] == ["src/agentic_workspace/cli.py"]
     assert "adaptive" in payload["task_scope"]["match_tokens"]
     assert "historical_audit_pressure" not in payload
-    assert payload["detail_commands"]["broad_compact"] == "agentic-workspace summary --profile compact --format json"
+    assert payload["detail_commands"]["broad_compact"] == "agentic-workspace summary --verbose --format json"
 
 
 def test_task_scoped_summary_prefers_matched_roadmap_when_active_only_matches_generic_words(tmp_path: Path, capsys) -> None:
