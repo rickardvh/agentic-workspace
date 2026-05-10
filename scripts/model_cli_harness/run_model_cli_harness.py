@@ -820,12 +820,13 @@ def _agentic_workspace_tooling_unavailable(result: dict[str, Any]) -> bool:
 
 def _raw_planning_before_fallback_workflow(result: dict[str, Any]) -> bool:
     text = _full_response_text(result).lower().replace("\\", "/")
-    raw_markers = (
+    raw_markers = [
         ".agentic-workspace/planning",
         "planning/execplans",
         "planning/decompositions",
         "planning/schemas",
-    )
+    ]
+    raw_markers.extend(match.group(0) for match in re.finditer(r"`planning`\s+directory|\bplanning\s+directory\b", text))
     raw_positions = [text.find(marker) for marker in raw_markers if text.find(marker) >= 0]
     if not raw_positions:
         return False
@@ -837,6 +838,30 @@ def _raw_planning_before_fallback_workflow(result: dict[str, Any]) -> bool:
     first_raw = min(raw_positions)
     first_workflow = min(workflow_positions) if workflow_positions else -1
     return first_workflow == -1 or first_raw < first_workflow
+
+
+def _invented_cli_unavailable_validation_commands(result: dict[str, Any]) -> bool:
+    text = _scored_agent_response_text(result)
+    if not text.strip():
+        text = str(result.get("stdout") or "")
+    normalized = text.lower()
+    if "validation command" not in normalized:
+        return False
+    if re.search(r"validation commands?\s+(?:are|is)\s+unavailable until|unavailable until the command can run", normalized):
+        return False
+    substitute_markers = (
+        "`grep",
+        "`rg",
+        "`read_file",
+        "`get-content",
+        "`cat",
+        "`ls",
+        "grep ",
+        "rg ",
+        "read_file",
+        "get-content",
+    )
+    return any(marker in normalized for marker in substitute_markers)
 
 
 def _is_diagnostic_command_output(path: str) -> bool:
@@ -1866,6 +1891,13 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
                 {
                     "warning_class": "model_cli_raw_workspace_before_fallback",
                     "message": "The model inspected raw Planning surfaces before using the fallback workflow after the workspace CLI was unavailable.",
+                }
+            )
+        if _invented_cli_unavailable_validation_commands(result):
+            warnings.append(
+                {
+                    "warning_class": "model_cli_cli_unavailable_substitute_validation",
+                    "message": "The model invented substitute validation commands instead of reporting validation as unavailable until the workspace CLI can run.",
                 }
             )
     if re.search(r"\b[A-Za-z]:\\temp\\", combined_text, flags=re.IGNORECASE):

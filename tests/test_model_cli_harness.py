@@ -283,6 +283,7 @@ def test_model_cli_harness_fallback_workflows_stop_when_cli_unavailable() -> Non
         text = workflow_file.read_text(encoding="utf-8")
         assert "If the CLI is unavailable" in text
         assert "Do not search planning directories, templates, schemas, or unrelated repo files" in text
+        assert "Do not invent substitute validation commands" in text
         assert "validation commands are unavailable until the command can run" in text
 
 
@@ -910,6 +911,71 @@ def test_model_cli_harness_warns_on_raw_planning_before_fallback_workflow(tmp_pa
     assert "model_cli_adapter_tooling_limitation" in classes
     assert "model_cli_raw_workspace_before_fallback" in classes
     assert any(signal["id"] == "read_surface_under_read" and signal["status"] == "weak" for signal in signals)
+
+
+def test_model_cli_harness_warns_on_shorthand_planning_before_fallback_workflow(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._execution_warnings(
+        result={
+            "returncode": 0,
+            "stdout": ("I will search within the `planning` directory first.\nLater I read `.agentic-workspace/WORKFLOW.md`.\n"),
+            "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
+        },
+        repo_path=repo,
+        mutation_summary={"status": "clean"},
+    )
+
+    classes = {warning["warning_class"] for warning in warnings}
+    assert "model_cli_raw_workspace_before_fallback" in classes
+
+
+def test_model_cli_harness_warns_on_cli_unavailable_substitute_validation(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._execution_warnings(
+        result={
+            "returncode": 0,
+            "stdout": (
+                "Intended command: `uv run agentic-workspace implement --changed README.md --format json`\n"
+                "Validation command list:\n"
+                "1. `grep README README.md`\n"
+                "2. `read_file README.md`\n"
+            ),
+            "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
+        },
+        repo_path=repo,
+        mutation_summary={"status": "clean"},
+    )
+
+    classes = {warning["warning_class"] for warning in warnings}
+    assert "model_cli_cli_unavailable_substitute_validation" in classes
+
+
+def test_model_cli_harness_accepts_cli_unavailable_validation_unavailable(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._execution_warnings(
+        result={
+            "returncode": 0,
+            "stdout": (
+                "Intended command: `uv run agentic-workspace implement --changed README.md --format json`\n"
+                "Validation command list: unavailable until the command can run.\n"
+            ),
+            "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
+        },
+        repo_path=repo,
+        mutation_summary={"status": "clean"},
+    )
+
+    classes = {warning["warning_class"] for warning in warnings}
+    assert "model_cli_cli_unavailable_substitute_validation" not in classes
 
 
 def test_model_cli_harness_skips_semantic_scoring_when_model_did_not_answer() -> None:
