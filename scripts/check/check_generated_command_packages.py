@@ -776,11 +776,11 @@ def _validate_static_surfaces() -> list[str]:
             errors.append("command_package_ir.json maturity routing rule does not protect weak-agent routing")
         packages = {package.get("id"): package for package in ir.get("packages", []) if isinstance(package, dict)}
         expected_python_promotions = {
-            "root-workspace": "agentic-workspace",
-            "planning-bootstrap": "agentic-planning",
-            "memory-bootstrap": "agentic-memory",
+            "root-workspace": ("agentic-workspace", "generated/python/workspace-cli"),
+            "planning-bootstrap": ("agentic-planning", "generated/python/planning-cli"),
+            "memory-bootstrap": ("agentic-memory", "generated/python/memory-cli"),
         }
-        for package_id, program in expected_python_promotions.items():
+        for package_id, (program, generated_root) in expected_python_promotions.items():
             package = packages.get(package_id)
             if not isinstance(package, dict):
                 errors.append(f"command_package_ir.json is missing package {package_id!r}")
@@ -802,6 +802,13 @@ def _validate_static_surfaces() -> list[str]:
                 )
             if package.get("program") != program:
                 errors.append(f"command_package_ir.json package {package_id!r} program drifted from {program!r}")
+            if python_target.get("generated_root") != generated_root:
+                errors.append(
+                    f"command_package_ir.json package {package_id!r} Python generated_root drifted from {generated_root!r}; "
+                    f"got {python_target.get('generated_root')!r}"
+                )
+            if not (REPO_ROOT / generated_root / "generated_cli_package" / "__init__.py").is_file():
+                errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing")
         generated_entrypoints = {
             "src/agentic_workspace/cli.py": "agentic_workspace.generated_cli_package",
             "packages/planning/src/repo_planning_bootstrap/cli.py": "repo_planning_bootstrap.generated_cli_package",
@@ -816,6 +823,17 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"{relative_path} does not import the generated Python CLI package")
             if main_index == -1 or generated_index == -1 or parser_index == -1 or generated_index > parser_index:
                 errors.append(f"{relative_path} does not route generated Python adapters before the handwritten parser")
+        durable_source_roots = {
+            "src/agentic_workspace/generated_cli_package/__init__.py": "generated/python/workspace-cli",
+            "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py": "generated/python/planning-cli",
+            "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py": "generated/python/memory-cli",
+        }
+        for relative_path, generated_root in durable_source_roots.items():
+            text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+            if "Generated runtime-backed Python command adapter" in text or "DO NOT EDIT DIRECTLY." in text:
+                errors.append(f"{relative_path} still contains durable generated Python output instead of package-local glue")
+            if generated_root not in text:
+                errors.append(f"{relative_path} does not bridge to {generated_root}")
     dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile"
     if not dockerfile.is_file():
         errors.append("generated/typescript/Dockerfile is missing")

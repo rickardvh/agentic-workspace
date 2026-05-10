@@ -41,6 +41,7 @@
         "src/agentic_workspace/contracts/command_package_ir.json"
       ],
       "prefixes": [
+        "generated/python/",
         "generated/typescript/",
         "scripts/generate/generate_command_packages.py",
         "scripts/check/check_generated_command_packages.py",
@@ -156,16 +157,28 @@
         "id": "generated-command-package-output",
         "role": "projection",
         "prefixes": [
-          "generated/typescript/",
-          "src/agentic_workspace/generated_cli_package/",
-          "packages/planning/src/repo_planning_bootstrap/generated_cli_package/",
-          "packages/memory/src/repo_memory_bootstrap/generated_cli_package/"
+          "generated/python/",
+          "generated/typescript/"
         ],
         "direct_edit_allowed": false,
         "source_contract": "src/agentic_workspace/contracts/command_package_ir.json",
         "generator_contract": "src/agentic_workspace/contracts/command_adapter_generation.json",
         "regeneration_path": "uv run python scripts/check/check_generated_command_packages.py",
         "edit_policy": "Do not hand-edit generated command package outputs; change the command package IR or generator and regenerate/prove the projection."
+      },
+      {
+        "id": "python-generated-package-bridge",
+        "role": "hand-owned-executable",
+        "exact": [
+          "src/agentic_workspace/generated_cli_package/__init__.py",
+          "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py",
+          "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py"
+        ],
+        "direct_edit_allowed": true,
+        "source_contract": "src/agentic_workspace/contracts/command_package_ir.json",
+        "generator_contract": null,
+        "regeneration_path": null,
+        "edit_policy": "These files are package-local bridges to generated/python, not generated output. Keep them small and prove package import behavior when editing."
       },
       {
         "id": "root-workspace-cli-runtime",

@@ -877,6 +877,16 @@
       "max_bytes": 20000
     },
     {
+      "pattern": "generated/python/*/generated_cli_package/__init__.py",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "package-local generated_cli_package bridges and installed package import proof",
+      "checked_in_justification": "Generated Python package metadata is kept as a peer target projection beside generated TypeScript outputs.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote to generated-on-demand only after packaging no longer needs checked-in generated Python metadata",
+      "max_bytes": 250000
+    },
+    {
       "pattern": "generated/typescript/*/package.json",
       "source_command": "uv run python scripts/generate/generate_command_packages.py",
       "named_consumer": "generated TypeScript package tests and package publishing preparation",

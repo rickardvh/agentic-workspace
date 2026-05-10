@@ -388,18 +388,17 @@ def render_outputs(
         for target in package["targets"]:
             root = repo_root / str(target["generated_root"])
             if target["kind"] == "python":
+                module_path = root / "generated_cli_package" / "__init__.py"
                 if _is_runtime_backed_python_target(target):
                     outputs.append(
                         GeneratedOutput(
-                            root / "__init__.py",
+                            module_path,
                             _python_runtime_adapter_module(package, source_path=source_path, regenerate_command=regenerate_command),
                         )
                     )
                     continue
                 outputs.append(
-                    GeneratedOutput(
-                        root / "__init__.py", _python_module(package, source_path=source_path, regenerate_command=regenerate_command)
-                    )
+                    GeneratedOutput(module_path, _python_module(package, source_path=source_path, regenerate_command=regenerate_command))
                 )
             elif target["kind"] == "typescript":
                 outputs.append(

@@ -437,6 +437,7 @@ def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) ->
     handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
     if handler is None:
         build_generated_cli_package_parser().error(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
+        raise SystemExit(2)
     return handler(args)
 
 

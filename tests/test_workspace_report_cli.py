@@ -834,7 +834,7 @@ def test_operational_compression_classifies_generated_output_footprint(tmp_path:
                     "targets": [
                         {
                             "kind": "python",
-                            "generated_root": "src/agentic_workspace/generated_cli_package",
+                            "generated_root": "generated/python/workspace-cli",
                             "generation_status": "supported-now",
                             "maturity_level_ref": "metadata-proof-fixture",
                             "test_environment": "python-dev",
@@ -864,7 +864,7 @@ def test_operational_compression_classifies_generated_output_footprint(tmp_path:
     )
     _write(target / "scripts" / "generate" / "generate_command_packages.py", "print('generate')\n")
     _write(target / "scripts" / "check" / "check_generated_command_packages.py", "print('check')\n")
-    _write(target / "src" / "agentic_workspace" / "generated_cli_package" / "__init__.py", "# generated\n")
+    _write(target / "generated" / "python" / "workspace-cli" / "generated_cli_package" / "__init__.py", "# generated\n")
     _write(
         target / "src" / "agentic_workspace" / "generated_cli_package" / "__pycache__" / "__init__.cpython-313.pyc",
         "cache\n",

@@ -9,7 +9,7 @@ RUN apt-get update \
 COPY src ./src
 COPY scripts ./scripts
 COPY packages ./packages
-COPY generated/typescript ./generated/typescript
+COPY generated ./generated
 
 ENV PYTHONPATH=/work/src:/work/packages/planning/src:/work/packages/memory/src
 

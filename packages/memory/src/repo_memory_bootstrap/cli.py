@@ -925,6 +925,7 @@ def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) ->
         result = handler(args)
         return 0 if result is None else result
     build_generated_cli_package_parser().error(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
+    raise SystemExit(2)
 
 
 def _run_generated_command_adapter(args: argparse.Namespace, *, adapter: dict[str, object]) -> int:

@@ -383,6 +383,13 @@
       "classification": "extraction candidate",
       "owner": "planning review extension",
       "rationale": "Review pass workflow is separable from daily active execution and should move with review support."
+    },
+    {
+      "source_path": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/__init__.py",
+      "classification": "maintainer/development only",
+      "owner": "generated command package projection",
+      "rationale": "The planning wheel force-includes the generated Python projection as private runtime import data; the canonical source remains the command-package IR and generator."
     }
   ]
 }

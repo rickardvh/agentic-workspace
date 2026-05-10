@@ -18,6 +18,7 @@ from jsonschema import Draft202012Validator
 from repo_planning_bootstrap import installer
 
 PLANNING_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = PLANNING_PACKAGE_ROOT.parents[1]
 CLASSIFICATION_PATH = PLANNING_PACKAGE_ROOT / "payload-surface-classification.json"
 EXTRACTION_CANDIDATES_PATH = PLANNING_PACKAGE_ROOT / "extraction-candidates.json"
 CLASSIFICATION_SCHEMA_PATH = PLANNING_PACKAGE_ROOT / "schemas" / "payload-surface-classification.schema.json"
@@ -178,7 +179,10 @@ def _classified_source_paths() -> set[str]:
 
 
 def _source_path(path: Path) -> str:
-    return f"packages/planning/{path.relative_to(PLANNING_PACKAGE_ROOT).as_posix()}"
+    resolved = path.resolve()
+    if resolved.is_relative_to(PLANNING_PACKAGE_ROOT):
+        return f"packages/planning/{resolved.relative_to(PLANNING_PACKAGE_ROOT).as_posix()}"
+    return resolved.relative_to(REPO_ROOT).as_posix()
 
 
 def _iter_tracked_payload_surface_files(root: Path) -> set[str]:
@@ -201,6 +205,10 @@ def test_planning_artifacts_ship_generated_cli_package_import_dependency(kind: s
 
     assert any(entry.endswith("repo_planning_bootstrap/generated_command_adapters.py") for entry in entries)
     assert any(entry.endswith("repo_planning_bootstrap/generated_cli_package/__init__.py") for entry in entries)
+    if kind == "wheel":
+        assert any(entry.endswith("repo_planning_bootstrap/_generated_cli_package_impl/__init__.py") for entry in entries)
+    else:
+        assert any(entry.endswith("src/repo_planning_bootstrap/_generated_cli_package_impl/__init__.py") for entry in entries)
 
 
 def test_installed_planning_wheel_imports_cli_module() -> None:

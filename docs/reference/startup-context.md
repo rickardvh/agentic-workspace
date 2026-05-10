@@ -79,6 +79,10 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `immediate_next_allowed_action.next_proof` | string | yes |  | Next proof text value used by this contract. |  |  |
 | `immediate_next_allowed_action.read_first` | array of string | yes |  | Ordered read first entries used by this contract. |  |  |
 | `immediate_next_allowed_action.open_execplan_only_when` | string | yes |  | Open execplan only when text value used by this contract. |  |  |
+| `workflow_sufficiency` | object | no |  | Small decision record that says whether the current packet is enough for the next step or which exact detail field should be requested. |  |  |
+| `continuation_state` | object | no |  | Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue. |  |  |
+| `authority_hierarchy` | object | no |  | Authority and promotion-path guidance for deciding which repo surfaces are current instruction, durable memory, future work, or historical audit. |  |  |
+| `compliance_economics` | object | no |  | Boundary statement for what Agentic Workspace can enforce directly and where it instead makes noncompliance visible or costly. |  |  |
 | `workflow_obligations` | object | no |  | Repo-configured workflow obligations relevant to the startup context. |  |  |
 | `closeout_obligations` | object | no |  | Closeout obligations that may apply before claiming work is complete. |  |  |
 | `memory_consult` | object | no |  | Memory lookup guidance for durable repo knowledge when startup context says it is relevant. |  |  |

@@ -446,7 +446,7 @@ def test_generated_command_package_docker_conformance_surface_exists() -> None:
     assert "--conformance" in text
     assert "--require-node" in text
     assert "COPY src ./src" in text
-    assert "COPY generated/typescript ./generated/typescript" in text
+    assert "COPY generated ./generated" in text
 
 
 def test_command_generation_schema_boundary_is_checked() -> None:
@@ -576,6 +576,8 @@ def test_generated_python_command_package_metadata_is_current() -> None:
     }
     target_kinds = {target["kind"] for target in GENERATED_COMMAND_PACKAGE["targets"]}
     assert {"python", "typescript", "bash", "powershell"} <= target_kinds
+    python_target = next(target for target in GENERATED_COMMAND_PACKAGE["targets"] if target["kind"] == "python")
+    assert python_target["generated_root"] == "generated/python/workspace-cli"
     assert generated_command_names() == (
         "config",
         "defaults",

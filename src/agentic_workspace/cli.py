@@ -7716,10 +7716,8 @@ def _generated_output_files(*, target_root: Path) -> list[Path]:
     candidates: list[Path] = []
     for pattern in (
         "generated/**/*",
-        "src/**/generated_*",
-        "packages/**/generated_*",
-        "src/**/generated_cli_package/**/*",
-        "packages/**/generated_cli_package/**/*",
+        "src/**/generated_command_adapters.py",
+        "packages/**/generated_command_adapters.py",
     ):
         candidates.extend(path for path in target_root.glob(pattern) if path.is_file() and not _is_runtime_cache_file(path))
     return sorted({path.resolve(): path for path in candidates}.values(), key=lambda path: path.as_posix())

@@ -212,7 +212,7 @@ Several are now explicitly optional or extraction candidates rather than plannin
 - Current category: `internal capability`
 - Problem solved: generated maintainer and routing surfaces become liabilities when they are stale or unclear in origin
 - Why an agent wants it in checked-in form: trusted generated artifacts can reduce orientation cost only when provenance and freshness are explicit
-- Current home: package-local generated adapters, render/check helpers, proof selectors, and maintainer tests
+- Current home: generated Python/TypeScript projections, package-local generated CLI bridges, render/check helpers, proof selectors, and maintainer tests
 - Promotion stance: keep internal and maintainer/development-only unless generic command-generation work proves a broader reusable boundary
 - Evidence required for further promotion: strong cross-module or cross-repo demand for a generic generated-surface trust layer with stable shared rules that do not assume planning payload internals
 

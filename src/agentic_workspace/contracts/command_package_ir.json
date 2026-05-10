@@ -150,7 +150,7 @@
         {
           "kind": "python",
           "package_name": "agentic-workspace",
-          "generated_root": "src/agentic_workspace/generated_cli_package",
+          "generated_root": "generated/python/workspace-cli",
           "entrypoints": [
             "agentic-workspace"
           ],
@@ -1945,7 +1945,7 @@
         {
           "kind": "python",
           "package_name": "agentic-planning",
-          "generated_root": "packages/planning/src/repo_planning_bootstrap/generated_cli_package",
+          "generated_root": "generated/python/planning-cli",
           "entrypoints": [
             "agentic-planning"
           ],
@@ -2439,7 +2439,7 @@
         {
           "kind": "python",
           "package_name": "agentic-memory",
-          "generated_root": "packages/memory/src/repo_memory_bootstrap/generated_cli_package",
+          "generated_root": "generated/python/memory-cli",
           "entrypoints": [
             "agentic-memory"
           ],

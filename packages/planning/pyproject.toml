@@ -47,6 +47,7 @@ packages = ["src/repo_planning_bootstrap"]
 "bootstrap/.agentic-workspace/planning/agent-manifest.json" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/agent-manifest.json"
 "skills" = "src/repo_planning_bootstrap/_skills"
 "src/repo_planning_bootstrap/_ownership.toml" = "src/repo_planning_bootstrap/_ownership.toml"
+"../../generated/python/planning-cli/generated_cli_package/__init__.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/__init__.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -56,6 +57,9 @@ include = [
   "/src/repo_planning_bootstrap",
   "/tests",
 ]
+
+[tool.hatch.build.targets.sdist.force-include]
+"../../generated/python/planning-cli/generated_cli_package/__init__.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/__init__.py"
 
 [tool.pytest.ini_options]
 addopts = [
