@@ -1,0 +1,146 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Package sprawl control review",
+  "date": "2026-05-10",
+  "scope": [
+    "Overlapping commands, verbosity/profile modes, scaffolds, and documentation authority surfaces"
+  ],
+  "classification": "contract-integrity",
+  "goal": [
+    "Identify the package-level control work needed to prevent overlapping commands, profiles, scaffolds, and documents from increasing architectural sprawl."
+  ],
+  "non_goals": [
+    "Do not implement the cleanup in this review pass.",
+    "Do not promote every conceptual concern into active work without prioritisation."
+  ],
+  "review_mode": {
+    "mode": "contract-integrity",
+    "review question": "Do current package surfaces make the intended authority path obvious, or do overlapping commands, modes, scaffolds, and docs still require agents to infer which one matters?",
+    "default finding cap": "3",
+    "inputs inspected first": "AGENTS.md routed start output, active Planning summary, .agentic-workspace/WORKFLOW.md, CLI command contracts, generated TypeScript command package, Planning/Memory README authority sections, review and execplan docs."
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --target . --task \"Review how to continuously prevent overlapping commands, profiles, scaffolds, and documents from increasing package sprawl\" --format json --select immediate_next_allowed_action,workflow_sufficiency,skill_routing,task_intent; uv run agentic-workspace summary --target . --format json --select planning_surface_health,todo.active_items,warnings,warning_count; rg over workflow, docs, CLI contracts, generated TypeScript command package, Planning/Memory docs, and scaffold surfaces.",
+    "evidence sources": ".agentic-workspace/WORKFLOW.md; src/agentic_workspace/contracts/cli_commands.json; generated/typescript/workspace-cli/src/commandPackage.ts; packages/planning/README.md; packages/memory/README.md; .agentic-workspace/planning/execplans/generated-cli-next-stage.plan.json; .agentic-workspace/planning/reviews/README.md."
+  },
+  "references": [
+    {
+      "kind": "file",
+      "target": ".agentic-workspace/WORKFLOW.md",
+      "label": "workflow router",
+      "role": "authority map evidence",
+      "locator": "startup commands and raw-surface guidance"
+    },
+    {
+      "kind": "file",
+      "target": "src/agentic_workspace/contracts/cli_commands.json",
+      "label": "CLI command contract",
+      "role": "profile/select evidence",
+      "locator": "--profile, --verbose, and --select declarations"
+    },
+    {
+      "kind": "file",
+      "target": ".agentic-workspace/planning/execplans/generated-cli-next-stage.plan.json",
+      "label": "active execplan scaffold",
+      "role": "scaffold residue evidence",
+      "locator": "planning_mode/control gate residue"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Profile vocabulary remains as an overlapping output model",
+      "summary": "The selector-first direction is partially landed, but command contracts and generated TypeScript surfaces still expose tiny/compact/full/profile language across many routine commands.",
+      "evidence": "src/agentic_workspace/contracts/cli_commands.json declares --profile for modules, summary, compatibility, implement, defaults, proof, config, report, preflight, status, and doctor; generated/typescript/workspace-cli/src/commandPackage.ts mirrors the same profile options; packages/planning/README.md still documents tiny, compact, and full profiles for active planning.",
+      "risk if unchanged": "Agents must choose between profile escalation and field selection, which reintroduces broad reads and makes the intended output contract ambiguous.",
+      "suggested action": "Promote a compatibility-deprecation lane: make selector-first the single ordinary detail mechanism, keep --verbose as the broad diagnostic affordance, and either remove --profile from public docs/contracts or mark it compatibility-only with tests that default outputs advertise selectors first.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "roadmap or active execplan after the current generated-CLI stage is shaped",
+      "promotion trigger": "Promote when touching generated CLI contracts or any command output contract next.",
+      "post-remediation note shape": "shrink to a pointer to the command-contract cleanup issue and tests."
+    },
+    {
+      "title": "Routing authority is spread across too many surfaces",
+      "summary": "The intended authority path exists, but similar routing guidance appears in WORKFLOW, cold-start docs, which-package, Planning README, Memory README, compact-contract docs, and command outputs.",
+      "evidence": ".agentic-workspace/WORKFLOW.md names start, implement --changed, preflight, summary, config, defaults, skills, and proof; docs/which-package.md points to defaults sections for preset and operating questions; packages/planning/README.md and packages/memory/README.md restate selective adoption, startup, and ownership boundaries; .agentic-workspace/docs/cold-start-protocol.md also names startup commands.",
+      "risk if unchanged": "Every helpful explanation can become a second source of truth. Agents may read more than needed or follow a stale doc rather than the current command output.",
+      "suggested action": "Create a small authority-ladder contract for operational surfaces: one canonical route per question, one owning command, one owning doc, and explicit demotion of all other prose to explanatory/non-authoritative status. Add a review/check that flags docs introducing new first-step routes without updating the ladder.",
+      "confidence": "medium-high",
+      "source": "mixed",
+      "promotion target": "roadmap candidate; canonical docs/checks",
+      "promotion trigger": "Promote before the next broad documentation or command-surface rewrite.",
+      "post-remediation note shape": "shrink to the authority-ladder doc/check and any issue link."
+    },
+    {
+      "title": "Scaffolds can carry stale or contradictory mode residue",
+      "summary": "A generated plan scaffold can contain mode-specific fields that later become wrong when the plan changes shape, leaving hidden contradictory instructions inside the same canonical artifact.",
+      "evidence": ".agentic-workspace/planning/execplans/generated-cli-next-stage.plan.json was initially created prep-only, then converted to an implementation plan; rg still surfaced prep-only residue under control gate text after the main planning_mode fields were changed. The summary was clean because canonical projections agreed, but deeper raw scaffold content still carried stale halt wording.",
+      "risk if unchanged": "Agents following raw plan detail may obey outdated scaffold residue even when compact projections say something else. This increases architectural complexity because agents must know which fields are authoritative inside a single artifact.",
+      "suggested action": "Add scaffold hygiene work: either generate smaller shape-specific plan records, provide package commands to convert prep-only to implementation mode, or add a planning health check that detects contradictory mode residue outside canonical projection fields.",
+      "confidence": "high",
+      "source": "friction-confirmed",
+      "promotion target": "active issue if repeated during generated-CLI work; otherwise roadmap",
+      "promotion trigger": "Promote immediately if another plan conversion or weak-agent eval hits stale scaffold instructions.",
+      "post-remediation note shape": "shrink to the regression check and command behavior."
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote profile deprecation and scaffold hygiene soon; both are directly connected to current generated-CLI and planning reliability work.",
+    "defer": "Defer the broader authority-ladder doc/check until after the current generated-CLI slice is shaped, unless documentation work starts first.",
+    "dismiss": "Do not dismiss these findings; they match repeated dogfooding friction and the user's stated concern."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "findings promoted, dismissed, or superseded",
+    "proof surface": "routed issues, planning state, docs, checks, Memory, or a compact retained review stub"
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run agentic-workspace start --target . --task \"Review how to continuously prevent overlapping commands, profiles, scaffolds, and documents from increasing package sprawl\" --format json --select immediate_next_allowed_action,workflow_sufficiency,skill_routing,task_intent",
+    "uv run agentic-workspace summary --target . --format json --select planning_surface_health,todo.active_items,warnings,warning_count",
+    "rg -n -- \"--profile|profile|--verbose|--select\" src/agentic_workspace packages/memory packages/planning generated tools -g \"*.py\" -g \"*.json\""
+  ],
+  "drift_log": [
+    "2026-05-10: Review record created by create-review.",
+    "2026-05-10: Captured bounded contract-integrity findings for package sprawl control."
+  ]
+}

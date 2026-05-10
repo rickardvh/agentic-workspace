@@ -314,21 +314,8 @@
     }
   },
   "drift_log": [
-    "2026-05-10: Scaffolded by agentic-planning new-plan."
+    "2026-05-10: Scaffolded by agentic-planning new-plan.",
+    "2026-05-10: Converted from prep-only follow-on planning to an active generated-CLI implementation-stage plan; removed stale prep-only halt gate."
   ],
-  "control_gates": [
-    {
-      "id": "prep-only-halt",
-      "owner_role": "implementation",
-      "required_for": [
-        "before any product or handoff file creation"
-      ],
-      "status": "pending",
-      "evidence": [
-        "agentic-workspace summary --target . --profile compact --format json"
-      ],
-      "blocking": true,
-      "next_action": "HALT: prep-only mode active. Create Planning state, run agentic-workspace summary --target . --profile compact --format json, then stop. Do not manually tighten or revalidate generated JSON unless summary reports a blocking Planning problem. Do not create product files, scaffolds, README, PLANNING_STATE, or handoff documentation."
-    }
-  ]
+  "control_gates": []
 }
