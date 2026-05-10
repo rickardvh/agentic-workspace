@@ -79,6 +79,94 @@ def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys
     assert "missing" not in config
 
 
+def test_start_exposes_workflow_sufficiency_and_continuation_selectors(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Fix one docs typo",
+                "--select",
+                "workflow_sufficiency,continuation_state",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["values"]["workflow_sufficiency"]["kind"] == "agentic-workspace/workflow-sufficiency/v1"
+    assert payload["values"]["workflow_sufficiency"]["decision"] == "enough-for-first-contact-routing"
+    assert payload["values"]["workflow_sufficiency"]["nothing_more_needed"] is True
+    continuation = payload["values"]["continuation_state"]
+    assert continuation["kind"] == "agentic-workspace/compact-continuation-state/v1"
+    assert continuation["fields"] == [
+        "goal",
+        "current_branch_or_state",
+        "files_touched",
+        "known_failing_tests",
+        "next_intended_step",
+        "open_questions",
+    ]
+
+
+def test_proof_supports_exact_field_selectors_for_sufficiency(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/cli.py",
+                "--select",
+                "sufficiency,next",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["source_command"] == "proof"
+    assert payload["values"]["sufficiency"]["decision"] == "required-proof-selected"
+    assert payload["values"]["next"]["action"] == "run-validation-command"
+    assert "missing" not in payload
+
+
+def test_report_sections_expose_authority_and_compliance_boundaries(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "authority_hierarchy", "--format", "json"]) == 0
+    authority = json.loads(capsys.readouterr().out)["answer"]
+    assert authority["kind"] == "agentic-workspace/authority-hierarchy/v1"
+    assert authority["ordered_authority"][-1]["authority"] == "disposable-or-audit-only-unless-promoted"
+    assert "generated_summary" in authority["promotion_paths"]
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "compliance_economics", "--format", "json"]) == 0
+    compliance = json.loads(capsys.readouterr().out)["answer"]
+    assert compliance["kind"] == "agentic-workspace/compliance-economics/v1"
+    assert "cannot force" in compliance["boundary"]
+    strengths = {entry["level"]: entry["strength"] for entry in compliance["enforcement_levels"]}
+    assert strengths["prompt_instruction"] == "weak"
+    assert strengths["schema_validity"] == "strong"
+
+
 def test_improvement_intake_includes_repair_recurrence_subtype(capsys) -> None:
     assert cli.main(["defaults", "--profile", "full", "--section", "improvement_intake", "--format", "json"]) == 0
 

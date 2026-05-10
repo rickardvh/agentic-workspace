@@ -259,6 +259,26 @@
       "additionalProperties": false,
       "description": "Next bounded action the agent may take without reading broader surfaces."
     },
+    "workflow_sufficiency": {
+      "type": "object",
+      "description": "Small decision record that says whether the current packet is enough for the next step or which exact detail field should be requested.",
+      "additionalProperties": true
+    },
+    "continuation_state": {
+      "type": "object",
+      "description": "Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue.",
+      "additionalProperties": true
+    },
+    "authority_hierarchy": {
+      "type": "object",
+      "description": "Authority and promotion-path guidance for deciding which repo surfaces are current instruction, durable memory, future work, or historical audit.",
+      "additionalProperties": true
+    },
+    "compliance_economics": {
+      "type": "object",
+      "description": "Boundary statement for what Agentic Workspace can enforce directly and where it instead makes noncompliance visible or costly.",
+      "additionalProperties": true
+    },
     "workflow_obligations": {
       "type": "object",
       "description": "Repo-configured workflow obligations relevant to the startup context."

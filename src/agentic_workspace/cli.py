@@ -2174,7 +2174,7 @@ def main(argv: list[str] | None = None) -> int:
                 target_root=target_root,
                 changed_paths=list(getattr(args, "changed", []) or []),
                 task_text=getattr(args, "task", None),
-                profile=(start_profile or "tiny") if getattr(args, "select", None) else start_profile,
+                profile=_start_profile_for_select(requested_profile=start_profile, select=getattr(args, "select", None)),
             )
             if getattr(args, "select", None):
                 payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="start")
@@ -2229,6 +2229,7 @@ def main(argv: list[str] | None = None) -> int:
                     current_only=bool(getattr(args, "current", False)),
                     changed_paths=list(getattr(args, "changed", []) or []),
                     profile=_diagnostic_profile(args, default="tiny"),
+                    select=getattr(args, "select", None),
                 )
             elif args.command == "ownership":
                 _emit_ownership(
@@ -6178,6 +6179,10 @@ def _run_report_command(
             installed_modules=installed_modules,
             module_reports=module_reports,
         ),
+        "authority_hierarchy": _authority_hierarchy_payload(cli_invoke=config.cli_invoke),
+        "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
+        "compliance_economics": _compliance_economics_payload(cli_invoke=config.cli_invoke),
+        "final_report_budget": _final_report_budget_payload(),
         "findings": aggregated_findings,
         "closeout_trust": closeout_trust,
         "successful_completion_cost": _successful_completion_cost_payload(
@@ -6291,6 +6296,10 @@ def _run_report_router_command(
             installed_modules=installed_modules,
             module_reports=[],
         ),
+        "authority_hierarchy": _authority_hierarchy_payload(cli_invoke=config.cli_invoke),
+        "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
+        "compliance_economics": _compliance_economics_payload(cli_invoke=config.cli_invoke),
+        "final_report_budget": _final_report_budget_payload(),
         "improvement_intake": _improvement_intake_payload(target_root=target_root, config=config, repo_friction=None),
         "external_work_reconciliation": _external_work_reconciliation_payload(
             module_reports=[],
@@ -6362,6 +6371,153 @@ def _successful_completion_cost_router_payload(*, cli_invoke: str) -> dict[str, 
             command="agentic-workspace report --target ./repo --section successful_completion_cost --format json",
             cli_invoke=cli_invoke,
         ),
+    }
+
+
+def _workflow_sufficiency_payload(
+    *,
+    surface: str,
+    decision: str,
+    reason: str,
+    required_next_action: str | None = None,
+    evidence_required: list[str] | None = None,
+    drill_down: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    evidence_required = evidence_required or []
+    payload: dict[str, Any] = {
+        "kind": "agentic-workspace/workflow-sufficiency/v1",
+        "surface": surface,
+        "decision": decision,
+        "reason": reason,
+        "evidence_required": evidence_required,
+        "rule": "Do not hide proof, ownership, or closeout obligations.",
+    }
+    if required_next_action:
+        payload["required_next_action"] = required_next_action
+    if not evidence_required:
+        payload["nothing_more_needed"] = True
+    if drill_down:
+        payload["drill_down"] = drill_down
+    return payload
+
+
+def _compact_continuation_state_contract(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/compact-continuation-state/v1",
+        "status": "available",
+        "purpose": "Short-lived state for paused, restarted, or handed-off work.",
+        "fields": [
+            "goal",
+            "current_branch_or_state",
+            "files_touched",
+            "known_failing_tests",
+            "next_intended_step",
+            "open_questions",
+        ],
+        "use_when": "paused, restarted, handed off, or next action would require rereading",
+        "not_needed_when": "task is closed, next action is in active planning, or fact belongs in Memory/docs",
+        "owner": "active Planning execplan context_budget or execution_run",
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace summary --select planning_record.context_budget,planning_record.execution_run --format json",
+            cli_invoke=cli_invoke,
+        ),
+    }
+
+
+def _authority_hierarchy_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/authority-hierarchy/v1",
+        "status": "present",
+        "rule": (
+            "Trust current source-of-truth surfaces before generated, historical, or advisory prose; "
+            "promote useful findings into their owner surface instead of preserving chronological residue."
+        ),
+        "ordered_authority": [
+            {
+                "rank": 1,
+                "surface_class": "code-tests-config",
+                "examples": ["source code", "tests", ".agentic-workspace/config.toml", ".agentic-workspace/OWNERSHIP.toml"],
+                "authority": "enforceable-or-reviewable",
+            },
+            {
+                "rank": 2,
+                "surface_class": "accepted-current-intent",
+                "examples": ["current issues", "system/subsystem intent", "active planning state"],
+                "authority": "current-execution-or-product-intent",
+            },
+            {
+                "rank": 3,
+                "surface_class": "compact-continuation-state",
+                "examples": ["active execplan execution_run", "context_budget", "handoff packets"],
+                "authority": "short-lived-operational",
+            },
+            {
+                "rank": 4,
+                "surface_class": "durable-memory-and-docs",
+                "examples": ["Memory decisions/invariants/runbooks", "maintained docs"],
+                "authority": "durable-knowledge",
+            },
+            {
+                "rank": 5,
+                "surface_class": "generated-and-historical-artifacts",
+                "examples": ["generated summaries", "reviews", "archives", "old reports"],
+                "authority": "disposable-or-audit-only-unless-promoted",
+            },
+        ],
+        "promotion_paths": {
+            "settled_decision": "Memory decisions, system/subsystem intent, docs, or config depending on owner",
+            "future_work": "Planning state or an upstream issue",
+            "durable_trap_or_invariant": "Memory",
+            "generated_summary": "discard unless it contains a decision, invariant, future work, or proof evidence worth promotion",
+        },
+        "inspect": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section authority_hierarchy --format json",
+            cli_invoke=cli_invoke,
+        ),
+    }
+
+
+def _compliance_economics_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/compliance-economics/v1",
+        "status": "present",
+        "boundary": (
+            "Agentic Workspace cannot force an arbitrary agent to think correctly or read the right file first; "
+            "it can make nonconforming work harder to land, easier to detect, and cheaper to recover."
+        ),
+        "target": [
+            "make the compliant path cheaper than bypass",
+            "make bypass or missing evidence visible",
+            "make recovery cheap when an agent goes off-path",
+            "leave irreversible safety to permissions, branch protection, CI, review, and runtime sandboxes",
+        ],
+        "enforcement_levels": [
+            {"level": "prompt_instruction", "strength": "weak", "example": "run start before editing"},
+            {"level": "cli_workflow", "strength": "moderate", "example": "next actions, warnings, proof lanes"},
+            {"level": "file_ownership", "strength": "moderate", "example": "managed fences and ownership metadata"},
+            {"level": "schema_validity", "strength": "strong", "example": "TOML/JSON state contracts"},
+            {"level": "tests_ci_permissions_review", "strength": "strong", "example": "required checks and protected branches"},
+        ],
+        "evidence_not_cognition": [
+            "startup or preflight evidence",
+            "changed-path proof selection and execution evidence",
+            "ownership/schema/generated-surface freshness checks",
+            "handoff and closeout residue in checked-in state",
+        ],
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section compliance_economics --format json",
+            cli_invoke=cli_invoke,
+        ),
+    }
+
+
+def _final_report_budget_payload() -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/final-report-budget/v1",
+        "status": "available",
+        "sections": ["changed", "intent_served", "verified", "unresolved"],
+        "rule": "Summarize what changed the decision or proves completion; do not narrate obvious diffs or dump raw logs by default.",
+        "raw_output_rule": "Keep raw output only when it is necessary evidence; otherwise report the first real error or proof summary.",
     }
 
 
@@ -9952,6 +10108,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             else "agentic-workspace modules --target ./repo --format json",
         },
         "active_state_summary": payload["active_state_summary"],
+        "workflow_sufficiency": payload.get("workflow_sufficiency"),
         "package_boundary": payload["package_boundary"],
         "authority_markers": payload["authority_markers"][:1],
         "immediate_next_allowed_action": immediate,
@@ -10135,7 +10292,12 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
         config_effect.get("configured_delegation_mode") != config_effect.get("delegation_mode")
         or config_effect.get("disabled_reason") not in (None, "")
         or config_effect.get("safe_to_auto_run_commands") is False
-        or (isinstance(manual_external_relay, dict) and manual_external_relay.get("target_kind") == "manual-external")
+        or (
+            isinstance(manual_external_relay, dict)
+            and manual_external_relay.get("target_kind") == "manual-external"
+            and manual_external_relay.get("status") == "appropriate"
+            and decision != "stay-local"
+        )
     )
     if decision != "stay-local" or value.get("required_next_action") != "continue-local" or config_changes_effective_behavior:
         routed_keys = ("route_obligation", "config_effect")
@@ -10167,10 +10329,19 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
     if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation", "delegate-bounded-slice"}:
         compact["target"] = value.get("target")
         compact["reason"] = value.get("reason")
-    if isinstance(manual_external_relay, dict) and manual_external_relay.get("target_kind") == "manual-external":
+    if (
+        isinstance(manual_external_relay, dict)
+        and manual_external_relay.get("target_kind") == "manual-external"
+        and (manual_external_relay.get("status") == "appropriate" or decision in {"suggest-escalation", "manual-handoff"})
+    ):
         relay = manual_external_relay
         compact["manual_external_relay"] = {
             key: relay.get(key) for key in ("kind", "status", "target_kind", "target", "interrupt_cost", "reason", "rule") if key in relay
+        }
+    if decision == "stay-local" and value.get("required_next_action") == "continue-local":
+        compact["delegation_sufficiency"] = {
+            "decision": "stay-local",
+            "reason": "No target is expected to improve quality or reduce tokens safely for this step.",
         }
     if decision in {"suggest-escalation", "delegate-bounded-slice", "manual-handoff", "ask-human"}:
         if value.get("handoff_command"):
@@ -10209,15 +10380,11 @@ def _compact_start_prep_only_handoff(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {"status": "unavailable"}
     keys = (
-        "kind",
         "status",
-        "reason",
         "first_command",
         "reference_command",
         "preferred_mutation_command_template",
         "after_write",
-        "required_action",
-        "minimal_success_criteria",
         "stop_after_summary",
         "open_execplan_after_creation",
         "manual_execplan_tightening",
@@ -10356,6 +10523,29 @@ def _prep_only_handoff_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     }
 
 
+_START_TINY_ONLY_SELECTORS = {
+    "adaptive_routing",
+    "active_state_summary",
+    "cli_invocation",
+    "context_router",
+    "delegation_decision",
+    "durable_intent",
+    "immediate_next_allowed_action",
+    "skill_routing",
+    "task_intent",
+    "workflow_sufficiency",
+}
+
+
+def _start_profile_for_select(*, requested_profile: str | None, select: str | None) -> str | None:
+    if not select:
+        return requested_profile
+    if requested_profile:
+        return requested_profile
+    selectors = {item.split(".", 1)[0].strip() for item in select.split(",") if item.strip()}
+    return "tiny" if selectors and selectors <= _START_TINY_ONLY_SELECTORS else "compact"
+
+
 def _start_payload(
     *,
     target_root: Path,
@@ -10464,6 +10654,17 @@ def _start_payload(
             "active_execplan": active_execplan,
             "planning_status": planning_record.get("status", "unavailable") if isinstance(planning_record, dict) else "unavailable",
         },
+        "workflow_sufficiency": _workflow_sufficiency_payload(
+            surface="start",
+            decision=("active-planning-summary-needed" if active_planning_present else "enough-for-first-contact-routing"),
+            reason=(
+                "Active planning exists; compact summary is next."
+                if active_planning_present
+                else "No active planning detected; choose the smallest shape and wait for changed paths before proof."
+            ),
+            required_next_action=("run summary" if active_planning_present else "choose-smallest-workflow-shape"),
+            evidence_required=(["compact active planning summary"] if active_planning_present else []),
+        ),
         "package_boundary": _package_boundary_payload(target_root=target_root),
         "authority_markers": _authority_markers_for_startup(active_execplan=active_execplan),
         "immediate_next_allowed_action": {
@@ -10489,6 +10690,7 @@ def _start_payload(
             compact=True,
             cli_invoke=config.cli_invoke,
         ),
+        "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
         "operating_posture": _operating_posture_payload(config=config, surface="start", compact=True),
         "skill_routing": _guidance_with_cli_invoke(
             value=_startup_skill_routing_payload(
@@ -10738,6 +10940,10 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "task_intent",
         "delegation_decision",
         "intent_acknowledgement",
+        "workflow_sufficiency",
+        "continuation_state",
+        "authority_hierarchy",
+        "compliance_economics",
         "cli_invocation",
         "durable_intent",
         "workflow_obligations",
@@ -10770,6 +10976,14 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str) -
         "target": ".",
         "immediate_next_allowed_action": payload["immediate_next_allowed_action"],
         "active_state_summary": payload["active_state_summary"],
+        "workflow_sufficiency": payload.get(
+            "workflow_sufficiency",
+            _workflow_sufficiency_payload(
+                surface="start",
+                decision="enough-for-first-contact-routing",
+                reason="Use the next action and selectors; no raw workspace files are needed yet.",
+            ),
+        ),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
             "rule": skill_routing.get("rule", "Use listed skills only when directly relevant; otherwise proceed from the next action.")
@@ -10877,6 +11091,17 @@ def _start_tiny_payload_fast(
         "cli_invocation": _cli_invocation_payload(config=config),
         "startup_sequence": startup_sequence,
         "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True),
+        "workflow_sufficiency": _workflow_sufficiency_payload(
+            surface="start",
+            decision=("active-planning-summary-needed" if active_planning_present else "enough-for-first-contact-routing"),
+            reason=(
+                "Active planning exists; compact summary is next."
+                if active_planning_present
+                else "No active planning detected; choose the smallest shape and wait for changed paths before proof."
+            ),
+            required_next_action=("run summary" if active_planning_present else "choose-smallest-workflow-shape"),
+            evidence_required=(["compact active planning summary"] if active_planning_present else []),
+        ),
         "adaptive_routing": {
             "current_need": current_need,
             "read_budget": {
@@ -10946,6 +11171,7 @@ def _start_tiny_payload_fast(
             ),
         },
         "memory_consult": _tiny_memory_consult_payload(config=config),
+        "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
         "operating_posture": _operating_posture_payload(config=config, surface="start", compact=True),
         "skill_routing": _guidance_with_cli_invoke(
             value=_startup_skill_routing_payload(
@@ -11537,6 +11763,19 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
     payload = {
         "kind": "implementer-context/v1",
         "target": target_root.as_posix(),
+        "workflow_sufficiency": _workflow_sufficiency_payload(
+            surface="implement",
+            decision=("enough-for-bounded-implementation" if normalized_paths else "insufficient-without-changed-paths"),
+            reason=(
+                "Changed paths are known; inspect only the named scope, reconcile acceptance, and run selected proof."
+                if normalized_paths
+                else "Changed paths are missing, so the package cannot select bounded inspect or proof scope."
+            ),
+            required_next_action=(
+                "inspect changed paths and selected proof" if normalized_paths else "provide --changed paths or run start/preflight"
+            ),
+            evidence_required=(["proof execution evidence before closeout"] if normalized_paths else ["changed paths"]),
+        ),
         "adaptive_routing": _adaptive_routing_payload(
             surface="implement",
             profile="full",
@@ -11611,6 +11850,8 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
                 "Skipping workspace orientation may be faster for this edit, but lowers continuation and review trust for planned or high-risk work."
             ),
         },
+        "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
+        "authority_hierarchy": _authority_hierarchy_payload(cli_invoke=config.cli_invoke),
         "inference_limits": {
             "rule": (
                 "implement --changed derives bounded context from changed paths, config, active planning, and package metadata; "
@@ -11697,6 +11938,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     projected = {
         "kind": "implementer-context-tiny/v1",
         "target": payload.get("target"),
+        "workflow_sufficiency": payload.get("workflow_sufficiency"),
         "adaptive_routing": _tiny_adaptive_routing_payload(
             surface="implement",
             current_need="changed-path-next-action" if payload.get("changed_paths") else "unknown-scope-routing",
@@ -16066,6 +16308,20 @@ def _defaults_payload() -> dict[str, Any]:
             "answer_shape": list(compact_manifest["answer_shape"]),
             "selectors": {key: value["command"] for key, value in compact_manifest["selectors"].items()},
         },
+        "workflow_sufficiency": {
+            "command": "agentic-workspace start --select workflow_sufficiency --format json",
+            "rule": "A package surface should say when the current packet is enough and when proof, ownership, or closeout evidence is still required.",
+            "nothing_more_needed_means": [
+                "no extra package read is needed for the current step",
+                "no raw workspace file should be opened unless a selector or proof failure points there",
+                "the agent may proceed with the bounded next action and selected proof",
+            ],
+            "not_evaluated_means": "Run the named detail command before treating absence as permission to skip obligations.",
+        },
+        "continuation_state": _compact_continuation_state_contract(),
+        "authority_hierarchy": _authority_hierarchy_payload(),
+        "compliance_economics": _compliance_economics_payload(),
+        "final_report_budget": _final_report_budget_payload(),
         "operating_questions": {
             "canonical_doc": "docs/which-package.md",
             "command": "agentic-workspace defaults --section operating_questions --format json",
@@ -16940,6 +17196,9 @@ def _tiny_defaults_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "capability_routing",
             "closeout_trust",
             "compact_contract_profile",
+            "workflow_sufficiency",
+            "authority_hierarchy",
+            "compliance_economics",
         ],
         "detail_commands": {
             "section": "agentic-workspace defaults --section <section> --format json",
@@ -17326,6 +17585,7 @@ def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "kind": "proof-next-decision/v1",
             "target": payload.get("target"),
             "selector": payload.get("selector", {}),
+            "sufficiency": answer.get("sufficiency", {}) if isinstance(answer, dict) else {},
             "next": {
                 "action": primary.get("action", "run-validation-command"),
                 "command": primary.get("command"),
@@ -17361,6 +17621,7 @@ def _emit_proof(
     current_only: bool = False,
     changed_paths: list[str] | None = None,
     profile: str = "full",
+    select: str | None = None,
 ) -> None:
     normalized_paths = _normalize_changed_paths(changed_paths or [])
     if profile == "tiny" and normalized_paths:
@@ -17377,6 +17638,8 @@ def _emit_proof(
                 "answer": answer,
             }
         )
+        if select:
+            payload = _select_payload_fields(payload, select=select, source_command="proof")
         if format_name == "json":
             print(json.dumps(serialise_value(payload), indent=2))
             return
@@ -17392,6 +17655,8 @@ def _emit_proof(
     )
     if profile == "tiny":
         payload = _tiny_proof_payload(payload)
+    if select:
+        payload = _select_payload_fields(payload, select=select, source_command="proof")
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
         return
@@ -17478,7 +17743,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         target_root=target_root,
         changed_paths=list(getattr(args, "changed", []) or []),
         task_text=getattr(args, "task", None),
-        profile=(start_profile or "tiny") if getattr(args, "select", None) else start_profile,
+        profile=_start_profile_for_select(requested_profile=start_profile, select=getattr(args, "select", None)),
     )
     if getattr(args, "select", None):
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="start")
@@ -17576,6 +17841,7 @@ def _run_proof_report_adapter(args: argparse.Namespace) -> int:
         current_only=bool(getattr(args, "current", False)),
         changed_paths=list(getattr(args, "changed", []) or []),
         profile=_diagnostic_profile(args, default="tiny"),
+        select=getattr(args, "select", None),
     )
     return 0
 
@@ -17902,6 +18168,17 @@ def _validation_plan_for_proof(
         "kind": "validation-plan/v1",
         "status": "inspect-before-run",
         "rule": "Commands are selected proof, not hidden automation; inspect the plan before executing it.",
+        "sufficiency": _workflow_sufficiency_payload(
+            surface="proof.validation_plan",
+            decision=("required-proof-selected" if steps else "no-required-proof-selected"),
+            reason=(
+                "Run the required commands and summarize pass/fail evidence; raw logs are only needed for failures."
+                if steps
+                else "No required changed-path proof command matched; use optional proof or broaden only if the trust question remains open."
+            ),
+            required_next_action=("run required proof commands" if steps else "decide whether optional proof is enough"),
+            evidence_required=(["required proof command result"] if steps else []),
+        ),
         "primary_next_action": primary_action,
         "required_count": len(steps),
         "optional_count": len(optional_steps),
@@ -18295,6 +18572,18 @@ def _proof_selection_for_changed_paths(
             for lane in selected_lanes
         ],
         "required_commands": required_commands,
+        "sufficiency": _workflow_sufficiency_payload(
+            surface="proof",
+            decision=("required-proof-selected" if required_commands else "no-required-proof-selected"),
+            reason=(
+                "Selected commands are the minimal proof for the matched changed paths; broaden only if task intent or failures demand it."
+                if required_commands
+                else "No changed-path proof rule selected a required command; use current proof or a task-specific proof before closeout."
+            ),
+            required_next_action=("run required_commands" if required_commands else "choose task-specific proof or current proof"),
+            evidence_required=(["proof execution evidence"] if required_commands else []),
+            drill_down={"full_detail": "agentic-workspace proof --verbose --changed <paths> --format json"},
+        ),
         "optional_commands": optional_commands,
         "validation_plan": _validation_plan_for_proof(
             selected_lanes=selected_lanes,

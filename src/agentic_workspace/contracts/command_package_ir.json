@@ -1061,6 +1061,13 @@
                 "help": "Return required proof commands for the provided repo-relative changed paths."
               },
               {
+                "name": "select",
+                "flags": [
+                  "--select"
+                ],
+                "help": "Return exact comma-separated field paths from the proof answer."
+              },
+              {
                 "name": "profile",
                 "flags": [
                   "--profile"
@@ -1105,6 +1112,7 @@
               "proof.routes.resolve",
               "proof.routes.resolve",
               "output.profile.select",
+              "output.fields.select",
               "output.emit"
             ]
           },

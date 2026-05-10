@@ -897,6 +897,13 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "nargs": "*"
           },
           {
+            "flags": [
+              "--select"
+            ],
+            "help": "Return exact comma-separated field paths from the proof answer.",
+            "name": "select"
+          },
+          {
             "choices": [
               "full",
               "tiny"
@@ -965,6 +972,7 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
           "proof.routes.resolve",
           "proof.routes.resolve",
           "output.profile.select",
+          "output.fields.select",
           "output.emit"
         ]
       },
@@ -2289,6 +2297,13 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           "help": "Return required proof commands for the provided repo-relative changed paths.",
           "name": "changed",
           "nargs": "*"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Return exact comma-separated field paths from the proof answer.",
+          "name": "select"
         },
         {
           "choices": [

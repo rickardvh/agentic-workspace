@@ -420,10 +420,8 @@ def test_implement_suppresses_manual_external_relay_for_code_local_changed_paths
     assert decision["effort_recommendation"]["validator"] == "high"
     assert decision["effort_recommendation"]["cost_posture"] == "quality-first"
     assert "target" not in decision["effort_recommendation"]
-    relay = decision["manual_external_relay"]
-    assert relay["status"] == "not-appropriate"
-    assert "code-local" in relay["reason"]
-    assert decision["config_effect"]["execution_authority"] == "manual-relay-only"
+    assert "manual_external_relay" not in decision
+    assert "config_effect" not in decision
     assert "manual_prompt" not in decision
     assert "handoff_command" not in decision
 

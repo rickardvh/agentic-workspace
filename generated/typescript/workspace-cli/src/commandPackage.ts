@@ -883,6 +883,13 @@ export const generatedCommandPackage = {
             "nargs": "*"
           },
           {
+            "flags": [
+              "--select"
+            ],
+            "help": "Return exact comma-separated field paths from the proof answer.",
+            "name": "select"
+          },
+          {
             "choices": [
               "full",
               "tiny"
@@ -951,6 +958,7 @@ export const generatedCommandPackage = {
           "proof.routes.resolve",
           "proof.routes.resolve",
           "output.profile.select",
+          "output.fields.select",
           "output.emit"
         ]
       },

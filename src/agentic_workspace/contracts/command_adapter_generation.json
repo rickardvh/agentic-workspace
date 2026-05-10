@@ -722,6 +722,7 @@
           "proof.routes.resolve",
           "proof.routes.resolve",
           "output.profile.select",
+          "output.fields.select",
           "output.emit"
         ]
       },

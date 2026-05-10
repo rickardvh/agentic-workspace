@@ -22,6 +22,13 @@ Use this skill before implementation when task size, proof cost, handoff needs, 
 8. For `bounded` work, use compact planning or proof output when continuation, risk, or non-obvious validation matters.
 9. For `lane` or `epic` work, stop before coding and create or continue checked-in Planning state.
 
+## Token Budget
+
+- A useful plan reduces future reading. Keep it to intent, slice, stop condition, proof, and next action.
+- Ask for clarification only when the answer changes the safe next step; otherwise state a bounded assumption.
+- Preserve compact continuation state only when work is unfinished or handoff/restart would otherwise force rediscovery.
+- In final reports, summarize changed, intent served, verified, and unresolved; do not narrate obvious diffs or dump raw logs.
+
 ## Output
 
 Report the inferred intended outcome, the shape, why that shape fits, the first repo-visible surface to inspect or update, the satisfaction evidence, the required next command, whether Planning state is optional/recommended/required, and any correction point from `intent_acknowledgement`.
