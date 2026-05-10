@@ -1,6 +1,6 @@
 # Workspace Config Contract
 
-Use `agentic-workspace config --target . --format json` for the resolved workspace configuration before reading raw config files.
+Use `uv run agentic-workspace config --target . --format json` for the resolved workspace configuration before reading raw config files.
 
 `config.toml` is repo-owned policy. `config.local.toml` is local runtime posture and must not be treated as shared repo authority.
 

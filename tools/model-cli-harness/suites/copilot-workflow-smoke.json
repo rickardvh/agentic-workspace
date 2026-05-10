@@ -142,7 +142,7 @@
         "does not invent planning files"
       ],
       "required_executed_commands": [
-        "agentic-workspace start"
+        "uv run agentic-workspace start"
       ],
       "score_notes": [
         "Good: CLI-first orientation before broad reads.",
@@ -184,10 +184,10 @@
       "fixture": "aw-minimal-host-repo",
       "prompt": "You are about to make a narrow README edit, but do not edit files yet. Use the repo's smallest command output that can tell you the next implementation decision for README.md. Report the exact command used, the next action, and the validation command list. Avoid reading raw .agentic-workspace files unless the command output tells you to.",
       "required_executed_commands": [
-        "agentic-workspace implement --changed"
+        "uv run agentic-workspace implement --changed"
       ],
       "required_command_mentions": [
-        "agentic-workspace implement --changed"
+        "uv run agentic-workspace implement --changed"
       ],
       "forbidden_write_patterns": [
         "**/*"
@@ -232,7 +232,7 @@
         "summary.json"
       ],
       "required_command_mentions": [
-        "agentic-workspace summary"
+        "uv run agentic-workspace summary"
       ],
       "forbidden_response_phrases": [
         "/plan",
@@ -405,7 +405,7 @@
         "**"
       ],
       "required_executed_commands": [
-        "agentic-workspace start"
+        "uv run agentic-workspace start"
       ],
       "expected_signals": [
         "weak target escalates or prepares a handoff for high-judgment work",
@@ -432,13 +432,13 @@
         "ROADMAP.md"
       ],
       "required_command_mentions": [
-        "agentic-workspace config",
+        "uv run agentic-workspace config",
         "workflow_obligations",
         "improvement_latitude",
         "optimization_bias"
       ],
       "required_executed_commands": [
-        "agentic-workspace config"
+        "uv run agentic-workspace config"
       ],
       "forbidden_response_phrases": [
         "no config",
@@ -472,12 +472,12 @@
         "**"
       ],
       "required_command_mentions": [
-        "agentic-workspace start",
+        "uv run agentic-workspace start",
         "config.local.toml",
         "safe_to_auto_run_commands"
       ],
       "required_executed_commands": [
-        "agentic-workspace start"
+        "uv run agentic-workspace start"
       ],
       "forbidden_executed_commands": [
         ".agentic-workspace/config.toml",
@@ -502,13 +502,13 @@
         "**"
       ],
       "required_command_mentions": [
-        "agentic-workspace config",
+        "uv run agentic-workspace config",
         "reporting_posture",
         "improvement_latitude",
         "optimization_bias"
       ],
       "required_executed_commands": [
-        "agentic-workspace config"
+        "uv run agentic-workspace config"
       ],
       "forbidden_executed_commands": [
         "Get-Content -Path .agentic-workspace/config.toml",
@@ -550,7 +550,7 @@
         "**"
       ],
       "required_executed_commands": [
-        "agentic-workspace start"
+        "uv run agentic-workspace start"
       ],
       "expected_signals": [
         "does not equate passing tests with full intent satisfaction",

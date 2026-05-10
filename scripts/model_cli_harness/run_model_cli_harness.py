@@ -26,6 +26,7 @@ EPHEMERAL_MUTATION_PATHS = (
     ".pytest_cache/",
     ".venv/",
     "__pycache__/",
+    "uv.lock",
 )
 
 
@@ -153,6 +154,7 @@ def _prepare_fixture(*, suite_path: Path, scenario: dict[str, Any], paths: Harne
         raise FileNotFoundError(f"fixture not found: {fixture}")
     paths.run_root.mkdir(parents=True, exist_ok=False)
     shutil.copytree(fixture_path, paths.repo_path)
+    _prepare_source_checkout_invocation(paths.repo_path)
     if (paths.repo_path / ".git").exists():
         subprocess.run(  # noqa: S603
             ["git", "config", "core.longpaths", "true"],
@@ -161,6 +163,34 @@ def _prepare_fixture(*, suite_path: Path, scenario: dict[str, Any], paths: Harne
             stderr=subprocess.DEVNULL,
             check=False,
         )
+
+
+def _prepare_source_checkout_invocation(repo_path: Path) -> None:
+    if not (repo_path / ".agentic-workspace").exists():
+        return
+
+    pyproject = repo_path / "pyproject.toml"
+    if not pyproject.exists():
+        pyproject.write_text(
+            "\n".join(
+                [
+                    "[project]",
+                    'name = "agentic-workspace-eval-fixture"',
+                    'version = "0.0.0"',
+                    'requires-python = ">=3.11"',
+                    'dependencies = ["agentic-workspace"]',
+                    "",
+                    "[tool.uv.sources]",
+                    f'agentic-workspace = {{ path = "{REPO_ROOT.as_posix()}", editable = true }}',
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+    local_config = repo_path / ".agentic-workspace" / "config.local.toml"
+    if not local_config.exists():
+        local_config.write_text('[workspace]\ncli_invoke = "uv run agentic-workspace"\n', encoding="utf-8")
 
 
 def _terminate_process_tree(pid: int) -> None:
@@ -767,12 +797,7 @@ def _normalized_command_text(text: str) -> str:
 
 def _command_requirement_satisfied(*, required: str, executed_command_text: str) -> bool:
     normalized_required = _normalized_command_text(required)
-    if normalized_required in executed_command_text:
-        return True
-    bare_required = re.sub(r"(?<!\S)uv\s+run\s+(?=agentic-workspace|agentic-planning|repo-planning|repo-memory)", "", normalized_required)
-    if bare_required != normalized_required and bare_required in executed_command_text:
-        return True
-    return False
+    return normalized_required in executed_command_text
 
 
 def _provider_did_not_run(result: dict[str, Any]) -> bool:
