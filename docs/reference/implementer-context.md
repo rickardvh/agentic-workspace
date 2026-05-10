@@ -24,6 +24,18 @@ Cheap implementer context for a bounded changed-path scope.
 | `package_boundary.package_root` | string | no |  | Package root text value used by this contract. |  |  |
 | `path_boundaries` | array of ref `#/$defs/path_boundary` | yes |  | Path-specific ownership and locality constraints for the changed paths. |  |  |
 | `authority_markers` | array of ref `#/$defs/authority_marker` | yes |  | Authority markers relevant to the implementation scope. |  |  |
+| `task_intent` | object | yes |  | Task-intent carry-forward packet used to derive acceptance, proof guidance, objective-drift checks, and closeout prompts. |  |  |
+| `acceptance` | ref `#/$defs/task_acceptance` | yes |  | Definition-of-done expectations inferred from task intent. |  |  |
+| `acceptance.kind` | const `"agentic-workspace/task-acceptance/v1"` | yes |  | Discriminator for the task-intent acceptance payload. |  |  |
+| `acceptance.status` | string | yes |  | Whether acceptance was inferred from task text or is unavailable. |  |  |
+| `acceptance.source` | string | yes |  | Source used to infer the acceptance checklist. |  |  |
+| `acceptance.confidence` | string | yes |  | Confidence in the inferred definition of done. |  |  |
+| `acceptance.requested_outcomes` | array of string | yes |  | Low-level requested outcome signals extracted from task text. |  |  |
+| `acceptance.items` | array of object | yes |  | Compact definition-of-done checklist inferred from task intent. |  |  |
+| `acceptance.closeout_required` | boolean | yes |  | Whether closeout must reconcile acceptance before claiming done. |  |  |
+| `acceptance.closeout_rule` | string | yes |  | Rule for reconciling acceptance before final answer or lane closeout. |  |  |
+| `acceptance.proof_rule` | string | yes |  | Rule for selecting proof that demonstrates acceptance satisfaction. |  |  |
+| `acceptance.unresolved_questions` | array of string | yes |  | Questions that block honest acceptance reconciliation. |  |  |
 | `proof` | ref `#/$defs/proof_selection` | yes |  | Selected proof lane and validation commands for the changed paths. |  |  |
 | `proof.kind` | const `"proof-selection/v1"` | yes |  | Discriminator for changed-path proof selection. |  |  |
 | `proof.changed_paths` | array of string | yes |  | Paths used to select validation lanes. |  |  |
@@ -39,12 +51,16 @@ Cheap implementer context for a bounded changed-path scope.
 | `proof.validation_plan.next_proof` | string | yes |  | How to proceed after the current validation step. |  |  |
 | `proof.broaden_when` | array of string | yes |  | Signals that narrow proof is no longer enough. |  |  |
 | `proof.escalate_when` | array of string | yes |  | Signals that the implementer should not guess. |  |  |
+| `proof.acceptance_guidance` | object | no |  | Guidance that proof should demonstrate acceptance satisfaction, not only command success. |  |  |
 | `required_validation_commands` | array of string | yes |  | Commands that must pass before claiming implementation complete. |  |  |
 | `acceptance_reconciliation` | object | yes |  | Closeout guard against passing self-authored tests while missing requested behavior. |  |  |
 | `acceptance_reconciliation.kind` | const `"agentic-workspace/acceptance-reconciliation/v1"` | yes |  | Discriminator for the acceptance reconciliation guidance. |  |  |
 | `acceptance_reconciliation.status` | string | yes |  | Whether acceptance reconciliation is required before closeout for the current context. |  |  |
 | `acceptance_reconciliation.rule` | string | yes |  | Why validation alone is not enough for closeout. |  |  |
 | `acceptance_reconciliation.requested_outcomes` | array of string | yes |  | Concrete task outcomes available for acceptance mapping. |  |  |
+| `acceptance_reconciliation.acceptance_items` | array of object | yes |  | Definition-of-done items inferred from task intent. |  |  |
+| `acceptance_reconciliation.acceptance_item_count` | integer | yes |  | Number of acceptance items to reconcile before closeout. |  |  |
+| `acceptance_reconciliation.acceptance_closeout_rule` | string | yes |  | Acceptance-specific closeout rule for claiming done. |  |  |
 | `acceptance_reconciliation.checklist` | array of string | yes |  | Checklist for mapping requested outcomes to delivered behavior and proof. |  |  |
 | `acceptance_reconciliation.compact_closeout_prompt` | string | yes |  | Short prompt agents can use before final answer or lane closeout. |  |  |
 | `acceptance_reconciliation.task_text_available` | boolean | yes |  | Whether the CLI invocation included task text to reconcile. |  |  |
@@ -55,6 +71,8 @@ Cheap implementer context for a bounded changed-path scope.
 | `objective_drift.status` | string | yes |  | Whether requested task terms appear missing from changed surfaces. |  |  |
 | `objective_drift.reason` | string | no |  | Why no drift comparison could be made, when applicable. |  |  |
 | `objective_drift.requested_outcomes` | array of string | yes |  | Task-specific terms checked against changed files. |  |  |
+| `objective_drift.acceptance_item_count` | integer | no |  | Number of inferred acceptance items that should be reconciled before closeout. |  |  |
+| `objective_drift.acceptance_closeout_rule` | string | no |  | Acceptance-specific closeout rule carried into objective-drift guidance. |  |  |
 | `objective_drift.missing_from_changed_surface` | array of string | yes |  | Requested terms that were not observed in changed files. |  |  |
 | `objective_drift.rule` | string | no |  | Closeout rule agents should apply when drift is suspected. |  |  |
 | `objective_drift.recommended_next_action` | string | no |  | Small next step for resolving or dismissing the drift signal. |  |  |
@@ -118,6 +136,15 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.delegation_decision` | object | yes |  | Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and changed-path signals. |  |  |
 | `execution_posture.inference_limits` | array of string | yes |  | Limits that prevent the posture recommendation from becoming hidden execution authority. |  |  |
 | `durable_intent` | object | yes |  | Compact durable system or subsystem intent pressure that may affect scope, proof, delegation, or closeout. |  |  |
+| `durable_intent_promotion` | ref `#/$defs/task_intent_promotion_guidance` | yes |  | Guidance for promoting non-finishable task intent into durable memory, docs, subsystem intent, or system intent. |  |  |
+| `durable_intent_promotion.kind` | const `"agentic-workspace/task-intent-promotion-guidance/v1"` | yes |  | Discriminator for durable task-intent promotion guidance. |  |  |
+| `durable_intent_promotion.status` | string | yes |  | Whether the task intent contains durable promotion signals. |  |  |
+| `durable_intent_promotion.reason` | string | no |  | Reason promotion guidance is not applicable, when absent. |  |  |
+| `durable_intent_promotion.matched_markers` | array of string | no |  | Heuristic durable-intent markers found in task text. |  |  |
+| `durable_intent_promotion.rule` | string | no |  | Promotion rule to apply before closeout. |  |  |
+| `durable_intent_promotion.route_options` | array of object | yes |  | Candidate durable surfaces for non-finishable task intent. |  |  |
+| `durable_intent_promotion.acceptance_item_count` | integer | no |  | Number of acceptance items considered for durable promotion. |  |  |
+| `durable_intent_promotion.closeout_question` | string | no |  | Question agents should answer before discarding task intent after closeout. |  |  |
 | `delegation_decision` | object | yes |  | Top-level copy of the compact delegation decision for next-action consumers. |  |  |
 | `workflow_sufficiency` | object | no |  | Small decision record that says whether the current implementer packet is enough for the next implementation step or which exact detail field should be requested. |  |  |
 | `continuation_state` | object | no |  | Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue. |  |  |

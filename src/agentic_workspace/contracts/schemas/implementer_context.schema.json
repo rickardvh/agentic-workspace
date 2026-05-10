@@ -14,6 +14,8 @@
     "package_boundary",
     "path_boundaries",
     "authority_markers",
+    "task_intent",
+    "acceptance",
     "proof",
     "required_validation_commands",
     "acceptance_reconciliation",
@@ -24,6 +26,7 @@
     "execution_posture",
     "delegation_decision",
     "durable_intent",
+    "durable_intent_promotion",
     "handoff_requirements",
     "next_allowed_action"
   ],
@@ -85,6 +88,15 @@
         "description": "One entry in the authority markers list."
       },
       "description": "Authority markers relevant to the implementation scope."
+    },
+    "task_intent": {
+      "type": "object",
+      "description": "Task-intent carry-forward packet used to derive acceptance, proof guidance, objective-drift checks, and closeout prompts.",
+      "additionalProperties": true
+    },
+    "acceptance": {
+      "$ref": "#/$defs/task_acceptance",
+      "description": "Definition-of-done expectations inferred from task intent."
     },
     "proof": {
       "$ref": "#/$defs/proof_selection",
@@ -274,6 +286,10 @@
       "description": "Compact durable system or subsystem intent pressure that may affect scope, proof, delegation, or closeout.",
       "additionalProperties": true
     },
+    "durable_intent_promotion": {
+      "$ref": "#/$defs/task_intent_promotion_guidance",
+      "description": "Guidance for promoting non-finishable task intent into durable memory, docs, subsystem intent, or system intent."
+    },
     "delegation_decision": {
       "type": "object",
       "description": "Top-level copy of the compact delegation decision for next-action consumers.",
@@ -306,6 +322,9 @@
         "status",
         "rule",
         "requested_outcomes",
+        "acceptance_items",
+        "acceptance_item_count",
+        "acceptance_closeout_rule",
         "checklist",
         "compact_closeout_prompt",
         "task_text_available",
@@ -331,6 +350,23 @@
             "description": "One explicit symbol or outcome extracted from the task text."
           },
           "description": "Concrete task outcomes available for acceptance mapping."
+        },
+        "acceptance_items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "One inferred acceptance item to reconcile before closeout."
+          },
+          "description": "Definition-of-done items inferred from task intent."
+        },
+        "acceptance_item_count": {
+          "type": "integer",
+          "description": "Number of acceptance items to reconcile before closeout."
+        },
+        "acceptance_closeout_rule": {
+          "type": "string",
+          "description": "Acceptance-specific closeout rule for claiming done."
         },
         "checklist": {
           "type": "array",
@@ -385,6 +421,14 @@
             "description": "One requested symbol or concrete outcome extracted from the task text."
           },
           "description": "Task-specific terms checked against changed files."
+        },
+        "acceptance_item_count": {
+          "type": "integer",
+          "description": "Number of inferred acceptance items that should be reconciled before closeout."
+        },
+        "acceptance_closeout_rule": {
+          "type": "string",
+          "description": "Acceptance-specific closeout rule carried into objective-drift guidance."
         },
         "missing_from_changed_surface": {
           "type": "array",
@@ -549,10 +593,165 @@
             "description": "Condition that requires escalation or stronger review."
           },
           "description": "Signals that the implementer should not guess."
+        },
+        "acceptance_guidance": {
+          "type": "object",
+          "description": "Guidance that proof should demonstrate acceptance satisfaction, not only command success.",
+          "additionalProperties": true
         }
       },
       "additionalProperties": true,
       "description": "Changed-path proof selection and validation plan."
+    },
+    "task_acceptance": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "source",
+        "confidence",
+        "requested_outcomes",
+        "items",
+        "closeout_required",
+        "closeout_rule",
+        "proof_rule",
+        "unresolved_questions"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/task-acceptance/v1",
+          "description": "Discriminator for the task-intent acceptance payload."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether acceptance was inferred from task text or is unavailable."
+        },
+        "source": {
+          "type": "string",
+          "description": "Source used to infer the acceptance checklist."
+        },
+        "confidence": {
+          "type": "string",
+          "description": "Confidence in the inferred definition of done."
+        },
+        "requested_outcomes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Low-level requested outcome signals extracted from task text."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "expectation",
+              "proof_hint",
+              "status",
+              "source"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Stable local acceptance item identifier."
+              },
+              "expectation": {
+                "type": "string",
+                "description": "Definition-of-done expectation to satisfy or explicitly route."
+              },
+              "proof_hint": {
+                "type": "string",
+                "description": "Compact hint for selecting proof that demonstrates this expectation."
+              },
+              "status": {
+                "type": "string",
+                "description": "Current reconciliation state for this acceptance item."
+              },
+              "source": {
+                "type": "string",
+                "description": "Source signal that produced this acceptance item."
+              }
+            },
+            "additionalProperties": false,
+            "description": "One inferred acceptance expectation."
+          },
+          "description": "Compact definition-of-done checklist inferred from task intent."
+        },
+        "closeout_required": {
+          "type": "boolean",
+          "description": "Whether closeout must reconcile acceptance before claiming done."
+        },
+        "closeout_rule": {
+          "type": "string",
+          "description": "Rule for reconciling acceptance before final answer or lane closeout."
+        },
+        "proof_rule": {
+          "type": "string",
+          "description": "Rule for selecting proof that demonstrates acceptance satisfaction."
+        },
+        "unresolved_questions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Questions that block honest acceptance reconciliation."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Task-intent-derived definition of done."
+    },
+    "task_intent_promotion_guidance": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "route_options"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/task-intent-promotion-guidance/v1",
+          "description": "Discriminator for durable task-intent promotion guidance."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether the task intent contains durable promotion signals."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason promotion guidance is not applicable, when absent."
+        },
+        "matched_markers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Heuristic durable-intent markers found in task text."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Promotion rule to apply before closeout."
+        },
+        "route_options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Candidate durable surfaces for non-finishable task intent."
+        },
+        "acceptance_item_count": {
+          "type": "integer",
+          "description": "Number of acceptance items considered for durable promotion."
+        },
+        "closeout_question": {
+          "type": "string",
+          "description": "Question agents should answer before discarding task intent after closeout."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Guidance for promoting durable task intent to memory, docs, subsystem intent, or system intent."
     },
     "validation_plan": {
       "type": "object",

@@ -302,7 +302,17 @@
     },
     "task_intent": {
       "type": "object",
-      "description": "Compact task-intent carry-forward guidance for subsequent implement --changed calls.",
+      "description": "Compact task-intent carry-forward guidance for subsequent implement --changed calls, including acceptance expectations when task text is present.",
+      "additionalProperties": true
+    },
+    "acceptance": {
+      "type": "object",
+      "description": "Definition-of-done expectations inferred from task intent for selector-first startup drill-down.",
+      "additionalProperties": true
+    },
+    "durable_intent_promotion": {
+      "type": "object",
+      "description": "Guidance for promoting non-finishable task intent into durable memory, docs, subsystem intent, or system intent.",
       "additionalProperties": true
     },
     "intent_acknowledgement": {

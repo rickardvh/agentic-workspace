@@ -48,6 +48,7 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
     assert payload["delegation_decision"] == payload["execution_posture"]["delegation_decision"]
     assert payload["delegation_decision"]["mode"] in {"suggest", "auto"}
     assert payload["acceptance_reconciliation"]["requested_outcomes"] == []
+    assert payload["acceptance"]["status"] == "unavailable"
     assert payload["objective_drift"]["status"] == "unavailable"
     assert "quality" in payload["execution_posture"]["quality_tradeoff"]
     assert "Token saving" in payload["execution_posture"]["token_tradeoff"]
@@ -92,6 +93,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert "make lint-workspace" in payload["next"]["commands"]
     assert payload["scope"]["inspect_files"] == ["src/agentic_workspace/cli.py"]
     assert "make test-workspace" in payload["proof"]["required_commands"]
+    assert payload["proof"]["acceptance_guidance"]["status"] == "present"
     assert payload["routing"]["work_shape"] == "bounded"
     acknowledgement = payload["intent_acknowledgement"]
     assert acknowledgement["decision"] == "proceed-with-stated-assumption"
@@ -105,12 +107,14 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert payload["delegation_decision"]["status"] == "evaluated"
     assert payload["delegation_decision"]["mode"] in {"suggest", "auto"}
     assert payload["acceptance_reconciliation"]["task_text_available"] is True
+    assert payload["acceptance"]["status"] == "inferred"
+    assert payload["acceptance"]["closeout_required"] is True
     assert payload["objective_drift"]["status"] in {"clear", "not-enough-explicit-outcomes"}
     assert "package_boundary" not in payload
     assert "authority_markers" not in payload
     assert "durable_intent" not in payload
     assert "inference_limits" not in payload
-    assert len(encoded) < 4950
+    assert len(encoded) < 5900
 
 
 def test_cli_invoke_rewrites_package_sibling_commands_when_repo_local() -> None:
@@ -147,8 +151,12 @@ def test_implement_task_file_preserves_task_intent_for_acceptance_checks(tmp_pat
     )
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["acceptance"]["items"][0]["id"] == "A1"
+    assert "normalize_whitespace" in payload["acceptance"]["items"][0]["expectation"]
+    assert payload["proof"]["acceptance_guidance"]["acceptance_item_count"] >= 2
     assert payload["acceptance_reconciliation"]["task_text_available"] is True
     assert payload["acceptance_reconciliation"]["requested_outcomes"] == ["normalize_whitespace", "sentence_summary"]
+    assert payload["acceptance_reconciliation"]["acceptance_item_count"] >= 2
     assert payload["objective_drift"]["missing_from_changed_surface"] == ["normalize_whitespace", "sentence_summary"]
 
 
@@ -202,6 +210,7 @@ def test_implement_task_specific_acceptance_warns_on_objective_drift(tmp_path: P
                 "src/sample_app/text.py",
                 "--task",
                 "Implement normalize_whitespace(text) and sentence_summary(text)",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -213,9 +222,12 @@ def test_implement_task_specific_acceptance_warns_on_objective_drift(tmp_path: P
     acceptance = payload["acceptance_reconciliation"]
     assert acceptance["task_text_available"] is True
     assert acceptance["requested_outcomes"] == ["normalize_whitespace", "sentence_summary"]
+    assert acceptance["acceptance_items"][0]["status"] == "unchecked"
+    assert "acceptance/requested" in acceptance["compact_closeout_prompt"]
     drift = payload["objective_drift"]
     assert drift["status"] == "warning"
     assert drift["missing_from_changed_surface"] == ["normalize_whitespace", "sentence_summary"]
+    assert drift["acceptance_item_count"] >= 2
     assert "self-authored tests alone" in acceptance["compact_closeout_prompt"]
 
 

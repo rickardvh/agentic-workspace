@@ -10194,12 +10194,17 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "warning_count": task_recommendations.get("warning_count", 0),
         }
     if isinstance(task_intent, dict) and task_intent.get("status") == "present":
+        acceptance = task_intent.get("acceptance", {})
         projected["task_intent"] = {
             "status": "present",
             "carry_forward_rule": task_intent.get("carry_forward_rule", ""),
             "requested_outcomes": task_intent.get("requested_outcomes", [])[:8],
+            "acceptance": _tiny_acceptance_payload(acceptance),
             "implement_changed_command": task_intent.get("implement_changed_command"),
         }
+        projected["acceptance"] = _tiny_acceptance_payload(acceptance)
+        if isinstance(task_intent.get("promotion_guidance"), dict):
+            projected["durable_intent_promotion"] = _tiny_task_intent_promotion_guidance(task_intent["promotion_guidance"])
         for optional_key in (
             "task_argument_mode",
             "task_file",
@@ -10705,6 +10710,8 @@ def _start_payload(
     task_intent = _task_intent_carry_forward_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if task_intent["status"] == "present":
         payload["task_intent"] = task_intent
+        payload["acceptance"] = task_intent["acceptance"]
+        payload["durable_intent_promotion"] = task_intent["promotion_guidance"]
     task_mentioned_paths = _task_mentioned_existing_paths(task_text=task_text, target_root=target_root)
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
@@ -10934,6 +10941,8 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "active_state_summary",
         "skill_routing",
         "task_intent",
+        "acceptance",
+        "durable_intent_promotion",
         "delegation_decision",
         "intent_acknowledgement",
         "workflow_sufficiency",
@@ -11035,7 +11044,32 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str) -
             ],
         }
     if "task_intent" in payload:
-        selected["task_intent"] = payload["task_intent"]
+        task_intent = payload["task_intent"]
+        selected["task_intent"] = {
+            "status": task_intent.get("status", "unknown") if isinstance(task_intent, dict) else "unknown",
+            "carry_forward_rule": task_intent.get("carry_forward_rule", "") if isinstance(task_intent, dict) else "",
+            "requested_outcomes": task_intent.get("requested_outcomes", [])[:8] if isinstance(task_intent, dict) else [],
+            "acceptance": _tiny_acceptance_payload(task_intent.get("acceptance", {})) if isinstance(task_intent, dict) else {},
+            "implement_changed_command": task_intent.get("implement_changed_command") if isinstance(task_intent, dict) else None,
+            "task_argument_mode": task_intent.get("task_argument_mode") if isinstance(task_intent, dict) else None,
+        }
+        for optional_key in (
+            "task_file",
+            "task_file_instruction",
+            "task_excerpt",
+            "task_digest",
+            "task_text_length",
+        ):
+            if isinstance(task_intent, dict) and optional_key in task_intent:
+                selected["task_intent"][optional_key] = task_intent[optional_key]
+        if isinstance(task_intent, dict) and "acceptance" in task_intent:
+            selected["acceptance"] = _tiny_acceptance_payload(task_intent["acceptance"])
+        if (
+            isinstance(task_intent, dict)
+            and isinstance(task_intent.get("promotion_guidance"), dict)
+            and task_intent["promotion_guidance"].get("status") == "candidate"
+        ):
+            selected["durable_intent_promotion"] = _tiny_task_intent_promotion_guidance(task_intent["promotion_guidance"])
     delegation = payload.get("delegation_decision", {})
     if isinstance(delegation, dict) and delegation.get("decision") not in {"", None, "stay-local"}:
         selected["delegation_decision"] = delegation
@@ -11206,6 +11240,8 @@ def _start_tiny_payload_fast(
     task_intent = _task_intent_carry_forward_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if task_intent["status"] == "present":
         payload["task_intent"] = task_intent
+        payload["acceptance"] = task_intent["acceptance"]
+        payload["durable_intent_promotion"] = task_intent["promotion_guidance"]
     task_mentioned_paths = _task_mentioned_existing_paths(task_text=task_text, target_root=target_root)
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
@@ -11512,6 +11548,135 @@ def _extract_requested_outcomes(task_text: str | None) -> list[str]:
     return outcomes[:12]
 
 
+def _task_excerpt(text: str, *, limit: int = 140) -> str:
+    compact = " ".join(str(text or "").split())
+    if len(compact) <= limit:
+        return compact
+    return compact[: max(0, limit - 3)].rstrip() + "..."
+
+
+def _task_acceptance_payload(*, task_text: str | None, requested_outcomes: list[str] | None = None) -> dict[str, Any]:
+    task = " ".join(str(task_text or "").split())
+    outcomes = list(requested_outcomes if requested_outcomes is not None else _extract_requested_outcomes(task))
+    has_task = bool(task)
+    items: list[dict[str, Any]] = []
+
+    def add_item(expectation: str, proof_hint: str, *, source: str) -> None:
+        items.append(
+            {
+                "id": f"A{len(items) + 1}",
+                "expectation": expectation,
+                "proof_hint": proof_hint,
+                "status": "unchecked",
+                "source": source,
+            }
+        )
+
+    if outcomes:
+        for outcome in outcomes[:5]:
+            add_item(
+                f"Requested outcome `{outcome}` is delivered or explicitly marked out of scope.",
+                "Inspect the changed behavior/surface and run the selected proof command that exercises this outcome.",
+                source="requested_outcomes",
+            )
+    elif has_task:
+        add_item(
+            f"Delivered behavior satisfies the requested task intent: {_task_excerpt(task)}",
+            "Compare the final diff and proof result against the original task text before closeout.",
+            source="task_text",
+        )
+
+    if has_task:
+        add_item(
+            "User-visible behavior, documentation, or workflow output changed in the way the task requested.",
+            "Name the delivered surface and the validation or inspection that proves it.",
+            source="task_text",
+        )
+        add_item(
+            "Any deferred, narrowed, or intentionally changed scope is stated before claiming completion.",
+            "List gaps/deviations in closeout; do not hide them behind passing tests.",
+            source="closeout_guard",
+        )
+
+    return {
+        "kind": "agentic-workspace/task-acceptance/v1",
+        "status": "inferred" if has_task else "unavailable",
+        "source": "task-text" if has_task else "none",
+        "confidence": "medium" if has_task else "none",
+        "requested_outcomes": outcomes,
+        "items": items,
+        "closeout_required": has_task,
+        "closeout_rule": (
+            "Before claiming done, mark each acceptance item satisfied, deferred, changed, or not applicable with proof or explanation."
+            if has_task
+            else "Provide task intent before closeout if acceptance is not obvious from the changed scope."
+        ),
+        "proof_rule": "Proof should demonstrate acceptance satisfaction, not only command success.",
+        "unresolved_questions": [],
+    }
+
+
+def _task_intent_promotion_guidance_payload(*, task_text: str | None, acceptance: dict[str, Any] | None = None) -> dict[str, Any]:
+    task = " ".join(str(task_text or "").split())
+    if not task:
+        return {
+            "kind": "agentic-workspace/task-intent-promotion-guidance/v1",
+            "status": "not-applicable",
+            "reason": "no task text was provided",
+            "route_options": [],
+        }
+    normalized = task.lower()
+    durable_markers = (
+        "should",
+        "must",
+        "always",
+        "never",
+        "prefer",
+        "optimi",
+        "easy to",
+        "auditable",
+        "invariant",
+        "system intent",
+        "subsystem",
+        "durable",
+        "over time",
+        "going forward",
+        "from now on",
+    )
+    matched = [marker for marker in durable_markers if marker in normalized]
+    status = "candidate" if matched else "no-durable-signal"
+    items = acceptance.get("items", []) if isinstance(acceptance, dict) else []
+    return {
+        "kind": "agentic-workspace/task-intent-promotion-guidance/v1",
+        "status": status,
+        "matched_markers": matched[:6],
+        "rule": (
+            "If task intent expresses a lasting direction rather than a finishable task, route the reusable part to Memory, docs, "
+            "subsystem intent, or system intent before closeout."
+        ),
+        "route_options": [
+            {
+                "target": "memory",
+                "use_when": "The task revealed durable repo knowledge, traps, or decisions that future agents would otherwise rediscover.",
+            },
+            {
+                "target": "subsystem-intent",
+                "use_when": "The task describes a lasting direction or invariant for one owned subsystem.",
+            },
+            {
+                "target": "system-intent",
+                "use_when": "The task describes package-wide purpose, quality direction, or invariant behavior.",
+            },
+            {
+                "target": "docs",
+                "use_when": "The task changes user-facing explanation, reference behavior, or maintainable operating guidance.",
+            },
+        ],
+        "acceptance_item_count": len(items) if isinstance(items, list) else 0,
+        "closeout_question": "Does any acceptance item encode durable intent that should survive beyond this task?",
+    }
+
+
 def _task_mentioned_existing_paths(*, task_text: str | None, target_root: Path) -> list[str]:
     text = str(task_text or "")
     if not text.strip():
@@ -11544,6 +11709,8 @@ def _task_intent_carry_forward_payload(*, task_text: str | None, cli_invoke: str
     task = str(task_text or "").strip()
     has_task = bool(task)
     requested_outcomes = _extract_requested_outcomes(task)
+    acceptance = _task_acceptance_payload(task_text=task, requested_outcomes=requested_outcomes)
+    promotion_guidance = _task_intent_promotion_guidance_payload(task_text=task, acceptance=acceptance)
     command = "agentic-workspace implement --changed <paths> --format json"
     task_argument_mode = "absent"
     optional: dict[str, Any] = {}
@@ -11574,6 +11741,8 @@ def _task_intent_carry_forward_payload(*, task_text: str | None, cli_invoke: str
         "task_text_available": has_task,
         "task_argument_mode": task_argument_mode,
         "requested_outcomes": requested_outcomes,
+        "acceptance": acceptance,
+        "promotion_guidance": promotion_guidance,
         "implement_changed_command": _command_with_cli_invoke(command=command, cli_invoke=cli_invoke),
         "closeout_rule": "Before closeout, map requested outcomes to delivered surfaces and proof; self-authored tests alone are not enough.",
         **optional,
@@ -11715,12 +11884,14 @@ def _read_changed_surface_text(*, target_root: Path, changed_paths: list[str], m
 
 def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None) -> dict[str, Any]:
     requested_outcomes = _extract_requested_outcomes(task_text)
+    acceptance = _task_acceptance_payload(task_text=task_text, requested_outcomes=requested_outcomes)
     if not task_text:
         return {
             "kind": "agentic-workspace/objective-drift/v1",
             "status": "unavailable",
             "reason": "no task text was provided to compare against changed surfaces",
             "requested_outcomes": [],
+            "acceptance_item_count": 0,
             "missing_from_changed_surface": [],
         }
     if not requested_outcomes:
@@ -11729,6 +11900,8 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
             "status": "not-enough-explicit-outcomes",
             "reason": "task text did not contain explicit symbols, code identifiers, or backticked outcomes",
             "requested_outcomes": [],
+            "acceptance_item_count": len(acceptance.get("items", [])),
+            "acceptance_closeout_rule": acceptance.get("closeout_rule", ""),
             "missing_from_changed_surface": [],
         }
     surface_text = _read_changed_surface_text(target_root=target_root, changed_paths=changed_paths)
@@ -11739,8 +11912,10 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
         "kind": "agentic-workspace/objective-drift/v1",
         "status": status,
         "requested_outcomes": requested_outcomes,
+        "acceptance_item_count": len(acceptance.get("items", [])),
+        "acceptance_closeout_rule": acceptance.get("closeout_rule", ""),
         "missing_from_changed_surface": missing,
-        "rule": "Do not claim completion until each requested outcome is mapped to delivered behavior and proof, or explicitly marked out of scope.",
+        "rule": "Do not claim completion until each acceptance item and requested outcome is mapped to delivered behavior and proof, or explicitly marked out of scope.",
         "recommended_next_action": (
             "Inspect changed files, exports, docs, and tests for the missing requested outcomes before closeout."
             if status == "warning"
@@ -11772,6 +11947,16 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         changed_paths=normalized_paths,
         task_text=task_text,
     )
+    task_intent = _task_intent_carry_forward_payload(task_text=task_text, cli_invoke=config.cli_invoke)
+    acceptance = task_intent["acceptance"]
+    promotion_guidance = task_intent["promotion_guidance"]
+    if isinstance(proof, dict):
+        proof["acceptance_guidance"] = {
+            "status": "present" if acceptance.get("closeout_required") else "not-task-scoped",
+            "rule": acceptance.get("proof_rule", "Proof should demonstrate acceptance satisfaction, not only command success."),
+            "acceptance_item_count": len(acceptance.get("items", [])),
+            "closeout_required": acceptance.get("closeout_required", False),
+        }
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     implement_current_need = "changed-path-implementation" if normalized_paths else "unknown-scope-routing"
     payload = {
@@ -11838,9 +12023,12 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         "package_boundary": _package_boundary_payload(target_root=target_root),
         "path_boundaries": path_boundaries,
         "authority_markers": [_authority_marker_for_path(path) for path in (normalized_paths or ["AGENTS.md", "llms.txt"])],
+        "task_intent": task_intent,
+        "acceptance": acceptance,
+        "durable_intent_promotion": promotion_guidance,
         "proof": proof,
         "required_validation_commands": proof["required_commands"],
-        "acceptance_reconciliation": _acceptance_reconciliation_prompt_payload(task_text=task_text),
+        "acceptance_reconciliation": _acceptance_reconciliation_prompt_payload(task_text=task_text, acceptance=acceptance),
         "intent_acknowledgement": _intent_acknowledgement_payload(
             task_text=task_text,
             execution_posture=execution_posture,
@@ -11989,10 +12177,21 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             if isinstance(payload.get("proof"), dict)
             else "proof-selection/v1",
             "required_commands": payload.get("required_validation_commands", []),
+            "acceptance_guidance": payload.get("proof", {}).get("acceptance_guidance", {})
+            if isinstance(payload.get("proof"), dict)
+            else {},
             "detail_command": "agentic-workspace proof --verbose --changed <paths> --format json",
         },
+        "task_intent": {
+            "status": payload.get("task_intent", {}).get("status", "absent") if isinstance(payload.get("task_intent"), dict) else "absent",
+            "requested_outcomes": payload.get("task_intent", {}).get("requested_outcomes", [])
+            if isinstance(payload.get("task_intent"), dict)
+            else [],
+        },
+        "acceptance": _tiny_acceptance_payload(payload.get("acceptance", {})),
         "acceptance_reconciliation": _tiny_acceptance_reconciliation(payload.get("acceptance_reconciliation", {})),
         "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
+        "durable_intent_promotion": _tiny_task_intent_promotion_guidance(payload.get("durable_intent_promotion", {})),
         "routing": {
             "task_status": task_routing.get("status") if isinstance(task_routing, dict) else None,
             "work_shape": capability.get("work_shape"),
@@ -12020,7 +12219,62 @@ def _tiny_acceptance_reconciliation(value: Any) -> dict[str, Any]:
         "status": value.get("status", "unknown"),
         "task_text_available": bool(value.get("task_text_available")),
         "requested_outcomes": value.get("requested_outcomes", []),
+        "acceptance_item_count": value.get("acceptance_item_count", 0),
+        "acceptance_closeout_rule": value.get("acceptance_closeout_rule", ""),
         "compact_closeout_prompt": value.get("compact_closeout_prompt", ""),
+    }
+
+
+def _tiny_acceptance_payload(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    items = value.get("items", [])
+    compact_items = []
+    if isinstance(items, list):
+        for item in items[:2]:
+            if not isinstance(item, dict):
+                continue
+            compact_items.append(
+                {
+                    "id": item.get("id"),
+                    "expectation": _task_excerpt(str(item.get("expectation", "")), limit=92),
+                    "proof_hint": _task_excerpt(str(item.get("proof_hint", "")), limit=80),
+                    "status": item.get("status"),
+                }
+            )
+    return {
+        "kind": value.get("kind", "agentic-workspace/task-acceptance/v1"),
+        "status": value.get("status", "unknown"),
+        "source": value.get("source", "unknown"),
+        "confidence": value.get("confidence", "unknown"),
+        "requested_outcomes": value.get("requested_outcomes", []),
+        "items": compact_items,
+        "item_count": len(items) if isinstance(items, list) else 0,
+        "closeout_required": bool(value.get("closeout_required")),
+        "proof_rule": value.get("proof_rule", ""),
+    }
+
+
+def _tiny_task_intent_promotion_guidance(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    if value.get("status") != "candidate":
+        return {
+            "kind": value.get("kind", "agentic-workspace/task-intent-promotion-guidance/v1"),
+            "status": value.get("status", "unknown"),
+            "matched_markers": value.get("matched_markers", []),
+        }
+    route_options = value.get("route_options", [])
+    return {
+        "kind": value.get("kind", "agentic-workspace/task-intent-promotion-guidance/v1"),
+        "status": value.get("status", "unknown"),
+        "matched_markers": value.get("matched_markers", []),
+        "route_options": [
+            {"target": item.get("target"), "use_when": _task_excerpt(str(item.get("use_when", "")), limit=80)}
+            for item in route_options[:4]
+            if isinstance(item, dict)
+        ],
+        "closeout_question": value.get("closeout_question", ""),
     }
 
 
@@ -12035,22 +12289,27 @@ def _tiny_objective_drift(value: Any) -> dict[str, Any]:
     }
 
 
-def _acceptance_reconciliation_prompt_payload(*, task_text: str | None) -> dict[str, Any]:
+def _acceptance_reconciliation_prompt_payload(*, task_text: str | None, acceptance: dict[str, Any] | None = None) -> dict[str, Any]:
     has_task = bool(str(task_text or "").strip())
     requested_outcomes = _extract_requested_outcomes(task_text)
+    acceptance_payload = acceptance or _task_acceptance_payload(task_text=task_text, requested_outcomes=requested_outcomes)
+    acceptance_items = acceptance_payload.get("items", []) if isinstance(acceptance_payload, dict) else []
     return {
         "kind": "agentic-workspace/acceptance-reconciliation/v1",
         "status": "required-before-closeout" if has_task else "required-when-task-intent-is-known",
         "rule": "Validation success is not enough; before closeout, reconcile requested outcomes against delivered behavior and tests.",
         "requested_outcomes": requested_outcomes,
+        "acceptance_items": acceptance_items,
+        "acceptance_item_count": len(acceptance_items) if isinstance(acceptance_items, list) else 0,
+        "acceptance_closeout_rule": acceptance_payload.get("closeout_rule", "") if isinstance(acceptance_payload, dict) else "",
         "checklist": [
-            "list each explicit user requirement or accepted planning criterion",
+            "list each acceptance item, explicit user requirement, or accepted planning criterion",
             "name the delivered surface or behavior for each requirement",
             "name proof covering each requirement, or mark the gap",
             "state intentional deviations before claiming success",
         ],
         "compact_closeout_prompt": (
-            "Before final answer: requested -> delivered -> proof -> gaps/deviations. "
+            "Before final answer: acceptance/requested -> delivered -> proof -> gaps/deviations. "
             "Do not claim completion from self-authored tests alone."
         ),
         "task_text_available": has_task,

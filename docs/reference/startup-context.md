@@ -88,7 +88,9 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `memory_consult` | object | no |  | Memory lookup guidance for durable repo knowledge when startup context says it is relevant. |  |  |
 | `operating_posture` | object | no |  | Compact statement of the current operating mode and risk posture. |  |  |
 | `delegation_decision` | object | no |  | Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and task signals. |  |  |
-| `task_intent` | object | no |  | Compact task-intent carry-forward guidance for subsequent implement --changed calls. |  |  |
+| `task_intent` | object | no |  | Compact task-intent carry-forward guidance for subsequent implement --changed calls, including acceptance expectations when task text is present. |  |  |
+| `acceptance` | object | no |  | Definition-of-done expectations inferred from task intent for selector-first startup drill-down. |  |  |
+| `durable_intent_promotion` | object | no |  | Guidance for promoting non-finishable task intent into durable memory, docs, subsystem intent, or system intent. |  |  |
 | `intent_acknowledgement` | object | no |  | Guidance for the middle path between silent inference and clarification halt: state inferred intent, first slice, non-goals, and correction point before non-direct work. |  |  |
 | `durable_intent` | object | no |  | Compact durable task, subsystem, and system intent pressure to consider before implementation. |  |  |
 | `skill_routing` | ref `#/$defs/skill_routing` | yes |  | Skill-discovery route and fallback guidance for task-specific instructions. |  |  |

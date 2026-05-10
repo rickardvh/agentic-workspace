@@ -462,6 +462,8 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert payload["active_state_summary"]["todo_active_count"] >= 0
     assert payload["immediate_next_allowed_action"]["action"] in {"choose-smallest-workflow-shape", "continue-active-planning-record"}
     assert "implement --changed <paths>" in payload["task_intent"]["implement_changed_command"]
+    assert payload["task_intent"]["acceptance"]["status"] == "inferred"
+    assert payload["acceptance"]["closeout_required"] is True
     assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
     assert payload["task_intent"]["status"] == "present"
     assert payload["task_intent"]["implement_changed_command"] == (
@@ -479,7 +481,7 @@ def test_start_default_returns_selector_first_router(capsys) -> None:
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload, sort_keys=True)
-    assert len(encoded) < 3600
+    assert len(encoded) < 4600
     assert payload["kind"] == "startup-context/v1"
     assert "adaptive_routing" not in payload
     assert "context_router" not in payload
@@ -493,6 +495,10 @@ def test_start_default_returns_selector_first_router(capsys) -> None:
     assert payload["task_intent"]["implement_changed_command"] == (
         f'uv run agentic-workspace implement --changed <paths> --task "{task}" --format json'
     )
+    assert payload["acceptance"]["items"]
+    assert payload["acceptance"]["items"][0]["status"] == "unchecked"
+    assert "acceptance" in payload["drill_down"]["available_selectors"]
+    assert "durable_intent_promotion" in payload["drill_down"]["available_selectors"]
     assert "available_selectors" in payload["drill_down"]
     assert "cli_invocation" in payload["drill_down"]["available_selectors"]
 
@@ -507,6 +513,21 @@ def test_start_select_returns_requested_startup_fields(capsys) -> None:
     assert payload["values"]["cli_invocation"]["primary"] == "uv run agentic-workspace"
     assert payload["missing"] == ["durable_intent.missing"]
     assert "skill_routing" in payload["available_selectors"]
+
+
+def test_start_select_returns_acceptance_and_durable_promotion(capsys) -> None:
+    task = "Default outputs should stay compact and drill-down based going forward"
+    assert cli.main(["start", "--task", task, "--select", "acceptance,durable_intent_promotion", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    acceptance = payload["values"]["acceptance"]
+    assert acceptance["status"] == "inferred"
+    assert acceptance["closeout_required"] is True
+    assert acceptance["items"][0]["id"] == "A1"
+    promotion = payload["values"]["durable_intent_promotion"]
+    assert promotion["status"] == "candidate"
+    assert "should" in promotion["matched_markers"]
+    assert "going forward" in promotion["matched_markers"]
 
 
 def test_start_tiny_flags_repo_local_cli_invocation_mismatch(tmp_path: Path, capsys) -> None:
