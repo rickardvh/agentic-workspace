@@ -51,6 +51,25 @@ def test_command_contracts_do_not_expose_profile_flags() -> None:
     ]
 
 
+def test_current_agent_facing_surfaces_do_not_teach_profile_flags() -> None:
+    root = Path(__file__).resolve().parents[1]
+    skill_roots = [
+        root / "packages" / "planning" / "skills",
+        root / ".agentic-workspace" / "planning" / "skills",
+        root / "tools" / "model-cli-harness" / "fixtures",
+    ]
+
+    offenders = [
+        path.relative_to(root).as_posix()
+        for skill_root in skill_roots
+        for path in skill_root.rglob("*")
+        if path.is_file() and path.suffix in {".md", ".toml", ".json"}
+        if "--profile" in path.read_text(encoding="utf-8")
+    ]
+
+    assert offenders == []
+
+
 def test_contract_inventory_declares_owner_choice_model() -> None:
     manifest = contract_tooling.contract_inventory_manifest()
     concern_classes = {entry["id"]: entry for entry in manifest["owner_choice_model"]["concern_classes"]}

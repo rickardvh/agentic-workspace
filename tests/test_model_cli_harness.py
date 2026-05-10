@@ -263,6 +263,18 @@ def test_model_cli_harness_dry_run_copies_fixture_and_renders_command(tmp_path: 
     assert payload["package_read_surface_summary"]["status"] == "absent"
 
 
+def test_model_cli_harness_fallback_workflows_stop_when_cli_unavailable() -> None:
+    fixture_root = REPO_ROOT / "tools" / "model-cli-harness" / "fixtures"
+    workflow_files = list(fixture_root.glob("*/.agentic-workspace/WORKFLOW.md"))
+
+    assert workflow_files
+    for workflow_file in workflow_files:
+        text = workflow_file.read_text(encoding="utf-8")
+        assert "If the CLI is unavailable" in text
+        assert "Do not search planning directories, templates, schemas, or unrelated repo files" in text
+        assert "validation commands are unavailable until the command can run" in text
+
+
 def test_model_cli_harness_records_explicit_completion_followthrough() -> None:
     harness = _load_harness()
 
@@ -833,6 +845,33 @@ def test_model_cli_harness_marks_missing_shell_tool_as_adapter_limitation(tmp_pa
     )
 
     assert "model_cli_adapter_tooling_limitation" in {warning["warning_class"] for warning in warnings}
+
+
+def test_model_cli_harness_warns_on_raw_planning_before_fallback_workflow(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._execution_warnings(
+        result={
+            "returncode": 0,
+            "stdout": ("I will list `.agentic-workspace/planning` first.\nLater I read `.agentic-workspace/WORKFLOW.md`.\n"),
+            "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
+        },
+        repo_path=repo,
+        mutation_summary={"status": "clean"},
+    )
+    signals = harness._quality_signals(
+        scenario_id="next-decision-output-profile",
+        result={"stdout": "agentic-workspace implement --changed README.md --format json"},
+        mutation_summary={"status": "clean"},
+        warnings=warnings,
+    )
+
+    classes = {warning["warning_class"] for warning in warnings}
+    assert "model_cli_adapter_tooling_limitation" in classes
+    assert "model_cli_raw_workspace_before_fallback" in classes
+    assert any(signal["id"] == "read_surface_under_read" and signal["status"] == "weak" for signal in signals)
 
 
 def test_model_cli_harness_skips_semantic_scoring_when_model_did_not_answer() -> None:

@@ -188,7 +188,7 @@ WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
 WORKSPACE_POINTER_BLOCK = (
     f"{WORKSPACE_WORKFLOW_MARKER_START}\n"
-    'For non-trivial requests with known changed paths, first run `agentic-workspace implement --changed <paths> --format json`; otherwise run `agentic-workspace start --task "<task>" --format json` using the user\'s request as `<task>`. Follow `immediate_next_allowed_action` and `skill_routing` before opening raw `.agentic-workspace` files. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If unavailable, read `.agentic-workspace/WORKFLOW.md`.\n'
+    'For non-trivial requests with known changed paths, first run `agentic-workspace implement --changed <paths> --format json`; otherwise run `agentic-workspace start --task "<task>" --format json` using the user\'s request as `<task>`. Follow `immediate_next_allowed_action` and `skill_routing` before opening raw `.agentic-workspace` files. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If the CLI is unavailable, immediately read `.agentic-workspace/WORKFLOW.md` before any other files.\n'
     f"{WORKSPACE_WORKFLOW_MARKER_END}"
 )
 EMBEDDED_WORKFLOW_HEADINGS = (

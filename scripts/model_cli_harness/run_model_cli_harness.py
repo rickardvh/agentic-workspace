@@ -793,6 +793,27 @@ def _agentic_workspace_tooling_unavailable(result: dict[str, Any]) -> bool:
     )
 
 
+def _raw_planning_before_fallback_workflow(result: dict[str, Any]) -> bool:
+    text = _full_response_text(result).lower().replace("\\", "/")
+    raw_markers = (
+        ".agentic-workspace/planning",
+        "planning/execplans",
+        "planning/decompositions",
+        "planning/schemas",
+    )
+    raw_positions = [text.find(marker) for marker in raw_markers if text.find(marker) >= 0]
+    if not raw_positions:
+        return False
+    workflow_positions = [
+        text.find(marker)
+        for marker in (".agentic-workspace/workflow.md", "workflow.md")
+        if text.find(marker) >= 0
+    ]
+    first_raw = min(raw_positions)
+    first_workflow = min(workflow_positions) if workflow_positions else -1
+    return first_workflow == -1 or first_raw < first_workflow
+
+
 def _is_diagnostic_command_output(path: str) -> bool:
     name = Path(path.replace("\\", "/")).name.lower()
     return bool(re.fullmatch(r"summary(?:[_-]full|[_-]?\d*)?\.json", name))
@@ -1143,11 +1164,18 @@ def _read_surface_quality_signals(
         )
     else:
         unclear = "did not report" in warning_text or "not report" in warning_text
+        raw_before_fallback = "raw workspace before fallback" in warning_text or "raw planning surfaces before" in warning_text
         signals.append(
             {
                 "id": "read_surface_under_read",
-                "status": "weak" if unclear and not (used_start or used_implement or used_summary) else "satisfied",
-                "evidence": "warnings suggested missing workflow evidence" if unclear else "no missing-workflow warning signal",
+                "status": "weak" if raw_before_fallback or (unclear and not (used_start or used_implement or used_summary)) else "satisfied",
+                "evidence": (
+                    "raw Planning surface was inspected before fallback workflow"
+                    if raw_before_fallback
+                    else "warnings suggested missing workflow evidence"
+                    if unclear
+                    else "no missing-workflow warning signal"
+                ),
             }
         )
         signals.append(
@@ -1808,6 +1836,13 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
                 "message": "The model CLI could not execute an Agentic Workspace command through its tool layer.",
             }
         )
+        if _raw_planning_before_fallback_workflow(result):
+            warnings.append(
+                {
+                    "warning_class": "model_cli_raw_workspace_before_fallback",
+                    "message": "The model inspected raw Planning surfaces before using the fallback workflow after the workspace CLI was unavailable.",
+                }
+            )
     if re.search(r"\b[A-Za-z]:\\temp\\", combined_text, flags=re.IGNORECASE):
         warnings.append(
             {

@@ -13,7 +13,7 @@ Use this skill after implementation of planned work, before closing the issue or
 2. Decide whether original intent is fully satisfied, partially satisfied, or blocked.
 3. Distill what should survive: future work to Planning, durable knowledge to Memory, stable guidance to docs, enforceable behavior to tests/contracts/config, and tracker follow-up to issues.
 4. Use `agentic-planning archive-plan <plan> --target . --prepare-closeout --apply-cleanup --format json` when the plan is done.
-5. Run `agentic-workspace summary --target . --format json --profile compact` after archive cleanup.
+5. Run `agentic-workspace summary --target . --format json` after archive cleanup.
 
 ## Guardrails
 
