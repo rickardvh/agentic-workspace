@@ -78,6 +78,13 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Return only one top-level defaults section in the compact contract profile.",
             "name": "section"
+          },
+          {
+            "flags": [
+              "--select"
+            ],
+            "help": "Return only comma-separated top-level or dotted JSON fields from the defaults payload. Prefer this over --verbose when one or a few fields are needed.",
+            "name": "select"
           }
         ]
       },
@@ -1863,6 +1870,13 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Return only one top-level defaults section in the compact contract profile.",
           "name": "section"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Return only comma-separated top-level or dotted JSON fields from the defaults payload. Prefer this over --verbose when one or a few fields are needed.",
+          "name": "select"
         }
       ]
     },

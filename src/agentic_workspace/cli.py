@@ -10956,7 +10956,27 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "path_boundaries",
         "drill_down",
     ]
-    return [selector for selector in preferred if selector in payload]
+    selectors = [selector for selector in preferred if selector in payload]
+    if selectors:
+        return selectors
+
+    discovered: list[str] = []
+
+    def visit(value: Any, prefix: str) -> None:
+        if len(discovered) >= 50:
+            return
+        if isinstance(value, dict):
+            for key in value:
+                path = f"{prefix}.{key}" if prefix else str(key)
+                discovered.append(path)
+                if len(discovered) >= 50:
+                    return
+                child = value[key]
+                if isinstance(child, dict):
+                    visit(child, path)
+
+    visit(payload, "")
+    return discovered
 
 
 def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict[str, Any]:
@@ -17205,12 +17225,14 @@ def _tiny_defaults_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _emit_defaults(*, format_name: str, section: str | None = None, profile: str = "tiny") -> None:
+def _emit_defaults(*, format_name: str, section: str | None = None, profile: str = "tiny", select: str | None = None) -> None:
     payload = _defaults_payload()
     if section is not None:
         payload = _select_defaults_section(payload, section=section)
     elif profile == "tiny":
         payload = _tiny_defaults_payload(payload)
+    if select is not None:
+        payload = _select_payload_fields(payload, select=select, source_command="defaults")
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
         return
@@ -17707,7 +17729,12 @@ def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) ->
 
 
 def _run_defaults_report_adapter(args: argparse.Namespace) -> int:
-    _emit_defaults(format_name=args.format, section=getattr(args, "section", None), profile=_diagnostic_profile(args, default="tiny"))
+    _emit_defaults(
+        format_name=args.format,
+        section=getattr(args, "section", None),
+        profile=_diagnostic_profile(args, default="tiny"),
+        select=getattr(args, "select", None),
+    )
     return 0
 
 

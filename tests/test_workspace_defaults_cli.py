@@ -526,10 +526,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
 
 
 def test_defaults_command_routes_through_generated_adapter(monkeypatch, capsys) -> None:
-    calls: list[tuple[str, str, str | None]] = []
+    calls: list[tuple[str, str, str | None, str | None]] = []
 
     def fake_defaults_handler(args) -> int:
-        calls.append((args.command, args.format, getattr(args, "section", None)))
+        calls.append((args.command, args.format, getattr(args, "section", None), getattr(args, "select", None)))
         print('{"ok": true}')
         return 0
 
@@ -538,7 +538,7 @@ def test_defaults_command_routes_through_generated_adapter(monkeypatch, capsys) 
     assert cli.main(["defaults", "--profile", "full", "--section", "startup", "--format", "json"]) == 0
 
     assert json.loads(capsys.readouterr().out) == {"ok": True}
-    assert calls == [("defaults", "json", "startup")]
+    assert calls == [("defaults", "json", "startup", None)]
 
 
 def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -> None:
@@ -857,6 +857,41 @@ def test_defaults_section_selector_returns_root_cli_authority_audit(capsys) -> N
     )
     assert answer["direct_cli_edit_routing"]["route_to_contract_when"]
     assert answer["direct_cli_edit_routing"]["review_requires"]
+
+
+def test_defaults_supports_selector_drilldown_for_full_payload(capsys) -> None:
+    assert (
+        cli.main(["defaults", "--profile", "full", "--select", "startup.canonical_doc,root_cli_authority.command", "--format", "json"]) == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["source_command"] == "defaults"
+    assert payload["values"] == {
+        "startup.canonical_doc": ".agentic-workspace/docs/minimum-operating-model.md",
+        "root_cli_authority.command": "agentic-workspace defaults --section root_cli_authority --format json",
+    }
+    assert "available_selectors" not in payload
+
+
+def test_defaults_supports_selector_drilldown_for_section_payload(capsys) -> None:
+    assert cli.main(["defaults", "--section", "root_cli_authority", "--select", "answer.command", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["source_command"] == "defaults"
+    assert payload["values"] == {
+        "answer.command": "agentic-workspace defaults --section root_cli_authority --format json",
+    }
+
+
+def test_defaults_selector_reports_available_fields_for_missing_selector(capsys) -> None:
+    assert cli.main(["defaults", "--section", "root_cli_authority", "--select", "answer.nope", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["missing"] == ["answer.nope"]
+    assert "answer.command" in payload["available_selectors"]
 
 
 def test_defaults_section_selector_returns_optimization_bias_answer(capsys) -> None:

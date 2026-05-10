@@ -287,6 +287,13 @@
             "--section"
           ],
           "help": "Return only one top-level defaults section in the compact contract profile."
+        },
+        {
+          "name": "select",
+          "flags": [
+            "--select"
+          ],
+          "help": "Return only comma-separated top-level or dotted JSON fields from the defaults payload. Prefer this over --verbose when one or a few fields are needed."
         }
       ],
       "role": "core_context_router",
