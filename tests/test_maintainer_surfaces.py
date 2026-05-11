@@ -15,10 +15,6 @@ def _render_script_path() -> Path:
     return WORKSPACE_ROOT / "scripts" / "render_agent_docs.py"
 
 
-def _render_handoff_script_path() -> Path:
-    return WORKSPACE_ROOT / "scripts" / "render_external_agent_handoff.py"
-
-
 def _load_module(path: Path, module_name: str):
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
@@ -47,7 +43,7 @@ def _baseline_manifest() -> dict[str, object]:
             ],
             "surface_roles": [
                 "`.agentic-workspace/docs/routing-contract.md` is the authoritative routing home.",
-                "`llms.txt` is the agent entrypoint router.",
+                "`AGENTS.md` is the agent entrypoint router.",
             ],
             "boundary_triggered_escalation": [
                 {
@@ -123,24 +119,6 @@ def _write_planning_surfaces(tmp_path: Path) -> None:
 <!-- agentic-workspace:workflow:start -->
 Before answering or editing non-trivial requests, including read-only workflow, config, delegation, or action-safety decisions, use the effective CLI invocation from `agentic-workspace start --format json`, `.agentic-workspace/config.toml` `[workspace].cli_invoke`, or `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present. Run `<effective-cli> implement --changed <paths> --task "<task>" --format json` when changed paths are known; otherwise run `<effective-cli> start --task "<task>" --format json` using the user's request as `<task>`. Do not substitute a bare `agentic-workspace` command when resolved config names a repo-local or dev-dependency invocation; PATH may resolve a stale installed selector. Do not open raw `.agentic-workspace` files before this command; follow `immediate_next_allowed_action` and `skill_routing` first. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If the CLI is unavailable, immediately read `.agentic-workspace/WORKFLOW.md` before any other files.
 <!-- agentic-workspace:workflow:end -->
-""",
-    )
-    _write(
-        tmp_path / "llms.txt",
-        """
-# Agent Entrypoint Router
-
-Generated compatibility adapter.
-
-Ordinary path:
-- Read `AGENTS.md` first.
-- Run `agentic-workspace start --task "<task>" --format json` for compact startup context.
-- Run `agentic-workspace proof --changed <paths> --format json` before claiming validation.
-
-When needed:
-- Add `--select <field[,field...]>` when one or two exact fields are needed.
-- Add `--verbose` only for broad diagnostics.
-- Open raw planning or contract files only when compact commands point there.
 """,
     )
     _write(
@@ -264,6 +242,7 @@ For maintainers:
 - `docs/maintainer/maintainer-commands.md` - canonical command index for routine maintenance.
 - `docs/collaboration-safety.md` - concurrent-edit and git hygiene rules.
 - `docs/maintainer/installed-contract-design-checklist.md` - review bar for new or changed shipped surfaces.
+- `docs/maintainer/dogfooding-feedback.md` - classify internal friction before routing it onward.
 - `.agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md` - classify internal friction before routing it onward.
 - `docs/workflow-contract-changes.md` - compact record of recent workflow-surface changes.
 
@@ -501,26 +480,3 @@ def test_rendered_routing_adapter_stays_secondary_and_compact() -> None:
     assert "uv run agentic-workspace preflight --format json" not in text
     assert "uv run agentic-workspace report --target . --format json" not in text
     assert len(text.splitlines()) <= 20
-
-
-def test_render_external_agent_handoff_updates_stale_llms_adapter(tmp_path: Path) -> None:
-    mod = _load_module(_render_handoff_script_path(), "maintainer_render_handoff")
-    _write(tmp_path / "AGENTS.md", "# Agent Instructions\n")
-    _write(tmp_path / "llms.txt", "# stale handoff\n")
-
-    result = mod.render_external_agent_handoff(target_root=tmp_path)
-
-    assert result == {"status": "updated", "path": "llms.txt"}
-    text = (tmp_path / "llms.txt").read_text(encoding="utf-8")
-    assert "Authority marker:" in text
-    assert "refresh_command: `make maintainer-surfaces`" in text
-
-
-def test_render_external_agent_handoff_reports_current_when_adapter_matches(tmp_path: Path) -> None:
-    mod = _load_module(_render_handoff_script_path(), "maintainer_render_handoff_current")
-    _write(tmp_path / "AGENTS.md", "# Agent Instructions\n")
-
-    mod.render_external_agent_handoff(target_root=tmp_path)
-    result = mod.render_external_agent_handoff(target_root=tmp_path)
-
-    assert result == {"status": "current", "path": "llms.txt"}

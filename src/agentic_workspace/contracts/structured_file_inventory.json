@@ -817,16 +817,6 @@
   ],
   "generated_mirrors": [
     {
-      "pattern": "llms.txt",
-      "source_command": "make render-external-agent-handoff",
-      "named_consumer": "external agents and runtimes that look for the conventional llms.txt handoff file",
-      "checked_in_justification": "Stable compatibility entrypoint for agents that cannot run package discovery before first contact.",
-      "freshness_check": "make maintainer-surfaces",
-      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --task \"<task>\" --format json -> summary/proof as needed",
-      "removal_or_demotion_path": "remove when external-agent handoff conventions no longer require a stable root file",
-      "max_bytes": 4000
-    },
-    {
       "pattern": ".agentic-workspace/planning/agent-manifest.json",
       "source_command": "uv run agentic-planning doctor --target . --format json",
       "named_consumer": "installed planning module lifecycle and root maintainer-surface renderers",
@@ -909,4 +899,3 @@
     "platform-tooling"
   ]
 }
-

@@ -2,6 +2,8 @@
 
 Agentic Workspace is for repositories where agent work must survive time: multiple sessions, tools, branches, contributors, or non-trivial proof expectations. It adds a small repo-native operating layer so agents can preserve intent, recover context, validate changes, and hand off safely without relying on chat history.
 
+Installing into another repo? Start with [`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md). Do not clone this source repo into a temporary folder as the host-repo install strategy.
+
 The simplest mental model is temporary technical contributors. Agents can move quickly, but they enter and leave a codebase with partial local context. Agentic Workspace gives the repo a small checked-in way to onboard them, bound their work, preserve useful lessons, and make handoff reviewable.
 
 ## Why Use It?
@@ -89,7 +91,7 @@ That compact answer routes the agent to Memory, Planning, proof, report, doctor,
 agentic-workspace summary --format json
 ```
 
-The generated startup files, including `AGENTS.md` and `llms.txt`, are thin adapters over the structured workspace state. They should point agents at the right compact command instead of becoming a second operating manual.
+The generated startup file, normally `AGENTS.md`, is a thin adapter over the structured workspace state. It should point agents at the right compact command instead of becoming a second operating manual.
 
 ## Boundaries
 

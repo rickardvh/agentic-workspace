@@ -89,7 +89,11 @@ def test_ownership_diagnostics_report_startup_adapter_drift_and_ambiguity(tmp_pa
         + "\n\nAuthoritative source of truth for this sprint.\nCurrent task handoff: continue the checkout redesign.\n",
         encoding="utf-8",
     )
-    _write(target / "llms.txt", "Authoritative source of truth for external agents.\n", encoding="utf-8")
+    workflow_path = target / ".agentic-workspace" / "WORKFLOW.md"
+    workflow_path.write_text(
+        workflow_path.read_text(encoding="utf-8") + "\n\nAuthoritative source of truth for external agents.\n",
+        encoding="utf-8",
+    )
 
     assert cli.main(["ownership", "--target", str(target), "--format", "json"]) == 0
 
@@ -100,7 +104,7 @@ def test_ownership_diagnostics_report_startup_adapter_drift_and_ambiguity(tmp_pa
     assert findings["startup-adapter-active-state"]["concern"] == "active execution state"
     assert findings["startup-adapter-active-state"]["suspected_drift_surface"] == "AGENTS.md"
     assert findings["startup-authority-ambiguous"]["status"] == "ambiguous-owner"
-    assert set(findings["startup-authority-ambiguous"]["claimed_by"]) >= {"AGENTS.md", "llms.txt"}
+    assert set(findings["startup-authority-ambiguous"]["claimed_by"]) >= {"AGENTS.md", ".agentic-workspace/WORKFLOW.md"}
 
 
 def test_ownership_diagnostics_report_missing_config_owner(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -232,19 +236,19 @@ def test_ownership_path_selector_includes_host_repo_subsystems(tmp_path: Path, m
     assert answer["subsystems"][1]["does_not_own"] == ["catalog pricing"]
 
 
-def test_ownership_path_answer_includes_authority_marker_and_boundary_warning(capsys) -> None:
-    assert cli.main(["ownership", "--path", "llms.txt", "--format", "json"]) == 0
+def test_ownership_path_answer_for_install_doc_is_repo_owned(capsys) -> None:
+    assert cli.main(["ownership", "--path", "docs/agentic-workspace-install.md", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
     assert answer["authority_marker"] == {
-        "path": "llms.txt",
-        "authority": "generated-adapter",
-        "canonical_source": "src/agentic_workspace/cli.py:_external_agent_handoff_text",
-        "safe_to_edit": False,
-        "refresh_command": "make maintainer-surfaces",
+        "path": "docs/agentic-workspace-install.md",
+        "authority": "repo-owned",
+        "canonical_source": "docs/agentic-workspace-install.md",
+        "safe_to_edit": True,
+        "refresh_command": None,
     }
-    assert answer["boundary_warning"]["requires_attention"] is True
+    assert answer["boundary_warning"]["requires_attention"] is False
 
 
 def test_authority_marker_policy_representative_paths_match_runtime() -> None:

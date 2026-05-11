@@ -14,7 +14,6 @@
   "subsystem_intent_kind": "agentic-workspace/subsystem-intent-set/v1",
   "default_agents_path": "AGENTS.md",
   "handoff_surfaces": [
-    "llms.txt",
     ".agentic-workspace/bootstrap-handoff.md",
     ".agentic-workspace/bootstrap-handoff.json"
   ],

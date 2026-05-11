@@ -249,7 +249,7 @@ def _build_cases(target_root: Path) -> list[MeasurementCase]:
                 kind="file_bundle",
                 label="setup prose bundle",
                 detail="Broader setup/jumpstart and lifecycle guidance read path.",
-                paths=("llms.txt", "docs/init-lifecycle.md", "docs/jumpstart-contract.md"),
+                paths=("docs/agentic-workspace-install.md", "docs/init-lifecycle.md", "docs/jumpstart-contract.md"),
             ),
         ),
     ]

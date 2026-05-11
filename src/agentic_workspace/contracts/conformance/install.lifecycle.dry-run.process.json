@@ -125,8 +125,7 @@
       ],
       "forbidden_paths": [
         ".agentic-workspace",
-        "AGENTS.md",
-        "llms.txt"
+        "AGENTS.md"
       ]
     },
     "idempotency": {

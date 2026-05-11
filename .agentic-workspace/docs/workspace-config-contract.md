@@ -125,7 +125,7 @@ The structured substrate is authoritative.
 The following prose surfaces are compatibility adapters and routing bridges:
 
 - `AGENTS.md`
-- `llms.txt`
+- `docs/agentic-workspace-install.md`
 - generated helper guidance exposed through compact report/default surfaces
 
 They should:

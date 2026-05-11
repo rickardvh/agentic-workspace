@@ -18,7 +18,6 @@ SCHEMA_PATH = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "schemas" 
 STRUCTURED_SUFFIXES = frozenset({".json", ".toml", ".yaml", ".yml"})
 GENERATED_MIRROR_REQUIRED_PATHS = frozenset(
     {
-        "llms.txt",
         "tools/agent-manifest.json",
         "tools/AGENT_QUICKSTART.md",
         "tools/AGENT_ROUTING.md",

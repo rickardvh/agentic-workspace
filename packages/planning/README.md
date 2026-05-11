@@ -98,7 +98,7 @@ pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdir
 Prefer the root Workspace command for host repos. Use these module-only commands when you are maintaining Planning itself, debugging the module boundary, or performing a narrow package-level operation after Workspace has established repo context. Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
 
 Use `prompt install` for a clean bootstrap. Use `adopt` when the repository already has planning-like docs and you want the package to merge conservatively around existing surfaces.
-After workspace bootstrap, `llms.txt` is the canonical external-agent handoff surface and `.agentic-workspace/bootstrap-handoff.md` is the next-action brief when the repo still needs review.
+After workspace bootstrap, `docs/agentic-workspace-install.md` is the canonical external-agent install handoff and `.agentic-workspace/bootstrap-handoff.md` is the next-action brief when the repo still needs review.
 
 ## Advanced Package Path
 

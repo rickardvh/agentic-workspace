@@ -107,8 +107,7 @@
         ".agentic-workspace/WORKFLOW.md"
       ],
       "forbidden_paths": [
-        "AGENTS.md",
-        "llms.txt"
+        "AGENTS.md"
       ]
     },
     "idempotency": {

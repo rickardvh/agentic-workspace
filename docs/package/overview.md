@@ -17,7 +17,7 @@ The root package ships:
 - package-managed workspace skills for first-contact startup, routing, proof, closeout, and module-boundary orientation;
 - machine-readable contracts under `src/agentic_workspace/contracts/`;
 - JSON schemata and generated reference docs for those contracts;
-- thin startup adapters such as `AGENTS.md` and `llms.txt` when installed into a host repository.
+- a thin startup adapter such as `AGENTS.md` when installed into a host repository.
 
 The root package currently depends on the first-party Planning and Memory packages so one command can orchestrate ordinary lifecycle work. Presets control the checked-in repository footprint, not the Python dependency graph.
 

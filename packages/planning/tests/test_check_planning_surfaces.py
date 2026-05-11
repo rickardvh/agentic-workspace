@@ -326,8 +326,8 @@ def _baseline_manifest() -> dict[str, object]:
                 "Open deeper surfaces only when the small model stops being sufficient.",
             ],
             "surface_roles": [
-                "`.agentic-workspace/docs/agent-installation.md` is only the external install/adopt handoff surface.",
-                "`llms.txt` is the agent entrypoint router.",
+                "`docs/agentic-workspace-install.md` is only the external install/adopt handoff surface.",
+                "`AGENTS.md` is the agent entrypoint router.",
             ],
             "boundary_triggered_escalation": [
                 {
@@ -551,8 +551,7 @@ def _write_startup_surfaces(
     manifest: dict[str, object] | None = None,
 ) -> None:
     _write(tmp_path / "AGENTS.md", _baseline_agents())
-    _write(tmp_path / "llms.txt", _baseline_llms())
-    _write(tmp_path / "docs" / "agent-installation.md", _baseline_install())
+    _write(tmp_path / "docs" / "agentic-workspace-install.md", _baseline_install())
     _write(tmp_path / "README.md", readme or _baseline_readme())
     _write(
         tmp_path / "docs" / "maintainer" / "contributor-playbook.md",

@@ -63,7 +63,6 @@ from agentic_workspace.config import (
     WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH,
     WORKSPACE_CONFIG_PATH,
     WORKSPACE_DELEGATION_OUTCOMES_PATH,
-    WORKSPACE_EXTERNAL_AGENT_PATH,
     WORKSPACE_LOCAL_CONFIG_PATH,
     WORKSPACE_LOCAL_INTEGRATION_ALLOWED_AID_KINDS,
     WORKSPACE_LOCAL_INTEGRATION_BOUNDARY_RULES,
@@ -2754,13 +2753,6 @@ def _repair_recovery_taxonomy_payload() -> dict[str, Any]:
                 "fault_classes": ["agent_operation_fault", "package_command_bug"],
             },
             {
-                "id": "workspace.external_handoff_current",
-                "owner": "workspace",
-                "severity": "warning",
-                "repair_class": "safe-deterministic",
-                "fault_classes": ["generated_artifact_drift", "package_command_bug"],
-            },
-            {
                 "id": "workspace.startup_pointer_present",
                 "owner": "repo",
                 "severity": "warning",
@@ -2873,7 +2865,6 @@ def _workspace_repair_payload(
     repair_actions: list[dict[str, Any]] = []
     manual_review_actions: list[dict[str, Any]] = []
     missing_workspace_surfaces: list[str] = []
-    generated_handoff_surfaces: list[str] = []
     missing_startup_surfaces: list[str] = []
     pointer_surfaces: list[str] = []
     absolute_path_surfaces: list[str] = []
@@ -2886,8 +2877,6 @@ def _workspace_repair_payload(
         detail = str(action.get("detail", ""))
         if kind == "missing" and path in {relative.as_posix() for relative in WORKSPACE_PAYLOAD_FILES}:
             missing_workspace_surfaces.append(path)
-        if path == WORKSPACE_EXTERNAL_AGENT_PATH.as_posix() and kind in {"missing", "warning"}:
-            generated_handoff_surfaces.append(path)
         if kind == "missing" and "root startup entrypoint missing" in detail:
             missing_startup_surfaces.append(path)
         if "workspace workflow pointer block missing" in detail:
@@ -2919,26 +2908,6 @@ def _workspace_repair_payload(
                 ],
             )
         )
-    if generated_handoff_surfaces:
-        repair_actions.append(
-            _workspace_safe_repair_action(
-                id="refresh-generated-agent-handoff",
-                invariant="workspace.external_handoff_current",
-                fault_class="generated_artifact_drift",
-                owner="workspace",
-                target_root=target_root,
-                cli_invoke=cli_invoke,
-                affected_surfaces=generated_handoff_surfaces,
-                current_fault_summary="Generated external-agent handoff surface is missing or stale.",
-                risk="low; refreshes generated adapter text from declared workspace/module state",
-                do_not=[
-                    "Do not make llms.txt a second handbook.",
-                    "Do not edit generated adapter doctrine instead of refreshing from source authority.",
-                ],
-                dry_run_first=True,
-            )
-        )
-
     for surface in missing_startup_surfaces:
         manual_review_actions.append(
             _workspace_manual_review_action(
@@ -3374,14 +3343,6 @@ def _workspace_status_report(
 ) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
-    installed_modules = [
-        module_name for module_name in _ordered_module_names(descriptors) if descriptors[module_name].detector(target_root)
-    ]
-    expected_handoff = _external_agent_handoff_text(
-        selected_modules=installed_modules or selected_modules,
-        agent_instructions_file=config.agent_instructions_file,
-        workflow_artifact_profile=config.workflow_artifact_profile,
-    )
     agents_relative = Path(config.agent_instructions_file)
 
     for relative in WORKSPACE_PAYLOAD_FILES:
@@ -3468,44 +3429,6 @@ def _workspace_status_report(
                 }
             )
 
-    handoff_path = target_root / WORKSPACE_EXTERNAL_AGENT_PATH
-    if not handoff_path.exists():
-        actions.append(
-            {
-                "kind": "warning",
-                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
-                "detail": "canonical external-agent handoff file missing",
-            }
-        )
-        warnings.append(
-            {
-                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
-                "message": "canonical external-agent handoff file missing",
-            }
-        )
-    elif handoff_path.read_text(encoding="utf-8") != expected_handoff:
-        actions.append(
-            {
-                "kind": "warning",
-                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
-                "detail": "external-agent handoff file differs from the current workspace contract",
-            }
-        )
-        warnings.append(
-            {
-                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
-                "message": "external-agent handoff file differs from the current workspace contract",
-            }
-        )
-    else:
-        actions.append(
-            {
-                "kind": "current",
-                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
-                "detail": "canonical external-agent handoff file present",
-            }
-        )
-
     policy_actions, policy_warnings = _sync_update_policy_actions(
         target_root=target_root,
         selected_modules=selected_modules,
@@ -3562,88 +3485,12 @@ def _write_action_kind(*, dry_run: bool, existing: str | None) -> str:
     return "created" if existing is None else "updated"
 
 
-def _external_agent_handoff_text(
-    *,
-    selected_modules: list[str],
-    agent_instructions_file: str = DEFAULT_AGENT_INSTRUCTIONS_FILE,
-    workflow_artifact_profile: str = DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
-) -> str:
-    artifact_profile = _workflow_artifact_profile_payload(workflow_artifact_profile)
-    lines = [
-        "# Agent Entrypoint Router",
-        "",
-        "Authority marker:",
-        "",
-        "- authority: generated-adapter",
-        "- canonical_source: `src/agentic_workspace/cli.py:_external_agent_handoff_text`",
-        "- safe_to_edit: false",
-        "- refresh_command: `make maintainer-surfaces`",
-        "",
-        "Generated compatibility adapter. Canonical startup behavior lives in `AGENTS.md`, workspace contracts, and compact commands.",
-        "",
-        "Ordinary path:",
-        f"- Read `{agent_instructions_file}` first.",
-        '- Run `agentic-workspace start --task "<task>" --format json` for compact startup context.',
-        "- Run `agentic-workspace summary --format json` when active work or roadmap state matters.",
-        "- Run `agentic-workspace proof --changed <paths> --format json` before claiming validation.",
-        "",
-        "When needed:",
-        "- `agentic-workspace preflight --format json` for takeover context.",
-        "- `agentic-workspace config --target ./repo --format json` for configured posture or obligations.",
-        "- Add `--select <field[,field...]>` when one or two exact fields are needed.",
-        "- Add `--verbose` only for broad diagnostics.",
-        "- Open raw planning or contract files only when compact commands point there.",
-        "",
-        "Preferred lifecycle commands:",
-        "- Prefer an installed `agentic-workspace` CLI from the target repo's environment.",
-        "- `agentic-workspace defaults --section install_profiles --format json`",
-    ]
-    if selected_modules == ["planning"]:
-        lines.append("- `agentic-workspace install --target ./repo --preset planning`")
-    elif selected_modules == ["memory"]:
-        lines.append("- `agentic-workspace install --target ./repo --preset memory`")
-    else:
-        lines.append("- `agentic-workspace install --target ./repo --preset memory`")
-        lines.append("- `agentic-workspace install --target ./repo --preset planning`")
-        lines.append("- `agentic-workspace install --target ./repo --preset full`")
-        lines.append("- Use `full` only when both Memory and Planning are explicitly desired.")
-    lines.extend(
-        [
-            "- `agentic-workspace config --target ./repo --format json`",
-            "- `agentic-workspace summary --format json`",
-            "- `agentic-workspace report --target ./repo --format json`",
-            "",
-            "Rules:",
-            "- Keep this file lightweight.",
-            "- Keep planning and memory ownership boundaries explicit.",
-            "- Keep canonical authority in contracts, config, planning, Memory, and checks, not this adapter.",
-            f"- Workflow artifact profile: {artifact_profile['profile']}.",
-            f"- {artifact_profile['sync_rule']}",
-            "",
-            "Success means:",
-            f"- `{agent_instructions_file}` remains the repo startup entrypoint",
-            "- `llms.txt` stays aligned with the installed workspace contract",
-            "",
-        ]
-    )
-    return "\n".join(lines)
-
-
-def _external_agent_handoff_text_for_target(*, target_root: Path) -> str:
-    descriptors = _module_operations()
-    config = _load_workspace_config(target_root=target_root, descriptors=descriptors)
-    selected_modules, _resolved_preset = _selected_modules(
-        command_name="report",
-        preset_name=None,
-        module_arg=None,
-        target_root=target_root,
-        descriptors=descriptors,
-        config=config,
-    )
-    return _external_agent_handoff_text(
-        selected_modules=selected_modules,
-        agent_instructions_file=config.agent_instructions_file,
-        workflow_artifact_profile=config.workflow_artifact_profile,
+def _is_retired_generated_llms_adapter(text: str) -> bool:
+    lowered = text.lower()
+    return (
+        "canonical_source: `src/agentic_workspace/cli.py:_external_agent_handoff_text`" in lowered
+        or "generated compatibility adapter" in lowered
+        or "agent entrypoint router" in lowered
     )
 
 
@@ -3660,7 +3507,8 @@ LOCAL_AGENT_REFERENCE_LINE = f"Follow instructions in `{LOCAL_AGENT_INSTRUCTIONS
 EXTERNAL_INTENT_CACHE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 EXTERNAL_INTENT_PLANNING_RELATIVE_PATH = Path(".agentic-workspace") / "planning" / "external-intent-evidence.json"
 EXTERNAL_INTENT_CACHE_CLOSED_RETENTION_DAYS = 7
-LOCAL_ONLY_IGNORE_BLOCK = "# Agentic Workspace local-only storage\n.agentic-workspace/\n"
+LOCAL_ONLY_IGNORE_BLOCK = "# Agentic Workspace local-only storage\n.agentic-workspace/\nAGENTS.local.md\n"
+LEGACY_LOCAL_ONLY_IGNORE_BLOCKS = ("# Agentic Workspace local-only storage\n.agentic-workspace/\n",)
 LOCAL_ONLY_STATE_FILE = Path(".agentic-workspace") / "LOCAL-ONLY.toml"
 
 
@@ -3969,14 +3817,16 @@ def _remove_local_only_git_exclude(*, repo_root: Path, dry_run: bool) -> dict[st
 def _remove_legacy_local_only_gitignore(*, repo_root: Path, dry_run: bool) -> dict[str, str]:
     gitignore_path = repo_root / ".gitignore"
     existing_text = gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
-    if LOCAL_ONLY_IGNORE_BLOCK not in existing_text:
+    removable_blocks = (LOCAL_ONLY_IGNORE_BLOCK, *LEGACY_LOCAL_ONLY_IGNORE_BLOCKS)
+    matched_block = next((block for block in removable_blocks if block in existing_text), None)
+    if matched_block is None:
         return {
             "kind": "skipped",
             "path": ".gitignore",
             "detail": "no legacy local-only workspace ignore block to remove",
         }
 
-    rendered_text = existing_text.replace(LOCAL_ONLY_IGNORE_BLOCK, "")
+    rendered_text = existing_text.replace(matched_block, "")
     if not rendered_text.strip():
         if not dry_run and gitignore_path.exists():
             gitignore_path.unlink()
@@ -4064,12 +3914,6 @@ def _workspace_init_or_upgrade_report(
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     conservative = inspection_mode != "install" and command_name == "init"
-    handoff_text = _external_agent_handoff_text(
-        selected_modules=selected_modules,
-        agent_instructions_file=config.agent_instructions_file,
-        workflow_artifact_profile=config.workflow_artifact_profile,
-    )
-
     config_action = _seed_workspace_config_action(
         target_root=target_root,
         resolved_preset=resolved_preset,
@@ -4212,41 +4056,27 @@ def _workspace_init_or_upgrade_report(
             }
         )
 
-    handoff_destination = target_root / WORKSPACE_EXTERNAL_AGENT_PATH
-    existing_handoff = handoff_destination.read_text(encoding="utf-8") if handoff_destination.exists() else None
-    if local_only_repo_root is not None:
-        actions.append(
-            {
-                "kind": "skipped",
-                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
-                "detail": "local-only startup uses AGENTS.local.md and does not create a root external-agent handoff",
-            }
-        )
-    elif existing_handoff == handoff_text:
-        actions.append(
-            {
-                "kind": "current",
-                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
-                "detail": "canonical external-agent handoff already current",
-            }
-        )
-    elif conservative and existing_handoff is not None:
-        actions.append(
-            {
-                "kind": "manual review",
-                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
-                "detail": "existing external-agent handoff differs from the managed workspace contract",
-            }
-        )
-    else:
-        _write_generated_text(destination=handoff_destination, text=handoff_text, dry_run=dry_run)
-        actions.append(
-            {
-                "kind": _write_action_kind(dry_run=dry_run, existing=existing_handoff),
-                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
-                "detail": "refresh canonical external-agent handoff surface",
-            }
-        )
+    legacy_llms_path = target_root / "llms.txt"
+    if legacy_llms_path.exists():
+        legacy_llms_text = legacy_llms_path.read_text(encoding="utf-8")
+        if _is_retired_generated_llms_adapter(legacy_llms_text):
+            if not dry_run:
+                legacy_llms_path.unlink()
+            actions.append(
+                {
+                    "kind": "would remove" if dry_run else "removed",
+                    "path": "llms.txt",
+                    "detail": "remove retired generated llms.txt adapter; AGENTS.md is the startup surface and docs/agentic-workspace-install.md is the public install handoff",
+                }
+            )
+        else:
+            actions.append(
+                {
+                    "kind": "manual review",
+                    "path": "llms.txt",
+                    "detail": "legacy llms.txt exists but is not recognized as the retired generated adapter",
+                }
+            )
 
     actions.append(_ensure_local_scratch(target_root=target_root, dry_run=dry_run))
 
@@ -4733,11 +4563,7 @@ def _inspect_repo_state(
         overlap_count=overlap_count,
         workflow_overlap_count=len(detected_workflow_surfaces),
         startup_surface_count=len(config.detected_agent_instructions_files),
-        handoff_surface_count=sum(
-            1
-            for surface in detected_state_surfaces
-            if surface in {WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(), WORKSPACE_BOOTSTRAP_HANDOFF_PATH.as_posix()}
-        ),
+        handoff_surface_count=sum(1 for surface in detected_state_surfaces if surface == WORKSPACE_BOOTSTRAP_HANDOFF_PATH.as_posix()),
         partial_state=partial_state,
         placeholders=placeholders,
     )
@@ -5731,7 +5557,7 @@ def _classify_lifecycle_action(*, path: str, action_kind: str, detail: str, comm
     if action_kind in {"would update", "updated", "overwritten", "would overwrite", "would replace", "replaced"}:
         if "optional" in detail_l:
             return "optional enabled", detail or "Optional managed surface is enabled or refreshed."
-        if path_l.startswith(".agentic-workspace/") or path in {"AGENTS.md", "llms.txt"}:
+        if path_l.startswith(".agentic-workspace/") or path == "AGENTS.md":
             return "core refreshed", detail or "Core managed lifecycle surface is refreshed."
         return "product-managed replaced", detail or "Product-managed surface is replaced."
     if action_kind in {"created", "copied", "would create", "would copy"}:
@@ -7594,7 +7420,7 @@ def _artifact_footprint_by_class(*, target: Any) -> dict[str, Any]:
         return len(files), [_relative_posix(path, target_root) for path in files[:5]]
 
     def _large_docs() -> tuple[int, list[str]]:
-        candidates = [path for path in [target_root / "README.md", target_root / "AGENTS.md", target_root / "llms.txt"] if path.is_file()]
+        candidates = [path for path in [target_root / "README.md", target_root / "AGENTS.md"] if path.is_file()]
         docs_root = target_root / "docs"
         if docs_root.exists():
             candidates.extend(path for path in docs_root.rglob("*.md") if path.is_file())
@@ -9892,8 +9718,6 @@ def _authority_marker_for_path(path_text: str) -> dict[str, Any]:
     normalized = _normalize_changed_paths([path_text])[0] if _normalize_changed_paths([path_text]) else path_text
     if normalized == "AGENTS.md":
         return _authority_marker_payload(marker_id="root-agent-instructions", normalized=normalized)
-    if normalized == "llms.txt":
-        return _authority_marker_payload(marker_id="external-agent-handoff", normalized=normalized)
     if normalized.startswith(".agentic-workspace/planning/"):
         return _authority_marker_payload(marker_id="planning-surface", normalized=normalized)
     if normalized.startswith(".agentic-workspace/memory/"):
@@ -9958,7 +9782,7 @@ def _boundary_warning_for_path(path_text: str) -> dict[str, Any]:
 
 
 def _authority_markers_for_startup(*, active_execplan: str | None = None) -> list[dict[str, Any]]:
-    paths = ["AGENTS.md", "llms.txt", ".agentic-workspace/WORKFLOW.md", ".agentic-workspace/OWNERSHIP.toml"]
+    paths = ["AGENTS.md", ".agentic-workspace/WORKFLOW.md", ".agentic-workspace/OWNERSHIP.toml"]
     if active_execplan:
         paths.append(active_execplan)
     return [_authority_marker_for_path(path) for path in paths]
@@ -12040,7 +11864,7 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         "files_to_avoid": list(implementer_template["files_to_avoid"]),
         "package_boundary": _package_boundary_payload(target_root=target_root),
         "path_boundaries": path_boundaries,
-        "authority_markers": [_authority_marker_for_path(path) for path in (normalized_paths or ["AGENTS.md", "llms.txt"])],
+        "authority_markers": [_authority_marker_for_path(path) for path in (normalized_paths or ["AGENTS.md"])],
         "task_intent": task_intent,
         "acceptance": acceptance,
         "durable_intent_promotion": promotion_guidance,
@@ -13631,7 +13455,7 @@ def _scope_tags_for_path(path: str) -> set[str]:
         tags.add("planning")
     if any(token in normalized for token in (".agentic-workspace/memory", "packages/memory")):
         tags.add("memory")
-    if any(token in normalized for token in ("agents.md", "llms.txt", "tools/agent_quickstart", "tools/agent_routing")):
+    if any(token in normalized for token in ("agents.md", "tools/agent_quickstart", "tools/agent_routing")):
         tags.add("adapter-surfaces")
     if "config.toml" in normalized or "workspace_config" in normalized:
         tags.add("workspace")
@@ -13658,7 +13482,7 @@ def _scope_tags_for_task_text(normalized_task: str) -> set[str]:
         )
     ):
         tags.add("workspace")
-    if any(token in normalized_task for token in ("agent instructions", "agents.md", "llms.txt", "adapter", "routing surface")):
+    if any(token in normalized_task for token in ("agent instructions", "agents.md", "adapter", "routing surface")):
         tags.add("adapter-surfaces")
     if any(token in normalized_task for token in ("planning", "plan", "execplan", "lane", "epic", "future work")):
         tags.add("planning")
@@ -15184,9 +15008,7 @@ def _init_next_steps(
             f"Use the generated finishing brief at {WORKSPACE_BOOTSTRAP_HANDOFF_PATH.as_posix()} for the next bounded bootstrap action."
         )
     if prompt_requirement == "none":
-        steps.append(
-            f"Tell your coding agent to use {agent_instructions_file} for normal work and llms.txt for lifecycle/front-door guidance."
-        )
+        steps.append(f"Tell your coding agent to use {agent_instructions_file} for normal work.")
         return steps
     if mode == "adopt_high_ambiguity":
         steps.append("Treat the finishing brief as required before normal work resumes.")
@@ -15293,7 +15115,6 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
     lines.extend(["", "When done:"])
     if summary["placeholders"]:
         lines.append("- remove or resolve any remaining placeholders before closing the bootstrap task")
-    lines.append("- keep llms.txt current as the canonical external-agent handoff surface")
     lines.append("- leave only durable workflow residue; do not keep temporary bootstrap notes around")
     lines.append(f"- keep {agent_instructions_file} as the repo startup entrypoint")
     return "\n".join(lines)
@@ -15328,7 +15149,6 @@ def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
             "validation": summary["validation"],
             "done_when": [
                 "bootstrap review items are closed or explicitly resolved",
-                "llms.txt remains current as the canonical external-agent handoff surface",
                 "temporary bootstrap residue is removed before normal work resumes",
             ],
         },
@@ -15347,7 +15167,6 @@ def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
         "refs": [
             agent_instructions_file,
             ".agentic-workspace/planning/state.toml",
-            "llms.txt",
             "docs/delegated-judgment-contract.md",
             "docs/init-lifecycle.md",
             "agentic-workspace defaults --format json",
@@ -15644,7 +15463,7 @@ def _agent_configuration_system_payload() -> dict[str, Any]:
         ],
         "adapter_surfaces": [
             {"surface": "AGENTS.md", "role": "ordinary startup adapter over structured substrate"},
-            {"surface": "llms.txt", "role": "external install/adopt adapter over structured substrate"},
+            {"surface": "docs/agentic-workspace-install.md", "role": "public external install/adopt instructions"},
             {
                 "surface": ".agentic-workspace/planning/agent-manifest.json",
                 "role": "planning package-owned generation source over structured substrate",
@@ -16487,8 +16306,8 @@ def _defaults_payload() -> dict[str, Any]:
                     "edit_rule": "edit directly only when maintaining planning state or when compact output points here",
                 },
                 {
-                    "surface": "llms.txt",
-                    "role": "external install/adopt handoff only",
+                    "surface": "docs/agentic-workspace-install.md",
+                    "role": "public external install/adopt instructions",
                     "owner": "repo",
                     "kind": "canonical",
                     "edit_rule": "keep bounded to external bootstrap and adopt flow",
@@ -16502,9 +16321,9 @@ def _defaults_payload() -> dict[str, Any]:
                 },
             ],
             "external_handoff": {
-                "surface": "llms.txt",
+                "surface": "docs/agentic-workspace-install.md",
                 "when": "external install or adopt first contact",
-                "rule": "Use `llms.txt` only to bootstrap or adopt the workspace, then return to the configured startup entrypoint for ordinary repo work.",
+                "rule": "Use the public install doc to bootstrap or adopt the workspace, then return to the configured startup entrypoint for ordinary repo work.",
             },
             "secondary": [
                 "Use `agentic-workspace summary --format json` before checking raw planning state for promotion work.",
@@ -16661,7 +16480,7 @@ def _defaults_payload() -> dict[str, Any]:
                     "question": "Where does setup or external handoff work live?",
                     "ask_first": "agentic-workspace setup --target ./repo --format json",
                     "then_if_needed": [
-                        "llms.txt",
+                        "docs/agentic-workspace-install.md",
                         ".agentic-workspace/bootstrap-handoff.md",
                         ".agentic-workspace/bootstrap-handoff.json",
                     ],
@@ -16774,7 +16593,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "agentic-workspace doctor --target ./repo",
                 "agentic-workspace upgrade --target ./repo",
             ],
-            "canonical_external_agent_handoff": "llms.txt",
+            "canonical_external_agent_handoff": "docs/agentic-workspace-install.md",
             "canonical_bootstrap_next_action": ".agentic-workspace/bootstrap-handoff.md",
             "canonical_bootstrap_handoff_record": ".agentic-workspace/bootstrap-handoff.json",
             "secondary": [
@@ -17354,7 +17173,6 @@ def _defaults_payload() -> dict[str, Any]:
                 "uv run agentic-memory upgrade --target .",
             ],
             "handoff_surfaces": [
-                "llms.txt",
                 ".agentic-workspace/bootstrap-handoff.md",
                 ".agentic-workspace/bootstrap-handoff.json",
             ],
@@ -19186,7 +19004,7 @@ def _changed_path_is_git_deletion(*, target_root: Path | None, changed_path: str
 
 def _durable_surface_class(changed_path: str) -> str | None:
     normalized = changed_path.replace("\\", "/").strip("/")
-    if normalized in {"AGENTS.md", "llms.txt", "SYSTEM_INTENT.md", "README.md"}:
+    if normalized in {"AGENTS.md", "SYSTEM_INTENT.md", "README.md"}:
         return "adapter_or_repo_intent_surface"
     if normalized.startswith("src/agentic_workspace/contracts/"):
         return "workspace_contract_surface"
@@ -19613,7 +19431,6 @@ def _ownership_diagnostics(
     config_text = read_text(WORKSPACE_CONFIG_PATH.as_posix())
     workflow_text = read_text(WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix())
     workspace_workflow_text = read_text(".agentic-workspace/WORKFLOW.md")
-    llms_text = read_text("llms.txt")
 
     active_state_markers = ("current task", "active task", "active execplan", "handoff", "next lane", "validation run")
     if any(marker in agents_text.lower() for marker in active_state_markers):
@@ -19654,7 +19471,6 @@ def _ownership_diagnostics(
     authoritative_claims: list[str] = []
     for surface, text in (
         ("AGENTS.md", agents_text),
-        ("llms.txt", llms_text),
         (".agentic-workspace/WORKFLOW.md", workspace_workflow_text),
         (WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(), workflow_text),
     ):

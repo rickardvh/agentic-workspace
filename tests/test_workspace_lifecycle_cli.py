@@ -209,6 +209,7 @@ def test_install_local_only_uses_normal_layout_with_local_startup_indirection(tm
     assert not (repo_root / "llms.txt").exists()
     git_exclude_text = (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
     assert ".agentic-workspace/" in git_exclude_text
+    assert "AGENTS.local.md" in git_exclude_text
     assert not (repo_root / ".gitignore").exists()
     lifecycle_plan = payload["lifecycle_plan"]
     assert "--local-only" in lifecycle_plan["next_safe_command"]["command"]
@@ -228,7 +229,9 @@ def test_install_local_only_migrates_legacy_gitignore_residue(tmp_path: Path, ca
     assert payload["target"] == repo_root.as_posix()
     assert not (repo_root / ".gitignore").exists()
     assert (repo_root / ".agentic-workspace" / "LOCAL-ONLY.toml").exists()
-    assert ".agentic-workspace/" in (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+    git_exclude_text = (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+    assert ".agentic-workspace/" in git_exclude_text
+    assert "AGENTS.local.md" in git_exclude_text
 
 
 def test_uninstall_local_only_removes_workspace_tree_local_startup_and_git_exclude(tmp_path: Path, capsys) -> None:
@@ -247,7 +250,9 @@ def test_uninstall_local_only_removes_workspace_tree_local_startup_and_git_exclu
     assert not (repo_root / ".agentic-workspace").exists()
     assert not (repo_root / "AGENTS.local.md").exists()
     assert "Follow instructions in `AGENTS.local.md` if present." not in (repo_root / "AGENTS.md").read_text(encoding="utf-8")
-    assert ".agentic-workspace/" not in (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+    git_exclude_text = (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+    assert ".agentic-workspace/" not in git_exclude_text
+    assert "AGENTS.local.md" not in git_exclude_text
     lifecycle_plan = payload["lifecycle_plan"]
     assert "--local-only" in lifecycle_plan["next_safe_command"]["command"]
     assert lifecycle_plan["mutation_safety"]["classification"] == "destructive-mutation"
@@ -292,7 +297,7 @@ def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_p
     assert "interpreted:" in payload["handoff_prompt"]
     assert (tmp_path / ".agentic-workspace" / "bootstrap-handoff.md").exists()
     assert (tmp_path / ".agentic-workspace" / "bootstrap-handoff.json").exists()
-    assert (tmp_path / "llms.txt").exists()
+    assert not (tmp_path / "llms.txt").exists()
     assert calls == [
         ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
         ("memory", "adopt", {"target": str(tmp_path), "dry_run": False}),
@@ -435,7 +440,7 @@ def test_init_autodetects_existing_gemini_file_as_startup_entrypoint(monkeypatch
     assert payload["agent_instructions_file"] == "GEMINI.md"
     assert payload["repo_state"] == "light_existing_workflow"
     assert payload["detected_surfaces"] == ["GEMINI.md"]
-    assert "Read `GEMINI.md` first." in (tmp_path / "llms.txt").read_text(encoding="utf-8")
+    assert not (tmp_path / "llms.txt").exists()
 
 
 def test_init_treats_multiple_supported_startup_files_as_high_ambiguity(monkeypatch, tmp_path: Path, capsys) -> None:
@@ -477,7 +482,7 @@ def test_init_can_create_gemini_startup_file_for_blank_repo(monkeypatch, tmp_pat
     assert payload["agent_instructions_file"] == "GEMINI.md"
     assert (tmp_path / "GEMINI.md").exists()
     assert not (tmp_path / "AGENTS.md").exists()
-    assert "Read `GEMINI.md` first." in (tmp_path / "llms.txt").read_text(encoding="utf-8")
+    assert not (tmp_path / "llms.txt").exists()
 
 
 def test_init_dry_run_rewrites_module_startup_actions_for_custom_agent_file(monkeypatch, tmp_path: Path, capsys) -> None:
@@ -510,7 +515,7 @@ def test_init_dry_run_rewrites_module_startup_actions_for_custom_agent_file(monk
 def test_init_treats_existing_llms_file_as_existing_workspace_surface(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    _write((tmp_path / "llms.txt"), "# External agent handoff\n")
+    _write((tmp_path / ".agentic-workspace" / "bootstrap-handoff.md"), "# Bootstrap handoff\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -520,7 +525,7 @@ def test_init_treats_existing_llms_file_as_existing_workspace_surface(monkeypatc
     assert payload["inferred_policy"] == "preserve_existing_and_adopt"
     assert payload["mode"] == "adopt"
     assert payload["prompt_requirement"] == "recommended"
-    assert payload["detected_surfaces"] == ["llms.txt"]
+    assert payload["detected_surfaces"] == [".agentic-workspace/bootstrap-handoff.md"]
     assert calls == [
         ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
         ("memory", "adopt", {"target": str(tmp_path), "dry_run": False}),
@@ -565,7 +570,7 @@ def test_init_reports_existing_handoff_plus_workflow_surface_as_high_ambiguity(m
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
     _write((tmp_path / "AGENTS.md"), "# Existing\n")
-    _write((tmp_path / "llms.txt"), "# External agent handoff\n")
+    _write((tmp_path / ".agentic-workspace" / "bootstrap-handoff.md"), "# Bootstrap handoff\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -575,9 +580,9 @@ def test_init_reports_existing_handoff_plus_workflow_surface_as_high_ambiguity(m
     assert payload["inferred_policy"] == "require_explicit_handoff"
     assert payload["mode"] == "adopt_high_ambiguity"
     assert payload["prompt_requirement"] == "required"
-    assert sorted(payload["detected_surfaces"]) == ["AGENTS.md", "llms.txt"]
+    assert sorted(payload["detected_surfaces"]) == [".agentic-workspace/bootstrap-handoff.md", "AGENTS.md"]
     assert "AGENTS.md: reconcile existing workflow surface ownership" in payload["needs_review"]
-    assert "llms.txt: reconcile existing workflow surface ownership" in payload["needs_review"]
+    assert ".agentic-workspace/bootstrap-handoff.md: reconcile existing workflow surface ownership" in payload["needs_review"]
     assert calls == [
         ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
         ("memory", "adopt", {"target": str(tmp_path), "dry_run": False}),
@@ -718,32 +723,52 @@ def test_install_real_init_can_use_gemini_as_root_startup_entrypoint(tmp_path: P
     gemini_text = (target / "GEMINI.md").read_text(encoding="utf-8")
     assert 'start --task "<task>"' in gemini_text
     assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." not in gemini_text
-    assert "Read `GEMINI.md` first." in (target / "llms.txt").read_text(encoding="utf-8")
+    assert not (target / "llms.txt").exists()
 
 
-def test_install_real_init_generates_llms_with_compact_startup_path_first(tmp_path: Path) -> None:
+def test_install_real_init_does_not_generate_llms_adapter(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
 
     assert cli.main(["init", "--target", str(target)]) == 0
 
-    llms_text = (target / "llms.txt").read_text(encoding="utf-8")
-    start_index = llms_text.index('agentic-workspace start --task "<task>" --format json')
-    preflight_index = llms_text.index("agentic-workspace preflight --format json")
-    config_index = llms_text.index("agentic-workspace config --target ./repo --format json")
-    summary_index = llms_text.index("agentic-workspace summary --format json")
-    proof_index = llms_text.index("agentic-workspace proof --changed <paths> --format json")
-    raw_index = llms_text.index("Open raw planning or contract files only when compact commands point there.")
+    assert not (target / "llms.txt").exists()
 
-    assert "Ordinary path:" in llms_text
-    assert "agentic-workspace defaults --section install_profiles --format json" in llms_text
-    assert "agentic-workspace install --target ./repo --preset memory" in llms_text
-    assert "agentic-workspace install --target ./repo --preset planning" in llms_text
-    assert "Use `full` only when both Memory and Planning are explicitly desired." in llms_text
-    assert start_index < summary_index < proof_index
-    assert proof_index < preflight_index
-    assert config_index < raw_index
+
+def test_upgrade_removes_retired_generated_llms_adapter(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / "llms.txt",
+        """
+# Agent Entrypoint Router
+
+Authority marker:
+
+- canonical_source: `src/agentic_workspace/cli.py:_external_agent_handoff_text`
+
+Generated compatibility adapter.
+""",
+    )
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+
+    assert not (target / "llms.txt").exists()
+
+
+def test_upgrade_preserves_custom_llms_for_manual_review(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(target / "llms.txt", "# Custom local instructions\n")
+
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert (target / "llms.txt").exists()
+    assert "llms.txt: legacy llms.txt exists but is not recognized as the retired generated adapter" in payload["needs_review"]
 
 
 def test_status_real_init_reports_workspace_shared_layer_surfaces(tmp_path: Path, capsys) -> None:
@@ -1165,12 +1190,12 @@ def test_root_lifecycle_fixture_matrix_classifies_entry_states(monkeypatch, tmp_
     routing_only.mkdir()
     _init_git_repo(routing_only)
     _write(routing_only / "AGENTS.md", "# Local agent instructions\n")
-    _write(routing_only / "llms.txt", "# Local external-agent adapter\n")
+    _write(routing_only / ".agentic-workspace" / "bootstrap-handoff.md", "# Bootstrap handoff\n")
     assert cli.main(["init", "--target", str(routing_only), "--dry-run", "--format", "json"]) == 0
     routing_payload = json.loads(capsys.readouterr().out)
     assert routing_payload["repo_state"] == "docs_heavy_existing_repo"
     assert routing_payload["inferred_policy"] == "require_explicit_handoff"
-    assert sorted(routing_payload["detected_surfaces"]) == ["AGENTS.md", "llms.txt"]
+    assert sorted(routing_payload["detected_surfaces"]) == [".agentic-workspace/bootstrap-handoff.md", "AGENTS.md"]
 
     partial = tmp_path / "partial"
     partial.mkdir()

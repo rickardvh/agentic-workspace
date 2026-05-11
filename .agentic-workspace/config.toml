@@ -52,7 +52,7 @@ commands = [
   "make maintainer-surfaces",
   "uv run python scripts/check/check_planning_surfaces.py",
 ]
-review_hint = "Use when AGENTS.md, llms.txt, generated agent docs, routing contracts, or workspace query surfaces changed."
+review_hint = "Use when AGENTS.md, generated agent docs, routing contracts, or workspace query surfaces changed."
 
 [workflow_obligations.boundary_and_context_discipline]
 summary = "Keep package boundaries explicit and start from checked-in surfaces before broad rereads."

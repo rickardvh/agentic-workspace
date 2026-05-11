@@ -70,21 +70,21 @@ def test_doctor_repair_actions_use_resolved_cli_invoke(tmp_path: Path, capsys) -
         target / ".agentic-workspace" / "config.local.toml",
         'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
     )
-    (target / "llms.txt").unlink()
+    (target / ".agentic-workspace" / "WORKFLOW.md").unlink()
 
     assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
     action = workspace_report["repair_actions"][0]
-    assert action["id"] == "refresh-generated-agent-handoff"
-    assert action["action"] == "inspect-workspace-upgrade-dry-run"
-    assert action["requires_dry_run_review"] is True
+    assert action["id"] == "restore-missing-workspace-surface"
+    assert action["action"] == "run-workspace-upgrade"
+    assert action.get("requires_dry_run_review") is not True
     assert action["command"].startswith("uv run agentic-workspace upgrade ")
-    assert "--dry-run" in action["command"]
-    assert action["dry_run"] == action["command"]
-    assert action["apply_after_review"].startswith("uv run agentic-workspace upgrade ")
-    assert "--dry-run" not in action["apply_after_review"]
+    assert "--dry-run" not in action["command"]
+    assert action["dry_run"].startswith("uv run agentic-workspace upgrade ")
+    assert "--dry-run" in action["dry_run"]
+    assert action.get("apply_after_review") in {None, action["command"]}
     assert action["proof_after"][0].startswith("uv run agentic-workspace doctor ")
 
 
@@ -149,7 +149,7 @@ def test_doctor_promotes_safe_module_lifecycle_repairs_for_missing_memory_templa
     assert doctor_payload["repair_plan"]["status"] == "safe-action-available"
 
 
-def test_doctor_module_filter_checks_llms_against_installed_modules(tmp_path: Path, capsys) -> None:
+def test_doctor_module_filter_does_not_require_llms_adapter(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -159,10 +159,9 @@ def test_doctor_module_filter_checks_llms_against_installed_modules(tmp_path: Pa
     assert cli.main(["doctor", "--verbose", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert "llms.txt: external-agent handoff file differs from the current workspace contract" not in payload["warnings"]
+    assert not any("llms.txt" in warning for warning in payload["warnings"])
     workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
-    llms_action = next(action for action in workspace_report["actions"] if action["path"] == "llms.txt")
-    assert llms_action["kind"] == "current"
+    assert not any(action["path"] == "llms.txt" for action in workspace_report["actions"])
 
 
 def test_status_flags_missing_workspace_shared_layer(tmp_path: Path, capsys) -> None:
@@ -218,7 +217,6 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
         f"# Agent Instructions\n\n{cli.WORKSPACE_POINTER_BLOCK}\n\nLocal repo instructions.\n",
         encoding="utf-8",
     )
-    (tmp_path / "llms.txt").write_text(cli._external_agent_handoff_text(selected_modules=["planning", "memory"]))
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["doctor", "--verbose", "--modules", "planning,memory", "--target", str(tmp_path), "--format", "json"]) == 0

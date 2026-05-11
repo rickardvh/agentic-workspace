@@ -44,7 +44,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["startup"]["first_queries"][3]["field"] == "planning_record"
     assert payload["startup"]["surface_roles"][0]["surface"] == "AGENTS.md"
     assert any(
-        role.get("surface") == "llms.txt" and role.get("role") == "external install/adopt handoff only"
+        role.get("surface") == "docs/agentic-workspace-install.md" and role.get("role") == "public external install/adopt instructions"
         for role in payload["startup"]["surface_roles"]
     )
     state_role = next(role for role in payload["startup"]["surface_roles"] if role["surface"] == ".agentic-workspace/planning/state.toml")
@@ -91,7 +91,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "agentic-workspace install --target ./repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
     assert "if missing, install it before bootstrap" in payload["lifecycle"]["cli_availability_rule"]
     assert payload["lifecycle"]["default_setup_posture"] == "smallest-viable-preset-first"
-    assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
+    assert payload["lifecycle"]["canonical_external_agent_handoff"] == "docs/agentic-workspace-install.md"
     assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
     assert payload["lifecycle"]["canonical_bootstrap_handoff_record"] == ".agentic-workspace/bootstrap-handoff.json"
     assert payload["setup"]["canonical_doc"] == "docs/jumpstart-contract.md"
@@ -936,7 +936,7 @@ def test_defaults_section_selector_returns_agent_configuration_system_answer(cap
     assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["answer"]["configuration_classes"][1]["id"] == "workspace_policy"
     assert payload["answer"]["module_attachment_points"][0] == "descriptor lifecycle commands and install detection"
-    assert payload["answer"]["adapter_surfaces"][1]["surface"] == "llms.txt"
+    assert payload["answer"]["adapter_surfaces"][1]["surface"] == "docs/agentic-workspace-install.md"
     assert (
         payload["answer"]["selective_loading"]["first_queries"][0]
         == "agentic-workspace defaults --section agent_configuration_system --format json"
@@ -1069,7 +1069,7 @@ def test_defaults_operating_questions_section_selector_returns_compact_contract_
     assert payload["answer"]["canonical_doc"] == "docs/which-package.md"
     assert payload["answer"]["questions"][0]["id"] == "startup_or_lifecycle_path"
     assert payload["answer"]["questions"][3]["id"] == "proof_or_ownership_answer"
-    assert payload["answer"]["questions"][4]["then_if_needed"][0] == "llms.txt"
+    assert payload["answer"]["questions"][4]["then_if_needed"][0] == "docs/agentic-workspace-install.md"
     assert payload["answer"]["stop_rule"] == ("Do not reopen broader docs once one compact surface has answered the routine question.")
     assert "docs/which-package.md" in payload["refs"]
 

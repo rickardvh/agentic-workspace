@@ -117,7 +117,7 @@
       "lane": "maintainer_surfaces",
       "exact": [
         "AGENTS.md",
-        "llms.txt"
+        "docs/agentic-workspace-install.md"
       ],
       "prefixes": [
         "docs/"

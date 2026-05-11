@@ -46,7 +46,7 @@
     "files_to_avoid": [
       "broad planning archives unless the compact summary points there",
       "package bootstrap payloads unless the task is explicitly payload sync",
-      "generated adapters such as llms.txt unless refreshing from source"
+      "generated adapters unless refreshing from source"
     ],
     "handoff_requirements": {
       "before_handoff": [

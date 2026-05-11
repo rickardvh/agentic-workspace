@@ -115,21 +115,6 @@
       "issue_hint": "#312"
     },
     {
-      "id": "external-agent-handoff-template",
-      "source": "src/agentic_workspace/cli.py:_external_agent_handoff_text",
-      "candidate_content": [
-        "llms.txt template",
-        "authority marker text",
-        "startup routing text"
-      ],
-      "proposed_owner_surface": "src/agentic_workspace/contracts/templates/external_agent_handoff.md",
-      "future_owner": "render templates",
-      "authority_status": "adapter",
-      "extraction_readiness": "template candidate",
-      "rationale": "The template is generated adapter prose; the refresh friction captured in #319 makes this a good extraction and conformance target.",
-      "issue_hint": "#319"
-    },
-    {
       "id": "config-local-override-model",
       "source": "src/agentic_workspace/config.py:MixedAgentLocalOverride and load_mixed_agent_local_override",
       "candidate_content": [

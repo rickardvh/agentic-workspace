@@ -1,7 +1,7 @@
 # System Intent Contract
 
 This contract keeps the larger intended outcome visible even when work is executed in smaller bounded slices.
-Repo-owned prose such as `SYSTEM_INTENT.md`, `README.md`, `AGENTS.md`, `llms.txt`, design docs, or issue context may provide evidence for that direction; checked-in planning still owns active execution state, bounded slices, and continuation routing.
+Repo-owned prose such as `SYSTEM_INTENT.md`, `README.md`, `AGENTS.md`, design docs, or issue context may provide evidence for that direction; checked-in planning still owns active execution state, bounded slices, and continuation routing.
 
 ## Workspace-Owned Declaration
 
@@ -103,4 +103,3 @@ Use:
 ## Checked-In Residue Rule
 
 Keep a checked-in execplan whenever later proof, intent validation, or required continuation would be expensive or ambiguous to reconstruct from chat alone.
-

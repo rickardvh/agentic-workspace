@@ -1694,7 +1694,6 @@ def _repo_friction_surface_role(relative_path: str) -> str:
         "AGENTS.md",
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/process.md",
-        "llms.txt",
         ".agentic-workspace/config.toml",
     }:
         return "front-door"

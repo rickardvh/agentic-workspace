@@ -7,7 +7,6 @@ An installed host repository gets a small set of checked-in surfaces. Their purp
 | Surface | Owner | Purpose |
 | --- | --- | --- |
 | `AGENTS.md` | repo-owned adapter with managed fences | first file an agent can read; routes to compact workspace commands |
-| `llms.txt` | generated adapter | compatibility handoff for tools that look for `llms.txt` |
 | `.agentic-workspace/` | product-managed enclave | shared workspace configuration, contracts, module roots, and local boundaries |
 | `.agentic-workspace/config.toml` | repo-owned config | selected modules, posture, workflow obligations, and repo-specific settings |
 | `.agentic-workspace/OWNERSHIP.toml` | repo-owned ledger | managed paths, fences, and authority metadata |
@@ -24,10 +23,10 @@ The installed and source-checkout surfaces fall into different classes. Keeping 
 
 | Class | Examples | How readers should use it |
 | --- | --- | --- |
-| core entrypoint | `AGENTS.md`, `llms.txt`, `agentic-workspace start`, `agentic-workspace summary` | start here or let compact commands route deeper |
+| core entrypoint | `AGENTS.md`, `agentic-workspace start`, `agentic-workspace summary` | start here or let compact commands route deeper |
 | secondary/deep surface | `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/docs/`, `.agentic-workspace/planning/`, `.agentic-workspace/memory/` | open only when a compact command or package doc points there |
 | machine contract | `.agentic-workspace/OWNERSHIP.toml`, contract JSON, schema JSON, manifest files | inspect through commands or generated references before hand-reading |
-| generated adapter | `llms.txt`, generated agent aids, `docs/reference/*.md` | treat as derived output; edit the source contract or renderer instead |
+| generated adapter | generated agent aids, `docs/reference/*.md` | treat as derived output; edit the source contract or renderer instead |
 | local-only surface | `.agentic-workspace/local/` | machine-local cache or override, not shared authority |
 | review artifact | `docs/reviews/*.md` | dated evidence for future work, not current product documentation |
 | maintainer machinery | `scripts/`, package bootstrap payloads, generated-package development files | source-checkout workflow only, not ordinary host-repo operation |

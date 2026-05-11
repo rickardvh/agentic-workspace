@@ -471,12 +471,13 @@ def test_config_command_autodetects_conservative_system_intent_sources_when_no_e
     _init_git_repo(tmp_path)
     (tmp_path / "README.md").write_text("# README\n", encoding="utf-8")
     (tmp_path / "AGENTS.md").write_text("# Repo Instructions\n", encoding="utf-8")
-    (tmp_path / "llms.txt").write_text("Repo direction hint\n", encoding="utf-8")
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "product-direction.md").write_text("Repo direction hint\n", encoding="utf-8")
 
     assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["system_intent"]["sources"] == ["README.md", "AGENTS.md", "llms.txt"]
+    assert payload["workspace"]["system_intent"]["sources"] == ["README.md", "AGENTS.md", "docs/product-direction.md"]
     assert payload["workspace"]["system_intent"]["sources_source"] == "autodetected-existing"
     assert payload["workspace"]["system_intent"]["preferred_source"] == "README.md"
 

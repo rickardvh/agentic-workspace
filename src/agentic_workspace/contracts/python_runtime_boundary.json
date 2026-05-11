@@ -164,7 +164,6 @@
         "agentic_workspace.cli"
       ],
       "runtime_surfaces": [
-        "llms.txt",
         "root AGENTS.md template"
       ],
       "why_python_owned": "Large Markdown adapter templates still render from Python for now; the stable start/implement context fragments have moved to context_templates.json, and the remaining adapter-template extraction is tracked separately.",
@@ -174,7 +173,7 @@
       ],
       "remaining_extractable_content": [
         {
-          "summary": "Extract external-agent handoff and root AGENTS adapter templates so maintainer-surface refresh drift is easier to detect and fix.",
+          "summary": "Extract the root AGENTS adapter template so maintainer-surface refresh drift is easier to detect and fix.",
           "tracking_issue": "#319",
           "status": "open follow-up"
         }

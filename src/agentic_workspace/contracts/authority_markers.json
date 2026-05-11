@@ -15,19 +15,6 @@
       ]
     },
     {
-      "id": "external-agent-handoff",
-      "authority": "generated-adapter",
-      "canonical_source": {
-        "kind": "fixed",
-        "value": "src/agentic_workspace/cli.py:_external_agent_handoff_text"
-      },
-      "safe_to_edit": false,
-      "refresh_command": "make maintainer-surfaces",
-      "representative_paths": [
-        "llms.txt"
-      ]
-    },
-    {
       "id": "planning-surface",
       "authority": "canonical",
       "canonical_source": {

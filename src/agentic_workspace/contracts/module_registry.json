@@ -181,8 +181,7 @@
             ],
             "owned_paths": [
               ".agentic-workspace/**",
-              "managed AGENTS.md fences",
-              "llms.txt"
+              "managed AGENTS.md fences"
             ],
             "dry_run_command": ""
           }
@@ -204,8 +203,7 @@
             ],
             "owned_paths": [
               ".agentic-workspace/**",
-              "managed AGENTS.md fences",
-              "llms.txt"
+              "managed AGENTS.md fences"
             ],
             "dry_run_command": "agentic-workspace install --target <repo> --modules <modules> --dry-run --format json"
           }
@@ -227,8 +225,7 @@
             ],
             "owned_paths": [
               ".agentic-workspace/**",
-              "managed AGENTS.md fences",
-              "llms.txt"
+              "managed AGENTS.md fences"
             ],
             "dry_run_command": "agentic-workspace upgrade --target <repo> --dry-run --format json"
           }
@@ -251,8 +248,7 @@
             ],
             "owned_paths": [
               ".agentic-workspace/**",
-              "managed AGENTS.md fences",
-              "llms.txt"
+              "managed AGENTS.md fences"
             ],
             "dry_run_command": "agentic-workspace uninstall --target <repo> --modules <modules> --dry-run --format json"
           }
@@ -279,12 +275,6 @@
           "name": "workspace.startup",
           "description": "Ordinary startup route through AGENTS.md and compact context commands.",
           "template": "AGENTS.md",
-          "prompt_kind": "handoff"
-        },
-        {
-          "name": "workspace.external_handoff",
-          "description": "Compatibility handoff for agents that start from llms.txt.",
-          "template": "llms.txt",
           "prompt_kind": "handoff"
         }
       ],

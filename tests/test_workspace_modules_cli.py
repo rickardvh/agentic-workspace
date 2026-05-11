@@ -61,10 +61,7 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     workspace_uninstall = next(tool for tool in root_components["tools"] if tool["name"] == "workspace.uninstall")
     assert workspace_uninstall["destructive"] is True
     assert "destructive" in workspace_uninstall["safety"]["requires_approval_when"]
-    assert {prompt["name"] for prompt in root_components["prompts"]} == {
-        "workspace.startup",
-        "workspace.external_handoff",
-    }
+    assert {prompt["name"] for prompt in root_components["prompts"]} == {"workspace.startup"}
     assert {root["id"] for root in root_components["roots"]} >= {
         "workspace-root",
         "workspace-local-root",

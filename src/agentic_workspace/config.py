@@ -52,11 +52,9 @@ SYSTEM_INTENT_SOURCE_DISCOVERY_CANDIDATES = (
     Path("SYSTEM_INTENT.md"),
     Path("README.md"),
     Path("AGENTS.md"),
-    Path("llms.txt"),
     Path("docs/system-intent.md"),
     Path("docs/product-direction.md"),
 )
-WORKSPACE_EXTERNAL_AGENT_PATH = Path("llms.txt")
 WORKSPACE_BOOTSTRAP_HANDOFF_PATH = Path(".agentic-workspace/bootstrap-handoff.md")
 WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH = Path(".agentic-workspace/bootstrap-handoff.json")
 DEFAULT_AGENT_INSTRUCTIONS_FILE = "AGENTS.md"

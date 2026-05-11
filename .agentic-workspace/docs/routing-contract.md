@@ -29,8 +29,7 @@ Use [minimum-operating-model.md](minimum-operating-model.md) for the compact mod
 - `.agentic-workspace/planning/state.toml` (`todo.active_items`): Repo-owned active task queue and smallest near-term follow-ons.
 - `.agentic-workspace/planning/state.toml` (`roadmap`): Repo-owned inactive long-horizon candidate work and promotion signals.
 - `.agentic-workspace/planning/execplans/`: Active, sequencing-heavy execution contracts.
-- `llms.txt`: Agent entrypoint router for external handoff and first-contact.
-- `agent-installation.md`: Detailed external install/adopt handoff instructions.
+- `docs/agentic-workspace-install.md`: Public install/adopt handoff for agents linked to the source repository.
 
 ### External Install/Adopt Handoff
 When an external agent is installing or adopting this repo:
