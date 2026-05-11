@@ -310,8 +310,8 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
 
     memory_targets = {target["kind"]: target for target in packages["memory-bootstrap"]["targets"]}
     assert memory_targets["typescript"]["test_environment"] == "docker"
-    assert memory_targets["typescript"]["maturity_level_ref"] == "runnable-read-only-adapter"
-    assert memory_targets["typescript"]["generation_status"] == "runnable-read-only-adapter"
+    assert memory_targets["typescript"]["maturity_level_ref"] == "weak-agent-safe-adapter"
+    assert memory_targets["typescript"]["generation_status"] == "weak-agent-safe-adapter"
 
 
 def test_command_package_ir_reuses_generated_adapter_truth() -> None:
@@ -820,8 +820,8 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
             "@agentic-workspace/memory-cli",
             "agentic-memory",
             "python -m repo_memory_bootstrap.cli",
-            "runnable-read-only-adapter",
-            "review-required",
+            "weak-agent-safe-adapter",
+            "allowed-read-only",
         ),
     }
     for package, (package_name, entrypoint, runtime_command, maturity, weak_agent_routing) in packages.items():

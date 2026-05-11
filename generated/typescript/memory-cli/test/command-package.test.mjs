@@ -16,15 +16,15 @@ test('generated package metadata exposes expected commands', () => {
 
 test('generated package metadata exposes maturity and weak-agent routing status', () => {
   const metadata = packageJson.agenticWorkspace;
-  assert.equal(metadata.generationStatus, 'runnable-read-only-adapter');
-  assert.equal(metadata.maturity.id, 'runnable-read-only-adapter');
+  assert.equal(metadata.generationStatus, 'weak-agent-safe-adapter');
+  assert.equal(metadata.maturity.id, 'weak-agent-safe-adapter');
   assert.equal(typeof metadata.maturity.summary, 'string');
   assert.ok(metadata.maturity.summary.length > 0);
   assert.ok(Array.isArray(metadata.maturity.promotion_requires));
   assert.ok(metadata.maturity.promotion_requires.length > 0);
   assert.equal(metadata.fixtureOnly, false);
   assert.equal(metadata.maturity.runnable, true);
-  assert.equal(metadata.maturity.weak_agent_routing, 'review-required');
+  assert.equal(metadata.maturity.weak_agent_routing, 'allowed-read-only');
   assert.ok(packageJson.bin);
 });
 
@@ -47,7 +47,7 @@ test('generated runnable adapter exposes routing status and recovery guidance', 
   const result = spawnSync(process.execPath, [cli, '--help'], { encoding: 'utf8' });
   assert.equal(result.status, 0);
   assert.match(result.stdout, /Supported generated commands:/);
-  assert.match(result.stdout, /Weak-agent routing: review-required/);
+  assert.match(result.stdout, /Weak-agent routing: allowed-read-only/);
   assert.match(result.stdout, /Recovery:/);
 });
 

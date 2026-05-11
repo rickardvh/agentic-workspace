@@ -15,7 +15,7 @@ const command = argv[0];
 if (!command || command === '--help' || command === '-h') {
   console.log(`Usage: agentic-memory <command> [options]`);
   console.log(`Supported generated commands: ${Array.from(supportedCommands).join(', ')}`);
-  console.log('Weak-agent routing: review-required');
+  console.log('Weak-agent routing: allowed-read-only');
   console.log('Recovery: use a supported generated command or route back to the canonical Python CLI.');
   process.exit(0);
 }
