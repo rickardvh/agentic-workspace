@@ -1,0 +1,126 @@
+{
+  "kind": "planning-decomposition/v1",
+  "title": "Codegen: implementation-independent generated command packages",
+  "status": "shaping",
+  "larger_intended_outcome": "Generated command implementations should be disposable projections from implementation-independent artifacts that define behavior, data, interfaces, and conformance expectations once. Tests should treat every generated implementation as a black-box target reached through a thin handwritten adapter.",
+  "non_goals": [
+    "Do not make generated code the behavioral source of truth.",
+    "Do not mirror package behavior inside target adapters.",
+    "Do not combine unrelated implementation lanes into one execplan.",
+    "Do not publish or recommend immature generated targets without explicit maturity signaling."
+  ],
+  "candidate_lanes": [
+    {
+      "id": "canonical-artifact-model",
+      "title": "Canonical artifact model",
+      "readiness": "needs-shaping",
+      "outcome": "Define the implementation-independent operation, interface, data, and fixture surfaces that generated command targets consume.",
+      "owner_surface": "",
+      "proof": "Schema and contract tests show command behavior can be represented without target-specific implementation logic.",
+      "depends_on": [],
+      "parallel_with": []
+    },
+    {
+      "id": "black-box-conformance-harness",
+      "title": "Black-box conformance harness",
+      "readiness": "needs-shaping",
+      "outcome": "Run shared behavior and output tests through target adapters instead of generated implementation internals.",
+      "owner_surface": "",
+      "proof": "A shared suite can execute against at least one existing generated target through an adapter and assert behavior/output only.",
+      "depends_on": [
+        "canonical-artifact-model"
+      ],
+      "parallel_with": [
+        "thin-target-adapters"
+      ]
+    },
+    {
+      "id": "thin-target-adapters",
+      "title": "Thin target adapters",
+      "readiness": "needs-shaping",
+      "outcome": "Specify and implement narrow language- or transport-specific adapters that translate shared test input into CLI, shell, MCP, or package API invocation without duplicating package behavior.",
+      "owner_surface": "",
+      "proof": "Adapter review and tests show adapters contain invocation translation only, with no copied command behavior or generated package logic.",
+      "depends_on": [
+        "canonical-artifact-model"
+      ],
+      "parallel_with": [
+        "black-box-conformance-harness"
+      ]
+    },
+    {
+      "id": "generated-target-maturity",
+      "title": "Generated target maturity",
+      "readiness": "promoted",
+      "outcome": "Harden Python and TypeScript generated command package targets enough for evaluation and weak-agent routing while keeping maturity status explicit.",
+      "owner_surface": ".agentic-workspace/planning/execplans/generated-cli-next-stage.plan.json",
+      "proof": "Targeted generated-package tests, source-checkout invocation proof, and maturity-report checks pass for promoted targets.",
+      "depends_on": [],
+      "parallel_with": []
+    },
+    {
+      "id": "additional-transports",
+      "title": "Additional transports",
+      "readiness": "deferred",
+      "outcome": "Evaluate shell, PowerShell, MCP, or package API projections only after the canonical model and harness are stable.",
+      "owner_surface": "",
+      "proof": "New target candidates pass the same black-box conformance expectations through thin adapters before being promoted.",
+      "depends_on": [
+        "canonical-artifact-model",
+        "black-box-conformance-harness",
+        "thin-target-adapters"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "drift-and-release-gates",
+      "title": "Drift and release gates",
+      "readiness": "needs-shaping",
+      "outcome": "Make stale generated output, duplicated behavior, adapter bloat, and target maturity regressions visible in ordinary proof.",
+      "owner_surface": "",
+      "proof": "Proof commands fail or warn when generated outputs are stale, behavior is only present in generated code, or target maturity metadata is misleading.",
+      "depends_on": [
+        "canonical-artifact-model",
+        "black-box-conformance-harness"
+      ],
+      "parallel_with": []
+    }
+  ],
+  "dependency_assumptions": [
+    "The current active #880 slice remains bounded to generated CLI next-stage shaping and should not try to complete the whole codegen epic.",
+    "Black-box conformance needs a stable implementation-independent artifact model before broadening target coverage.",
+    "Additional transports should wait until adapters and shared conformance tests prove the target contract."
+  ],
+  "parallelization_assumptions": [
+    "Adapter contract shaping can overlap with harness design after the canonical artifact model is clear.",
+    "Target maturity hardening can proceed for existing generated Python and TypeScript targets while larger canonical model work is being shaped, as long as it does not introduce another behavioral source of truth."
+  ],
+  "proof_expectations": [
+    "Each promoted lane records narrow validation in its execplan.",
+    "Behavior proof should prefer shared black-box conformance fixtures over generated-code internals.",
+    "Generated code should be treated as disposable output and regenerated from canonical artifacts during proof where practical.",
+    "Adapters should be reviewed for thinness and absence of mirrored package behavior."
+  ],
+  "promotion_rule": "Promote only lanes with clear outcome, owner surface, proof expectation, bounded write scope, and a stated relationship to GitHub epic #892 and milestone 1.",
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#892",
+      "label": "Codegen epic",
+      "role": "epic"
+    },
+    {
+      "kind": "issue",
+      "target": "#880",
+      "label": "Generated CLI next stage",
+      "role": "first-slice"
+    },
+    {
+      "kind": "milestone",
+      "target": "1",
+      "label": "Codegen: implementation-independent generated command packages",
+      "role": "grouping"
+    }
+  ],
+  "notes": "This decomposition is the epic-level shape for the codegen project. It is not an execution journal and should not collect historical lane records after slices close."
+}
