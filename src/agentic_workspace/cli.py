@@ -17912,6 +17912,11 @@ def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
             next_decision.setdefault("target", payload.get("target"))
             next_decision.setdefault("selector", payload.get("selector", {}))
             next_decision.setdefault("sufficiency", answer.get("sufficiency", {}))
+            if answer.get("proof_route_decision"):
+                route_decision = dict(answer["proof_route_decision"])
+                route_decision.pop("next_action", None)
+                route_decision.pop("required_commands", None)
+                next_decision["proof_route_decision"] = route_decision
             if answer.get("proof_command_adjustments"):
                 next_decision["proof_command_adjustments"] = answer["proof_command_adjustments"]
             if answer.get("unavailable_proof_commands"):
@@ -18880,6 +18885,80 @@ def _proof_next_decision_payload(
     }
 
 
+def _proof_route_decision_payload(
+    *,
+    proof_next_decision: dict[str, Any],
+    selected_commands: list[dict[str, Any]],
+    required_commands: list[str],
+    manual_verification: dict[str, Any] | None,
+    unavailable_commands: list[dict[str, Any]],
+) -> dict[str, Any]:
+    next_action = dict(proof_next_decision.get("next", {}))
+    selected_command = selected_commands[0] if selected_commands else None
+    manual_fallback = None
+    if isinstance(manual_verification, dict):
+        manual_fallback = {
+            "required": True,
+            "status": manual_verification.get("status"),
+            "summary": manual_verification.get("summary") or manual_verification.get("reason"),
+            "unavailable_command_count": len(unavailable_commands),
+        }
+    return {
+        "kind": "proof-route-decision/v1",
+        "next_action": next_action,
+        "selected_command": (
+            {
+                "command": selected_command.get("command"),
+                "lane": selected_command.get("lane"),
+                "route_source": selected_command.get("selected_from"),
+                "intent_type": selected_command.get("intent_type"),
+            }
+            if isinstance(selected_command, dict)
+            else None
+        ),
+        "route_source": next_action.get("route_source", "none"),
+        "required_commands": required_commands,
+        "manual_fallback": manual_fallback,
+        "critical_warnings": list(proof_next_decision.get("warnings", [])),
+        "explanation_field": "proof_route_explanation",
+    }
+
+
+def _proof_route_explanation_payload(
+    *,
+    proof_intents: list[dict[str, Any]],
+    configured_policy: list[dict[str, Any]],
+    learned_route_hints: dict[str, Any],
+    target_capabilities: dict[str, Any],
+    selected_commands: list[dict[str, Any]],
+    unavailable_commands: list[dict[str, Any]],
+    host_policy_blocked_commands: list[dict[str, str]],
+    manual_verification: dict[str, Any] | None,
+    proof_execution_evidence: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "kind": "proof-route-explanation/v1",
+        "selection_order": [
+            "changed paths -> proof intent",
+            "proof intent -> candidate route needs",
+            "host policy/profile overlay",
+            "learned hints",
+            "live capability confirmation",
+            "command/manual selection",
+            "execution evidence expectations",
+        ],
+        "proof_intents": proof_intents,
+        "configured_policy": configured_policy,
+        "learned_route_hints": learned_route_hints,
+        "target_capabilities": target_capabilities,
+        "selected_commands": selected_commands,
+        "unavailable_commands": unavailable_commands,
+        "host_policy_blocked_commands": host_policy_blocked_commands,
+        "manual_verification": manual_verification,
+        "proof_execution_evidence": proof_execution_evidence,
+    }
+
+
 _MANUAL_VERIFICATION_TEMPLATES: dict[str, dict[str, Any]] = {
     "behavior-test": {
         "title": "Behavior verification",
@@ -19628,27 +19707,24 @@ def _proof_selection_for_changed_paths(
         manual_verification=manual_verification,
         learned_route_hints=learned_route_hints,
     )
-    proof_route_decision = {
-        "kind": "proof-route-decision/v1",
-        "selection_order": [
-            "changed paths -> proof intent",
-            "proof intent -> candidate route needs",
-            "host policy/profile overlay",
-            "learned hints",
-            "live capability confirmation",
-            "command/manual selection",
-            "execution evidence expectations",
-        ],
-        "proof_intents": proof_intents,
-        "configured_policy": configured_policy,
-        "learned_route_hints": learned_route_hints,
-        "target_capabilities": target_capabilities,
-        "selected_commands": selected_commands,
-        "unavailable_commands": unavailable_commands,
-        "host_policy_blocked_commands": host_policy_blocked_commands,
-        "manual_verification": manual_verification,
-        "proof_execution_evidence": proof_execution_evidence,
-    }
+    proof_route_decision = _proof_route_decision_payload(
+        proof_next_decision=proof_next_decision,
+        selected_commands=selected_commands,
+        required_commands=required_commands,
+        manual_verification=manual_verification,
+        unavailable_commands=unavailable_commands,
+    )
+    proof_route_explanation = _proof_route_explanation_payload(
+        proof_intents=proof_intents,
+        configured_policy=configured_policy,
+        learned_route_hints=learned_route_hints,
+        target_capabilities=target_capabilities,
+        selected_commands=selected_commands,
+        unavailable_commands=unavailable_commands,
+        host_policy_blocked_commands=host_policy_blocked_commands,
+        manual_verification=manual_verification,
+        proof_execution_evidence=proof_execution_evidence,
+    )
 
     optional_commands = [
         "agentic-workspace proof --target ./repo --current --format json",
@@ -19706,6 +19782,7 @@ def _proof_selection_for_changed_paths(
         "host_policy_blocked_commands": host_policy_blocked_commands,
         "proof_execution_evidence": proof_execution_evidence,
         "proof_route_decision": proof_route_decision,
+        "proof_route_explanation": proof_route_explanation,
         "proof_next_decision": proof_next_decision,
         "selected_lanes": [
             {

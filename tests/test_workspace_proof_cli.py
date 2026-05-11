@@ -174,6 +174,17 @@ def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, ca
     assert payload["next"]["command"] == "make test"
     assert payload["next"]["route_source"] == "live-adapted-target-capability"
     assert payload["next"]["why"] == "behavior-test intent selected live-adapted-target-capability."
+    assert payload["proof_route_decision"]["selected_command"] == {
+        "command": "make test",
+        "lane": "workspace_cli",
+        "route_source": "live-adapted-target-capability",
+        "intent_type": "behavior-test",
+    }
+    assert payload["proof_route_decision"]["route_source"] == "live-adapted-target-capability"
+    assert payload["proof_route_decision"]["manual_fallback"] is None
+    assert payload["proof_route_decision"]["explanation_field"] == "proof_route_explanation"
+    assert "next_action" not in payload["proof_route_decision"]
+    assert "required_commands" not in payload["proof_route_decision"]
     assert payload["proof_command_adjustments"] == [
         {
             "lane": "workspace_cli",
@@ -200,6 +211,10 @@ def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -
     assert payload["required_commands"] == []
     assert payload["next"]["action"] == "manual-verification"
     assert payload["next"]["command"] is None
+    assert payload["proof_route_decision"]["manual_fallback"]["status"] == "required"
+    assert payload["proof_route_decision"]["manual_fallback"]["unavailable_command_count"] == 2
+    assert payload["proof_route_decision"]["selected_command"] is None
+    assert payload["proof_route_decision"]["route_source"] == "manual-fallback"
     assert payload["manual_verification"]["status"] == "required"
     assert "no executable proof route" in payload["manual_verification"]["summary"]
     assert payload["unavailable_proof_commands"] == [
@@ -253,12 +268,18 @@ def test_proof_verbose_exposes_manual_fallback_decision_layers(tmp_path: Path, c
 
     answer = json.loads(capsys.readouterr().out)["answer"]
     decision = answer["proof_route_decision"]
-    assert decision["selected_commands"] == []
-    assert [command["command"] for command in decision["unavailable_commands"]] == ["make test-workspace", "make lint-workspace"]
-    assert decision["manual_verification"]["status"] == "required"
-    assert decision["manual_verification"]["templates"][0]["intent_type"] == "behavior-test"
-    assert decision["manual_verification"]["templates"][0]["trust"] == "lower-than-executable-proof"
-    assert decision["proof_execution_evidence"] == {
+    assert decision["next_action"]["action"] == "manual-verification"
+    assert decision["selected_command"] is None
+    assert decision["manual_fallback"]["status"] == "required"
+    assert decision["manual_fallback"]["unavailable_command_count"] == 2
+    assert decision["critical_warnings"] == ["Some selected proof commands are unavailable in this target repo."]
+    explanation = answer["proof_route_explanation"]
+    assert explanation["selected_commands"] == []
+    assert [command["command"] for command in explanation["unavailable_commands"]] == ["make test-workspace", "make lint-workspace"]
+    assert explanation["manual_verification"]["status"] == "required"
+    assert explanation["manual_verification"]["templates"][0]["intent_type"] == "behavior-test"
+    assert explanation["manual_verification"]["templates"][0]["trust"] == "lower-than-executable-proof"
+    assert explanation["proof_execution_evidence"] == {
         "kind": "proof-execution-evidence/v1",
         "status": "not-run",
         "state_model": ["selected", "run", "passed", "failed", "skipped", "unavailable", "waived", "missing"],
@@ -399,10 +420,13 @@ def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path
     assert hints["stale"][0]["candidate_command"] == "npm run stale"
     assert hints["stale"][0]["confirmation"] == "stale-or-unavailable"
     decision = answer["proof_route_decision"]
-    assert decision["proof_intents"][0]["kind"] == "proof-intent/v1"
-    assert decision["target_capabilities"]["package_json"]["scripts"] == ["lint", "test"]
-    assert decision["selected_commands"][0]["kind"] == "proof-command/v1"
-    assert decision["proof_execution_evidence"]["status"] == "not-run"
+    assert decision["critical_warnings"] == ["1 learned route hint(s) are stale or unavailable."]
+    assert decision["selected_command"]["command"] == "npm test"
+    explanation = answer["proof_route_explanation"]
+    assert explanation["proof_intents"][0]["kind"] == "proof-intent/v1"
+    assert explanation["target_capabilities"]["package_json"]["scripts"] == ["lint", "test"]
+    assert explanation["selected_commands"][0]["kind"] == "proof-command/v1"
+    assert explanation["proof_execution_evidence"]["status"] == "not-run"
     assert answer["proof_next_decision"]["warnings"] == ["1 learned route hint(s) are stale or unavailable."]
 
 
@@ -492,7 +516,8 @@ candidates = []
             "selected_by_lane": "workspace_cli",
         }
     ]
-    assert answer["proof_route_decision"]["host_policy_blocked_commands"] == answer["host_policy_blocked_commands"]
+    assert answer["proof_route_decision"]["critical_warnings"] == ["Host proof policy blocked one or more candidate proof commands."]
+    assert answer["proof_route_explanation"]["host_policy_blocked_commands"] == answer["host_policy_blocked_commands"]
     assert answer["proof_next_decision"]["warnings"] == ["Host proof policy blocked one or more candidate proof commands."]
 
 
