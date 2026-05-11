@@ -447,7 +447,17 @@ def test_init_persists_advisory_proof_route_hints(monkeypatch, tmp_path: Path, c
         "hint_count": 2,
         "written": True,
         "rule": "Advisory proof route hints are not host policy; proof selection must live-confirm them before emitting commands.",
+        "learning_policy": {
+            "kind": "setup-adopt-proof-route-learning-policy/v1",
+            "persistence": "advisory-hints",
+            "authoritative_selection": "live-target-capabilities",
+            "configured_policy_role": (
+                "host proof policy may require, disallow, or add routes but does not come from setup/adopt learning"
+            ),
+            "route_map_decision": "do-not-create-second-route-map-unless-live-discovery-proves-insufficient",
+        },
     }
+    assert hints["learning_policy"] == payload["proof_route_hints"]["learning_policy"]
     assert [hint["candidate_command"] for hint in hints["hints"]] == ["npm run lint", "npm test"]
     assert all(hint["requires_live_confirmation"] is True for hint in hints["hints"])
 

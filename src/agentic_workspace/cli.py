@@ -4518,6 +4518,7 @@ def _run_init(
             "hint_count": len(proof_route_hints["hints"]),
             "written": not dry_run and should_write_proof_route_hints,
             "rule": proof_route_hints["rule"],
+            "learning_policy": proof_route_hints["learning_policy"],
         },
     }
     should_include_prompt = print_prompt or prompt_path is not None or summary["prompt_requirement"] != "none"
@@ -18733,6 +18734,13 @@ def _proof_route_hints_payload(*, target_root: Path) -> dict[str, Any]:
         "schema_version": "proof-route-hints/v1",
         "source": "lifecycle-discovery",
         "rule": "Advisory proof route hints are not host policy; proof selection must live-confirm them before emitting commands.",
+        "learning_policy": {
+            "kind": "setup-adopt-proof-route-learning-policy/v1",
+            "persistence": "advisory-hints",
+            "authoritative_selection": "live-target-capabilities",
+            "configured_policy_role": "host proof policy may require, disallow, or add routes but does not come from setup/adopt learning",
+            "route_map_decision": "do-not-create-second-route-map-unless-live-discovery-proves-insufficient",
+        },
         "hints": hints,
     }
 
@@ -18795,6 +18803,33 @@ def _confirm_learned_route_hints(
         "confirmed": confirmed,
         "stale": stale,
         "rule": "Learned route hints can explain or suggest proof routes, but only live-confirmed hints may support command selection.",
+    }
+
+
+def _setup_adopt_route_learning_projection(learned_route_hints: dict[str, Any]) -> dict[str, Any]:
+    status = str(learned_route_hints.get("status", "unavailable"))
+    hints = learned_route_hints.get("hints", []) if isinstance(learned_route_hints.get("hints", []), list) else []
+    confirmed = learned_route_hints.get("confirmed", []) if isinstance(learned_route_hints.get("confirmed", []), list) else []
+    stale = learned_route_hints.get("stale", []) if isinstance(learned_route_hints.get("stale", []), list) else []
+    persisted = status == "loaded"
+    return {
+        "kind": "setup-adopt-proof-route-learning/v1",
+        "status": "advisory-hints-loaded" if persisted else "live-discovery-sufficient",
+        "persistent_surface": PROOF_ROUTE_HINTS_PATH.as_posix(),
+        "hint_count": len(hints),
+        "confirmed_count": len(confirmed),
+        "stale_count": len(stale),
+        "route_map_decision": "use-advisory-hints-only" if persisted else "no-persisted-route-map-needed",
+        "reason": (
+            "Setup/adopt-discovered route hints are persisted as advisory memory and must be live-confirmed before command selection."
+            if persisted
+            else "No setup/adopt route hints are present; live target capability discovery is sufficient for proof selection."
+        ),
+        "separation": {
+            "configured_policy": "host-owned proof profiles and disallowed commands",
+            "live_target_capabilities": "current Makefile, package.json, language, and role-command discovery",
+            "setup_adopt_learning": "advisory route hints from lifecycle discovery, never host policy",
+        },
     }
 
 
@@ -18950,6 +18985,7 @@ def _proof_route_explanation_payload(
         "proof_intents": proof_intents,
         "configured_policy": configured_policy,
         "learned_route_hints": learned_route_hints,
+        "setup_adopt_route_learning": _setup_adopt_route_learning_projection(learned_route_hints),
         "target_capabilities": target_capabilities,
         "selected_commands": selected_commands,
         "unavailable_commands": unavailable_commands,

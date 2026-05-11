@@ -9,6 +9,7 @@
     "schema_version",
     "source",
     "rule",
+    "learning_policy",
     "hints"
   ],
   "properties": {
@@ -29,6 +30,36 @@
       "type": "string",
       "minLength": 1,
       "description": "Human-readable safety rule explaining how consumers should treat these hints."
+    },
+    "learning_policy": {
+      "type": "object",
+      "required": [
+        "kind",
+        "persistence",
+        "authoritative_selection",
+        "configured_policy_role",
+        "route_map_decision"
+      ],
+      "properties": {
+        "kind": {
+          "const": "setup-adopt-proof-route-learning-policy/v1"
+        },
+        "persistence": {
+          "const": "advisory-hints"
+        },
+        "authoritative_selection": {
+          "const": "live-target-capabilities"
+        },
+        "configured_policy_role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "route_map_decision": {
+          "const": "do-not-create-second-route-map-unless-live-discovery-proves-insufficient"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Policy separating setup/adopt-learned hints from live capabilities and configured proof policy."
     },
     "hints": {
       "type": "array",

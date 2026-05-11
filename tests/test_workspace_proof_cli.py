@@ -425,6 +425,23 @@ def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path
     explanation = answer["proof_route_explanation"]
     assert explanation["proof_intents"][0]["kind"] == "proof-intent/v1"
     assert explanation["target_capabilities"]["package_json"]["scripts"] == ["lint", "test"]
+    assert explanation["setup_adopt_route_learning"] == {
+        "kind": "setup-adopt-proof-route-learning/v1",
+        "status": "advisory-hints-loaded",
+        "persistent_surface": ".agentic-workspace/proof-route-hints.json",
+        "hint_count": 2,
+        "confirmed_count": 1,
+        "stale_count": 1,
+        "route_map_decision": "use-advisory-hints-only",
+        "reason": (
+            "Setup/adopt-discovered route hints are persisted as advisory memory and must be live-confirmed before command selection."
+        ),
+        "separation": {
+            "configured_policy": "host-owned proof profiles and disallowed commands",
+            "live_target_capabilities": "current Makefile, package.json, language, and role-command discovery",
+            "setup_adopt_learning": "advisory route hints from lifecycle discovery, never host policy",
+        },
+    }
     assert explanation["selected_commands"][0]["kind"] == "proof-command/v1"
     assert explanation["proof_execution_evidence"]["status"] == "not-run"
     assert answer["proof_next_decision"]["warnings"] == ["1 learned route hint(s) are stale or unavailable."]
@@ -519,6 +536,21 @@ candidates = []
     assert answer["proof_route_decision"]["critical_warnings"] == ["Host proof policy blocked one or more candidate proof commands."]
     assert answer["proof_route_explanation"]["host_policy_blocked_commands"] == answer["host_policy_blocked_commands"]
     assert answer["proof_next_decision"]["warnings"] == ["Host proof policy blocked one or more candidate proof commands."]
+
+
+def test_proof_verbose_explains_live_discovery_when_no_setup_adopt_route_hints(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "Makefile", "test:\n\tpytest\n\nlint:\n\truff check .\n")
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    learning = answer["proof_route_explanation"]["setup_adopt_route_learning"]
+    assert learning["status"] == "live-discovery-sufficient"
+    assert learning["hint_count"] == 0
+    assert learning["route_map_decision"] == "no-persisted-route-map-needed"
+    assert "live target capability discovery is sufficient" in learning["reason"]
+    assert learning["separation"]["setup_adopt_learning"] == "advisory route hints from lifecycle discovery, never host policy"
 
 
 def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
