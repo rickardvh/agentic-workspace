@@ -10951,6 +10951,12 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "delegation_decision",
         "intent_acknowledgement",
         "workflow_sufficiency",
+        "health",
+        "warnings_count",
+        "needs_review_count",
+        "repair_actions_count",
+        "manual_review_actions_count",
+        "next_action",
         "continuation_state",
         "authority_hierarchy",
         "compliance_economics",
@@ -18261,6 +18267,8 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
         config=config,
         compact_status=_diagnostic_profile(args, default="tiny") == "tiny",
     )
+    if getattr(args, "select", None):
+        payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command=command_name)
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 

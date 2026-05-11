@@ -1571,6 +1571,13 @@ export const generatedCommandPackage = {
             ],
             "help": "Emit all diagnostic detail. Prefer default output for ordinary remediation routing.",
             "name": "verbose"
+          },
+          {
+            "flags": [
+              "--select"
+            ],
+            "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed.",
+            "name": "select"
           }
         ]
       },
@@ -1608,6 +1615,7 @@ export const generatedCommandPackage = {
           "workspace.root.resolve",
           "workspace.selection.resolve",
           "workspace.report.assemble",
+          "output.fields.select",
           "output.emit"
         ]
       },

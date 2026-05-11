@@ -710,6 +710,19 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
     ]
 
 
+def test_generated_python_command_package_parses_doctor_select() -> None:
+    from agentic_workspace.generated_cli_package import run_generated_command
+
+    calls: list[tuple[str, str | None]] = []
+
+    def runtime_handler(operation_id: str, args: argparse.Namespace) -> int:
+        calls.append((operation_id, getattr(args, "select", None)))
+        return 0
+
+    assert run_generated_command(["doctor", "--target", ".", "--format", "json", "--select", "health,next_action"], runtime_handler) == 0
+    assert calls == [("doctor.report", "health,next_action")]
+
+
 def test_package_generated_python_command_packages_parse_status_runtime_operations() -> None:
     from repo_memory_bootstrap.generated_cli_package import run_generated_command as run_memory_generated_command
     from repo_planning_bootstrap.generated_cli_package import run_generated_command as run_planning_generated_command
