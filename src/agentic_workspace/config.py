@@ -162,11 +162,18 @@ SUPPORTED_CLARIFICATION_CONTROL_MODES = (
 )
 WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
-WORKSPACE_POINTER_BLOCK = (
-    f"{WORKSPACE_WORKFLOW_MARKER_START}\n"
-    'Before answering or editing non-trivial requests, including read-only workflow, config, delegation, or action-safety decisions, use the effective CLI invocation from `agentic-workspace start --format json`, `.agentic-workspace/config.toml` `[workspace].cli_invoke`, or `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present. Run `<effective-cli> implement --changed <paths> --task "<task>" --format json` when changed paths are known; otherwise run `<effective-cli> start --task "<task>" --format json` using the user\'s request as `<task>`. Do not substitute a bare `agentic-workspace` command when resolved config names a repo-local or dev-dependency invocation; PATH may resolve a stale installed selector. Do not open raw `.agentic-workspace` files before this command; follow `immediate_next_allowed_action` and `skill_routing` first. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If the CLI is unavailable, immediately read `.agentic-workspace/WORKFLOW.md` before any other files.\n'
-    f"{WORKSPACE_WORKFLOW_MARKER_END}"
-)
+
+
+def workspace_pointer_block(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> str:
+    effective_cli = cli_invoke.strip() or DEFAULT_CLI_INVOKE
+    return (
+        f"{WORKSPACE_WORKFLOW_MARKER_START}\n"
+        f'Before answering or editing non-trivial requests, including read-only workflow, config, delegation, or action-safety decisions, use `{effective_cli}` as the effective Agentic Workspace CLI invocation for this repo. This value is resolved from `.agentic-workspace/config.toml` `[workspace].cli_invoke`; if `.agentic-workspace/config.local.toml` explicitly overrides it, use that local value. Run `{effective_cli} implement --changed <paths> --task "<task>" --format json` when changed paths are known; otherwise run `{effective_cli} start --task "<task>" --format json` using the user\'s request as `<task>`. Do not try a bare `agentic-workspace` command first when the effective invocation names a repo-local or dev-dependency command; PATH may resolve a stale installed selector. Do not open raw `.agentic-workspace` files before this command; follow `immediate_next_allowed_action` and `skill_routing` first. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If the effective CLI is unavailable after trying it, immediately read `.agentic-workspace/WORKFLOW.md` before any other files.\n'
+        f"{WORKSPACE_WORKFLOW_MARKER_END}"
+    )
+
+
+WORKSPACE_POINTER_BLOCK = workspace_pointer_block()
 MEMORY_WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
 MEMORY_WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
 MEMORY_POINTER_BLOCK = (

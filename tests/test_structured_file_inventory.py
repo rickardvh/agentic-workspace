@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -20,6 +21,17 @@ def test_inventory_shape_is_valid() -> None:
 
 def test_current_tracked_structured_files_are_classified() -> None:
     assert check_structured_file_inventory.inventory_findings() == []
+
+
+def test_tracked_files_exclude_planned_deletions(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    tracked = tmp_path / "planned-delete.plan.json"
+    tracked.write_text('{"kind":"planning-execplan/v1"}\n', encoding="utf-8")
+    subprocess.run(["git", "add", "planned-delete.plan.json"], cwd=tmp_path, check=True, capture_output=True, text=True)
+
+    tracked.unlink()
+
+    assert check_structured_file_inventory._tracked_files(tmp_path) == []
 
 
 def test_unmatched_structured_file_fails() -> None:

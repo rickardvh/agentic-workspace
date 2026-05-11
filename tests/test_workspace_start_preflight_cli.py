@@ -874,6 +874,100 @@ def test_start_tiny_keeps_config_effect_when_auto_mode_is_safety_downgraded(tmp_
     assert decision["config_effect"]["safe_to_auto_run_commands"] is False
 
 
+def test_start_surfaces_decomposed_active_work_delegation_candidates_and_auto_skip(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "auto"',
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = false",
+                "",
+                "[delegation_targets.mini]",
+                'strength = "medium"',
+                'location = "local"',
+                'capability_classes = ["mixed", "mechanical-follow-through"]',
+                'execution_methods = ["cli"]',
+            ]
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        "\n".join(
+            [
+                'kind = "agentic-planning-state"',
+                'schema_version = "planning-state/v1"',
+                "",
+                "[todo]",
+                'active_items = [{ id = "dogfood", surface = ".agentic-workspace/planning/execplans/dogfood.plan.json", next_action = "Continue decomposed work." }]',
+            ]
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "dogfood.decomposition.json",
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Dogfood delegation opportunities",
+                "status": "ready-for-lane-promotion",
+                "larger_intended_outcome": "Expose concrete delegation opportunities.",
+                "non_goals": [],
+                "candidate_lanes": [
+                    {
+                        "id": "validation-slice",
+                        "title": "Validation slice",
+                        "readiness": "ready",
+                        "outcome": "Run and report focused validation.",
+                        "owner_surface": ".agentic-workspace/planning/execplans/validation-slice.plan.json",
+                        "proof": "Focused CLI tests pass.",
+                        "depends_on": [],
+                        "parallel_with": [],
+                    }
+                ],
+                "dependency_assumptions": [],
+                "parallelization_assumptions": [],
+                "proof_expectations": ["Focused CLI tests pass."],
+                "promotion_rule": "Promote ready lanes only.",
+                "references": [],
+                "notes": "",
+            },
+            indent=2,
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue active decomposed docs validation work",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    decision = json.loads(capsys.readouterr().out)["delegation_decision"]
+    decomposition = decision["decomposition_delegation"]
+    assert decomposition["status"] == "present"
+    assert decomposition["candidates"][0]["lane_id"] == "validation-slice"
+    assert decomposition["candidates"][0]["route_candidate"] == "delegate-implementation"
+    assert decision["delegation_candidates"][0]["owner_surface"].endswith("validation-slice.plan.json")
+    audit = decision["auto_delegation_audit"]
+    assert audit["status"] == "skipped"
+    assert audit["must_report_if_not_run"] is True
+    assert audit["skipped_targets"][0]["name"] == "mini"
+    assert "safe_to_auto_run_commands" in audit["skipped_targets"][0]["reasons"][0]
+
+
 def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

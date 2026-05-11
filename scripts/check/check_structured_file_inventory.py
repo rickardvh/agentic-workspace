@@ -106,7 +106,8 @@ def _tracked_files(root: Path = REPO_ROOT) -> list[str]:
         capture_output=True,
         text=True,
     )
-    return sorted(_as_posix(line.strip()) for line in result.stdout.splitlines() if line.strip())
+    tracked_paths = (_as_posix(line.strip()) for line in result.stdout.splitlines() if line.strip())
+    return sorted(path for path in tracked_paths if (root / path).exists() or (root / path).is_symlink())
 
 
 def tracked_structured_files(root: Path = REPO_ROOT) -> list[str]:

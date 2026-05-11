@@ -70,7 +70,7 @@ from agentic_workspace.config import (
     WORKSPACE_LOCAL_INTEGRATION_SUBFOLDER_CONVENTION,
     WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
     WORKSPACE_LOCAL_SCRATCH_ROOT_PATH,
-    WORKSPACE_POINTER_BLOCK,
+    WORKSPACE_POINTER_BLOCK,  # noqa: F401 - re-exported for compatibility with tests and callers.
     WORKSPACE_SUBSYSTEM_INTENT_PATH,
     WORKSPACE_SYSTEM_INTENT_MIRROR_PATH,
     WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH,
@@ -83,6 +83,7 @@ from agentic_workspace.config import (
     ModuleUpdatePolicy,
     WorkspaceConfig,
     WorkspaceUsageError,
+    workspace_pointer_block,
 )
 from agentic_workspace.contract_tooling import (
     authority_markers_manifest,
@@ -3267,11 +3268,11 @@ def _workspace_agents_template(
         "Authority marker:",
         "",
         "- authority: adapter",
-        "- canonical_source: `.agentic-workspace/config.toml` and `agentic-workspace start --target . --format json`",
+        f"- canonical_source: `.agentic-workspace/config.toml` and `{cli_invoke} start --target . --format json`",
         "- safe_to_edit: true",
         "- refresh_command: null",
         "",
-        WORKSPACE_POINTER_BLOCK,
+        workspace_pointer_block(cli_invoke=cli_invoke),
     ]
     return "\n".join(lines) + "\n"
 
@@ -3306,7 +3307,7 @@ def _remove_fenced_block(*, text: str, start_marker: str, end_marker: str) -> tu
     return updated, True
 
 
-def _local_agent_indirection_is_current(*, target_root: Path, agents_relative: Path, agents_text: str) -> bool:
+def _local_agent_indirection_is_current(*, target_root: Path, agents_relative: Path, agents_text: str, cli_invoke: str) -> bool:
     if agents_relative != LOCAL_AGENT_REFERENCE_FILE:
         return False
     if LOCAL_AGENT_REFERENCE_LINE not in agents_text:
@@ -3314,7 +3315,7 @@ def _local_agent_indirection_is_current(*, target_root: Path, agents_relative: P
     local_agents_path = target_root / LOCAL_AGENT_INSTRUCTIONS_FILE
     if not local_agents_path.is_file():
         return False
-    return WORKSPACE_POINTER_BLOCK in local_agents_path.read_text(encoding="utf-8")
+    return workspace_pointer_block(cli_invoke=cli_invoke) in local_agents_path.read_text(encoding="utf-8")
 
 
 def _workspace_status_report(
@@ -3374,7 +3375,8 @@ def _workspace_status_report(
         )
 
     agents_text = agents_path.read_text(encoding="utf-8")
-    if WORKSPACE_POINTER_BLOCK in agents_text:
+    expected_pointer_block = workspace_pointer_block(cli_invoke=config.cli_invoke)
+    if expected_pointer_block in agents_text:
         actions.append(
             {
                 "kind": "current",
@@ -3382,7 +3384,12 @@ def _workspace_status_report(
                 "detail": "workspace workflow pointer block present",
             }
         )
-    elif _local_agent_indirection_is_current(target_root=target_root, agents_relative=agents_relative, agents_text=agents_text):
+    elif _local_agent_indirection_is_current(
+        target_root=target_root,
+        agents_relative=agents_relative,
+        agents_text=agents_text,
+        cli_invoke=config.cli_invoke,
+    ):
         actions.append(
             {
                 "kind": "current",
@@ -3525,18 +3532,18 @@ def _local_only_state_path(*, target_root: Path) -> Path:
     return target_root / LOCAL_ONLY_STATE_FILE
 
 
-def _local_agent_instructions_text() -> str:
+def _local_agent_instructions_text(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> str:
     lines = [
         "# Local Agent Instructions",
         "",
         "Authority marker:",
         "",
         "- authority: local-adapter",
-        "- canonical_source: `.agentic-workspace/config.toml` and `agentic-workspace start --target . --format json`",
+        f"- canonical_source: `.agentic-workspace/config.toml` and `{cli_invoke} start --target . --format json`",
         "- safe_to_edit: true",
         "- refresh_command: null",
         "",
-        WORKSPACE_POINTER_BLOCK,
+        workspace_pointer_block(cli_invoke=cli_invoke),
     ]
     return "\n".join(lines) + "\n"
 
@@ -3570,10 +3577,10 @@ def _remove_local_agent_reference_text(text: str) -> tuple[str, bool]:
     return updated, True
 
 
-def _sync_local_agent_startup(*, repo_root: Path, dry_run: bool, replace_reference_file: bool) -> list[dict[str, str]]:
+def _sync_local_agent_startup(*, repo_root: Path, dry_run: bool, replace_reference_file: bool, cli_invoke: str) -> list[dict[str, str]]:
     actions: list[dict[str, str]] = []
     local_path = repo_root / LOCAL_AGENT_INSTRUCTIONS_FILE
-    rendered_local = _local_agent_instructions_text()
+    rendered_local = _local_agent_instructions_text(cli_invoke=cli_invoke)
     existing_local = local_path.read_text(encoding="utf-8") if local_path.exists() else None
     if existing_local == rendered_local:
         actions.append(
@@ -3626,7 +3633,7 @@ def _sync_local_agent_startup(*, repo_root: Path, dry_run: bool, replace_referen
     return actions
 
 
-def _remove_local_agent_startup(*, repo_root: Path, dry_run: bool) -> list[dict[str, str]]:
+def _remove_local_agent_startup(*, repo_root: Path, dry_run: bool, cli_invoke: str) -> list[dict[str, str]]:
     actions: list[dict[str, str]] = []
     local_path = repo_root / LOCAL_AGENT_INSTRUCTIONS_FILE
     if not local_path.exists():
@@ -3637,7 +3644,7 @@ def _remove_local_agent_startup(*, repo_root: Path, dry_run: bool) -> list[dict[
                 "detail": "local startup instructions already absent",
             }
         )
-    elif local_path.read_text(encoding="utf-8") != _local_agent_instructions_text():
+    elif local_path.read_text(encoding="utf-8") != _local_agent_instructions_text(cli_invoke=cli_invoke):
         actions.append(
             {
                 "kind": "manual review",
@@ -3960,6 +3967,7 @@ def _workspace_init_or_upgrade_report(
                 repo_root=local_only_repo_root,
                 dry_run=dry_run,
                 replace_reference_file=inspection_mode == "install",
+                cli_invoke=config.cli_invoke,
             )
         )
     elif inspection_mode == "install":
@@ -3986,7 +3994,7 @@ def _workspace_init_or_upgrade_report(
         base_text = existing_agents or rendered_agents
         updated_text, changed = _replace_or_insert_fenced_block(
             text=base_text,
-            block=WORKSPACE_POINTER_BLOCK,
+            block=workspace_pointer_block(cli_invoke=config.cli_invoke),
             start_marker=WORKSPACE_WORKFLOW_MARKER_START,
             end_marker=WORKSPACE_WORKFLOW_MARKER_END,
         )
@@ -4086,7 +4094,9 @@ def _workspace_init_or_upgrade_report(
     )
 
 
-def _workspace_uninstall_report(*, target_root: Path, dry_run: bool, local_only_repo_root: Path | None = None) -> dict[str, Any]:
+def _workspace_uninstall_report(
+    *, target_root: Path, dry_run: bool, config: WorkspaceConfig, local_only_repo_root: Path | None = None
+) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     removable_candidates: list[Path] = []
@@ -4150,7 +4160,7 @@ def _workspace_uninstall_report(*, target_root: Path, dry_run: bool, local_only_
                     "detail": "remove the local-only workspace tree",
                 }
             )
-        actions.extend(_remove_local_agent_startup(repo_root=local_only_repo_root, dry_run=dry_run))
+        actions.extend(_remove_local_agent_startup(repo_root=local_only_repo_root, dry_run=dry_run, cli_invoke=config.cli_invoke))
         actions.append(_remove_local_only_git_exclude(repo_root=local_only_repo_root, dry_run=dry_run))
         actions.append(_remove_legacy_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
 
@@ -4844,6 +4854,7 @@ def _run_lifecycle_command(
             _workspace_uninstall_report(
                 target_root=target_root,
                 dry_run=dry_run,
+                config=config,
                 local_only_repo_root=local_only_repo_root,
             )
         )
@@ -10160,6 +10171,17 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
     if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation", "delegate-bounded-slice"}:
         compact["target"] = value.get("target")
         compact["reason"] = value.get("reason")
+    decomposition_delegation = value.get("decomposition_delegation")
+    if isinstance(decomposition_delegation, dict) and decomposition_delegation.get("status") == "present":
+        compact["decomposition_delegation"] = {
+            key: decomposition_delegation.get(key)
+            for key in ("kind", "status", "reason", "candidate_count", "candidates", "rule")
+            if key in decomposition_delegation
+        }
+        compact["delegation_candidates"] = list(value.get("delegation_candidates", []))[:5]
+    auto_delegation_audit = value.get("auto_delegation_audit")
+    if isinstance(auto_delegation_audit, dict) and auto_delegation_audit.get("status") == "skipped":
+        compact["auto_delegation_audit"] = auto_delegation_audit
     if (
         isinstance(manual_external_relay, dict)
         and manual_external_relay.get("target_kind") == "manual-external"
@@ -10560,6 +10582,7 @@ def _start_payload(
         config=config,
         changed_paths=_normalize_changed_paths(changed_paths),
         task_text=task_text,
+        target_root=target_root,
     )
     payload["delegation_decision"] = execution_posture["delegation_decision"]
     intent_acknowledgement = _intent_acknowledgement_payload(
@@ -10905,7 +10928,11 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str) -
         ):
             selected["durable_intent_promotion"] = _tiny_task_intent_promotion_guidance(task_intent["promotion_guidance"])
     delegation = payload.get("delegation_decision", {})
-    if isinstance(delegation, dict) and delegation.get("decision") not in {"", None, "stay-local"}:
+    if isinstance(delegation, dict) and (
+        delegation.get("decision") not in {"", None, "stay-local"}
+        or delegation.get("delegation_candidates")
+        or (isinstance(delegation.get("auto_delegation_audit"), dict) and delegation["auto_delegation_audit"].get("status") == "skipped")
+    ):
         selected["delegation_decision"] = delegation
     cli_invocation = payload.get("cli_invocation", {})
     if isinstance(cli_invocation, dict) and cli_invocation.get("mismatch"):
@@ -11096,6 +11123,7 @@ def _start_tiny_payload_fast(
         config=config,
         changed_paths=_normalize_changed_paths(changed_paths),
         task_text=task_text,
+        target_root=target_root,
     )
     payload["delegation_decision"] = execution_posture["delegation_decision"]
     intent_acknowledgement = _intent_acknowledgement_payload(
@@ -11210,6 +11238,99 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
         "todo_active_count": len(active_items),
         "active_execplan": active_execplan,
         "planning_status": "present" if active_items else "unavailable",
+    }
+
+
+def _active_decomposition_delegation_payload(*, target_root: Path) -> dict[str, Any]:
+    active_summary = _fast_planning_active_summary(target_root=target_root)
+    if not (active_summary.get("todo_active_count") or active_summary.get("active_execplan")):
+        return {
+            "kind": "agentic-workspace/decomposition-delegation-candidates/v1",
+            "status": "inactive",
+            "reason": "no active planning state is present, so decomposition records remain future-work context",
+            "candidates": [],
+        }
+    decompositions_dir = target_root / ".agentic-workspace" / "planning" / "decompositions"
+    if not decompositions_dir.exists():
+        return {
+            "kind": "agentic-workspace/decomposition-delegation-candidates/v1",
+            "status": "absent",
+            "reason": "no planning decomposition directory is installed",
+            "candidates": [],
+        }
+
+    candidates: list[dict[str, Any]] = []
+    inspected_records: list[str] = []
+    for path in sorted(decompositions_dir.glob("*.decomposition.json")):
+        rel_path = path.relative_to(target_root).as_posix()
+        if path.name == "TEMPLATE.decomposition.json":
+            continue
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(record, dict) or record.get("kind") != "planning-decomposition/v1":
+            continue
+        status = str(record.get("status", "")).strip().lower()
+        if status in {"closed", "retired", "superseded"}:
+            continue
+        inspected_records.append(rel_path)
+        lanes = record.get("candidate_lanes", [])
+        if not isinstance(lanes, list):
+            continue
+        for lane in lanes:
+            if not isinstance(lane, dict):
+                continue
+            readiness = str(lane.get("readiness", "")).strip().lower()
+            if readiness in {"promoted", "closed", "done", "retired", "superseded"}:
+                continue
+            lane_id = str(lane.get("id", "")).strip()
+            title = str(lane.get("title", "")).strip()
+            outcome = str(lane.get("outcome", "")).strip()
+            owner_surface = str(lane.get("owner_surface", "")).strip()
+            proof = str(lane.get("proof", "")).strip()
+            if not (lane_id and title and outcome):
+                continue
+            if readiness in {"ready", "ready-for-promotion", "ready-for-lane-promotion"}:
+                route = "delegate-implementation"
+            elif owner_surface or proof:
+                route = "delegate-exploration"
+            else:
+                route = "keep-local-shaping"
+            candidates.append(
+                {
+                    "decomposition": rel_path,
+                    "lane_id": lane_id,
+                    "title": title,
+                    "readiness": readiness or "unknown",
+                    "route_candidate": route,
+                    "outcome": outcome,
+                    "owner_surface": owner_surface,
+                    "proof": proof,
+                    "depends_on": list(lane.get("depends_on", [])) if isinstance(lane.get("depends_on", []), list) else [],
+                    "parallel_with": list(lane.get("parallel_with", [])) if isinstance(lane.get("parallel_with", []), list) else [],
+                }
+            )
+
+    if not candidates:
+        return {
+            "kind": "agentic-workspace/decomposition-delegation-candidates/v1",
+            "status": "none",
+            "reason": "no open decomposition lanes are concrete enough to delegate",
+            "inspected_records": inspected_records,
+            "candidates": [],
+        }
+    return {
+        "kind": "agentic-workspace/decomposition-delegation-candidates/v1",
+        "status": "present",
+        "reason": "open decomposition lanes provide concrete bounded slices that can be considered for delegation",
+        "inspected_records": inspected_records,
+        "candidate_count": len(candidates),
+        "candidates": candidates[:5],
+        "rule": (
+            "Delegation candidates from decomposition records are advisory. Promote or hand off only bounded lanes with "
+            "clear owner surface, proof expectation, and unchanged validation burden."
+        ),
     }
 
 
@@ -11824,6 +11945,7 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         config=config,
         changed_paths=normalized_paths,
         task_text=task_text,
+        target_root=target_root,
     )
     task_intent = _task_intent_carry_forward_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     acceptance = task_intent["acceptance"]
@@ -12444,6 +12566,7 @@ def _delegation_next_action_decision(
     mode = str(delegation_control.get("effective_mode", "suggest"))
     clarification_mode = str(clarification_control.get("effective_mode", "suggest"))
     selected_target = execution_posture.get("selected_target")
+    decomposition_delegation = execution_posture.get("decomposition_delegation", {})
     target_name = str(selected_target.get("name")) if isinstance(selected_target, dict) and selected_target.get("name") else None
     target_execution_methods = (
         list(selected_target.get("execution_methods", []))
@@ -12479,6 +12602,11 @@ def _delegation_next_action_decision(
 
     downrouting = runtime_resolution.get("downrouting_guardrail", {})
     downrouting_active = isinstance(downrouting, dict) and downrouting.get("status") == "active"
+    decomposition_candidates = (
+        list(decomposition_delegation.get("candidates", []))
+        if isinstance(decomposition_delegation, dict) and isinstance(decomposition_delegation.get("candidates"), list)
+        else []
+    )
 
     if missing_task_signal and clarification_mode == "ask-first":
         decision = "ask-human"
@@ -12650,6 +12778,50 @@ def _delegation_next_action_decision(
         ),
         "human_control": "auto execution requires local safety permission; otherwise surface suggest/handoff first.",
     }
+    configured_auto_targets = [
+        profile
+        for profile in runtime_resolution.get("profile_recommendations", [])
+        if isinstance(profile, dict)
+        and (not profile.get("human_control_modes") or "auto" in {str(mode) for mode in profile.get("human_control_modes", [])})
+        and any(str(method) in {"internal", "cli", "api"} for method in profile.get("execution_methods", []))
+    ]
+    auto_skip_reasons: list[str] = []
+    if delegation_control.get("configured_mode") == "auto" and delegation_control.get("execution_permitted") is not True:
+        auto_skip_reasons.append(str(delegation_control.get("disabled_reason") or "auto delegation is not execution-permitted"))
+    if decision != "delegate-bounded-slice":
+        auto_skip_reasons.append(f"delegation decision is {decision}, not delegate-bounded-slice")
+    if proof_burden == "high":
+        auto_skip_reasons.append("proof burden is high")
+    if work_shape not in {"direct", "bounded"}:
+        auto_skip_reasons.append(f"work shape is {work_shape or 'unknown'}")
+    auto_audit_applies = bool(
+        configured_auto_targets
+        and decision != "delegate-bounded-slice"
+        and (decomposition_candidates or delegation_control.get("execution_permitted") is not True)
+    )
+    auto_delegation_audit = {
+        "kind": "agentic-workspace/auto-delegation-audit/v1",
+        "status": "skipped" if auto_audit_applies else "not-applicable",
+        "configured_mode": delegation_control.get("configured_mode", mode),
+        "effective_mode": mode,
+        "execution_permitted": delegation_control.get("execution_permitted") is True,
+        "must_report_if_not_run": auto_audit_applies,
+        "skipped_targets": [
+            {
+                "name": str(profile.get("name", "")),
+                "execution_methods": list(profile.get("execution_methods", [])),
+                "recommendation": str(profile.get("recommendation", "")),
+                "reasons": auto_skip_reasons or ["target was configured but current task did not require automatic delegation"],
+            }
+            for profile in configured_auto_targets
+        ]
+        if auto_audit_applies
+        else [],
+        "reporting_rule": (
+            "When auto-capable configured targets are not used, report the skip reason so the orchestrator can distinguish "
+            "human-control gating, proof risk, and ordinary stay-local execution."
+        ),
+    }
     quality_risk = "high" if proof_burden == "high" else ("medium" if proof_burden == "non-obvious" else "low")
     token_savings_expected = (
         "likely"
@@ -12682,6 +12854,9 @@ def _delegation_next_action_decision(
         ),
         "mode_effect": mode_effect,
         "config_effect": config_effect,
+        "decomposition_delegation": decomposition_delegation,
+        "delegation_candidates": decomposition_candidates,
+        "auto_delegation_audit": auto_delegation_audit,
         "reason": reasons[0],
         "handoff_command": handoff_command,
         "handoff_surface": _delegation_handoff_surface(command=handoff_command) if handoff_command else None,
@@ -12911,10 +13086,21 @@ def _execution_posture_payload(
     config: WorkspaceConfig,
     changed_paths: list[str],
     task_text: str | None,
+    target_root: Path | None = None,
 ) -> dict[str, Any]:
     posture = _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
     runtime_resolution = _runtime_resolution_payload(config=config, capability_posture=posture["posture"])
     delegation_control = _delegation_control_payload(config.local_override)
+    decomposition_delegation = (
+        _active_decomposition_delegation_payload(target_root=target_root)
+        if target_root is not None
+        else {
+            "kind": "agentic-workspace/decomposition-delegation-candidates/v1",
+            "status": "unavailable",
+            "reason": "target root unavailable",
+            "candidates": [],
+        }
+    )
     target = next(
         (
             profile
@@ -12964,6 +13150,7 @@ def _execution_posture_payload(
         "runtime_resolution": runtime_resolution,
         "delegation_control": delegation_control,
         "selected_target": target,
+        "decomposition_delegation": decomposition_delegation,
         "capability_handoff_packets": _capability_handoff_packet_templates(),
         "recommended_action": recommendation,
         "quality_tradeoff": quality_tradeoff,
@@ -12976,6 +13163,7 @@ def _execution_posture_payload(
                 "runtime_resolution": runtime_resolution,
                 "delegation_control": delegation_control,
                 "selected_target": target,
+                "decomposition_delegation": decomposition_delegation,
             },
             task_text=task_text,
             changed_paths=changed_paths,

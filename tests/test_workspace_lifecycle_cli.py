@@ -724,7 +724,7 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
     assert 'start --task "<task>"' in agents_text
     assert not (target / "AGENTS.local.md").exists()
     assert "Run `agentic-workspace start --format json`" not in agents_text
-    assert "Do not substitute a bare `agentic-workspace` command" in agents_text
+    assert "Do not try a bare `agentic-workspace` command first" in agents_text
     assert "agentic-workspace preflight --format json" not in agents_text
     assert (
         "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself." not in agents_text

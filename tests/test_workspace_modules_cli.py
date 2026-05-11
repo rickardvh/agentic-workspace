@@ -428,3 +428,12 @@ def test_workspace_agents_template_keeps_descriptor_guidance_out_of_root_entrypo
     assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." not in rendered
     assert 'start --task "<task>"' in rendered
     assert "## Module Notes" not in rendered
+
+
+def test_workspace_agents_template_renders_resolved_cli_invocation() -> None:
+    rendered = cli._workspace_agents_template(selected_modules=[], descriptors={}, cli_invoke="uv run agentic-workspace")
+
+    assert "- canonical_source: `.agentic-workspace/config.toml` and `uv run agentic-workspace start --target . --format json`" in rendered
+    assert "use `uv run agentic-workspace` as the effective Agentic Workspace CLI invocation" in rendered
+    assert 'run `uv run agentic-workspace start --task "<task>" --format json`' in rendered
+    assert "use the effective CLI invocation from `agentic-workspace start" not in rendered
