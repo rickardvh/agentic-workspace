@@ -461,6 +461,92 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
     assert "bounded work" in decision["reason"]
 
 
+def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "auto"',
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = true",
+                "",
+                "[delegation_targets.chatgpt]",
+                'strength = "strong"',
+                'location = "external"',
+                'capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed"]',
+                'execution_methods = ["manual"]',
+            ]
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "codegen.decomposition.json",
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Codegen epic",
+                "status": "shaping",
+                "larger_intended_outcome": "Use decomposed artifacts to finish an epic cheaply.",
+                "non_goals": [],
+                "candidate_lanes": [
+                    {
+                        "id": "black-box-harness",
+                        "title": "Black-box harness",
+                        "readiness": "needs-shaping",
+                        "outcome": "Choose the next bounded conformance slice.",
+                        "owner_surface": "",
+                        "proof": "Report likely changed files and validation.",
+                        "depends_on": [],
+                        "parallel_with": [],
+                    }
+                ],
+                "dependency_assumptions": [],
+                "parallelization_assumptions": [],
+                "proof_expectations": ["Focused proof remains unchanged."],
+                "promotion_rule": "Promote only bounded slices.",
+                "references": [],
+                "notes": "",
+            },
+            indent=2,
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/cli.py",
+                "--task",
+                "Continue the codegen epic and evaluate reusable-worker delegation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    decision = json.loads(capsys.readouterr().out)["delegation_decision"]
+    assert decision["decision"] == "suggest-delegation"
+    assert decision["target"] == "reusable-worker"
+    assert decision["required_next_action"] == "execute-when-safe"
+    assert decision["token_savings_expected"] == "possible"
+    assert decision["config_effect"]["execution_authority"] == "auto-execution-permitted"
+    assert decision["delegation_next_step"]["execution_methods"] == ["internal", "cli"]
+    assert decision["delegation_next_step"]["must_report_if_not_run"] is True
+    assert "proof run and result" in decision["delegation_next_step"]["return_contract"]
+    assert decision["decomposition_delegation"]["status"] == "available-without-active-planning"
+    assert decision["delegation_candidates"][0]["route_candidate"] == "delegate-exploration"
+    assert "reuse an existing worker" in decision["reason"]
+    assert "auto_delegation_audit" not in decision
+
+
 def test_implement_suppresses_manual_external_relay_for_code_local_changed_paths(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(

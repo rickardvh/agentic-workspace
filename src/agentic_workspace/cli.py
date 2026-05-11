@@ -10173,7 +10173,15 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
         compact["target"] = value.get("target")
         compact["reason"] = value.get("reason")
     decomposition_delegation = value.get("decomposition_delegation")
-    if isinstance(decomposition_delegation, dict) and decomposition_delegation.get("status") == "present":
+    if (
+        isinstance(decomposition_delegation, dict)
+        and decomposition_delegation.get("status")
+        in {
+            "present",
+            "available-without-active-planning",
+        }
+        and (decision == "suggest-delegation" or decomposition_delegation.get("status") == "present")
+    ):
         compact["decomposition_delegation"] = {
             key: decomposition_delegation.get(key)
             for key in ("kind", "status", "reason", "candidate_count", "candidates", "rule")
@@ -10197,7 +10205,7 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
             "decision": "stay-local",
             "reason": "No target is expected to improve quality or reduce tokens safely for this step.",
         }
-    if decision in {"suggest-escalation", "delegate-bounded-slice", "manual-handoff", "ask-human"}:
+    if decision in {"suggest-delegation", "suggest-escalation", "delegate-bounded-slice", "manual-handoff", "ask-human"}:
         if value.get("handoff_command"):
             compact["handoff_command"] = value.get("handoff_command")
         if value.get("manual_prompt"):
@@ -10207,7 +10215,15 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
             compact["delegation_next_step"] = (
                 {
                     key: next_step.get(key)
-                    for key in ("status", "action", "target", "command", "execution_methods", "must_report_if_not_run")
+                    for key in (
+                        "status",
+                        "action",
+                        "target",
+                        "command",
+                        "execution_methods",
+                        "must_report_if_not_run",
+                        "return_contract",
+                    )
                     if key in next_step
                 }
                 if isinstance(next_step, dict)
@@ -11244,13 +11260,7 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
 
 def _active_decomposition_delegation_payload(*, target_root: Path) -> dict[str, Any]:
     active_summary = _fast_planning_active_summary(target_root=target_root)
-    if not (active_summary.get("todo_active_count") or active_summary.get("active_execplan")):
-        return {
-            "kind": "agentic-workspace/decomposition-delegation-candidates/v1",
-            "status": "inactive",
-            "reason": "no active planning state is present, so decomposition records remain future-work context",
-            "candidates": [],
-        }
+    has_active_planning = bool(active_summary.get("todo_active_count") or active_summary.get("active_execplan"))
     decompositions_dir = target_root / ".agentic-workspace" / "planning" / "decompositions"
     if not decompositions_dir.exists():
         return {
@@ -11294,6 +11304,8 @@ def _active_decomposition_delegation_payload(*, target_root: Path) -> dict[str, 
                 continue
             if readiness in {"ready", "ready-for-promotion", "ready-for-lane-promotion"}:
                 route = "delegate-implementation"
+            elif readiness in {"needs-shaping", "shaping"}:
+                route = "delegate-exploration"
             elif owner_surface or proof:
                 route = "delegate-exploration"
             else:
@@ -11317,14 +11329,22 @@ def _active_decomposition_delegation_payload(*, target_root: Path) -> dict[str, 
         return {
             "kind": "agentic-workspace/decomposition-delegation-candidates/v1",
             "status": "none",
-            "reason": "no open decomposition lanes are concrete enough to delegate",
+            "reason": (
+                "no open decomposition lanes are concrete enough to delegate"
+                if has_active_planning
+                else "no active planning state is present and no open decomposition lanes are concrete enough to delegate"
+            ),
             "inspected_records": inspected_records,
             "candidates": [],
         }
     return {
         "kind": "agentic-workspace/decomposition-delegation-candidates/v1",
-        "status": "present",
-        "reason": "open decomposition lanes provide concrete bounded slices that can be considered for delegation",
+        "status": "present" if has_active_planning else "available-without-active-planning",
+        "reason": (
+            "open decomposition lanes provide concrete bounded slices that can be considered for delegation"
+            if has_active_planning
+            else "open decomposition lanes can guide cheap reusable-worker exploration before an execplan is active"
+        ),
         "inspected_records": inspected_records,
         "candidate_count": len(candidates),
         "candidates": candidates[:5],
@@ -12608,6 +12628,11 @@ def _delegation_next_action_decision(
         if isinstance(decomposition_delegation, dict) and isinstance(decomposition_delegation.get("candidates"), list)
         else []
     )
+    decomposition_status = str(decomposition_delegation.get("status", "")) if isinstance(decomposition_delegation, dict) else ""
+    task_signal = " ".join((task_text or "").lower().split())
+    decomposition_routing_requested = decomposition_status == "present" or any(
+        term in task_signal for term in ("epic", "lane", "decomposition", "decomposed", "delegation", "delegate", "worker")
+    )
 
     if missing_task_signal and clarification_mode == "ask-first":
         decision = "ask-human"
@@ -12640,6 +12665,29 @@ def _delegation_next_action_decision(
             (
                 f"auto delegation is permitted and target '{target_name}' fits bounded work; "
                 "delegate a narrow implementation or validation slice only if proof expectations stay unchanged"
+            )
+        ]
+
+    if decomposition_candidates and decomposition_routing_requested and work_shape in {"lane", "epic"} and mode != "off":
+        decision = "suggest-delegation"
+        required_next_action = (
+            "execute-when-safe"
+            if mode == "auto" and delegation_control.get("execution_permitted") is True
+            else ("prepare-handoff" if mode == "manual" else "mention-suggestion")
+        )
+        reusable_routes = sorted(
+            {str(candidate.get("route_candidate", "")) for candidate in decomposition_candidates if isinstance(candidate, dict)}
+        )
+        if not target_name or not any(method in {"internal", "cli", "api"} for method in target_execution_methods):
+            target_name = "reusable-worker"
+            target_execution_methods = ["internal", "cli"]
+            target_location = "local"
+            target_strength = "medium"
+        reasons = [
+            (
+                "planning decomposition exposes bounded reusable-worker sidecar work "
+                f"({', '.join(route for route in reusable_routes if route) or 'delegation candidates'}); "
+                "reuse an existing worker for lane selection, exploration, validation, or review before widening local context"
             )
         ]
 
@@ -12715,7 +12763,7 @@ def _delegation_next_action_decision(
             "action": required_next_action,
             "target": target_name,
             "command": handoff_command,
-            "execution_methods": selected_target.get("execution_methods", []) if isinstance(selected_target, dict) else [],
+            "execution_methods": target_execution_methods,
             "must_report_if_not_run": required_next_action in {"execute-when-safe", "prepare-manual-handoff"},
             "scope_rule": "Delegate only a bounded slice with unchanged proof expectations; otherwise stay local and state why.",
             "manual_external_relay": {
@@ -12770,7 +12818,7 @@ def _delegation_next_action_decision(
         "disabled_reason": delegation_control.get("disabled_reason"),
         "execution_authority": (
             "manual-relay-only"
-            if manual_external_relay.get("target_kind") == "manual-external"
+            if decision in {"suggest-escalation", "manual-handoff"} and manual_external_relay.get("target_kind") == "manual-external"
             else (
                 "auto-execution-permitted"
                 if mode == "auto" and delegation_control.get("execution_permitted") is True
@@ -12797,8 +12845,8 @@ def _delegation_next_action_decision(
         auto_skip_reasons.append(f"work shape is {work_shape or 'unknown'}")
     auto_audit_applies = bool(
         configured_auto_targets
-        and decision != "delegate-bounded-slice"
-        and (decomposition_candidates or delegation_control.get("execution_permitted") is not True)
+        and decision not in {"delegate-bounded-slice", "suggest-delegation"}
+        and ((decomposition_candidates and decomposition_routing_requested) or delegation_control.get("execution_permitted") is not True)
     )
     auto_delegation_audit = {
         "kind": "agentic-workspace/auto-delegation-audit/v1",
