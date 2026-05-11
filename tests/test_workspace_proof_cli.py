@@ -172,6 +172,8 @@ def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, ca
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == ["make test", "make lint"]
     assert payload["next"]["command"] == "make test"
+    assert payload["next"]["route_source"] == "live-adapted-target-capability"
+    assert payload["next"]["why"] == "behavior-test intent selected live-adapted-target-capability."
     assert payload["proof_command_adjustments"] == [
         {
             "lane": "workspace_cli",
@@ -196,8 +198,10 @@ def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == []
-    assert payload["next"]["action"] == "select-proof-scope"
+    assert payload["next"]["action"] == "manual-verification"
     assert payload["next"]["command"] is None
+    assert payload["manual_verification"]["status"] == "required"
+    assert "no executable proof route" in payload["manual_verification"]["summary"]
     assert payload["unavailable_proof_commands"] == [
         {
             "lane": "workspace_cli",
@@ -215,6 +219,25 @@ def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -
     assert payload["manual_verification"]["status"] == "required"
 
 
+def test_proof_verbose_exposes_manual_fallback_decision_layers(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    decision = answer["proof_route_decision"]
+    assert decision["selected_commands"] == []
+    assert [command["command"] for command in decision["unavailable_commands"]] == ["make test-workspace", "make lint-workspace"]
+    assert decision["manual_verification"]["status"] == "required"
+    assert decision["proof_execution_evidence"] == {
+        "kind": "proof-execution-evidence/v1",
+        "status": "not-run",
+        "expected_commands": [],
+        "manual_verification_expected": True,
+        "rule": "Proof selection describes expected proof only; closeout must record what actually ran, failed, was skipped, or was manually verified.",
+    }
+
+
 def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run", "lint": "eslint ."}}))
@@ -223,6 +246,7 @@ def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_pat
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == ["npm test", "npm run lint"]
+    assert payload["next"]["route_source"] == "live-adapted-target-capability"
     assert payload["target_proof_capabilities"]["package_json"]["scripts"] == ["lint", "test"]
     assert payload["proof_command_adjustments"] == [
         {
@@ -238,7 +262,7 @@ def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_pat
             "reason": "target repo has no Makefile; using package.json script for 'lint' proof",
         },
     ]
-    assert "manual_verification" not in payload
+    assert payload["manual_verification"] is None
 
 
 def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path, capsys) -> None:
@@ -285,6 +309,12 @@ def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path
     assert hints["confirmed"][0]["confirmation"] == "live-confirmed"
     assert hints["stale"][0]["candidate_command"] == "npm run stale"
     assert hints["stale"][0]["confirmation"] == "stale-or-unavailable"
+    decision = answer["proof_route_decision"]
+    assert decision["proof_intents"][0]["kind"] == "proof-intent/v1"
+    assert decision["target_capabilities"]["package_json"]["scripts"] == ["lint", "test"]
+    assert decision["selected_commands"][0]["kind"] == "proof-command/v1"
+    assert decision["proof_execution_evidence"]["status"] == "not-run"
+    assert answer["proof_next_decision"]["warnings"] == ["1 learned route hint(s) are stale or unavailable."]
 
 
 def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, capsys) -> None:

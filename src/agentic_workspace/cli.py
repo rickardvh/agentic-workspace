@@ -17719,6 +17719,26 @@ def _select_proof_payload(
 def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if payload.get("profile") == "compact-contract-answer/v1":
         answer = payload.get("answer", {})
+        if isinstance(answer, dict) and isinstance(answer.get("proof_next_decision"), dict):
+            next_decision = dict(answer["proof_next_decision"])
+            next_decision.setdefault("target", payload.get("target"))
+            next_decision.setdefault("selector", payload.get("selector", {}))
+            next_decision.setdefault("sufficiency", answer.get("sufficiency", {}))
+            if answer.get("proof_command_adjustments"):
+                next_decision["proof_command_adjustments"] = answer["proof_command_adjustments"]
+            if answer.get("unavailable_proof_commands"):
+                next_decision["unavailable_proof_commands"] = answer["unavailable_proof_commands"]
+            if answer.get("target_proof_capabilities") and (
+                answer.get("proof_command_adjustments") or answer.get("unavailable_proof_commands")
+            ):
+                next_decision["target_proof_capabilities"] = answer["target_proof_capabilities"]
+            if answer.get("proof_strategy") and (answer.get("proof_command_adjustments") or answer.get("unavailable_proof_commands")):
+                next_decision["proof_strategy"] = {
+                    "kind": answer.get("proof_strategy", {}).get("kind"),
+                    "selection_order": answer.get("proof_strategy", {}).get("selection_order", []),
+                }
+            next_decision.setdefault("detail_command", "agentic-workspace proof --verbose --changed <paths> --format json")
+            return next_decision
         required_commands = answer.get("required_commands", []) if isinstance(answer, dict) else []
         validation_plan = answer.get("validation_plan", {}) if isinstance(answer, dict) else {}
         primary = validation_plan.get("primary_next_action") if isinstance(validation_plan, dict) else None
@@ -18585,6 +18605,89 @@ def _confirm_learned_route_hints(
     }
 
 
+def _proof_intent_for_lane(lane: dict[str, Any]) -> dict[str, Any]:
+    proof_kind = str(lane.get("proof_kind", "targeted-test"))
+    if proof_kind in {"targeted-test", "full-test"}:
+        intent_type = "behavior-test"
+    elif proof_kind == "surface-check":
+        intent_type = "static-check"
+    elif proof_kind == "diff-review":
+        intent_type = "docs-diff-review"
+    else:
+        intent_type = "manual-verification"
+    source = "host-config" if lane.get("proof_profile") or lane.get("subsystem") else "changed-paths"
+    return {
+        "kind": "proof-intent/v1",
+        "id": str(lane.get("id", "")),
+        "type": intent_type,
+        "source": source,
+        "reason": str(lane.get("when", "")),
+        "proof_kind": proof_kind,
+    }
+
+
+def _proof_route_source_for_lane(*, lane: dict[str, Any], command: str, adjustments_by_replacement: dict[str, dict[str, str]]) -> str:
+    if lane.get("proof_profile"):
+        return "host-configured-proof-profile"
+    if lane.get("subsystem"):
+        return "host-configured-subsystem"
+    if command in adjustments_by_replacement:
+        return "live-adapted-target-capability"
+    return "live-confirmed-proof-rule"
+
+
+def _proof_next_decision_payload(
+    *,
+    required_commands: list[str],
+    selected_commands: list[dict[str, Any]],
+    unavailable_commands: list[dict[str, Any]],
+    manual_verification: dict[str, Any] | None,
+    learned_route_hints: dict[str, Any],
+) -> dict[str, Any]:
+    warnings: list[str] = []
+    stale_hints = learned_route_hints.get("stale", []) if isinstance(learned_route_hints, dict) else []
+    if stale_hints:
+        warnings.append(f"{len(stale_hints)} learned route hint(s) are stale or unavailable.")
+    if unavailable_commands:
+        warnings.append("Some selected proof commands are unavailable in this target repo.")
+    selected = selected_commands[0] if selected_commands else None
+    if selected is not None:
+        next_action = {
+            "action": "run-validation-command",
+            "command": selected["command"],
+            "run": selected["command"],
+            "required": True,
+            "why": f"{selected['intent_type']} intent selected {selected['selected_from']}.",
+            "route_source": selected["selected_from"],
+        }
+    else:
+        summary = None
+        if isinstance(manual_verification, dict):
+            summary = manual_verification.get("summary") or manual_verification.get("reason")
+        next_action = {
+            "action": "manual-verification" if manual_verification else "select-proof-scope",
+            "command": None,
+            "run": None,
+            "required": bool(manual_verification),
+            "why": summary or "No executable proof route was selected.",
+            "route_source": "manual-fallback" if manual_verification else "none",
+        }
+    return {
+        "kind": "proof-next-decision/v1",
+        "next": next_action,
+        "required_commands": required_commands,
+        "manual_verification": (
+            {
+                "status": manual_verification.get("status"),
+                "summary": manual_verification.get("summary") or manual_verification.get("reason"),
+            }
+            if isinstance(manual_verification, dict)
+            else None
+        ),
+        "warnings": warnings,
+    }
+
+
 def _target_proof_capabilities(*, target_root: Path | None, make_targets: set[str] | None) -> dict[str, Any]:
     package_scripts = _package_json_scripts(target_root)
     has_makefile = bool(target_root is not None and (target_root / "Makefile").is_file())
@@ -19034,6 +19137,110 @@ def _proof_selection_for_changed_paths(
     if len(executable_lanes) > 1:
         escalate_when.insert(0, str(_PROOF_SELECTION_RULES["cross_lane_escalation"]))
 
+    adjustments_by_replacement = {
+        str(adjustment["replacement"]): adjustment for adjustment in proof_command_adjustments if adjustment.get("replacement")
+    }
+    proof_intents = [_proof_intent_for_lane(lane) for lane in selected_lanes]
+    intent_by_lane_id = {intent["id"]: intent for intent in proof_intents}
+    selected_commands: list[dict[str, Any]] = []
+    for lane in selected_lanes:
+        intent = intent_by_lane_id.get(str(lane.get("id", "")), {})
+        for command in lane.get("enough_proof", []):
+            selected_commands.append(
+                {
+                    "kind": "proof-command/v1",
+                    "command": str(command),
+                    "cwd": ".",
+                    "selected_from": _proof_route_source_for_lane(
+                        lane=lane,
+                        command=str(command),
+                        adjustments_by_replacement=adjustments_by_replacement,
+                    ),
+                    "intent_type": str(intent.get("type", "behavior-test")),
+                    "lane": str(lane.get("id", "")),
+                    "required": True,
+                }
+            )
+    unavailable_commands = [
+        {
+            "kind": "proof-command-unavailable/v1",
+            "command": str(command.get("command", "")),
+            "lane": str(command.get("lane", "")),
+            "reason": str(command.get("reason", "")),
+            **({"replacement": command["replacement"]} if command.get("replacement") else {}),
+        }
+        for command in unavailable_proof_commands
+    ]
+    manual_verification: dict[str, Any] | None = None
+    if not required_commands or unavailable_proof_commands:
+        manual_verification = {
+            "kind": "manual-verification/v1",
+            "status": "required" if not required_commands else "required-for-unavailable-proof",
+            "reason": (
+                "no live-confirmed executable route was selected"
+                if not required_commands
+                else "some selected proof commands are unavailable in this target repo"
+            ),
+            "summary": (
+                "Review changed behavior manually and record evidence because no executable proof route was selected."
+                if not required_commands
+                else "Review unavailable proof expectations manually and record why repo-specific proof is sufficient."
+            ),
+            "instructions": [
+                "Inspect the changed paths against the requested task outcome.",
+                "Use target_proof_capabilities.candidate_commands only if they are relevant to this change.",
+                "Record what was manually checked and why unavailable commands were not required for closeout.",
+            ],
+            "candidate_commands": target_capabilities.get("candidate_commands", []),
+            "unavailable_commands": unavailable_commands,
+        }
+    proof_execution_evidence = {
+        "kind": "proof-execution-evidence/v1",
+        "status": "not-run",
+        "expected_commands": required_commands,
+        "manual_verification_expected": manual_verification is not None,
+        "rule": "Proof selection describes expected proof only; closeout must record what actually ran, failed, was skipped, or was manually verified.",
+    }
+    configured_policy = [
+        {
+            "kind": "proof-profile/v1",
+            "source": "host-config",
+            "id": str(lane.get("proof_profile", "")),
+            "required_commands": list(lane.get("enough_proof", [])),
+            "optional_commands": list(lane.get("optional_commands", [])),
+            "review_aids": list(lane.get("review_aids", [])),
+        }
+        for lane in concern_lanes
+        if lane.get("proof_profile")
+    ]
+    proof_next_decision = _proof_next_decision_payload(
+        required_commands=required_commands,
+        selected_commands=selected_commands,
+        unavailable_commands=unavailable_commands,
+        manual_verification=manual_verification,
+        learned_route_hints=learned_route_hints,
+    )
+    proof_route_decision = {
+        "kind": "proof-route-decision/v1",
+        "selection_order": [
+            "changed paths -> proof intent",
+            "proof intent -> candidate route needs",
+            "host policy/profile overlay",
+            "learned hints",
+            "live capability confirmation",
+            "command/manual selection",
+            "execution evidence expectations",
+        ],
+        "proof_intents": proof_intents,
+        "configured_policy": configured_policy,
+        "learned_route_hints": learned_route_hints,
+        "target_capabilities": target_capabilities,
+        "selected_commands": selected_commands,
+        "unavailable_commands": unavailable_commands,
+        "manual_verification": manual_verification,
+        "proof_execution_evidence": proof_execution_evidence,
+    }
+
     optional_commands = [
         "agentic-workspace proof --target ./repo --current --format json",
         "agentic-workspace summary --format json",
@@ -19083,6 +19290,13 @@ def _proof_selection_for_changed_paths(
         },
         "target_proof_capabilities": target_capabilities,
         "learned_route_hints": learned_route_hints,
+        "proof_intents": proof_intents,
+        "configured_policy": configured_policy,
+        "selected_commands": selected_commands,
+        "unavailable_commands": unavailable_commands,
+        "proof_execution_evidence": proof_execution_evidence,
+        "proof_route_decision": proof_route_decision,
+        "proof_next_decision": proof_next_decision,
         "selected_lanes": [
             {
                 "id": lane["id"],
@@ -19132,18 +19346,8 @@ def _proof_selection_for_changed_paths(
         proof_selection["escalate_when"].append(
             "Some selected proof commands are unavailable in this target repo; choose repo-specific proof before closeout."
         )
-    if not required_commands or unavailable_proof_commands:
-        proof_selection["manual_verification"] = {
-            "kind": "manual-verification-fallback/v1",
-            "status": "required" if not required_commands else "required-for-unavailable-proof",
-            "instructions": [
-                "Inspect the changed paths against the requested task outcome.",
-                "Use target_proof_capabilities.candidate_commands only if they are relevant to this change.",
-                "Record what was manually checked and why unavailable commands were not required for closeout.",
-            ],
-            "candidate_commands": target_capabilities.get("candidate_commands", []),
-            "unavailable_commands": unavailable_proof_commands,
-        }
+    if manual_verification is not None:
+        proof_selection["manual_verification"] = manual_verification
     if config is not None and target_root is not None and include_durable_intent:
         durable_intent = _intent_decision_projection(
             target_root=target_root,

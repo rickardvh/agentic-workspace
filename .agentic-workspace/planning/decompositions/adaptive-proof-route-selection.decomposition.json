@@ -24,9 +24,9 @@
     {
       "id": "explicit-decision-model",
       "title": "Explicit proof-route decision model",
-      "readiness": "needs-shaping",
+      "readiness": "promoted",
       "outcome": "Expose proof intent, configured policy, learned hints, live capabilities, selected commands, unavailable routes, manual fallback, and execution evidence as distinct inspectable layers.",
-      "owner_surface": "",
+      "owner_surface": ".agentic-workspace/planning/execplans/adaptive-proof-selection-shaping.plan.json",
       "proof": "Detailed proof output can reconstruct why each command or manual route was selected, skipped, replaced, or downgraded without conflating layers.",
       "depends_on": [
         "advisory-route-hints"

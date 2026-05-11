@@ -13,7 +13,7 @@ execplans = []
 
 [todo]
 active_items = [
-  { id = "adaptive-proof-selection-shaping", title = "Adaptive Proof Route Selection", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/adaptive-proof-selection-shaping.plan.json", why_now = "GitHub #899 epic first slice: advisory setup/adopt proof route hints.", owner_role = "implementation", handoff_ready = true, refs = ["GitHub #899"] },
+  { id = "adaptive-proof-selection-shaping", title = "Adaptive Proof Route Selection", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/adaptive-proof-selection-shaping.plan.json", why_now = "GitHub #901 explicit proof-route decision model under #899.", owner_role = "implementation", handoff_ready = true, refs = ["GitHub #899", "GitHub #901"] },
 ]
 queued_items = []
 

@@ -26,14 +26,14 @@
     "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
   },
   "canonical_core": {
-    "requested_outcome": "Implement the first bounded slice of #899 Adaptive Proof Route Selection: persist advisory lifecycle-discovered proof route hints and live-confirm them during proof selection.",
-    "hard_constraints": "Do not make learned hints host policy. Do not emit a learned command unless live target capabilities still confirm it. Keep source-repo proof commands out of host repos unless configured or discovered.",
-    "agent_may_decide": "Exact hint schema, lifecycle payload shape, compact/detailed projection, and narrow tests for the first slice.",
-    "escalate_when": "The slice starts defining host quality policy, unsafe command execution, broad detector coverage, or proof evidence persistence beyond advisory route hints.",
-    "next_action": "Run selected proof for the first advisory route-hints slice, update closeout fields, commit, then continue to the next #899 slice.",
+    "requested_outcome": "Implement #901 under #899 Adaptive Proof Route Selection: expose explicit proof-route decision layers while preserving current command-selection behavior.",
+    "hard_constraints": "Do not make learned hints host policy. Do not conflate proof intent, host policy, learned hints, target capabilities, selected commands, manual verification, and execution evidence. Keep source-repo proof commands out of host repos unless configured or discovered.",
+    "agent_may_decide": "Exact compact/detailed projection shape and narrow tests for the explicit decision model.",
+    "escalate_when": "The slice starts defining host quality policy, unsafe command execution, broad detector coverage, or persisted proof execution evidence beyond expectation reporting.",
+    "next_action": "Run selected proof for #901, update closeout fields, commit, push, then stop per user instruction.",
     "proof_expectations": [
-      "uv run pytest tests/test_workspace_lifecycle_cli.py::test_init_persists_advisory_proof_route_hints tests/test_workspace_lifecycle_cli.py::test_setup_command_reports_no_new_seed_surfaces_for_mature_repo tests/test_workspace_proof_cli.py::test_proof_changed_reports_live_confirmed_learned_route_hints tests/test_workspace_proof_cli.py::test_proof_changed_uses_target_package_json_scripts_without_makefile -q",
-      "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_lifecycle_cli.py tests/test_workspace_proof_cli.py",
+      "uv run pytest tests/test_workspace_proof_cli.py::test_proof_changed_uses_available_target_makefile_targets tests/test_workspace_proof_cli.py::test_proof_changed_does_not_assume_makefile_exists tests/test_workspace_proof_cli.py::test_proof_verbose_exposes_manual_fallback_decision_layers tests/test_workspace_proof_cli.py::test_proof_changed_uses_target_package_json_scripts_without_makefile tests/test_workspace_proof_cli.py::test_proof_changed_reports_live_confirmed_learned_route_hints -q",
+      "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_proof_cli.py",
       "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
       "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"
     ],
@@ -41,21 +41,17 @@
       ".agentic-workspace/planning/state.toml",
       ".agentic-workspace/planning/execplans/",
       "src/agentic_workspace/cli.py",
-      "src/agentic_workspace/contracts/workspace_surfaces.json",
-      "src/agentic_workspace/contracts/schemas/workspace_surfaces_manifest.schema.json",
-      "src/agentic_workspace/contracts/schemas/proof_route_hints.schema.json",
-      "src/agentic_workspace/contracts/structured_file_inventory.json",
-      "tests/test_workspace_lifecycle_cli.py",
+      ".agentic-workspace/planning/decompositions/adaptive-proof-route-selection.decomposition.json",
       "tests/test_workspace_proof_cli.py"
     ],
     "completion_criteria": [
-      "Non-dry-run init/adopt writes advisory proof route hints.",
-      "Setup reports the hint surface without becoming a mutation command.",
-      "Proof selection reports learned_route_hints and separates live-confirmed from stale hints.",
-      "Learned hints do not override host policy or bypass live target capability checks."
+      "Verbose proof output exposes proof_route_decision with distinct intent, policy, hints, live capabilities, command, fallback, and evidence-expectation layers.",
+      "Compact proof output exposes proof_next_decision-derived action, route source, command, required commands, manual fallback summary, and warnings.",
+      "Existing compact diagnostics remain compatible.",
+      "Focused tests cover executable routing, stale learned hints, and manual fallback."
     ],
     "continuation_owner": ".agentic-workspace/planning/execplans/adaptive-proof-selection-shaping.plan.json",
-    "closeout_decision": "pending"
+    "closeout_decision": "stop-after-current-slice"
   },
   "goal": [
     "Implement bounded committed slices for #899 Adaptive Proof Route Selection."
@@ -67,16 +63,16 @@
   ],
   "machine_readable_contract": {
     "intent": {
-      "outcome": "Implement the first bounded slice of #899 Adaptive Proof Route Selection.",
-      "constraints": "Hints are advisory only, require live confirmation, and must not become host proof policy.",
-      "latitude": "Choose the smallest contract and runtime shape that can persist lifecycle-discovered hints and expose confirmation state in proof output.",
+      "outcome": "Implement #901 explicit proof-route decision model under #899 Adaptive Proof Route Selection.",
+      "constraints": "Keep decision layers separate; do not turn hints or discovered commands into host proof policy.",
+      "latitude": "Choose the smallest additive projection that makes compact and detailed proof decisions inspectable.",
       "escalation": "Escalate if the work becomes host quality policy, broad detector expansion, or proof execution persistence."
     },
     "execution": {
       "milestone": "adaptive-proof-selection-shaping",
       "status": "active",
-      "next_step": "Run selected proof for the first advisory route-hints slice, update closeout fields, commit, then continue to the next #899 slice.",
-      "proof": "Focused lifecycle/proof tests, ruff, contract tooling, and structured inventory checks."
+      "next_step": "Run selected proof for #901, update closeout fields, commit, push, then stop per user instruction.",
+      "proof": "Focused proof tests, ruff, changed-path proof, contract tooling, structured inventory, and planning summary."
     },
     "scope": {
       "touched": [
@@ -133,35 +129,35 @@
   "required_continuation": {
     "required follow-on for the larger intended outcome": "yes",
     "owner surface": ".agentic-workspace/planning/execplans/adaptive-proof-selection-shaping.plan.json",
-    "activation trigger": "After the advisory route-hints slice is committed, continue with the next #899 milestone."
+    "activation trigger": "After the user resumes the #899 epic after the requested stop."
   },
   "iterative_follow_through": {
-    "what this slice enabled": "Lifecycle can persist advisory proof route hints and proof selection can report live-confirmed versus stale learned hints.",
-    "intentionally deferred": "Host policy precedence UI, broader detector coverage, proof execution evidence feedback, manual verification templates, and PR/dogfooding expansion.",
-    "discovered implications": "Setup is read-only, so persistence belongs in init/adopt lifecycle mutation while setup reports the managed hint surface.",
-    "proof achieved now": "focused tests, ruff, contract tooling, and structured inventory checks passed",
-    "validation still needed": "changed-path proof selection before commit",
-    "next likely slice": "formalize the explicit proof-route decision model and compact/detailed output split."
+    "what this slice enabled": "Proof selection now exposes a compact next-decision projection and a detailed proof_route_decision with intent, policy, hints, live capabilities, selected commands, unavailable routes, manual fallback, and evidence expectations separated.",
+    "intentionally deferred": "Host policy precedence behavior, broader detector coverage, persisted proof execution evidence, and richer manual verification templates.",
+    "discovered implications": "Compact output must preserve existing diagnostic fields while adding the decision object so agents and tests do not lose route-adjustment evidence.",
+    "proof achieved now": "focused proof tests and ruff passed; changed-path proof still to run before commit",
+    "validation still needed": "changed-path proof selection, planning summary, contract tooling, and structured inventory before commit",
+    "next likely slice": "host policy precedence or manual verification templates after the requested stop."
   },
   "intent_interpretation": {
-    "literal request": "Implement the Adaptive Proof Route Selection epic on autopilot.",
-    "inferred intended outcome": "Advance #899 through bounded committed slices with PR-backed visibility.",
-    "chosen concrete what": "First slice: advisory setup/adopt proof route hints with live confirmation in proof selection.",
+    "literal request": "Stop after the current slice has been completed, committed, and pushed.",
+    "inferred intended outcome": "Finish #901 cleanly, push it to PR #900, and do not continue to the next #899 slice in this turn.",
+    "chosen concrete what": "Current slice: explicit proof-route decision model.",
     "interpretation distance": "low",
     "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
   },
   "execution_bounds": {
-    "allowed paths": "Planning state, this execplan, proof-selection runtime, workspace surface contracts/schemas, structured inventory, and focused lifecycle/proof tests.",
+    "allowed paths": "Planning state, this execplan, adaptive proof decomposition, proof-selection runtime, and focused proof tests.",
     "max changed files": "Keep each slice narrow enough to commit independently.",
-    "required validation commands": "focused pytest, ruff, contract tooling, structured inventory, and changed-path proof selection.",
+    "required validation commands": "focused pytest, ruff, changed-path proof selection, planning summary, contract tooling, and structured inventory.",
     "ask-before-refactor threshold": "Any broad redesign that makes Agentic Workspace own host quality policy or introduces unsafe command execution.",
     "stop before touching": "Unrelated generated CLI work, broad detector expansion, proof execution storage, or host security/compliance policy.",
     "manual JSON validation": "Do not run ad hoc JSON validation loops; use summary or package checks."
   },
   "stop_conditions": {
-    "stop when": "The current slice is committed and the next slice is either selected or blocked.",
+    "stop when": "The current #901 slice is completed, committed, and pushed.",
     "escalate when boundary reached": "The work becomes broad policy design instead of route assistance.",
-    "escalate on scope drift": "The slice expands beyond advisory route hints and proof output confirmation.",
+    "escalate on scope drift": "The slice expands beyond explicit decision projection and compact compatibility.",
     "escalate on proof failure": "Focused proof, contract checks, or changed-path proof cannot validate the slice."
   },
   "context_budget": {
@@ -209,7 +205,7 @@
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Run selected proof for the first advisory route-hints slice, update closeout fields, commit, then continue to the next #899 slice."
+    "Run selected proof for #901, update closeout fields, commit, push, then stop per user instruction."
   ],
   "blockers": [
     "None."
@@ -218,19 +214,15 @@
     ".agentic-workspace/planning/state.toml",
     ".agentic-workspace/planning/execplans/",
     "src/agentic_workspace/cli.py",
-    "src/agentic_workspace/contracts/workspace_surfaces.json",
-    "src/agentic_workspace/contracts/schemas/workspace_surfaces_manifest.schema.json",
-    "src/agentic_workspace/contracts/schemas/proof_route_hints.schema.json",
-    "src/agentic_workspace/contracts/structured_file_inventory.json",
-    "tests/test_workspace_lifecycle_cli.py",
+    ".agentic-workspace/planning/decompositions/adaptive-proof-route-selection.decomposition.json",
     "tests/test_workspace_proof_cli.py"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
   ],
   "validation_commands": [
-    "uv run pytest tests/test_workspace_lifecycle_cli.py::test_init_persists_advisory_proof_route_hints tests/test_workspace_lifecycle_cli.py::test_setup_command_reports_no_new_seed_surfaces_for_mature_repo tests/test_workspace_proof_cli.py::test_proof_changed_reports_live_confirmed_learned_route_hints tests/test_workspace_proof_cli.py::test_proof_changed_uses_target_package_json_scripts_without_makefile -q",
-    "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_lifecycle_cli.py tests/test_workspace_proof_cli.py",
+    "uv run pytest tests/test_workspace_proof_cli.py::test_proof_changed_uses_available_target_makefile_targets tests/test_workspace_proof_cli.py::test_proof_changed_does_not_assume_makefile_exists tests/test_workspace_proof_cli.py::test_proof_verbose_exposes_manual_fallback_decision_layers tests/test_workspace_proof_cli.py::test_proof_changed_uses_target_package_json_scripts_without_makefile tests/test_workspace_proof_cli.py::test_proof_changed_reports_live_confirmed_learned_route_hints -q",
+    "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_proof_cli.py",
     "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
     "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"
   ],
@@ -238,30 +230,30 @@
     "None."
   ],
   "completion_criteria": [
-    "Non-dry-run init/adopt writes advisory proof route hints.",
-    "Setup reports the hint surface without becoming a mutation command.",
-    "Proof selection reports learned_route_hints and separates live-confirmed from stale hints.",
-    "Learned hints do not override host policy or bypass live target capability checks."
+    "Verbose proof output exposes proof_route_decision with distinct intent, policy, hints, live capabilities, command, fallback, and evidence-expectation layers.",
+    "Compact proof output exposes proof_next_decision-derived action, route source, command, required commands, manual fallback summary, and warnings.",
+    "Existing compact diagnostics remain compatible.",
+    "Focused tests cover executable routing, stale learned hints, and manual fallback."
   ],
   "execution_run": {
-    "run status": "slice-1-complete",
+    "run status": "slice-2-complete",
     "executor": "Codex",
     "handoff source": "GitHub #899 and active execplan",
-    "what happened": "Added advisory proof route hint persistence during init/adopt, setup reporting for the hint surface, and proof output that separates live-confirmed from stale learned hints.",
-    "scope touched": "planning state, this execplan, workspace surface contracts/schemas, structured inventory, CLI route-hint discovery/loading/confirmation, and focused lifecycle/proof tests",
-    "changed surfaces": "state.toml; adaptive-proof-selection-shaping.plan.json; cli.py; workspace_surfaces.json; workspace_surfaces_manifest.schema.json; proof_route_hints.schema.json; structured_file_inventory.json; lifecycle/proof tests",
-    "validations run": "focused pytest route-hint tests; ruff on touched CLI/tests; contract tooling; structured inventory; planning summary; planning doctor; make test-workspace; make lint-workspace; root_cli_authority defaults; contract ruff; tests/test_workspace_cli.py",
-    "result for continuation": "first #899 slice ready to commit; larger adaptive proof route selection epic remains open",
-    "next step": "Commit this slice, push/open the draft PR, then continue with the next #899 slice."
+    "what happened": "Added proof_next_decision and proof_route_decision projections, separated proof-intent/policy/hints/capability/command/fallback/evidence-expectation layers, preserved compact diagnostics, and promoted #901 in planning.",
+    "scope touched": "planning state, this execplan, adaptive proof decomposition, proof-selection runtime, and focused proof tests",
+    "changed surfaces": "state.toml; adaptive-proof-selection-shaping.plan.json; adaptive-proof-route-selection.decomposition.json; cli.py; tests/test_workspace_proof_cli.py",
+    "validations run": "focused pytest; ruff touched proof files; planning summary; changed-path implement proof selection; agentic-planning summary --verbose; planning doctor; make test-workspace; make lint-workspace; root_cli_authority defaults; tests/test_workspace_cli.py",
+    "result for continuation": "#901 implementation complete and ready to commit/push",
+    "next step": "Commit, push, then stop."
   },
   "finished_run_review": {
     "review status": "reviewed",
     "scope respected": "yes",
     "proof status": "passed",
-    "intent served": "bounded first slice served; larger epic remains open",
+    "intent served": "#901 implementation complete",
     "config compliance": "used configured repo-local CLI invocation and selected changed-path proof",
-    "misinterpretation risk": "low; learned hints remain advisory and live-confirmed",
-    "follow-on decision": "continue #899 on the same active plan"
+    "misinterpretation risk": "low; additive projection preserves existing behavior",
+    "follow-on decision": "stop after commit and push per user instruction"
   },
   "delegation_outcome_feedback": {
     "route chosen": "pending",
@@ -273,23 +265,23 @@
     "decomposition adjustment": "pending"
   },
   "proof_report": {
-    "validation proof": "Passed: focused route-hint pytest (4 tests), ruff touched CLI/tests, contract tooling, structured inventory, planning summary, planning doctor, make test-workspace, make lint-workspace, root_cli_authority defaults, contract ruff, and tests/test_workspace_cli.py.",
-    "proof achieved now": "The first advisory route-hints slice is locally validated.",
+    "validation proof": "Passed: focused proof pytest, ruff touched files, planning summary, changed-path implement proof selection, agentic-planning summary --verbose, planning doctor, make test-workspace, make lint-workspace, root_cli_authority defaults, and tests/test_workspace_cli.py.",
+    "proof achieved now": "#901 explicit proof-route decision model is locally validated.",
     "evidence for \"proof achieved\" state": "All selected commands exited 0 on 2026-05-11."
   },
   "intent_satisfaction": {
     "original intent": "Implement #899 on autopilot through bounded committed slices.",
     "was original intent fully satisfied?": "no; first bounded slice only",
-    "evidence of intent satisfaction": "Slice 1 persists advisory route hints and exposes live-confirmed/stale learned hints in proof output.",
+    "evidence of intent satisfaction": "#901 exposes compact and detailed proof-route decision projections with focused tests.",
     "unsolved intent passed to": ".agentic-workspace/planning/execplans/adaptive-proof-selection-shaping.plan.json"
   },
   "execution_summary": {
-    "outcome delivered": "advisory setup/adopt proof route hints with proof-time live confirmation",
+    "outcome delivered": "explicit proof-route decision model",
     "validation confirmed": "passed",
     "follow-on routed to": ".agentic-workspace/planning/execplans/adaptive-proof-selection-shaping.plan.json",
     "post-work posterity capture": "closeout fields updated before slice commit",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "next #899 slice"
+    "resume from": "after user explicitly resumes #899"
   },
   "durable_residue": {
     "status": "none",
@@ -304,19 +296,19 @@
     "larger-intent status": "open",
     "closure decision": "archive-but-keep-lane-open",
     "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "The committed slice only implements advisory persisted route hints and live confirmation; the broader adaptive proof route selection model remains intentionally incomplete.",
-    "evidence carried forward": "proof_route_hints schema/surface, init/setup/proof CLI behavior, and tests proving live-confirmed versus stale hints.",
-    "reopen trigger": "A host repo needs route decisions beyond advisory hints, compact/detailed decision projection, host policy precedence, broader detectors, execution evidence, or manual verification templates."
+    "why this decision is honest": "The current slice implements only the explicit decision projection; host policy precedence, broader detectors, persisted execution feedback, and richer manual templates remain open in the decomposition.",
+    "evidence carried forward": "proof_next_decision, proof_route_decision, focused tests for route source, stale hint warnings, and manual fallback layers.",
+    "reopen trigger": "A host repo needs host-policy precedence, broader detectors, persisted proof execution evidence, or richer manual verification templates."
   },
   "improvement_signal_review": {
     "status": "reviewed",
     "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
     "source": "operating_posture",
     "signals found": [
-      "Dogfooding: writing an empty proof-route-hints cache during init would add avoidable footprint to repos with no discovered routes."
+      "Dogfooding: stale injected thread instructions still mentioned removed --profile flags even though checked-in AGENTS.md was current."
     ],
     "signals fixed": [
-      "Init now writes proof-route-hints.json only when hints exist or when an existing file must be refreshed."
+      "Verified checked-in AGENTS.md and tests already reject --profile guidance; used the current start command without --profile."
     ],
     "signals routed": [],
     "signals dismissed": [],
