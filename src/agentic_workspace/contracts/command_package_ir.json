@@ -1187,6 +1187,13 @@
                 "help": "Optional task description used to recommend likely skills."
               },
               {
+                "name": "select",
+                "flags": [
+                  "--select"
+                ],
+                "help": "Comma-separated JSON fields to return, such as recommendations,warnings or top_recommendations,warnings."
+              },
+              {
                 "name": "format",
                 "flags": [
                   "--format"
@@ -1209,6 +1216,7 @@
             "primitive_refs": [
               "workspace.root.resolve",
               "skills.registry.inspect",
+              "output.fields.select",
               "output.emit"
             ]
           },

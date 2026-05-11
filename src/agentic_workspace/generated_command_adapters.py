@@ -423,6 +423,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "primitive_refs": [
         "workspace.root.resolve",
         "skills.registry.inspect",
+        "output.fields.select",
         "output.emit"
       ]
     },

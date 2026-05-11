@@ -130,6 +130,70 @@ def test_skills_command_recommends_planning_autopilot_for_active_milestone_task(
     assert any("phrase match" in reason for reason in payload["recommendations"][0]["reasons"])
 
 
+def test_skills_command_select_returns_compact_recommendations_without_inventory(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "run autopilot and implement the current active milestone from the execplan",
+                "--select",
+                "recommendations,warnings",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["source_command"] == "skills"
+    assert "recommendations" in payload["values"]
+    assert "warnings" in payload["values"]
+    assert payload["values"]["recommendations"][0]["id"] == "planning-autopilot"
+    assert "skills" not in payload["values"]
+
+
+def test_skills_command_select_supports_top_recommendations_alias(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "run autopilot and implement the current active milestone from the execplan",
+                "--select",
+                "top_recommendations,warnings",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["values"]["top_recommendations"][0]["id"] == "planning-autopilot"
+    assert payload["values"]["warnings"] == []
+
+
 def test_skills_command_recommends_planning_reporting_for_setup_task(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

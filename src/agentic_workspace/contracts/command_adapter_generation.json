@@ -882,6 +882,7 @@
         "primitive_refs": [
           "workspace.root.resolve",
           "skills.registry.inspect",
+          "output.fields.select",
           "output.emit"
         ]
       },
@@ -935,6 +936,7 @@
           "target root resolution",
           "skill registry discovery",
           "task recommendation scoring",
+          "field selection",
           "output emission"
         ]
       },

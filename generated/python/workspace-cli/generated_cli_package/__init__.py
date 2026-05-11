@@ -1023,6 +1023,13 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             "name": "task"
           },
           {
+            "flags": [
+              "--select"
+            ],
+            "help": "Comma-separated JSON fields to return, such as recommendations,warnings or top_recommendations,warnings.",
+            "name": "select"
+          },
+          {
             "choices": [
               "text",
               "json"
@@ -1068,6 +1075,7 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
         "primitive_refs": [
           "workspace.root.resolve",
           "skills.registry.inspect",
+          "output.fields.select",
           "output.emit"
         ]
       },
@@ -2174,6 +2182,13 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Optional task description used to recommend likely skills.",
           "name": "task"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Comma-separated JSON fields to return, such as recommendations,warnings or top_recommendations,warnings.",
+          "name": "select"
         },
         {
           "choices": [

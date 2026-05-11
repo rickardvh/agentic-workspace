@@ -2294,7 +2294,12 @@ def main(argv: list[str] | None = None) -> int:
             target_root = _resolve_target_root(args.target) if args.target else None
             if target_root is not None:
                 _validate_target_root(command_name="skills", target_root=target_root)
-            _emit_skills(format_name=args.format, target_root=target_root, task_text=args.task)
+            _emit_skills(
+                format_name=args.format,
+                target_root=target_root,
+                task_text=args.task,
+                select=getattr(args, "select", None),
+            )
             return 0
         except WorkspaceUsageError as exc:
             parser.error(str(exc))
@@ -18145,7 +18150,12 @@ def _run_skills_report_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else None
     if target_root is not None:
         _validate_target_root(command_name="skills", target_root=target_root)
-    _emit_skills(format_name=args.format, target_root=target_root, task_text=getattr(args, "task", None))
+    _emit_skills(
+        format_name=args.format,
+        target_root=target_root,
+        task_text=getattr(args, "task", None),
+        select=getattr(args, "select", None),
+    )
     return 0
 
 
@@ -21553,8 +21563,12 @@ def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:
     )
 
 
-def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str | None) -> None:
+def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str | None, select: str | None = None) -> None:
     payload = _skills_payload(target_root=target_root, task_text=task_text)
+    if select:
+        payload = _select_payload_fields(payload, select=select, source_command="skills")
+        _emit_payload(payload=payload, format_name=format_name)
+        return
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
         return
@@ -21594,17 +21608,22 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
     agent_aids, aid_warnings = _checked_in_agent_aid_entries(target_root=target_root)
     visible_agent_aids = [aid for aid in agent_aids if aid["status"] != "retired"]
     agent_aid_recommendations = _recommend_agent_aids(task_text=task_text, aids=visible_agent_aids) if task_text else []
+    skill_recommendation_payloads = [
+        {
+            **_skill_payload(skill=recommendation.skill),
+            "score": recommendation.score,
+            "reasons": list(recommendation.reasons),
+        }
+        for recommendation in recommendations
+    ]
     return {
         "target": target_root.as_posix(),
         "task": task_text,
         "skills": [_skill_payload(skill=skill) for skill in skills],
-        "recommendations": [
-            {
-                **_skill_payload(skill=recommendation.skill),
-                "score": recommendation.score,
-                "reasons": list(recommendation.reasons),
-            }
-            for recommendation in recommendations
+        "recommendations": skill_recommendation_payloads,
+        "top_recommendations": [
+            {key: item.get(key) for key in ("id", "path", "score", "summary", "reasons") if item.get(key) not in ("", None)}
+            for item in skill_recommendation_payloads[:3]
         ],
         "agent_aids": visible_agent_aids,
         "agent_aid_recommendations": agent_aid_recommendations,

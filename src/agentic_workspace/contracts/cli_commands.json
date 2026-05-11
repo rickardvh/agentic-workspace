@@ -492,6 +492,13 @@
             "--task"
           ],
           "help": "Optional task description used to recommend likely skills."
+        },
+        {
+          "name": "select",
+          "flags": [
+            "--select"
+          ],
+          "help": "Comma-separated JSON fields to return, such as recommendations,warnings or top_recommendations,warnings."
         }
       ],
       "role": "module_delegation_front_door",
