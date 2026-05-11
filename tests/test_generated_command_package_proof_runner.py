@@ -96,6 +96,19 @@ def test_static_generated_package_proof_fails_when_conformance_coverage_drifts(m
     assert "static conformance coverage drift: missing contract-backed case" in errors
 
 
+def test_command_package_ir_records_deferred_shell_transport_evaluation() -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+
+    shell_policy = ir["generation_policy"]["shell_adapter_policy"]
+    root_targets = {target["kind"]: target for target in ir["packages"][0]["targets"]}
+
+    assert "Issue #909 evaluation selects Bash as the first additional generated command transport candidate" in shell_policy
+    assert "black-box conformance for runtime handoff" in shell_policy
+    assert root_targets["bash"]["maturity_level_ref"] == "deferred"
+    assert root_targets["powershell"]["maturity_level_ref"] == "deferred"
+
+
 def test_typescript_runtime_handoff_thinness_rejects_runtime_owned_behavior() -> None:
     checker = _load_checker()
     cli_text = "\n".join(

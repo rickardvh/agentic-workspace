@@ -555,7 +555,21 @@ def _validate_static_surfaces() -> list[str]:
         routing_rule = str(maturity_policy.get("routing_rule", ""))
         if "Weak agents may use only generated targets" not in routing_rule:
             errors.append("command_package_ir.json maturity routing rule does not protect weak-agent routing")
+        shell_policy = str(ir.get("generation_policy", {}).get("shell_adapter_policy", ""))
+        if "Issue #909 evaluation selects Bash as the first additional generated command transport candidate" not in shell_policy:
+            errors.append("command_package_ir.json shell adapter policy does not record the #909 first transport evaluation")
+        if "black-box conformance for runtime handoff" not in shell_policy:
+            errors.append("command_package_ir.json shell adapter policy does not name the deferred conformance route")
         packages = {package.get("id"): package for package in ir.get("packages", []) if isinstance(package, dict)}
+        workspace_package = packages.get("root-workspace")
+        if isinstance(workspace_package, dict):
+            workspace_targets = [target for target in workspace_package.get("targets", []) if isinstance(target, dict)]
+            bash_targets = [target for target in workspace_targets if target.get("kind") == "bash"]
+            powershell_targets = [target for target in workspace_targets if target.get("kind") == "powershell"]
+            if not bash_targets or bash_targets[0].get("maturity_level_ref") != "deferred":
+                errors.append("command_package_ir.json root Bash transport candidate must remain explicit and deferred")
+            if not powershell_targets or powershell_targets[0].get("maturity_level_ref") != "deferred":
+                errors.append("command_package_ir.json root PowerShell transport candidate must remain explicit and deferred")
         for package_id, package in packages.items():
             for command in package.get("commands", []):
                 if isinstance(command, dict) and command.get("status") == "generated":
