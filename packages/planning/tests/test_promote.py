@@ -594,6 +594,97 @@ def test_planning_cli_new_plan_creates_valid_active_scaffold(tmp_path: Path, cap
     assert summary["execplans"]["active_execplans"][0]["path"].endswith("plan-alpha.plan.json")
 
 
+def test_planning_cli_new_plan_activate_refuses_implicit_active_switch(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "current-plan", title = "Current Plan", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/current-plan.plan.json", why_now = "Already active." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert (
+        planning_cli.main(
+            [
+                "new-plan",
+                "--id",
+                "Next Plan",
+                "--title",
+                "Next Plan",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert any(action["kind"] == "manual review" and "--switch-active" in action["detail"] for action in payload["actions"])
+    summary = planning_summary(target=tmp_path, profile="compact")
+    assert [item["id"] for item in summary["todo"]["active_items"]] == ["current-plan"]
+
+
+def test_planning_cli_new_plan_switch_active_demotes_existing_active_items(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "current-plan", title = "Current Plan", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/current-plan.plan.json", why_now = "Already active." },
+]
+queued_items = [
+  { id = "queued-plan", title = "Queued Plan", maturity = "ready", status = "queued", surface = ".agentic-workspace/planning/execplans/queued-plan.plan.json", why_now = "Already queued." },
+]
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert (
+        planning_cli.main(
+            [
+                "new-plan",
+                "--id",
+                "Next Plan",
+                "--title",
+                "Next Plan",
+                "--source",
+                "#896",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--switch-active",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+
+    assert any(action["kind"] == "updated" and "active_items" in action["detail"] for action in payload["actions"])
+    assert [item["id"] for item in state["todo"]["active_items"]] == ["next-plan"]
+    assert [item["id"] for item in state["todo"]["queued_items"]] == ["current-plan", "queued-plan"]
+    assert state["todo"]["queued_items"][0]["status"] == "queued"
+    assert state["todo"]["queued_items"][0]["maturity"] == "ready"
+    assert state["todo"]["queued_items"][0]["switched_from_active_by"] == "next-plan"
+
+
 def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: Path, capsys) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     install_bootstrap(target=tmp_path)

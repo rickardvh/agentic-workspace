@@ -157,6 +157,11 @@ def build_parser() -> argparse.ArgumentParser:
     state_group.add_argument("--activate", action="store_true", help="Register the new plan in todo.active_items.")
     state_group.add_argument("--queue", action="store_true", help="Register the new plan in todo.queued_items.")
     new_plan_parser.add_argument(
+        "--switch-active",
+        action="store_true",
+        help="When used with --activate, demote existing active items into the queue before registering the new active plan.",
+    )
+    new_plan_parser.add_argument(
         "--prep-only",
         action="store_true",
         help="Mark this scaffold as a planning-only handoff slice; verify summary, then stop without product scaffolding.",
@@ -320,6 +325,7 @@ def main(argv: list[str] | None = None) -> int:
                 target=args.target,
                 activate=args.activate,
                 queue=args.queue,
+                switch_active=args.switch_active,
                 prep_only=args.prep_only,
                 overwrite=args.overwrite,
                 dry_run=args.dry_run,

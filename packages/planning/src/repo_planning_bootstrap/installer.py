@@ -8633,6 +8633,7 @@ def create_execplan_scaffold(
     target: str | Path | None = None,
     activate: bool = False,
     queue: bool = False,
+    switch_active: bool = False,
     prep_only: bool = False,
     overwrite: bool = False,
     dry_run: bool = False,
@@ -8645,6 +8646,9 @@ def create_execplan_scaffold(
         return result
     if activate and queue:
         result.add("manual review", target_root / PLANNING_STATE_PATH, "choose only one of --activate or --queue")
+        return result
+    if switch_active and not activate:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, "--switch-active requires --activate")
         return result
 
     plan_title = title.strip() or _title_from_slug(slug)
@@ -8700,6 +8704,30 @@ def create_execplan_scaffold(
         items = todo.get(bucket, [])
         if not isinstance(items, list):
             items = []
+        queued_items = todo.get("queued_items", [])
+        if not isinstance(queued_items, list):
+            queued_items = []
+        if activate and items and not switch_active:
+            result.add(
+                "manual review",
+                state_path,
+                "active planning item already exists; rerun with --switch-active to demote existing active items into todo.queued_items",
+            )
+            return result
+        if activate and switch_active and items:
+            switched_items: list[Any] = []
+            for item in items:
+                if not isinstance(item, dict):
+                    switched_items.append(item)
+                    continue
+                switched_item = copy.deepcopy(item)
+                switched_item["maturity"] = "ready"
+                switched_item["status"] = "queued"
+                switched_item["switched_from_active_by"] = slug
+                switched_item["switch_reason"] = source_text or f"Switched active lane to {plan_title}."
+                switched_items.append(switched_item)
+            queued_items = [*switched_items, *queued_items]
+            items = []
         state_item: dict[str, Any] = {
             "id": slug,
             "title": plan_title,
@@ -8714,12 +8742,17 @@ def create_execplan_scaffold(
             state_item["refs"] = [source_text]
         items.append(state_item)
         todo[bucket] = items
+        todo["queued_items"] = queued_items
         todo.setdefault("active_items", [])
         todo.setdefault("queued_items", [])
         updated_state["todo"] = todo
 
     if dry_run:
         result.add("would create" if not record_path.exists() else "would update", record_path, "schema-valid execplan scaffold")
+        if activate and switch_active and isinstance((state.get("todo") or {}).get("active_items"), list):
+            active_count = len((state.get("todo") or {}).get("active_items", []))
+            if active_count:
+                result.add("would update", state_path, f"demote {active_count} active planning item(s) into todo.queued_items")
         if activate or queue:
             result.add("would update", state_path, f"register '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
         result.add("next", target_root / PLANNING_STATE_PATH, "run `agentic-workspace summary --target . --verbose --format json`")
