@@ -34,6 +34,46 @@ def test_tracked_files_exclude_planned_deletions(tmp_path: Path) -> None:
     assert check_structured_file_inventory._tracked_files(tmp_path) == []
 
 
+def test_staged_index_precondition_reports_unstaged_structured_deletion(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    tracked = tmp_path / "planned-delete.plan.json"
+    tracked.write_text('{"kind":"planning-execplan/v1"}\n', encoding="utf-8")
+    subprocess.run(["git", "add", "planned-delete.plan.json"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "baseline"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    tracked.unlink()
+
+    findings = check_structured_file_inventory.staged_index_precondition_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].path == "planned-delete.plan.json"
+    assert "git add -A" in findings[0].message
+
+
+def test_staged_index_precondition_accepts_staged_structured_deletion(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    tracked = tmp_path / "planned-delete.plan.json"
+    tracked.write_text('{"kind":"planning-execplan/v1"}\n', encoding="utf-8")
+    subprocess.run(["git", "add", "planned-delete.plan.json"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "baseline"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    tracked.unlink()
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True, capture_output=True, text=True)
+
+    assert check_structured_file_inventory.staged_index_precondition_findings(tmp_path) == []
+
+
 def test_unmatched_structured_file_fails() -> None:
     inventory = check_structured_file_inventory.load_inventory()
 

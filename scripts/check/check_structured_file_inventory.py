@@ -110,6 +110,34 @@ def _tracked_files(root: Path = REPO_ROOT) -> list[str]:
     return sorted(path for path in tracked_paths if (root / path).exists() or (root / path).is_symlink())
 
 
+def staged_index_precondition_findings(root: Path = REPO_ROOT) -> list[Finding]:
+    result = subprocess.run(
+        ["git", "status", "--porcelain=v1", "-z"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    findings: list[Finding] = []
+    for record in result.stdout.split("\0"):
+        if len(record) < 4:
+            continue
+        index_status = record[0]
+        worktree_status = record[1]
+        path = _as_posix(record[3:])
+        if index_status == " " and worktree_status == "D" and _structured_format(path) is not None:
+            findings.append(
+                Finding(
+                    path=path,
+                    message=(
+                        "structured file deletion or rename is not staged; run `git add -A` before broad structured-file proof "
+                        "so git-index-backed inventory checks see the intended file set"
+                    ),
+                )
+            )
+    return findings
+
+
 def tracked_structured_files(root: Path = REPO_ROOT) -> list[str]:
     files = _tracked_files(root)
     return sorted(path for path in files if PurePosixPath(path).suffix.lower() in STRUCTURED_SUFFIXES)
@@ -446,6 +474,10 @@ def inventory_findings(paths: list[str] | None = None) -> list[Finding]:
     findings = validate_inventory_shape(inventory)
     if findings:
         return findings
+    if paths is None:
+        precondition_findings = staged_index_precondition_findings()
+        if precondition_findings:
+            return precondition_findings
     checked_paths = tracked_structured_files() if paths is None else paths
     checked_all_paths = _tracked_files() if paths is None else checked_paths
     return (
