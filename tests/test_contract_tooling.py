@@ -795,6 +795,9 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert "doctor.report.cli" in source_text
     assert "DO NOT EDIT DIRECTLY" in source_text
     assert "maxBuffer: 16 * 1024 * 1024" in cli_text
+    assert "function splitRuntimeCommand(commandLine)" in cli_text
+    assert "spawnSync(runtimeExecutable, [...runtimeArgs, ...argv]" in cli_text
+    assert "shell: true" not in cli_text
     assert "writeSync(1, result.stdout)" in cli_text
     assert "writeSync(2, result.stderr)" in cli_text
     assert "Weak-agent routing: allowed-read-only" in cli_text
@@ -841,8 +844,12 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         assert metadata["maturity"]["weak_agent_routing"] == weak_agent_routing
         assert metadata["maturity"]["promotion_requires"]
         assert runtime_command in cli_text
+        assert "function splitRuntimeCommand(commandLine)" in cli_text
+        assert "spawnSync(runtimeExecutable, [...runtimeArgs, ...argv]" in cli_text
+        assert "shell: true" not in cli_text
         assert f"Weak-agent routing: {weak_agent_routing}" in cli_text
         assert "generated runnable adapter delegates supported command to runtime process" in test_text
+        assert "generated runnable adapter preserves spaced argv values during runtime handoff" in test_text
 
 
 def test_generated_command_adapter_module_routes_direct_edits_to_authoritative_sources() -> None:

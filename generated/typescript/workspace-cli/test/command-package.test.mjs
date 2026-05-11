@@ -42,6 +42,19 @@ test('generated runnable adapter delegates supported command to runtime process'
   assert.deepEqual(payload.args, ['config', '--format', 'json']);
 });
 
+test('generated runnable adapter preserves spaced argv values during runtime handoff', () => {
+  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
+  const mockRuntime = fileURLToPath(new URL('./mock-runtime.mjs', import.meta.url));
+  const runtime = `"${process.execPath}" "${mockRuntime}"`;
+  const result = spawnSync(process.execPath, [cli, 'config', '--task', 'value with spaces'], {
+    encoding: 'utf8',
+    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: runtime },
+  });
+  assert.equal(result.status, 0);
+  const payload = JSON.parse(result.stdout);
+  assert.deepEqual(payload.args, ['config', '--task', 'value with spaces']);
+});
+
 test('generated runnable adapter exposes routing status and recovery guidance', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
   const result = spawnSync(process.execPath, [cli, '--help'], { encoding: 'utf8' });

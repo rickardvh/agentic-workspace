@@ -27,9 +27,36 @@ if (!supportedCommands.has(command)) {
 }
 
 const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? "python -m repo_memory_bootstrap.cli";
+
+function splitRuntimeCommand(commandLine) {
+  const parts = [];
+  let current = '';
+  let quote = null;
+  for (const char of commandLine.trim()) {
+    if (quote) {
+      if (char === quote) quote = null;
+      else current += char;
+    } else if (char === '"' || char === "'") {
+      quote = char;
+    } else if (/\s/.test(char)) {
+      if (current) {
+        parts.push(current);
+        current = '';
+      }
+    } else {
+      current += char;
+    }
+  }
+  if (quote) throw new Error('runtime command has an unterminated quote');
+  if (current) parts.push(current);
+  if (parts.length === 0) throw new Error('runtime command is empty');
+  return parts;
+}
+
 let result;
 try {
-  result = spawnSync(runtimeCommand, argv, { encoding: 'utf8', shell: true, maxBuffer: 16 * 1024 * 1024 });
+  const [runtimeExecutable, ...runtimeArgs] = splitRuntimeCommand(runtimeCommand);
+  result = spawnSync(runtimeExecutable, [...runtimeArgs, ...argv], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
 } catch (error) {
   console.error(`Adapter runtime handoff failed: ${error.message}`);
   console.error('Recovery: verify AGENTIC_WORKSPACE_RUNTIME or run the canonical Python CLI directly.');
