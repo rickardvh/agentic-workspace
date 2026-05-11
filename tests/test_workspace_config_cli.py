@@ -1279,7 +1279,7 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
     assert mini["outcome_evidence"]["task_fit"]["suggest_add"] == ["narrow-tests"]
 
 
-def test_repo_config_cli_invoke_is_ignored_as_machine_local_policy(tmp_path: Path, capsys) -> None:
+def test_repo_config_cli_invoke_sets_repo_owned_invocation_policy(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -1291,9 +1291,30 @@ def test_repo_config_cli_invoke_is_ignored_as_machine_local_policy(tmp_path: Pat
     assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["cli_invoke"] == "agentic-workspace"
-    assert payload["workspace"]["cli_invoke_source"] == "product-default"
-    assert payload["warnings"] == [".agentic-workspace/config.toml [workspace] contains unsupported field(s): cli_invoke."]
+    assert payload["workspace"]["cli_invoke"] == "uv run agentic-workspace"
+    assert payload["workspace"]["cli_invoke_source"] == "repo-config"
+    assert payload["warnings"] == []
+
+
+def test_local_config_cli_invoke_overrides_repo_owned_invocation_policy(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "python -m agentic_workspace.cli"\n',
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["cli_invoke"] == "python -m agentic_workspace.cli"
+    assert payload["workspace"]["cli_invoke_source"] == "local-override"
+    assert payload["warnings"] == []
 
 
 def test_config_reports_satisfied_repo_owned_cli_compatibility_expectation(tmp_path: Path, capsys) -> None:

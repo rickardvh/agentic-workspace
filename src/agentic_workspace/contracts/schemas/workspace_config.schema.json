@@ -89,6 +89,18 @@
             ]
           ],
           "x-agentic-workspace-doc-role": "advanced"
+        },
+        "cli_invoke": {
+          "description": "Repo-owned command prefix agents should use to invoke Agentic Workspace in this repository, such as a source-checkout or dev-dependency invocation. User-specific installs can still override this with .agentic-workspace/config.local.toml.",
+          "type": "string",
+          "minLength": 1,
+          "default": "agentic-workspace",
+          "examples": [
+            "agentic-workspace",
+            "uv run agentic-workspace",
+            "npm exec agentic-workspace"
+          ],
+          "x-agentic-workspace-effective-default-source": "product-default-or-repo-config-or-local-override"
         }
       },
       "additionalProperties": true

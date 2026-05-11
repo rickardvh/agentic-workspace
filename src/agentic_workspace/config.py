@@ -166,7 +166,7 @@ WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
 WORKSPACE_POINTER_BLOCK = (
     f"{WORKSPACE_WORKFLOW_MARKER_START}\n"
-    'Before answering or editing non-trivial requests, including read-only workflow, config, delegation, or action-safety decisions, use the effective CLI invocation from `agentic-workspace start --format json` / `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present. Run `<effective-cli> implement --changed <paths> --format json` when changed paths are known; otherwise run `<effective-cli> start --task "<task>" --format json` using the user\'s request as `<task>`. Do not substitute a bare `agentic-workspace` command when local config names a repo-local invocation; PATH may resolve a stale installed selector. Do not open raw `.agentic-workspace` files before this command; follow `immediate_next_allowed_action` and `skill_routing` first. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If the CLI is unavailable, immediately read `.agentic-workspace/WORKFLOW.md` before any other files.\n'
+    'Before answering or editing non-trivial requests, including read-only workflow, config, delegation, or action-safety decisions, use the effective CLI invocation from `agentic-workspace start --format json`, `.agentic-workspace/config.toml` `[workspace].cli_invoke`, or `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present. Run `<effective-cli> implement --changed <paths> --task "<task>" --format json` when changed paths are known; otherwise run `<effective-cli> start --task "<task>" --format json` using the user\'s request as `<task>`. Do not substitute a bare `agentic-workspace` command when resolved config names a repo-local or dev-dependency invocation; PATH may resolve a stale installed selector. Do not open raw `.agentic-workspace` files before this command; follow `immediate_next_allowed_action` and `skill_routing` first. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If the CLI is unavailable, immediately read `.agentic-workspace/WORKFLOW.md` before any other files.\n'
     f"{WORKSPACE_WORKFLOW_MARKER_END}"
 )
 MEMORY_WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
@@ -1343,6 +1343,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             "improvement_latitude",
             "optimization_bias",
             "advanced_features",
+            "cli_invoke",
         }
     )
     if unknown_workspace:
@@ -1378,6 +1379,12 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     if configured_advanced_features:
         advanced_features = configured_advanced_features
         advanced_features_source = "repo-config"
+    raw_cli_invoke = raw_workspace.get("cli_invoke")
+    if raw_cli_invoke is not None:
+        if not isinstance(raw_cli_invoke, str) or not raw_cli_invoke.strip():
+            raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} workspace.cli_invoke must be a non-empty string.")
+        cli_invoke = raw_cli_invoke.strip()
+        cli_invoke_source = "repo-config"
     if local_override.cli_invoke is not None:
         cli_invoke = local_override.cli_invoke
         cli_invoke_source = "local-override"
