@@ -37,10 +37,10 @@
     {
       "id": "thin-target-adapters",
       "title": "Thin target adapters",
-      "readiness": "needs-shaping",
+      "readiness": "promoted",
       "outcome": "Specify and implement narrow language- or transport-specific adapters that translate shared test input into CLI, shell, MCP, or package API invocation without duplicating package behavior.",
-      "owner_surface": "",
-      "proof": "Adapter review and tests show adapters contain invocation translation only, with no copied command behavior or generated package logic.",
+      "owner_surface": "scripts/check/check_generated_command_packages.py",
+      "proof": "Default generated-package static proof checks runnable TypeScript adapters for thin process handoff shape, expected imports only, stdout/stderr forwarding, and no runtime-owned behavior markers.",
       "depends_on": [
         "canonical-artifact-model"
       ],
