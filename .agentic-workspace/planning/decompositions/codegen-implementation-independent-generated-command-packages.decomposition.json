@@ -75,10 +75,10 @@
     {
       "id": "drift-and-release-gates",
       "title": "Drift and release gates",
-      "readiness": "needs-shaping",
+      "readiness": "promoted",
       "outcome": "Make stale generated output, duplicated behavior, adapter bloat, and target maturity regressions visible in ordinary proof.",
-      "owner_surface": "",
-      "proof": "Proof commands fail or warn when generated outputs are stale, behavior is only present in generated code, or target maturity metadata is misleading.",
+      "owner_surface": "scripts/check/check_generated_command_packages.py",
+      "proof": "Default generated-package static proof fails when runnable TypeScript targets lose contract-derived conformance coverage or reintroduce unsafe runtime handoff shelling.",
       "depends_on": [
         "canonical-artifact-model",
         "black-box-conformance-harness"

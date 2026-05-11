@@ -263,6 +263,43 @@ def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptCon
     return selected, errors
 
 
+def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str) -> list[str]:
+    errors: list[str] = []
+    expected_imports = {
+        "import { spawnSync } from 'node:child_process';",
+        "import { writeSync } from 'node:fs';",
+    }
+    import_lines = {line.strip() for line in cli_text.splitlines() if line.startswith("import ")}
+    unexpected_imports = sorted(import_lines - expected_imports)
+    if unexpected_imports:
+        errors.append(
+            f"generated/typescript/{package}/src/cli.mjs imports runtime-owned modules: {unexpected_imports!r}"
+        )
+    required_fragments = [
+        "function splitRuntimeCommand(commandLine)",
+        "const [runtimeExecutable, ...runtimeArgs] = splitRuntimeCommand(runtimeCommand);",
+        "spawnSync(runtimeExecutable, [...runtimeArgs, ...argv], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })",
+        "if (result.stdout) writeSync(1, result.stdout);",
+        "if (result.stderr) writeSync(2, result.stderr);",
+        "process.exit(result.status ?? 1);",
+    ]
+    for fragment in required_fragments:
+        if fragment not in cli_text:
+            errors.append(f"generated/typescript/{package}/src/cli.mjs is missing thin runtime handoff fragment: {fragment}")
+    forbidden_fragments = [
+        "shell: true",
+        "readFile",
+        "existsSync",
+        "readdir",
+        "statSync",
+        "JSON.stringify",
+    ]
+    for fragment in forbidden_fragments:
+        if fragment in cli_text:
+            errors.append(f"generated/typescript/{package}/src/cli.mjs contains runtime-owned behavior marker: {fragment}")
+    return errors
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -540,6 +577,10 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"{relative_path} still contains durable generated Python output instead of package-local glue")
             if generated_root not in text:
                 errors.append(f"{relative_path} does not bridge to {generated_root}")
+        conformance_cases, conformance_errors = _runnable_typescript_conformance_cases()
+        errors.extend(f"static conformance coverage drift: {error}" for error in conformance_errors)
+        if not conformance_errors and not conformance_cases:
+            errors.append("static conformance coverage drift: no runnable TypeScript conformance cases were derived from contract artifacts")
     dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile"
     if not dockerfile.is_file():
         errors.append("generated/typescript/Dockerfile is missing")
@@ -564,6 +605,10 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"generated/typescript/{package}/src/cli.mjs is missing for runnable target")
             if is_runnable and "bin" not in payload:
                 errors.append(f"generated/typescript/{package}/package.json is missing bin entry for runnable target")
+            cli_path = package_root / "src" / "cli.mjs"
+            if is_runnable and cli_path.is_file():
+                cli_text = cli_path.read_text(encoding="utf-8")
+                errors.extend(_validate_typescript_runtime_handoff_thinness(package=package, cli_text=cli_text))
             if is_weak_agent_safe and maturity.get("weak_agent_routing") != "allowed-read-only":
                 errors.append(f"generated/typescript/{package}/package.json weak-agent-safe target is missing allowed-read-only routing")
             if is_runnable and not is_weak_agent_safe and maturity.get("weak_agent_routing") != "review-required":
