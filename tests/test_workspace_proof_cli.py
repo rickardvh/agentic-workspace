@@ -219,6 +219,33 @@ def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -
     assert payload["manual_verification"]["status"] == "required"
 
 
+def test_proof_changed_reports_manual_verification_templates(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    templates = payload["manual_verification"]["templates"]
+    assert templates == [
+        {
+            "kind": "manual-verification-template/v1",
+            "intent_type": "behavior-test",
+            "title": "Behavior verification",
+            "trust": "lower-than-executable-proof",
+            "checklist": [
+                "Identify the behavior the changed paths are expected to affect.",
+                "Inspect the implementation path and the user-visible or API-facing result.",
+                "Exercise the smallest available manual scenario or explain why no scenario is available.",
+            ],
+            "evidence_to_record": [
+                "changed behavior inspected",
+                "scenario or reasoning used",
+                "residual risk compared with executable tests",
+            ],
+        }
+    ]
+
+
 def test_proof_verbose_exposes_manual_fallback_decision_layers(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
@@ -229,6 +256,8 @@ def test_proof_verbose_exposes_manual_fallback_decision_layers(tmp_path: Path, c
     assert decision["selected_commands"] == []
     assert [command["command"] for command in decision["unavailable_commands"]] == ["make test-workspace", "make lint-workspace"]
     assert decision["manual_verification"]["status"] == "required"
+    assert decision["manual_verification"]["templates"][0]["intent_type"] == "behavior-test"
+    assert decision["manual_verification"]["templates"][0]["trust"] == "lower-than-executable-proof"
     assert decision["proof_execution_evidence"] == {
         "kind": "proof-execution-evidence/v1",
         "status": "not-run",

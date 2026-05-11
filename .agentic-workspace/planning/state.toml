@@ -13,7 +13,7 @@ execplans = []
 
 [todo]
 active_items = [
-  { id = "manual-verification-templates", title = "Manual verification templates for proof fallback", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/manual-verification-templates.plan.json", why_now = "Next #899 lane after host policy precedence: make manual fallback proof instructions structured by proof intent.", owner_role = "implementation", handoff_ready = true, refs = ["GitHub #899"] },
+  { id = "broader-capability-detectors", title = "Broader proof capability detectors", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/broader-capability-detectors.plan.json", why_now = "Next #899 lane after manual fallback templates: add common ecosystem capability detectors as advisory routes, not policy.", owner_role = "implementation", handoff_ready = true, refs = ["GitHub #899"] },
 ]
 queued_items = []
 

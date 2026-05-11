@@ -50,9 +50,9 @@
     {
       "id": "broader-capability-detectors",
       "title": "Broader capability detectors",
-      "readiness": "needs-shaping",
+      "readiness": "promoted",
       "outcome": "Add detectors for common repo ecosystems as capabilities and advisory hints, not as policy.",
-      "owner_surface": "",
+      "owner_surface": ".agentic-workspace/planning/execplans/broader-capability-detectors.plan.json",
       "proof": "Repos with Python, Rust, Go, Gradle/Maven, or alternate JS package-manager surfaces receive useful route candidates without unsafe assumptions.",
       "depends_on": [
         "explicit-decision-model"
@@ -78,7 +78,7 @@
       "title": "Manual verification templates",
       "readiness": "promoted",
       "outcome": "Provide structured non-executable verification instructions by proof intent when no safe executable route exists.",
-      "owner_surface": ".agentic-workspace/planning/execplans/manual-verification-templates.plan.json",
+      "owner_surface": "GitHub #899; implementation evidence in slice commit Add manual proof fallback templates",
       "proof": "Proof output makes manual fallback explicit, lower-trust unless host policy says otherwise, and specific enough for agents to record evidence.",
       "depends_on": [
         "explicit-decision-model"

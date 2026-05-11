@@ -18683,12 +18683,90 @@ def _proof_next_decision_payload(
             {
                 "status": manual_verification.get("status"),
                 "summary": manual_verification.get("summary") or manual_verification.get("reason"),
+                "templates": manual_verification.get("templates", []),
             }
             if isinstance(manual_verification, dict)
             else None
         ),
         "warnings": warnings,
     }
+
+
+_MANUAL_VERIFICATION_TEMPLATES: dict[str, dict[str, Any]] = {
+    "behavior-test": {
+        "title": "Behavior verification",
+        "trust": "lower-than-executable-proof",
+        "checklist": [
+            "Identify the behavior the changed paths are expected to affect.",
+            "Inspect the implementation path and the user-visible or API-facing result.",
+            "Exercise the smallest available manual scenario or explain why no scenario is available.",
+        ],
+        "evidence_to_record": [
+            "changed behavior inspected",
+            "scenario or reasoning used",
+            "residual risk compared with executable tests",
+        ],
+    },
+    "static-check": {
+        "title": "Static surface verification",
+        "trust": "lower-than-executable-proof",
+        "checklist": [
+            "Inspect the changed declaration, manifest, generated surface, or configuration.",
+            "Compare the changed surface with the owning schema, contract, or documented invariant.",
+            "Record any unchecked generated or downstream consumer risk.",
+        ],
+        "evidence_to_record": [
+            "surface inspected",
+            "owner contract or invariant consulted",
+            "unchecked consumer risk",
+        ],
+    },
+    "docs-diff-review": {
+        "title": "Documentation diff verification",
+        "trust": "review-only",
+        "checklist": [
+            "Compare the diff with the requested documentation outcome.",
+            "Check links, commands, and examples for stale or misleading guidance.",
+            "Record what reader task is now clearer and what remains unproved.",
+        ],
+        "evidence_to_record": [
+            "requested documentation outcome",
+            "reader task checked",
+            "remaining unproved behavior",
+        ],
+    },
+    "manual-verification": {
+        "title": "Task-specific manual verification",
+        "trust": "lower-than-executable-proof",
+        "checklist": [
+            "State the proof intent that lacked a safe executable route.",
+            "Inspect the changed paths against the requested task outcome.",
+            "Record the manual evidence and why executable proof was unavailable.",
+        ],
+        "evidence_to_record": [
+            "proof intent",
+            "manual evidence",
+            "why executable proof was unavailable",
+        ],
+    },
+}
+
+
+def _manual_verification_templates_for_intents(*, proof_intents: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    intent_types = _dedupe(str(intent.get("type", "manual-verification")) for intent in proof_intents if isinstance(intent, dict))
+    if not intent_types:
+        intent_types = ["manual-verification"]
+    templates: list[dict[str, Any]] = []
+    for intent_type in intent_types:
+        template = _MANUAL_VERIFICATION_TEMPLATES.get(intent_type, _MANUAL_VERIFICATION_TEMPLATES["manual-verification"])
+        templates.append(
+            {
+                "kind": "manual-verification-template/v1",
+                "intent_type": intent_type,
+                **template,
+            }
+        )
+    return templates
 
 
 def _target_proof_capabilities(*, target_root: Path | None, make_targets: set[str] | None) -> dict[str, Any]:
@@ -19235,6 +19313,7 @@ def _proof_selection_for_changed_paths(
                 "Use target_proof_capabilities.candidate_commands only if they are relevant to this change.",
                 "Record what was manually checked and why unavailable commands were not required for closeout.",
             ],
+            "templates": _manual_verification_templates_for_intents(proof_intents=proof_intents),
             "candidate_commands": target_capabilities.get("candidate_commands", []),
             "unavailable_commands": unavailable_commands,
         }
