@@ -18641,6 +18641,7 @@ def _proof_next_decision_payload(
     required_commands: list[str],
     selected_commands: list[dict[str, Any]],
     unavailable_commands: list[dict[str, Any]],
+    host_policy_blocked_commands: list[dict[str, str]],
     manual_verification: dict[str, Any] | None,
     learned_route_hints: dict[str, Any],
 ) -> dict[str, Any]:
@@ -18650,6 +18651,8 @@ def _proof_next_decision_payload(
         warnings.append(f"{len(stale_hints)} learned route hint(s) are stale or unavailable.")
     if unavailable_commands:
         warnings.append("Some selected proof commands are unavailable in this target repo.")
+    if host_policy_blocked_commands:
+        warnings.append("Host proof policy blocked one or more candidate proof commands.")
     selected = selected_commands[0] if selected_commands else None
     if selected is not None:
         next_action = {
@@ -19080,6 +19083,7 @@ def _proof_selection_for_changed_paths(
                     "proof_profile": profile.id,
                     "optional_commands": list(profile.optional_commands),
                     "review_aids": list(profile.review_aids),
+                    "disallowed_commands": list(profile.disallowed_commands),
                 }
             )
     selected_lanes.extend(concern_lanes)
@@ -19092,6 +19096,36 @@ def _proof_selection_for_changed_paths(
     )
     proof_command_adjustments: list[dict[str, str]] = []
     unavailable_proof_commands: list[dict[str, str]] = []
+    host_policy_disallowed_commands: dict[str, dict[str, str]] = {}
+    for lane in concern_lanes:
+        for raw_command in lane.get("disallowed_commands", []):
+            raw_command_text = str(raw_command).strip()
+            if not raw_command_text:
+                continue
+            candidate_commands = [raw_command_text]
+            adapted_command, _adjustment = _adapt_make_proof_command_for_target(
+                command=raw_command_text,
+                target_root=target_root,
+                make_targets=make_targets,
+                package_scripts=package_scripts,
+            )
+            if adapted_command is not None:
+                candidate_commands.append(adapted_command)
+            for candidate_command in candidate_commands:
+                resolved_command = str(
+                    _command_with_cli_invoke(
+                        command=_proof_command_for_target(command=candidate_command, target_root=target_root),
+                        cli_invoke=cli_invoke,
+                    )
+                )
+                host_policy_disallowed_commands[resolved_command] = {
+                    "lane": str(lane.get("id", "")),
+                    "proof_profile": str(lane.get("proof_profile", "")),
+                    "command": resolved_command,
+                    "configured_command": raw_command_text,
+                    "reason": "host-configured proof profile disallows this command",
+                }
+    host_policy_blocked_commands: list[dict[str, str]] = []
     for lane in selected_lanes:
         lane["proof_kind"] = _proof_kind_for_lane(lane)
         adapted_commands: list[str] = []
@@ -19110,12 +19144,22 @@ def _proof_selection_for_changed_paths(
                     proof_command_adjustments.append(adjustment)
             if adapted_command is None:
                 continue
-            adapted_commands.append(
+            resolved_command = str(
                 _command_with_cli_invoke(
                     command=_proof_command_for_target(command=adapted_command, target_root=target_root),
                     cli_invoke=cli_invoke,
                 )
             )
+            disallowed = host_policy_disallowed_commands.get(resolved_command)
+            if disallowed is not None:
+                host_policy_blocked_commands.append(
+                    {
+                        **disallowed,
+                        "selected_by_lane": str(lane.get("id", "")),
+                    }
+                )
+                continue
+            adapted_commands.append(resolved_command)
         lane["enough_proof"] = adapted_commands
     required_commands: list[str] = []
     broaden_when: list[str] = []
@@ -19209,6 +19253,15 @@ def _proof_selection_for_changed_paths(
             "required_commands": list(lane.get("enough_proof", [])),
             "optional_commands": list(lane.get("optional_commands", [])),
             "review_aids": list(lane.get("review_aids", [])),
+            "disallowed_commands": [
+                str(
+                    _command_with_cli_invoke(
+                        command=_proof_command_for_target(command=str(command), target_root=target_root),
+                        cli_invoke=cli_invoke,
+                    )
+                )
+                for command in lane.get("disallowed_commands", [])
+            ],
         }
         for lane in concern_lanes
         if lane.get("proof_profile")
@@ -19217,6 +19270,7 @@ def _proof_selection_for_changed_paths(
         required_commands=required_commands,
         selected_commands=selected_commands,
         unavailable_commands=unavailable_commands,
+        host_policy_blocked_commands=host_policy_blocked_commands,
         manual_verification=manual_verification,
         learned_route_hints=learned_route_hints,
     )
@@ -19237,6 +19291,7 @@ def _proof_selection_for_changed_paths(
         "target_capabilities": target_capabilities,
         "selected_commands": selected_commands,
         "unavailable_commands": unavailable_commands,
+        "host_policy_blocked_commands": host_policy_blocked_commands,
         "manual_verification": manual_verification,
         "proof_execution_evidence": proof_execution_evidence,
     }
@@ -19294,6 +19349,7 @@ def _proof_selection_for_changed_paths(
         "configured_policy": configured_policy,
         "selected_commands": selected_commands,
         "unavailable_commands": unavailable_commands,
+        "host_policy_blocked_commands": host_policy_blocked_commands,
         "proof_execution_evidence": proof_execution_evidence,
         "proof_route_decision": proof_route_decision,
         "proof_next_decision": proof_next_decision,
@@ -19345,6 +19401,11 @@ def _proof_selection_for_changed_paths(
         proof_selection["unavailable_proof_commands"] = unavailable_proof_commands
         proof_selection["escalate_when"].append(
             "Some selected proof commands are unavailable in this target repo; choose repo-specific proof before closeout."
+        )
+    if host_policy_blocked_commands:
+        proof_selection["host_policy_blocked_commands"] = host_policy_blocked_commands
+        proof_selection["escalate_when"].append(
+            "Host-configured proof policy blocked one or more discovered or selected commands; choose allowed repo-specific proof before closeout."
         )
     if manual_verification is not None:
         proof_selection["manual_verification"] = manual_verification

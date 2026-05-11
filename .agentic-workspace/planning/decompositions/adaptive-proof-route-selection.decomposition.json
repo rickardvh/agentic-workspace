@@ -16,7 +16,7 @@
       "title": "Advisory route hints from setup/adopt",
       "readiness": "promoted",
       "outcome": "Persist lifecycle-discovered proof route hints with provenance and require live confirmation before proof selection treats them as usable.",
-      "owner_surface": ".agentic-workspace/planning/execplans/adaptive-proof-selection-shaping.plan.json",
+      "owner_surface": "GitHub #901; implementation evidence in commit d9902b66",
       "proof": "Init/adopt writes route hints only when discovered, setup reports the surface read-only, and proof output separates confirmed from stale hints.",
       "depends_on": [],
       "parallel_with": []
@@ -26,7 +26,7 @@
       "title": "Explicit proof-route decision model",
       "readiness": "promoted",
       "outcome": "Expose proof intent, configured policy, learned hints, live capabilities, selected commands, unavailable routes, manual fallback, and execution evidence as distinct inspectable layers.",
-      "owner_surface": ".agentic-workspace/planning/execplans/adaptive-proof-selection-shaping.plan.json",
+      "owner_surface": "GitHub #901; implementation evidence in commit d9902b66",
       "proof": "Detailed proof output can reconstruct why each command or manual route was selected, skipped, replaced, or downgraded without conflating layers.",
       "depends_on": [
         "advisory-route-hints"
@@ -38,9 +38,9 @@
     {
       "id": "host-policy-precedence",
       "title": "Host policy precedence",
-      "readiness": "needs-shaping",
+      "readiness": "promoted",
       "outcome": "Make explicit host-configured proof profiles and unsafe-command constraints override learned hints and generic discovery.",
-      "owner_surface": "",
+      "owner_surface": "GitHub #899; implementation evidence in slice commit Add host policy proof command blocks",
       "proof": "Tests show host-required proof wins, host-disallowed commands are blocked, and learned or discovered routes cannot silently replace policy.",
       "depends_on": [
         "explicit-decision-model"
@@ -76,9 +76,9 @@
     {
       "id": "manual-verification-templates",
       "title": "Manual verification templates",
-      "readiness": "needs-shaping",
+      "readiness": "promoted",
       "outcome": "Provide structured non-executable verification instructions by proof intent when no safe executable route exists.",
-      "owner_surface": "",
+      "owner_surface": ".agentic-workspace/planning/execplans/manual-verification-templates.plan.json",
       "proof": "Proof output makes manual fallback explicit, lower-trust unless host policy says otherwise, and specific enough for agents to record evidence.",
       "depends_on": [
         "explicit-decision-model"

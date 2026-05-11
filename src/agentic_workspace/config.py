@@ -290,6 +290,7 @@ class AssuranceProofProfile:
     required_commands: tuple[str, ...]
     optional_commands: tuple[str, ...]
     review_aids: tuple[str, ...]
+    disallowed_commands: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -627,7 +628,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
     for profile_id, profile_payload in sorted(raw_profiles.items()):
         if not isinstance(profile_payload, dict):
             raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.proof_profiles.{profile_id}] must be a table.")
-        unknown_profile = sorted(set(profile_payload) - {"required_commands", "optional_commands", "review_aids"})
+        unknown_profile = sorted(set(profile_payload) - {"required_commands", "optional_commands", "review_aids", "disallowed_commands"})
         if unknown_profile:
             warnings.append(
                 f"{config_path.as_posix()} [assurance.proof_profiles.{profile_id}] contains unsupported field(s): {', '.join(unknown_profile)}."
@@ -638,6 +639,9 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
                 required_commands=require_optional_string_list(payload=profile_payload, key="required_commands", config_path=config_path),
                 optional_commands=require_optional_string_list(payload=profile_payload, key="optional_commands", config_path=config_path),
                 review_aids=require_optional_string_list(payload=profile_payload, key="review_aids", config_path=config_path),
+                disallowed_commands=require_optional_string_list(
+                    payload=profile_payload, key="disallowed_commands", config_path=config_path
+                ),
             )
         )
     raw_test_data_policy = raw_assurance.get("test_data_policy", {})

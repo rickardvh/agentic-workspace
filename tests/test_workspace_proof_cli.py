@@ -317,6 +317,96 @@ def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path
     assert answer["proof_next_decision"]["warnings"] == ["1 learned route hint(s) are stale or unavailable."]
 
 
+def test_proof_changed_host_policy_disallows_generic_discovered_commands(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run", "lint": "eslint ."}}))
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.proof_profiles.no_npm_test]
+required_commands = []
+optional_commands = []
+review_aids = []
+disallowed_commands = ["npm test"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "proof-route-hints.json",
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-route-hints/v1",
+                "schema_version": "proof-route-hints/v1",
+                "source": "lifecycle-discovery",
+                "rule": "Advisory proof route hints are not host policy; proof selection must live-confirm them before emitting commands.",
+                "hints": [
+                    {
+                        "id": "package-json:test",
+                        "intent_type": "behavior-test",
+                        "candidate_command": "npm test",
+                        "source": "package-json",
+                        "source_path": "package.json",
+                        "confidence": "medium",
+                        "requires_live_confirmation": True,
+                    }
+                ],
+            }
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "in-progress", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json", why_now = "prove host policy precedence." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    record = planning_installer._build_execplan_record_from_todo_item(
+        title="Plan Alpha",
+        item_id="plan-alpha",
+        status="in-progress",
+        why_now="prove host policy precedence.",
+        next_action="run proof selection.",
+        done_when="host policy blocks disallowed command.",
+    )
+    record["adaptive_assurance"] = {
+        "level": "medium",
+        "reason": "host disallows npm test",
+        "proof_profiles": ["no_npm_test"],
+    }
+    planning_installer._write_execplan_record(record_path=record_path, record=record)
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.ts", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["learned_route_hints"]["confirmed"][0]["candidate_command"] == "npm test"
+    assert "npm test" not in answer["required_commands"]
+    assert "npm run lint" in answer["required_commands"]
+    assert answer["configured_policy"][0]["disallowed_commands"] == ["npm test"]
+    assert answer["host_policy_blocked_commands"] == [
+        {
+            "lane": "concern:no_npm_test",
+            "proof_profile": "no_npm_test",
+            "command": "npm test",
+            "configured_command": "npm test",
+            "reason": "host-configured proof profile disallows this command",
+            "selected_by_lane": "workspace_cli",
+        }
+    ]
+    assert answer["proof_route_decision"]["host_policy_blocked_commands"] == answer["host_policy_blocked_commands"]
+    assert answer["proof_next_decision"]["warnings"] == ["Host proof policy blocked one or more candidate proof commands."]
+
+
 def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
     _write(
         tmp_path / ".agentic-workspace" / "config.local.toml",
