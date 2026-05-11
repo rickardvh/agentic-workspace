@@ -18771,6 +18771,7 @@ def _manual_verification_templates_for_intents(*, proof_intents: list[dict[str, 
 
 def _target_proof_capabilities(*, target_root: Path | None, make_targets: set[str] | None) -> dict[str, Any]:
     package_scripts = _package_json_scripts(target_root)
+    role_commands = _target_role_command_candidates(target_root=target_root, package_scripts=package_scripts)
     has_makefile = bool(target_root is not None and (target_root / "Makefile").is_file())
     has_package_json = bool(target_root is not None and (target_root / "package.json").is_file())
     capabilities: dict[str, Any] = {
@@ -18785,6 +18786,27 @@ def _target_proof_capabilities(*, target_root: Path | None, make_targets: set[st
             "available": has_package_json,
             "scripts": sorted(package_scripts),
         },
+        "python": {
+            "available": bool(
+                target_root is not None
+                and (
+                    (target_root / "pyproject.toml").is_file() or (target_root / "pytest.ini").is_file() or (target_root / "tests").exists()
+                )
+            ),
+        },
+        "rust": {"available": bool(target_root is not None and (target_root / "Cargo.toml").is_file())},
+        "go": {"available": bool(target_root is not None and (target_root / "go.mod").is_file())},
+        "java": {
+            "available": bool(
+                target_root is not None
+                and (
+                    (target_root / "pom.xml").is_file()
+                    or (target_root / "build.gradle").is_file()
+                    or (target_root / "build.gradle.kts").is_file()
+                )
+            ),
+        },
+        "role_commands": role_commands,
         "rule": (
             "Proof commands are executable only when the target repo exposes a matching capability; otherwise proof selection "
             "must report unavailable commands and ask for task-specific or manual verification."
@@ -18798,6 +18820,8 @@ def _target_proof_capabilities(*, target_root: Path | None, make_targets: set[st
         for target in sorted(make_targets):
             if target in {"test", "lint", "check", "typecheck", "maintainer-surfaces"}:
                 discovered_commands.append(f"make {target}")
+    for commands in role_commands.values():
+        discovered_commands.extend(commands)
     capabilities["candidate_commands"] = _dedupe(discovered_commands)
     return capabilities
 
@@ -18829,12 +18853,54 @@ def _package_script_command_for_role(*, role: str | None, package_scripts: dict[
     return None
 
 
+def _target_role_command_candidates(*, target_root: Path | None, package_scripts: dict[str, str]) -> dict[str, list[str]]:
+    role_commands: dict[str, list[str]] = {"test": [], "lint": [], "check": [], "typecheck": []}
+    if "test" in package_scripts:
+        role_commands["test"].append("npm test")
+    for role in ("lint", "check", "typecheck"):
+        if role in package_scripts:
+            role_commands[role].append(f"npm run {role}")
+    if "check" in package_scripts and "lint" not in package_scripts:
+        role_commands["lint"].append("npm run check")
+    if target_root is None:
+        return {role: _dedupe(commands) for role, commands in role_commands.items() if commands}
+
+    pyproject_path = target_root / "pyproject.toml"
+    pyproject_text = ""
+    if pyproject_path.is_file():
+        try:
+            pyproject_text = pyproject_path.read_text(encoding="utf-8-sig")
+        except OSError:
+            pyproject_text = ""
+    if pyproject_path.is_file() or (target_root / "pytest.ini").is_file() or (target_root / "tests").exists():
+        role_commands["test"].append("uv run pytest")
+    if (
+        (target_root / "ruff.toml").is_file()
+        or (target_root / ".ruff.toml").is_file()
+        or "[tool.ruff" in pyproject_text
+        or "[tool.ruff." in pyproject_text
+    ):
+        role_commands["lint"].append("uv run ruff check .")
+    if (target_root / "Cargo.toml").is_file():
+        role_commands["test"].append("cargo test")
+        role_commands["lint"].append("cargo clippy --all-targets --all-features")
+    if (target_root / "go.mod").is_file():
+        role_commands["test"].append("go test ./...")
+        role_commands["lint"].append("go vet ./...")
+    if (target_root / "pom.xml").is_file():
+        role_commands["test"].append("./mvnw test" if (target_root / "mvnw").is_file() else "mvn test")
+    if (target_root / "build.gradle").is_file() or (target_root / "build.gradle.kts").is_file():
+        role_commands["test"].append("./gradlew test" if (target_root / "gradlew").is_file() else "gradle test")
+    return {role: _dedupe(commands) for role, commands in role_commands.items() if commands}
+
+
 def _adapt_make_proof_command_for_target(
     *,
     command: str,
     target_root: Path | None,
     make_targets: set[str] | None,
     package_scripts: dict[str, str] | None = None,
+    role_commands: dict[str, list[str]] | None = None,
 ) -> tuple[str | None, dict[str, str] | None]:
     target = _target_make_command(command)
     if target is None or target_root is None:
@@ -18843,12 +18909,20 @@ def _adapt_make_proof_command_for_target(
         role=_generic_proof_role_for_make_target(target),
         package_scripts=package_scripts or {},
     )
+    role = _generic_proof_role_for_make_target(target)
+    role_replacement = next(iter((role_commands or {}).get(role or "", [])), None)
     if make_targets is None:
         if script_replacement is not None:
             return script_replacement, {
                 "command": command,
                 "replacement": script_replacement,
                 "reason": f"target repo has no Makefile; using package.json script for {_generic_proof_role_for_make_target(target)!r} proof",
+            }
+        if role_replacement is not None:
+            return role_replacement, {
+                "command": command,
+                "replacement": role_replacement,
+                "reason": f"target repo has no Makefile; using detected {role!r} proof capability",
             }
         return None, {
             "command": command,
@@ -18877,6 +18951,12 @@ def _adapt_make_proof_command_for_target(
             "command": command,
             "replacement": script_replacement,
             "reason": f"target Makefile does not define {target!r}; using package.json script for {_generic_proof_role_for_make_target(target)!r} proof",
+        }
+    if role_replacement is not None:
+        return role_replacement, {
+            "command": command,
+            "replacement": role_replacement,
+            "reason": f"target Makefile does not define {target!r}; using detected {role!r} proof capability",
         }
     return None, {
         "command": command,
@@ -19186,6 +19266,7 @@ def _proof_selection_for_changed_paths(
                 target_root=target_root,
                 make_targets=make_targets,
                 package_scripts=package_scripts,
+                role_commands=target_capabilities.get("role_commands", {}),
             )
             if adapted_command is not None:
                 candidate_commands.append(adapted_command)
@@ -19213,6 +19294,7 @@ def _proof_selection_for_changed_paths(
                 target_root=target_root,
                 make_targets=make_targets,
                 package_scripts=package_scripts,
+                role_commands=target_capabilities.get("role_commands", {}),
             )
             if adjustment is not None:
                 adjustment = {"lane": str(lane.get("id", "")), **adjustment}

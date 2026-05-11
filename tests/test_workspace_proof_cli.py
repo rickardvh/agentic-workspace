@@ -294,6 +294,65 @@ def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_pat
     assert payload["manual_verification"] is None
 
 
+def test_proof_changed_uses_python_pytest_capability_without_makefile(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "pyproject.toml",
+        """
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+""",
+    )
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["required_commands"] == ["uv run pytest", "uv run ruff check ."]
+    assert payload["target_proof_capabilities"]["python"]["available"] is True
+    assert payload["target_proof_capabilities"]["role_commands"] == {
+        "test": ["uv run pytest"],
+        "lint": ["uv run ruff check ."],
+    }
+    assert payload["proof_command_adjustments"] == [
+        {
+            "lane": "workspace_cli",
+            "command": "make test-workspace",
+            "replacement": "uv run pytest",
+            "reason": "target repo has no Makefile; using detected 'test' proof capability",
+        },
+        {
+            "lane": "workspace_cli",
+            "command": "make lint-workspace",
+            "replacement": "uv run ruff check .",
+            "reason": "target repo has no Makefile; using detected 'lint' proof capability",
+        },
+    ]
+    assert payload["manual_verification"] is None
+
+
+def test_proof_changed_reports_rust_go_and_java_capability_candidates(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "Cargo.toml", '[package]\nname = "demo"\nversion = "0.1.0"\n')
+    _write(tmp_path / "go.mod", "module example.com/demo\n")
+    _write(tmp_path / "pom.xml", "<project />\n")
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "docs/notes.md", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    capabilities = answer["target_proof_capabilities"]
+    assert capabilities["rust"]["available"] is True
+    assert capabilities["go"]["available"] is True
+    assert capabilities["java"]["available"] is True
+    assert capabilities["role_commands"]["test"] == ["cargo test", "go test ./...", "mvn test"]
+    assert capabilities["role_commands"]["lint"] == ["cargo clippy --all-targets --all-features", "go vet ./..."]
+    assert "cargo test" in capabilities["candidate_commands"]
+    assert "go vet ./..." in capabilities["candidate_commands"]
+    assert "mvn test" in capabilities["candidate_commands"]
+
+
 def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run", "lint": "eslint ."}}))

@@ -52,7 +52,7 @@
       "title": "Broader capability detectors",
       "readiness": "promoted",
       "outcome": "Add detectors for common repo ecosystems as capabilities and advisory hints, not as policy.",
-      "owner_surface": ".agentic-workspace/planning/execplans/broader-capability-detectors.plan.json",
+      "owner_surface": "GitHub #899; implementation evidence in slice commit Add broader proof capability detectors",
       "proof": "Repos with Python, Rust, Go, Gradle/Maven, or alternate JS package-manager surfaces receive useful route candidates without unsafe assumptions.",
       "depends_on": [
         "explicit-decision-model"
@@ -64,9 +64,9 @@
     {
       "id": "proof-execution-evidence",
       "title": "Proof execution evidence feedback",
-      "readiness": "needs-shaping",
+      "readiness": "promoted",
       "outcome": "Represent selected, run, passed, failed, skipped, unavailable, waived, and missing proof states distinctly.",
-      "owner_surface": "",
+      "owner_surface": ".agentic-workspace/planning/execplans/proof-execution-evidence.plan.json",
       "proof": "Closeout and proof reports distinguish route selection from execution results, and stale/unavailable routes can be downgraded.",
       "depends_on": [
         "explicit-decision-model"

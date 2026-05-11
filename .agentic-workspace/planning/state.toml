@@ -13,7 +13,7 @@ execplans = []
 
 [todo]
 active_items = [
-  { id = "broader-capability-detectors", title = "Broader proof capability detectors", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/broader-capability-detectors.plan.json", why_now = "Next #899 lane after manual fallback templates: add common ecosystem capability detectors as advisory routes, not policy.", owner_role = "implementation", handoff_ready = true, refs = ["GitHub #899"] },
+  { id = "proof-execution-evidence", title = "Proof execution evidence feedback", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/proof-execution-evidence.plan.json", why_now = "Final #899 lane: represent selected/run/passed/failed/skipped/unavailable/waived/missing proof states distinctly.", owner_role = "implementation", handoff_ready = true, refs = ["GitHub #899"] },
 ]
 queued_items = []
 
