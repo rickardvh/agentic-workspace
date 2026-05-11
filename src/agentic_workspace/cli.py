@@ -2401,7 +2401,7 @@ def main(argv: list[str] | None = None) -> int:
             selected_modules=selected_modules,
             dry_run=args.dry_run,
             local_only=bool(args.local_only),
-            cli_invoke=config.cli_invoke,
+            cli_invoke=_lifecycle_cli_invoke(config=config),
         )
         _emit_payload(payload=payload, format_name=args.format)
         return 0
@@ -4951,7 +4951,7 @@ def _run_lifecycle_command(
         selected_modules=selected_modules,
         dry_run=dry_run,
         local_only=local_only_repo_root is not None,
-        cli_invoke=config.cli_invoke,
+        cli_invoke=_lifecycle_cli_invoke(config=config),
     )
     if command_name in {"status", "doctor"}:
         repair_actions, manual_review_actions = _aggregate_repair_actions_from_reports(
@@ -5258,6 +5258,24 @@ def _module_safe_lifecycle_repair_action(
             "preferred_remedy": "make safe module repair availability visible from the root lifecycle surface",
         },
     }
+
+
+def _lifecycle_cli_invoke(*, config: WorkspaceConfig, invocation_root: Path | None = None) -> str:
+    if config.cli_invoke_source != "product-default":
+        return config.cli_invoke
+    invocation_root = invocation_root or Path.cwd()
+    try:
+        if invocation_root.resolve() == config.target_root.resolve():
+            return config.cli_invoke
+    except OSError:
+        return config.cli_invoke
+    try:
+        invocation_config = config_lib.load_workspace_config(target_root=invocation_root)
+    except WorkspaceUsageError:
+        return config.cli_invoke
+    if invocation_config.cli_invoke_source != "product-default":
+        return invocation_config.cli_invoke
+    return config.cli_invoke
 
 
 def _lifecycle_plan_payload(

@@ -951,7 +951,7 @@ def test_upgrade_lifecycle_plan_advertises_root_front_door_for_module_selections
     assert "selected modules" in front_door["ordinary_sequence"][0]["reason"]
     assert front_door["ordinary_sequence"][1]["step"] == "apply"
     assert "--dry-run" not in front_door["ordinary_sequence"][1]["command"]
-    assert front_door["ordinary_sequence"][2]["command"].startswith("agentic-workspace doctor --target ")
+    assert front_door["ordinary_sequence"][2]["command"].startswith("uv run agentic-workspace doctor --target ")
     assert [(module_name, command_name) for module_name, command_name, _kwargs in calls] == [
         (module_name, "upgrade") for module_name in expected_modules
     ]
@@ -986,6 +986,32 @@ def test_lifecycle_plan_uses_resolved_cli_invoke_for_next_actions(monkeypatch, t
     assert front_door["ordinary_sequence"][1]["command"].startswith("uv run agentic-workspace upgrade ")
     assert front_door["ordinary_sequence"][2]["command"].startswith("uv run agentic-workspace doctor ")
     assert payload["next_steps"][0].startswith("Run uv run agentic-workspace doctor ")
+
+
+def test_install_review_next_actions_use_invoking_workspace_cli_invoke(monkeypatch, tmp_path: Path, capsys) -> None:
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    source.mkdir()
+    target.mkdir()
+    _init_git_repo(source)
+    _init_git_repo(target)
+    _write(
+        source / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+    _write(target / "AGENTS.md", "# Existing instructions\n")
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    monkeypatch.chdir(source)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(target, calls))
+
+    assert cli.main(["install", "--target", str(target), "--preset", "full", "--non-interactive", "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    lifecycle_plan = payload["lifecycle_plan"]
+    assert lifecycle_plan["next_safe_command"]["status"] == "review-required"
+    assert lifecycle_plan["next_safe_command"]["command"].startswith("uv run agentic-workspace install ")
+    assert lifecycle_plan["primary_next_action"]["command"].startswith("uv run agentic-workspace install ")
+    assert lifecycle_plan["primary_next_action"]["run"] == lifecycle_plan["primary_next_action"]["command"]
 
 
 @pytest.mark.parametrize("dry_run_arg", [["--dry-run"], []])
@@ -1070,7 +1096,7 @@ def test_uninstall_dry_run_requires_review_for_ambiguous_workspace_payload(tmp_p
     assert lifecycle_plan["next_safe_command"]["status"] == "review-required"
     primary_action = lifecycle_plan["primary_next_action"]
     assert primary_action["action"] == "resolve-lifecycle-review"
-    assert primary_action["command"].startswith("agentic-workspace uninstall ")
+    assert primary_action["command"].startswith("uv run agentic-workspace uninstall ")
     assert "--dry-run" in primary_action["command"]
     assert primary_action["run"] == primary_action["command"]
     assert primary_action["risk"] == "blocked until review items are resolved"
