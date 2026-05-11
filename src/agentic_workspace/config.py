@@ -1057,7 +1057,7 @@ def _resolve_shared_local_config_path(
     configured = Path(raw_path.strip())
     if configured.is_absolute():
         return configured
-    return (local_path.parent / configured).resolve()
+    return (target_root / configured).resolve()
 
 
 def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLocalOverride, list[str]]:

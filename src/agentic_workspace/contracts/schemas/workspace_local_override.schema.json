@@ -23,7 +23,7 @@
         "shared_config_path": {
           "type": "string",
           "minLength": 1,
-          "description": "Optional path to another machine-local Agentic Workspace local config file. Relative paths resolve from this config.local.toml file; repo-local local config values override shared values."
+          "description": "Optional path to another machine-local Agentic Workspace local config file. Relative paths resolve from the repository root; repo-local local config values override shared values."
         }
       },
       "additionalProperties": false,
