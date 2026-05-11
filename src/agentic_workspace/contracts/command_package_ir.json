@@ -1838,8 +1838,8 @@
             "agentic-planning"
           ],
           "test_environment": "docker",
-          "maturity_level_ref": "runnable-read-only-adapter",
-          "generation_status": "runnable-read-only-adapter"
+          "maturity_level_ref": "weak-agent-safe-adapter",
+          "generation_status": "weak-agent-safe-adapter"
         }
       ],
       "commands": [

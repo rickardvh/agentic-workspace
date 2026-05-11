@@ -479,9 +479,9 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
         "agentic-planning"
       ],
       "generated_root": "generated/typescript/planning-cli",
-      "generation_status": "runnable-read-only-adapter",
+      "generation_status": "weak-agent-safe-adapter",
       "kind": "typescript",
-      "maturity_level_ref": "runnable-read-only-adapter",
+      "maturity_level_ref": "weak-agent-safe-adapter",
       "package_name": "@agentic-workspace/planning-cli",
       "test_environment": "docker"
     }

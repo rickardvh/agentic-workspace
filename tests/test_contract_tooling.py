@@ -303,11 +303,15 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert targets["bash"]["maturity_level_ref"] == "deferred"
     assert targets["powershell"]["generation_status"] == "deferred"
 
-    for package_id in ("planning-bootstrap", "memory-bootstrap"):
-        package_targets = {target["kind"]: target for target in packages[package_id]["targets"]}
-        assert package_targets["typescript"]["test_environment"] == "docker"
-        assert package_targets["typescript"]["maturity_level_ref"] == "runnable-read-only-adapter"
-        assert package_targets["typescript"]["generation_status"] == "runnable-read-only-adapter"
+    planning_targets = {target["kind"]: target for target in packages["planning-bootstrap"]["targets"]}
+    assert planning_targets["typescript"]["test_environment"] == "docker"
+    assert planning_targets["typescript"]["maturity_level_ref"] == "weak-agent-safe-adapter"
+    assert planning_targets["typescript"]["generation_status"] == "weak-agent-safe-adapter"
+
+    memory_targets = {target["kind"]: target for target in packages["memory-bootstrap"]["targets"]}
+    assert memory_targets["typescript"]["test_environment"] == "docker"
+    assert memory_targets["typescript"]["maturity_level_ref"] == "runnable-read-only-adapter"
+    assert memory_targets["typescript"]["generation_status"] == "runnable-read-only-adapter"
 
 
 def test_command_package_ir_reuses_generated_adapter_truth() -> None:
@@ -805,10 +809,22 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
 def test_generated_typescript_package_adapters_are_runnable() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     packages = {
-        "planning-cli": ("@agentic-workspace/planning-cli", "agentic-planning", "python -m repo_planning_bootstrap.cli"),
-        "memory-cli": ("@agentic-workspace/memory-cli", "agentic-memory", "python -m repo_memory_bootstrap.cli"),
+        "planning-cli": (
+            "@agentic-workspace/planning-cli",
+            "agentic-planning",
+            "python -m repo_planning_bootstrap.cli",
+            "weak-agent-safe-adapter",
+            "allowed-read-only",
+        ),
+        "memory-cli": (
+            "@agentic-workspace/memory-cli",
+            "agentic-memory",
+            "python -m repo_memory_bootstrap.cli",
+            "runnable-read-only-adapter",
+            "review-required",
+        ),
     }
-    for package, (package_name, entrypoint, runtime_command) in packages.items():
+    for package, (package_name, entrypoint, runtime_command, maturity, weak_agent_routing) in packages.items():
         package_root = repo_root / "generated" / "typescript" / package
         package_json = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
         cli_text = (package_root / "src" / "cli.mjs").read_text(encoding="utf-8")
@@ -818,13 +834,14 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         assert package_json["bin"] == {entrypoint: "./src/cli.mjs"}
         metadata = package_json["agenticWorkspace"]
         assert metadata["fixtureOnly"] is False
-        assert metadata["generationStatus"] == "runnable-read-only-adapter"
+        assert metadata["generationStatus"] == maturity
         assert metadata["effectiveRuntimeCommand"] == runtime_command
-        assert metadata["maturity"]["id"] == "runnable-read-only-adapter"
+        assert metadata["maturity"]["id"] == maturity
         assert metadata["maturity"]["runnable"] is True
-        assert metadata["maturity"]["weak_agent_routing"] == "review-required"
+        assert metadata["maturity"]["weak_agent_routing"] == weak_agent_routing
         assert metadata["maturity"]["promotion_requires"]
         assert runtime_command in cli_text
+        assert f"Weak-agent routing: {weak_agent_routing}" in cli_text
         assert "generated runnable adapter delegates supported command to runtime process" in test_text
 
 
