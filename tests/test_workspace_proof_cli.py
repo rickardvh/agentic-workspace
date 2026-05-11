@@ -261,6 +261,7 @@ def test_proof_verbose_exposes_manual_fallback_decision_layers(tmp_path: Path, c
     assert decision["proof_execution_evidence"] == {
         "kind": "proof-execution-evidence/v1",
         "status": "not-run",
+        "state_model": ["selected", "run", "passed", "failed", "skipped", "unavailable", "waived", "missing"],
         "expected_commands": [],
         "manual_verification_expected": True,
         "rule": "Proof selection describes expected proof only; closeout must record what actually ran, failed, was skipped, or was manually verified.",
@@ -637,6 +638,8 @@ strict_closeout = true
 
 [assurance.proof_profiles.assurance_matrix]
 required_commands = [
+  "selected-command",
+  "run-command",
   "pass-command",
   "fail-command",
   "skip-command",
@@ -680,6 +683,8 @@ candidates = []
         "proof achieved now": "mixed",
         "proof execution evidence": json.dumps(
             [
+                {"command": "selected-command", "status": "selected", "evidence_ref": "local:selected"},
+                {"command": "run-command", "status": "run", "evidence_ref": "local:run"},
                 {"command": "pass-command", "status": "passed", "evidence_ref": "local:pass"},
                 {"command": "fail-command", "status": "failed", "evidence_ref": "local:fail"},
                 {"command": "skip-command", "status": "skipped", "reason": "not applicable"},
@@ -707,7 +712,10 @@ candidates = []
     )
 
     evidence = json.loads(capsys.readouterr().out)["answer"]["planning_assurance"]["trust_state"]["proof_execution_evidence"]
+    assert evidence["state_model"] == ["selected", "run", "passed", "failed", "skipped", "unavailable", "waived", "missing"]
     assert evidence["counts"] == {
+        "selected": 1,
+        "run": 1,
         "passed": 1,
         "failed": 1,
         "skipped": 1,
@@ -715,7 +723,11 @@ candidates = []
         "waived": 1,
         "missing": 2,
     }
-    assert evidence["lower_trust_required_count"] == 5
+    assert evidence["lower_trust_required_count"] == 7
+    selected = next(item for item in evidence["commands"] if item["command"] == "selected-command")
+    assert selected["trust"] == "lower-trust"
+    run = next(item for item in evidence["commands"] if item["command"] == "run-command")
+    assert run["trust"] == "lower-trust"
     waived = next(item for item in evidence["commands"] if item["command"] == "waived-command")
     assert waived["trust"] == "satisfied"
     assert waived["waiver_state"] == "waived-with-reason"

@@ -12,9 +12,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "proof-execution-evidence", title = "Proof execution evidence feedback", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/proof-execution-evidence.plan.json", why_now = "Final #899 lane: represent selected/run/passed/failed/skipped/unavailable/waived/missing proof states distinctly.", owner_role = "implementation", handoff_ready = true, refs = ["GitHub #899"] },
-]
+active_items = []
 queued_items = []
 
 [roadmap]

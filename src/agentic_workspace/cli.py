@@ -19096,6 +19096,9 @@ def _assurance_item_state(
     }
 
 
+_PROOF_EXECUTION_STATUSES = ("selected", "run", "passed", "failed", "skipped", "unavailable", "waived", "missing")
+
+
 def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[str]) -> dict[str, Any]:
     raw_entries: list[Any]
     if isinstance(declared, dict):
@@ -19111,7 +19114,7 @@ def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[
         command = str(entry.get("command", "")).strip()
         if command:
             by_command[command] = entry
-    statuses = ["passed", "failed", "skipped", "unavailable", "waived", "missing"]
+    statuses = list(_PROOF_EXECUTION_STATUSES)
     counts = {status: 0 for status in statuses}
     command_states: list[dict[str, Any]] = []
     for command in required_commands:
@@ -19122,7 +19125,7 @@ def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[
         reason = str(entry.get("reason", "")).strip()
         evidence_ref = str(entry.get("evidence_ref", entry.get("evidence", ""))).strip()
         waiver_has_reason = status != "waived" or bool(reason or evidence_ref)
-        lowers_trust = status in {"failed", "skipped", "unavailable", "missing"} or not waiver_has_reason
+        lowers_trust = status in {"selected", "run", "failed", "skipped", "unavailable", "missing"} or not waiver_has_reason
         counts[status] += 1
         command_states.append(
             {
@@ -19142,6 +19145,7 @@ def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[
     return {
         "status": "complete" if command_states and lower_trust_count == 0 else ("absent" if not command_states else "attention"),
         "rule": "Selected proof is not executed proof; required commands need compact evidence or an explicit waiver reason.",
+        "state_model": list(_PROOF_EXECUTION_STATUSES),
         "required_command_count": len(command_states),
         "lower_trust_required_count": lower_trust_count,
         "counts": counts,
@@ -19402,6 +19406,7 @@ def _proof_selection_for_changed_paths(
     proof_execution_evidence = {
         "kind": "proof-execution-evidence/v1",
         "status": "not-run",
+        "state_model": list(_PROOF_EXECUTION_STATUSES),
         "expected_commands": required_commands,
         "manual_verification_expected": manual_verification is not None,
         "rule": "Proof selection describes expected proof only; closeout must record what actually ran, failed, was skipped, or was manually verified.",

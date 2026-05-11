@@ -1,7 +1,7 @@
 {
   "kind": "planning-decomposition/v1",
   "title": "Adaptive Proof Route Selection",
-  "status": "shaping",
+  "status": "closed",
   "larger_intended_outcome": "Given a change in a host repository, help an agent choose the safest available proof route that matches the kind of confidence needed, without assuming Agentic Workspace source-repo commands or becoming the host repo's quality-policy owner.",
   "non_goals": [
     "Do not make Agentic Workspace define what proof is sufficient for every host repo.",
@@ -66,7 +66,7 @@
       "title": "Proof execution evidence feedback",
       "readiness": "promoted",
       "outcome": "Represent selected, run, passed, failed, skipped, unavailable, waived, and missing proof states distinctly.",
-      "owner_surface": ".agentic-workspace/planning/execplans/proof-execution-evidence.plan.json",
+      "owner_surface": "GitHub #899; implementation evidence in slice commit Add proof execution evidence states",
       "proof": "Closeout and proof reports distinguish route selection from execution results, and stale/unavailable routes can be downgraded.",
       "depends_on": [
         "explicit-decision-model"
