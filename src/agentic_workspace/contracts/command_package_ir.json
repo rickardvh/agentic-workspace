@@ -1419,6 +1419,22 @@
                   "--target"
                 ],
                 "help": "Optional repository path used to reconcile planning state."
+              },
+              {
+                "name": "apply_safe_prune",
+                "flags": [
+                  "--apply-safe-prune"
+                ],
+                "action": "store_true",
+                "help": "Apply only reconcile cleanup targets that are already marked safe_to_prune."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview --apply-safe-prune without writing files."
               }
             ]
           },
@@ -1431,6 +1447,7 @@
             "primitive_refs": [
               "workspace.root.resolve",
               "planning.reconcile.load",
+              "planning.reconcile.load",
               "output.emit"
             ]
           },
@@ -1439,10 +1456,10 @@
             "output": []
           },
           "effect_hints": {
-            "read_only": true,
+            "read_only": false,
             "destructive": false,
             "idempotent": true,
-            "writes_repo_state": false,
+            "writes_repo_state": true,
             "requires_preflight_gate": false
           },
           "conformance_refs": [
@@ -1468,6 +1485,7 @@
               "target root resolution",
               "external intent cache refresh when available",
               "planning reconciliation loading",
+              "safe-prune state mutation",
               "output emission"
             ]
           }
@@ -1880,6 +1898,22 @@
                 ],
                 "default": "text",
                 "help": "Output format."
+              },
+              {
+                "name": "apply_safe_prune",
+                "flags": [
+                  "--apply-safe-prune"
+                ],
+                "action": "store_true",
+                "help": "Apply only reconcile cleanup targets that are already marked safe_to_prune."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview --apply-safe-prune without writing files."
               }
             ]
           },
@@ -2243,6 +2277,7 @@
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
               "planning.reconcile.load",
+              "planning.reconcile.load",
               "output.emit"
             ]
           },
@@ -2251,10 +2286,10 @@
             "output": []
           },
           "effect_hints": {
-            "read_only": true,
+            "read_only": false,
             "destructive": false,
             "idempotent": true,
-            "writes_repo_state": false,
+            "writes_repo_state": true,
             "requires_preflight_gate": false
           },
           "conformance_refs": [

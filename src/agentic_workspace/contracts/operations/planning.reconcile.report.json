@@ -1,2 +1,95 @@
-{"schema_version":"agentic-workspace/operation/v1","id":"planning.reconcile.report","command_surface":{"program":"agentic-planning","command":"reconcile","format_option":"format"},"summary":"Read-only agentic-planning reconcile report.","classification":"read-only-report","inputs":[{"name":"target","source":"cli-option","required":false},{"name":"format","source":"cli-option","required":false}],"output":{"kind":"text-or-json"},"effects":{"read_only":true,"destructive":false,"idempotent":true,"writes_repo_state":false,"requires_preflight_gate":false},"locality":{"requires_repo":false,"network":"forbidden","outside_repo_writes":"forbidden"},"reads":[{"surface":"package-local runtime state","required":false}],"writes":[],"steps":[{"id":"load_report","uses":"planning.reconcile.load","description":"Load package-local report payload."},{"id":"emit_output","uses":"output.emit","description":"Emit report in the requested format."}],"guards":["reconcile must remain read-only."],"proof":["operation contract validates against operation.schema.json","process conformance remains compatible"],"migration_status":"runtime-consumed"}
-
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.reconcile.report",
+  "command_surface": {
+    "program": "agentic-planning",
+    "command": "reconcile",
+    "format_option": "format"
+  },
+  "summary": "Report planning reconciliation state and optionally apply exact safe-to-prune cleanup targets.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "apply_safe_prune",
+      "source": "cli-option",
+      "required": false,
+      "description": "When true, remove only cleanup targets already marked safe_to_prune by reconcile."
+    },
+    {
+      "name": "dry_run",
+      "source": "cli-option",
+      "required": false,
+      "description": "Preview safe-prune application without writing repo state."
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "package-local runtime state",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/planning/state.toml",
+      "required": false,
+      "when": "--apply-safe-prune removes exact safe_to_prune roadmap targets"
+    },
+    {
+      "surface": ".agentic-workspace/planning/decompositions/",
+      "required": false,
+      "when": "--apply-safe-prune removes exact safe_to_prune decomposition records"
+    }
+  ],
+  "steps": [
+    {
+      "id": "load_report",
+      "uses": "planning.reconcile.load",
+      "description": "Load package-local report payload."
+    },
+    {
+      "id": "apply_safe_prune",
+      "uses": "planning.reconcile.load",
+      "description": "When requested, remove exact cleanup targets already marked safe_to_prune and then reload verification state."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit report in the requested format."
+    }
+  ],
+  "guards": [
+    "--apply-safe-prune must only mutate targets already present in cleanup_targets with safe_to_prune=true.",
+    "--dry-run must not write repo state."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "process conformance remains compatible",
+    "safe-prune tests cover exact roadmap/decomposition cleanup and dry-run behavior"
+  ],
+  "migration_status": "runtime-consumed"
+}

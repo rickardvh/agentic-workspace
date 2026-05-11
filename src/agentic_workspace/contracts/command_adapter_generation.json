@@ -1047,6 +1047,7 @@
         "primitive_refs": [
           "workspace.root.resolve",
           "planning.reconcile.load",
+          "planning.reconcile.load",
           "output.emit"
         ]
       },
@@ -1055,10 +1056,10 @@
         "output": []
       },
       "effect_hints": {
-        "read_only": true,
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
+        "writes_repo_state": true,
         "requires_preflight_gate": false
       },
       "projection_hints": {
@@ -1100,6 +1101,7 @@
           "target root resolution",
           "external intent cache refresh when available",
           "planning reconciliation loading",
+          "safe-prune state mutation",
           "output emission"
         ]
       },
@@ -1663,6 +1665,7 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "planning.reconcile.load",
+          "planning.reconcile.load",
           "output.emit"
         ]
       },
@@ -1671,10 +1674,10 @@
         "output": []
       },
       "effect_hints": {
-        "read_only": true,
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
+        "writes_repo_state": true,
         "requires_preflight_gate": false
       },
       "projection_hints": {

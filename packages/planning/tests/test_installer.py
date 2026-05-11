@@ -179,6 +179,89 @@ candidates = [
         "remove-decomposition-record",
     ]
     assert all(target["safe_to_prune"] is True for target in cleanup_targets)
+    assert completed["apply_available"] is True
+    assert completed["apply_command"] == "agentic-planning reconcile --apply-safe-prune --format json"
+
+
+def test_planning_reconcile_applies_only_safe_prune_targets(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    decomposition_path = tmp_path / ".agentic-workspace/planning/decompositions/closed-migration.decomposition.json"
+    _write(
+        state_path,
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "closed-lane", title = "Closed lane", priority = "first", issues = ["EXT-1"], outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "None." },
+  { id = "open-lane", title = "Open lane", priority = "second", issues = ["EXT-2"], outcome = "Open.", reason = "Open.", promotion_signal = "None.", suggested_first_slice = "None." },
+]
+candidates = [
+  { id = "closed-candidate", title = "Closed candidate", priority = "third", refs = "EXT-1", outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "None." },
+]
+""",
+    )
+    _write(
+        decomposition_path,
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Closed migration EXT-1",
+                "status": "complete",
+                "larger_intended_outcome": "Complete EXT-1",
+                "non_goals": [],
+                "candidate_lanes": [],
+                "dependency_assumptions": [],
+                "parallelization_assumptions": [],
+                "proof_expectations": [],
+                "promotion_rule": "",
+                "references": [{"kind": "issue", "target": "EXT-1", "role": "related-work"}],
+                "notes": "",
+            },
+            indent=2,
+        ),
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "EXT-1",
+                "title": "Closed elsewhere",
+                "status": "resolved",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "optional",
+            },
+            {
+                "system": "manual",
+                "id": "EXT-2",
+                "title": "Still open elsewhere",
+                "status": "in_progress",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "optional",
+            },
+        ],
+    )
+
+    preview = planning_reconcile(target=tmp_path, apply_safe_prune=True, dry_run=True)
+
+    assert preview["apply_result"]["dry_run"] is True
+    assert preview["apply_result"]["applied_count"] == 3
+    assert decomposition_path.exists()
+
+    applied = planning_reconcile(target=tmp_path, apply_safe_prune=True)
+
+    assert applied["apply_result"]["applied_count"] == 3
+    assert applied["completed_work_reconciliation"]["cleanup_target_count"] == 0
+    assert not decomposition_path.exists()
+    state = tomllib.loads(state_path.read_text(encoding="utf-8"))
+    assert [lane["id"] for lane in state["roadmap"]["lanes"]] == ["open-lane"]
+    assert state["roadmap"]["candidates"] == []
 
 
 def test_planning_cli_reconcile_outputs_provider_agnostic_state(tmp_path: Path, capsys) -> None:

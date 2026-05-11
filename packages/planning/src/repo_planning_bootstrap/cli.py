@@ -136,6 +136,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Report stale planning state against provider-agnostic external work evidence.",
     )
     reconcile_parser.add_argument("--target")
+    reconcile_parser.add_argument(
+        "--apply-safe-prune",
+        action="store_true",
+        help="Apply only reconcile cleanup targets that are already marked safe_to_prune.",
+    )
+    reconcile_parser.add_argument("--dry-run", action="store_true", help="Preview --apply-safe-prune without writing files.")
     reconcile_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     handoff_parser = subparsers.add_parser("handoff", help="Emit the compact delegated-worker handoff derived from active planning state.")
@@ -288,7 +294,11 @@ def main(argv: list[str] | None = None) -> int:
             _print_report(report)
         return 0
     if args.command == "reconcile":
-        reconcile = planning_reconcile(target=args.target)
+        reconcile = planning_reconcile(
+            target=args.target,
+            apply_safe_prune=bool(getattr(args, "apply_safe_prune", False)),
+            dry_run=bool(getattr(args, "dry_run", False)),
+        )
         if args.format == "json":
             print(json.dumps(reconcile, indent=2))
         else:

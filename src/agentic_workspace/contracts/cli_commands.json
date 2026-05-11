@@ -553,6 +553,22 @@
             "--target"
           ],
           "help": "Optional repository path used to reconcile planning state."
+        },
+        {
+          "name": "apply_safe_prune",
+          "flags": [
+            "--apply-safe-prune"
+          ],
+          "action": "store_true",
+          "help": "Apply only reconcile cleanup targets that are already marked safe_to_prune."
+        },
+        {
+          "name": "dry_run",
+          "flags": [
+            "--dry-run"
+          ],
+          "action": "store_true",
+          "help": "Preview --apply-safe-prune without writing files."
         }
       ],
       "role": "reusable_host_repo_diagnostics",

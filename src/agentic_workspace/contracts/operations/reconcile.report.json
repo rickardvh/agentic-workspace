@@ -1,1 +1,112 @@
-{"schema_version":"agentic-workspace/operation/v1","id":"reconcile.report","command_surface":{"command":"reconcile","format_option":"format"},"summary":"Show stale planning state against provider-agnostic external work evidence.","classification":"read-only-report","inputs":[{"name":"target","source":"cli-option","required":false},{"name":"format","source":"cli-option","required":false}],"output":{"kind":"text-or-json"},"effects":{"read_only":true,"destructive":false,"idempotent":true,"writes_repo_state":false,"requires_preflight_gate":false},"locality":{"requires_repo":false,"network":"forbidden","outside_repo_writes":"forbidden"},"reads":[{"surface":".agentic-workspace/planning/state.toml","required":false},{"surface":".agentic-workspace/planning/external-intent-evidence.json","required":false},{"surface":".agentic-workspace/planning/reviews/","required":false},{"surface":".agentic-workspace/planning/execplans/","required":false}],"writes":[],"steps":[{"id":"resolve_root","uses":"workspace.root.resolve","description":"Resolve the target root."},{"id":"load_reconcile","uses":"planning.reconcile.load","description":"Load provider-agnostic planning reconciliation state."},{"id":"emit_output","uses":"output.emit","description":"Emit reconcile state in the requested format."}],"guards":["Reconcile must consume provider-agnostic external evidence and must not hard-code host tracker semantics.","Reconcile must remain read-only; stale state is reported as recommendations, not mutated."],"proof":["operation contract validates against operation.schema.json","reconcile command tests cover provider-agnostic stale-state reporting"],"migration_status":"draft-contract-only"}
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "reconcile.report",
+  "command_surface": {
+    "command": "reconcile",
+    "format_option": "format"
+  },
+  "summary": "Show stale planning state and optionally apply exact safe-to-prune cleanup targets.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "apply_safe_prune",
+      "source": "cli-option",
+      "required": false,
+      "description": "When true, remove only cleanup targets already marked safe_to_prune by reconcile."
+    },
+    {
+      "name": "dry_run",
+      "source": "cli-option",
+      "required": false,
+      "description": "Preview safe-prune application without writing repo state."
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": ".agentic-workspace/planning/state.toml",
+      "required": false
+    },
+    {
+      "surface": ".agentic-workspace/planning/external-intent-evidence.json",
+      "required": false
+    },
+    {
+      "surface": ".agentic-workspace/planning/reviews/",
+      "required": false
+    },
+    {
+      "surface": ".agentic-workspace/planning/execplans/",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/planning/state.toml",
+      "required": false,
+      "when": "--apply-safe-prune removes exact safe_to_prune roadmap targets"
+    },
+    {
+      "surface": ".agentic-workspace/planning/decompositions/",
+      "required": false,
+      "when": "--apply-safe-prune removes exact safe_to_prune decomposition records"
+    }
+  ],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve",
+      "description": "Resolve the target root."
+    },
+    {
+      "id": "load_reconcile",
+      "uses": "planning.reconcile.load",
+      "description": "Load provider-agnostic planning reconciliation state."
+    },
+    {
+      "id": "apply_safe_prune",
+      "uses": "planning.reconcile.load",
+      "description": "When requested, remove exact cleanup targets already marked safe_to_prune and then reload verification state."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit reconcile state in the requested format."
+    }
+  ],
+  "guards": [
+    "Reconcile must consume provider-agnostic external evidence and must not hard-code host tracker semantics.",
+    "--apply-safe-prune must only mutate targets already present in cleanup_targets with safe_to_prune=true.",
+    "--dry-run must not write repo state."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "reconcile command tests cover provider-agnostic stale-state reporting",
+    "safe-prune tests cover exact roadmap/decomposition cleanup and dry-run behavior"
+  ],
+  "migration_status": "draft-contract-only"
+}

@@ -2403,7 +2403,11 @@ def main(argv: list[str] | None = None) -> int:
         except WorkspaceUsageError as exc:
             parser.error(str(exc))
         _ensure_external_intent_cache_if_available(target_root=target_root)
-        payload = planning_reconcile(target=target_root)
+        payload = planning_reconcile(
+            target=target_root,
+            apply_safe_prune=bool(getattr(args, "apply_safe_prune", False)),
+            dry_run=bool(getattr(args, "dry_run", False)),
+        )
         if args.format == "json":
             _emit_payload(payload=payload, format_name=args.format)
         else:
@@ -18421,7 +18425,11 @@ def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
     from repo_planning_bootstrap.installer import planning_reconcile
 
     _ensure_external_intent_cache_if_available(target_root=target_root)
-    payload = planning_reconcile(target=target_root)
+    payload = planning_reconcile(
+        target=target_root,
+        apply_safe_prune=bool(getattr(args, "apply_safe_prune", False)),
+        dry_run=bool(getattr(args, "dry_run", False)),
+    )
     if args.format == "json":
         _emit_payload(payload=payload, format_name=args.format)
     else:

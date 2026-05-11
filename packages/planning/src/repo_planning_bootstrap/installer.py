@@ -2135,8 +2135,31 @@ def _planning_manual_external_relay(handoff_contract: Any) -> dict[str, Any]:
     }
 
 
-def planning_reconcile(*, target: str | Path | None = None) -> dict[str, Any]:
+def planning_reconcile(
+    *,
+    target: str | Path | None = None,
+    apply_safe_prune: bool = False,
+    dry_run: bool = False,
+) -> dict[str, Any]:
     target_root = resolve_target_root(target)
+    payload = _planning_reconcile_payload(target_root)
+    if apply_safe_prune:
+        apply_result = _apply_reconcile_safe_prune(
+            target_root=target_root, cleanup_targets=payload["completed_work_reconciliation"]["cleanup_targets"], dry_run=dry_run
+        )
+        verification = _planning_reconcile_payload(target_root) if not dry_run else payload
+        payload = verification
+        payload["apply_result"] = apply_result
+        payload["completed_work_reconciliation"]["post_apply_verification"] = {
+            "status": verification["completed_work_reconciliation"]["status"],
+            "cleanup_target_count": verification["completed_work_reconciliation"]["cleanup_target_count"],
+            "stale_artifact_count": verification["completed_work_reconciliation"]["stale_artifact_count"],
+            "command": "agentic-planning reconcile --format json",
+        }
+    return payload
+
+
+def _planning_reconcile_payload(target_root: Path) -> dict[str, Any]:
     summary = planning_summary(target=target_root, profile="full")
     intent_validation = summary.get("intent_validation_contract", {})
     current_external_work = intent_validation.get("current_external_work", {})
@@ -2241,6 +2264,12 @@ def planning_reconcile(*, target: str | Path | None = None) -> dict[str, Any]:
     stale_artifact_count = len(stale_artifacts)
     status = "attention-needed" if stale_artifact_count or current_external_work.get("untracked_open_count", 0) else "clean"
 
+    safe_cleanup_count = sum(1 for target in cleanup_targets if target.get("safe_to_prune") is True)
+    apply_command = (
+        "agentic-planning reconcile --apply-safe-prune --format json"
+        if safe_cleanup_count
+        else "No exact safe_to_prune cleanup targets are available to apply."
+    )
     return {
         "kind": "planning-reconcile/v1",
         "schema": {
@@ -2262,7 +2291,10 @@ def planning_reconcile(*, target: str | Path | None = None) -> dict[str, Any]:
                 "Closed external-work references may only prune live planning state when every explicit issue/ref on that "
                 "artifact resolves to a closed external item; ambiguous artifacts are reported, not deleted."
             ),
-            "apply_command": "No automatic prune command is available yet; remove exact safe_to_prune targets or archive completed execplans explicitly.",
+            "safe_cleanup_count": safe_cleanup_count,
+            "apply_available": safe_cleanup_count > 0,
+            "apply_command": apply_command,
+            "apply_dry_run_command": "agentic-planning reconcile --apply-safe-prune --dry-run --format json" if safe_cleanup_count else "",
         },
         "external_work_state": current_external_work,
         "historical_audit_references": historical_audit_references,
@@ -2280,6 +2312,76 @@ def planning_reconcile(*, target: str | Path | None = None) -> dict[str, Any]:
             "closed_decomposition_records": stale_decompositions,
         },
         "recommendations": recommendations,
+    }
+
+
+def _apply_reconcile_safe_prune(
+    *,
+    target_root: Path,
+    cleanup_targets: list[dict[str, Any]],
+    dry_run: bool,
+) -> dict[str, Any]:
+    safe_targets = [target for target in cleanup_targets if target.get("safe_to_prune") is True]
+    applied: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    state = _read_state_from_toml(target_root) or {}
+    roadmap = state.get("roadmap")
+    roadmap_changed = False
+
+    def _remove_roadmap_item(collection_name: str, item_id: str) -> bool:
+        nonlocal roadmap_changed
+        if not isinstance(roadmap, dict):
+            return False
+        items = roadmap.get(collection_name)
+        if not isinstance(items, list):
+            return False
+        kept = [item for item in items if not (isinstance(item, dict) and str(item.get("id", "")).strip() == item_id)]
+        if len(kept) == len(items):
+            return False
+        roadmap[collection_name] = kept
+        roadmap_changed = True
+        return True
+
+    for target in safe_targets:
+        action = str(target.get("cleanup_action", "")).strip()
+        target_id = str(target.get("id", "")).strip()
+        if not target_id:
+            skipped.append({**target, "reason": "missing cleanup target id"})
+            continue
+        if action == "remove-roadmap-lane":
+            removed = _remove_roadmap_item("lanes", target_id)
+        elif action == "remove-roadmap-candidate":
+            removed = _remove_roadmap_item("candidates", target_id)
+        elif action == "remove-decomposition-record":
+            relative_path = Path(str(target.get("path", "")))
+            path = target_root / relative_path
+            expected_name = f"{target_id}.decomposition.json"
+            if path.name != expected_name or ".agentic-workspace/planning/decompositions/" not in path.as_posix():
+                skipped.append({**target, "reason": "decomposition path does not match exact safe-prune target"})
+                continue
+            removed = path.exists()
+            if removed and not dry_run:
+                path.unlink()
+        else:
+            skipped.append({**target, "reason": "cleanup action is not supported by safe-prune apply"})
+            continue
+        if removed:
+            applied.append(target)
+        else:
+            skipped.append({**target, "reason": "target was already absent"})
+
+    if roadmap_changed and not dry_run:
+        _write_state_to_toml(target_root, state)
+
+    return {
+        "kind": "planning-reconcile-safe-prune-apply/v1",
+        "dry_run": dry_run,
+        "safe_target_count": len(safe_targets),
+        "applied_count": len(applied),
+        "skipped_count": len(skipped),
+        "applied_targets": applied,
+        "skipped_targets": skipped,
+        "rule": "Only cleanup targets already marked safe_to_prune by reconcile are eligible; unsupported or ambiguous targets are skipped.",
     }
 
 

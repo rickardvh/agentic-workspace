@@ -310,9 +310,9 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
     "effect_hints": {
       "destructive": false,
       "idempotent": true,
-      "read_only": true,
+      "read_only": false,
       "requires_preflight_gate": false,
-      "writes_repo_state": false
+      "writes_repo_state": true
     },
     "id": "reconcile.report.cli",
     "operation_id": "reconcile.report",
@@ -320,6 +320,7 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "kind": "operation-primitive-sequence",
       "primitive_refs": [
         "workspace.root.resolve",
+        "planning.reconcile.load",
         "planning.reconcile.load",
         "output.emit"
       ]

@@ -66,6 +66,22 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
             ],
             "help": "Output format.",
             "name": "format"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--apply-safe-prune"
+            ],
+            "help": "Apply only reconcile cleanup targets that are already marked safe_to_prune.",
+            "name": "apply_safe_prune"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Preview --apply-safe-prune without writing files.",
+            "name": "dry_run"
           }
         ]
       },
@@ -392,9 +408,9 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
       "effect_hints": {
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
+        "read_only": false,
         "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": true
       },
       "interface": {
         "help": "Read-only reconcile report.",
@@ -448,6 +464,7 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "planning.reconcile.load",
           "planning.reconcile.load",
           "output.emit"
         ]
@@ -525,6 +542,22 @@ _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(
           ],
           "help": "Output format.",
           "name": "format"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--apply-safe-prune"
+          ],
+          "help": "Apply only reconcile cleanup targets that are already marked safe_to_prune.",
+          "name": "apply_safe_prune"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview --apply-safe-prune without writing files.",
+          "name": "dry_run"
         }
       ]
     },

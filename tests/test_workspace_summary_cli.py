@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import tomllib
 from pathlib import Path
 
 from repo_planning_bootstrap.installer import install_bootstrap
@@ -188,6 +189,64 @@ candidates = []
     assert payload["kind"] == "planning-reconcile/v1"
     assert payload["external_work_state"]["closed_count"] == 1
     assert payload["stale_forward_state"]["closed_roadmap_lanes"][0]["id"] == "closed-lane"
+    assert payload["completed_work_reconciliation"]["apply_available"] is True
+    assert payload["completed_work_reconciliation"]["apply_command"] == "agentic-planning reconcile --apply-safe-prune --format json"
+
+
+def test_workspace_reconcile_apply_safe_prune_removes_exact_closed_items(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    _write(
+        state_path,
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "closed-lane", title = "Closed lane", priority = "first", issues = ["EXT-1"], outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "None." },
+  { id = "open-lane", title = "Open lane", priority = "second", issues = ["EXT-2"], outcome = "Open.", reason = "Open.", promotion_signal = "None.", suggested_first_slice = "None." },
+]
+candidates = []
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "system": "manual",
+                        "id": "EXT-1",
+                        "title": "Closed elsewhere",
+                        "status": "resolved",
+                        "kind": "lane",
+                        "planning_residue_expected": "optional",
+                    },
+                    {
+                        "system": "manual",
+                        "id": "EXT-2",
+                        "title": "Open elsewhere",
+                        "status": "in_progress",
+                        "kind": "lane",
+                        "planning_residue_expected": "optional",
+                    },
+                ],
+            },
+            indent=2,
+        ),
+    )
+
+    exit_code = cli.main(["reconcile", "--target", str(tmp_path), "--apply-safe-prune", "--format", "json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["apply_result"]["applied_count"] == 1
+    assert payload["completed_work_reconciliation"]["cleanup_target_count"] == 0
+    state = tomllib.loads(state_path.read_text(encoding="utf-8"))
+    assert [lane["id"] for lane in state["roadmap"]["lanes"]] == ["open-lane"]
 
 
 def test_workspace_reconcile_reconstructs_external_cache_when_gh_is_available(tmp_path: Path, monkeypatch, capsys) -> None:
