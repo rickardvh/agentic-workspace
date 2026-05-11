@@ -12,6 +12,7 @@
     "default_agents_path",
     "handoff_surfaces",
     "module_upgrade_source_paths",
+    "proof_route_hints_path",
     "setup_findings_path",
     "mixed_agent_local_override_fields"
   ],
@@ -75,6 +76,10 @@
     "setup_findings_path": {
       "type": "string",
       "description": "Setup findings path text value used by this contract."
+    },
+    "proof_route_hints_path": {
+      "type": "string",
+      "description": "Workspace-managed advisory proof route hints path."
     },
     "mixed_agent_local_override_fields": {
       "type": "array",

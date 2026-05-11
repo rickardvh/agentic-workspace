@@ -465,6 +465,7 @@ def _cli_compatibility_remediation(
 
 
 SETUP_FINDINGS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["setup_findings_path"])
+PROOF_ROUTE_HINTS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["proof_route_hints_path"])
 _SETUP_FINDINGS_POLICY = setup_findings_policy_manifest()
 SETUP_FINDINGS_KIND = str(_SETUP_FINDINGS_POLICY["accepted_kind"])
 SUPPORTED_SETUP_FINDING_CLASSES = tuple(item["class"] for item in _SETUP_FINDINGS_POLICY["accepted_classes"])
@@ -4492,11 +4493,22 @@ def _run_init(
         _write_prompt_file(prompt_path=prompt_path, prompt_text=prompt_text, dry_run=dry_run)
     if handoff_record is not None and handoff_record_path is not None and not dry_run:
         _write_json_file(destination=handoff_record_path, payload=handoff_record, dry_run=dry_run)
+    proof_route_hints = _proof_route_hints_payload(target_root=target_root)
+    proof_route_hints_path = _proof_route_hints_path(target_root=target_root)
+    should_write_proof_route_hints = bool(proof_route_hints["hints"]) or proof_route_hints_path.exists()
+    if not dry_run and should_write_proof_route_hints:
+        _write_json_file(destination=proof_route_hints_path, payload=proof_route_hints, dry_run=dry_run)
     payload: dict[str, Any] = summary | {
         "dry_run": dry_run,
         "non_interactive": non_interactive,
         "module_reports": reports,
         "config": _config_payload(config=effective_config),
+        "proof_route_hints": {
+            "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
+            "hint_count": len(proof_route_hints["hints"]),
+            "written": not dry_run and should_write_proof_route_hints,
+            "rule": proof_route_hints["rule"],
+        },
     }
     should_include_prompt = print_prompt or prompt_path is not None or summary["prompt_requirement"] != "none"
     if should_include_prompt:
@@ -17541,6 +17553,7 @@ def _setup_payload(
         status_payload=status_payload,
         active_todo_surface=_active_todo_surface(target_root=target_root),
     )
+    proof_route_hints = _load_proof_route_hints(target_root=target_root)
     findings_input = _setup_findings_input_payload(target_root=target_root)
     mature_repo = _repo_looks_setup_mature(target_root=target_root)
     if mature_repo:
@@ -17599,6 +17612,12 @@ def _setup_payload(
             ),
         },
         "analysis_input": findings_input,
+        "proof_route_hints": {
+            "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
+            "status": proof_route_hints["status"],
+            "hint_count": len(proof_route_hints.get("hints", [])),
+            "rule": "Setup reports lifecycle-discovered advisory proof route hints; proof still live-confirms them before command selection.",
+        },
         "next_action": next_action,
         "discovery": discovery,
         "current": {
@@ -18449,6 +18468,123 @@ def _package_json_scripts(target_root: Path | None) -> dict[str, str]:
     return {str(name): str(command) for name, command in scripts.items() if str(name).strip() and str(command).strip()}
 
 
+def _proof_intent_for_command_name(name: str) -> str | None:
+    if name == "test" or name.startswith("test-"):
+        return "behavior-test"
+    if name == "lint" or name.startswith("lint-") or name == "check":
+        return "static-check"
+    if name == "typecheck" or name == "type-check":
+        return "type-check"
+    if name == "maintainer-surfaces":
+        return "general-check"
+    return None
+
+
+def _proof_route_hints_payload(*, target_root: Path) -> dict[str, Any]:
+    make_targets = _makefile_targets(target_root)
+    package_scripts = _package_json_scripts(target_root)
+    hints: list[dict[str, Any]] = []
+    for target in sorted(make_targets or []):
+        intent_type = _proof_intent_for_command_name(target)
+        if intent_type is None:
+            continue
+        hints.append(
+            {
+                "id": f"make:{target}",
+                "intent_type": intent_type,
+                "candidate_command": f"make {target}",
+                "source": "makefile",
+                "source_path": "Makefile",
+                "confidence": "medium",
+                "requires_live_confirmation": True,
+            }
+        )
+    for script_name in sorted(package_scripts):
+        intent_type = _proof_intent_for_command_name(script_name)
+        if intent_type is None:
+            continue
+        command = "npm test" if script_name == "test" else f"npm run {script_name}"
+        hints.append(
+            {
+                "id": f"package-json:{script_name}",
+                "intent_type": intent_type,
+                "candidate_command": command,
+                "source": "package-json",
+                "source_path": "package.json",
+                "confidence": "medium",
+                "requires_live_confirmation": True,
+            }
+        )
+    return {
+        "kind": "agentic-workspace/proof-route-hints/v1",
+        "schema_version": "proof-route-hints/v1",
+        "source": "lifecycle-discovery",
+        "rule": "Advisory proof route hints are not host policy; proof selection must live-confirm them before emitting commands.",
+        "hints": hints,
+    }
+
+
+def _proof_route_hints_path(*, target_root: Path) -> Path:
+    return target_root / PROOF_ROUTE_HINTS_PATH
+
+
+def _load_proof_route_hints(*, target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {"kind": "learned-proof-route-hints/v1", "status": "unavailable", "hints": []}
+    path = _proof_route_hints_path(target_root=target_root)
+    if not path.is_file():
+        return {"kind": "learned-proof-route-hints/v1", "status": "not-found", "path": PROOF_ROUTE_HINTS_PATH.as_posix(), "hints": []}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "kind": "learned-proof-route-hints/v1",
+            "status": "invalid",
+            "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
+            "reason": str(exc),
+            "hints": [],
+        }
+    raw_hints = payload.get("hints", []) if isinstance(payload, dict) else []
+    if not isinstance(raw_hints, list):
+        raw_hints = []
+    return {
+        "kind": "learned-proof-route-hints/v1",
+        "status": "loaded",
+        "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
+        "hints": [hint for hint in raw_hints if isinstance(hint, dict)],
+    }
+
+
+def _confirm_learned_route_hints(
+    *,
+    learned_hints: dict[str, Any],
+    target_capabilities: dict[str, Any],
+) -> dict[str, Any]:
+    live_commands = set(str(command) for command in target_capabilities.get("candidate_commands", []))
+    confirmed: list[dict[str, Any]] = []
+    stale: list[dict[str, Any]] = []
+    for hint in learned_hints.get("hints", []):
+        command = str(hint.get("candidate_command", "")).strip()
+        record = {
+            "id": str(hint.get("id", "")),
+            "intent_type": str(hint.get("intent_type", "")),
+            "candidate_command": command,
+            "source": str(hint.get("source", "")),
+            "confidence": str(hint.get("confidence", "")),
+            "requires_live_confirmation": bool(hint.get("requires_live_confirmation", True)),
+        }
+        if command and command in live_commands:
+            confirmed.append({**record, "confirmation": "live-confirmed"})
+        else:
+            stale.append({**record, "confirmation": "stale-or-unavailable"})
+    return {
+        **learned_hints,
+        "confirmed": confirmed,
+        "stale": stale,
+        "rule": "Learned route hints can explain or suggest proof routes, but only live-confirmed hints may support command selection.",
+    }
+
+
 def _target_proof_capabilities(*, target_root: Path | None, make_targets: set[str] | None) -> dict[str, Any]:
     package_scripts = _package_json_scripts(target_root)
     has_makefile = bool(target_root is not None and (target_root / "Makefile").is_file())
@@ -18847,6 +18983,10 @@ def _proof_selection_for_changed_paths(
     make_targets = _makefile_targets(target_root)
     package_scripts = _package_json_scripts(target_root)
     target_capabilities = _target_proof_capabilities(target_root=target_root, make_targets=make_targets)
+    learned_route_hints = _confirm_learned_route_hints(
+        learned_hints=_load_proof_route_hints(target_root=target_root),
+        target_capabilities=target_capabilities,
+    )
     proof_command_adjustments: list[dict[str, str]] = []
     unavailable_proof_commands: list[dict[str, str]] = []
     for lane in selected_lanes:
@@ -18942,6 +19082,7 @@ def _proof_selection_for_changed_paths(
             ],
         },
         "target_proof_capabilities": target_capabilities,
+        "learned_route_hints": learned_route_hints,
         "selected_lanes": [
             {
                 "id": lane["id"],

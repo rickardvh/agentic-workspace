@@ -241,6 +241,52 @@ def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_pat
     assert "manual_verification" not in payload
 
 
+def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run", "lint": "eslint ."}}))
+    _write(
+        tmp_path / ".agentic-workspace" / "proof-route-hints.json",
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-route-hints/v1",
+                "schema_version": "proof-route-hints/v1",
+                "source": "lifecycle-discovery",
+                "rule": "Advisory proof route hints are not host policy; proof selection must live-confirm them before emitting commands.",
+                "hints": [
+                    {
+                        "id": "package-json:test",
+                        "intent_type": "behavior-test",
+                        "candidate_command": "npm test",
+                        "source": "package-json",
+                        "source_path": "package.json",
+                        "confidence": "medium",
+                        "requires_live_confirmation": True,
+                    },
+                    {
+                        "id": "package-json:stale",
+                        "intent_type": "static-check",
+                        "candidate_command": "npm run stale",
+                        "source": "package-json",
+                        "source_path": "package.json",
+                        "confidence": "medium",
+                        "requires_live_confirmation": True,
+                    },
+                ],
+            }
+        ),
+    )
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.ts", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    hints = answer["learned_route_hints"]
+    assert hints["status"] == "loaded"
+    assert hints["confirmed"][0]["candidate_command"] == "npm test"
+    assert hints["confirmed"][0]["confirmation"] == "live-confirmed"
+    assert hints["stale"][0]["candidate_command"] == "npm run stale"
+    assert hints["stale"][0]["confirmation"] == "stale-or-unavailable"
+
+
 def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
     _write(
         tmp_path / ".agentic-workspace" / "config.local.toml",

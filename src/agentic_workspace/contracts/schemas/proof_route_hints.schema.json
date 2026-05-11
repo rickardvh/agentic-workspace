@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/proof-route-hints.schema.json",
+  "title": "Agentic Workspace Proof Route Hints",
+  "description": "Advisory proof route hints discovered during lifecycle setup/adopt. Hints are not host policy and require live confirmation before command selection.",
+  "type": "object",
+  "required": [
+    "kind",
+    "schema_version",
+    "source",
+    "rule",
+    "hints"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/proof-route-hints/v1"
+    },
+    "schema_version": {
+      "const": "proof-route-hints/v1"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rule": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "intent_type",
+          "candidate_command",
+          "source",
+          "confidence",
+          "requires_live_confirmation"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "intent_type": {
+            "type": "string",
+            "enum": [
+              "behavior-test",
+              "static-check",
+              "type-check",
+              "general-check"
+            ]
+          },
+          "candidate_command": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "makefile",
+              "package-json"
+            ]
+          },
+          "source_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "requires_live_confirmation": {
+            "const": true
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
+}
