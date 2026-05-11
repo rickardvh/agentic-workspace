@@ -535,11 +535,16 @@ def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(
     decision = json.loads(capsys.readouterr().out)["delegation_decision"]
     assert decision["decision"] == "suggest-delegation"
     assert decision["target"] == "reusable-worker"
-    assert decision["required_next_action"] == "execute-when-safe"
+    assert decision["required_next_action"] == "select-or-promote-bounded-lane"
     assert decision["token_savings_expected"] == "possible"
     assert decision["config_effect"]["execution_authority"] == "auto-execution-permitted"
+    assert "handoff_command" not in decision
+    assert decision["delegation_next_step"]["status"] == "prepare-or-report"
+    assert decision["delegation_next_step"]["action"] == "select-or-promote-bounded-lane"
+    assert decision["delegation_next_step"]["command"] is None
     assert decision["delegation_next_step"]["execution_methods"] == ["internal", "cli"]
-    assert decision["delegation_next_step"]["must_report_if_not_run"] is True
+    assert decision["delegation_next_step"]["must_report_if_not_run"] is False
+    assert decision["delegation_next_step"]["handoff_contract_status"] == "unavailable-without-active-planning"
     assert "proof run and result" in decision["delegation_next_step"]["return_contract"]
     assert decision["decomposition_delegation"]["status"] == "available-without-active-planning"
     assert decision["delegation_candidates"][0]["route_candidate"] == "delegate-exploration"

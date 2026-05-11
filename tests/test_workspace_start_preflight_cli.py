@@ -968,6 +968,80 @@ def test_start_surfaces_decomposed_active_work_delegation_candidates_and_auto_sk
     assert "safe_to_auto_run_commands" in audit["skipped_targets"][0]["reasons"][0]
 
 
+def test_start_decomposition_only_delegation_requires_lane_promotion_before_handoff(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "auto"',
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = true",
+            ]
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "dogfood.decomposition.json",
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Dogfood delegation opportunities",
+                "status": "shaping",
+                "larger_intended_outcome": "Expose concrete delegation opportunities.",
+                "non_goals": [],
+                "candidate_lanes": [
+                    {
+                        "id": "validation-slice",
+                        "title": "Validation slice",
+                        "readiness": "needs-shaping",
+                        "outcome": "Run and report focused validation.",
+                        "owner_surface": "",
+                        "proof": "Focused CLI tests pass.",
+                        "depends_on": [],
+                        "parallel_with": [],
+                    }
+                ],
+                "dependency_assumptions": [],
+                "parallelization_assumptions": [],
+                "proof_expectations": ["Focused CLI tests pass."],
+                "promotion_rule": "Promote ready lanes only.",
+                "references": [],
+                "notes": "",
+            },
+            indent=2,
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue the decomposed epic with reusable worker delegation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    decision = json.loads(capsys.readouterr().out)["delegation_decision"]
+    assert decision["decision"] == "suggest-delegation"
+    assert decision["required_next_action"] == "select-or-promote-bounded-lane"
+    assert decision["decomposition_delegation"]["status"] == "available-without-active-planning"
+    assert "handoff_command" not in decision
+    assert decision["delegation_next_step"]["status"] == "prepare-or-report"
+    assert decision["delegation_next_step"]["command"] is None
+    assert decision["delegation_next_step"]["handoff_contract_status"] == "unavailable-without-active-planning"
+    assert "Select or promote" in decision["delegation_next_step"]["precondition"]
+
+
 def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

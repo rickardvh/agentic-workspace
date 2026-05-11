@@ -10222,6 +10222,8 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
                         "command",
                         "execution_methods",
                         "must_report_if_not_run",
+                        "handoff_contract_status",
+                        "precondition",
                         "return_contract",
                     )
                     if key in next_step
@@ -12715,6 +12717,10 @@ def _delegation_next_action_decision(
         if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation"}:
             required_next_action = "execute-when-safe"
 
+    decomposition_only_delegation = decision == "suggest-delegation" and decomposition_status == "available-without-active-planning"
+    if decomposition_only_delegation:
+        required_next_action = "select-or-promote-bounded-lane"
+
     if (
         decision in {"suggest-escalation", "manual-handoff"}
         and manual_external_relay.get("target_kind") == "manual-external"
@@ -12729,10 +12735,11 @@ def _delegation_next_action_decision(
         "manual-handoff",
         "delegate-bounded-slice",
     }:
-        handoff_command = _command_with_cli_invoke(
-            command="agentic-planning handoff --target . --format json",
-            cli_invoke=config.cli_invoke,
-        )
+        if not decomposition_only_delegation:
+            handoff_command = _command_with_cli_invoke(
+                command="agentic-planning handoff --target . --format json",
+                cli_invoke=config.cli_invoke,
+            )
     if decision in {"manual-handoff", "ask-human"}:
         manual_prompt = {
             "kind": "agentic-workspace/manual-human-prompt/v1",
@@ -12778,6 +12785,13 @@ def _delegation_next_action_decision(
                 "residue to route into planning, memory, docs, or issues",
             ],
         }
+        if decomposition_only_delegation:
+            delegation_next_step.update(
+                {
+                    "handoff_contract_status": "unavailable-without-active-planning",
+                    "precondition": "Select or promote a bounded lane before running agentic-planning handoff.",
+                }
+            )
 
     if required_next_action == "continue-local":
         must = "Continue locally; no delegation action is required for this step."
@@ -12788,6 +12802,9 @@ def _delegation_next_action_decision(
     elif required_next_action == "prepare-handoff":
         must = "Prepare the handoff packet or prompt before implementation continues on the delegated slice."
         must_not = "Do not treat the suggestion as optional background when the route is capability-driven."
+    elif required_next_action == "select-or-promote-bounded-lane":
+        must = "Select or promote a bounded lane before preparing a worker handoff packet."
+        must_not = "Do not run agentic-planning handoff until an active execplan or handoff contract exists."
     elif required_next_action == "execute-when-safe":
         must = "Execute only when local auto mode, target profile, scope, and proof constraints all remain satisfied."
         must_not = "Do not widen scope, lower proof, or use a target outside its configured execution methods."
