@@ -1,10 +1,5 @@
 from __future__ import annotations
 
-import re
-import subprocess
-from dataclasses import dataclass
-from pathlib import Path
-
 from agentic_workspace import cli, config
 from agentic_workspace.contract_tooling import (
     compact_contract_manifest,
@@ -12,74 +7,6 @@ from agentic_workspace.contract_tooling import (
     proof_routes_manifest,
     report_contract_manifest,
 )
-
-# Absolute Path Check Constants
-_POSIX_ROOT_NAMES = ("Users", "home", "tmp", "var", "etc", "opt", "srv", "mnt", "media", "root", "workspace", "workspaces")
-_POSIX_PLACEHOLDER_ROOTS = (("absolute", "path"), ("path", "to"))
-_TOKEN_TRAILING_PUNCTUATION = ".,:;!?)]}>\"'"
-
-WINDOWS_ABSOLUTE_PATH = re.compile(r"(?<![A-Za-z0-9_./-])[A-Za-z]:[\\/]\S+")
-POSIX_ABSOLUTE_PATH = re.compile(
-    r"(?<![A-Za-z0-9_./-])(?:"
-    + "|".join(
-        [rf"/(?:{'|'.join(_POSIX_ROOT_NAMES)})\S*"] + [re.escape("/" + "/".join(parts)) + r"\S*" for parts in _POSIX_PLACEHOLDER_ROOTS]
-    )
-    + r")"
-)
-
-ALLOWED_LITERAL_EXCEPTIONS = frozenset[str]()
-ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {}
-
-
-@dataclass(frozen=True, slots=True)
-class AbsolutePathFinding:
-    path: Path
-    line: int
-    column: int
-    value: str
-
-
-def check_absolute_paths(target_root: Path) -> list[AbsolutePathFinding]:
-    """Scan tracked files for absolute filesystem paths."""
-    findings: list[AbsolutePathFinding] = []
-    try:
-        result = subprocess.run(
-            ["git", "ls-files", "-z"],
-            cwd=target_root,
-            capture_output=True,
-            check=True,
-        )
-        tracked_files = [target_root / Path(raw.decode("utf-8")) for raw in result.stdout.split(b"\0") if raw]
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return []
-
-    for path in tracked_files:
-        if not path.is_file():
-            continue
-        try:
-            raw = path.read_bytes()
-            if b"\0" in raw:
-                continue
-            text = raw.decode("utf-8", errors="ignore")
-
-            for pattern in (WINDOWS_ABSOLUTE_PATH, POSIX_ABSOLUTE_PATH):
-                for match in pattern.finditer(text):
-                    value = match.group(0).rstrip(_TOKEN_TRAILING_PUNCTUATION)
-                    if not value:
-                        continue
-
-                    repo_relative_path = path.relative_to(target_root)
-                    if value in ALLOWED_LITERAL_EXCEPTIONS or value in ALLOWED_FILE_LITERAL_EXCEPTIONS.get(repo_relative_path, frozenset()):
-                        continue
-
-                    line = text.count("\n", 0, match.start()) + 1
-                    last_newline = text.rfind("\n", 0, match.start())
-                    column = match.start() + 1 if last_newline == -1 else match.start() - last_newline
-                    findings.append(AbsolutePathFinding(path=repo_relative_path, line=line, column=column, value=value))
-        except Exception:
-            continue
-
-    return findings
 
 
 def check_contract_integrity() -> list[str]:

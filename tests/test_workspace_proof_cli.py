@@ -163,6 +163,54 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert len(encoded) < 2500
 
 
+def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "Makefile", "test:\n\tpytest\n\nlint:\n\truff check .\n\nmaintainer-surfaces:\n\ttrue\n")
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["required_commands"] == ["make test", "make lint"]
+    assert payload["next"]["command"] == "make test"
+    assert payload["proof_command_adjustments"] == [
+        {
+            "lane": "workspace_cli",
+            "command": "make test-workspace",
+            "replacement": "make test",
+            "reason": "target Makefile does not define 'test-workspace'; using available 'test' target",
+        },
+        {
+            "lane": "workspace_cli",
+            "command": "make lint-workspace",
+            "replacement": "make lint",
+            "reason": "target Makefile does not define 'lint-workspace'; using available 'lint' target",
+        },
+    ]
+
+
+def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["required_commands"] == []
+    assert payload["next"]["action"] == "select-proof-scope"
+    assert payload["next"]["command"] is None
+    assert payload["unavailable_proof_commands"] == [
+        {
+            "lane": "workspace_cli",
+            "command": "make test-workspace",
+            "reason": "target repo has no Makefile, so make-based package proof was not selected",
+        },
+        {
+            "lane": "workspace_cli",
+            "command": "make lint-workspace",
+            "reason": "target repo has no Makefile, so make-based package proof was not selected",
+        },
+    ]
+
+
 def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
     _write(
         tmp_path / ".agentic-workspace" / "config.local.toml",

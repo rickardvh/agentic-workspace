@@ -434,8 +434,6 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     }
     assert len(json.dumps(payload, sort_keys=True)) < 16600
     assert payload["proof"]["required_commands"] == [
-        "make test-workspace",
-        "make lint-workspace",
         "uv run agentic-workspace defaults --section root_cli_authority --format json",
     ]
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"

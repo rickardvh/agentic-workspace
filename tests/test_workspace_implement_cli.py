@@ -117,6 +117,33 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert len(encoded) < 5900
 
 
+def test_implement_uses_available_target_makefile_targets(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "Makefile", "test:\n\tpytest\n\nlint:\n\truff check .\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "llms.txt",
+                "--task",
+                "Remove `llms.txt`",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["next"]["commands"] == ["make test", "make lint"]
+    assert payload["proof"]["required_commands"] == ["make test", "make lint"]
+    assert "make test-workspace" not in json.dumps(payload)
+
+
 def test_cli_invoke_rewrites_package_sibling_commands_when_repo_local() -> None:
     assert (
         cli._command_with_cli_invoke(

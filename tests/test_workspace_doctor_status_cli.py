@@ -107,6 +107,22 @@ def test_doctor_accepts_local_only_startup_indirection(tmp_path: Path, capsys) -
     assert not any(action["id"] == "restore-workspace-pointer-manually" for action in payload["manual_review_actions"])
 
 
+def test_doctor_does_not_enforce_source_repo_absolute_path_policy_in_target_repo(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(target / "Dockerfile", "RUN rm -rf /var/lib/apt/lists/*\n")
+    _write(target / "src" / "app" / "admin" / "CreateUser.tsx", "export const Role = () => <option>Admin</option>;\n")
+
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert not any("absolute path found" in warning for warning in payload["warnings"])
+    assert not any(action["id"] == "remove-or-localize-absolute-paths" for action in payload["manual_review_actions"])
+
+
 def test_doctor_routes_workspace_merge_conflict_markers_to_manual_review(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

@@ -12,7 +12,14 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # mention a literal absolute filesystem path, whitelist the exact literal here
 # rather than weakening the detector globally.
 ALLOWED_LITERAL_EXCEPTIONS = frozenset[str]()
-ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {}
+ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
+    Path("tests/test_workspace_doctor_status_cli.py"): frozenset(
+        {
+            "/" + "var/lib/apt/lists/*\\n",
+            "/" + "option>;\\n",
+        }
+    )
+}
 
 _POSIX_ROOT_NAMES = ("Users", "home", "tmp", "var", "etc", "opt", "srv", "mnt", "media", "root", "workspace", "workspaces")
 _POSIX_PLACEHOLDER_ROOTS = (("absolute", "path"), ("path", "to"))

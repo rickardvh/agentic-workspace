@@ -2760,13 +2760,6 @@ def _repair_recovery_taxonomy_payload() -> dict[str, Any]:
                 "fault_classes": ["agent_operation_fault", "ambiguous_ownership"],
             },
             {
-                "id": "workspace.no_absolute_paths",
-                "owner": "repo",
-                "severity": "warning",
-                "repair_class": "manual-review",
-                "fault_classes": ["user_content_fault", "local_only_leakage"],
-            },
-            {
                 "id": "planning.active_execplan_exists",
                 "owner": "planning",
                 "severity": "warning",
@@ -2867,7 +2860,6 @@ def _workspace_repair_payload(
     missing_workspace_surfaces: list[str] = []
     missing_startup_surfaces: list[str] = []
     pointer_surfaces: list[str] = []
-    absolute_path_surfaces: list[str] = []
     contract_drift_surfaces: list[str] = []
     merge_conflict_findings = _workspace_merge_conflict_findings(target_root=target_root)
 
@@ -2881,8 +2873,6 @@ def _workspace_repair_payload(
             missing_startup_surfaces.append(path)
         if "workspace workflow pointer block missing" in detail:
             pointer_surfaces.append(path)
-        if "absolute path found" in detail:
-            absolute_path_surfaces.append(path)
 
     for warning in warnings:
         path = str(warning.get("path", ""))
@@ -2941,24 +2931,6 @@ def _workspace_repair_payload(
                 do_not=[
                     "Do not replace unfenced repo instructions while restoring the workspace pointer.",
                     "Do not widen the pointer into a second workflow handbook.",
-                ],
-            )
-        )
-    if absolute_path_surfaces:
-        manual_review_actions.append(
-            _workspace_manual_review_action(
-                id="remove-or-localize-absolute-paths",
-                invariant="workspace.no_absolute_paths",
-                fault_class="local_only_leakage",
-                owner="repo",
-                target_root=target_root,
-                cli_invoke=cli_invoke,
-                affected_surfaces=absolute_path_surfaces,
-                current_fault_summary="Shared workspace surface contains absolute local path(s).",
-                risk="manual review required; local paths may encode environment-specific assumptions",
-                do_not=[
-                    "Do not preserve machine-local paths in shared authority surfaces.",
-                    "Do not delete path context if the repo needs a portable replacement.",
                 ],
             )
         )
@@ -3463,17 +3435,6 @@ def _workspace_status_report(
         warnings.append({"path": config.path.as_posix() if config.path else ".agentic-workspace/config.toml", "message": config_warning})
 
     if command_name == "doctor":
-        abs_paths = doctor.check_absolute_paths(target_root)
-        for finding in abs_paths:
-            actions.append(
-                {
-                    "kind": "warning",
-                    "path": finding.path.as_posix(),
-                    "detail": f"absolute path found at {finding.line}:{finding.column}: {finding.value}",
-                }
-            )
-            warnings.append({"path": finding.path.as_posix(), "message": f"absolute path found: {finding.value}"})
-
         integrity_errors = doctor.check_contract_integrity()
         for error in integrity_errors:
             warnings.append({"path": "src/agentic_workspace/contracts/", "message": f"contract drift: {error}"})
@@ -17742,7 +17703,14 @@ def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
         required_commands = answer.get("required_commands", []) if isinstance(answer, dict) else []
         validation_plan = answer.get("validation_plan", {}) if isinstance(answer, dict) else {}
         primary = validation_plan.get("primary_next_action") if isinstance(validation_plan, dict) else None
-        if not isinstance(primary, dict):
+        if isinstance(answer, dict) and not required_commands and answer.get("unavailable_proof_commands"):
+            primary = {
+                "action": "select-proof-scope",
+                "command": None,
+                "run": None,
+                "required": False,
+            }
+        elif not isinstance(primary, dict):
             primary = {
                 "action": "run-validation-command" if required_commands else "select-proof-scope",
                 "command": required_commands[0] if required_commands else None,
@@ -17769,6 +17737,16 @@ def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "required": primary.get("required", bool(required_commands)),
             },
             "required_commands": required_commands,
+            **(
+                {"proof_command_adjustments": answer["proof_command_adjustments"]}
+                if isinstance(answer, dict) and answer.get("proof_command_adjustments")
+                else {}
+            ),
+            **(
+                {"unavailable_proof_commands": answer["unavailable_proof_commands"]}
+                if isinstance(answer, dict) and answer.get("unavailable_proof_commands")
+                else {}
+            ),
             "warnings": warnings,
             "detail_command": "agentic-workspace proof --verbose --changed <paths> --format json",
         }
@@ -18411,6 +18389,69 @@ def _docs_only_reduction_lane(*, changed_path: str, matched_lane: str) -> str | 
     return None
 
 
+def _makefile_targets(target_root: Path | None) -> set[str] | None:
+    if target_root is None:
+        return None
+    makefile = target_root / "Makefile"
+    if not makefile.is_file():
+        return None
+    try:
+        lines = makefile.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return None
+    targets: set[str] = set()
+    for line in lines:
+        if not line or line.startswith(("\t", " ", "#", ".")):
+            continue
+        match = re.match(r"^([A-Za-z0-9_.-]+)\s*:(?![=])", line)
+        if match:
+            targets.add(match.group(1))
+    return targets
+
+
+def _target_make_command(command: str) -> str | None:
+    match = re.match(r"^make\s+([A-Za-z0-9_.-]+)\s*$", command.strip())
+    return match.group(1) if match else None
+
+
+def _adapt_make_proof_command_for_target(
+    *,
+    command: str,
+    target_root: Path | None,
+    make_targets: set[str] | None,
+) -> tuple[str | None, dict[str, str] | None]:
+    target = _target_make_command(command)
+    if target is None or target_root is None:
+        return command, None
+    if make_targets is None:
+        return None, {
+            "command": command,
+            "reason": "target repo has no Makefile, so make-based package proof was not selected",
+        }
+    if target in make_targets:
+        return command, None
+    fallback_by_target = {
+        "test-workspace": "test",
+        "lint-workspace": "lint",
+        "test-planning": "test",
+        "lint-planning": "lint",
+        "test-memory": "test",
+        "lint-memory": "lint",
+    }
+    fallback = fallback_by_target.get(target)
+    if fallback and fallback in make_targets:
+        replacement = f"make {fallback}"
+        return replacement, {
+            "command": command,
+            "replacement": replacement,
+            "reason": f"target Makefile does not define {target!r}; using available {fallback!r} target",
+        }
+    return None, {
+        "command": command,
+        "reason": f"target Makefile does not define {target!r} and no generic fallback target was found",
+    }
+
+
 def _active_planning_assurance_for_proof(*, target_root: Path | None) -> dict[str, Any]:
     if target_root is None:
         return {"status": "unavailable", "reason": "requires a target root"}
@@ -18691,17 +18732,33 @@ def _proof_selection_for_changed_paths(
                 }
             )
     selected_lanes.extend(concern_lanes)
+    make_targets = _makefile_targets(target_root)
+    proof_command_adjustments: list[dict[str, str]] = []
+    unavailable_proof_commands: list[dict[str, str]] = []
     for lane in selected_lanes:
         lane["proof_kind"] = _proof_kind_for_lane(lane)
-        lane["enough_proof"] = [
-            str(
+        adapted_commands: list[str] = []
+        for raw_command in lane.get("enough_proof", []):
+            adapted_command, adjustment = _adapt_make_proof_command_for_target(
+                command=str(raw_command),
+                target_root=target_root,
+                make_targets=make_targets,
+            )
+            if adjustment is not None:
+                adjustment = {"lane": str(lane.get("id", "")), **adjustment}
+                if adapted_command is None:
+                    unavailable_proof_commands.append(adjustment)
+                else:
+                    proof_command_adjustments.append(adjustment)
+            if adapted_command is None:
+                continue
+            adapted_commands.append(
                 _command_with_cli_invoke(
-                    command=_proof_command_for_target(command=str(command), target_root=target_root),
+                    command=_proof_command_for_target(command=adapted_command, target_root=target_root),
                     cli_invoke=cli_invoke,
                 )
             )
-            for command in lane.get("enough_proof", [])
-        ]
+        lane["enough_proof"] = adapted_commands
     required_commands: list[str] = []
     broaden_when: list[str] = []
     escalate_when: list[str] = []
@@ -18784,6 +18841,13 @@ def _proof_selection_for_changed_paths(
     }
     if routing_reductions:
         proof_selection["routing_reductions"] = routing_reductions
+    if proof_command_adjustments:
+        proof_selection["proof_command_adjustments"] = proof_command_adjustments
+    if unavailable_proof_commands:
+        proof_selection["unavailable_proof_commands"] = unavailable_proof_commands
+        proof_selection["escalate_when"].append(
+            "Some selected proof commands are unavailable in this target repo; choose repo-specific proof before closeout."
+        )
     if config is not None and target_root is not None and include_durable_intent:
         durable_intent = _intent_decision_projection(
             target_root=target_root,
