@@ -53,6 +53,8 @@ candidates = []
     assert summary["handoff_contract"]["role_metadata"] == expected_role_metadata
     assert summary["handoff_contract"]["next_role_needed"] == "implementation"
     assert compact["handoff_contract"]["role_metadata"] == expected_role_metadata
+    assert compact["handoff_contract"]["ready_worker_prompt"]["status"] == "present"
+    assert compact["handoff_contract"]["ready_worker_prompt"]["plan_path"] == ".agentic-workspace/planning/execplans/active-plan.plan.json"
     assert handoff["handoff_contract"]["role_metadata"] == expected_role_metadata
 
 
@@ -190,6 +192,7 @@ def test_planning_handoff_schema_names_required_worker_packet_fields(tmp_path: P
         "return_contract",
         "target_posture",
     ]
+    assert handoff["schema"]["ready_worker_prompt_field"] == "handoff_contract.ready_worker_prompt"
     assert "bounded execplan" in handoff["schema"]["unavailable_fallback"]
 
 
@@ -252,6 +255,18 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
         "read-only exploration for one explicit question when assigned"
     )
     assert handoff["handoff_contract"]["worker_contract"]["worker_must_not_own_by_default"][0] == "roadmap routing"
+    prompt = handoff["handoff_contract"]["ready_worker_prompt"]
+    assert prompt["kind"] == "planning-ready-worker-prompt/v1"
+    assert prompt["status"] == "present"
+    assert prompt["source"] == "planning-handoff-contract"
+    assert "Implement the active plan in `.agentic-workspace/planning/execplans/plan-alpha.md`." in prompt["copy_paste"]
+    assert "Return using this template:" in prompt["copy_paste"]
+    assert "- changed files / changed surfaces:" in prompt["copy_paste"]
+    assert "scripts/check/check_planning_surfaces.py" in prompt["copy_paste"]
+    assert prompt["return_template"]["fields"]["execution_run"][5] == "changed surfaces"
+    assert prompt["return_template"]["fields"]["finished_run_review"][0] == "review status"
+    assert prompt["return_template"]["fields"]["delegation_outcome_feedback"][0] == "route chosen"
+    assert "Do not broaden beyond the plan's owned write scope." in prompt["constraints"]
 
 
 def test_planning_handoff_includes_manual_external_relay_prompt_for_epic_intent_shaping(tmp_path: Path) -> None:

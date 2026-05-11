@@ -2557,6 +2557,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "context_budget",
                 "return_with",
                 "worker_contract",
+                "ready_worker_prompt",
             ],
             "roadmap": [
                 "lane_count",
@@ -3875,6 +3876,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "owned_write_scope",
                 "proof_expectations",
                 "tool_verification",
+                "ready_worker_prompt",
             ),
             idle_unavailable_reason=idle_unavailable_reason,
         ),
@@ -5342,6 +5344,7 @@ def _planning_handoff_schema() -> dict[str, Any]:
             "return_contract",
             "target_posture",
         ],
+        "ready_worker_prompt_field": "handoff_contract.ready_worker_prompt",
         "unavailable_fallback": (
             "If no active planning record exists, create or select a bounded execplan before delegating implementation; "
             "do not invent a parallel handoff plan from chat alone."
@@ -8023,6 +8026,85 @@ def _active_hierarchy_contract(
     }
 
 
+def _ready_worker_prompt_from_handoff(
+    *,
+    planning_record: dict[str, Any],
+    read_first: list[Any],
+    owned_write_scope: list[Any],
+    proof_expectations: list[Any],
+    return_with: dict[str, Any],
+    worker_contract: dict[str, Any],
+) -> dict[str, Any]:
+    task = dict(planning_record.get("task", {}))
+    plan_path = str(task.get("surface") or task.get("path") or planning_record.get("surface") or "").strip()
+    if not plan_path:
+        return {
+            "kind": "planning-ready-worker-prompt/v1",
+            "status": "unavailable",
+            "reason": "active planning record has no explicit plan surface",
+        }
+
+    requested_outcome = str(planning_record.get("requested_outcome", "")).strip()
+    next_action = str(planning_record.get("next_action", "")).strip()
+    completion_criteria = [str(item).strip() for item in planning_record.get("completion_criteria", []) if str(item).strip()]
+    return_fields = {
+        "execution_run": list(return_with.get("execution_run_fields", [])),
+        "finished_run_review": list(return_with.get("finished_run_review_fields", [])),
+        "delegation_outcome_feedback": list(return_with.get("delegation_outcome_feedback_fields", [])),
+        "prose_sections": list(
+            return_with.get("prose_templates", {}).get("handoff_or_closeout", {}).get("sections", [])
+            if isinstance(return_with.get("prose_templates", {}), dict)
+            else []
+        ),
+    }
+    return_template_lines = [
+        "Return using this template:",
+        "- changed files / changed surfaces:",
+        "- tests or proof run:",
+        "- completion status:",
+        "- blockers:",
+        "- residue or follow-up:",
+        "- delegation outcome feedback:",
+    ]
+    prompt_lines = [
+        f"Implement the active plan in `{plan_path}`.",
+        "Use that plan file as the source of scope, constraints, proof expectations, stop conditions, and return contract.",
+    ]
+    if requested_outcome:
+        prompt_lines.append(f"Requested outcome: {requested_outcome}")
+    if next_action:
+        prompt_lines.append(f"Next action: {next_action}")
+    if read_first:
+        prompt_lines.append("Read first: " + ", ".join(f"`{item}`" for item in read_first))
+    if owned_write_scope:
+        prompt_lines.append("Owned write scope: " + ", ".join(f"`{item}`" for item in owned_write_scope))
+    if proof_expectations:
+        prompt_lines.append("Proof expectations: " + "; ".join(str(item) for item in proof_expectations))
+    if completion_criteria:
+        prompt_lines.append("Completion criteria: " + "; ".join(completion_criteria))
+    stop_when = [str(item).strip() for item in worker_contract.get("stop_when", []) if str(item).strip()]
+    if stop_when:
+        prompt_lines.append("Stop and report back if: " + "; ".join(stop_when))
+    prompt_lines.extend(return_template_lines)
+    return {
+        "kind": "planning-ready-worker-prompt/v1",
+        "status": "present",
+        "source": "planning-handoff-contract",
+        "plan_path": plan_path,
+        "copy_paste": "\n".join(prompt_lines),
+        "return_template": {
+            "summary": return_template_lines,
+            "fields": return_fields,
+        },
+        "constraints": [
+            "Do not broaden beyond the plan's owned write scope.",
+            "Do not reshape the roadmap, parent lane, or issue closure unless the plan explicitly assigns that ownership.",
+            "Stop instead of guessing when proof, scope, or ownership needs to change.",
+        ],
+        "worker_contract": worker_contract,
+    }
+
+
 def _active_handoff_contract(
     *,
     planning_record: dict[str, Any],
@@ -8039,6 +8121,80 @@ def _active_handoff_contract(
     parent_lane = {}
     if hierarchy_contract.get("status") == "present":
         parent_lane = dict(hierarchy_contract.get("parent_lane", {}))
+
+    read_first = list(planning_record.get("minimal_refs", []))
+    owned_write_scope = list(planning_record.get("touched_scope", []))
+    proof_expectations = list(planning_record.get("proof_expectations", []))
+    return_with = {
+        "prose_templates": _default_prose_templates(),
+        "execution_run_fields": [
+            "run status",
+            "executor",
+            "handoff source",
+            "what happened",
+            "scope touched",
+            "changed surfaces",
+            "validations run",
+            "result for continuation",
+            "next step",
+        ],
+        "execution_summary_fields": [
+            "outcome delivered",
+            "validation confirmed",
+            "follow-on routed to",
+            "post-work posterity capture",
+            "knowledge promoted (memory/docs/config)",
+            "resume from",
+        ],
+        "finished_run_review_fields": [
+            "review status",
+            "scope respected",
+            "proof status",
+            "intent served",
+            "config compliance",
+            "misinterpretation risk",
+            "follow-on decision",
+        ],
+        "delegation_outcome_feedback_fields": [
+            "route chosen",
+            "route skipped reason",
+            "expected savings",
+            "actual friction",
+            "proof result",
+            "quality concern",
+            "decomposition adjustment",
+        ],
+    }
+    worker_contract = {
+        "allowed_execution_methods": [
+            "internal delegation",
+            "read-only exploration",
+            "external cli or api",
+            "single-agent fallback",
+        ],
+        "worker_owns_by_default": [
+            "read-only exploration for one explicit question when assigned",
+            "bounded implementation inside the owned write scope",
+            "narrow validation named by the handoff",
+            "checked-in updates inside owned surfaces when explicitly assigned",
+            "cleanup and commit only when explicitly assigned and still bounded",
+        ],
+        "worker_must_not_own_by_default": [
+            "roadmap routing",
+            "issue closure",
+            "lane reshaping",
+            "repo-wide policy changes",
+        ],
+        "stop_when": [
+            str(planning_record.get("stop_conditions", {}).get("stop when", "")).strip(),
+            str(planning_record.get("stop_conditions", {}).get("escalate when boundary reached", "")).strip(),
+            str(planning_record.get("stop_conditions", {}).get("escalate on scope drift", "")).strip(),
+            str(planning_record.get("stop_conditions", {}).get("escalate on proof failure", "")).strip(),
+            str(planning_record.get("escalate_when", "")).strip(),
+            "the task needs broad rereads beyond the explicit read-first refs and owned write scope",
+            "the chosen delegation method cannot preserve the checked-in handoff contract",
+        ],
+    }
 
     return {
         "status": "present",
@@ -8058,9 +8214,9 @@ def _active_handoff_contract(
         "delegation_outcome_feedback": dict(planning_record.get("delegation_outcome_feedback", {})),
         "next_action": str(planning_record.get("next_action", "")).strip(),
         "completion_criteria": list(planning_record.get("completion_criteria", [])),
-        "read_first": list(planning_record.get("minimal_refs", [])),
-        "owned_write_scope": list(planning_record.get("touched_scope", [])),
-        "proof_expectations": list(planning_record.get("proof_expectations", [])),
+        "read_first": read_first,
+        "owned_write_scope": owned_write_scope,
+        "proof_expectations": proof_expectations,
         "proof_report": dict(planning_record.get("proof_report", {})),
         "intent_satisfaction": dict(planning_record.get("intent_satisfaction", {})),
         "system_intent_alignment": dict(planning_record.get("system_intent_alignment", {})),
@@ -8082,76 +8238,16 @@ def _active_handoff_contract(
         "tool_verification": dict(planning_record.get("tool_verification", {})),
         "continuation_owner": str(planning_record.get("continuation_owner", "")).strip(),
         "context_budget": dict(context_budget_contract if context_budget_contract.get("status") == "present" else {}),
-        "return_with": {
-            "prose_templates": _default_prose_templates(),
-            "execution_run_fields": [
-                "run status",
-                "executor",
-                "handoff source",
-                "what happened",
-                "scope touched",
-                "changed surfaces",
-                "validations run",
-                "result for continuation",
-                "next step",
-            ],
-            "execution_summary_fields": [
-                "outcome delivered",
-                "validation confirmed",
-                "follow-on routed to",
-                "post-work posterity capture",
-                "knowledge promoted (memory/docs/config)",
-                "resume from",
-            ],
-            "finished_run_review_fields": [
-                "review status",
-                "scope respected",
-                "proof status",
-                "intent served",
-                "config compliance",
-                "misinterpretation risk",
-                "follow-on decision",
-            ],
-            "delegation_outcome_feedback_fields": [
-                "route chosen",
-                "route skipped reason",
-                "expected savings",
-                "actual friction",
-                "proof result",
-                "quality concern",
-                "decomposition adjustment",
-            ],
-        },
-        "worker_contract": {
-            "allowed_execution_methods": [
-                "internal delegation",
-                "read-only exploration",
-                "external cli or api",
-                "single-agent fallback",
-            ],
-            "worker_owns_by_default": [
-                "read-only exploration for one explicit question when assigned",
-                "bounded implementation inside the owned write scope",
-                "narrow validation named by the handoff",
-                "checked-in updates inside owned surfaces when explicitly assigned",
-                "cleanup and commit only when explicitly assigned and still bounded",
-            ],
-            "worker_must_not_own_by_default": [
-                "roadmap routing",
-                "issue closure",
-                "lane reshaping",
-                "repo-wide policy changes",
-            ],
-            "stop_when": [
-                str(planning_record.get("stop_conditions", {}).get("stop when", "")).strip(),
-                str(planning_record.get("stop_conditions", {}).get("escalate when boundary reached", "")).strip(),
-                str(planning_record.get("stop_conditions", {}).get("escalate on scope drift", "")).strip(),
-                str(planning_record.get("stop_conditions", {}).get("escalate on proof failure", "")).strip(),
-                str(planning_record.get("escalate_when", "")).strip(),
-                "the task needs broad rereads beyond the explicit read-first refs and owned write scope",
-                "the chosen delegation method cannot preserve the checked-in handoff contract",
-            ],
-        },
+        "return_with": return_with,
+        "worker_contract": worker_contract,
+        "ready_worker_prompt": _ready_worker_prompt_from_handoff(
+            planning_record=planning_record,
+            read_first=read_first,
+            owned_write_scope=owned_write_scope,
+            proof_expectations=proof_expectations,
+            return_with=return_with,
+            worker_contract=worker_contract,
+        ),
     }
 
 
