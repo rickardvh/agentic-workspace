@@ -34,7 +34,7 @@ REPO_FRICTION_SKIP_DIRS = {
     "dist",
     "build",
 }
-REPO_FRICTION_REGENERABLE_CACHE_PREFIXES = (".agentic-workspace/local/cache/",)
+REPO_FRICTION_REGENERABLE_CACHE_PREFIXES = (".agentic-workspace/local/cache/", "scratch/")
 
 STANDING_INTENT_CANONICAL_DOC = ".agentic-workspace/docs/standing-intent-contract.md"
 
@@ -1712,7 +1712,7 @@ def _repo_friction_is_regenerable_cache(relative_path: str) -> bool:
     return any(relative_path.startswith(prefix) for prefix in REPO_FRICTION_REGENERABLE_CACHE_PREFIXES)
 
 
-def _repo_friction_context_strategy(*, relative_path: str, kind: str, surface_role: str) -> dict[str, str]:
+def _repo_friction_context_strategy(*, relative_path: str, kind: str, surface_role: str) -> dict[str, Any]:
     if surface_role == "regenerable-local-cache":
         return {
             "classification": "ignore-or-refresh-cache",
@@ -1726,6 +1726,14 @@ def _repo_friction_context_strategy(*, relative_path: str, kind: str, surface_ro
             "suggested_action": "split-focused-tests",
             "context_strategy": "Use test selectors and extract focused test modules before reading the whole file.",
             "likely_remediation": "tests",
+            "recurrence": "human_confirmed",
+            "owner_decision": {
+                "status": "bounded-slice-required",
+                "owner": "test owner for the reported path",
+                "decision": "Split only a cohesive behavior cluster with a named selector; do not split test files from line count alone.",
+                "next_slice_rule": "Promote a focused test split when a touched behavior cluster has a target file boundary and proof selector.",
+                "retention": "shrink_after_fix",
+            },
         }
     if relative_path == "src/agentic_workspace/cli.py":
         return {
@@ -1733,6 +1741,20 @@ def _repo_friction_context_strategy(*, relative_path: str, kind: str, surface_ro
             "suggested_action": "extract-runtime-or-renderer-helper",
             "context_strategy": "Inspect symbols first; move bounded runtime/rendering helpers behind existing contracts before broad edits.",
             "likely_remediation": "module_split",
+            "recurrence": "human_confirmed",
+            "owner_decision": {
+                "status": "retained-with-rationale",
+                "owner": "issue #627",
+                "decision": (
+                    "Keep the root CLI hotspot visible as a human-confirmed architecture-cost signal, but do not promote "
+                    "a broad split from size alone."
+                ),
+                "next_slice_rule": (
+                    "Promote only a bounded helper extraction when a touched command, renderer, or runtime primitive has "
+                    "a named boundary and proof command."
+                ),
+                "retention": "keep_with_justification",
+            },
         }
     if relative_path.endswith("/installer.py"):
         return {
@@ -1740,6 +1762,17 @@ def _repo_friction_context_strategy(*, relative_path: str, kind: str, surface_ro
             "suggested_action": "extract-module-helper",
             "context_strategy": "Inspect the relevant function range and extract cohesive helpers only inside the owning package boundary.",
             "likely_remediation": "module_split",
+            "recurrence": "human_confirmed",
+            "owner_decision": {
+                "status": "bounded-slice-required",
+                "owner": "installer package owner for the reported path",
+                "decision": (
+                    "Use the installer hotspot as routing pressure for cohesive helper extraction inside the owning package, "
+                    "not as permission for a broad installer rewrite."
+                ),
+                "next_slice_rule": "Promote a helper extraction only when the touched installer behavior has a named boundary and package proof command.",
+                "retention": "shrink_after_fix",
+            },
         }
     if kind == "docs":
         return {
@@ -1754,6 +1787,14 @@ def _repo_friction_context_strategy(*, relative_path: str, kind: str, surface_ro
             "suggested_action": "query-or-schema-route",
             "context_strategy": "Use structured queries and schema-backed selectors instead of manual broad reads.",
             "likely_remediation": "validation",
+            "recurrence": "human_confirmed",
+            "owner_decision": {
+                "status": "retained-with-rationale",
+                "owner": "schema/check owner for the reported path",
+                "decision": "Retain large structured artifacts when schema-backed selectors and freshness checks avoid broad manual reads.",
+                "next_slice_rule": "Promote only if agents still need to inspect the full artifact after selectors and checks are used.",
+                "retention": "keep_with_justification",
+            },
         }
     return {
         "classification": "large-source-hotspot",
@@ -1819,19 +1860,22 @@ def _repo_friction_hotspots(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_
 
 def _repo_friction_regenerable_cache_hotspots(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> list[dict[str, Any]]:
     hotspots: list[dict[str, Any]] = []
-    cache_root = target_root / ".agentic-workspace" / "local" / "cache"
-    if not cache_root.exists():
-        return hotspots
-    for path in sorted(cache_root.rglob("*")):
-        if not path.is_file() or path.suffix.lower() not in REPO_FRICTION_SCAN_SUFFIXES:
+    for prefix in REPO_FRICTION_REGENERABLE_CACHE_PREFIXES:
+        cache_root = target_root / prefix.rstrip("/")
+        if not cache_root.exists():
             continue
-        try:
-            line_count = sum(1 for _ in path.open("r", encoding="utf-8"))
-        except (UnicodeDecodeError, OSError):
-            continue
-        if line_count < REPO_FRICTION_LARGE_FILE_THRESHOLD:
-            continue
-        hotspots.append(_repo_friction_hotspot_payload(path=path, target_root=target_root, line_count=line_count, cli_invoke=cli_invoke))
+        for path in sorted(cache_root.rglob("*")):
+            if not path.is_file() or path.suffix.lower() not in REPO_FRICTION_SCAN_SUFFIXES:
+                continue
+            try:
+                line_count = sum(1 for _ in path.open("r", encoding="utf-8"))
+            except (UnicodeDecodeError, OSError):
+                continue
+            if line_count < REPO_FRICTION_LARGE_FILE_THRESHOLD:
+                continue
+            hotspots.append(
+                _repo_friction_hotspot_payload(path=path, target_root=target_root, line_count=line_count, cli_invoke=cli_invoke)
+            )
     hotspots.sort(key=lambda item: (-int(item["line_count"]), str(item["path"])))
     return hotspots[:REPO_FRICTION_MAX_HOTSPOTS]
 

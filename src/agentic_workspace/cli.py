@@ -1808,6 +1808,13 @@ def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, A
         likely_remediation = str(item.get("likely_remediation", "refactor")).strip() or "refactor"
         if likely_remediation not in _IMPROVEMENT_SIGNAL_CONTRACT["likely_remediations"]:
             likely_remediation = "refactor"
+        recurrence = str(item.get("recurrence", "first_seen")).strip() or "first_seen"
+        if recurrence not in _IMPROVEMENT_SIGNAL_CONTRACT["recurrence"]:
+            recurrence = "first_seen"
+        owner_decision = item.get("owner_decision")
+        retention = str(owner_decision.get("retention", "")).strip() if isinstance(owner_decision, dict) else "shrink_after_fix"
+        if retention not in _IMPROVEMENT_SIGNAL_CONTRACT["retention"]:
+            retention = "shrink_after_fix"
         candidate = _improvement_signal_candidate(
             kind="architecture_cost",
             observed_during="agentic-workspace report --section repo_friction",
@@ -1816,12 +1823,19 @@ def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, A
             suspected_owner=path,
             likely_remediation=likely_remediation,
             confidence="medium",
-            recurrence="first_seen",
+            recurrence=recurrence,
             immediate_action="route",
-            retention="shrink_after_fix",
+            retention=retention,
             source="repo_friction.large_file_hotspots",
         )
-        for field in ("surface_role", "classification", "suggested_action", "context_strategy", "primary_next_action"):
+        for field in (
+            "surface_role",
+            "classification",
+            "suggested_action",
+            "context_strategy",
+            "primary_next_action",
+            "owner_decision",
+        ):
             if field in item:
                 candidate[field] = copy.deepcopy(item[field])
         candidates.append(candidate)

@@ -2457,6 +2457,80 @@ def test_report_does_not_promote_regenerable_cache_as_large_file_friction(tmp_pa
     assert payload["improvement_intake"]["improvement_signal_candidates"] == []
 
 
+def test_report_does_not_promote_scratch_artifacts_as_large_file_friction(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    scratch_path = target / "scratch" / "proof-output.json"
+    scratch_path.parent.mkdir(parents=True, exist_ok=True)
+    scratch_path.write_text("\n".join(f"line_{index}" for index in range(950)) + "\n", encoding="utf-8")
+
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    large_files = payload["repo_friction"]["large_file_hotspots"]
+    assert large_files["count"] == 0
+    assert large_files["ignored_regenerable_cache_count"] == 1
+    ignored = large_files["ignored_regenerable_caches"][0]
+    assert ignored["path"] == "scratch/proof-output.json"
+    assert ignored["surface_role"] == "regenerable-local-cache"
+    assert ignored["suggested_action"] == "do-not-refactor"
+    assert payload["improvement_intake"]["improvement_signal_candidates"] == []
+
+
+def test_report_routes_root_cli_hotspot_with_owner_decision(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    cli_path = target / "src" / "agentic_workspace" / "cli.py"
+    cli_path.parent.mkdir(parents=True, exist_ok=True)
+    cli_path.write_text("\n".join(f"line_{index}" for index in range(450)) + "\n", encoding="utf-8")
+
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    hotspot = payload["repo_friction"]["large_file_hotspots"]["items"][0]
+    signal = payload["improvement_intake"]["improvement_signal_candidates"][0]
+
+    assert hotspot["classification"] == "root-cli-runtime-hotspot"
+    assert hotspot["recurrence"] == "human_confirmed"
+    assert hotspot["owner_decision"]["owner"] == "issue #627"
+    assert signal["recurrence"] == "human_confirmed"
+    assert signal["retention"] == "keep_with_justification"
+    assert signal["owner_decision"]["status"] == "retained-with-rationale"
+
+
+def test_report_routes_known_hotspot_classes_with_owner_decisions(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    paths = [
+        target / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "installer.py",
+        target / "packages" / "planning" / "tests" / "test_summary.py",
+        target / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json",
+    ]
+    for path in paths:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("\n".join(f"line_{index}" for index in range(450)) + "\n", encoding="utf-8")
+
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    signals = {
+        signal["classification"]: signal
+        for signal in payload["improvement_intake"]["improvement_signal_candidates"]
+        if "classification" in signal
+    }
+
+    assert signals["module-installer-hotspot"]["owner_decision"]["status"] == "bounded-slice-required"
+    assert signals["module-installer-hotspot"]["recurrence"] == "human_confirmed"
+    assert signals["module-installer-hotspot"]["retention"] == "shrink_after_fix"
+    assert signals["test-hotspot"]["owner_decision"]["status"] == "bounded-slice-required"
+    assert signals["test-hotspot"]["recurrence"] == "human_confirmed"
+    assert signals["structured-surface-hotspot"]["owner_decision"]["status"] == "retained-with-rationale"
+    assert signals["structured-surface-hotspot"]["retention"] == "keep_with_justification"
+
+
 def test_report_surfaces_concept_hotspots_as_repo_friction_evidence(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
