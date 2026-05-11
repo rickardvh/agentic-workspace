@@ -88,6 +88,25 @@ def test_doctor_repair_actions_use_resolved_cli_invoke(tmp_path: Path, capsys) -
     assert action["proof_after"][0].startswith("uv run agentic-workspace doctor ")
 
 
+def test_doctor_accepts_local_only_startup_indirection(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["install", "--modules", "planning", "--target", str(target), "--local-only", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    startup_action = next(action for action in workspace_report["actions"] if action["path"] == "AGENTS.md")
+    assert startup_action["kind"] == "current"
+    assert startup_action["detail"] == "local startup indirection points to AGENTS.local.md workspace workflow block"
+    assert not any("workspace workflow pointer block missing" in warning for warning in payload["warnings"])
+    assert not any(action["id"] == "restore-workspace-pointer-manually" for action in payload["manual_review_actions"])
+
+
 def test_doctor_routes_workspace_merge_conflict_markers_to_manual_review(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

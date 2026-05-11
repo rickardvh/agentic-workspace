@@ -3333,6 +3333,17 @@ def _remove_fenced_block(*, text: str, start_marker: str, end_marker: str) -> tu
     return updated, True
 
 
+def _local_agent_indirection_is_current(*, target_root: Path, agents_relative: Path, agents_text: str) -> bool:
+    if agents_relative != LOCAL_AGENT_REFERENCE_FILE:
+        return False
+    if LOCAL_AGENT_REFERENCE_LINE not in agents_text:
+        return False
+    local_agents_path = target_root / LOCAL_AGENT_INSTRUCTIONS_FILE
+    if not local_agents_path.is_file():
+        return False
+    return WORKSPACE_POINTER_BLOCK in local_agents_path.read_text(encoding="utf-8")
+
+
 def _workspace_status_report(
     *,
     target_root: Path,
@@ -3396,6 +3407,14 @@ def _workspace_status_report(
                 "kind": "current",
                 "path": agents_relative.as_posix(),
                 "detail": "workspace workflow pointer block present",
+            }
+        )
+    elif _local_agent_indirection_is_current(target_root=target_root, agents_relative=agents_relative, agents_text=agents_text):
+        actions.append(
+            {
+                "kind": "current",
+                "path": agents_relative.as_posix(),
+                "detail": "local startup indirection points to AGENTS.local.md workspace workflow block",
             }
         )
     else:
