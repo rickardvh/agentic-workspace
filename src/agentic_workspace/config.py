@@ -249,6 +249,9 @@ class MixedAgentLocalOverride:
     path: Path | None
     exists: bool
     applied: bool
+    shared_config_path: Path | None
+    shared_config_exists: bool
+    shared_config_applied: bool
     cli_invoke: str | None
     supports_internal_delegation: bool | None
     strong_planner_available: bool | None
@@ -261,6 +264,7 @@ class MixedAgentLocalOverride:
     local_memory_enabled: bool | None
     local_memory_path: Path
     delegation_targets: tuple[DelegationTargetProfile, ...]
+    field_sources: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -984,6 +988,9 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         path=path,
         exists=exists,
         applied=False,
+        shared_config_path=None,
+        shared_config_exists=False,
+        shared_config_applied=False,
         cli_invoke=None,
         supports_internal_delegation=None,
         strong_planner_available=None,
@@ -996,7 +1003,63 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         local_memory_enabled=None,
         local_memory_path=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
         delegation_targets=(),
+        field_sources={},
     )
+
+
+def _merge_local_config_payloads(*, base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge_local_config_payloads(base=merged[key], override=value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _local_config_table(payload: dict[str, Any] | None, table: str) -> dict[str, Any]:
+    if not payload:
+        return {}
+    value = payload.get(table, {})
+    return value if isinstance(value, dict) else {}
+
+
+def _local_config_field_source(
+    *,
+    local_payload: dict[str, Any],
+    shared_payload: dict[str, Any] | None,
+    table: str,
+    key: str,
+) -> str:
+    if key in _local_config_table(local_payload, table):
+        return "local-override"
+    if key in _local_config_table(shared_payload, table):
+        return "shared-local-config"
+    return "unset"
+
+
+def _local_config_display_path(*, path: Path, target_root: Path) -> str:
+    try:
+        return path.relative_to(target_root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _resolve_shared_local_config_path(
+    *,
+    raw_workspace: dict[str, Any],
+    local_path: Path,
+    target_root: Path,
+) -> Path | None:
+    raw_path = raw_workspace.get("shared_config_path")
+    if raw_path is None:
+        return None
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} workspace.shared_config_path must be a non-empty string.")
+    configured = Path(raw_path.strip())
+    if configured.is_absolute():
+        return configured
+    return (local_path.parent / configured).resolve()
 
 
 def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLocalOverride, list[str]]:
@@ -1009,13 +1072,40 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         else:
             return empty_mixed_agent_local_override(path=local_path, exists=False), warnings
 
-    payload = load_toml_payload(path=local_path, surface_name=WORKSPACE_LOCAL_CONFIG_PATH.as_posix())
+    local_payload = load_toml_payload(path=local_path, surface_name=WORKSPACE_LOCAL_CONFIG_PATH.as_posix())
 
-    schema_version = payload.get("schema_version")
+    schema_version = local_payload.get("schema_version")
     if schema_version != 1:
         raise WorkspaceUsageError(
             f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current local mixed-agent override contract."
         )
+    local_workspace_for_shared = _local_config_table(local_payload, "workspace")
+    shared_config_path = _resolve_shared_local_config_path(
+        raw_workspace=local_workspace_for_shared,
+        local_path=local_path,
+        target_root=target_root,
+    )
+    shared_payload: dict[str, Any] | None = None
+    shared_config_exists = False
+    shared_config_applied = False
+    if shared_config_path is not None:
+        shared_config_exists = shared_config_path.exists()
+        shared_display = _local_config_display_path(path=shared_config_path, target_root=target_root)
+        if shared_config_exists:
+            shared_payload = load_toml_payload(path=shared_config_path, surface_name=shared_display)
+            shared_schema_version = shared_payload.get("schema_version")
+            if shared_schema_version != 1:
+                raise WorkspaceUsageError(
+                    f"{shared_display} must set schema_version = 1 for the current local mixed-agent override contract."
+                )
+            shared_config_applied = True
+        else:
+            warnings.append(
+                f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} workspace.shared_config_path points to missing file: {shared_display}."
+            )
+
+    payload = _merge_local_config_payloads(base=shared_payload or {}, override=local_payload)
+    field_sources: dict[str, str] = {}
 
     unknown_top_level = sorted(
         set(payload)
@@ -1040,7 +1130,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         raw_workspace = {}
     if not isinstance(raw_workspace, dict):
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [workspace] section must be a table.")
-    unknown_workspace = sorted(set(raw_workspace) - {"cli_invoke"})
+    unknown_workspace = sorted(set(raw_workspace) - {"cli_invoke", "shared_config_path"})
     if unknown_workspace:
         unknown_text = ", ".join(unknown_workspace)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [workspace] contains unsupported field(s): {unknown_text}.")
@@ -1050,6 +1140,12 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         if not isinstance(raw_cli_invoke, str) or not raw_cli_invoke.strip():
             raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} workspace.cli_invoke must be a non-empty string.")
         cli_invoke = raw_cli_invoke.strip()
+        field_sources["workspace.cli_invoke"] = _local_config_field_source(
+            local_payload=local_payload,
+            shared_payload=shared_payload,
+            table="workspace",
+            key="cli_invoke",
+        )
 
     raw_runtime = payload.get("runtime", {})
     if raw_runtime is None:
@@ -1097,6 +1193,12 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         if not isinstance(delegation_mode, str) or delegation_mode not in SUPPORTED_DELEGATION_CONTROL_MODES:
             allowed_text = ", ".join(SUPPORTED_DELEGATION_CONTROL_MODES)
             raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} delegation.mode must be one of: {allowed_text}.")
+        field_sources["delegation.mode"] = _local_config_field_source(
+            local_payload=local_payload,
+            shared_payload=shared_payload,
+            table="delegation",
+            key="mode",
+        )
 
     raw_clarification = payload.get("clarification", {})
     if raw_clarification is None:
@@ -1112,6 +1214,12 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         if not isinstance(clarification_mode, str) or clarification_mode not in SUPPORTED_CLARIFICATION_CONTROL_MODES:
             allowed_text = ", ".join(SUPPORTED_CLARIFICATION_CONTROL_MODES)
             raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} clarification.mode must be one of: {allowed_text}.")
+        field_sources["clarification.mode"] = _local_config_field_source(
+            local_payload=local_payload,
+            shared_payload=shared_payload,
+            table="clarification",
+            key="mode",
+        )
 
     raw_local_memory = payload.get("local_memory", {})
     if raw_local_memory is None:
@@ -1138,6 +1246,9 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         path=local_path,
         exists=True,
         applied=True,
+        shared_config_path=shared_config_path,
+        shared_config_exists=shared_config_exists,
+        shared_config_applied=shared_config_applied,
         cli_invoke=cli_invoke,
         supports_internal_delegation=require_optional_bool(
             payload=raw_runtime,
@@ -1183,6 +1294,56 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             default=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
         ),
         delegation_targets=delegation_targets,
+        field_sources=field_sources
+        | {
+            field_path: _local_config_field_source(
+                local_payload=local_payload,
+                shared_payload=shared_payload,
+                table=table,
+                key=key,
+            )
+            for field_path, table, key, configured in (
+                (
+                    "runtime.supports_internal_delegation",
+                    "runtime",
+                    "supports_internal_delegation",
+                    raw_runtime.get("supports_internal_delegation"),
+                ),
+                (
+                    "runtime.strong_planner_available",
+                    "runtime",
+                    "strong_planner_available",
+                    raw_runtime.get("strong_planner_available"),
+                ),
+                (
+                    "runtime.cheap_bounded_executor_available",
+                    "runtime",
+                    "cheap_bounded_executor_available",
+                    raw_runtime.get("cheap_bounded_executor_available"),
+                ),
+                (
+                    "handoff.prefer_internal_delegation_when_available",
+                    "handoff",
+                    "prefer_internal_delegation_when_available",
+                    raw_handoff.get("prefer_internal_delegation_when_available"),
+                ),
+                (
+                    "safety.safe_to_auto_run_commands",
+                    "safety",
+                    "safe_to_auto_run_commands",
+                    raw_safety.get("safe_to_auto_run_commands"),
+                ),
+                (
+                    "safety.requires_human_verification_on_pr",
+                    "safety",
+                    "requires_human_verification_on_pr",
+                    raw_safety.get("requires_human_verification_on_pr"),
+                ),
+                ("local_memory.enabled", "local_memory", "enabled", raw_local_memory.get("enabled")),
+                ("local_memory.path", "local_memory", "path", raw_local_memory.get("path")),
+            )
+            if configured is not None
+        },
     ), warnings
 
 
@@ -1251,7 +1412,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     warnings.extend(cli_compatibility_warnings)
     if local_override.cli_invoke is not None:
         cli_invoke = local_override.cli_invoke
-        cli_invoke_source = "local-override"
+        cli_invoke_source = local_override.field_sources.get("workspace.cli_invoke", "local-override")
 
     if not config_path.exists():
         agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = resolve_effective_agent_instructions_file(
@@ -1387,7 +1548,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         cli_invoke_source = "repo-config"
     if local_override.cli_invoke is not None:
         cli_invoke = local_override.cli_invoke
-        cli_invoke_source = "local-override"
+        cli_invoke_source = local_override.field_sources.get("workspace.cli_invoke", "local-override")
 
     update_modules = dict(defaults)
     raw_update = payload.get("update", {})

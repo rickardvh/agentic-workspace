@@ -655,6 +655,79 @@ def test_config_command_reports_reserved_local_override_presence_without_applyin
     }
 
 
+def test_config_command_layers_shared_local_config_below_repo_local_override(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    shared = tmp_path / "agentic-workspace.local.toml"
+    shared.write_text(
+        "schema_version = 1\n\n"
+        "[workspace]\n"
+        'cli_invoke = "python -m agentic_workspace.cli"\n\n'
+        "[runtime]\n"
+        "strong_planner_available = true\n"
+        "cheap_bounded_executor_available = false\n\n"
+        "[delegation]\n"
+        'mode = "manual"\n\n'
+        "[local_memory]\n"
+        "enabled = true\n",
+        encoding="utf-8",
+    )
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "schema_version = 1\n\n"
+        "[workspace]\n"
+        f'shared_config_path = "{shared.as_posix()}"\n\n'
+        "[runtime]\n"
+        "cheap_bounded_executor_available = true\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["cli_invoke"] == "python -m agentic_workspace.cli"
+    assert payload["workspace"]["cli_invoke_source"] == "shared-local-config"
+    local_override = payload["mixed_agent"]["local_override"]
+    assert local_override["shared_config"] == {
+        "path": shared.as_posix(),
+        "exists": True,
+        "applied": True,
+        "status": "applied",
+    }
+    assert payload["mixed_agent"]["effective_posture"]["strong_planner_available"] == {
+        "value": True,
+        "source": "shared-local-config",
+    }
+    assert payload["mixed_agent"]["effective_posture"]["cheap_bounded_executor_available"] == {
+        "value": True,
+        "source": "local-override",
+    }
+    assert payload["mixed_agent"]["effective_posture"]["delegation_mode"] == {
+        "value": "manual",
+        "source": "shared-local-config",
+    }
+    assert payload["mixed_agent"]["local_memory"]["source"] == "shared-local-config"
+    assert payload["warnings"] == []
+
+
+def test_config_command_warns_when_shared_local_config_is_missing(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        'schema_version = 1\n\n[workspace]\nshared_config_path = "../missing.local.toml"\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mixed_agent"]["local_override"]["shared_config"]["status"] == "missing"
+    assert payload["warnings"] == [
+        ".agentic-workspace/config.local.toml workspace.shared_config_path points to missing file: missing.local.toml."
+    ]
+
+
 def test_config_command_reports_local_only_memory_override(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

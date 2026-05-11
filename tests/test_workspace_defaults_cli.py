@@ -247,6 +247,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["mixed_agent"]["local_override"]["supported"] is True
     assert payload["mixed_agent"]["local_override"]["supported_fields"] == [
         "workspace.cli_invoke",
+        "workspace.shared_config_path",
         "runtime.supports_internal_delegation",
         "runtime.strong_planner_available",
         "runtime.cheap_bounded_executor_available",

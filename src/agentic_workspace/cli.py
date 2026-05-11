@@ -968,6 +968,12 @@ def _local_memory_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     local_override = config.local_override
     enabled = bool(local_override.local_memory_enabled)
     relative_path = local_override.local_memory_path or WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH
+    configured_source = local_override.field_sources.get("local_memory.enabled") or local_override.field_sources.get("local_memory.path")
+    controlled_by = (
+        local_override.shared_config_path.as_posix()
+        if configured_source == "shared-local-config" and local_override.shared_config_path is not None
+        else WORKSPACE_LOCAL_CONFIG_PATH.as_posix()
+    )
     exists = False
     scratch_exists = False
     if config.target_root is not None:
@@ -979,7 +985,8 @@ def _local_memory_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "configured": local_override.local_memory_enabled is not None,
         "path": relative_path.as_posix(),
         "exists": exists,
-        "controlled_by": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+        "controlled_by": controlled_by,
+        "source": configured_source or ("local-override" if local_override.local_memory_enabled is not None else "unset"),
         "authoritative": False,
         "advisory_only": True,
         "git_ignored": True,
@@ -16841,6 +16848,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "workspace.improvement_latitude",
                 "workspace.optimization_bias",
                 "workspace.advanced_features",
+                "workspace.cli_invoke",
                 "system_intent.sources",
                 "system_intent.preferred_source",
                 "workflow_obligations.<name>.summary",
@@ -20827,7 +20835,19 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "exists": local_override.exists,
             "applied": local_override.applied,
             "status": "applied" if local_override.applied else "available-not-set",
-            "rule": "local-only machine/runtime posture; may not override repo-owned semantics",
+            "shared_config": {
+                "path": local_override.shared_config_path.as_posix() if local_override.shared_config_path is not None else None,
+                "exists": local_override.shared_config_exists,
+                "applied": local_override.shared_config_applied,
+                "status": (
+                    "applied"
+                    if local_override.shared_config_applied
+                    else "missing"
+                    if local_override.shared_config_path is not None
+                    else "not-configured"
+                ),
+            },
+            "rule": "local-only machine/runtime posture; may override local-advisory invocation and routing fields, not repo-owned product semantics",
         },
         "delegation_control": _delegation_control_payload(local_override),
         "delegation_targets": {
@@ -20895,35 +20915,39 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "effective_posture": {
             "supports_internal_delegation": _sourced_value(
                 local_override.supports_internal_delegation,
-                source="local-override",
+                source=local_override.field_sources.get("runtime.supports_internal_delegation", "local-override"),
             ),
             "strong_planner_available": _sourced_value(
                 local_override.strong_planner_available,
-                source="local-override",
+                source=local_override.field_sources.get("runtime.strong_planner_available", "local-override"),
             ),
             "cheap_bounded_executor_available": _sourced_value(
                 local_override.cheap_bounded_executor_available,
-                source="local-override",
+                source=local_override.field_sources.get("runtime.cheap_bounded_executor_available", "local-override"),
             ),
             "prefer_internal_delegation_when_available": _sourced_value(
                 local_override.prefer_internal_delegation_when_available,
-                source="local-override",
+                source=local_override.field_sources.get("handoff.prefer_internal_delegation_when_available", "local-override"),
             ),
             "safe_to_auto_run_commands": _sourced_value(
                 local_override.safe_to_auto_run_commands,
-                source="local-override",
+                source=local_override.field_sources.get("safety.safe_to_auto_run_commands", "local-override"),
             ),
             "requires_human_verification_on_pr": _sourced_value(
                 local_override.requires_human_verification_on_pr,
-                source="local-override",
+                source=local_override.field_sources.get("safety.requires_human_verification_on_pr", "local-override"),
             ),
             "delegation_mode": _sourced_value(
                 local_override.delegation_mode or "suggest",
-                source="local-override" if local_override.delegation_mode is not None else "default",
+                source=local_override.field_sources.get("delegation.mode", "local-override")
+                if local_override.delegation_mode is not None
+                else "default",
             ),
             "clarification_mode": _sourced_value(
                 local_override.clarification_mode or "suggest",
-                source="local-override" if local_override.clarification_mode is not None else "default",
+                source=local_override.field_sources.get("clarification.mode", "local-override")
+                if local_override.clarification_mode is not None
+                else "default",
             ),
         },
         "derived_mode": {

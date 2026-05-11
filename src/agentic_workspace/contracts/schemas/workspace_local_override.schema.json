@@ -19,6 +19,11 @@
           "type": "string",
           "minLength": 1,
           "description": "Command prefix this machine should show in copyable Agentic Workspace commands, such as `uv run agentic-workspace`."
+        },
+        "shared_config_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional path to another machine-local Agentic Workspace local config file. Relative paths resolve from this config.local.toml file; repo-local local config values override shared values."
         }
       },
       "additionalProperties": false,
