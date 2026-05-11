@@ -23,10 +23,10 @@
     {
       "id": "black-box-conformance-harness",
       "title": "Black-box conformance harness",
-      "readiness": "needs-shaping",
-      "outcome": "Run shared behavior and output tests through target adapters instead of generated implementation internals.",
-      "owner_surface": "",
-      "proof": "A shared suite can execute against at least one existing generated target through an adapter and assert behavior/output only.",
+      "readiness": "promoted",
+      "outcome": "Run shared behavior and output tests through target adapters from checked-in conformance contract artifacts instead of generated implementation internals or handwritten proof-case mirrors.",
+      "owner_surface": "scripts/check/check_generated_command_packages.py",
+      "proof": "The generated TypeScript conformance proof derives command argv, fixture files, and expected output fields from conformance/*.json for root, Planning, and Memory targets.",
       "depends_on": [
         "canonical-artifact-model"
       ],
@@ -53,7 +53,7 @@
       "title": "Generated target maturity",
       "readiness": "promoted",
       "outcome": "Harden Python and TypeScript generated command package targets enough for evaluation and weak-agent routing while keeping maturity status explicit.",
-      "owner_surface": ".agentic-workspace/planning/execplans/generated-cli-next-stage.plan.json",
+      "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json",
       "proof": "Targeted generated-package tests, source-checkout invocation proof, and maturity-report checks pass for promoted targets.",
       "depends_on": [],
       "parallel_with": []
@@ -87,8 +87,8 @@
     }
   ],
   "dependency_assumptions": [
-    "The current active #880 slice remains bounded to generated CLI next-stage shaping and should not try to complete the whole codegen epic.",
-    "Black-box conformance needs a stable implementation-independent artifact model before broadening target coverage.",
+    "#880 is closed; root, Planning, and Memory TypeScript generated CLI targets are weak-agent-safe for read-only routing.",
+    "Black-box conformance can consume the existing conformance contract artifacts for the current generated TypeScript targets before broader canonical artifact redesign.",
     "Additional transports should wait until adapters and shared conformance tests prove the target contract."
   ],
   "parallelization_assumptions": [

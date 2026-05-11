@@ -12,7 +12,7 @@
       "--changed",
       "README.md",
       "--task",
-      "generated adapter proof",
+      "generated-adapter-proof",
       "--format",
       "json"
     ],

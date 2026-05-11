@@ -26,6 +26,8 @@ class AdapterConformanceCase(NamedTuple):
     success_args: list[str]
     selected_fields: SelectedFields
     expected_fields: dict[str, object] | None
+    fixture_id: str
+    fixture_files: dict[str, str]
 
 
 class RunnableTypescriptConformanceCase(NamedTuple):
@@ -34,6 +36,13 @@ class RunnableTypescriptConformanceCase(NamedTuple):
     cli: Path
     weak_agent_safe: bool
     case: AdapterConformanceCase
+
+
+CONFORMANCE_PLACEHOLDER_BY_PACKAGE = {
+    "root-workspace": "agentic_workspace_cli",
+    "planning-bootstrap": "agentic_planning_cli",
+    "memory-bootstrap": "agentic_memory_cli",
+}
 
 
 def _run(command: list[str]) -> int:
@@ -74,443 +83,130 @@ def _capture(command: list[str], *, cwd: Path, env: dict[str, str]) -> subproces
     return subprocess.run(command, cwd=cwd, env=env, text=True, capture_output=True, check=False)
 
 
-def _selected_defaults_fields(stdout: str) -> dict[str, object]:
+def _load_json(relative_path: str) -> dict[str, object]:
+    return json.loads((REPO_ROOT / "src" / "agentic_workspace" / "contracts" / relative_path).read_text(encoding="utf-8"))
+
+
+def _field_value(payload: object, path: list[str]) -> object:
+    current = payload
+    for part in path:
+        if not isinstance(current, dict) or part not in current:
+            raise KeyError(".".join(path))
+        current = current[part]
+    return current
+
+
+def _selected_contract_fields(stdout: str, assertions: list[dict[str, object]]) -> dict[str, object]:
     payload = json.loads(stdout)
-    return {
-        "profile": payload.get("profile"),
-        "surface": payload.get("surface"),
-        "section": payload.get("selector", {}).get("section") if isinstance(payload.get("selector"), dict) else None,
-        "matched": payload.get("matched"),
-        "default_canonical_agent_instructions_file": (
-            payload.get("answer", {}).get("default_canonical_agent_instructions_file") if isinstance(payload.get("answer"), dict) else None
+    selected: dict[str, object] = {}
+    for assertion in assertions:
+        path = assertion.get("path", [])
+        if not isinstance(path, list) or not all(isinstance(part, str) for part in path):
+            raise ValueError(f"conformance assertion path is malformed: {path!r}")
+        selected[".".join(path)] = _field_value(payload, path)
+    return selected
+
+
+def _expected_contract_fields(assertions: list[dict[str, object]]) -> dict[str, object]:
+    expected: dict[str, object] = {}
+    for assertion in assertions:
+        path = assertion.get("path", [])
+        if not isinstance(path, list) or not all(isinstance(part, str) for part in path):
+            raise ValueError(f"conformance assertion path is malformed: {path!r}")
+        expected[".".join(path)] = assertion.get("equals")
+    return expected
+
+
+def _success_args_from_contract(*, contract: dict[str, object], package_id: str) -> list[str]:
+    adapter = contract.get("adapter", {})
+    if not isinstance(adapter, dict):
+        raise ValueError(f"conformance contract {contract.get('id')!r} has malformed adapter")
+    template = adapter.get("command_template", [])
+    if not isinstance(template, list) or not all(isinstance(token, str) for token in template):
+        raise ValueError(f"conformance contract {contract.get('id')!r} has malformed command_template")
+    expected_placeholder = "{" + CONFORMANCE_PLACEHOLDER_BY_PACKAGE[package_id] + "}"
+    if not template or template[0] != expected_placeholder:
+        raise ValueError(
+            f"conformance contract {contract.get('id')!r} starts with {template[0] if template else None!r}, "
+            f"expected {expected_placeholder!r} for package {package_id!r}"
+        )
+    return template[1:]
+
+
+def _fixture_from_contract(contract: dict[str, object]) -> tuple[str, dict[str, str]]:
+    fixtures = contract.get("fixtures", [])
+    if not isinstance(fixtures, list) or not fixtures or not isinstance(fixtures[0], dict):
+        raise ValueError(f"conformance contract {contract.get('id')!r} has no usable fixture")
+    fixture = fixtures[0]
+    fixture_id = fixture.get("id")
+    files = fixture.get("files")
+    if not isinstance(fixture_id, str) or not isinstance(files, dict) or not all(isinstance(key, str) for key in files):
+        raise ValueError(f"conformance contract {contract.get('id')!r} fixture is malformed")
+    return fixture_id, {path: str(contents) for path, contents in files.items()}
+
+
+def _case_from_conformance_contract(*, contract: dict[str, object], package_id: str) -> AdapterConformanceCase:
+    expectations = contract.get("expectations", {})
+    stdout = expectations.get("stdout", {}) if isinstance(expectations, dict) else {}
+    assertions = stdout.get("field_assertions", []) if isinstance(stdout, dict) else []
+    if not isinstance(assertions, list) or not all(isinstance(assertion, dict) for assertion in assertions):
+        raise ValueError(f"conformance contract {contract.get('id')!r} has malformed field_assertions")
+    fixture_id, fixture_files = _fixture_from_contract(contract)
+    contract_id = str(contract.get("id", ""))
+    return AdapterConformanceCase(
+        conformance_ref=contract_id,
+        label=contract_id.removesuffix(".process").replace(".", " "),
+        success_args=_success_args_from_contract(contract=contract, package_id=package_id),
+        selected_fields=lambda stdout_text, contract_assertions=assertions: _selected_contract_fields(
+            stdout_text,
+            contract_assertions,
         ),
-    }
-
-
-def _selected_config_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    workspace = payload.get("workspace", {}) if isinstance(payload.get("workspace"), dict) else {}
-    return {
-        "kind": payload.get("kind"),
-        "profile": payload.get("profile"),
-        "exists": payload.get("exists"),
-        "agent_instructions_file": workspace.get("agent_instructions_file"),
-        "improvement_latitude": workspace.get("improvement_latitude"),
-        "optimization_bias": workspace.get("optimization_bias"),
-    }
-
-
-def _selected_modules_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    active_modules = payload.get("active_modules", [])
-    return {
-        "kind": payload.get("kind"),
-        "profile": payload.get("profile"),
-        "active_module_count": payload.get("active_module_count"),
-        "active_modules": active_modules,
-    }
-
-
-def _selected_start_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    next_action = (
-        payload.get("immediate_next_allowed_action", {})
-        if isinstance(payload.get("immediate_next_allowed_action"), dict)
-        else {}
+        expected_fields=_expected_contract_fields(assertions),
+        fixture_id=fixture_id,
+        fixture_files=fixture_files,
     )
-    proof = payload.get("proof", {}) if isinstance(payload.get("proof"), dict) else {}
-    return {
-        "kind": payload.get("kind"),
-        "next_action": next_action.get("action"),
-        "proof_kind": proof.get("kind"),
-        "changed_paths": proof.get("changed_paths"),
-    }
 
 
-def _selected_summary_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    machine_first = payload.get("machine_first_planning", {}) if isinstance(payload.get("machine_first_planning"), dict) else {}
-    execplans = payload.get("execplans", {}) if isinstance(payload.get("execplans"), dict) else {}
-    return {
-        "kind": payload.get("kind"),
-        "profile": payload.get("profile"),
-        "machine_first_status": machine_first.get("status"),
-        "active_count": execplans.get("active_count"),
-    }
+def _adapter_conformance_cases_by_package() -> tuple[dict[str, dict[str, AdapterConformanceCase]], list[str]]:
+    registry = _load_json("conformance_contracts.json")
+    contracts_by_id: dict[str, dict[str, object]] = {}
+    errors: list[str] = []
+    for entry in registry.get("contracts", []):
+        if not isinstance(entry, dict):
+            continue
+        contract_id = str(entry.get("id", ""))
+        path = entry.get("path")
+        if not isinstance(path, str):
+            errors.append(f"conformance registry entry {contract_id!r} is missing path")
+            continue
+        contracts_by_id[contract_id] = _load_json(path)
 
-
-def _selected_implement_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    proof = payload.get("proof", {}) if isinstance(payload.get("proof"), dict) else {}
-    return {
-        "kind": payload.get("kind"),
-        "proof_kind": proof.get("kind"),
-    }
-
-
-def _selected_preflight_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    return {
-        "kind": payload.get("kind"),
-        "mode": payload.get("mode"),
-    }
-
-
-def _selected_proof_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    next_action = payload.get("next", {}) if isinstance(payload.get("next"), dict) else {}
-    return {
-        "kind": payload.get("kind"),
-        "next_action": next_action.get("action"),
-        "detail_command": payload.get("detail_command"),
-    }
-
-
-def _selected_ownership_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    return {
-        "profile": payload.get("profile"),
-        "surface": payload.get("surface"),
-        "matched": payload.get("matched"),
-    }
-
-
-def _selected_skills_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    return {
-        "task": payload.get("task"),
-    }
-
-
-def _selected_report_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    return {
-        "kind": payload.get("kind"),
-        "command": payload.get("command"),
-    }
-
-
-def _selected_reconcile_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    return {
-        "kind": payload.get("kind"),
-        "status": payload.get("status"),
-    }
-
-
-def _selected_setup_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    return {
-        "kind": payload.get("kind"),
-        "command": payload.get("command"),
-    }
-
-
-def _selected_lifecycle_report_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    return {
-        "command": payload.get("command"),
-        "health": payload.get("health"),
-    }
-
-
-def _selected_doctor_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    repair_plan = payload.get("repair_plan", {}) if isinstance(payload.get("repair_plan"), dict) else {}
-    return {
-        "command": payload.get("command"),
-        "health": payload.get("health"),
-        "repair_plan_kind": repair_plan.get("kind"),
-    }
-
-
-def _selected_package_result_fields(stdout: str) -> dict[str, object]:
-    payload = json.loads(stdout)
-    status = payload.get("status")
-    return {
-        "kind": payload.get("kind"),
-        "module": payload.get("module"),
-        "message": payload.get("message"),
-        "health": payload.get("health"),
-        "profile": payload.get("profile"),
-        "status": status if isinstance(status, str) else None,
-        "status_keys": sorted(status) if isinstance(status, dict) else [],
-    }
-
-
-def _root_workspace_adapter_conformance_cases() -> dict[str, AdapterConformanceCase]:
-    cases = [
-        AdapterConformanceCase(
-            conformance_ref="defaults.report.process",
-            label="defaults",
-            success_args=["defaults", "--section", "startup", "--format", "json"],
-            selected_fields=_selected_defaults_fields,
-            expected_fields={
-                "profile": "compact-contract-answer/v1",
-                "surface": "defaults",
-                "section": "startup",
-                "matched": True,
-                "default_canonical_agent_instructions_file": "AGENTS.md",
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="config.report.process",
-            label="config",
-            success_args=["config", "--target", ".", "--format", "json"],
-            selected_fields=_selected_config_fields,
-            expected_fields={
-                "kind": "agentic-workspace/config-tiny/v1",
-                "profile": "tiny",
-                "exists": False,
-                "agent_instructions_file": "AGENTS.md",
-                "improvement_latitude": "conservative",
-                "optimization_bias": "balanced",
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="modules.report.process",
-            label="modules",
-            success_args=["modules", "--target", ".", "--format", "json"],
-            selected_fields=_selected_modules_fields,
-            expected_fields={
-                "kind": "agentic-workspace/modules-router/v1",
-                "profile": "tiny",
-                "active_module_count": 0,
-                "active_modules": [],
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="start.context.process",
-            label="start",
-            success_args=["start", "--target", ".", "--changed", "README.md", "--format", "json"],
-            selected_fields=_selected_start_fields,
-            expected_fields={
-                "kind": "startup-context/v1",
-                "next_action": "choose-smallest-workflow-shape",
-                "proof_kind": "proof-selection/v1",
-                "changed_paths": ["README.md"],
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="summary.report.process",
-            label="summary",
-            success_args=["summary", "--target", ".", "--verbose", "--format", "json"],
-            selected_fields=_selected_summary_fields,
-            expected_fields={
-                "kind": "planning-summary/v1",
-                "profile": "full",
-                "machine_first_status": "no-active-execplan",
-                "active_count": 0,
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="implement.context.process",
-            label="implement",
-            success_args=["implement", "--target", ".", "--changed", "README.md", "--task", "generated-adapter-proof", "--format", "json"],
-            selected_fields=_selected_implement_fields,
-            expected_fields={
-                "kind": "implementer-context-tiny/v1",
-                "proof_kind": "proof-selection/v1",
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="preflight.report.process",
-            label="preflight",
-            success_args=["preflight", "--target", ".", "--active-only", "--format", "json"],
-            selected_fields=_selected_preflight_fields,
-            expected_fields={
-                "kind": "preflight-response/v1",
-                "mode": "active-state-only",
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="proof.report.process",
-            label="proof",
-            success_args=["proof", "--target", ".", "--changed", "README.md", "--format", "json"],
-            selected_fields=_selected_proof_fields,
-            expected_fields={
-                "kind": "proof-next-decision/v1",
-                "next_action": "run-validation-command",
-                "detail_command": "agentic-workspace proof --verbose --changed <paths> --format json",
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="ownership.report.process",
-            label="ownership",
-            success_args=["ownership", "--target", ".", "--concern", "startup", "--format", "json"],
-            selected_fields=_selected_ownership_fields,
-            expected_fields={
-                "profile": "compact-contract-answer/v1",
-                "surface": "ownership",
-                "matched": False,
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="skills.report.process",
-            label="skills",
-            success_args=["skills", "--target", ".", "--task", "proof", "--format", "json"],
-            selected_fields=_selected_skills_fields,
-            expected_fields={
-                "task": "proof",
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="report.combined.process",
-            label="report",
-            success_args=["report", "--target", ".", "--format", "json"],
-            selected_fields=_selected_report_fields,
-            expected_fields={
-                "kind": "workspace-report-router/v1",
-                "command": "report",
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="reconcile.report.process",
-            label="reconcile",
-            success_args=["reconcile", "--target", ".", "--format", "json"],
-            selected_fields=_selected_reconcile_fields,
-            expected_fields={
-                "kind": "planning-reconcile/v1",
-                "status": "clean",
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="setup.guidance.process",
-            label="setup",
-            success_args=["setup", "--target", ".", "--modules", "planning", "--format", "json"],
-            selected_fields=_selected_setup_fields,
-            expected_fields={
-                "kind": "workspace-setup/v1",
-                "command": "setup",
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="status.report.process",
-            label="status",
-            success_args=["status", "--target", ".", "--modules", "planning", "--format", "json"],
-            selected_fields=_selected_lifecycle_report_fields,
-            expected_fields={
-                "command": "status",
-                "health": "attention-needed",
-            },
-        ),
-        AdapterConformanceCase(
-            conformance_ref="doctor.report.process",
-            label="doctor",
-            success_args=["doctor", "--target", ".", "--modules", "planning", "--format", "json"],
-            selected_fields=_selected_doctor_fields,
-            expected_fields={
-                "command": "doctor",
-                "health": "attention-needed",
-                "repair_plan_kind": "workspace-repair-plan/v1",
-            },
-        ),
-    ]
-    return {case.conformance_ref: case for case in cases}
-
-
-def _planning_adapter_conformance_cases() -> dict[str, AdapterConformanceCase]:
-    cases = [
-        AdapterConformanceCase(
-            conformance_ref="planning.status.process",
-            label="planning status",
-            success_args=["status", "--target", ".", "--format", "json"],
-            selected_fields=_selected_package_result_fields,
-            expected_fields=None,
-        ),
-        AdapterConformanceCase(
-            conformance_ref="planning.doctor.process",
-            label="planning doctor",
-            success_args=["doctor", "--target", ".", "--format", "json"],
-            selected_fields=_selected_package_result_fields,
-            expected_fields=None,
-        ),
-        AdapterConformanceCase(
-            conformance_ref="planning.summary.process",
-            label="planning summary",
-            success_args=["summary", "--target", ".", "--verbose", "--format", "json"],
-            selected_fields=_selected_summary_fields,
-            expected_fields=None,
-        ),
-        AdapterConformanceCase(
-            conformance_ref="planning.report.process",
-            label="planning report",
-            success_args=["report", "--target", ".", "--format", "json"],
-            selected_fields=_selected_package_result_fields,
-            expected_fields=None,
-        ),
-        AdapterConformanceCase(
-            conformance_ref="planning.reconcile.process",
-            label="planning reconcile",
-            success_args=["reconcile", "--target", ".", "--format", "json"],
-            selected_fields=_selected_reconcile_fields,
-            expected_fields=None,
-        ),
-    ]
-    return {case.conformance_ref: case for case in cases}
-
-
-def _memory_adapter_conformance_cases() -> dict[str, AdapterConformanceCase]:
-    cases = [
-        AdapterConformanceCase(
-            conformance_ref="memory.status.process",
-            label="memory status",
-            success_args=["status", "--target", ".", "--format", "json"],
-            selected_fields=_selected_package_result_fields,
-            expected_fields=None,
-        ),
-        AdapterConformanceCase(
-            conformance_ref="memory.doctor.process",
-            label="memory doctor",
-            success_args=["doctor", "--target", ".", "--format", "json"],
-            selected_fields=_selected_package_result_fields,
-            expected_fields=None,
-        ),
-        AdapterConformanceCase(
-            conformance_ref="memory.report.process",
-            label="memory report",
-            success_args=["report", "--target", ".", "--format", "json"],
-            selected_fields=_selected_package_result_fields,
-            expected_fields=None,
-        ),
-        AdapterConformanceCase(
-            conformance_ref="memory.route-report.process",
-            label="memory route-report",
-            success_args=["route-report", "--target", ".", "--format", "json"],
-            selected_fields=_selected_package_result_fields,
-            expected_fields=None,
-        ),
-        AdapterConformanceCase(
-            conformance_ref="memory.promotion-report.process",
-            label="memory promotion-report",
-            success_args=["promotion-report", "--target", ".", "--format", "json"],
-            selected_fields=_selected_package_result_fields,
-            expected_fields=None,
-        ),
-        AdapterConformanceCase(
-            conformance_ref="memory.list-files.process",
-            label="memory list-files",
-            success_args=["list-files", "--target", ".", "--format", "json"],
-            selected_fields=_selected_package_result_fields,
-            expected_fields=None,
-        ),
-        AdapterConformanceCase(
-            conformance_ref="memory.list-skills.process",
-            label="memory list-skills",
-            success_args=["list-skills", "--format", "json"],
-            selected_fields=_selected_package_result_fields,
-            expected_fields=None,
-        ),
-    ]
-    return {case.conformance_ref: case for case in cases}
-
-
-def _adapter_conformance_cases_by_package() -> dict[str, dict[str, AdapterConformanceCase]]:
-    return {
-        "root-workspace": _root_workspace_adapter_conformance_cases(),
-        "planning-bootstrap": _planning_adapter_conformance_cases(),
-        "memory-bootstrap": _memory_adapter_conformance_cases(),
-    }
+    ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
+    cases_by_package: dict[str, dict[str, AdapterConformanceCase]] = {}
+    for package in ir.get("packages", []):
+        if not isinstance(package, dict):
+            continue
+        package_id = str(package.get("id", ""))
+        if package_id not in CONFORMANCE_PLACEHOLDER_BY_PACKAGE:
+            continue
+        package_cases: dict[str, AdapterConformanceCase] = {}
+        for command in package.get("commands", []):
+            if not isinstance(command, dict):
+                continue
+            for conformance_ref in command.get("conformance_refs", []):
+                contract = contracts_by_id.get(str(conformance_ref))
+                if contract is None:
+                    errors.append(f"conformance ref {conformance_ref!r} is not registered")
+                    continue
+                try:
+                    package_cases[str(conformance_ref)] = _case_from_conformance_contract(
+                        contract=contract,
+                        package_id=package_id,
+                    )
+                except ValueError as exc:
+                    errors.append(str(exc))
+        cases_by_package[package_id] = package_cases
+    return cases_by_package, errors
 
 
 def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptConformanceCase], list[str]]:
@@ -519,7 +215,9 @@ def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptCon
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return [], [f"adapter conformance failed before execution: command-package IR validation failed: {exc}"]
 
-    registries = _adapter_conformance_cases_by_package()
+    registries, registry_errors = _adapter_conformance_cases_by_package()
+    if registry_errors:
+        return [], registry_errors
     selected: list[RunnableTypescriptConformanceCase] = []
     errors: list[str] = []
     for package in ir.get("packages", []):
@@ -578,10 +276,6 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     python = _python_executable()
     with tempfile.TemporaryDirectory(prefix="agentic-workspace-generated-adapter-") as tmp:
         temp_root = Path(tmp)
-        fixture_root = temp_root / "minimal-repo"
-        (fixture_root / ".git").mkdir(parents=True)
-        (fixture_root / ".git" / ".keep").write_text("", encoding="utf-8")
-        (fixture_root / "README.md").write_text("# Fixture\n", encoding="utf-8")
 
         derived_cases, derived_errors = _runnable_typescript_conformance_cases()
         if derived_errors:
@@ -606,6 +300,16 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                 shims[package_id] = shim
             return f'"{python}" "{shim}"'
 
+        def materialize_fixture(case: AdapterConformanceCase) -> Path:
+            fixture_root = temp_root / case.fixture_id
+            if fixture_root.exists():
+                shutil.rmtree(fixture_root)
+            for relative_path, contents in case.fixture_files.items():
+                path = fixture_root / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(contents, encoding="utf-8")
+            return fixture_root
+
         def compare_adapter(runnable_case: RunnableTypescriptConformanceCase) -> None:
             if not runnable_case.cli.is_file():
                 errors.append(
@@ -614,6 +318,7 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                 )
                 return
             case = runnable_case.case
+            fixture_root = materialize_fixture(case)
             runtime = runtime_for_package(runnable_case.package_id)
             canonical_process = _capture(
                 [python, str(shims[runnable_case.package_id]), *case.success_args],
@@ -629,8 +334,8 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                 return
             try:
                 canonical_selected = case.selected_fields(canonical_process.stdout)
-            except json.JSONDecodeError as exc:
-                errors.append(f"runtime primitive failure: canonical {runnable_case.package_id} {case.label} stdout was not JSON: {exc}")
+            except (KeyError, ValueError, json.JSONDecodeError) as exc:
+                errors.append(f"runtime primitive failure: canonical {runnable_case.package_id} {case.label} stdout did not satisfy selected fields: {exc}")
                 return
             if case.expected_fields is not None and canonical_selected != case.expected_fields:
                 errors.append(
@@ -652,9 +357,9 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
             else:
                 try:
                     adapter_selected = case.selected_fields(adapter_process.stdout)
-                except json.JSONDecodeError as exc:
+                except (KeyError, ValueError, json.JSONDecodeError) as exc:
                     errors.append(
-                        f"adapter failure: {runnable_case.package_id} {case.label} stdout was not JSON: {exc}; "
+                        f"adapter failure: {runnable_case.package_id} {case.label} stdout did not satisfy selected fields: {exc}; "
                         f"stdout={adapter_process.stdout!r}"
                     )
                 else:
@@ -692,6 +397,7 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
 
         for runnable_case in derived_cases:
             compare_adapter(runnable_case)
+            fixture_root = materialize_fixture(runnable_case.case)
             help_result = _capture(
                 [node, str(runnable_case.cli), "--help"],
                 cwd=fixture_root,
