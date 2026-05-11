@@ -186,6 +186,7 @@ def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, ca
             "reason": "target Makefile does not define 'lint-workspace'; using available 'lint' target",
         },
     ]
+    assert payload["target_proof_capabilities"]["make"]["targets"] == ["lint", "maintainer-surfaces", "test"]
 
 
 def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -> None:
@@ -201,14 +202,43 @@ def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -
         {
             "lane": "workspace_cli",
             "command": "make test-workspace",
-            "reason": "target repo has no Makefile, so make-based package proof was not selected",
+            "reason": "target repo has no Makefile and no matching package.json script, so make-based package proof was not selected",
         },
         {
             "lane": "workspace_cli",
             "command": "make lint-workspace",
-            "reason": "target repo has no Makefile, so make-based package proof was not selected",
+            "reason": "target repo has no Makefile and no matching package.json script, so make-based package proof was not selected",
         },
     ]
+    assert payload["proof_strategy"]["selection_order"][0] == "match changed paths to proof intent"
+    assert payload["target_proof_capabilities"]["candidate_commands"] == []
+    assert payload["manual_verification"]["status"] == "required"
+
+
+def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run", "lint": "eslint ."}}))
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["required_commands"] == ["npm test", "npm run lint"]
+    assert payload["target_proof_capabilities"]["package_json"]["scripts"] == ["lint", "test"]
+    assert payload["proof_command_adjustments"] == [
+        {
+            "lane": "workspace_cli",
+            "command": "make test-workspace",
+            "replacement": "npm test",
+            "reason": "target repo has no Makefile; using package.json script for 'test' proof",
+        },
+        {
+            "lane": "workspace_cli",
+            "command": "make lint-workspace",
+            "replacement": "npm run lint",
+            "reason": "target repo has no Makefile; using package.json script for 'lint' proof",
+        },
+    ]
+    assert "manual_verification" not in payload
 
 
 def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, capsys) -> None:

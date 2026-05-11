@@ -68,7 +68,7 @@
     },
     "execution": {
       "milestone": "generated-cli-next-stage",
-      "status": "active",
+      "status": "deferred",
       "next_step": "Shape GitHub #880 into the first bounded generated-CLI implementation slice, then implement and prove that slice.",
       "proof": "Planning summary plus targeted generated-CLI/workspace tests for the selected slice."
     },
@@ -192,7 +192,7 @@
   ],
   "active_milestone": {
     "id": "generated-cli-next-stage",
-    "status": "active",
+    "status": "deferred",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
     "ready": "ready",
     "blocked": "none",
@@ -315,7 +315,8 @@
   },
   "drift_log": [
     "2026-05-10: Scaffolded by agentic-planning new-plan.",
-    "2026-05-10: Converted from prep-only follow-on planning to an active generated-CLI implementation-stage plan; removed stale prep-only halt gate."
+    "2026-05-10: Converted from prep-only follow-on planning to an active generated-CLI implementation-stage plan; removed stale prep-only halt gate.",
+    "2026-05-11: Demoted from active lane to roadmap candidate because dynamic proof selection became the higher-priority active lane."
   ],
   "control_gates": []
 }

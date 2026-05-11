@@ -1,0 +1,400 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Proof selection dynamic routing",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Shape proof selection into a dynamic package feature that starts from proof intent/types, enriches from target repo structure and setup/adopt-discovered routes, and only then emits concrete commands or manual verification instructions.",
+    "hard_constraints": "Do not leak this source repo's proof commands or policies into host repos. Do not assume make, pytest, npm, CI, or any specific tool exists unless discovered or configured for the target.",
+    "agent_may_decide": "The review method, proof-type taxonomy, route-map storage shape, setup/adopt discovery strategy, and first implementation slice after shaping.",
+    "escalate_when": "The model would make Agentic Workspace own host-repo quality policy instead of routing from discovered/configured proof capabilities, or would require broad unrelated workflow redesign.",
+    "next_action": "Run final changed-path proof selection and planning validation, then close out or archive this bounded slice.",
+    "proof_expectations": [
+      "uv run agentic-workspace summary --target . --format json --select planning_surface_health,warnings,warning_count",
+      "review artifact covers proof-type model, target capability discovery, setup/adopt route learning, command selection, and manual verification fallback",
+      "uv run pytest tests/test_workspace_proof_cli.py::test_proof_changed_uses_available_target_makefile_targets tests/test_workspace_proof_cli.py::test_proof_changed_does_not_assume_makefile_exists tests/test_workspace_proof_cli.py::test_proof_changed_uses_target_package_json_scripts_without_makefile tests/test_workspace_implement_cli.py::test_implement_uses_available_target_makefile_targets -q",
+      "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_proof_cli.py tests/test_workspace_implement_cli.py"
+    ],
+    "touched_scope": [
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/",
+      ".agentic-workspace/planning/decompositions/",
+      ".agentic-workspace/planning/reviews/2026-05-11-proof-selection-dynamic-routing.review.json",
+      "src/agentic_workspace/contracts/proof_selection_rules.json",
+      "src/agentic_workspace/cli.py",
+      "tests/test_workspace_proof_cli.py",
+      "tests/test_workspace_implement_cli.py"
+    ],
+    "completion_criteria": [
+      "Review identifies the proof-type layers and target-route enrichment model.",
+      "Proof output exposes proof_strategy and target_proof_capabilities before commands.",
+      "Proof selection adapts unavailable Makefile proof to discovered package.json scripts where available.",
+      "Proof selection emits manual_verification when executable proof cannot be selected safely.",
+      "Generated-CLI work remains deferred in roadmap candidates."
+    ],
+    "continuation_owner": ".agentic-workspace/planning/execplans/proof-selection-dynamic-routing.plan.json",
+    "closeout_decision": "archive-after-final-validation"
+  },
+  "goal": [
+    "Review and shape proof selection as a dynamic target-aware feature before any further implementation."
+  ],
+  "non_goals": [
+    "Do not hard-code this repo's Makefile or quality rules as host-repo proof.",
+    "Do not start broad implementation before the review identifies proof-type layers and the first bounded slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "dogfooding report: target repos exposed repo-local proof assumptions",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "proof-selection-dynamic-routing",
+      "status": "completed",
+      "next_step": "Run final changed-path proof selection and planning validation, then close out or archive this bounded slice.",
+      "proof": "Focused proof-selection tests plus lint and planning validation."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/",
+        ".agentic-workspace/planning/decompositions/",
+        ".agentic-workspace/planning/reviews/2026-05-11-proof-selection-dynamic-routing.review.json",
+        "src/agentic_workspace/contracts/proof_selection_rules.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_proof_cli.py",
+        "tests/test_workspace_implement_cli.py"
+      ],
+      "invariants": [
+        "Do not leak source-repo proof commands into host repos.",
+        "Do not emit executable proof commands unless the target exposes the relevant capability or configured proof profile."
+      ]
+    },
+    "planning_mode": {
+      "prep_only": false,
+      "halt_after_summary": false,
+      "halt_instruction": "Implementation mode active after review gate completion; keep edits bounded to proof selection and its tests.",
+      "minimal_success_criteria": [
+        "review findings promoted into implementation",
+        "focused proof-selection tests pass",
+        "agentic-workspace summary reports clean planning state"
+      ],
+      "manual_tightening_policy": "keep plan updates focused on review findings, proof, and closeout",
+      "allowed_outputs": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/<id>.plan.json",
+        ".agentic-workspace/planning/decompositions/<id>.decomposition.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_proof_cli.py",
+        "tests/test_workspace_implement_cli.py"
+      ],
+      "forbidden_outputs": [
+        "README",
+        "PLANNING_STATE",
+        "HANDOFF",
+        "SLICES",
+        "package",
+        "dependency",
+        "public",
+        "database",
+        "schema",
+        "app scaffold"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Proof selection becomes a central target-aware workflow feature instead of a static source-repo command list.",
+    "this slice completes the larger intended outcome": "partially: live target-aware proof routing is implemented; persisted setup/adopt route learning remains deferred",
+    "continuation surface": ".agentic-workspace/planning/execplans/proof-selection-dynamic-routing.plan.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "optional",
+    "owner surface": ".agentic-workspace/planning/execplans/proof-selection-dynamic-routing.plan.json",
+    "activation trigger": "When setup/adopt should persist target proof route maps instead of relying on live proof-time discovery."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Proof selection now exposes proof strategy, target proof capabilities, discovered package script substitutions, and manual verification fallback.",
+    "intentionally deferred": "Persisting route maps during setup/adopt; the implemented slice performs live target discovery during proof selection.",
+    "discovered implications": "Prep-only execplans need an explicit transition out of prep mode when a review gate promotes directly into implementation.",
+    "proof achieved now": "focused tests and lint passed before final changed-path proof selection",
+    "validation still needed": "final changed-path proof selection and planning validation",
+    "next likely slice": "persist discovered proof route maps during setup/adopt only if live discovery proves insufficient"
+  },
+  "intent_interpretation": {
+    "literal request": "Proof selection dynamic routing",
+    "inferred intended outcome": "Make proof selection reason from proof purpose and discovered target capabilities before emitting commands.",
+    "chosen concrete what": "Run a shaping review and select the smallest implementation slice for target-aware proof routing.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Planning state, this execplan, the proof-selection review artifact, and later proof-selection implementation surfaces selected by the review.",
+    "max changed files": "Keep the first implementation slice bounded; split if it touches setup/adopt discovery, proof contracts, CLI projection, and tests all at once.",
+    "required validation commands": "uv run agentic-workspace summary --target . --format json --select planning_surface_health,warnings,warning_count; then proof commands selected by changed paths after review.",
+    "ask-before-refactor threshold": "Any redesign that changes broader Agentic Workspace workflow obligations or makes the package prescribe host-repo quality policy.",
+    "stop before touching": "Unrelated generated-CLI work, unrelated planning cleanup, or target-repo-specific quality rules not needed to model proof routing.",
+    "manual JSON validation": "Use package summary/checks; avoid ad hoc validation loops unless a structured surface reports a blocking problem."
+  },
+  "stop_conditions": {
+    "stop when": "Focused proof-selection behavior is implemented and final selected validation passes.",
+    "escalate when boundary reached": "The work would require a package-wide policy decision about host-repo proof ownership.",
+    "escalate on scope drift": "The lane turns into broad workflow redesign or unrelated generated-CLI implementation.",
+    "escalate on proof failure": "Summary or review checks cannot verify clean Planning state."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "dogfooding report: target repos exposed repo-local proof assumptions",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "dogfooding report: target repos exposed repo-local proof assumptions",
+      "label": "dogfooding report: target repos exposed repo-local proof assumptions",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "proof-selection-dynamic-routing",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run final changed-path proof selection and planning validation, then close out or archive this bounded slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/",
+    ".agentic-workspace/planning/decompositions/",
+    ".agentic-workspace/planning/reviews/2026-05-11-proof-selection-dynamic-routing.review.json",
+    "src/agentic_workspace/contracts/proof_selection_rules.json",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_proof_cli.py",
+    "tests/test_workspace_implement_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json --select planning_surface_health,warnings,warning_count",
+    "review artifact covers proof-type model, target capability discovery, setup/adopt route learning, command selection, and manual verification fallback",
+    "uv run pytest tests/test_workspace_proof_cli.py::test_proof_changed_uses_available_target_makefile_targets tests/test_workspace_proof_cli.py::test_proof_changed_does_not_assume_makefile_exists tests/test_workspace_proof_cli.py::test_proof_changed_uses_target_package_json_scripts_without_makefile tests/test_workspace_implement_cli.py::test_implement_uses_available_target_makefile_targets -q",
+    "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_proof_cli.py tests/test_workspace_implement_cli.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Review identifies the proof-type layers and target-route enrichment model.",
+    "Proof output exposes proof_strategy and target_proof_capabilities before commands.",
+    "Proof selection adapts unavailable Makefile proof to discovered package.json scripts where available.",
+    "Proof selection emits manual_verification when executable proof cannot be selected safely.",
+    "Generated-CLI work remains deferred in roadmap candidates."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Filed follow-up issue #896, completed the proof-selection shaping review, and implemented the first bounded dynamic proof-routing slice.",
+    "scope touched": "planning state, proof-selection execplan/review, proof CLI runtime, and proof CLI tests",
+    "changed surfaces": "planning state, proof-selection execplan/review, generated-CLI execplan demotion, src/agentic_workspace/cli.py, tests/test_workspace_proof_cli.py",
+    "validations run": "uv run pytest focused proof-selection tests -q; uv run ruff check selected files; uv run agentic-planning summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json; make test-workspace; make lint-workspace; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run pytest tests/test_workspace_cli.py -q",
+    "result for continuation": "target-aware live proof discovery is implemented; persisted setup/adopt route maps remain optional future work",
+    "next step": "Archive this completed bounded slice."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes for this bounded lane: live target-aware proof routing implemented",
+    "config compliance": "used configured repo-local CLI invocation",
+    "misinterpretation risk": "low; persisted setup/adopt route maps intentionally deferred",
+    "follow-on decision": "archive this slice"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "stay-local",
+    "route skipped reason": "Changed-path routing classified this as high proof-burden lane work; no delegation target would reduce risk.",
+    "expected savings": "none",
+    "actual friction": "Broad proof required staging the intentional execplan archive move before structured inventory tests could pass.",
+    "proof result": "passed",
+    "quality concern": "none blocking",
+    "decomposition adjustment": "Persisted setup/adopt route maps remain optional future work."
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest focused proof-selection tests -q; uv run ruff check selected files",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "4 focused tests passed, ruff passed, make test-workspace passed, make lint-workspace passed, root CLI authority defaults passed, workspace CLI tests passed, and planning doctor/summary were clean"
+  },
+  "intent_satisfaction": {
+    "original intent": "dogfooding report: target repos exposed repo-local proof assumptions",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Review completed; proof selection now emits proof_strategy, target_proof_capabilities, package.json script substitutions, and manual_verification fallback; selected proof passed.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Dynamic proof-selection first slice implemented and validated.",
+    "validation confirmed": "make test-workspace, make lint-workspace, focused tests, root CLI authority defaults, workspace CLI tests, planning summary, and planning doctor passed.",
+    "follow-on routed to": "GitHub #896 for safe active-lane switching; optional persisted setup/adopt route maps deferred until needed.",
+    "post-work posterity capture": "review artifact and execplan closeout updated",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "roadmap candidates after this plan archives"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded dynamic proof-routing slice requested by the active lane is implemented and validated; persisted setup/adopt route maps are optional future work, not required for this closeout.",
+    "evidence carried forward": "make test-workspace; make lint-workspace; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-planning summary --target . --verbose --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run pytest tests/test_workspace_cli.py -q",
+    "reopen trigger": "Reopen or create a new lane if live target discovery is insufficient and setup/adopt needs to persist proof route maps."
+  },
+  "improvement_signal_review": {
+    "status": "reviewed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "new-plan --activate can leave two active lanes without a safe demotion flow",
+      "prep-only execplan scaffolds need an explicit transition when a review gate promotes into implementation"
+    ],
+    "signals fixed": [
+      "proof selection now avoids unavailable host Makefile commands and exposes manual fallback"
+    ],
+    "signals routed": [
+      "GitHub #896: Add safe active-lane switch affordance"
+    ],
+    "signals dismissed": [],
+    "next owner": "GitHub #896 for lane-switch affordance; no separate issue yet for prep-only transition unless it recurs"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "GitHub #896 for safe active-lane switching; optional persisted setup/adopt route maps deferred until needed.",
+          "owner": ".agentic-workspace/planning/execplans/proof-selection-dynamic-routing.plan.json",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "GitHub #896: Add safe active-lane switch affordance",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-05-11: Scaffolded by agentic-planning new-plan.",
+    "2026-05-11: Tightened from generic prep-only scaffold into active shaping lane for dynamic target-aware proof selection.",
+    "2026-05-11: Implemented and validated the first bounded dynamic proof-routing slice."
+  ],
+  "control_gates": [
+    {
+      "id": "review-before-implementation",
+      "owner_role": "planning-review",
+      "required_for": [
+        "before broad proof-selection implementation"
+      ],
+      "status": "satisfied",
+      "evidence": [
+        ".agentic-workspace/planning/reviews/2026-05-11-proof-selection-dynamic-routing.review.json"
+      ],
+      "blocking": true,
+      "next_action": "Satisfied by 2026-05-11 review; continue with final proof and closeout."
+    }
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "none"
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: dogfooding report: target repos exposed repo-local proof assumptions\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest focused proof-selection tests -q; uv run ruff check selected files\nChanged surfaces: planning state, proof-selection execplan/review, generated-CLI execplan demotion, src/agentic_workspace/cli.py, tests/test_workspace_proof_cli.py\nDurable residue: none (none)\nMemory learning: none\nFollow-up: GitHub #896 for safe active-lane switching; optional persisted setup/adopt route maps deferred until needed."
+  }
+}

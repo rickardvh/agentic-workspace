@@ -12,14 +12,13 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "generated-cli-next-stage", title = "Generated CLI next stage", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/generated-cli-next-stage.plan.json", why_now = "GitHub #880", owner_role = "implementation", handoff_ready = true, refs = ["GitHub #880"] },
-]
+active_items = []
 queued_items = []
 
 [roadmap]
 lanes = []
 candidates = [
+  { id = "generated-cli-next-stage", maturity = "candidate", status = "deferred", priority = "P1", refs = "GitHub #880", title = "Generated CLI next stage", outcome = "Plan and implement the next generated-CLI stage after the Python generated package relocation.", reason = "Demoted on 2026-05-11 because dynamic proof selection is the higher-priority active lane.", promotion_signal = "Promote after proof selection shaping is complete or when returning to generated CLI implementation.", suggested_first_slice = "Shape GitHub #880 into the first bounded generated-CLI implementation slice, then implement and prove that slice." },
   { id = "github-894-reconcile-safe-prune-apply", maturity = "candidate", status = "deferred", priority = "P1", refs = "GitHub #894", title = "Add apply command for reconcile safe-to-prune cleanup", outcome = "Provide a safe lifecycle apply route for exact reconcile cleanup targets so agents do not hand-edit planning state for proven closed external-work residue.", reason = "Dogfooding found reconcile could identify an exact safe_to_prune target but offered no automatic apply command.", promotion_signal = "Promote when improving reconciliation safety or planning-state mutation ergonomics.", suggested_first_slice = "Add a command or structured apply mode that removes only exact safe_to_prune reconcile targets and points to verification." },
   { id = "github-892-codegen-epic", maturity = "candidate", status = "deferred", priority = "P1", refs = "GitHub #892", title = "Implementation-independent generated command packages", outcome = "Coordinate generated command package/codegen work around implementation-independent artifacts, black-box conformance, thin target adapters, explicit maturity, and drift gates.", reason = "Open epic-level coordination surface; current bounded first slice remains GitHub #880.", promotion_signal = "Promote after #880 closes or when a bounded codegen follow-up slice is selected.", suggested_first_slice = "Select the next bounded generated-command package lane from the epic after the active #880 slice is complete." },
   { id = "github-627-large-file-hotspot-remediation", maturity = "candidate", status = "deferred", priority = "P2", refs = "GitHub #627", title = "Route large-file hotspot remediation into bounded slices", outcome = "Break large-file hotspot remediation into reviewable bounded slices.", reason = "Deferred by user on 2026-05-04; remains a friction lane because large hotspots increase review, continuation, and agent context cost.", promotion_signal = "Promote when large-file churn starts blocking review or agent continuation.", suggested_first_slice = "Identify top hotspot files and create the first bounded remediation slice." },

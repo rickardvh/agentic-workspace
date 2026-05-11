@@ -17747,6 +17747,30 @@ def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 if isinstance(answer, dict) and answer.get("unavailable_proof_commands")
                 else {}
             ),
+            **(
+                {
+                    "proof_strategy": {
+                        "kind": answer.get("proof_strategy", {}).get("kind"),
+                        "selection_order": answer.get("proof_strategy", {}).get("selection_order", []),
+                    }
+                }
+                if isinstance(answer, dict)
+                and answer.get("proof_strategy")
+                and (answer.get("proof_command_adjustments") or answer.get("unavailable_proof_commands"))
+                else {}
+            ),
+            **(
+                {"target_proof_capabilities": answer["target_proof_capabilities"]}
+                if isinstance(answer, dict)
+                and answer.get("target_proof_capabilities")
+                and (answer.get("proof_command_adjustments") or answer.get("unavailable_proof_commands"))
+                else {}
+            ),
+            **(
+                {"manual_verification": answer["manual_verification"]}
+                if isinstance(answer, dict) and answer.get("manual_verification")
+                else {}
+            ),
             "warnings": warnings,
             "detail_command": "agentic-workspace proof --verbose --changed <paths> --format json",
         }
@@ -18409,9 +18433,80 @@ def _makefile_targets(target_root: Path | None) -> set[str] | None:
     return targets
 
 
+def _package_json_scripts(target_root: Path | None) -> dict[str, str]:
+    if target_root is None:
+        return {}
+    package_json = target_root / "package.json"
+    if not package_json.is_file():
+        return {}
+    try:
+        payload = json.loads(package_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    scripts = payload.get("scripts", {}) if isinstance(payload, dict) else {}
+    if not isinstance(scripts, dict):
+        return {}
+    return {str(name): str(command) for name, command in scripts.items() if str(name).strip() and str(command).strip()}
+
+
+def _target_proof_capabilities(*, target_root: Path | None, make_targets: set[str] | None) -> dict[str, Any]:
+    package_scripts = _package_json_scripts(target_root)
+    has_makefile = bool(target_root is not None and (target_root / "Makefile").is_file())
+    has_package_json = bool(target_root is not None and (target_root / "package.json").is_file())
+    capabilities: dict[str, Any] = {
+        "kind": "target-proof-capabilities/v1",
+        "status": "discovered" if target_root is not None else "source-default",
+        "target_root": "." if target_root is None else target_root.as_posix(),
+        "make": {
+            "available": has_makefile,
+            "targets": sorted(make_targets or []),
+        },
+        "package_json": {
+            "available": has_package_json,
+            "scripts": sorted(package_scripts),
+        },
+        "rule": (
+            "Proof commands are executable only when the target repo exposes a matching capability; otherwise proof selection "
+            "must report unavailable commands and ask for task-specific or manual verification."
+        ),
+    }
+    discovered_commands: list[str] = []
+    for script_name in ("test", "lint", "check", "typecheck"):
+        if script_name in package_scripts:
+            discovered_commands.append("npm test" if script_name == "test" else f"npm run {script_name}")
+    if make_targets:
+        for target in sorted(make_targets):
+            if target in {"test", "lint", "check", "typecheck", "maintainer-surfaces"}:
+                discovered_commands.append(f"make {target}")
+    capabilities["candidate_commands"] = _dedupe(discovered_commands)
+    return capabilities
+
+
 def _target_make_command(command: str) -> str | None:
     match = re.match(r"^make\s+([A-Za-z0-9_.-]+)\s*$", command.strip())
     return match.group(1) if match else None
+
+
+def _generic_proof_role_for_make_target(target: str) -> str | None:
+    if target.startswith("test"):
+        return "test"
+    if target.startswith("lint"):
+        return "lint"
+    if target in {"check", "typecheck"}:
+        return target
+    return None
+
+
+def _package_script_command_for_role(*, role: str | None, package_scripts: dict[str, str]) -> str | None:
+    if role is None:
+        return None
+    if role == "test" and "test" in package_scripts:
+        return "npm test"
+    if role in package_scripts:
+        return f"npm run {role}"
+    if role == "lint" and "check" in package_scripts:
+        return "npm run check"
+    return None
 
 
 def _adapt_make_proof_command_for_target(
@@ -18419,14 +18514,25 @@ def _adapt_make_proof_command_for_target(
     command: str,
     target_root: Path | None,
     make_targets: set[str] | None,
+    package_scripts: dict[str, str] | None = None,
 ) -> tuple[str | None, dict[str, str] | None]:
     target = _target_make_command(command)
     if target is None or target_root is None:
         return command, None
+    script_replacement = _package_script_command_for_role(
+        role=_generic_proof_role_for_make_target(target),
+        package_scripts=package_scripts or {},
+    )
     if make_targets is None:
+        if script_replacement is not None:
+            return script_replacement, {
+                "command": command,
+                "replacement": script_replacement,
+                "reason": f"target repo has no Makefile; using package.json script for {_generic_proof_role_for_make_target(target)!r} proof",
+            }
         return None, {
             "command": command,
-            "reason": "target repo has no Makefile, so make-based package proof was not selected",
+            "reason": "target repo has no Makefile and no matching package.json script, so make-based package proof was not selected",
         }
     if target in make_targets:
         return command, None
@@ -18445,6 +18551,12 @@ def _adapt_make_proof_command_for_target(
             "command": command,
             "replacement": replacement,
             "reason": f"target Makefile does not define {target!r}; using available {fallback!r} target",
+        }
+    if script_replacement is not None:
+        return script_replacement, {
+            "command": command,
+            "replacement": script_replacement,
+            "reason": f"target Makefile does not define {target!r}; using package.json script for {_generic_proof_role_for_make_target(target)!r} proof",
         }
     return None, {
         "command": command,
@@ -18733,6 +18845,8 @@ def _proof_selection_for_changed_paths(
             )
     selected_lanes.extend(concern_lanes)
     make_targets = _makefile_targets(target_root)
+    package_scripts = _package_json_scripts(target_root)
+    target_capabilities = _target_proof_capabilities(target_root=target_root, make_targets=make_targets)
     proof_command_adjustments: list[dict[str, str]] = []
     unavailable_proof_commands: list[dict[str, str]] = []
     for lane in selected_lanes:
@@ -18743,6 +18857,7 @@ def _proof_selection_for_changed_paths(
                 command=str(raw_command),
                 target_root=target_root,
                 make_targets=make_targets,
+                package_scripts=package_scripts,
             )
             if adjustment is not None:
                 adjustment = {"lane": str(lane.get("id", "")), **adjustment}
@@ -18799,6 +18914,34 @@ def _proof_selection_for_changed_paths(
     proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,
+        "proof_strategy": {
+            "kind": "proof-strategy/v1",
+            "proof_types": [
+                {
+                    "id": "executable",
+                    "meaning": "A discovered target command can directly exercise the changed behavior or surface.",
+                },
+                {
+                    "id": "surface-check",
+                    "meaning": "A structured checker can inspect changed declarations, manifests, or generated surfaces.",
+                },
+                {
+                    "id": "diff-review",
+                    "meaning": "The trust question is human/agent review of the diff against the requested outcome.",
+                },
+                {
+                    "id": "manual-verification",
+                    "meaning": "No trustworthy executable route was discovered; closeout needs explicit manual verification evidence.",
+                },
+            ],
+            "selection_order": [
+                "match changed paths to proof intent",
+                "enrich with target repo capabilities and configured assurance profiles",
+                "emit executable commands only when the target exposes the required capability",
+                "emit manual verification instructions when executable proof is unavailable",
+            ],
+        },
+        "target_proof_capabilities": target_capabilities,
         "selected_lanes": [
             {
                 "id": lane["id"],
@@ -18848,6 +18991,18 @@ def _proof_selection_for_changed_paths(
         proof_selection["escalate_when"].append(
             "Some selected proof commands are unavailable in this target repo; choose repo-specific proof before closeout."
         )
+    if not required_commands or unavailable_proof_commands:
+        proof_selection["manual_verification"] = {
+            "kind": "manual-verification-fallback/v1",
+            "status": "required" if not required_commands else "required-for-unavailable-proof",
+            "instructions": [
+                "Inspect the changed paths against the requested task outcome.",
+                "Use target_proof_capabilities.candidate_commands only if they are relevant to this change.",
+                "Record what was manually checked and why unavailable commands were not required for closeout.",
+            ],
+            "candidate_commands": target_capabilities.get("candidate_commands", []),
+            "unavailable_commands": unavailable_proof_commands,
+        }
     if config is not None and target_root is not None and include_durable_intent:
         durable_intent = _intent_decision_projection(
             target_root=target_root,

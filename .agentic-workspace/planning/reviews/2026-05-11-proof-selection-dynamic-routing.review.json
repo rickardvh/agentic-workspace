@@ -1,0 +1,132 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Proof selection dynamic routing review",
+  "date": "2026-05-11",
+  "scope": [
+    "Review whether proof selection should reason from proof types, target repo capabilities, setup/adopt-discovered routes, and manual verification fallbacks before selecting concrete commands."
+  ],
+  "classification": "dogfooding-shaping",
+  "goal": [
+    "Shape a dynamic proof-selection model that starts from proof intent, enriches from target repo capabilities, and only then emits concrete commands or manual verification instructions."
+  ],
+  "non_goals": [
+    "Do not prescribe this source repo's Makefile targets or no-absolute-path policy to host repos.",
+    "Do not implement the full proof-selection redesign in the review pass."
+  ],
+  "review_mode": {
+    "mode": "dogfooding-shaping",
+    "review question": "How should proof selection represent general proof types, target capability discovery, setup/adopt learned routes, command selection, and manual verification fallbacks without leaking repo-local assumptions?",
+    "default finding cap": "bounded",
+    "inputs inspected first": "compact planning and task-specific surfaces"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace summary --format json --select planning_record,active_contract,resumable_contract,todo,planning_surface_health; rg -n proof/test-workspace/lint-workspace in src and tests; inspect proof_selection_rules.json and proof CLI tests.",
+    "evidence sources": "Target-repo report about unavailable Makefile targets, target-repo report about repo-local absolute-path policy leakage, current proof-selection rules/default lanes, existing Makefile adaptation tests, and config assurance proof profiles."
+  },
+  "references": [
+    {
+      "kind": "execplan",
+      "target": ".agentic-workspace/planning/execplans/proof-selection-dynamic-routing.plan.json",
+      "label": "Active proof-selection shaping lane",
+      "role": "owner",
+      "locator": ""
+    },
+    {
+      "kind": "dogfooding",
+      "target": "target repo report",
+      "label": "Proof selection selected Make targets absent from host repo",
+      "role": "evidence",
+      "locator": "chat"
+    }
+  ],
+  "findings": [
+    {
+      "id": "proof-type-before-command",
+      "title": "Proof selection needs a proof-intent layer before command selection",
+      "summary": "Changed paths should first map to proof kinds such as executable proof, surface check, diff review, or manual verification rather than directly to repo-specific commands.",
+      "evidence": "The existing lane table already carries proof_kind and enough_proof fields, but compact proof output did not expose the proof-type reasoning that explains why a command or review route was selected.",
+      "risk_if_unchanged": "Agents see only a command list and can mistake package-local defaults for target-repo obligations.",
+      "recommendation": "Expose a proof_strategy object in proof output and keep command emission downstream of proof-kind selection.",
+      "promotion_target": "src/agentic_workspace/cli.py",
+      "status": "implemented-first-slice"
+    },
+    {
+      "id": "target-capabilities-before-command",
+      "title": "Executable proof commands must be gated by target capabilities",
+      "summary": "Host repos must not receive Makefile commands unless the target actually exposes the needed targets or a discovered equivalent.",
+      "evidence": "Dogfooding target report showed proof selected make test-workspace and make lint-workspace in a repo whose Makefile did not define those targets.",
+      "risk_if_unchanged": "Proof selection sends agents into failed command loops and implies Agentic Workspace owns host-repo proof policy.",
+      "recommendation": "Report target_proof_capabilities and adapt only to discovered Makefile targets or package.json scripts.",
+      "promotion_target": "src/agentic_workspace/cli.py and tests/test_workspace_proof_cli.py",
+      "status": "implemented-first-slice"
+    },
+    {
+      "id": "manual-fallback-needed",
+      "title": "Unavailable executable proof needs explicit manual verification fallback",
+      "summary": "When no satisfactory command can be selected, proof output should say so and give the agent concrete manual verification instructions.",
+      "evidence": "The target report's command failures were not enough to tell the agent what proof should replace them.",
+      "risk_if_unchanged": "Agents either over-test with irrelevant commands or close work with ambiguous proof.",
+      "recommendation": "Emit manual_verification when selected proof commands are unavailable or no required command is discovered.",
+      "promotion_target": "src/agentic_workspace/cli.py and tests/test_workspace_proof_cli.py",
+      "status": "implemented-first-slice"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promoted the three review findings into the first implementation slice: proof_strategy, target_proof_capabilities, package.json script adaptation, and manual_verification fallback.",
+    "defer": "Persisted route maps learned during setup/adopt remain future work; this slice performs live target discovery at proof-selection time.",
+    "dismiss": "No findings dismissed."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "findings promoted, dismissed, or superseded",
+    "proof surface": "routed issues, planning state, docs, checks, Memory, or a compact retained review stub"
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_proof_cli.py::test_proof_changed_uses_available_target_makefile_targets tests/test_workspace_proof_cli.py::test_proof_changed_does_not_assume_makefile_exists tests/test_workspace_proof_cli.py::test_proof_changed_uses_target_package_json_scripts_without_makefile tests/test_workspace_implement_cli.py::test_implement_uses_available_target_makefile_targets -q",
+    "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_proof_cli.py tests/test_workspace_implement_cli.py"
+  ],
+  "drift_log": [
+    "2026-05-11: Review record created by create-review.",
+    "2026-05-11: Review completed and promoted into the first bounded proof-selection implementation slice."
+  ]
+}
