@@ -22,4 +22,5 @@ Manifest of workspace-owned surfaces, generated artifacts, and ownership roles.
 | `module_upgrade_source_paths.memory` | string | yes |  | Memory text value used by this contract. |  |  |
 | `module_upgrade_source_paths.<name>` | string | no |  | Named entry in the module upgrade source paths mapping. |  |  |
 | `setup_findings_path` | string | yes |  | Setup findings path text value used by this contract. |  |  |
+| `proof_route_hints_path` | string | yes |  | Workspace-managed advisory proof route hints path. |  |  |
 | `mixed_agent_local_override_fields` | array of string | yes |  | Ordered mixed agent local override fields entries used by this contract. |  |  |

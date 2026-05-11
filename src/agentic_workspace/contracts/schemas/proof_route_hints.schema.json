@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/proof-route-hints.schema.json",
+  "title": "Agentic Workspace Proof Route Hints",
+  "description": "Advisory proof route hints discovered during lifecycle setup/adopt. Hints are not host policy and require live confirmation before command selection.",
+  "type": "object",
+  "required": [
+    "kind",
+    "schema_version",
+    "source",
+    "rule",
+    "hints"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/proof-route-hints/v1",
+      "description": "Discriminator identifying this payload as advisory proof route hints."
+    },
+    "schema_version": {
+      "const": "proof-route-hints/v1",
+      "description": "Version of the proof route hints contract."
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repo-relative source path or setup phase that produced these hints."
+    },
+    "rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable safety rule explaining how consumers should treat these hints."
+    },
+    "hints": {
+      "type": "array",
+      "description": "Advisory proof command candidates that still require live confirmation before use.",
+      "items": {
+        "type": "object",
+        "description": "One advisory proof route hint discovered from repo-local surfaces.",
+        "required": [
+          "id",
+          "intent_type",
+          "candidate_command",
+          "source",
+          "confidence",
+          "requires_live_confirmation"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable identifier for this discovered proof route hint."
+          },
+          "intent_type": {
+            "type": "string",
+            "description": "Proof intent this command candidate may satisfy after live confirmation.",
+            "enum": [
+              "behavior-test",
+              "static-check",
+              "type-check",
+              "general-check"
+            ]
+          },
+          "candidate_command": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Command string discovered as a possible proof route."
+          },
+          "source": {
+            "type": "string",
+            "description": "Kind of repo-local surface where the candidate command was found.",
+            "enum": [
+              "makefile",
+              "package-json"
+            ]
+          },
+          "source_path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Repo-relative file path that contributed this hint."
+          },
+          "confidence": {
+            "type": "string",
+            "description": "Advisory confidence level assigned by setup or adopt discovery.",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "requires_live_confirmation": {
+            "const": true,
+            "description": "Whether the candidate must be confirmed against current repo capabilities before command selection."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

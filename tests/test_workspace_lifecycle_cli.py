@@ -24,6 +24,9 @@ def test_setup_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Pa
     assert payload["findings_promotion"]["artifact_path"] == "tools/setup-findings.json"
     assert payload["findings_promotion"]["schema_path"] == "src/agentic_workspace/contracts/schemas/setup_findings.schema.json"
     assert payload["analysis_input"]["status"] == "not-found"
+    assert payload["proof_route_hints"]["path"] == ".agentic-workspace/proof-route-hints.json"
+    assert payload["proof_route_hints"]["hint_count"] == 0
+    assert not (target / ".agentic-workspace" / "proof-route-hints.json").exists()
     assert payload["next_action"]["summary"] == "Review the compact report surfaces"
     assert "agentic-workspace report --target ./repo --format json" in payload["next_action"]["commands"]
 
@@ -426,6 +429,27 @@ def test_init_uses_recommended_prompt_for_single_existing_surface(monkeypatch, t
         ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
         ("memory", "adopt", {"target": str(tmp_path), "dry_run": False}),
     ]
+
+
+def test_init_persists_advisory_proof_route_hints(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run", "lint": "eslint ."}}))
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    hints_path = tmp_path / ".agentic-workspace" / "proof-route-hints.json"
+    hints = json.loads(hints_path.read_text(encoding="utf-8"))
+    assert payload["proof_route_hints"] == {
+        "path": ".agentic-workspace/proof-route-hints.json",
+        "hint_count": 2,
+        "written": True,
+        "rule": "Advisory proof route hints are not host policy; proof selection must live-confirm them before emitting commands.",
+    }
+    assert [hint["candidate_command"] for hint in hints["hints"]] == ["npm run lint", "npm test"]
+    assert all(hint["requires_live_confirmation"] is True for hint in hints["hints"])
 
 
 def test_init_autodetects_existing_gemini_file_as_startup_entrypoint(monkeypatch, tmp_path: Path, capsys) -> None:

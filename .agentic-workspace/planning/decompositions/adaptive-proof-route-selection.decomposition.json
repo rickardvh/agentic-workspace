@@ -1,0 +1,116 @@
+{
+  "kind": "planning-decomposition/v1",
+  "title": "Adaptive Proof Route Selection",
+  "status": "closed",
+  "larger_intended_outcome": "Given a change in a host repository, help an agent choose the safest available proof route that matches the kind of confidence needed, without assuming Agentic Workspace source-repo commands or becoming the host repo's quality-policy owner.",
+  "non_goals": [
+    "Do not make Agentic Workspace define what proof is sufficient for every host repo.",
+    "Do not require host repos to adopt a universal testing convention.",
+    "Do not hard-code Agentic Workspace source-repo commands into host proof selection.",
+    "Do not infer security, compliance, release, migration, or data-loss approval from discovered commands.",
+    "Do not treat persisted route hints as durable truth."
+  ],
+  "candidate_lanes": [
+    {
+      "id": "advisory-route-hints",
+      "title": "Advisory route hints from setup/adopt",
+      "readiness": "promoted",
+      "outcome": "Persist lifecycle-discovered proof route hints with provenance and require live confirmation before proof selection treats them as usable.",
+      "owner_surface": "GitHub #901; implementation evidence in commit d9902b66",
+      "proof": "Init/adopt writes route hints only when discovered, setup reports the surface read-only, and proof output separates confirmed from stale hints.",
+      "depends_on": [],
+      "parallel_with": []
+    },
+    {
+      "id": "explicit-decision-model",
+      "title": "Explicit proof-route decision model",
+      "readiness": "promoted",
+      "outcome": "Expose proof intent, configured policy, learned hints, live capabilities, selected commands, unavailable routes, manual fallback, and execution evidence as distinct inspectable layers.",
+      "owner_surface": "GitHub #901; implementation evidence in commit d9902b66",
+      "proof": "Detailed proof output can reconstruct why each command or manual route was selected, skipped, replaced, or downgraded without conflating layers.",
+      "depends_on": [
+        "advisory-route-hints"
+      ],
+      "parallel_with": [
+        "manual-verification-templates"
+      ]
+    },
+    {
+      "id": "host-policy-precedence",
+      "title": "Host policy precedence",
+      "readiness": "promoted",
+      "outcome": "Make explicit host-configured proof profiles and unsafe-command constraints override learned hints and generic discovery.",
+      "owner_surface": "GitHub #899; implementation evidence in slice commit Add host policy proof command blocks",
+      "proof": "Tests show host-required proof wins, host-disallowed commands are blocked, and learned or discovered routes cannot silently replace policy.",
+      "depends_on": [
+        "explicit-decision-model"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "broader-capability-detectors",
+      "title": "Broader capability detectors",
+      "readiness": "promoted",
+      "outcome": "Add detectors for common repo ecosystems as capabilities and advisory hints, not as policy.",
+      "owner_surface": "GitHub #899; implementation evidence in slice commit Add broader proof capability detectors",
+      "proof": "Repos with Python, Rust, Go, Gradle/Maven, or alternate JS package-manager surfaces receive useful route candidates without unsafe assumptions.",
+      "depends_on": [
+        "explicit-decision-model"
+      ],
+      "parallel_with": [
+        "manual-verification-templates"
+      ]
+    },
+    {
+      "id": "proof-execution-evidence",
+      "title": "Proof execution evidence feedback",
+      "readiness": "promoted",
+      "outcome": "Represent selected, run, passed, failed, skipped, unavailable, waived, and missing proof states distinctly.",
+      "owner_surface": "GitHub #899; implementation evidence in slice commit Add proof execution evidence states",
+      "proof": "Closeout and proof reports distinguish route selection from execution results, and stale/unavailable routes can be downgraded.",
+      "depends_on": [
+        "explicit-decision-model"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "manual-verification-templates",
+      "title": "Manual verification templates",
+      "readiness": "promoted",
+      "outcome": "Provide structured non-executable verification instructions by proof intent when no safe executable route exists.",
+      "owner_surface": "GitHub #899; implementation evidence in slice commit Add manual proof fallback templates",
+      "proof": "Proof output makes manual fallback explicit, lower-trust unless host policy says otherwise, and specific enough for agents to record evidence.",
+      "depends_on": [
+        "explicit-decision-model"
+      ],
+      "parallel_with": [
+        "broader-capability-detectors"
+      ]
+    }
+  ],
+  "dependency_assumptions": [
+    "Advisory route hints are the smallest useful first slice and should remain live-confirmed before use.",
+    "The explicit decision model should precede policy precedence, broader detectors, and execution-evidence feedback so later slices do not overload one command object.",
+    "Manual verification can be shaped in parallel with detector expansion after the decision model exposes proof intent clearly."
+  ],
+  "parallelization_assumptions": [
+    "Manual fallback wording and broader detector expansion can proceed independently after proof intent is explicit.",
+    "Host policy precedence and proof execution evidence should remain separate slices because one is pre-selection authority and the other is post-selection fact capture."
+  ],
+  "proof_expectations": [
+    "Each promoted lane records focused validation in its execplan.",
+    "Every lane must prove source-repo command leakage remains blocked.",
+    "Every lane must keep host policy separate from learned or discovered route assistance.",
+    "Compact proof output should stay action-oriented while detailed output remains explainable."
+  ],
+  "promotion_rule": "Promote only lanes with a clear proof-intent layer, bounded write scope, explicit host-policy boundary, and tests across at least one real or fixture host-repo shape.",
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#899",
+      "label": "Adaptive Proof Route Selection",
+      "role": "epic"
+    }
+  ],
+  "notes": "This decomposition is the epic-level map for #899. It should guide slice order and issue creation, not collect execution history."
+}

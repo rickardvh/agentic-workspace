@@ -172,6 +172,8 @@ def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, ca
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == ["make test", "make lint"]
     assert payload["next"]["command"] == "make test"
+    assert payload["next"]["route_source"] == "live-adapted-target-capability"
+    assert payload["next"]["why"] == "behavior-test intent selected live-adapted-target-capability."
     assert payload["proof_command_adjustments"] == [
         {
             "lane": "workspace_cli",
@@ -196,8 +198,10 @@ def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == []
-    assert payload["next"]["action"] == "select-proof-scope"
+    assert payload["next"]["action"] == "manual-verification"
     assert payload["next"]["command"] is None
+    assert payload["manual_verification"]["status"] == "required"
+    assert "no executable proof route" in payload["manual_verification"]["summary"]
     assert payload["unavailable_proof_commands"] == [
         {
             "lane": "workspace_cli",
@@ -215,6 +219,55 @@ def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -
     assert payload["manual_verification"]["status"] == "required"
 
 
+def test_proof_changed_reports_manual_verification_templates(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    templates = payload["manual_verification"]["templates"]
+    assert templates == [
+        {
+            "kind": "manual-verification-template/v1",
+            "intent_type": "behavior-test",
+            "title": "Behavior verification",
+            "trust": "lower-than-executable-proof",
+            "checklist": [
+                "Identify the behavior the changed paths are expected to affect.",
+                "Inspect the implementation path and the user-visible or API-facing result.",
+                "Exercise the smallest available manual scenario or explain why no scenario is available.",
+            ],
+            "evidence_to_record": [
+                "changed behavior inspected",
+                "scenario or reasoning used",
+                "residual risk compared with executable tests",
+            ],
+        }
+    ]
+
+
+def test_proof_verbose_exposes_manual_fallback_decision_layers(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    decision = answer["proof_route_decision"]
+    assert decision["selected_commands"] == []
+    assert [command["command"] for command in decision["unavailable_commands"]] == ["make test-workspace", "make lint-workspace"]
+    assert decision["manual_verification"]["status"] == "required"
+    assert decision["manual_verification"]["templates"][0]["intent_type"] == "behavior-test"
+    assert decision["manual_verification"]["templates"][0]["trust"] == "lower-than-executable-proof"
+    assert decision["proof_execution_evidence"] == {
+        "kind": "proof-execution-evidence/v1",
+        "status": "not-run",
+        "state_model": ["selected", "run", "passed", "failed", "skipped", "unavailable", "waived", "missing"],
+        "expected_commands": [],
+        "manual_verification_expected": True,
+        "rule": "Proof selection describes expected proof only; closeout must record what actually ran, failed, was skipped, or was manually verified.",
+    }
+
+
 def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run", "lint": "eslint ."}}))
@@ -223,6 +276,7 @@ def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_pat
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == ["npm test", "npm run lint"]
+    assert payload["next"]["route_source"] == "live-adapted-target-capability"
     assert payload["target_proof_capabilities"]["package_json"]["scripts"] == ["lint", "test"]
     assert payload["proof_command_adjustments"] == [
         {
@@ -238,7 +292,208 @@ def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_pat
             "reason": "target repo has no Makefile; using package.json script for 'lint' proof",
         },
     ]
-    assert "manual_verification" not in payload
+    assert payload["manual_verification"] is None
+
+
+def test_proof_changed_uses_python_pytest_capability_without_makefile(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "pyproject.toml",
+        """
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+""",
+    )
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["required_commands"] == ["uv run pytest", "uv run ruff check ."]
+    assert payload["target_proof_capabilities"]["python"]["available"] is True
+    assert payload["target_proof_capabilities"]["role_commands"] == {
+        "test": ["uv run pytest"],
+        "lint": ["uv run ruff check ."],
+    }
+    assert payload["proof_command_adjustments"] == [
+        {
+            "lane": "workspace_cli",
+            "command": "make test-workspace",
+            "replacement": "uv run pytest",
+            "reason": "target repo has no Makefile; using detected 'test' proof capability",
+        },
+        {
+            "lane": "workspace_cli",
+            "command": "make lint-workspace",
+            "replacement": "uv run ruff check .",
+            "reason": "target repo has no Makefile; using detected 'lint' proof capability",
+        },
+    ]
+    assert payload["manual_verification"] is None
+
+
+def test_proof_changed_reports_rust_go_and_java_capability_candidates(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "Cargo.toml", '[package]\nname = "demo"\nversion = "0.1.0"\n')
+    _write(tmp_path / "go.mod", "module example.com/demo\n")
+    _write(tmp_path / "pom.xml", "<project />\n")
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "docs/notes.md", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    capabilities = answer["target_proof_capabilities"]
+    assert capabilities["rust"]["available"] is True
+    assert capabilities["go"]["available"] is True
+    assert capabilities["java"]["available"] is True
+    assert capabilities["role_commands"]["test"] == ["cargo test", "go test ./...", "mvn test"]
+    assert capabilities["role_commands"]["lint"] == ["cargo clippy --all-targets --all-features", "go vet ./..."]
+    assert "cargo test" in capabilities["candidate_commands"]
+    assert "go vet ./..." in capabilities["candidate_commands"]
+    assert "mvn test" in capabilities["candidate_commands"]
+
+
+def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run", "lint": "eslint ."}}))
+    _write(
+        tmp_path / ".agentic-workspace" / "proof-route-hints.json",
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-route-hints/v1",
+                "schema_version": "proof-route-hints/v1",
+                "source": "lifecycle-discovery",
+                "rule": "Advisory proof route hints are not host policy; proof selection must live-confirm them before emitting commands.",
+                "hints": [
+                    {
+                        "id": "package-json:test",
+                        "intent_type": "behavior-test",
+                        "candidate_command": "npm test",
+                        "source": "package-json",
+                        "source_path": "package.json",
+                        "confidence": "medium",
+                        "requires_live_confirmation": True,
+                    },
+                    {
+                        "id": "package-json:stale",
+                        "intent_type": "static-check",
+                        "candidate_command": "npm run stale",
+                        "source": "package-json",
+                        "source_path": "package.json",
+                        "confidence": "medium",
+                        "requires_live_confirmation": True,
+                    },
+                ],
+            }
+        ),
+    )
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.ts", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    hints = answer["learned_route_hints"]
+    assert hints["status"] == "loaded"
+    assert hints["confirmed"][0]["candidate_command"] == "npm test"
+    assert hints["confirmed"][0]["confirmation"] == "live-confirmed"
+    assert hints["stale"][0]["candidate_command"] == "npm run stale"
+    assert hints["stale"][0]["confirmation"] == "stale-or-unavailable"
+    decision = answer["proof_route_decision"]
+    assert decision["proof_intents"][0]["kind"] == "proof-intent/v1"
+    assert decision["target_capabilities"]["package_json"]["scripts"] == ["lint", "test"]
+    assert decision["selected_commands"][0]["kind"] == "proof-command/v1"
+    assert decision["proof_execution_evidence"]["status"] == "not-run"
+    assert answer["proof_next_decision"]["warnings"] == ["1 learned route hint(s) are stale or unavailable."]
+
+
+def test_proof_changed_host_policy_disallows_generic_discovered_commands(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run", "lint": "eslint ."}}))
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.proof_profiles.no_npm_test]
+required_commands = []
+optional_commands = []
+review_aids = []
+disallowed_commands = ["npm test"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "proof-route-hints.json",
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-route-hints/v1",
+                "schema_version": "proof-route-hints/v1",
+                "source": "lifecycle-discovery",
+                "rule": "Advisory proof route hints are not host policy; proof selection must live-confirm them before emitting commands.",
+                "hints": [
+                    {
+                        "id": "package-json:test",
+                        "intent_type": "behavior-test",
+                        "candidate_command": "npm test",
+                        "source": "package-json",
+                        "source_path": "package.json",
+                        "confidence": "medium",
+                        "requires_live_confirmation": True,
+                    }
+                ],
+            }
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "in-progress", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json", why_now = "prove host policy precedence." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    record = planning_installer._build_execplan_record_from_todo_item(
+        title="Plan Alpha",
+        item_id="plan-alpha",
+        status="in-progress",
+        why_now="prove host policy precedence.",
+        next_action="run proof selection.",
+        done_when="host policy blocks disallowed command.",
+    )
+    record["adaptive_assurance"] = {
+        "level": "medium",
+        "reason": "host disallows npm test",
+        "proof_profiles": ["no_npm_test"],
+    }
+    planning_installer._write_execplan_record(record_path=record_path, record=record)
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.ts", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["learned_route_hints"]["confirmed"][0]["candidate_command"] == "npm test"
+    assert "npm test" not in answer["required_commands"]
+    assert "npm run lint" in answer["required_commands"]
+    assert answer["configured_policy"][0]["disallowed_commands"] == ["npm test"]
+    assert answer["host_policy_blocked_commands"] == [
+        {
+            "lane": "concern:no_npm_test",
+            "proof_profile": "no_npm_test",
+            "command": "npm test",
+            "configured_command": "npm test",
+            "reason": "host-configured proof profile disallows this command",
+            "selected_by_lane": "workspace_cli",
+        }
+    ]
+    assert answer["proof_route_decision"]["host_policy_blocked_commands"] == answer["host_policy_blocked_commands"]
+    assert answer["proof_next_decision"]["warnings"] == ["Host proof policy blocked one or more candidate proof commands."]
 
 
 def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
@@ -383,6 +638,8 @@ strict_closeout = true
 
 [assurance.proof_profiles.assurance_matrix]
 required_commands = [
+  "selected-command",
+  "run-command",
   "pass-command",
   "fail-command",
   "skip-command",
@@ -426,6 +683,8 @@ candidates = []
         "proof achieved now": "mixed",
         "proof execution evidence": json.dumps(
             [
+                {"command": "selected-command", "status": "selected", "evidence_ref": "local:selected"},
+                {"command": "run-command", "status": "run", "evidence_ref": "local:run"},
                 {"command": "pass-command", "status": "passed", "evidence_ref": "local:pass"},
                 {"command": "fail-command", "status": "failed", "evidence_ref": "local:fail"},
                 {"command": "skip-command", "status": "skipped", "reason": "not applicable"},
@@ -453,7 +712,10 @@ candidates = []
     )
 
     evidence = json.loads(capsys.readouterr().out)["answer"]["planning_assurance"]["trust_state"]["proof_execution_evidence"]
+    assert evidence["state_model"] == ["selected", "run", "passed", "failed", "skipped", "unavailable", "waived", "missing"]
     assert evidence["counts"] == {
+        "selected": 1,
+        "run": 1,
         "passed": 1,
         "failed": 1,
         "skipped": 1,
@@ -461,7 +723,11 @@ candidates = []
         "waived": 1,
         "missing": 2,
     }
-    assert evidence["lower_trust_required_count"] == 5
+    assert evidence["lower_trust_required_count"] == 7
+    selected = next(item for item in evidence["commands"] if item["command"] == "selected-command")
+    assert selected["trust"] == "lower-trust"
+    run = next(item for item in evidence["commands"] if item["command"] == "run-command")
+    assert run["trust"] == "lower-trust"
     waived = next(item for item in evidence["commands"] if item["command"] == "waived-command")
     assert waived["trust"] == "satisfied"
     assert waived["waiver_state"] == "waived-with-reason"

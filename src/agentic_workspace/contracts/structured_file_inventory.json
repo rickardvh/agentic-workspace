@@ -119,6 +119,32 @@
       "checked_in_justification": "Shared aid metadata is durable checked-in state used to prove safety, portability, validation, and promotion criteria."
     },
     {
+      "pattern": ".agentic-workspace/proof-route-hints.json",
+      "format": "json",
+      "owner": "workspace-lifecycle",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/proof_route_hints.schema.json",
+      "editable_by_agents": false,
+      "generated": false,
+      "notes": "Lifecycle-created advisory proof route hints help proof selection avoid rediscovery while requiring live confirmation before command emission.",
+      "storage_class": "local-cache",
+      "checked_in_justification": "Small advisory route cache retained to reduce repeated setup/adopt discovery; host policy remains in config and active planning.",
+      "reconstructable_from": [
+        "Makefile targets",
+        "package.json scripts",
+        "future lifecycle discovery detectors"
+      ],
+      "guardrails": {
+        "max_items": 50,
+        "preferred_refs": [
+          "source_path",
+          "candidate_command",
+          "requires_live_confirmation"
+        ],
+        "routed_to": "#899"
+      }
+    },
+    {
       "pattern": ".agentic-workspace/system-intent/intent.toml",
       "format": "toml",
       "owner": "system-intent",

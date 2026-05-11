@@ -465,6 +465,7 @@ def _cli_compatibility_remediation(
 
 
 SETUP_FINDINGS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["setup_findings_path"])
+PROOF_ROUTE_HINTS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["proof_route_hints_path"])
 _SETUP_FINDINGS_POLICY = setup_findings_policy_manifest()
 SETUP_FINDINGS_KIND = str(_SETUP_FINDINGS_POLICY["accepted_kind"])
 SUPPORTED_SETUP_FINDING_CLASSES = tuple(item["class"] for item in _SETUP_FINDINGS_POLICY["accepted_classes"])
@@ -4492,11 +4493,22 @@ def _run_init(
         _write_prompt_file(prompt_path=prompt_path, prompt_text=prompt_text, dry_run=dry_run)
     if handoff_record is not None and handoff_record_path is not None and not dry_run:
         _write_json_file(destination=handoff_record_path, payload=handoff_record, dry_run=dry_run)
+    proof_route_hints = _proof_route_hints_payload(target_root=target_root)
+    proof_route_hints_path = _proof_route_hints_path(target_root=target_root)
+    should_write_proof_route_hints = bool(proof_route_hints["hints"]) or proof_route_hints_path.exists()
+    if not dry_run and should_write_proof_route_hints:
+        _write_json_file(destination=proof_route_hints_path, payload=proof_route_hints, dry_run=dry_run)
     payload: dict[str, Any] = summary | {
         "dry_run": dry_run,
         "non_interactive": non_interactive,
         "module_reports": reports,
         "config": _config_payload(config=effective_config),
+        "proof_route_hints": {
+            "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
+            "hint_count": len(proof_route_hints["hints"]),
+            "written": not dry_run and should_write_proof_route_hints,
+            "rule": proof_route_hints["rule"],
+        },
     }
     should_include_prompt = print_prompt or prompt_path is not None or summary["prompt_requirement"] != "none"
     if should_include_prompt:
@@ -17541,6 +17553,7 @@ def _setup_payload(
         status_payload=status_payload,
         active_todo_surface=_active_todo_surface(target_root=target_root),
     )
+    proof_route_hints = _load_proof_route_hints(target_root=target_root)
     findings_input = _setup_findings_input_payload(target_root=target_root)
     mature_repo = _repo_looks_setup_mature(target_root=target_root)
     if mature_repo:
@@ -17599,6 +17612,12 @@ def _setup_payload(
             ),
         },
         "analysis_input": findings_input,
+        "proof_route_hints": {
+            "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
+            "status": proof_route_hints["status"],
+            "hint_count": len(proof_route_hints.get("hints", [])),
+            "rule": "Setup reports lifecycle-discovered advisory proof route hints; proof still live-confirms them before command selection.",
+        },
         "next_action": next_action,
         "discovery": discovery,
         "current": {
@@ -17700,6 +17719,26 @@ def _select_proof_payload(
 def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if payload.get("profile") == "compact-contract-answer/v1":
         answer = payload.get("answer", {})
+        if isinstance(answer, dict) and isinstance(answer.get("proof_next_decision"), dict):
+            next_decision = dict(answer["proof_next_decision"])
+            next_decision.setdefault("target", payload.get("target"))
+            next_decision.setdefault("selector", payload.get("selector", {}))
+            next_decision.setdefault("sufficiency", answer.get("sufficiency", {}))
+            if answer.get("proof_command_adjustments"):
+                next_decision["proof_command_adjustments"] = answer["proof_command_adjustments"]
+            if answer.get("unavailable_proof_commands"):
+                next_decision["unavailable_proof_commands"] = answer["unavailable_proof_commands"]
+            if answer.get("target_proof_capabilities") and (
+                answer.get("proof_command_adjustments") or answer.get("unavailable_proof_commands")
+            ):
+                next_decision["target_proof_capabilities"] = answer["target_proof_capabilities"]
+            if answer.get("proof_strategy") and (answer.get("proof_command_adjustments") or answer.get("unavailable_proof_commands")):
+                next_decision["proof_strategy"] = {
+                    "kind": answer.get("proof_strategy", {}).get("kind"),
+                    "selection_order": answer.get("proof_strategy", {}).get("selection_order", []),
+                }
+            next_decision.setdefault("detail_command", "agentic-workspace proof --verbose --changed <paths> --format json")
+            return next_decision
         required_commands = answer.get("required_commands", []) if isinstance(answer, dict) else []
         validation_plan = answer.get("validation_plan", {}) if isinstance(answer, dict) else {}
         primary = validation_plan.get("primary_next_action") if isinstance(validation_plan, dict) else None
@@ -18449,8 +18488,290 @@ def _package_json_scripts(target_root: Path | None) -> dict[str, str]:
     return {str(name): str(command) for name, command in scripts.items() if str(name).strip() and str(command).strip()}
 
 
+def _proof_intent_for_command_name(name: str) -> str | None:
+    if name == "test" or name.startswith("test-"):
+        return "behavior-test"
+    if name == "lint" or name.startswith("lint-") or name == "check":
+        return "static-check"
+    if name == "typecheck" or name == "type-check":
+        return "type-check"
+    if name == "maintainer-surfaces":
+        return "general-check"
+    return None
+
+
+def _proof_route_hints_payload(*, target_root: Path) -> dict[str, Any]:
+    make_targets = _makefile_targets(target_root)
+    package_scripts = _package_json_scripts(target_root)
+    hints: list[dict[str, Any]] = []
+    for target in sorted(make_targets or []):
+        intent_type = _proof_intent_for_command_name(target)
+        if intent_type is None:
+            continue
+        hints.append(
+            {
+                "id": f"make:{target}",
+                "intent_type": intent_type,
+                "candidate_command": f"make {target}",
+                "source": "makefile",
+                "source_path": "Makefile",
+                "confidence": "medium",
+                "requires_live_confirmation": True,
+            }
+        )
+    for script_name in sorted(package_scripts):
+        intent_type = _proof_intent_for_command_name(script_name)
+        if intent_type is None:
+            continue
+        command = "npm test" if script_name == "test" else f"npm run {script_name}"
+        hints.append(
+            {
+                "id": f"package-json:{script_name}",
+                "intent_type": intent_type,
+                "candidate_command": command,
+                "source": "package-json",
+                "source_path": "package.json",
+                "confidence": "medium",
+                "requires_live_confirmation": True,
+            }
+        )
+    return {
+        "kind": "agentic-workspace/proof-route-hints/v1",
+        "schema_version": "proof-route-hints/v1",
+        "source": "lifecycle-discovery",
+        "rule": "Advisory proof route hints are not host policy; proof selection must live-confirm them before emitting commands.",
+        "hints": hints,
+    }
+
+
+def _proof_route_hints_path(*, target_root: Path) -> Path:
+    return target_root / PROOF_ROUTE_HINTS_PATH
+
+
+def _load_proof_route_hints(*, target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {"kind": "learned-proof-route-hints/v1", "status": "unavailable", "hints": []}
+    path = _proof_route_hints_path(target_root=target_root)
+    if not path.is_file():
+        return {"kind": "learned-proof-route-hints/v1", "status": "not-found", "path": PROOF_ROUTE_HINTS_PATH.as_posix(), "hints": []}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "kind": "learned-proof-route-hints/v1",
+            "status": "invalid",
+            "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
+            "reason": str(exc),
+            "hints": [],
+        }
+    raw_hints = payload.get("hints", []) if isinstance(payload, dict) else []
+    if not isinstance(raw_hints, list):
+        raw_hints = []
+    return {
+        "kind": "learned-proof-route-hints/v1",
+        "status": "loaded",
+        "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
+        "hints": [hint for hint in raw_hints if isinstance(hint, dict)],
+    }
+
+
+def _confirm_learned_route_hints(
+    *,
+    learned_hints: dict[str, Any],
+    target_capabilities: dict[str, Any],
+) -> dict[str, Any]:
+    live_commands = set(str(command) for command in target_capabilities.get("candidate_commands", []))
+    confirmed: list[dict[str, Any]] = []
+    stale: list[dict[str, Any]] = []
+    for hint in learned_hints.get("hints", []):
+        command = str(hint.get("candidate_command", "")).strip()
+        record = {
+            "id": str(hint.get("id", "")),
+            "intent_type": str(hint.get("intent_type", "")),
+            "candidate_command": command,
+            "source": str(hint.get("source", "")),
+            "confidence": str(hint.get("confidence", "")),
+            "requires_live_confirmation": bool(hint.get("requires_live_confirmation", True)),
+        }
+        if command and command in live_commands:
+            confirmed.append({**record, "confirmation": "live-confirmed"})
+        else:
+            stale.append({**record, "confirmation": "stale-or-unavailable"})
+    return {
+        **learned_hints,
+        "confirmed": confirmed,
+        "stale": stale,
+        "rule": "Learned route hints can explain or suggest proof routes, but only live-confirmed hints may support command selection.",
+    }
+
+
+def _proof_intent_for_lane(lane: dict[str, Any]) -> dict[str, Any]:
+    proof_kind = str(lane.get("proof_kind", "targeted-test"))
+    if proof_kind in {"targeted-test", "full-test"}:
+        intent_type = "behavior-test"
+    elif proof_kind == "surface-check":
+        intent_type = "static-check"
+    elif proof_kind == "diff-review":
+        intent_type = "docs-diff-review"
+    else:
+        intent_type = "manual-verification"
+    source = "host-config" if lane.get("proof_profile") or lane.get("subsystem") else "changed-paths"
+    return {
+        "kind": "proof-intent/v1",
+        "id": str(lane.get("id", "")),
+        "type": intent_type,
+        "source": source,
+        "reason": str(lane.get("when", "")),
+        "proof_kind": proof_kind,
+    }
+
+
+def _proof_route_source_for_lane(*, lane: dict[str, Any], command: str, adjustments_by_replacement: dict[str, dict[str, str]]) -> str:
+    if lane.get("proof_profile"):
+        return "host-configured-proof-profile"
+    if lane.get("subsystem"):
+        return "host-configured-subsystem"
+    if command in adjustments_by_replacement:
+        return "live-adapted-target-capability"
+    return "live-confirmed-proof-rule"
+
+
+def _proof_next_decision_payload(
+    *,
+    required_commands: list[str],
+    selected_commands: list[dict[str, Any]],
+    unavailable_commands: list[dict[str, Any]],
+    host_policy_blocked_commands: list[dict[str, str]],
+    manual_verification: dict[str, Any] | None,
+    learned_route_hints: dict[str, Any],
+) -> dict[str, Any]:
+    warnings: list[str] = []
+    stale_hints = learned_route_hints.get("stale", []) if isinstance(learned_route_hints, dict) else []
+    if stale_hints:
+        warnings.append(f"{len(stale_hints)} learned route hint(s) are stale or unavailable.")
+    if unavailable_commands:
+        warnings.append("Some selected proof commands are unavailable in this target repo.")
+    if host_policy_blocked_commands:
+        warnings.append("Host proof policy blocked one or more candidate proof commands.")
+    selected = selected_commands[0] if selected_commands else None
+    if selected is not None:
+        next_action = {
+            "action": "run-validation-command",
+            "command": selected["command"],
+            "run": selected["command"],
+            "required": True,
+            "why": f"{selected['intent_type']} intent selected {selected['selected_from']}.",
+            "route_source": selected["selected_from"],
+        }
+    else:
+        summary = None
+        if isinstance(manual_verification, dict):
+            summary = manual_verification.get("summary") or manual_verification.get("reason")
+        next_action = {
+            "action": "manual-verification" if manual_verification else "select-proof-scope",
+            "command": None,
+            "run": None,
+            "required": bool(manual_verification),
+            "why": summary or "No executable proof route was selected.",
+            "route_source": "manual-fallback" if manual_verification else "none",
+        }
+    return {
+        "kind": "proof-next-decision/v1",
+        "next": next_action,
+        "required_commands": required_commands,
+        "manual_verification": (
+            {
+                "status": manual_verification.get("status"),
+                "summary": manual_verification.get("summary") or manual_verification.get("reason"),
+                "templates": manual_verification.get("templates", []),
+            }
+            if isinstance(manual_verification, dict)
+            else None
+        ),
+        "warnings": warnings,
+    }
+
+
+_MANUAL_VERIFICATION_TEMPLATES: dict[str, dict[str, Any]] = {
+    "behavior-test": {
+        "title": "Behavior verification",
+        "trust": "lower-than-executable-proof",
+        "checklist": [
+            "Identify the behavior the changed paths are expected to affect.",
+            "Inspect the implementation path and the user-visible or API-facing result.",
+            "Exercise the smallest available manual scenario or explain why no scenario is available.",
+        ],
+        "evidence_to_record": [
+            "changed behavior inspected",
+            "scenario or reasoning used",
+            "residual risk compared with executable tests",
+        ],
+    },
+    "static-check": {
+        "title": "Static surface verification",
+        "trust": "lower-than-executable-proof",
+        "checklist": [
+            "Inspect the changed declaration, manifest, generated surface, or configuration.",
+            "Compare the changed surface with the owning schema, contract, or documented invariant.",
+            "Record any unchecked generated or downstream consumer risk.",
+        ],
+        "evidence_to_record": [
+            "surface inspected",
+            "owner contract or invariant consulted",
+            "unchecked consumer risk",
+        ],
+    },
+    "docs-diff-review": {
+        "title": "Documentation diff verification",
+        "trust": "review-only",
+        "checklist": [
+            "Compare the diff with the requested documentation outcome.",
+            "Check links, commands, and examples for stale or misleading guidance.",
+            "Record what reader task is now clearer and what remains unproved.",
+        ],
+        "evidence_to_record": [
+            "requested documentation outcome",
+            "reader task checked",
+            "remaining unproved behavior",
+        ],
+    },
+    "manual-verification": {
+        "title": "Task-specific manual verification",
+        "trust": "lower-than-executable-proof",
+        "checklist": [
+            "State the proof intent that lacked a safe executable route.",
+            "Inspect the changed paths against the requested task outcome.",
+            "Record the manual evidence and why executable proof was unavailable.",
+        ],
+        "evidence_to_record": [
+            "proof intent",
+            "manual evidence",
+            "why executable proof was unavailable",
+        ],
+    },
+}
+
+
+def _manual_verification_templates_for_intents(*, proof_intents: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    intent_types = _dedupe(str(intent.get("type", "manual-verification")) for intent in proof_intents if isinstance(intent, dict))
+    if not intent_types:
+        intent_types = ["manual-verification"]
+    templates: list[dict[str, Any]] = []
+    for intent_type in intent_types:
+        template = _MANUAL_VERIFICATION_TEMPLATES.get(intent_type, _MANUAL_VERIFICATION_TEMPLATES["manual-verification"])
+        templates.append(
+            {
+                "kind": "manual-verification-template/v1",
+                "intent_type": intent_type,
+                **template,
+            }
+        )
+    return templates
+
+
 def _target_proof_capabilities(*, target_root: Path | None, make_targets: set[str] | None) -> dict[str, Any]:
     package_scripts = _package_json_scripts(target_root)
+    role_commands = _target_role_command_candidates(target_root=target_root, package_scripts=package_scripts)
     has_makefile = bool(target_root is not None and (target_root / "Makefile").is_file())
     has_package_json = bool(target_root is not None and (target_root / "package.json").is_file())
     capabilities: dict[str, Any] = {
@@ -18465,6 +18786,27 @@ def _target_proof_capabilities(*, target_root: Path | None, make_targets: set[st
             "available": has_package_json,
             "scripts": sorted(package_scripts),
         },
+        "python": {
+            "available": bool(
+                target_root is not None
+                and (
+                    (target_root / "pyproject.toml").is_file() or (target_root / "pytest.ini").is_file() or (target_root / "tests").exists()
+                )
+            ),
+        },
+        "rust": {"available": bool(target_root is not None and (target_root / "Cargo.toml").is_file())},
+        "go": {"available": bool(target_root is not None and (target_root / "go.mod").is_file())},
+        "java": {
+            "available": bool(
+                target_root is not None
+                and (
+                    (target_root / "pom.xml").is_file()
+                    or (target_root / "build.gradle").is_file()
+                    or (target_root / "build.gradle.kts").is_file()
+                )
+            ),
+        },
+        "role_commands": role_commands,
         "rule": (
             "Proof commands are executable only when the target repo exposes a matching capability; otherwise proof selection "
             "must report unavailable commands and ask for task-specific or manual verification."
@@ -18478,6 +18820,8 @@ def _target_proof_capabilities(*, target_root: Path | None, make_targets: set[st
         for target in sorted(make_targets):
             if target in {"test", "lint", "check", "typecheck", "maintainer-surfaces"}:
                 discovered_commands.append(f"make {target}")
+    for commands in role_commands.values():
+        discovered_commands.extend(commands)
     capabilities["candidate_commands"] = _dedupe(discovered_commands)
     return capabilities
 
@@ -18509,12 +18853,54 @@ def _package_script_command_for_role(*, role: str | None, package_scripts: dict[
     return None
 
 
+def _target_role_command_candidates(*, target_root: Path | None, package_scripts: dict[str, str]) -> dict[str, list[str]]:
+    role_commands: dict[str, list[str]] = {"test": [], "lint": [], "check": [], "typecheck": []}
+    if "test" in package_scripts:
+        role_commands["test"].append("npm test")
+    for role in ("lint", "check", "typecheck"):
+        if role in package_scripts:
+            role_commands[role].append(f"npm run {role}")
+    if "check" in package_scripts and "lint" not in package_scripts:
+        role_commands["lint"].append("npm run check")
+    if target_root is None:
+        return {role: _dedupe(commands) for role, commands in role_commands.items() if commands}
+
+    pyproject_path = target_root / "pyproject.toml"
+    pyproject_text = ""
+    if pyproject_path.is_file():
+        try:
+            pyproject_text = pyproject_path.read_text(encoding="utf-8-sig")
+        except OSError:
+            pyproject_text = ""
+    if pyproject_path.is_file() or (target_root / "pytest.ini").is_file() or (target_root / "tests").exists():
+        role_commands["test"].append("uv run pytest")
+    if (
+        (target_root / "ruff.toml").is_file()
+        or (target_root / ".ruff.toml").is_file()
+        or "[tool.ruff" in pyproject_text
+        or "[tool.ruff." in pyproject_text
+    ):
+        role_commands["lint"].append("uv run ruff check .")
+    if (target_root / "Cargo.toml").is_file():
+        role_commands["test"].append("cargo test")
+        role_commands["lint"].append("cargo clippy --all-targets --all-features")
+    if (target_root / "go.mod").is_file():
+        role_commands["test"].append("go test ./...")
+        role_commands["lint"].append("go vet ./...")
+    if (target_root / "pom.xml").is_file():
+        role_commands["test"].append("./mvnw test" if (target_root / "mvnw").is_file() else "mvn test")
+    if (target_root / "build.gradle").is_file() or (target_root / "build.gradle.kts").is_file():
+        role_commands["test"].append("./gradlew test" if (target_root / "gradlew").is_file() else "gradle test")
+    return {role: _dedupe(commands) for role, commands in role_commands.items() if commands}
+
+
 def _adapt_make_proof_command_for_target(
     *,
     command: str,
     target_root: Path | None,
     make_targets: set[str] | None,
     package_scripts: dict[str, str] | None = None,
+    role_commands: dict[str, list[str]] | None = None,
 ) -> tuple[str | None, dict[str, str] | None]:
     target = _target_make_command(command)
     if target is None or target_root is None:
@@ -18523,12 +18909,20 @@ def _adapt_make_proof_command_for_target(
         role=_generic_proof_role_for_make_target(target),
         package_scripts=package_scripts or {},
     )
+    role = _generic_proof_role_for_make_target(target)
+    role_replacement = next(iter((role_commands or {}).get(role or "", [])), None)
     if make_targets is None:
         if script_replacement is not None:
             return script_replacement, {
                 "command": command,
                 "replacement": script_replacement,
                 "reason": f"target repo has no Makefile; using package.json script for {_generic_proof_role_for_make_target(target)!r} proof",
+            }
+        if role_replacement is not None:
+            return role_replacement, {
+                "command": command,
+                "replacement": role_replacement,
+                "reason": f"target repo has no Makefile; using detected {role!r} proof capability",
             }
         return None, {
             "command": command,
@@ -18557,6 +18951,12 @@ def _adapt_make_proof_command_for_target(
             "command": command,
             "replacement": script_replacement,
             "reason": f"target Makefile does not define {target!r}; using package.json script for {_generic_proof_role_for_make_target(target)!r} proof",
+        }
+    if role_replacement is not None:
+        return role_replacement, {
+            "command": command,
+            "replacement": role_replacement,
+            "reason": f"target Makefile does not define {target!r}; using detected {role!r} proof capability",
         }
     return None, {
         "command": command,
@@ -18696,6 +19096,9 @@ def _assurance_item_state(
     }
 
 
+_PROOF_EXECUTION_STATUSES = ("selected", "run", "passed", "failed", "skipped", "unavailable", "waived", "missing")
+
+
 def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[str]) -> dict[str, Any]:
     raw_entries: list[Any]
     if isinstance(declared, dict):
@@ -18711,7 +19114,7 @@ def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[
         command = str(entry.get("command", "")).strip()
         if command:
             by_command[command] = entry
-    statuses = ["passed", "failed", "skipped", "unavailable", "waived", "missing"]
+    statuses = list(_PROOF_EXECUTION_STATUSES)
     counts = {status: 0 for status in statuses}
     command_states: list[dict[str, Any]] = []
     for command in required_commands:
@@ -18722,7 +19125,7 @@ def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[
         reason = str(entry.get("reason", "")).strip()
         evidence_ref = str(entry.get("evidence_ref", entry.get("evidence", ""))).strip()
         waiver_has_reason = status != "waived" or bool(reason or evidence_ref)
-        lowers_trust = status in {"failed", "skipped", "unavailable", "missing"} or not waiver_has_reason
+        lowers_trust = status in {"selected", "run", "failed", "skipped", "unavailable", "missing"} or not waiver_has_reason
         counts[status] += 1
         command_states.append(
             {
@@ -18742,6 +19145,7 @@ def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[
     return {
         "status": "complete" if command_states and lower_trust_count == 0 else ("absent" if not command_states else "attention"),
         "rule": "Selected proof is not executed proof; required commands need compact evidence or an explicit waiver reason.",
+        "state_model": list(_PROOF_EXECUTION_STATUSES),
         "required_command_count": len(command_states),
         "lower_trust_required_count": lower_trust_count,
         "counts": counts,
@@ -18841,14 +19245,50 @@ def _proof_selection_for_changed_paths(
                     "proof_profile": profile.id,
                     "optional_commands": list(profile.optional_commands),
                     "review_aids": list(profile.review_aids),
+                    "disallowed_commands": list(profile.disallowed_commands),
                 }
             )
     selected_lanes.extend(concern_lanes)
     make_targets = _makefile_targets(target_root)
     package_scripts = _package_json_scripts(target_root)
     target_capabilities = _target_proof_capabilities(target_root=target_root, make_targets=make_targets)
+    learned_route_hints = _confirm_learned_route_hints(
+        learned_hints=_load_proof_route_hints(target_root=target_root),
+        target_capabilities=target_capabilities,
+    )
     proof_command_adjustments: list[dict[str, str]] = []
     unavailable_proof_commands: list[dict[str, str]] = []
+    host_policy_disallowed_commands: dict[str, dict[str, str]] = {}
+    for lane in concern_lanes:
+        for raw_command in lane.get("disallowed_commands", []):
+            raw_command_text = str(raw_command).strip()
+            if not raw_command_text:
+                continue
+            candidate_commands = [raw_command_text]
+            adapted_command, _adjustment = _adapt_make_proof_command_for_target(
+                command=raw_command_text,
+                target_root=target_root,
+                make_targets=make_targets,
+                package_scripts=package_scripts,
+                role_commands=target_capabilities.get("role_commands", {}),
+            )
+            if adapted_command is not None:
+                candidate_commands.append(adapted_command)
+            for candidate_command in candidate_commands:
+                resolved_command = str(
+                    _command_with_cli_invoke(
+                        command=_proof_command_for_target(command=candidate_command, target_root=target_root),
+                        cli_invoke=cli_invoke,
+                    )
+                )
+                host_policy_disallowed_commands[resolved_command] = {
+                    "lane": str(lane.get("id", "")),
+                    "proof_profile": str(lane.get("proof_profile", "")),
+                    "command": resolved_command,
+                    "configured_command": raw_command_text,
+                    "reason": "host-configured proof profile disallows this command",
+                }
+    host_policy_blocked_commands: list[dict[str, str]] = []
     for lane in selected_lanes:
         lane["proof_kind"] = _proof_kind_for_lane(lane)
         adapted_commands: list[str] = []
@@ -18858,6 +19298,7 @@ def _proof_selection_for_changed_paths(
                 target_root=target_root,
                 make_targets=make_targets,
                 package_scripts=package_scripts,
+                role_commands=target_capabilities.get("role_commands", {}),
             )
             if adjustment is not None:
                 adjustment = {"lane": str(lane.get("id", "")), **adjustment}
@@ -18867,12 +19308,22 @@ def _proof_selection_for_changed_paths(
                     proof_command_adjustments.append(adjustment)
             if adapted_command is None:
                 continue
-            adapted_commands.append(
+            resolved_command = str(
                 _command_with_cli_invoke(
                     command=_proof_command_for_target(command=adapted_command, target_root=target_root),
                     cli_invoke=cli_invoke,
                 )
             )
+            disallowed = host_policy_disallowed_commands.get(resolved_command)
+            if disallowed is not None:
+                host_policy_blocked_commands.append(
+                    {
+                        **disallowed,
+                        "selected_by_lane": str(lane.get("id", "")),
+                    }
+                )
+                continue
+            adapted_commands.append(resolved_command)
         lane["enough_proof"] = adapted_commands
     required_commands: list[str] = []
     broaden_when: list[str] = []
@@ -18893,6 +19344,123 @@ def _proof_selection_for_changed_paths(
     ]
     if len(executable_lanes) > 1:
         escalate_when.insert(0, str(_PROOF_SELECTION_RULES["cross_lane_escalation"]))
+
+    adjustments_by_replacement = {
+        str(adjustment["replacement"]): adjustment for adjustment in proof_command_adjustments if adjustment.get("replacement")
+    }
+    proof_intents = [_proof_intent_for_lane(lane) for lane in selected_lanes]
+    intent_by_lane_id = {intent["id"]: intent for intent in proof_intents}
+    selected_commands: list[dict[str, Any]] = []
+    for lane in selected_lanes:
+        intent = intent_by_lane_id.get(str(lane.get("id", "")), {})
+        for command in lane.get("enough_proof", []):
+            selected_commands.append(
+                {
+                    "kind": "proof-command/v1",
+                    "command": str(command),
+                    "cwd": ".",
+                    "selected_from": _proof_route_source_for_lane(
+                        lane=lane,
+                        command=str(command),
+                        adjustments_by_replacement=adjustments_by_replacement,
+                    ),
+                    "intent_type": str(intent.get("type", "behavior-test")),
+                    "lane": str(lane.get("id", "")),
+                    "required": True,
+                }
+            )
+    unavailable_commands = [
+        {
+            "kind": "proof-command-unavailable/v1",
+            "command": str(command.get("command", "")),
+            "lane": str(command.get("lane", "")),
+            "reason": str(command.get("reason", "")),
+            **({"replacement": command["replacement"]} if command.get("replacement") else {}),
+        }
+        for command in unavailable_proof_commands
+    ]
+    manual_verification: dict[str, Any] | None = None
+    if not required_commands or unavailable_proof_commands:
+        manual_verification = {
+            "kind": "manual-verification/v1",
+            "status": "required" if not required_commands else "required-for-unavailable-proof",
+            "reason": (
+                "no live-confirmed executable route was selected"
+                if not required_commands
+                else "some selected proof commands are unavailable in this target repo"
+            ),
+            "summary": (
+                "Review changed behavior manually and record evidence because no executable proof route was selected."
+                if not required_commands
+                else "Review unavailable proof expectations manually and record why repo-specific proof is sufficient."
+            ),
+            "instructions": [
+                "Inspect the changed paths against the requested task outcome.",
+                "Use target_proof_capabilities.candidate_commands only if they are relevant to this change.",
+                "Record what was manually checked and why unavailable commands were not required for closeout.",
+            ],
+            "templates": _manual_verification_templates_for_intents(proof_intents=proof_intents),
+            "candidate_commands": target_capabilities.get("candidate_commands", []),
+            "unavailable_commands": unavailable_commands,
+        }
+    proof_execution_evidence = {
+        "kind": "proof-execution-evidence/v1",
+        "status": "not-run",
+        "state_model": list(_PROOF_EXECUTION_STATUSES),
+        "expected_commands": required_commands,
+        "manual_verification_expected": manual_verification is not None,
+        "rule": "Proof selection describes expected proof only; closeout must record what actually ran, failed, was skipped, or was manually verified.",
+    }
+    configured_policy = [
+        {
+            "kind": "proof-profile/v1",
+            "source": "host-config",
+            "id": str(lane.get("proof_profile", "")),
+            "required_commands": list(lane.get("enough_proof", [])),
+            "optional_commands": list(lane.get("optional_commands", [])),
+            "review_aids": list(lane.get("review_aids", [])),
+            "disallowed_commands": [
+                str(
+                    _command_with_cli_invoke(
+                        command=_proof_command_for_target(command=str(command), target_root=target_root),
+                        cli_invoke=cli_invoke,
+                    )
+                )
+                for command in lane.get("disallowed_commands", [])
+            ],
+        }
+        for lane in concern_lanes
+        if lane.get("proof_profile")
+    ]
+    proof_next_decision = _proof_next_decision_payload(
+        required_commands=required_commands,
+        selected_commands=selected_commands,
+        unavailable_commands=unavailable_commands,
+        host_policy_blocked_commands=host_policy_blocked_commands,
+        manual_verification=manual_verification,
+        learned_route_hints=learned_route_hints,
+    )
+    proof_route_decision = {
+        "kind": "proof-route-decision/v1",
+        "selection_order": [
+            "changed paths -> proof intent",
+            "proof intent -> candidate route needs",
+            "host policy/profile overlay",
+            "learned hints",
+            "live capability confirmation",
+            "command/manual selection",
+            "execution evidence expectations",
+        ],
+        "proof_intents": proof_intents,
+        "configured_policy": configured_policy,
+        "learned_route_hints": learned_route_hints,
+        "target_capabilities": target_capabilities,
+        "selected_commands": selected_commands,
+        "unavailable_commands": unavailable_commands,
+        "host_policy_blocked_commands": host_policy_blocked_commands,
+        "manual_verification": manual_verification,
+        "proof_execution_evidence": proof_execution_evidence,
+    }
 
     optional_commands = [
         "agentic-workspace proof --target ./repo --current --format json",
@@ -18942,6 +19510,15 @@ def _proof_selection_for_changed_paths(
             ],
         },
         "target_proof_capabilities": target_capabilities,
+        "learned_route_hints": learned_route_hints,
+        "proof_intents": proof_intents,
+        "configured_policy": configured_policy,
+        "selected_commands": selected_commands,
+        "unavailable_commands": unavailable_commands,
+        "host_policy_blocked_commands": host_policy_blocked_commands,
+        "proof_execution_evidence": proof_execution_evidence,
+        "proof_route_decision": proof_route_decision,
+        "proof_next_decision": proof_next_decision,
         "selected_lanes": [
             {
                 "id": lane["id"],
@@ -18991,18 +19568,13 @@ def _proof_selection_for_changed_paths(
         proof_selection["escalate_when"].append(
             "Some selected proof commands are unavailable in this target repo; choose repo-specific proof before closeout."
         )
-    if not required_commands or unavailable_proof_commands:
-        proof_selection["manual_verification"] = {
-            "kind": "manual-verification-fallback/v1",
-            "status": "required" if not required_commands else "required-for-unavailable-proof",
-            "instructions": [
-                "Inspect the changed paths against the requested task outcome.",
-                "Use target_proof_capabilities.candidate_commands only if they are relevant to this change.",
-                "Record what was manually checked and why unavailable commands were not required for closeout.",
-            ],
-            "candidate_commands": target_capabilities.get("candidate_commands", []),
-            "unavailable_commands": unavailable_proof_commands,
-        }
+    if host_policy_blocked_commands:
+        proof_selection["host_policy_blocked_commands"] = host_policy_blocked_commands
+        proof_selection["escalate_when"].append(
+            "Host-configured proof policy blocked one or more discovered or selected commands; choose allowed repo-specific proof before closeout."
+        )
+    if manual_verification is not None:
+        proof_selection["manual_verification"] = manual_verification
     if config is not None and target_root is not None and include_durable_intent:
         durable_intent = _intent_decision_projection(
             target_root=target_root,
