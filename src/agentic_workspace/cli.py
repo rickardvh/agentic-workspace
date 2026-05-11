@@ -11724,6 +11724,44 @@ def _read_changed_surface_text(*, target_root: Path, changed_paths: list[str], m
     return "\n".join(chunks)
 
 
+def _task_has_removal_intent(task_text: str | None) -> bool:
+    normalized = " ".join(str(task_text or "").lower().split())
+    return any(
+        marker in normalized
+        for marker in (
+            "delete",
+            "deleted",
+            "deleting",
+            "remove",
+            "removed",
+            "removing",
+            "retire",
+            "retired",
+            "retiring",
+            "drop",
+            "dropped",
+            "dropping",
+            "get rid of",
+        )
+    )
+
+
+def _outcome_matches_changed_path(outcome: str, changed_paths: list[str]) -> bool:
+    needle = outcome.lower().strip().strip("`'\".,:;()[]{}")
+    if not needle:
+        return False
+    for raw_path in changed_paths:
+        normalized = str(raw_path).replace("\\", "/").lower().strip("/")
+        if not normalized:
+            continue
+        parts = [part for part in normalized.split("/") if part]
+        if needle == normalized or needle in parts:
+            return True
+        if "/" not in needle and parts and needle == parts[-1]:
+            return True
+    return False
+
+
 def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None) -> dict[str, Any]:
     requested_outcomes = _extract_requested_outcomes(task_text)
     acceptance = _task_acceptance_payload(task_text=task_text, requested_outcomes=requested_outcomes)
@@ -11748,12 +11786,15 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
         }
     surface_text = _read_changed_surface_text(target_root=target_root, changed_paths=changed_paths)
     searchable = surface_text.lower()
-    missing = [item for item in requested_outcomes if item.lower() not in searchable]
+    removal_intent = _task_has_removal_intent(task_text)
+    removed_or_retired = [item for item in requested_outcomes if removal_intent and _outcome_matches_changed_path(item, changed_paths)]
+    missing = [item for item in requested_outcomes if item.lower() not in searchable and item not in removed_or_retired]
     status = "warning" if missing and changed_paths else "clear"
     return {
         "kind": "agentic-workspace/objective-drift/v1",
         "status": status,
         "requested_outcomes": requested_outcomes,
+        "removed_or_retired_outcomes": removed_or_retired,
         "acceptance_item_count": len(acceptance.get("items", [])),
         "acceptance_closeout_rule": acceptance.get("closeout_rule", ""),
         "missing_from_changed_surface": missing,
@@ -11763,7 +11804,10 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
             if status == "warning"
             else "Use acceptance reconciliation before closeout."
         ),
-        "heuristic": "identifier and backtick-term overlap between task text and changed file contents",
+        "heuristic": (
+            "identifier and backtick-term overlap between task text and changed file contents; explicit removal or "
+            "retirement intent may satisfy an outcome through a matching changed path"
+        ),
     }
 
 
@@ -12126,6 +12170,7 @@ def _tiny_objective_drift(value: Any) -> dict[str, Any]:
     return {
         "status": value.get("status", "unknown"),
         "requested_outcomes": value.get("requested_outcomes", []),
+        "removed_or_retired_outcomes": value.get("removed_or_retired_outcomes", []),
         "missing_from_changed_surface": value.get("missing_from_changed_surface", []),
         "recommended_next_action": value.get("recommended_next_action", ""),
     }

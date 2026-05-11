@@ -231,6 +231,61 @@ def test_implement_task_specific_acceptance_warns_on_objective_drift(tmp_path: P
     assert "self-authored tests alone" in acceptance["compact_closeout_prompt"]
 
 
+def test_implement_objective_drift_accepts_explicit_deleted_outcome(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "llms.txt",
+                "--task",
+                "Remove `llms.txt` and replace it with install docs",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    drift = payload["objective_drift"]
+    assert drift["status"] == "clear"
+    assert drift["requested_outcomes"] == ["llms.txt"]
+    assert drift["removed_or_retired_outcomes"] == ["llms.txt"]
+    assert drift["missing_from_changed_surface"] == []
+
+
+def test_implement_objective_drift_keeps_missing_path_without_removal_intent(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "llms.txt",
+                "--task",
+                "Document `llms.txt` behavior",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    drift = payload["objective_drift"]
+    assert drift["status"] == "warning"
+    assert drift["removed_or_retired_outcomes"] == []
+    assert drift["missing_from_changed_surface"] == ["llms.txt"]
+
+
 def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
