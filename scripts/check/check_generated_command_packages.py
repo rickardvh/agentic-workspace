@@ -589,14 +589,14 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"command_package_ir.json package {package_id!r} is missing a Python generated target")
                 continue
             python_target = python_targets[0]
-            if python_target.get("maturity_level_ref") != "runtime-backed-read-only-adapter":
+            if python_target.get("maturity_level_ref") != "weak-agent-safe-adapter":
                 errors.append(
-                    f"command_package_ir.json package {package_id!r} Python target is not runtime-backed; "
+                    f"command_package_ir.json package {package_id!r} Python target is not weak-agent-safe; "
                     f"got {python_target.get('maturity_level_ref')!r}"
                 )
-            if python_target.get("generation_status") != "runtime-backed-read-only-adapter":
+            if python_target.get("generation_status") != "weak-agent-safe-adapter":
                 errors.append(
-                    f"command_package_ir.json package {package_id!r} Python generation_status is not runtime-backed; "
+                    f"command_package_ir.json package {package_id!r} Python generation_status is not weak-agent-safe; "
                     f"got {python_target.get('generation_status')!r}"
                 )
             if package.get("program") != program:
@@ -608,6 +608,14 @@ def _validate_static_surfaces() -> list[str]:
                 )
             if not (REPO_ROOT / generated_root / "generated_cli_package" / "__init__.py").is_file():
                 errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing")
+            else:
+                generated_text = (REPO_ROOT / generated_root / "generated_cli_package" / "__init__.py").read_text(encoding="utf-8")
+                if "def generated_maturity()" not in generated_text:
+                    errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_maturity")
+                if "def generated_weak_agent_routing()" not in generated_text:
+                    errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_weak_agent_routing")
+                if "_GENERATED_WEAK_AGENT_ROUTING = 'allowed-read-only'" not in generated_text:
+                    errors.append(f"{generated_root}/generated_cli_package/__init__.py does not advertise allowed-read-only routing")
         generated_entrypoints = {
             "src/agentic_workspace/cli.py": "agentic_workspace.generated_cli_package",
             "packages/planning/src/repo_planning_bootstrap/cli.py": "repo_planning_bootstrap.generated_cli_package",

@@ -294,8 +294,8 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
 
     assert root_package["program"] == "agentic-workspace"
     assert targets["python"]["test_environment"] == "python-dev"
-    assert targets["python"]["maturity_level_ref"] == "runtime-backed-read-only-adapter"
-    assert targets["python"]["generation_status"] == "runtime-backed-read-only-adapter"
+    assert targets["python"]["maturity_level_ref"] == "weak-agent-safe-adapter"
+    assert targets["python"]["generation_status"] == "weak-agent-safe-adapter"
     assert targets["typescript"]["test_environment"] == "docker"
     assert targets["typescript"]["maturity_level_ref"] == "weak-agent-safe-adapter"
     assert targets["typescript"]["generation_status"] == "weak-agent-safe-adapter"
@@ -607,7 +607,13 @@ def test_command_generation_readme_defines_lift_out_criteria() -> None:
 
 
 def test_generated_python_command_package_metadata_is_current() -> None:
-    from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE, generated_command_names, supports_generated_command
+    from agentic_workspace.generated_cli_package import (
+        GENERATED_COMMAND_PACKAGE,
+        generated_command_names,
+        generated_maturity,
+        generated_weak_agent_routing,
+        supports_generated_command,
+    )
 
     assert GENERATED_COMMAND_PACKAGE["program"] == "agentic-workspace"
     assert {command["adapter_id"] for command in GENERATED_COMMAND_PACKAGE["commands"]} == {
@@ -631,6 +637,14 @@ def test_generated_python_command_package_metadata_is_current() -> None:
     assert {"python", "typescript", "bash", "powershell"} <= target_kinds
     python_target = next(target for target in GENERATED_COMMAND_PACKAGE["targets"] if target["kind"] == "python")
     assert python_target["generated_root"] == "generated/python/workspace-cli"
+    assert python_target["maturity_level_ref"] == "weak-agent-safe-adapter"
+    assert python_target["generation_status"] == "weak-agent-safe-adapter"
+    assert generated_maturity() == {
+        "id": "weak-agent-safe-adapter",
+        "runnable": True,
+        "weak_agent_routing": "allowed-read-only",
+    }
+    assert generated_weak_agent_routing() == "allowed-read-only"
     assert generated_command_names() == (
         "config",
         "defaults",
@@ -666,7 +680,7 @@ def test_generated_python_command_package_metadata_is_current() -> None:
 
 
 def test_generated_python_command_package_parses_and_dispatches_runtime_operations() -> None:
-    from agentic_workspace.generated_cli_package import run_generated_command
+    from agentic_workspace.generated_cli_package import build_generated_parser, run_generated_command
 
     calls: list[tuple[str, str | None, str, str | None]] = []
 
@@ -674,6 +688,9 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
         calls.append((operation_id, getattr(args, "target", None), args.format, getattr(args, "section", None)))
         return 0
 
+    help_text = build_generated_parser().format_help()
+    assert "Weak-agent routing: allowed-read-only" in help_text
+    assert "Recovery: use one of the supported generated commands" in help_text
     assert run_generated_command(["defaults", "--section", "startup", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["config", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["modules", "--target", ".", "--format", "json"], runtime_handler) == 0
@@ -728,7 +745,9 @@ def test_generated_python_command_package_parses_doctor_select() -> None:
 
 
 def test_package_generated_python_command_packages_parse_status_runtime_operations() -> None:
+    from repo_memory_bootstrap.generated_cli_package import generated_maturity as memory_generated_maturity
     from repo_memory_bootstrap.generated_cli_package import run_generated_command as run_memory_generated_command
+    from repo_planning_bootstrap.generated_cli_package import generated_maturity as planning_generated_maturity
     from repo_planning_bootstrap.generated_cli_package import run_generated_command as run_planning_generated_command
 
     calls: list[tuple[str, str | None, str]] = []
@@ -745,6 +764,8 @@ def test_package_generated_python_command_packages_parse_status_runtime_operatio
     assert run_memory_generated_command(["status", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_memory_generated_command(["doctor", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_memory_generated_command(["report", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert planning_generated_maturity()["weak_agent_routing"] == "allowed-read-only"
+    assert memory_generated_maturity()["weak_agent_routing"] == "allowed-read-only"
     assert calls == [
         ("planning.status.report", ".", "json"),
         ("planning.doctor.report", ".", "json"),

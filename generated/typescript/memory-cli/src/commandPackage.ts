@@ -608,9 +608,9 @@ export const generatedCommandPackage = {
         "agentic-memory"
       ],
       "generated_root": "generated/python/memory-cli",
-      "generation_status": "runtime-backed-read-only-adapter",
+      "generation_status": "weak-agent-safe-adapter",
       "kind": "python",
-      "maturity_level_ref": "runtime-backed-read-only-adapter",
+      "maturity_level_ref": "weak-agent-safe-adapter",
       "package_name": "agentic-memory",
       "test_environment": "python-dev"
     },

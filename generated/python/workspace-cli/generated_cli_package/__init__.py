@@ -1667,9 +1667,9 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(
         "agentic-workspace"
       ],
       "generated_root": "generated/python/workspace-cli",
-      "generation_status": "runtime-backed-read-only-adapter",
+      "generation_status": "weak-agent-safe-adapter",
       "kind": "python",
-      "maturity_level_ref": "runtime-backed-read-only-adapter",
+      "maturity_level_ref": "weak-agent-safe-adapter",
       "package_name": "agentic-workspace",
       "test_environment": "python-dev"
     },
@@ -2534,7 +2534,23 @@ _GENERATED_COMMANDS_BY_NAME: dict[str, dict[str, Any]] = {
     str(command["interface"]["name"]): command for command in _GENERATED_ADAPTER_COMMANDS
 }
 
+_GENERATED_MATURITY_ID = 'weak-agent-safe-adapter'
+_GENERATED_WEAK_AGENT_ROUTING = 'allowed-read-only'
+_GENERATED_RUNNABLE = True
+
 RuntimeHandler = Callable[[str, argparse.Namespace], int]
+
+
+def generated_maturity() -> dict[str, object]:
+    return {
+        "id": _GENERATED_MATURITY_ID,
+        "runnable": _GENERATED_RUNNABLE,
+        "weak_agent_routing": _GENERATED_WEAK_AGENT_ROUTING,
+    }
+
+
+def generated_weak_agent_routing() -> str:
+    return _GENERATED_WEAK_AGENT_ROUTING
 
 
 def generated_command_names() -> tuple[str, ...]:
@@ -2574,7 +2590,11 @@ def _add_option(parser: argparse.ArgumentParser, option_spec: dict[str, Any]) ->
 
 
 def build_generated_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="agentic-workspace", description="")
+    epilog = (
+        f"Weak-agent routing: {_GENERATED_WEAK_AGENT_ROUTING}\n"
+        "Recovery: use one of the supported generated commands or route back to the canonical Python CLI."
+    )
+    parser = argparse.ArgumentParser(prog="agentic-workspace", description="", epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
     subparsers = parser.add_subparsers(dest="command", required=True)
     for command in _GENERATED_ADAPTER_COMMANDS:
         interface = command["interface"]

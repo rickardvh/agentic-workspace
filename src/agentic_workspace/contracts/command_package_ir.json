@@ -155,8 +155,8 @@
             "agentic-workspace"
           ],
           "test_environment": "python-dev",
-          "maturity_level_ref": "runtime-backed-read-only-adapter",
-          "generation_status": "runtime-backed-read-only-adapter"
+          "maturity_level_ref": "weak-agent-safe-adapter",
+          "generation_status": "weak-agent-safe-adapter"
         },
         {
           "kind": "typescript",
@@ -1845,8 +1845,8 @@
             "agentic-planning"
           ],
           "test_environment": "python-dev",
-          "maturity_level_ref": "runtime-backed-read-only-adapter",
-          "generation_status": "runtime-backed-read-only-adapter"
+          "maturity_level_ref": "weak-agent-safe-adapter",
+          "generation_status": "weak-agent-safe-adapter"
         },
         {
           "kind": "typescript",
@@ -2331,8 +2331,8 @@
             "agentic-memory"
           ],
           "test_environment": "python-dev",
-          "maturity_level_ref": "runtime-backed-read-only-adapter",
-          "generation_status": "runtime-backed-read-only-adapter"
+          "maturity_level_ref": "weak-agent-safe-adapter",
+          "generation_status": "weak-agent-safe-adapter"
         },
         {
           "kind": "typescript",
