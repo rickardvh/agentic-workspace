@@ -13,10 +13,10 @@
     {
       "id": "canonical-artifact-model",
       "title": "Canonical artifact model",
-      "readiness": "needs-shaping",
+      "readiness": "promoted",
       "outcome": "Define the implementation-independent operation, interface, data, and fixture surfaces that generated command targets consume.",
-      "owner_surface": "",
-      "proof": "Schema and contract tests show command behavior can be represented without target-specific implementation logic.",
+      "owner_surface": "scripts/check/check_generated_command_packages.py",
+      "proof": "Default generated-package static proof validates that each generated command declares conformance refs and projection-boundary ownership across universal, target-specific, and runtime-owned surfaces.",
       "depends_on": [],
       "parallel_with": []
     },

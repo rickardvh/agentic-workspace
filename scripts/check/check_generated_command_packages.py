@@ -300,6 +300,44 @@ def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str
     return errors
 
 
+def _validate_generated_command_projection_boundary(*, package_id: str, command: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    command_payload = command.get("command", {})
+    command_name = (
+        command_payload.get("name", "<unknown>")
+        if isinstance(command_payload, dict)
+        else "<unknown>"
+    )
+    location = f"command_package_ir.json package {package_id!r} command {command_name!r}"
+    conformance_refs = command.get("conformance_refs", [])
+    if not isinstance(conformance_refs, list) or not conformance_refs:
+        errors.append(f"{location} must declare at least one conformance ref")
+    projection_boundary = command.get("projection_boundary", {})
+    if not isinstance(projection_boundary, dict):
+        return [*errors, f"{location} projection_boundary is malformed"]
+    expected_sections = {
+        "universal": ["command identity", "operation reference", "runtime primitive reference", "effect hints", "conformance refs"],
+        "target_specific": ["parser library", "package entrypoint wiring", "help text layout"],
+        "runtime_owned": [],
+    }
+    for section, required_terms in expected_sections.items():
+        values = projection_boundary.get(section, [])
+        if not isinstance(values, list) or not all(isinstance(value, str) for value in values) or not values:
+            errors.append(f"{location} projection_boundary.{section} must be a non-empty string list")
+            continue
+        joined = " | ".join(values)
+        for term in required_terms:
+            if term not in joined:
+                errors.append(f"{location} projection_boundary.{section} is missing {term!r}")
+    target_specific = projection_boundary.get("target_specific", [])
+    if isinstance(target_specific, list):
+        target_text = " | ".join(str(value) for value in target_specific)
+        for runtime_term in ("live workspace inspection", "payload assembly", "runtime primitive", "output emission"):
+            if runtime_term in target_text:
+                errors.append(f"{location} projection_boundary.target_specific contains runtime-owned term {runtime_term!r}")
+    return errors
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -518,6 +556,10 @@ def _validate_static_surfaces() -> list[str]:
         if "Weak agents may use only generated targets" not in routing_rule:
             errors.append("command_package_ir.json maturity routing rule does not protect weak-agent routing")
         packages = {package.get("id"): package for package in ir.get("packages", []) if isinstance(package, dict)}
+        for package_id, package in packages.items():
+            for command in package.get("commands", []):
+                if isinstance(command, dict) and command.get("status") == "generated":
+                    errors.extend(_validate_generated_command_projection_boundary(package_id=str(package_id), command=command))
         expected_python_promotions = {
             "root-workspace": ("agentic-workspace", "generated/python/workspace-cli"),
             "planning-bootstrap": ("agentic-planning", "generated/python/planning-cli"),

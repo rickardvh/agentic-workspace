@@ -114,3 +114,25 @@ def test_typescript_runtime_handoff_thinness_rejects_runtime_owned_behavior() ->
     assert any("imports runtime-owned modules" in error for error in errors)
     assert any("runtime-owned behavior marker: readFile" in error for error in errors)
     assert any("runtime-owned behavior marker: JSON.stringify" in error for error in errors)
+
+
+def test_generated_command_projection_boundary_rejects_target_owned_runtime_behavior() -> None:
+    checker = _load_checker()
+    command = {
+        "status": "generated",
+        "command": {"name": "report"},
+        "conformance_refs": [],
+        "projection_boundary": {
+            "universal": ["command identity", "operation reference", "effect hints"],
+            "target_specific": ["parser library", "payload assembly"],
+            "runtime_owned": ["output emission"],
+        },
+    }
+
+    errors = checker._validate_generated_command_projection_boundary(package_id="root-workspace", command=command)
+
+    assert any("must declare at least one conformance ref" in error for error in errors)
+    assert any("runtime primitive reference" in error for error in errors)
+    assert any("conformance refs" in error for error in errors)
+    assert any("package entrypoint wiring" in error for error in errors)
+    assert any("runtime-owned term 'payload assembly'" in error for error in errors)
