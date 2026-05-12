@@ -19737,6 +19737,20 @@ def _proof_selection_for_changed_paths(
         if lane_id not in selected_ids:
             selected_ids.append(lane_id)
 
+    def generated_command_package_scope() -> str | None:
+        has_python = any(path.startswith("generated/python/") for path in changed_paths)
+        has_typescript = any(path.startswith("generated/typescript/") for path in changed_paths)
+        has_shared_source = any(
+            path in {"src/agentic_workspace/contracts/command_package_ir.json"}
+            or path.startswith("scripts/generate/generate_command_packages.py")
+            for path in changed_paths
+        )
+        if has_python and not has_typescript and not has_shared_source:
+            return "python-only"
+        if has_typescript and not has_python:
+            return "typescript-only"
+        return None
+
     for changed_path in changed_paths:
         matched_rule = False
         for rule in _PROOF_SELECTION_RULES["rules"]:
@@ -19762,7 +19776,21 @@ def _proof_selection_for_changed_paths(
         if cli_authority_lane and _cli_authority_classification_for_path(changed_path):
             _select(str(cli_authority_lane))
 
-    selected_lanes = [_lane(lane_id) for lane_id in selected_ids]
+    selected_lanes = [copy.deepcopy(_lane(lane_id)) for lane_id in selected_ids]
+    generated_scope = generated_command_package_scope()
+    if generated_scope == "python-only":
+        for lane in selected_lanes:
+            if lane["id"] == "generated_command_packages":
+                lane["enough_proof"] = [
+                    "uv run python scripts/check/check_generated_command_packages.py",
+                    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+                    "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+                ]
+                lane["ci_relationship"] = (
+                    "CI may repeat generated-package proof; local Python generated-package closeout should run "
+                    "static, local Python conformance, and Python Docker conformance serially."
+                )
+                break
     subsystem_matches = _subsystem_matches_for_changed_paths(target_root=target_root, changed_paths=changed_paths)
     subsystem_lanes: list[dict[str, Any]] = []
     for subsystem in subsystem_matches["matched_subsystems"]:
