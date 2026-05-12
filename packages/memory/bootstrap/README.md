@@ -189,17 +189,17 @@ Ask one more question before expanding a note: what repo change would let this n
 
 Prefer this flow for existing or older installs:
 
-1. Run `agentic-memory doctor --target <repo>`.
-2. Run `agentic-memory upgrade --dry-run --target <repo>`.
+1. Run `agentic-workspace doctor --target <repo> --modules memory`.
+2. Run `agentic-workspace upgrade --dry-run --target <repo> --modules memory`.
 3. Apply the minimal-safe upgrade plan.
 4. Use `--apply-local-entrypoint` only when you want the installer to patch `AGENTS.md`.
 
 Upgrade is normally triggered through the checked-in `memory-upgrade` skill under `.agentic-workspace/memory/skills/`, which runs the packaged upgrade implementation using the resolved source record in `.agentic-workspace/memory/UPGRADE-SOURCE.toml`. Temporary bootstrap workspace files are for install and adopt lifecycle completion, not the primary upgrade path.
 
-Use `agentic-memory list-files` to preview the packaged files that the installer exposes.
-Use `agentic-memory promotion-report --target <repo>` to identify notes that should likely be promoted into canonical docs or reviewed as elimination candidates.
-Use `agentic-memory promotion-report --mode remediation --target <repo>` to focus on medium/high-confidence remediation targets for shrinking or removing memory.
-Use `agentic-memory doctor --strict-doc-ownership --target <repo>` to force doc-ownership and shadow-doc audits before adopting stricter repo policy.
+Use `agentic-workspace modules --target <repo> --format json` to inspect installed module surfaces.
+Use `agentic-workspace memory promotion-report --target <repo>` to identify notes that should likely be promoted into canonical docs or reviewed as elimination candidates.
+Use `agentic-workspace memory promotion-report --mode remediation --target <repo>` to focus on medium/high-confidence remediation targets for shrinking or removing memory.
+Use `agentic-workspace doctor --target <repo> --modules memory` before adopting stricter repo policy.
 Use `--policy-profile strict-doc-ownership` with `install`, `adopt`, or `upgrade` to set `forbid_core_docs_depend_on_memory = true` in `.agentic-workspace/memory/repo/manifest.toml`.
 
 ## Automation notes

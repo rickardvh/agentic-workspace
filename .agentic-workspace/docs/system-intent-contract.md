@@ -97,7 +97,7 @@ Use:
 - `agentic-workspace defaults --section durable_intent --format json`
 - `agentic-workspace report --target ./repo --section durable_intent --format json`
 - `agentic-workspace summary --format json`
-- `agentic-planning report --format json`
+- `agentic-workspace planning report --format json`
 - `agentic-workspace system-intent --target ./repo --sync --format json`
 
 ## Checked-In Residue Rule

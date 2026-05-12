@@ -65,8 +65,8 @@ Those forms return the compact contract answer profile from [compact-contract-pr
 | Are planning surfaces coherent? | `uv run python scripts/check/check_planning_surfaces.py` | Canonical planning-surface proof |
 | Do maintainer and generated surfaces still agree? | `make maintainer-surfaces` | Cross-surface contract proof |
 | Does source, payload, and root install still line up? | `uv run pytest tests/test_source_payload_operational_install.py` | Explicit boundary proof |
-| Is the root repo on the latest checked-in planning payload? | `uv run agentic-planning upgrade --target .` | Final payload freshness proof |
-| Is the root repo on the latest checked-in memory payload? | `uv run agentic-memory upgrade --target .` | Final payload freshness proof |
+| Is the root repo on the latest checked-in planning payload? | `uv run agentic-workspace upgrade --target . --modules planning` | Final payload freshness proof |
+| Is the root repo on the latest checked-in memory payload? | `uv run agentic-workspace upgrade --target . --modules memory` | Final payload freshness proof |
 
 ## Boundaries
 
@@ -81,4 +81,3 @@ Those forms return the compact contract answer profile from [compact-contract-pr
 - Use [`.agentic-workspace/docs/reporting-contract.md`](reporting-contract.md) for the compact front-door route to combined workspace state.
 - Use [`.agentic-workspace/docs/lifecycle-and-config-contract.md`](lifecycle-and-config-contract.md) when the repo is already in a broken or ambiguous state and you need a recovery sequence.
 - Use [generated-surface-trust.md](generated-surface-trust.md) when the trust question is specifically about generated mirrors and their canonical sources.
-

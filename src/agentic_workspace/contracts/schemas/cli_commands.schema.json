@@ -96,6 +96,10 @@
           "type": "string",
           "description": "Subcommand dest text value used by this contract."
         },
+        "subcommands_required": {
+          "type": "boolean",
+          "description": "Whether a subcommand is required when subcommands are declared."
+        },
         "subcommands": {
           "type": "array",
           "items": {

@@ -748,13 +748,13 @@ def test_start_tiny_routes_prep_only_handoff_to_planning_bridge(tmp_path: Path, 
     payload = json.loads(capsys.readouterr().out)
     action = payload["immediate_next_allowed_action"]
     assert action["action"] == "create-prep-only-planning-state"
-    assert action["command"].startswith("agentic-planning new-plan")
+    assert action["command"].startswith("agentic-workspace planning new-plan")
     assert "--prep-only" in action["command"]
     assert action["next_proof"] == "agentic-workspace summary --verbose --format json"
     assert action["read_first"] == []
     assert "do not create product source" in action["summary"]
     prep_only = payload["prep_only_handoff"]
-    assert prep_only["first_command"].startswith("agentic-planning new-plan")
+    assert prep_only["first_command"].startswith("agentic-workspace planning new-plan")
     assert prep_only["reference_command"] == "agentic-workspace planning --format json"
     assert "--prep-only" in prep_only["preferred_mutation_command_template"]
     assert prep_only["after_write"] == "agentic-workspace summary --verbose --format json"
@@ -796,7 +796,7 @@ def test_start_tiny_routes_groundwork_without_implementation_to_prep_only(tmp_pa
     payload = json.loads(capsys.readouterr().out)
     action = payload["immediate_next_allowed_action"]
     assert action["action"] == "create-prep-only-planning-state"
-    assert action["command"].startswith("agentic-planning new-plan")
+    assert action["command"].startswith("agentic-workspace planning new-plan")
     assert action["read_first"] == []
 
 
@@ -1320,8 +1320,8 @@ def test_memory_consult_uses_local_cli_invoke_for_memory_helpers(tmp_path: Path,
 
     payload = json.loads(capsys.readouterr().out)
     memory_consult = payload["answer"]
-    assert memory_consult["capture_helper"].startswith("uv run agentic-memory capture-note")
-    assert memory_consult["promotion_pressure"]["command"].startswith("uv run agentic-memory promotion-report")
+    assert memory_consult["capture_helper"].startswith("uv run agentic-workspace memory capture-note")
+    assert memory_consult["promotion_pressure"]["command"].startswith("uv run agentic-workspace memory promotion-report")
 
 
 def test_start_reports_blocking_cli_compatibility_drift_without_health_remediation(tmp_path: Path, capsys) -> None:

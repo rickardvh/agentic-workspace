@@ -173,10 +173,10 @@ def test_implement_uses_available_target_makefile_targets(tmp_path: Path, capsys
 def test_cli_invoke_rewrites_package_sibling_commands_when_repo_local() -> None:
     assert (
         cli._command_with_cli_invoke(
-            command="agentic-planning handoff --target . --format json",
+            command="agentic-workspace planning handoff --target . --format json",
             cli_invoke="uv run agentic-workspace",
         )
-        == "uv run agentic-planning handoff --target . --format json"
+        == "uv run agentic-workspace planning handoff --target . --format json"
     )
 
 
@@ -406,7 +406,7 @@ def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: 
     assert posture["delegation_decision"]["config_effect"]["source_path"] == ".agentic-workspace/config.local.toml"
     assert posture["delegation_decision"]["config_effect"]["delegation_mode"] == "manual"
     assert posture["delegation_decision"]["config_effect"]["execution_authority"] == "suggest-or-handoff-only"
-    assert posture["delegation_decision"]["handoff_command"] == "agentic-planning handoff --target . --format json"
+    assert posture["delegation_decision"]["handoff_command"] == "agentic-workspace planning handoff --target . --format json"
     assert posture["delegation_decision"]["handoff_surface"]["required_packet_fields"] == [
         "intent",
         "constraints",
@@ -480,7 +480,7 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
     assert decision["route_obligation"]["must"].startswith("Execute only when local auto mode")
     assert decision["config_effect"]["authority"] == "local-config"
     assert decision["config_effect"]["execution_authority"] == "auto-execution-permitted"
-    assert decision["handoff_command"] == "agentic-planning handoff --target . --format json"
+    assert decision["handoff_command"] == "agentic-workspace planning handoff --target . --format json"
     assert decision["delegation_next_step"]["status"] == "executable"
     assert decision["delegation_next_step"]["must_report_if_not_run"] is True
     assert decision["delegation_next_step"]["execution_methods"] == ["cli"]

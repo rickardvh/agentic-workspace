@@ -23,7 +23,7 @@ Use it when you want the repo to make delegation preference queryable without tu
 
 Use `agentic-workspace defaults --section delegation_posture --format json` for the machine-readable contract surface.
 Use `agentic-workspace defaults --section relay --format json` when the question is how a strong planner hands the compact contract to a bounded executor, especially when routed Memory should supply durable context first.
-Use `agentic-planning handoff --format json` when the question is what the active delegated worker actually needs to read, own, prove, and escalate.
+Use `agentic-workspace planning handoff --format json` when the question is what the active delegated worker actually needs to read, own, prove, and escalate.
 
 ```json
 {
@@ -138,4 +138,3 @@ Each packet must carry task shape, route reason, inspected context, allowed writ
 - Use [`.agentic-workspace/docs/lifecycle-and-config-contract.md`](lifecycle-and-config-contract.md) for the repo-owned config and local override posture that influence delegation preference.
 - Use [`.agentic-workspace/docs/capability-aware-execution.md`](.agentic-workspace/docs/capability-aware-execution.md) for the broader capability-fit decision tree.
 - Use [`orchestrator-workflow-contract.md`](orchestrator-workflow-contract.md) for the delegated planner-to-worker workflow and the active handoff surface.
-

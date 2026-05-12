@@ -1,6 +1,6 @@
 ---
 name: bootstrap-adoption
-description: Add the bootstrap to an existing repository conservatively. Use when a repo does not fully use the `agentic-memory` structure yet and needs `doctor`, `install`, or `adopt` guidance, manual review of local workflow docs, or careful alignment of local docs with the bootstrap model.
+description: Add the Memory bootstrap to an existing repository conservatively. Use when a repo does not fully use the workspace Memory structure yet and needs `doctor`, `install`, or `adopt` guidance, manual review of local workflow docs, or careful alignment of local docs with the bootstrap model.
 ---
 
 # Bootstrap Adoption
@@ -15,7 +15,7 @@ It is an execution layer for applying the memory system. The installed files rem
    - read `AGENTS.md` if it exists
    - check whether `.agentic-workspace/memory/repo/` already exists
    - note any existing repo-local task system without trying to replace it
-2. Run `agentic-memory doctor --target <repo>` to see the current state.
+2. Run `agentic-workspace doctor --target <repo> --modules memory --format json` to see the current state.
 3. Decide which path fits:
    - `install` for general bootstrap application
    - `adopt` when the repo already has local files that should be preserved conservatively
@@ -30,7 +30,7 @@ It is an execution layer for applying the memory system. The installed files rem
    - preserve repo-specific scope and commands
 7. Run `agentic-workspace doctor --target <repo> --format json` and `agentic-workspace report --target <repo> --format json` when you need post-install memory health or recurring-friction visibility.
 8. If adoption finds legacy current-memory files, treat them as migration residue: durable facts move into normal memory notes or canonical docs, active state moves into planning/status, and transient context moves into local-only scratch.
-9. When the CLI can help, prefer the installed `agentic-memory` command. Otherwise use the runner source recorded in `.agentic-workspace/memory/UPGRADE-SOURCE.toml` to print the relevant follow-up command.
+9. When the CLI can help, prefer the root `agentic-workspace` command. Use the package-local Memory CLI only for package debugging when the root command cannot run.
 
 ## Guardrails
 
@@ -46,5 +46,4 @@ It is an execution layer for applying the memory system. The installed files rem
 - safe install or adopt actions applied
 - manually aligned `AGENTS.md` and memory guidance where necessary
 - a clear note about durable-memory surfaces and any legacy current-memory migration residue
-- the exact follow-up using either the installed CLI or the runner source recorded in `.agentic-workspace/memory/UPGRADE-SOURCE.toml`, when it is relevant
-
+- the exact follow-up using the root `agentic-workspace` CLI, when it is relevant

@@ -245,7 +245,7 @@ candidates = []
     assert payload["external_work_state"]["closed_count"] == 1
     assert payload["stale_forward_state"]["closed_roadmap_lanes"][0]["id"] == "closed-lane"
     assert payload["completed_work_reconciliation"]["apply_available"] is True
-    assert payload["completed_work_reconciliation"]["apply_command"] == "agentic-planning reconcile --apply-safe-prune --format json"
+    assert payload["completed_work_reconciliation"]["apply_command"] == "agentic-workspace reconcile --apply-safe-prune --format json"
 
 
 def test_workspace_reconcile_apply_safe_prune_removes_exact_closed_items(tmp_path: Path, capsys) -> None:

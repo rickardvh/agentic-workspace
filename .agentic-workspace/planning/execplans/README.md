@@ -16,7 +16,7 @@ Use `docs/intent-contract.md` and `docs/resumable-execution-contract.md` for the
 Use `docs/execution-summary-contract.md` for the compact outcome shape that completed slices should leave behind before archive.
 Use `archive-plan --apply-cleanup` only when you want the helper to also remove completed active-item references and compress matching roadmap residue for the same archived thread.
 
-After `agentic-planning new-plan`, treat the result as a valid scaffold, not an implementation-ready plan. Before editing product or package files, tighten the concrete goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and `adaptive_assurance` when risk or scope requires it.
+After `agentic-workspace planning new-plan`, treat the result as a valid scaffold, not an implementation-ready plan. Before editing product or package files, tighten the concrete goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and `adaptive_assurance` when risk or scope requires it.
 
 This planning system is for execution. It is not intended to become a generic tracker, backlog database, or Jira replacement.
 
@@ -36,7 +36,7 @@ Flexible fields such as maps and notes are escape hatches for slice-specific res
 
 - Keep active plans at the top level of `.agentic-workspace/planning/execplans/`.
 - Keep only active plans plus `README.md`, `TEMPLATE.md`, and `TEMPLATE.plan.json` at the top level.
-- Close completed plans with `agentic-planning archive-plan <plan> --target . --format json`; default closeout removes the completed execplan after distillation.
+- Close completed plans with `agentic-workspace planning archive-plan <plan> --target . --format json`; default closeout removes the completed execplan after distillation.
 - Mark the active milestone `Status` as `completed` before archiving a finished plan.
 - Before archive, fill `## Proof Report`, `## Intent Satisfaction`, `## Closure Check`, and `## Durable Residue` so proof, intent closure, and future-relevant residue routing are explicit.
 - Keep exactly one active milestone and one immediate next action by default.
@@ -214,7 +214,7 @@ Closure checks belong under `## Closure Check` for completed or nearly-complete 
 - `Evidence carried forward`
 - `Reopen trigger`
 
-Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields; it writes a valid closeout patch from the current record.
+Prefer `agentic-workspace planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields; it writes a valid closeout patch from the current record.
 When hand-editing, use the same terminal values archive validation accepts:
 
 - `Slice status`: one of `complete`, `completed`, or `bounded slice complete`
@@ -326,4 +326,3 @@ Prefer refining the existing contract over inventing a second schema. If a propo
 Default to one active milestone at a time.
 Prefer updating an existing active plan over creating overlapping plan files for the same feature.
 Close and remove completed plans once they no longer affect future execution; retain archives only when audit or compatibility needs are explicit.
-

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import copy
 import difflib
 import fnmatch
 import hashlib
+import io
 import json
 import re
 import shutil
@@ -1130,7 +1132,7 @@ def _command_suggestions(unknown_command: str) -> list[str]:
     if not unknown_command:
         return []
     known_commands = [item["name"] for item in _CLI_COMMANDS_MANIFEST["commands"]]
-    return difflib.get_close_matches(unknown_command, known_commands, n=2, cutoff=0.55)
+    return difflib.get_close_matches(unknown_command, known_commands, n=1, cutoff=0.55)
 
 
 def _build_preflight_token(*, issued_at_epoch: int) -> str:
@@ -1289,7 +1291,10 @@ def _add_manifest_command(subparsers, command_spec: dict[str, Any]) -> None:
         _add_manifest_option(command_parser, option_spec)
     subcommands = command_spec.get("subcommands", [])
     if isinstance(subcommands, list) and subcommands:
-        child_subparsers = command_parser.add_subparsers(dest=str(command_spec.get("subcommand_dest", "subcommand")), required=True)
+        child_subparsers = command_parser.add_subparsers(
+            dest=str(command_spec.get("subcommand_dest", "subcommand")),
+            required=bool(command_spec.get("subcommands_required", True)),
+        )
         for subcommand_spec in subcommands:
             _add_manifest_command(child_subparsers, subcommand_spec)
 
@@ -1320,9 +1325,11 @@ def _workspace_self_adaptation_guardrail_payload() -> dict[str, Any]:
 
 def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
     target_arg = f" --target {target}" if target else " --target ."
-    new_plan_command = f"agentic-planning new-plan --id <id> --title <title>{target_arg} --activate --format json"
-    prep_only_new_plan_command = f"agentic-planning new-plan --id <id> --title <title>{target_arg} --activate --prep-only --format json"
-    promote_command = f"agentic-planning promote-to-plan <item-id>{target_arg} --format json"
+    new_plan_command = f"agentic-workspace planning new-plan --id <id> --title <title>{target_arg} --activate --format json"
+    prep_only_new_plan_command = (
+        f"agentic-workspace planning new-plan --id <id> --title <title>{target_arg} --activate --prep-only --format json"
+    )
+    promote_command = f"agentic-workspace planning promote-to-plan --item-id <item-id>{target_arg} --format json"
     summary_command = f"agentic-workspace summary{target_arg} --verbose --format json"
     return {
         "kind": "agentic-workspace/planning-help/v1",
@@ -1335,7 +1342,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         "lifecycle_commands": [
             new_plan_command,
             promote_command,
-            f"agentic-planning archive-plan <plan>{target_arg} --format json",
+            f"agentic-workspace planning archive-plan --plan <plan>{target_arg} --format json",
         ],
         "post_new_plan_tightening": {
             "rule": "new-plan creates a schema-valid scaffold, not an implementation-ready contract.",
@@ -1428,7 +1435,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         },
         "rules": [
             "Use CLI first for orientation and proof selection.",
-            "Use package lifecycle commands for planning mutations when available.",
+            "Use agentic-workspace planning subcommands for planning mutations.",
             "After new-plan, tighten scaffold fields before implementation.",
             "For ordered roadmap lanes, execute one lane at a time; a lane may use multiple execplans, but an execplan should not span unrelated lanes.",
             "Prefer checked-in Agentic Workspace plans as the shared authority for required planning.",
@@ -1461,7 +1468,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         "unsafe_state_recovery": {
             "inspect": f"agentic-workspace summary{target_arg} --format json",
             "doctor": f"agentic-workspace doctor{target_arg} --format json",
-            "preferred": f"agentic-planning archive-plan <plan>{target_arg} --format json",
+            "preferred": f"agentic-workspace planning archive-plan --plan <plan>{target_arg} --format json",
             "manual_fallback": (
                 "Make the smallest schema-preserving edit to .agentic-workspace/planning/state.toml or the active "
                 "plan, then rerun summary; do not invent reset flags."
@@ -1472,6 +1479,136 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "register the item in .agentic-workspace/planning/state.toml, then rerun summary."
         ),
     }
+
+
+def _memory_help_payload(*, target: str | None = None) -> dict[str, Any]:
+    target_arg = f" --target {target}" if target else " --target ."
+    return {
+        "kind": "agentic-workspace/memory-help/v1",
+        "summary": "Memory operations are routed through the workspace front door for host-repo agents.",
+        "commands": [
+            f"agentic-workspace memory route{target_arg} --files <paths> --format json",
+            f"agentic-workspace memory sync-memory{target_arg} --files <paths> --format json",
+            f"agentic-workspace memory promotion-report{target_arg} --notes <notes> --format json",
+            f"agentic-workspace memory capture-note{target_arg} --slug <slug> --summary <text> --files <paths> --format json",
+            f"agentic-workspace memory report{target_arg} --format json",
+        ],
+        "rules": [
+            "Use agentic-workspace memory subcommands for ordinary host-repo Memory routing and capture.",
+            "Use package-local module CLIs only for package maintenance or debugging when the root workspace command cannot run.",
+        ],
+    }
+
+
+def _print_memory_help(payload: dict[str, Any]) -> None:
+    print(payload["summary"])
+    print("")
+    print("Memory commands:")
+    for command in payload["commands"]:
+        print(f"- {command}")
+    print("")
+    print("Rules:")
+    for rule in payload["rules"]:
+        print(f"- {rule}")
+
+
+def _append_option(argv: list[str], name: str, value: Any) -> None:
+    if value is not None and value != "" and value != []:
+        argv.extend([name, str(value)])
+
+
+def _append_repeated_option(argv: list[str], name: str, values: Any) -> None:
+    if isinstance(values, list) and values:
+        argv.append(name)
+        argv.extend(str(value) for value in values)
+
+
+def _append_flag(argv: list[str], name: str, enabled: bool) -> None:
+    if enabled:
+        argv.append(name)
+
+
+def _planning_module_argv(args: argparse.Namespace) -> list[str]:
+    command = str(args.planning_command)
+    argv = [command]
+    if command == "promote-to-plan":
+        argv.append(str(args.item_id))
+    elif command == "archive-plan" and getattr(args, "plan", None):
+        argv.append(str(args.plan))
+    for option, attr in (
+        ("--id", "id"),
+        ("--title", "title"),
+        ("--source", "source"),
+        ("--target", "target"),
+        ("--plan-slug", "plan_slug"),
+        ("--parent-lane-closeout", "parent_lane_closeout"),
+        ("--closure-decision", "closure_decision"),
+        ("--intent-satisfied", "intent_satisfied"),
+        ("--unsolved-intent", "unsolved_intent"),
+        ("--intent-evidence", "intent_evidence"),
+        ("--closure-reason", "closure_reason"),
+        ("--closure-evidence", "closure_evidence"),
+        ("--reopen-trigger", "reopen_trigger"),
+        ("--discard-summary", "discard_summary"),
+        ("--continuation-summary", "continuation_summary"),
+    ):
+        _append_option(argv, option, getattr(args, attr, None))
+    for option, attr in (
+        ("--activate", "activate"),
+        ("--queue", "queue"),
+        ("--switch-active", "switch_active"),
+        ("--prep-only", "prep_only"),
+        ("--overwrite", "overwrite"),
+        ("--dry-run", "dry_run"),
+        ("--apply-cleanup", "apply_cleanup"),
+        ("--prepare-closeout", "prepare_closeout"),
+        ("--retain-archive", "retain_archive"),
+        ("--verbose", "verbose"),
+    ):
+        _append_flag(argv, option, bool(getattr(args, attr, False)))
+    _append_option(argv, "--format", getattr(args, "format", None))
+    return argv
+
+
+def _memory_module_argv(args: argparse.Namespace) -> list[str]:
+    command = str(args.memory_command)
+    argv = [command]
+    if command == "capture-note" and getattr(args, "slug", None):
+        argv.append(str(args.slug))
+    for option, attr in (
+        ("--target", "target"),
+        ("--summary", "summary"),
+        ("--existing-note", "existing_note"),
+        ("--force-new-reason", "force_new_reason"),
+        ("--mode", "mode"),
+    ):
+        _append_option(argv, option, getattr(args, attr, None))
+    _append_repeated_option(argv, "--files", getattr(args, "files", None))
+    _append_repeated_option(argv, "--surface", getattr(args, "surfaces", None))
+    _append_repeated_option(argv, "--notes", getattr(args, "notes", None))
+    _append_flag(argv, "--verbose", bool(getattr(args, "verbose", False)))
+    _append_option(argv, "--format", getattr(args, "format", None))
+    return argv
+
+
+def _run_planning_front_door(args: argparse.Namespace) -> int:
+    from repo_planning_bootstrap.cli import main as planning_main
+
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        result = planning_main(_planning_module_argv(args))
+    print(buffer.getvalue().replace("agentic-planning ", "agentic-workspace planning "), end="")
+    return result
+
+
+def _run_memory_front_door(args: argparse.Namespace) -> int:
+    from repo_memory_bootstrap.cli import main as memory_main
+
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        result = memory_main(_memory_module_argv(args))
+    print(buffer.getvalue().replace("agentic-memory ", "agentic-workspace memory "), end="")
+    return result
 
 
 def _print_planning_help(payload: dict[str, Any]) -> None:
@@ -2196,11 +2333,29 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(str(exc))
 
     if args.command == "planning":
+        if getattr(args, "planning_command", None):
+            try:
+                return _run_planning_front_door(args)
+            except ImportError:
+                parser.error("The planning module must be installed to use planning subcommands.")
         payload = _planning_help_payload(target=args.target)
         if args.format == "json":
             print(json.dumps(payload, indent=2))
         else:
             _print_planning_help(payload)
+        return 0
+
+    if args.command == "memory":
+        if getattr(args, "memory_command", None):
+            try:
+                return _run_memory_front_door(args)
+            except ImportError:
+                parser.error("The memory module must be installed to use memory subcommands.")
+        payload = _memory_help_payload(target=args.target)
+        if args.format == "json":
+            print(json.dumps(payload, indent=2))
+        else:
+            _print_memory_help(payload)
         return 0
 
     if args.command == "summary":
@@ -2258,6 +2413,7 @@ def main(argv: list[str] | None = None) -> int:
                     )
                     if closeout_inspection["status"] in {"required", "clear"}:
                         summary["closeout_trust_inspection"] = closeout_inspection
+                summary = _rewrite_module_cli_commands(summary)
                 if args.format == "json":
                     print(format_summary_json(summary))
                 else:
@@ -2503,6 +2659,7 @@ def main(argv: list[str] | None = None) -> int:
             apply_safe_prune=bool(getattr(args, "apply_safe_prune", False)),
             dry_run=bool(getattr(args, "dry_run", False)),
         )
+        payload = _rewrite_module_cli_commands(payload)
         if args.format == "json":
             _emit_payload(payload=payload, format_name=args.format)
         else:
@@ -2563,6 +2720,7 @@ def main(argv: list[str] | None = None) -> int:
             )
         except WorkspaceUsageError as exc:
             parser.error(str(exc))
+        payload = _rewrite_module_cli_commands(payload)
         _emit_payload(payload=payload, format_name=args.format)
         return 0
 
@@ -3629,6 +3787,10 @@ def _local_only_state_text() -> str:
 
 def _local_only_state_path(*, target_root: Path) -> Path:
     return target_root / LOCAL_ONLY_STATE_FILE
+
+
+def _has_local_only_workspace_state(*, target_root: Path) -> bool:
+    return _local_only_state_path(target_root=target_root).exists()
 
 
 def _local_agent_instructions_text(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> str:
@@ -4910,6 +5072,8 @@ def _run_lifecycle_command(
     config: WorkspaceConfig,
     compact_status: bool = True,
 ) -> dict[str, Any]:
+    if command_name == "upgrade" and local_only_repo_root is None and _has_local_only_workspace_state(target_root=target_root):
+        local_only_repo_root = target_root
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     reports = [
         _normalize_module_report_startup_paths(
@@ -4939,7 +5103,7 @@ def _run_lifecycle_command(
         reports.append(
             _workspace_init_or_upgrade_report(
                 target_root=target_root,
-                local_only_repo_root=None,
+                local_only_repo_root=local_only_repo_root,
                 selected_modules=selected_modules,
                 resolved_preset=resolved_preset,
                 descriptors=descriptors,
@@ -7045,23 +7209,9 @@ def _operational_compression_payload(
     }
 
 
-def _sibling_cli_command_with_invoke(*, command: str, workspace_cli_invoke: str, sibling_program: str) -> str:
-    if not command.startswith(sibling_program):
-        return command
-    if workspace_cli_invoke == DEFAULT_CLI_INVOKE:
-        return command
-    parts = workspace_cli_invoke.split()
-    if parts and parts[-1] == DEFAULT_CLI_INVOKE:
-        return " ".join([*parts[:-1], sibling_program]) + command.removeprefix(sibling_program)
-    return command
-
-
 def _memory_command_with_invoke(*, command: str, workspace_cli_invoke: str) -> str:
-    return _sibling_cli_command_with_invoke(
-        command=command,
-        workspace_cli_invoke=workspace_cli_invoke,
-        sibling_program="agentic-memory",
-    )
+    command = command.replace("agentic-memory ", "agentic-workspace memory ", 1)
+    return str(_command_with_cli_invoke(command=command, cli_invoke=workspace_cli_invoke))
 
 
 def _memory_payload_commands_with_invoke(*, value: Any, workspace_cli_invoke: str) -> Any:
@@ -7074,6 +7224,20 @@ def _memory_payload_commands_with_invoke(*, value: Any, workspace_cli_invoke: st
             key: _memory_payload_commands_with_invoke(value=nested, workspace_cli_invoke=workspace_cli_invoke)
             for key, nested in value.items()
         }
+    return value
+
+
+def _rewrite_module_cli_commands(value: Any) -> Any:
+    if isinstance(value, str):
+        value = value.replace("agentic-planning reconcile ", "agentic-workspace reconcile ")
+        value = value.replace("agentic-planning summary ", "agentic-workspace summary ")
+        value = value.replace("agentic-planning ", "agentic-workspace planning ")
+        value = value.replace("agentic-memory ", "agentic-workspace memory ")
+        return value
+    if isinstance(value, list):
+        return [_rewrite_module_cli_commands(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _rewrite_module_cli_commands(nested) for key, nested in value.items()}
     return value
 
 
@@ -7159,7 +7323,7 @@ def _memory_consult_payload(
         "route_matches": route_actions[:max_notes],
         "evidence": evidence if isinstance(evidence, dict) else {},
         "capture_helper": _memory_command_with_invoke(
-            command="agentic-memory capture-note <slug> --target ./repo --summary <text> --files <changed paths> --format json",
+            command="agentic-workspace memory capture-note --slug <slug> --target ./repo --summary <text> --files <changed paths> --format json",
             workspace_cli_invoke=cli_invoke,
         ),
         "promotion_pressure": _memory_payload_commands_with_invoke(value=promotion_pressure, workspace_cli_invoke=cli_invoke),
@@ -10266,7 +10430,23 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         projected["cli_compatibility"] = cli_compatibility
     maintainer_mode = payload.get("maintainer_mode", {})
     if isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled":
-        projected["maintainer_mode"] = maintainer_mode
+        primary_next_action = maintainer_mode.get("primary_next_action", {})
+        projected["maintainer_mode"] = {
+            "kind": maintainer_mode.get("kind"),
+            "status": maintainer_mode.get("status"),
+            "source": maintainer_mode.get("source"),
+            "config_field": maintainer_mode.get("config_field"),
+            "dogfooding_reports": [
+                {key: route.get(key) for key in ("section", "command") if isinstance(route, dict) and key in route}
+                for route in maintainer_mode.get("dogfooding_reports", [])[:3]
+                if isinstance(route, dict)
+            ],
+            "primary_next_action": {
+                key: primary_next_action.get(key)
+                for key in ("action", "summary", "command", "risk")
+                if isinstance(primary_next_action, dict) and key in primary_next_action
+            },
+        }
     closeout_inspection = payload.get("closeout_trust_inspection", {})
     if isinstance(closeout_inspection, dict) and closeout_inspection.get("status") in {"required", "clear"}:
         projected["closeout_trust_inspection"] = closeout_inspection
@@ -10449,24 +10629,64 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
         compact["target"] = value.get("target")
         compact["reason"] = value.get("reason")
     decomposition_delegation = value.get("decomposition_delegation")
-    if (
+    delegation_candidates = [item for item in value.get("delegation_candidates", []) if isinstance(item, dict)]
+    include_decomposition = (
         isinstance(decomposition_delegation, dict)
-        and decomposition_delegation.get("status")
-        in {
-            "present",
-            "available-without-active-planning",
-        }
-        and (decision == "suggest-delegation" or decomposition_delegation.get("status") == "present")
-    ):
+        and decomposition_delegation.get("status") in {"present", "available-without-active-planning"}
+        and (decision == "suggest-delegation" or 0 < len(delegation_candidates) <= 2)
+    )
+    if include_decomposition:
         compact["decomposition_delegation"] = {
             key: decomposition_delegation.get(key)
-            for key in ("kind", "status", "reason", "candidate_count", "candidates", "rule")
+            for key in ("kind", "status", "reason", "candidate_count", "rule")
             if key in decomposition_delegation
         }
-        compact["delegation_candidates"] = list(value.get("delegation_candidates", []))[:5]
+        candidates = [item for item in decomposition_delegation.get("candidates", []) if isinstance(item, dict)]
+        if candidates:
+            compact["decomposition_delegation"]["candidates"] = [
+                {
+                    key: candidate.get(key)
+                    for key in (
+                        "lane_id",
+                        "title",
+                        "readiness",
+                        "owner_surface",
+                        "route_candidate",
+                        "proof",
+                    )
+                    if key in candidate
+                }
+                for candidate in candidates[:2]
+            ]
+    if delegation_candidates and (decision == "suggest-delegation" or include_decomposition):
+        compact["delegation_candidates"] = [
+            {
+                key: candidate.get(key)
+                for key in (
+                    "lane_id",
+                    "title",
+                    "readiness",
+                    "owner_surface",
+                    "route_candidate",
+                    "proof",
+                )
+                if key in candidate
+            }
+            for candidate in delegation_candidates[:2]
+        ]
     auto_delegation_audit = value.get("auto_delegation_audit")
     if isinstance(auto_delegation_audit, dict) and auto_delegation_audit.get("status") == "skipped":
-        compact["auto_delegation_audit"] = auto_delegation_audit
+        compact["auto_delegation_audit"] = {
+            key: auto_delegation_audit.get(key)
+            for key in ("kind", "status", "configured_mode", "effective_mode", "execution_permitted", "must_report_if_not_run")
+            if key in auto_delegation_audit
+        }
+        skipped_targets = [item for item in auto_delegation_audit.get("skipped_targets", []) if isinstance(item, dict)]
+        if skipped_targets and (decision != "stay-local" or include_decomposition):
+            compact["auto_delegation_audit"]["skipped_targets"] = [
+                {key: target.get(key) for key in ("name", "reasons", "execution_methods") if key in target}
+                for target in skipped_targets[:2]
+            ]
     if (
         isinstance(manual_external_relay, dict)
         and manual_external_relay.get("target_kind") == "manual-external"
@@ -10475,11 +10695,6 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
         relay = manual_external_relay
         compact["manual_external_relay"] = {
             key: relay.get(key) for key in ("kind", "status", "target_kind", "target", "interrupt_cost", "reason", "rule") if key in relay
-        }
-    if decision == "stay-local" and value.get("required_next_action") == "continue-local":
-        compact["delegation_sufficiency"] = {
-            "decision": "stay-local",
-            "reason": "No target is expected to improve quality or reduce tokens safely for this step.",
         }
     if decision in {"suggest-delegation", "suggest-escalation", "delegate-bounded-slice", "manual-handoff", "ask-human"}:
         if value.get("handoff_command"):
@@ -10729,7 +10944,7 @@ def _prep_only_handoff_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     planning_command = _command_with_cli_invoke(command="agentic-workspace planning --format json", cli_invoke=config.cli_invoke)
     summary_command = _command_with_cli_invoke(command="agentic-workspace summary --verbose --format json", cli_invoke=config.cli_invoke)
     new_plan_template = _command_with_cli_invoke(
-        command="agentic-planning new-plan --id <id> --title <title> --target . --activate --prep-only --format json",
+        command="agentic-workspace planning new-plan --id <id> --title <title> --target . --activate --prep-only --format json",
         cli_invoke=config.cli_invoke,
     )
     return {
@@ -13156,7 +13371,7 @@ def _delegation_next_action_decision(
     }:
         if not decomposition_only_delegation:
             handoff_command = _command_with_cli_invoke(
-                command="agentic-planning handoff --target . --format json",
+                command="agentic-workspace planning handoff --target . --format json",
                 cli_invoke=config.cli_invoke,
             )
     if decision in {"manual-handoff", "ask-human"}:
@@ -13208,7 +13423,7 @@ def _delegation_next_action_decision(
             delegation_next_step.update(
                 {
                     "handoff_contract_status": "unavailable-without-active-planning",
-                    "precondition": "Select or promote a bounded lane before running agentic-planning handoff.",
+                    "precondition": "Select or promote a bounded lane before running agentic-workspace planning handoff.",
                 }
             )
 
@@ -13223,7 +13438,7 @@ def _delegation_next_action_decision(
         must_not = "Do not treat the suggestion as optional background when the route is capability-driven."
     elif required_next_action == "select-or-promote-bounded-lane":
         must = "Select or promote a bounded lane before preparing a worker handoff packet."
-        must_not = "Do not run agentic-planning handoff until an active execplan or handoff contract exists."
+        must_not = "Do not run agentic-workspace planning handoff until an active execplan or handoff contract exists."
     elif required_next_action == "execute-when-safe":
         must = "Execute only when local auto mode, target profile, scope, and proof constraints all remain satisfied."
         must_not = "Do not widen scope, lower proof, or use a target outside its configured execution methods."
@@ -13666,13 +13881,12 @@ def _command_with_cli_invoke(*, command: str | None, cli_invoke: str) -> str | N
         return None
     if command == "agentic-workspace" or command.startswith("agentic-workspace "):
         return f"{cli_invoke}{command.removeprefix('agentic-workspace')}"
-    for sibling_program in ("agentic-planning", "agentic-memory"):
-        if command == sibling_program or command.startswith(f"{sibling_program} "):
-            return _sibling_cli_command_with_invoke(
-                command=command,
-                workspace_cli_invoke=cli_invoke,
-                sibling_program=sibling_program,
-            )
+    if command == "agentic-planning" or command.startswith("agentic-planning "):
+        mapped = command.replace("agentic-planning ", "agentic-workspace planning ", 1)
+        return _command_with_cli_invoke(command=mapped, cli_invoke=cli_invoke)
+    if command == "agentic-memory" or command.startswith("agentic-memory "):
+        mapped = command.replace("agentic-memory ", "agentic-workspace memory ", 1)
+        return _command_with_cli_invoke(command=mapped, cli_invoke=cli_invoke)
     return command
 
 
@@ -15053,7 +15267,7 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
                     "The effective posture reports both a strong planner and a cheap bounded executor.",
                     "The delegated worker handoff can stay canonical even if execution remains internal, external, or direct.",
                 ],
-                "consult": ["agentic-planning handoff --format json"],
+                "consult": ["agentic-workspace planning handoff --format json"],
                 "allowed_execution_methods": handoff_contract.get("worker_contract", {}).get(
                     "allowed_execution_methods",
                     ["internal delegation", "external cli or api", "single-agent fallback"],
@@ -15466,7 +15680,7 @@ def _relay_contract_payload() -> dict[str, Any]:
         "selection_rule": (
             "Use the effective mixed-agent posture from agentic-workspace config, then keep the same handoff contract whether execution stays internal, external over cli or api, or direct."
         ),
-        "handoff_command": "agentic-planning handoff --format json",
+        "handoff_command": "agentic-workspace planning handoff --format json",
         "planner_role": {
             "summary": "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract.",
             "does": [
@@ -16898,7 +17112,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "the trust question is planning-surface shape or drift only",
             ],
             "enough_proof": [
-                "agentic-planning summary --target ./repo --verbose --format json",
+                "agentic-workspace summary --target ./repo --verbose --format json",
                 "agentic-workspace doctor --target ./repo --modules planning --format json",
             ],
             "proof_responsibility": "local-closeout",
@@ -16965,7 +17179,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "rule": "Choose the smallest workflow shape before implementation; when Planning is installed, broad work should become checked-in planning before edits.",
                 "planning_mutation_rule": (
                     "Use compact CLI for orientation and proof selection; use package lifecycle commands such as "
-                    "`agentic-planning new-plan`, `promote-to-plan`, and `archive-plan` for planning mutations when available; "
+                    "`agentic-workspace planning new-plan`, `promote-to-plan`, and `archive-plan` for planning mutations when available; "
                     "edit checked-in planning records directly only for bounded content/fallback edits, then rerun summary."
                 ),
                 "levels": [
@@ -17899,8 +18113,8 @@ def _defaults_payload() -> dict[str, Any]:
                 "agentic-workspace config --target ./repo --format json",
             ],
             "refresh_contract": [
-                "uv run agentic-planning upgrade --target .",
-                "uv run agentic-memory upgrade --target .",
+                "uv run agentic-workspace upgrade --target . --modules planning",
+                "uv run agentic-workspace upgrade --target . --modules memory",
             ],
             "handoff_surfaces": [
                 ".agentic-workspace/bootstrap-handoff.md",
@@ -18720,6 +18934,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             )
             if closeout_inspection["status"] in {"required", "clear"}:
                 summary["closeout_trust_inspection"] = closeout_inspection
+        summary = _rewrite_module_cli_commands(summary)
         if args.format == "json":
             print(format_summary_json(summary))
         else:
@@ -18848,6 +19063,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             descriptors=descriptors,
             config=config,
         )
+        payload = _rewrite_module_cli_commands(payload)
         _emit_payload(payload=payload, format_name=args.format)
         return 0
     payload = _run_report_command(
@@ -18862,6 +19078,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
         profile=profile,
         section=section,
     )
+    payload = _rewrite_module_cli_commands(payload)
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 
@@ -18878,6 +19095,7 @@ def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
         apply_safe_prune=bool(getattr(args, "apply_safe_prune", False)),
         dry_run=bool(getattr(args, "dry_run", False)),
     )
+    payload = _rewrite_module_cli_commands(payload)
     if args.format == "json":
         _emit_payload(payload=payload, format_name=args.format)
     else:

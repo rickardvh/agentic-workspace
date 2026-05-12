@@ -17,7 +17,7 @@ Use it when work is broad enough to benefit from stronger planning first and a b
 3. `agentic-workspace summary --target . --format json`
 4. `agentic-workspace config --target . --format json`
 5. `agentic-workspace defaults --section relay --format json`
-6. `agentic-planning handoff --format json`
+6. `agentic-workspace planning handoff --format json`
 
 Open `.agentic-workspace/planning/state.toml` or the active execplan only when these compact outputs point there, or when the orchestrator is maintaining the checked-in planning record directly.
 
@@ -26,7 +26,7 @@ Open `.agentic-workspace/planning/state.toml` or the active execplan only when t
 1. Confirm the task is planning-backed and bounded enough for delegation.
 2. Inspect the effective mixed-agent posture from local config.
 3. Stay direct when delegation is unsupported or would cost more than it saves.
-4. When delegation is worthwhile, derive the worker contract from `agentic-planning handoff --format json`.
+4. When delegation is worthwhile, derive the worker contract from `agentic-workspace planning handoff --format json`.
 5. Choose any execution method that preserves that contract:
    - internal delegation when the environment supports it and prefers it
    - external CLI or API handoff when another executor is cheaper or more available
@@ -67,4 +67,3 @@ For each orchestrated run, record:
 - what the handoff contract contained
 - what overhead remained
 - what workflow improvement signal, if any, should survive in checked-in planning or review residue
-

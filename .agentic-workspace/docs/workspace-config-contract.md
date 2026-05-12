@@ -105,8 +105,8 @@ Command output owns the first live answer; docs explain the contract behind that
 | Which proof should run? | `agentic-workspace proof --changed <paths> --format json` | `.agentic-workspace/docs/proof-surfaces-contract.md` | repo check scripts, package/module proof docs |
 | Which config or local invocation matters? | `agentic-workspace config --target ./repo --format json --select <field>` | `.agentic-workspace/docs/workspace-config-contract.md` | `.agentic-workspace/config.toml`, `.agentic-workspace/config.local.toml` |
 | Who owns a surface? | `agentic-workspace ownership --target ./repo --path <path> --format json` | `.agentic-workspace/docs/ownership-authority-contract.md` | `.agentic-workspace/OWNERSHIP.toml` |
-| Which durable memory is relevant? | `agentic-memory route --task "<task>" --format json` or workspace memory routing when exposed | `.agentic-workspace/memory/WORKFLOW.md` | routed memory notes only |
-| How should a slice close out? | `agentic-planning archive-plan <plan> --prepare-closeout --format json` | `.agentic-workspace/docs/execution-flow-contract.md` | active execplan closeout fields, issue comments |
+| Which durable memory is relevant? | `agentic-workspace memory route --task "<task>" --format json` | `.agentic-workspace/memory/WORKFLOW.md` | routed memory notes only |
+| How should a slice close out? | `agentic-workspace planning archive-plan <plan> --prepare-closeout --format json` | `.agentic-workspace/docs/execution-flow-contract.md` | active execplan closeout fields, issue comments |
 | Which module lifecycle repair is needed? | `agentic-workspace doctor --target ./repo --format json` | `.agentic-workspace/docs/lifecycle-and-config-contract.md` | module doctor reports and managed payload files |
 
 Before adding a new startup, routing, proof, closeout, or lifecycle surface, name which row it replaces, merges, demotes, or removes.

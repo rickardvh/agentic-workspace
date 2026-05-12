@@ -164,6 +164,7 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
     assert set(command_roles) == {
         "modules",
         "planning",
+        "memory",
         "summary",
         "start",
         "implement",

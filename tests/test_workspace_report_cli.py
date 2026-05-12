@@ -189,8 +189,8 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert {report["module"] for report in payload["module_reports"]} == {"planning", "memory"}
     planning_report = next(report for report in payload["module_reports"] if report["module"] == "planning")
     memory_report = next(report for report in payload["module_reports"] if report["module"] == "memory")
-    assert planning_report["schema"]["command"] == "agentic-planning report --format json"
-    assert memory_report["schema"]["command"] == "agentic-memory report --target ./repo --format json"
+    assert planning_report["schema"]["command"] == "agentic-workspace planning report --format json"
+    assert memory_report["schema"]["command"] == "agentic-workspace memory report --target ./repo --format json"
     assert payload["config"]["mixed_agent"]["status"] == "reporting-only"
     operational_compression = payload["operational_compression"]
     assert operational_compression["kind"] == "workspace-operational-compression/v1"
@@ -2437,7 +2437,7 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
     assert execution_shape["default_posture"]["handoff_preference"] == "prefer-internal-when-safe"
     assert execution_shape["capability_posture"]["execution class"] == "boundary-shaping"
     assert execution_shape["recommendation"]["id"] == "planner-first-then-bounded-executor"
-    assert execution_shape["recommendation"]["consult"] == ["agentic-planning handoff --format json"]
+    assert execution_shape["recommendation"]["consult"] == ["agentic-workspace planning handoff --format json"]
     assert execution_shape["recommendation"]["best_target_fits"] == []
     assert execution_shape["current_slice"]["task_id"] == "execution-shape-slice"
     assert execution_shape["resolved_targets"] == []
