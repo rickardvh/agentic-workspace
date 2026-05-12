@@ -73,6 +73,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     operating_posture = payload["operating_posture"]
     assert operating_posture["kind"] == "agentic-workspace/operating-posture/v1"
     assert operating_posture["improvement_latitude"]["mode"] == "conservative"
+
     assert operating_posture["optimization_bias"]["mode"] == "balanced"
     assert "report useful incidental findings compactly even when not acting" in operating_posture["required_behaviors"]
     assert operating_posture["closeout_nudge"]["field"] == "improvement_signal_review"
@@ -203,6 +204,39 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert measures["unresolved_external_work_routing"]["provider_rule"].startswith(
         "Core planning only consumes provider-agnostic external work evidence"
     )
+
+
+def test_report_router_surfaces_maintainer_mode_dogfooding_routes_from_local_config(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        """
+schema_version = 1
+
+[workspace]
+maintainer_mode = true
+""".strip(),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    maintainer_mode = payload["maintainer_mode"]
+    assert maintainer_mode["status"] == "enabled"
+    assert maintainer_mode["source"] == "local-override"
+    assert maintainer_mode["preferred_local_config"] == ".agentic-workspace/config.local.toml"
+    assert [route["section"] for route in maintainer_mode["dogfooding_reports"]] == [
+        "improvement_intake",
+        "repo_friction",
+        "successful_completion_cost",
+    ]
+    assert maintainer_mode["primary_next_action"]["command"] == (
+        "agentic-workspace report --target ./repo --section improvement_intake --format json"
+    )
+    assert "maintainer_mode" in payload["report_profile"]["decision_grade_fields"]
 
 
 def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path, capsys) -> None:

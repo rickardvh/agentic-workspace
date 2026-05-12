@@ -29,6 +29,9 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["optimization_bias_source"] == "product-default"
     assert payload["workspace"]["advanced_features"] == []
     assert payload["workspace"]["advanced_features_source"] == "product-default"
+    assert payload["workspace"]["maintainer_mode"] is False
+    assert payload["workspace"]["maintainer_mode_source"] == "product-default"
+    assert payload["workspace"]["maintainer_mode_detail"]["status"] == "disabled"
     assert payload["workspace"]["supported_advanced_features"] == ["review_artifacts", "external_adapters"]
     assert payload["workspace"]["workflow_artifact_adapter"]["canonical_surfaces"] == [
         ".agentic-workspace/planning/state.toml",
@@ -56,6 +59,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["mixed_agent"]["repo_policy"]["source"] == "product-defaults"
     assert payload["mixed_agent"]["repo_policy"]["path"] == ".agentic-workspace/config.toml"
     assert payload["mixed_agent"]["repo_policy"]["authoritative"] is False
+    assert "workspace.maintainer_mode" in payload["mixed_agent"]["repo_policy"]["supported_fields"]
     assert payload["mixed_agent"]["local_override"]["path"] == ".agentic-workspace/config.local.toml"
     assert payload["mixed_agent"]["local_override"]["supported"] is True
     assert payload["mixed_agent"]["local_override"]["exists"] is False
@@ -333,6 +337,33 @@ def test_config_command_accepts_agent_efficiency_optimization_bias(tmp_path: Pat
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["optimization_bias"] == "agent-efficiency"
     assert payload["workspace"]["optimization_bias_source"] == "repo-config"
+
+
+def test_config_local_maintainer_mode_overrides_host_repo_policy(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.local.toml",
+        """
+schema_version = 1
+
+[workspace]
+maintainer_mode = true
+""".strip(),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    workspace = payload["workspace"]
+    assert workspace["maintainer_mode"] is True
+    assert workspace["maintainer_mode_source"] == "local-override"
+    assert workspace["maintainer_mode_detail"]["status"] == "enabled"
+    assert workspace["maintainer_mode_detail"]["dogfooding_reports"][0]["section"] == "improvement_intake"
+    assert payload["mixed_agent"]["local_override"]["maintainer_mode"] == {
+        "value": True,
+        "source": "local-override",
+    }
 
 
 def test_config_command_reports_assurance_onboarding_states(tmp_path: Path, capsys) -> None:

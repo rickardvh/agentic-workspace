@@ -56,6 +56,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `report_profile` | object | yes |  | Report profile metadata, including which sections are decision-grade. |  |  |
 | `output_contract` | object | yes |  | Output contract details used by this contract. |  |  |
 | `operating_posture` | object | yes |  | Current operating posture for agent work in this repository. |  |  |
+| `maintainer_mode` | object | yes |  | Package-maintainer dogfooding report routes enabled by workspace.maintainer_mode. |  |  |
 | `config_enforcement` | object | yes |  | How repo config expectations are applied and reported. |  |  |
 | `config_effect_audit` | object | yes |  | Audit of each config setting's concrete force, affected output routes, and agent dependency. |  |  |
 | `branch_workflow_posture` | object | yes |  | Branch and worktree posture relevant to safe continuation. |  |  |

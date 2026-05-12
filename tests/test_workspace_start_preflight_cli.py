@@ -447,6 +447,35 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     ]
 
 
+def test_start_surfaces_maintainer_mode_dogfooding_routes_from_local_config(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        """
+schema_version = 1
+
+[workspace]
+maintainer_mode = true
+""".strip(),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["start", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    maintainer_mode = payload["maintainer_mode"]
+    assert maintainer_mode["status"] == "enabled"
+    assert maintainer_mode["source"] == "local-override"
+    assert [route["section"] for route in maintainer_mode["dogfooding_reports"]] == [
+        "improvement_intake",
+        "repo_friction",
+        "successful_completion_cost",
+    ]
+    assert maintainer_mode["primary_next_action"]["summary"].startswith("Use compact dogfooding report routes")
+
+
 def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     task = "Start the way the repo instructs a new agent to start. Do not implement anything yet."
     assert cli.main(["start", "--task", task, "--format", "json"]) == 0
@@ -499,6 +528,65 @@ def test_start_default_returns_selector_first_router(capsys) -> None:
     assert "durable_intent_promotion" in payload["drill_down"]["available_selectors"]
     assert "available_selectors" in payload["drill_down"]
     assert "cli_invocation" in payload["drill_down"]["available_selectors"]
+
+
+def test_start_completion_question_requires_closeout_trust_when_followup_remains(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "epic-continuation", maturity = "candidate", status = "next", priority = "P1", refs = "package-owned-only", title = "Continue epic", outcome = "Finish the original epic intent.", reason = "A completed lane did not satisfy the larger intent.", promotion_signal = "Promote before closeout.", suggested_first_slice = "Promote the next lane." },
+]
+""",
+    )
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "decompositions" / "epic-continuation.decomposition.json",
+        {
+            "kind": "planning-decomposition/v1",
+            "title": "Epic continuation",
+            "outcome": "Finish the original epic intent.",
+            "status": "ready-for-lane-promotion",
+            "lanes": [
+                {
+                    "id": "next-lane",
+                    "title": "Next lane",
+                    "readiness": "ready",
+                    "owner_surface": ".agentic-workspace/planning/state.toml",
+                }
+            ],
+        },
+    )
+
+    assert cli.main(["start", "--target", str(target), "--task", "Is the epic satisfied?", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    action = payload["immediate_next_allowed_action"]
+    assert action["action"] == "inspect-closeout-trust-before-completion-answer"
+    assert action["command"] == "agentic-workspace report --target ./repo --section closeout_trust --format json"
+    closeout = payload["closeout_trust_inspection"]
+    assert closeout["status"] == "required"
+    assert closeout["trust"] == "lower-trust"
+    assert closeout["strict_closeout_gate"]["status"] == "blocked"
+    assert closeout["intent_satisfaction"]["trust"] == "follow-up-required"
+    assert "closeout_trust_inspection" in payload["drill_down"]["available_selectors"]
 
 
 def test_start_select_returns_requested_startup_fields(capsys) -> None:

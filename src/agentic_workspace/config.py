@@ -87,6 +87,7 @@ SUPPORTED_ADVANCED_FEATURES = (
     "review_artifacts",
     "external_adapters",
 )
+DEFAULT_MAINTAINER_MODE = False
 DEFAULT_CLI_INVOKE = "agentic-workspace"
 DEFAULT_ASSURANCE_LEVEL = "low"
 SUPPORTED_ASSURANCE_LEVELS = ("low", "medium", "high", "critical")
@@ -258,6 +259,7 @@ class MixedAgentLocalOverride:
     shared_config_exists: bool
     shared_config_applied: bool
     cli_invoke: str | None
+    maintainer_mode: bool | None
     supports_internal_delegation: bool | None
     strong_planner_available: bool | None
     cheap_bounded_executor_available: bool | None
@@ -343,6 +345,8 @@ class WorkspaceConfig:
     optimization_bias_source: str
     advanced_features: tuple[str, ...]
     advanced_features_source: str
+    maintainer_mode: bool
+    maintainer_mode_source: str
     cli_invoke: str
     cli_invoke_source: str
     detected_agent_instructions_files: tuple[str, ...]
@@ -1001,6 +1005,7 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         shared_config_exists=False,
         shared_config_applied=False,
         cli_invoke=None,
+        maintainer_mode=None,
         supports_internal_delegation=None,
         strong_planner_available=None,
         cheap_bounded_executor_available=None,
@@ -1139,7 +1144,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         raw_workspace = {}
     if not isinstance(raw_workspace, dict):
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [workspace] section must be a table.")
-    unknown_workspace = sorted(set(raw_workspace) - {"cli_invoke", "shared_config_path"})
+    unknown_workspace = sorted(set(raw_workspace) - {"cli_invoke", "shared_config_path", "maintainer_mode"})
     if unknown_workspace:
         unknown_text = ", ".join(unknown_workspace)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [workspace] contains unsupported field(s): {unknown_text}.")
@@ -1154,6 +1159,18 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             shared_payload=shared_payload,
             table="workspace",
             key="cli_invoke",
+        )
+    maintainer_mode = require_optional_bool(
+        payload=raw_workspace,
+        key="maintainer_mode",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+    )
+    if maintainer_mode is not None:
+        field_sources["workspace.maintainer_mode"] = _local_config_field_source(
+            local_payload=local_payload,
+            shared_payload=shared_payload,
+            table="workspace",
+            key="maintainer_mode",
         )
 
     raw_runtime = payload.get("runtime", {})
@@ -1259,6 +1276,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         shared_config_exists=shared_config_exists,
         shared_config_applied=shared_config_applied,
         cli_invoke=cli_invoke,
+        maintainer_mode=maintainer_mode,
         supports_internal_delegation=require_optional_bool(
             payload=raw_runtime,
             key="supports_internal_delegation",
@@ -1410,6 +1428,8 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     optimization_bias_source = "product-default"
     advanced_features: tuple[str, ...] = ()
     advanced_features_source = "product-default"
+    maintainer_mode = DEFAULT_MAINTAINER_MODE
+    maintainer_mode_source = "product-default"
     cli_invoke = DEFAULT_CLI_INVOKE
     cli_invoke_source = "product-default"
     assurance, assurance_warnings = _load_assurance_config(raw_assurance={}, config_path=WORKSPACE_CONFIG_PATH)
@@ -1422,6 +1442,9 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     if local_override.cli_invoke is not None:
         cli_invoke = local_override.cli_invoke
         cli_invoke_source = local_override.field_sources.get("workspace.cli_invoke", "local-override")
+    if local_override.maintainer_mode is not None:
+        maintainer_mode = local_override.maintainer_mode
+        maintainer_mode_source = local_override.field_sources.get("workspace.maintainer_mode", "local-override")
 
     if not config_path.exists():
         agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = resolve_effective_agent_instructions_file(
@@ -1444,6 +1467,8 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             optimization_bias_source=optimization_bias_source,
             advanced_features=advanced_features,
             advanced_features_source=advanced_features_source,
+            maintainer_mode=maintainer_mode,
+            maintainer_mode_source=maintainer_mode_source,
             cli_invoke=cli_invoke,
             cli_invoke_source=cli_invoke_source,
             detected_agent_instructions_files=detected_agent_instruction_files,
@@ -1513,6 +1538,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             "improvement_latitude",
             "optimization_bias",
             "advanced_features",
+            "maintainer_mode",
             "cli_invoke",
         }
     )
@@ -1549,6 +1575,12 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     if configured_advanced_features:
         advanced_features = configured_advanced_features
         advanced_features_source = "repo-config"
+    raw_maintainer_mode = raw_workspace.get("maintainer_mode")
+    if raw_maintainer_mode is not None:
+        if not isinstance(raw_maintainer_mode, bool):
+            raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} workspace.maintainer_mode must be true or false.")
+        maintainer_mode = raw_maintainer_mode
+        maintainer_mode_source = "repo-config"
     raw_cli_invoke = raw_workspace.get("cli_invoke")
     if raw_cli_invoke is not None:
         if not isinstance(raw_cli_invoke, str) or not raw_cli_invoke.strip():
@@ -1558,6 +1590,9 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     if local_override.cli_invoke is not None:
         cli_invoke = local_override.cli_invoke
         cli_invoke_source = local_override.field_sources.get("workspace.cli_invoke", "local-override")
+    if local_override.maintainer_mode is not None:
+        maintainer_mode = local_override.maintainer_mode
+        maintainer_mode_source = local_override.field_sources.get("workspace.maintainer_mode", "local-override")
 
     update_modules = dict(defaults)
     raw_update = payload.get("update", {})
@@ -1673,6 +1708,8 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         optimization_bias_source=optimization_bias_source,
         advanced_features=advanced_features,
         advanced_features_source=advanced_features_source,
+        maintainer_mode=maintainer_mode,
+        maintainer_mode_source=maintainer_mode_source,
         cli_invoke=cli_invoke,
         cli_invoke_source=cli_invoke_source,
         detected_agent_instructions_files=detected_agent_instruction_files,

@@ -1591,6 +1591,71 @@ def _operating_posture_payload(*, config: WorkspaceConfig, surface: str, compact
     return payload
 
 
+def _maintainer_mode_payload(*, config: WorkspaceConfig, compact: bool = False) -> dict[str, Any]:
+    def report_command(section: str) -> str:
+        return _command_with_cli_invoke(
+            command=f"agentic-workspace report --target ./repo --section {section} --format json",
+            cli_invoke=config.cli_invoke,
+        )
+
+    report_routes = [
+        {
+            "section": "improvement_intake",
+            "command": report_command("improvement_intake"),
+            "purpose": "route dogfooding, validation, review, memory, and repair signals to an owner or dismissal",
+        },
+        {
+            "section": "repo_friction",
+            "command": report_command("repo_friction"),
+            "purpose": "inspect package or workflow friction that should become a bounded package improvement signal",
+        },
+        {
+            "section": "successful_completion_cost",
+            "command": report_command("successful_completion_cost"),
+            "purpose": "compare successful-completion cost, retries, proof effort, and package-read overhead",
+        },
+        {
+            "section": "maintenance_pressure",
+            "command": report_command("maintenance_pressure"),
+            "purpose": "inspect closeout, retention, external-evidence, and artifact pressure before expanding residue",
+        },
+    ]
+    payload: dict[str, Any] = {
+        "kind": "agentic-workspace/maintainer-mode/v1",
+        "status": "enabled" if config.maintainer_mode else "disabled",
+        "source": config.maintainer_mode_source,
+        "config_field": "workspace.maintainer_mode",
+        "audience": "package-maintainer-dogfooding",
+        "rule": (
+            "When enabled, ordinary start/report surfaces expose compact dogfooding report routes. "
+            "They remain read-only routing and do not install source-checkout-only workflows into host repos."
+        ),
+        "preferred_local_config": ".agentic-workspace/config.local.toml",
+        "host_repo_boundary": (
+            "Use host-repo evidence as signal; route package fixes in the package source checkout, issue tracker, docs, checks, or Memory."
+        ),
+        "dogfooding_reports": report_routes if not compact else report_routes[:3],
+    }
+    if config.maintainer_mode:
+        payload["primary_next_action"] = {
+            "action": "inspect-dogfooding-reports-when-relevant",
+            "summary": "Use compact dogfooding report routes during normal work and route package improvement signals deliberately.",
+            "command": report_command("improvement_intake"),
+            "run": report_command("improvement_intake"),
+            "risk": "read-only routing; package improvements still require explicit bounded work in the package repo",
+            "required_inputs": ["current host-repo task", "observed package friction or repeated cost"],
+            "next_proof": "prove any resulting package change with changed-path proof selection in the package source checkout",
+        }
+    else:
+        payload["enable_example"] = [
+            "schema_version = 1",
+            "",
+            "[workspace]",
+            "maintainer_mode = true",
+        ]
+    return payload
+
+
 def _setup_finding_class_payload(finding_class: str) -> dict[str, Any]:
     return copy.deepcopy(_SETUP_FINDING_CLASS_PAYLOADS[finding_class])
 
@@ -2150,6 +2215,11 @@ def main(argv: list[str] | None = None) -> int:
             config = _load_workspace_config(target_root=target_root)
             changed_paths = list(getattr(args, "changed", []) or [])
             if getattr(args, "select", None):
+                closeout_inspection = _completion_closeout_inspection_payload(
+                    target_root=target_root,
+                    config=config,
+                    task_text=getattr(args, "task", None),
+                )
                 payload = _select_summary_payload(
                     target_root=target_root,
                     select=getattr(args, "select"),
@@ -2158,6 +2228,12 @@ def main(argv: list[str] | None = None) -> int:
                     planning_summary=planning_summary,
                     cli_invoke=config.cli_invoke,
                 )
+                if closeout_inspection["status"] in {"required", "clear"}:
+                    payload.setdefault("values", {})
+                    if "closeout_trust_inspection" in getattr(args, "select"):
+                        payload["values"]["closeout_trust_inspection"] = closeout_inspection
+                        if "closeout_trust_inspection" in payload.get("missing", []):
+                            payload["missing"] = [item for item in payload.get("missing", []) if item != "closeout_trust_inspection"]
                 _emit_payload(payload=payload, format_name=args.format)
             else:
                 summary_profile = _diagnostic_profile(args, default="tiny") if args.format == "json" else "full"
@@ -2177,6 +2253,13 @@ def main(argv: list[str] | None = None) -> int:
                         if summary_profile == "full"
                         else _tiny_memory_consult_payload(config=config)
                     )
+                    closeout_inspection = _completion_closeout_inspection_payload(
+                        target_root=target_root,
+                        config=config,
+                        task_text=getattr(args, "task", None),
+                    )
+                    if closeout_inspection["status"] in {"required", "clear"}:
+                        summary["closeout_trust_inspection"] = closeout_inspection
                 if args.format == "json":
                     print(format_summary_json(summary))
                 else:
@@ -6021,6 +6104,7 @@ def _run_report_command(
             surface="report",
         ),
         "operating_posture": _operating_posture_payload(config=config, surface="report"),
+        "maintainer_mode": _maintainer_mode_payload(config=config),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
         "branch_workflow_posture": branch_workflow_posture,
@@ -6162,6 +6246,7 @@ def _run_report_router_command(
             surface="report",
         ),
         "operating_posture": _operating_posture_payload(config=config, surface="report"),
+        "maintainer_mode": _maintainer_mode_payload(config=config, compact=True),
         "report_profile": _report_profile_payload(cli_invoke=config.cli_invoke),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
@@ -10181,6 +10266,12 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     cli_compatibility = payload.get("cli_compatibility", {})
     if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {"blocking-drift", "warning-drift"}:
         projected["cli_compatibility"] = cli_compatibility
+    maintainer_mode = payload.get("maintainer_mode", {})
+    if isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled":
+        projected["maintainer_mode"] = maintainer_mode
+    closeout_inspection = payload.get("closeout_trust_inspection", {})
+    if isinstance(closeout_inspection, dict) and closeout_inspection.get("status") in {"required", "clear"}:
+        projected["closeout_trust_inspection"] = closeout_inspection
     vague_orientation = payload.get("vague_outcome_orientation", {})
     if isinstance(vague_orientation, dict) and vague_orientation.get("applies_to_current_task") is True:
         if isinstance(task_intent, dict) and task_intent.get("task_argument_mode") == "task-file":
@@ -10533,6 +10624,109 @@ def _is_config_posture_task(task_text: str | None) -> bool:
     return any(marker in normalized for marker in posture_markers)
 
 
+def _is_completion_status_task(task_text: str | None) -> bool:
+    normalized = " ".join((task_text or "").lower().split())
+    if not normalized:
+        return False
+    completion_markers = (
+        "is the work complete",
+        "is this work complete",
+        "is it complete",
+        "how much remains",
+        "what remains",
+        "what is left",
+        "can this lane be considered done",
+        "can the lane be considered done",
+        "is the lane done",
+        "is this lane done",
+        "is the epic satisfied",
+        "is this epic satisfied",
+        "is the epic done",
+        "completion status",
+        "status of completion",
+        "ready to close",
+        "can we close",
+        "can i close",
+        "can this be closed",
+        "can this issue be closed",
+        "can this lane close",
+        "can this lane be closed",
+        "considered done",
+    )
+    if any(marker in normalized for marker in completion_markers):
+        return True
+    question_terms = ("complete", "completed", "done", "closed", "satisfied", "finished", "remaining", "remains")
+    scope_terms = ("work", "lane", "epic", "issue", "task", "milestone", "closeout", "closure")
+    question_starters = ("is ", "are ", "can ", "should ", "how ", "what ")
+    return (
+        normalized.endswith("?")
+        and normalized.startswith(question_starters)
+        and any(term in normalized for term in question_terms)
+        and any(term in normalized for term in scope_terms)
+    )
+
+
+def _completion_closeout_inspection_payload(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    task_text: str | None,
+) -> dict[str, Any]:
+    command = _command_with_cli_invoke(
+        command="agentic-workspace report --target ./repo --section closeout_trust --format json",
+        cli_invoke=config.cli_invoke,
+    )
+    if not _is_completion_status_task(task_text):
+        return {
+            "status": "not-applicable",
+            "reason": "current task is not completion/status oriented",
+            "detail_command": command,
+        }
+    try:
+        from repo_planning_bootstrap.installer import planning_report
+    except ImportError:
+        return {
+            "status": "required",
+            "trust": "unavailable",
+            "reason": "completion/status question requires closeout trust, but the planning module is not importable",
+            "detail_command": command,
+            "required_next_inspection": command,
+        }
+    planning_payload = planning_report(target=target_root)
+    closeout = _report_closeout_trust_payload(
+        module_reports=[planning_payload],
+        target_root=target_root,
+        config=config,
+        cli_invoke=config.cli_invoke,
+    )
+    strict_gate = closeout.get("strict_closeout_gate", {}) if isinstance(closeout.get("strict_closeout_gate"), dict) else {}
+    intent_check = closeout.get("intent_satisfaction_check", {}) if isinstance(closeout.get("intent_satisfaction_check"), dict) else {}
+    trust = str(closeout.get("trust") or closeout.get("status") or "unavailable")
+    lower_trust_count = _as_int(closeout.get("lower_trust_closeout_count"))
+    gate_blocking = bool(strict_gate.get("blocking"))
+    needs_surface = trust != "normal" or lower_trust_count > 0 or gate_blocking
+    return {
+        "status": "required" if needs_surface else "clear",
+        "reason": (
+            "completion/status question must inspect closeout_trust before claiming broad work is done"
+            if needs_surface
+            else "completion/status question inspected closeout_trust and found no lower-trust blocker"
+        ),
+        "trust": trust,
+        "lower_trust_closeout_count": lower_trust_count,
+        "strict_closeout_gate": {key: strict_gate.get(key) for key in ("status", "blocking", "summary", "reason") if key in strict_gate},
+        "intent_satisfaction": {
+            key: intent_check.get(key)
+            for key in ("status", "trust", "reason", "recommended_next_action", "continuation_surface")
+            if key in intent_check
+        },
+        "sample_signals": closeout.get("sample_signals", [])[:2] if isinstance(closeout.get("sample_signals"), list) else [],
+        "required_next_inspection": command,
+        "detail_command": command,
+        "rule": "Do not answer done/complete/closeable for lane, epic, or broad work without reconciling this surface.",
+    }
+
+
 def _prep_only_handoff_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     planning_command = _command_with_cli_invoke(command="agentic-workspace planning --format json", cli_invoke=config.cli_invoke)
     summary_command = _command_with_cli_invoke(command="agentic-workspace summary --verbose --format json", cli_invoke=config.cli_invoke)
@@ -10585,6 +10779,7 @@ _START_TINY_ONLY_SELECTORS = {
     "active_state_summary",
     "cli_invocation",
     "context_router",
+    "closeout_trust_inspection",
     "delegation_decision",
     "durable_intent",
     "immediate_next_allowed_action",
@@ -10747,6 +10942,7 @@ def _start_payload(
             compact=True,
             cli_invoke=config.cli_invoke,
         ),
+        "maintainer_mode": _maintainer_mode_payload(config=config, compact=True),
         "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
         "operating_posture": _operating_posture_payload(config=config, surface="start", compact=True),
         "skill_routing": _guidance_with_cli_invoke(
@@ -10864,6 +11060,22 @@ def _start_payload(
             "required_inputs": ["target repo", "current task"],
             "next_proof": "no file proof unless the task later becomes an edit",
             "read_first": [config_command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        }
+    closeout_inspection = _completion_closeout_inspection_payload(target_root=target_root, config=config, task_text=task_text)
+    if closeout_inspection["status"] in {"required", "clear"}:
+        payload["closeout_trust_inspection"] = closeout_inspection
+    if closeout_inspection["status"] == "required":
+        command = str(closeout_inspection["required_next_inspection"])
+        payload["immediate_next_allowed_action"] = {
+            "action": "inspect-closeout-trust-before-completion-answer",
+            "summary": "Completion/status question detected; inspect closeout_trust before claiming broad work is done.",
+            "command": command,
+            "run": command,
+            "risk": "read-only closeout trust routing",
+            "required_inputs": ["target repo", "completion/status question"],
+            "next_proof": "answer completion only after closeout_trust and intent satisfaction are reconciled",
+            "read_first": [command],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
     cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
@@ -11013,6 +11225,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "authority_hierarchy",
         "compliance_economics",
         "cli_invocation",
+        "closeout_trust_inspection",
         "durable_intent",
         "workflow_obligations",
         "closeout_obligations",
@@ -11156,11 +11369,15 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str) -
         "path_boundaries",
         "startup_review",
         "prep_only_handoff",
+        "closeout_trust_inspection",
         "vague_outcome_orientation",
         "intent_acknowledgement",
     ):
         if optional_key in payload:
             selected[optional_key] = payload[optional_key]
+    maintainer_mode = payload.get("maintainer_mode", {})
+    if isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled":
+        selected["maintainer_mode"] = maintainer_mode
     return selected
 
 
@@ -11288,6 +11505,7 @@ def _start_tiny_payload_fast(
             ),
         },
         "memory_consult": _tiny_memory_consult_payload(config=config),
+        "maintainer_mode": _maintainer_mode_payload(config=config, compact=True),
         "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
         "operating_posture": _operating_posture_payload(config=config, surface="start", compact=True),
         "skill_routing": _guidance_with_cli_invoke(
@@ -11400,6 +11618,22 @@ def _start_tiny_payload_fast(
             "required_inputs": ["target repo", "current task"],
             "next_proof": "no file proof unless the task later becomes an edit",
             "read_first": [config_command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        }
+    closeout_inspection = _completion_closeout_inspection_payload(target_root=target_root, config=config, task_text=task_text)
+    if closeout_inspection["status"] in {"required", "clear"}:
+        payload["closeout_trust_inspection"] = closeout_inspection
+    if closeout_inspection["status"] == "required":
+        command = str(closeout_inspection["required_next_inspection"])
+        payload["immediate_next_allowed_action"] = {
+            "action": "inspect-closeout-trust-before-completion-answer",
+            "summary": "Completion/status question detected; inspect closeout_trust before claiming broad work is done.",
+            "command": command,
+            "run": command,
+            "risk": "read-only closeout trust routing",
+            "required_inputs": ["target repo", "completion/status question"],
+            "next_proof": "answer completion only after closeout_trust and intent satisfaction are reconciled",
+            "read_first": [command],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
     normalized_paths = _normalize_changed_paths(changed_paths)
@@ -13645,6 +13879,12 @@ def _config_field_enforcement_entries() -> list[dict[str, Any]]:
             "used_by": ["report advanced sections", "skills routing", "startup guidance"],
         },
         {
+            "field": "workspace.maintainer_mode",
+            "enforcement": "local-advisory",
+            "scope": "repo-config-or-local-config",
+            "used_by": ["start.maintainer_mode", "report.maintainer_mode", "dogfooding report routes"],
+        },
+        {
             "field": "system_intent.sources",
             "enforcement": "operational",
             "scope": "repo-config",
@@ -13740,6 +13980,14 @@ def _config_enforcement_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 ),
             },
             {
+                "field": "workspace.maintainer_mode",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "field_path": "maintainer_mode",
+            },
+            {
                 "field": "workflow_obligations.<name>.*",
                 "command": _command_with_cli_invoke(
                     command="agentic-workspace report --target ./repo --section workflow_obligations --format json",
@@ -13817,6 +14065,12 @@ def _config_effect_audit_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         elif field.startswith("workspace.optimization_bias"):
             concrete_commands = [command("agentic-workspace report --target ./repo --section output_contract --format json")]
             payload_fields = ["output_contract", "operating_posture.optimization_bias"]
+        elif field.startswith("workspace.maintainer_mode"):
+            concrete_commands = [
+                command("agentic-workspace start --target ./repo --format json"),
+                command("agentic-workspace report --target ./repo --format json"),
+            ]
+            payload_fields = ["maintainer_mode", "report_profile.decision_grade_fields"]
         elif field.startswith("workflow_obligations"):
             concrete_commands = [
                 command("agentic-workspace report --target ./repo --section workflow_obligations --format json"),
@@ -18428,6 +18682,11 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     config = _load_workspace_config(target_root=target_root)
     changed_paths = list(getattr(args, "changed", []) or [])
     if getattr(args, "select", None):
+        closeout_inspection = _completion_closeout_inspection_payload(
+            target_root=target_root,
+            config=config,
+            task_text=getattr(args, "task", None),
+        )
         payload = _select_summary_payload(
             target_root=target_root,
             select=getattr(args, "select"),
@@ -18436,6 +18695,11 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             planning_summary=planning_summary,
             cli_invoke=config.cli_invoke,
         )
+        if closeout_inspection["status"] in {"required", "clear"} and "closeout_trust_inspection" in getattr(args, "select"):
+            payload.setdefault("values", {})
+            payload["values"]["closeout_trust_inspection"] = closeout_inspection
+            if "closeout_trust_inspection" in payload.get("missing", []):
+                payload["missing"] = [item for item in payload.get("missing", []) if item != "closeout_trust_inspection"]
         _emit_payload(payload=payload, format_name=args.format)
     else:
         summary_profile = _diagnostic_profile(args, default="tiny") if args.format == "json" else "full"
@@ -18455,6 +18719,13 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 if summary_profile == "full"
                 else _tiny_memory_consult_payload(config=config)
             )
+            closeout_inspection = _completion_closeout_inspection_payload(
+                target_root=target_root,
+                config=config,
+                task_text=getattr(args, "task", None),
+            )
+            if closeout_inspection["status"] in {"required", "clear"}:
+                summary["closeout_trust_inspection"] = closeout_inspection
         if args.format == "json":
             print(format_summary_json(summary))
         else:
@@ -22082,7 +22353,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "path": WORKSPACE_CONFIG_PATH.as_posix(),
             "source": "repo-config" if config.exists else "product-defaults",
             "authoritative": config.exists,
-            "supported_fields": ["workspace.improvement_latitude", "workspace.advanced_features"],
+            "supported_fields": ["workspace.improvement_latitude", "workspace.advanced_features", "workspace.maintainer_mode"],
         },
         "local_override": {
             "path": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
@@ -22091,6 +22362,12 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "exists": local_override.exists,
             "applied": local_override.applied,
             "status": "applied" if local_override.applied else "available-not-set",
+            "maintainer_mode": {
+                "value": local_override.maintainer_mode,
+                "source": local_override.field_sources.get("workspace.maintainer_mode", "unset")
+                if local_override.maintainer_mode is not None
+                else "unset",
+            },
             "shared_config": {
                 "path": local_override.shared_config_path.as_posix() if local_override.shared_config_path is not None else None,
                 "exists": local_override.shared_config_exists,
@@ -22256,8 +22533,11 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "optimization_bias_source": config.optimization_bias_source,
             "advanced_features": list(config.advanced_features),
             "advanced_features_source": config.advanced_features_source,
+            "maintainer_mode": config.maintainer_mode,
+            "maintainer_mode_source": config.maintainer_mode_source,
             "cli_invoke": config.cli_invoke,
             "cli_invoke_source": config.cli_invoke_source,
+            "maintainer_mode_detail": _maintainer_mode_payload(config=config),
             "workflow_artifact_adapter": _workflow_artifact_profile_payload(config.workflow_artifact_profile),
             "agent_configuration_substrate": {
                 "canonical_doc": _agent_configuration_system_payload()["canonical_doc"],
@@ -22350,6 +22630,8 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "improvement_latitude_source": workspace["improvement_latitude_source"],
             "optimization_bias": workspace["optimization_bias"],
             "optimization_bias_source": workspace["optimization_bias_source"],
+            "maintainer_mode": workspace["maintainer_mode"],
+            "maintainer_mode_source": workspace["maintainer_mode_source"],
             "cli_invoke": workspace["cli_invoke"],
             "workflow_obligations": compact_obligations,
             "system_intent_sources": workspace["system_intent"]["sources"],
