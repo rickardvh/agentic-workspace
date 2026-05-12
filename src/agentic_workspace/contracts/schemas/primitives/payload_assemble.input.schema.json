@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/payload_assemble.input.schema.json",
+  "title": "payload.assemble input",
+  "type": "object",
+  "properties": {
+    "fields": {
+      "type": "object",
+      "description": "Named constants or step outputs to include in the emitted payload."
+    },
+    "schema_ref": {
+      "type": "string",
+      "description": "Optional schema that validates the assembled payload."
+    }
+  },
+  "required": [
+    "fields"
+  ],
+  "additionalProperties": false
+}

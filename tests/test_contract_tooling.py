@@ -601,6 +601,29 @@ def test_operation_command_parity_uses_package_program_namespace() -> None:
     assert module._validate_operation_registry(module.operation_contracts_manifest()) == []
 
 
+def test_operation_ir_has_portable_representative_command() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    primitive_errors = module._validate_operation_primitives(module.operation_primitives_manifest())
+    ir_errors = module._validate_operation_ir_plans()
+    operation = contract_tooling.operation_manifest("operations/memory.list-files.report.json")
+    used = [step["uses"] for step in operation["ir_plan"]["steps"]]
+
+    assert primitive_errors == []
+    assert ir_errors == []
+    assert operation["ir_plan"]["status"] == "representative"
+    assert used == [
+        "path.target_root.resolve",
+        "filesystem.glob",
+        "payload.assemble",
+        "output.emit",
+    ]
+
+
 def test_workspace_command_generation_integration_owns_repo_paths() -> None:
     module_path = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "workspace_command_generation.py"
     spec = importlib.util.spec_from_file_location("workspace_command_generation", module_path)

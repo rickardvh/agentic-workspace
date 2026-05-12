@@ -296,11 +296,21 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
     errors: list[str] = []
     if payload.get("schema_version") != "agentic-workspace/operation-primitives/v1":
         errors.append("operation_primitives.json has unexpected schema_version")
+    ir_model = payload.get("ir_model")
+    if not isinstance(ir_model, dict):
+        errors.append("operation_primitives.json must declare ir_model")
+    else:
+        boundary_rules = ir_model.get("boundary_rules")
+        if not isinstance(boundary_rules, list) or not boundary_rules:
+            errors.append("operation_primitives.json ir_model must declare boundary_rules")
+        if "general-purpose" not in " ".join(str(rule) for rule in boundary_rules).lower():
+            errors.append("operation_primitives.json ir_model must explicitly guard against becoming a general-purpose language")
     primitives = payload.get("primitives")
     if not isinstance(primitives, list) or not primitives:
         errors.append("operation_primitives.json must contain at least one primitive")
         return errors
     seen_ids: set[str] = set()
+    target_executor_kinds: set[str] = set()
     for index, primitive in enumerate(primitives):
         if not isinstance(primitive, dict):
             errors.append(f"primitive entry {index} must be an object")
@@ -314,6 +324,80 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
         seen_ids.add(primitive_id)
         if not isinstance(primitive.get("summary"), str) or not str(primitive.get("summary")).strip():
             errors.append(f"primitive {primitive_id} missing summary")
+        if primitive.get("portability") == "target-executor":
+            kind = primitive.get("kind")
+            if isinstance(kind, str):
+                target_executor_kinds.add(kind)
+            if not isinstance(primitive.get("semantics"), str) or not str(primitive.get("semantics")).strip():
+                errors.append(f"target-executor primitive {primitive_id} must declare semantics")
+    required_target_executor_kinds = {
+        "filesystem",
+        "structured-data",
+        "record",
+        "validation",
+        "rendering",
+        "output",
+        "check",
+    }
+    missing_kinds = sorted(required_target_executor_kinds - target_executor_kinds)
+    if missing_kinds:
+        errors.append("operation_primitives.json target-executor coverage missing kind(s): " + ", ".join(missing_kinds))
+    return errors
+
+
+def _validate_operation_ir_plans() -> list[str]:
+    errors: list[str] = []
+    operation_refs = operation_contracts_manifest()["operations"]
+    primitive_map = {primitive["id"]: primitive for primitive in operation_primitives_manifest()["primitives"]}
+    primitive_refs = set(primitive_map)
+    conformance_operation_ids = {contract["operation_id"] for contract in conformance_contracts_manifest()["contracts"]}
+    representative_ids: set[str] = set()
+    for operation_ref in operation_refs:
+        operation = operation_manifest(str(operation_ref.get("path", "")))
+        ir_plan = operation.get("ir_plan")
+        if ir_plan is None:
+            continue
+        if not isinstance(ir_plan, dict):
+            errors.append(f"operation {operation_ref['id']} ir_plan must be an object")
+            continue
+        status = ir_plan.get("status")
+        operation_id = str(operation.get("id", operation_ref.get("id", "")))
+        if status in {"representative", "complete"}:
+            representative_ids.add(operation_id)
+            if operation_id not in conformance_operation_ids:
+                errors.append(f"operation {operation_id} has representative IR without process conformance")
+        steps = ir_plan.get("steps")
+        if not isinstance(steps, list) or not steps:
+            errors.append(f"operation {operation_id} ir_plan must declare steps")
+            continue
+        for step in steps:
+            if not isinstance(step, dict):
+                errors.append(f"operation {operation_id} ir_plan step must be an object")
+                continue
+            primitive_id = step.get("uses")
+            if primitive_id not in primitive_refs:
+                errors.append(f"operation {operation_id} ir_plan uses unknown primitive {primitive_id}")
+                continue
+            primitive = primitive_map[primitive_id]
+            if status in {"representative", "complete"} and primitive.get("portability") == "target-executor":
+                for field in ("input_schema_ref", "output_schema_ref"):
+                    schema_ref = primitive.get(field)
+                    if not isinstance(schema_ref, str) or not schema_ref.strip():
+                        errors.append(f"representative primitive {primitive_id} must declare {field}")
+                        continue
+                    schema_path = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / schema_ref
+                    if not schema_path.is_file():
+                        errors.append(f"representative primitive {primitive_id} references missing {field} {schema_ref}")
+    if "memory.list-files.report" not in representative_ids:
+        errors.append("memory.list-files.report must remain the #930 representative operation IR proof")
+    else:
+        operation = operation_manifest("operations/memory.list-files.report.json")
+        plan_steps = operation.get("ir_plan", {}).get("steps", [])
+        used = {step.get("uses") for step in plan_steps if isinstance(step, dict)}
+        required = {"path.target_root.resolve", "filesystem.glob", "payload.assemble", "output.emit"}
+        missing = sorted(required - used)
+        if missing:
+            errors.append("memory.list-files.report representative IR missing primitive(s): " + ", ".join(missing))
     return errors
 
 
@@ -1381,6 +1465,10 @@ def main(argv: list[str] | None = None) -> int:
             "operation primitives registry",
             _validate(operation_primitives_manifest(), "operation_primitives.schema.json")
             + _validate_operation_primitives(operation_primitives_manifest()),
+        ),
+        (
+            "operation IR representative plans",
+            _validate_operation_ir_plans(),
         ),
         (
             "improvement signal contract",

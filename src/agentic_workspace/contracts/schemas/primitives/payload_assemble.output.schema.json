@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/payload_assemble.output.schema.json",
+  "title": "payload.assemble output",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "number",
+        "boolean",
+        "null"
+      ],
+      "description": "JSON-serializable assembled payload."
+    }
+  },
+  "required": [
+    "payload"
+  ],
+  "additionalProperties": false
+}

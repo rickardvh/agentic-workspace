@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/filesystem_glob.output.schema.json",
+  "title": "filesystem.glob output",
+  "type": "object",
+  "properties": {
+    "paths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Root-relative paths that matched the glob."
+    }
+  },
+  "required": [
+    "paths"
+  ],
+  "additionalProperties": false
+}

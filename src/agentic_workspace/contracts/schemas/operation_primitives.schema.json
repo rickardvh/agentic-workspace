@@ -19,6 +19,39 @@
       "minLength": 1,
       "description": "Short human-readable summary for this entry."
     },
+    "ir_model": {
+      "type": "object",
+      "required": [
+        "purpose",
+        "boundary_rules"
+      ],
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why this primitive registry exists as an operation IR boundary."
+        },
+        "boundary_rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Rules that keep the primitive set from becoming an ad hoc programming language."
+        },
+        "defer_when": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Signals that behavior should remain a named runtime primitive instead of being decomposed further."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Contract-level explanation of the target-executor IR model."
+    },
     "primitives": {
       "type": "array",
       "minItems": 1,
@@ -38,6 +71,47 @@
             "type": "string",
             "minLength": 1,
             "description": "Short human-readable summary for this entry."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "filesystem",
+              "structured-data",
+              "record",
+              "validation",
+              "rendering",
+              "output",
+              "check",
+              "workspace-runtime",
+              "planning-runtime",
+              "memory-runtime",
+              "external-runtime",
+              "usage-control"
+            ],
+            "description": "Portable primitive category or runtime-bridge category."
+          },
+          "portability": {
+            "type": "string",
+            "enum": [
+              "target-executor",
+              "domain-runtime",
+              "external-adapter"
+            ],
+            "description": "Whether target runtimes are expected to implement this primitive directly or bridge it explicitly."
+          },
+          "semantics": {
+            "type": "string",
+            "description": "Concise execution semantics for target-executor primitives."
+          },
+          "input_schema_ref": {
+            "type": "string",
+            "pattern": "^schemas/primitives/[a-z0-9_.-]+\\.schema\\.json$",
+            "description": "Primitive-specific input schema for target-executor implementations."
+          },
+          "output_schema_ref": {
+            "type": "string",
+            "pattern": "^schemas/primitives/[a-z0-9_.-]+\\.schema\\.json$",
+            "description": "Primitive-specific output schema for target-executor implementations."
           }
         },
         "additionalProperties": false,

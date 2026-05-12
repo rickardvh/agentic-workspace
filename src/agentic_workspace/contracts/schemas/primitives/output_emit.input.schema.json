@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/output_emit.input.schema.json",
+  "title": "output.emit input",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "number",
+        "boolean",
+        "null"
+      ],
+      "description": "Structured payload to emit."
+    },
+    "format": {
+      "type": "string",
+      "enum": [
+        "json",
+        "text"
+      ],
+      "description": "Requested output format."
+    }
+  },
+  "required": [
+    "payload",
+    "format"
+  ],
+  "additionalProperties": false
+}

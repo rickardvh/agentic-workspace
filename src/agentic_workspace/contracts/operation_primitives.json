@@ -1,10 +1,186 @@
 {
   "schema_version": "agentic-workspace/operation-primitives/v1",
   "summary": "Named primitive capabilities that procedural operation contracts may reference without embedding implementation code.",
+  "ir_model": {
+    "purpose": "Keep generated command behavior implementation-independent by expressing common package operations as a small, JSON-Schema-validated primitive sequence that thin target executors can implement.",
+    "boundary_rules": [
+      "Prefer target-executor primitives for file IO, structured data parsing, record updates, validation, rendering, and output emission.",
+      "Keep package-specific inspection, heuristics, subprocess orchestration, and mutation policy behind named domain-runtime primitives until they have a smaller stable contract.",
+      "Do not let the IR become a general-purpose language: avoid branching, loops, expression evaluation, or arbitrary code execution; introduce a named primitive with tests when behavior stops being simple data manipulation.",
+      "A Python runtime bridge is a domain-runtime primitive and must be explicit rather than counted as independent target completion."
+    ],
+    "defer_when": [
+      "The behavior depends on live repository heuristics that are not yet contract-stable.",
+      "The behavior shells out to external tools or network-backed providers.",
+      "The behavior requires complex conflict resolution or destructive mutation sequencing."
+    ]
+  },
   "primitives": [
     {
+      "id": "path.target_root.resolve",
+      "summary": "Resolve an optional target path to a root-contained operation target.",
+      "kind": "filesystem",
+      "portability": "target-executor",
+      "semantics": "Resolve the target input or current working directory into a normalized target root and reject path escape.",
+      "input_schema_ref": "schemas/primitives/path_target_root_resolve.input.schema.json",
+      "output_schema_ref": "schemas/primitives/path_target_root_resolve.output.schema.json"
+    },
+    {
+      "id": "filesystem.exists",
+      "summary": "Check whether a path exists within the operation root.",
+      "kind": "filesystem",
+      "portability": "target-executor",
+      "semantics": "Return a boolean for a normalized path without escaping the operation root."
+    },
+    {
+      "id": "filesystem.read",
+      "summary": "Read a UTF-8 text file from within the operation root or package resource root.",
+      "kind": "filesystem",
+      "portability": "target-executor",
+      "semantics": "Read text from a normalized path after root containment checks."
+    },
+    {
+      "id": "filesystem.write",
+      "summary": "Write a UTF-8 text file within the operation root.",
+      "kind": "filesystem",
+      "portability": "target-executor",
+      "semantics": "Write text to a normalized path after root containment and operation effect checks."
+    },
+    {
+      "id": "filesystem.copy",
+      "summary": "Copy a package resource or root-contained file to a root-contained destination.",
+      "kind": "filesystem",
+      "portability": "target-executor",
+      "semantics": "Copy bytes between declared roots without allowing path escape."
+    },
+    {
+      "id": "filesystem.remove",
+      "summary": "Remove a root-contained file when the operation allows the mutation.",
+      "kind": "filesystem",
+      "portability": "target-executor",
+      "semantics": "Remove a normalized root-contained path only when operation effects and guards permit removal."
+    },
+    {
+      "id": "filesystem.glob",
+      "summary": "List root-contained paths matching a declared glob.",
+      "kind": "filesystem",
+      "portability": "target-executor",
+      "semantics": "Return sorted relative paths that match a non-escaping glob expression.",
+      "input_schema_ref": "schemas/primitives/filesystem_glob.input.schema.json",
+      "output_schema_ref": "schemas/primitives/filesystem_glob.output.schema.json"
+    },
+    {
+      "id": "json.parse",
+      "summary": "Parse JSON text into a structured value.",
+      "kind": "structured-data",
+      "portability": "target-executor",
+      "semantics": "Parse JSON using the target runtime's standard parser and fail the operation on invalid JSON."
+    },
+    {
+      "id": "json.write",
+      "summary": "Serialize a structured value as stable JSON text.",
+      "kind": "structured-data",
+      "portability": "target-executor",
+      "semantics": "Emit deterministic UTF-8 JSON using the contract-selected formatting policy."
+    },
+    {
+      "id": "toml.parse",
+      "summary": "Parse TOML text into a structured value.",
+      "kind": "structured-data",
+      "portability": "target-executor",
+      "semantics": "Parse TOML using the target runtime's declared TOML library and fail the operation on invalid TOML."
+    },
+    {
+      "id": "toml.write",
+      "summary": "Serialize a structured value as TOML text.",
+      "kind": "structured-data",
+      "portability": "target-executor",
+      "semantics": "Write deterministic TOML for the limited record shapes owned by package contracts."
+    },
+    {
+      "id": "markdown.sections.parse",
+      "summary": "Parse Markdown into heading-addressable sections.",
+      "kind": "structured-data",
+      "portability": "target-executor",
+      "semantics": "Build a conservative section map from Markdown headings without interpreting arbitrary Markdown syntax."
+    },
+    {
+      "id": "record.select",
+      "summary": "Select a field or dotted path from a structured record.",
+      "kind": "record",
+      "portability": "target-executor",
+      "semantics": "Return the value at a declared path or a missing-value signal according to operation policy."
+    },
+    {
+      "id": "record.set",
+      "summary": "Set a field or dotted path in a structured record.",
+      "kind": "record",
+      "portability": "target-executor",
+      "semantics": "Return an updated record with the declared path set to a contract-valid value."
+    },
+    {
+      "id": "record.append",
+      "summary": "Append an item to a structured record list.",
+      "kind": "record",
+      "portability": "target-executor",
+      "semantics": "Append one item to a declared list path after schema validation."
+    },
+    {
+      "id": "record.merge",
+      "summary": "Merge structured records using a declared shallow merge policy.",
+      "kind": "record",
+      "portability": "target-executor",
+      "semantics": "Apply an operation-declared merge policy without target-specific conflict heuristics."
+    },
+    {
+      "id": "record.delete",
+      "summary": "Delete a field or list item from a structured record.",
+      "kind": "record",
+      "portability": "target-executor",
+      "semantics": "Remove only the declared path or matched item and return the updated record."
+    },
+    {
+      "id": "record.normalize",
+      "summary": "Normalize a structured record into its canonical contract shape.",
+      "kind": "record",
+      "portability": "target-executor",
+      "semantics": "Apply schema-backed defaults, sorting, and field projection declared by the operation."
+    },
+    {
+      "id": "schema.validate",
+      "summary": "Validate a structured value against a JSON Schema.",
+      "kind": "validation",
+      "portability": "target-executor",
+      "semantics": "Evaluate the declared JSON Schema and surface validation errors as operation failures."
+    },
+    {
+      "id": "template.render",
+      "summary": "Render a declared template from a structured value.",
+      "kind": "rendering",
+      "portability": "target-executor",
+      "semantics": "Render only named templates with structured inputs; do not execute arbitrary template code."
+    },
+    {
+      "id": "payload.assemble",
+      "summary": "Assemble an output payload from named step results.",
+      "kind": "output",
+      "portability": "target-executor",
+      "semantics": "Build a JSON-serializable payload from declared step outputs and constants.",
+      "input_schema_ref": "schemas/primitives/payload_assemble.input.schema.json",
+      "output_schema_ref": "schemas/primitives/payload_assemble.output.schema.json"
+    },
+    {
+      "id": "check.run.allowed",
+      "summary": "Run an explicitly allowed validation command.",
+      "kind": "check",
+      "portability": "target-executor",
+      "semantics": "Execute only a command declared by the operation or proof route and report structured exit/output data."
+    },
+    {
       "id": "workspace.root.resolve",
-      "summary": "Resolve the effective workspace root from a target path or current working directory."
+      "summary": "Resolve the effective workspace root from a target path or current working directory.",
+      "kind": "workspace-runtime",
+      "portability": "domain-runtime"
     },
     {
       "id": "workspace.config.load",
@@ -140,7 +316,12 @@
     },
     {
       "id": "output.emit",
-      "summary": "Render text or JSON output according to the operation format option."
+      "summary": "Render text or JSON output according to the operation format option.",
+      "kind": "output",
+      "portability": "target-executor",
+      "semantics": "Emit either stable JSON or declared text from an already assembled structured payload.",
+      "input_schema_ref": "schemas/primitives/output_emit.input.schema.json",
+      "output_schema_ref": "schemas/primitives/output_emit.output.schema.json"
     },
     {
       "id": "output.profile.select",

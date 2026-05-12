@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/filesystem_glob.input.schema.json",
+  "title": "filesystem.glob input",
+  "type": "object",
+  "properties": {
+    "root": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Root directory or package resource namespace to search."
+    },
+    "pattern": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Non-escaping glob pattern."
+    },
+    "sort": {
+      "type": "string",
+      "enum": [
+        "lexicographic"
+      ],
+      "default": "lexicographic"
+    }
+  },
+  "required": [
+    "root",
+    "pattern"
+  ],
+  "additionalProperties": false
+}

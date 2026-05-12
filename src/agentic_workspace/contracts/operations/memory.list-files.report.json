@@ -54,6 +54,63 @@
       "description": "Emit file list in the requested format."
     }
   ],
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Representative target-executor IR for a read-only package-resource command from CLI input through emitted JSON/text output.",
+    "steps": [
+      {
+        "id": "resolve_target",
+        "uses": "path.target_root.resolve",
+        "description": "Resolve the optional target root without requiring an installed workspace.",
+        "inputs": [
+          "target"
+        ],
+        "outputs": [
+          "target_root"
+        ],
+        "on_error": "emit_usage_error"
+      },
+      {
+        "id": "list_packaged_payload",
+        "uses": "filesystem.glob",
+        "description": "List packaged memory bootstrap payload files as stable relative paths.",
+        "reads": [
+          "packaged memory bootstrap payload"
+        ],
+        "outputs": [
+          "files"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "assemble_payload",
+        "uses": "payload.assemble",
+        "description": "Build the module-result payload containing dry-run status and discovered file paths.",
+        "inputs": [
+          "target_root",
+          "files"
+        ],
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the result as JSON or text according to the format option.",
+        "inputs": [
+          "result",
+          "format"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ],
+    "portability_notes": [
+      "A TypeScript executor can implement this representative plan with filesystem globbing and payload assembly; it does not require importing Python internals.",
+      "The existing runtime primitive sequence remains the compatibility layer until generated targets consume ir_plan directly."
+    ]
+  },
   "guards": [
     "List-files must remain read-only."
   ],
@@ -63,4 +120,3 @@
   ],
   "migration_status": "validated-contract"
 }
-

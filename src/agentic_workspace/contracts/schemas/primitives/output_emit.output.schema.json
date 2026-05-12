@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/output_emit.output.schema.json",
+  "title": "output.emit output",
+  "type": "object",
+  "properties": {
+    "stdout": {
+      "type": "string",
+      "description": "Rendered stdout text."
+    },
+    "stderr": {
+      "type": "string",
+      "description": "Rendered stderr text."
+    },
+    "exit_code": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Process exit code."
+    }
+  },
+  "required": [
+    "stdout",
+    "stderr",
+    "exit_code"
+  ],
+  "additionalProperties": false
+}

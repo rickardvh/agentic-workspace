@@ -35,6 +35,18 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": "src/agentic_workspace/contracts/schemas/primitives/*.schema.json",
+      "format": "json",
+      "owner": "workspace-contracts",
+      "status": "schema-backed",
+      "schema_or_validator": "JSON Schema draft 2020-12",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Primitive IO schemas define portable target-executor operation IR boundaries.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
       "pattern": "src/agentic_workspace/contracts/operations/*.json",
       "format": "json",
       "owner": "workspace-contracts",
@@ -781,6 +793,23 @@
       "routed_to": "#539"
     },
     {
+      "pattern": "generated/python/*/generated_cli_package/*.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Python command-package resource JSON files are adapter outputs derived from command_package_ir.json.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so installed generated Python package resources load without embedding large JSON blocks in executable code.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "src/agentic_workspace/contracts/command_package_ir.json"
+      ],
+      "routed_to": "#929"
+    },
+    {
       "pattern": "tests/fixtures/**/*.json",
       "format": "json",
       "owner": "workspace-tests",
@@ -900,6 +929,16 @@
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
       "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote to generated-on-demand only after packaging no longer needs checked-in generated Python metadata",
+      "max_bytes": 250000
+    },
+    {
+      "pattern": "generated/python/*/generated_cli_package/*.json",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "package-local generated_cli_package JSON resource loaders",
+      "checked_in_justification": "Generated Python command-package resources are kept as files so executable adapters stay thin and do not embed large JSON blocks.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote to generated-on-demand only after packaging no longer needs checked-in generated Python resource files",
       "max_bytes": 250000
     },
     {

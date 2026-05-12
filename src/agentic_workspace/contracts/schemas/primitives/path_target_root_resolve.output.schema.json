@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/path_target_root_resolve.output.schema.json",
+  "title": "path.target_root.resolve output",
+  "type": "object",
+  "properties": {
+    "target_root": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Normalized target root path selected by the executor."
+    }
+  },
+  "required": [
+    "target_root"
+  ],
+  "additionalProperties": false
+}

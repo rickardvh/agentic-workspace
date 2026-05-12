@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/path_target_root_resolve.input.schema.json",
+  "title": "path.target_root.resolve input",
+  "type": "object",
+  "properties": {
+    "target": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional target path supplied by the command."
+    },
+    "cwd": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Executor current working directory."
+    }
+  },
+  "required": [
+    "cwd"
+  ],
+  "additionalProperties": false
+}
