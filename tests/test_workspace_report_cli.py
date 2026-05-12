@@ -1303,8 +1303,9 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["closeout_trust"]["strict_closeout_gate"]["status"] == "allowed"
-    assert payload["closeout_trust"]["strict_closeout_gate"]["blocking"] is False
+    assert payload["closeout_trust"]["strict_closeout_gate"]["status"] == "blocked"
+    assert payload["closeout_trust"]["strict_closeout_gate"]["blocking"] is True
+    assert payload["closeout_trust"]["intent_satisfaction_lower_trust_count"] == 1
     evidence = payload["closeout_trust"]["package_workflow_evidence"]
     assert evidence["status"] == "present"
     assert evidence["trust"] == "normal"
@@ -1339,10 +1340,87 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert "future work goes to planning" in residue_action["destination_rule"]
     assert "rerun summary/reconcile" in residue_action["next_proof"]
     terminal_action = payload["closeout_trust"]["terminal_action"]
-    assert terminal_action["blocking"] is False
-    assert terminal_action["next_command"] == "none"
-    assert "No closeout trust blocker" in terminal_action["why"]
-    assert "proof, intent satisfaction, issue state" in terminal_action["changes_closure"]
+    assert terminal_action["blocking"] is True
+    assert terminal_action["next_command"] == "agentic-workspace report --target ./repo --section closeout_trust --format json"
+    assert "Lower-trust closeout signals" in terminal_action["why"]
+    assert "lower_trust_closeout_count is 0" in terminal_action["changes_closure"]
+
+
+def test_report_closeout_trust_lowers_trust_for_open_package_owned_continuation_without_active_plan(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "epic-continuation", maturity = "candidate", status = "next", priority = "P1", refs = "package-owned-only", title = "Continue epic", outcome = "Finish the original epic intent.", reason = "A completed lane did not satisfy the larger intent.", promotion_signal = "Promote before closeout.", suggested_first_slice = "Promote the next lane." },
+]
+""",
+    )
+    (target / ".agentic-workspace" / "planning" / "decompositions").mkdir(parents=True, exist_ok=True)
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "decompositions" / "epic-continuation.decomposition.json",
+        {
+            "kind": "planning-decomposition/v1",
+            "title": "Epic continuation",
+            "outcome": "Finish the original epic intent.",
+            "status": "ready-for-lane-promotion",
+            "lanes": [
+                {
+                    "id": "next-lane",
+                    "title": "Next lane",
+                    "readiness": "ready",
+                    "owner_surface": ".agentic-workspace/planning/state.toml",
+                }
+            ],
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    closeout = payload["closeout_trust"]
+    assert closeout["trust"] == "lower-trust"
+    assert closeout["strict_closeout_gate"]["status"] == "blocked"
+    assert closeout["lower_trust_closeout_count"] == 1
+    assert closeout["planning_residue_lower_trust_count"] == 0
+    assert closeout["package_evidence_lower_trust_count"] == 0
+    assert closeout["acceptance_reconciliation_lower_trust_count"] == 0
+    assert closeout["intent_satisfaction_lower_trust_count"] == 1
+    intent_check = closeout["intent_satisfaction_check"]
+    assert intent_check["status"] == "present"
+    assert intent_check["trust"] == "follow-up-required"
+    assert intent_check["reason"] == "no active planning record, but package-owned continuation surfaces remain open"
+    continuation = intent_check["package_owned_continuation"]
+    assert continuation["status"] == "present"
+    assert continuation["surface_count"] >= 1
+    assert ".agentic-workspace/planning/state.toml" in continuation["owner_surfaces"]
+    assert intent_check["closure_scope"]["larger_intent_closure"]["status"] == "open"
+    assert "package-owned continuation" in intent_check["recommended_next_action"]
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+    section_payload = json.loads(capsys.readouterr().out)
+    answer = section_payload["answer"]
+    assert answer["trust"] == "lower-trust"
+    assert answer["lower_trust_closeout_count"] == 1
+    assert answer["checks"]["intent_satisfaction"]["status"] == "present"
+    assert answer["checks"]["intent_satisfaction"]["trust"] == "follow-up-required"
 
 
 def test_report_closeout_trust_lowers_trust_when_active_plan_has_no_package_evidence(tmp_path: Path, capsys) -> None:

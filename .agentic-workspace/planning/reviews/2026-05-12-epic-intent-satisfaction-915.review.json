@@ -1,0 +1,165 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Epic intent satisfaction review for #915",
+  "date": "2026-05-12",
+  "scope": [
+    "Package-owned planning surfaces must preserve original epic intent independently of external trackers"
+  ],
+  "classification": "dogfooding-intent-preservation",
+  "goal": [
+    "Review the #915 dogfooding signal and identify the package-owned planning semantics that must be changed before implementation."
+  ],
+  "non_goals": [
+    "Do not make GitHub, milestones, or any external tracker state authoritative for planning closeout.",
+    "Do not solve all epic planning semantics in one unbounded pass.",
+    "Do not convert review findings into implementation authority without preserving the upstream source reference."
+  ],
+  "review_mode": {
+    "mode": "planning-surface",
+    "review question": "Which package-owned Planning surface should prevent lane proof or external tracker state from substituting for original epic intent satisfaction?",
+    "default finding cap": "3 findings",
+    "inputs inspected first": "GitHub #915, GitHub #892 closeout comments, .agentic-workspace/planning/upstream-task-intake.md, .agentic-workspace/planning/state.toml, src/agentic_workspace/cli.py:_intent_satisfaction_check_payload"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --task \"Ingest #915, create a planning review, enrich the issue, then implement\" --format json; gh issue view 915 --json number,title,body,state,labels,url; gh issue view 892 --comments --json number,title,state,closed,closedAt,body,comments,url; rg intent satisfaction and closeout surfaces",
+    "evidence sources": "Issue #915 states the product-owned failure; #892 closeout demonstrates the failure pattern; upstream-task-intake states external trackers are intake only; _intent_satisfaction_check_payload separates validation proof from larger intent but only for active planning records."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/915",
+      "label": "#915",
+      "role": "upstream dogfooding signal",
+      "locator": "GitHub issue #915"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/892",
+      "label": "#892",
+      "role": "source event that exposed the gap",
+      "locator": "GitHub issue #892 closeout comments"
+    },
+    {
+      "kind": "planning-doc",
+      "target": ".agentic-workspace/planning/upstream-task-intake.md",
+      "label": "upstream intake contract",
+      "role": "authority rule for external trackers",
+      "locator": "Authority Rule"
+    },
+    {
+      "kind": "code",
+      "target": "src/agentic_workspace/cli.py",
+      "label": "_intent_satisfaction_check_payload",
+      "role": "current closeout trust implementation",
+      "locator": "function _intent_satisfaction_check_payload"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Epic intent satisfaction only evaluates active planning records",
+      "summary": "The existing closeout trust payload correctly says validation success is not intent closure, but it returns unavailable when there is no active planning record. Epic-level work can therefore lose package-owned intent continuity after a bounded execplan is archived while decomposition or roadmap lanes still carry the larger outcome.",
+      "evidence": "src/agentic_workspace/cli.py:_intent_satisfaction_check_payload returns unavailable when no active planning record exposes intent-continuity evidence; #892 was closed after promoted lanes even though the larger codegen project and milestone remained open.",
+      "risk if unchanged": "Agents can complete and archive bounded lanes, then treat the absence of an active planning record as quiet state even when the original epic intent remains live elsewhere in package-owned surfaces.",
+      "suggested action": "Extend package-owned summary/closeout trust to inspect inactive epic/decomposition/roadmap continuation signals, not only active execplans, and classify unsatisfied original epic intent as follow-up-required.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "Issue #915 implementation; src/agentic_workspace/cli.py closeout trust and planning summary tests",
+      "promotion trigger": "Before implementing #915, update the issue acceptance to require package-owned epic continuation detection without GitHub dependence.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "External tracker state can still be mistaken for intent authority",
+      "summary": "The upstream intake contract says external trackers are intake sources only, but the #892 failure shows closeout communication can still let external issue state imply that the package-owned epic intent is complete.",
+      "evidence": ".agentic-workspace/planning/upstream-task-intake.md says checked-in planning surfaces decide active scope and done state after promotion; #915 was created because #892 closure obscured open package-owned intent.",
+      "risk if unchanged": "The same failure can recur with any tracker, not only GitHub: Jira, Linear, Notion, or an internal task note could appear closed while package-owned intent remains unresolved.",
+      "suggested action": "Make issue enrichment and implementation language tracker-agnostic: external state may be recorded as evidence, but closeout trust must name package-owned continuation owners and satisfaction status.",
+      "confidence": "high",
+      "source": "friction-confirmed",
+      "promotion target": "Issue #915 acceptance and implementation tests",
+      "promotion trigger": "When enriching #915, remove GitHub-specific closure language from acceptance except as source event context.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "A minimal implementation slice can be bounded to detection and proof",
+      "summary": "The first implementation does not need to redesign all epic planning. A bounded slice can add a package-owned check that detects open decomposition or roadmap continuation after lane closeout and exposes it in summary/closeout trust as follow-up-required.",
+      "evidence": "#915 acceptance asks for a regression surface independent of GitHub; current planning summary already reports roadmap candidate counts and closeout trust already reports intent satisfaction state.",
+      "risk if unchanged": "Trying to solve the full epic model in one pass could add broad planning complexity while missing the dogfooding regression that triggered the work.",
+      "suggested action": "Implement the first slice as a tracker-agnostic planning-summary/closeout-trust guard with a test fixture modeled after #892: completed lane evidence plus open package-owned continuation must not be reported as satisfied.",
+      "confidence": "medium",
+      "source": "static-analysis",
+      "promotion target": "Active #915 implementation slice",
+      "promotion trigger": "After issue enrichment records the bounded first slice.",
+      "post-remediation note shape": "shrink"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote #915 into an active bounded implementation slice after enriching the issue with this review's tracker-agnostic package-owned acceptance.",
+    "defer": "Defer broader epic-model redesign until the first detection/proof slice exposes the exact missing package-owned state.",
+    "dismiss": "Do not pursue GitHub-specific issue-closure blocking; that was the symptom, not the planning contract owner."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "Issue #915 has been enriched and the first package-owned detection/proof slice lands.",
+    "proof surface": "Issue #915, planning summary/closeout trust tests, and the implementation commit",
+    "source retention rule": "Keep this review as compact evidence of the dogfooding judgment; do not retain full issue text once the issue and tests carry the durable contract.",
+    "distillation path": "After implementation, shrink to the findings that remain useful or stub to #915 and the regression test.",
+    "reconstructable refs": [
+      "GitHub issue #915",
+      "GitHub issue #892",
+      "src/agentic_workspace/cli.py:_intent_satisfaction_check_payload"
+    ],
+    "fields intentionally omitted": [
+      "full issue transcripts",
+      "long command output",
+      "GitHub milestone state snapshots"
+    ]
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run agentic-planning create-review epic-intent-satisfaction-915 --title \"Epic intent satisfaction review for #915\" --scope \"Package-owned planning surfaces must preserve original epic intent independently of external trackers\" --classification \"dogfooding-intent-preservation\" --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "drift_log": [
+    "2026-05-12: Review record created by create-review.",
+    "2026-05-12: Review filled from #915/#892 dogfooding evidence before implementation."
+  ]
+}

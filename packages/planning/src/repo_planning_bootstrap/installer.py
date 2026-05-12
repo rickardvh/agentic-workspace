@@ -8749,8 +8749,10 @@ def create_execplan_scaffold(
 
     if dry_run:
         result.add("would create" if not record_path.exists() else "would update", record_path, "schema-valid execplan scaffold")
-        if activate and switch_active and isinstance((state.get("todo") or {}).get("active_items"), list):
-            active_count = len((state.get("todo") or {}).get("active_items", []))
+        state_todo = state.get("todo")
+        state_active_items = state_todo.get("active_items", []) if isinstance(state_todo, dict) else []
+        if activate and switch_active and isinstance(state_active_items, list):
+            active_count = len(state_active_items)
             if active_count:
                 result.add("would update", state_path, f"demote {active_count} active planning item(s) into todo.queued_items")
         if activate or queue:
