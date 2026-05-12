@@ -609,6 +609,16 @@ def _validate_python_runtime_handler_boundary() -> list[str]:
     return errors
 
 
+def _validate_no_legacy_generated_adapter_runtime_import(*, relative_path: str, text: str) -> list[str]:
+    legacy_import = "generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND"
+    if legacy_import in text:
+        return [
+            f"{relative_path} must route generated Python commands through generated_cli_package, "
+            "not legacy generated_command_adapters runtime dispatch"
+        ]
+    return []
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -902,6 +912,7 @@ def _validate_static_surfaces() -> list[str]:
             main_index = text.find("def main(")
             generated_index = text.find("_run_generated_cli_package_if_supported", main_index)
             parser_index = text.find("build_parser()", main_index)
+            errors.extend(_validate_no_legacy_generated_adapter_runtime_import(relative_path=relative_path, text=text))
             if import_name not in text:
                 errors.append(f"{relative_path} does not import the generated Python CLI package")
             if main_index == -1 or generated_index == -1 or parser_index == -1 or generated_index > parser_index:

@@ -225,6 +225,19 @@ def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatc
     assert any("memory.status.report" in error and "thin _run_*_adapter binding" in error for error in errors)
 
 
+def test_python_runtime_import_boundary_rejects_legacy_generated_adapter_dispatch() -> None:
+    checker = _load_checker()
+    errors = checker._validate_no_legacy_generated_adapter_runtime_import(
+        relative_path="src/agentic_workspace/cli.py",
+        text="from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND\n",
+    )
+
+    assert errors == [
+        "src/agentic_workspace/cli.py must route generated Python commands through generated_cli_package, "
+        "not legacy generated_command_adapters runtime dispatch"
+    ]
+
+
 def test_typescript_runtime_handoff_thinness_rejects_runtime_owned_behavior() -> None:
     checker = _load_checker()
     cli_text = "\n".join(

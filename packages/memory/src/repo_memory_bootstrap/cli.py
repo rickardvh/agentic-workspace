@@ -18,7 +18,6 @@ from repo_memory_bootstrap.generated_cli_package import (
 from repo_memory_bootstrap.generated_cli_package import (
     supports_generated_command as supports_generated_cli_package_command,
 )
-from repo_memory_bootstrap.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 from repo_memory_bootstrap.installer import (
     BOOTSTRAP_WORKSPACE_ROOT,
     MANIFEST_PATH,
@@ -882,20 +881,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv_list)
 
     try:
-        generated_adapter = _generated_adapter_for_command(str(args.command))
-        if generated_adapter is not None:
-            return _run_generated_command_adapter(args, adapter=generated_adapter)
-
         handler = COMMAND_HANDLERS.get(_command_key(args))
         if handler is None:
             parser.error(f"Unknown command: {args.command}")
         return handler(args)
     except RepoDetectionError as exc:
         parser.error(_repo_detection_error_message(exc))
-
-
-def _generated_adapter_for_command(command_name: str) -> dict[str, object] | None:
-    return GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
 
 
 def _run_generated_cli_package_if_supported(argv: list[str]) -> int | None:
@@ -915,15 +906,6 @@ def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) ->
         return 0 if result is None else result
     build_generated_cli_package_parser().error(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
     raise SystemExit(2)
-
-
-def _run_generated_command_adapter(args: argparse.Namespace, *, adapter: dict[str, object]) -> int:
-    operation_id = str(adapter["operation_id"])
-    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
-    if handler is not None:
-        result = handler(args)
-        return 0 if result is None else result
-    raise ValueError(f"Unsupported generated command adapter operation: {operation_id}")
 
 
 def _handle_generated_doctor(args: argparse.Namespace) -> int | None:

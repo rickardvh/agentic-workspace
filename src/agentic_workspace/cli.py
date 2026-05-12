@@ -116,7 +116,6 @@ from agentic_workspace.generated_cli_package import (
 from agentic_workspace.generated_cli_package import (
     supports_generated_command as supports_generated_cli_package_command,
 )
-from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 from agentic_workspace.reporting_support import (
     output_contract_payload,
     repo_friction_payload,
@@ -2197,13 +2196,6 @@ def main(argv: list[str] | None = None) -> int:
         else:
             _print_planning_help(payload)
         return 0
-
-    generated_adapter = _generated_adapter_for_command(str(args.command))
-    if generated_adapter is not None:
-        try:
-            return _run_generated_command_adapter(args, adapter=generated_adapter)
-        except WorkspaceUsageError as exc:
-            parser.error(str(exc))
 
     if args.command == "summary":
         try:
@@ -18605,10 +18597,6 @@ def _emit_proof(
             print(f"- {item}")
 
 
-def _generated_adapter_for_command(command_name: str) -> dict[str, Any] | None:
-    return GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
-
-
 def _run_generated_cli_package_if_supported(argv: list[str]) -> int | None:
     if not supports_generated_cli_package_command(argv):
         return None
@@ -18942,14 +18930,6 @@ _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "status.report": _run_lifecycle_report_adapter,
     "summary.report": _run_summary_report_adapter,
 }
-
-
-def _run_generated_command_adapter(args: argparse.Namespace, *, adapter: dict[str, Any]) -> int:
-    operation_id = str(adapter["operation_id"])
-    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
-    if handler is None:
-        raise WorkspaceUsageError(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
-    return handler(args)
 
 
 def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> dict[str, Any]:

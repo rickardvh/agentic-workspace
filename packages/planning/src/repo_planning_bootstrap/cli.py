@@ -16,7 +16,6 @@ from repo_planning_bootstrap.generated_cli_package import (
 from repo_planning_bootstrap.generated_cli_package import (
     supports_generated_command as supports_generated_cli_package_command,
 )
-from repo_planning_bootstrap.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 from repo_planning_bootstrap.installer import (
     adopt_bootstrap,
     archive_execplan,
@@ -253,10 +252,6 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv_list)
 
-    generated_adapter = _generated_adapter_for_command(str(args.command))
-    if generated_adapter is not None:
-        return _run_generated_command_adapter(args, adapter=generated_adapter)
-
     if args.command in {"install", "init"}:
         return _emit(
             install_bootstrap(
@@ -426,10 +421,6 @@ def main(argv: list[str] | None = None) -> int:
     return 2
 
 
-def _generated_adapter_for_command(command_name: str) -> dict[str, object] | None:
-    return GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
-
-
 def _run_generated_cli_package_if_supported(argv: list[str]) -> int | None:
     if not supports_generated_cli_package_command(argv):
         return None
@@ -517,15 +508,6 @@ _GENERATED_RUNTIME_HANDLERS = {
     "planning.status.report": _run_status_report_adapter,
     "planning.summary.report": _run_summary_report_adapter,
 }
-
-
-def _run_generated_command_adapter(args: argparse.Namespace, *, adapter: dict[str, object]) -> int:
-    operation_id = str(adapter["operation_id"])
-    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
-    if handler is None:
-        parser = build_parser()
-        parser.error(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
-    return handler(args)
 
 
 def _emit(result, output_format: str) -> int:
