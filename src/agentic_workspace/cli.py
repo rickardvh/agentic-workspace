@@ -19244,14 +19244,7 @@ def _validation_plan_step(
     lane_id: str | None = None,
     cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
-    cwd = "."
-    runnable_command = command
-    prefix = "cd "
-    separator = " && "
-    if command.startswith(prefix) and separator in command:
-        cwd_part, command_part = command.split(separator, 1)
-        cwd = cwd_part.removeprefix(prefix).strip() or "."
-        runnable_command = command_part.strip()
+    cwd, runnable_command = _split_validation_command(command)
     runnable_command = str(_command_with_cli_invoke(command=runnable_command, cli_invoke=cli_invoke))
     step = {
         "order": index,
@@ -19267,6 +19260,18 @@ def _validation_plan_step(
     if lane_id:
         step["lane_id"] = lane_id
     return step
+
+
+def _split_validation_command(command: str) -> tuple[str, str]:
+    cwd = "."
+    runnable_command = command
+    prefix = "cd "
+    separator = " && "
+    if command.startswith(prefix) and separator in command:
+        cwd_part, command_part = command.split(separator, 1)
+        cwd = cwd_part.removeprefix(prefix).strip() or "."
+        runnable_command = command_part.strip()
+    return cwd, runnable_command
 
 
 def _proof_target_argument(target_root: Path | None) -> str:
@@ -19411,6 +19416,124 @@ def _package_json_scripts(target_root: Path | None) -> dict[str, str]:
     if not isinstance(scripts, dict):
         return {}
     return {str(name): str(command) for name, command in scripts.items() if str(name).strip() and str(command).strip()}
+
+
+def _relative_project_path(*, target_root: Path, project_root: Path) -> str:
+    try:
+        relative = project_root.resolve().relative_to(target_root.resolve()).as_posix()
+    except (OSError, ValueError):
+        relative = project_root.as_posix()
+    return relative or "."
+
+
+def _command_with_cwd(command: str, cwd: str) -> str:
+    return command if cwd == "." else f"cd {cwd} && {command}"
+
+
+def _project_root_record(*, target_root: Path, project_root: Path, source: str, changed_path_match_count: int = 0) -> dict[str, Any]:
+    relative = _relative_project_path(target_root=target_root, project_root=project_root)
+    make_targets = _makefile_targets(project_root)
+    package_scripts = _package_json_scripts(project_root)
+    role_commands = _target_role_command_candidates(target_root=project_root, package_scripts=package_scripts)
+    candidate_commands: list[str] = []
+    for script_name in ("test", "lint", "check", "typecheck"):
+        if script_name in package_scripts:
+            candidate_commands.append("npm test" if script_name == "test" else f"npm run {script_name}")
+    if make_targets:
+        for target in sorted(make_targets):
+            if target in {"test", "lint", "check", "typecheck", "maintainer-surfaces"}:
+                candidate_commands.append(f"make {target}")
+    for commands in role_commands.values():
+        candidate_commands.extend(commands)
+    return {
+        "path": relative,
+        "source": source,
+        "changed_path_match_count": changed_path_match_count,
+        "changed_path_matched": changed_path_match_count > 0,
+        "make": {
+            "available": make_targets is not None,
+            "targets": sorted(make_targets or []),
+        },
+        "package_json": {
+            "available": bool((project_root / "package.json").is_file()),
+            "scripts": sorted(package_scripts),
+        },
+        "python": {
+            "available": bool(
+                (project_root / "pyproject.toml").is_file() or (project_root / "pytest.ini").is_file() or (project_root / "tests").exists()
+            ),
+        },
+        "role_commands": role_commands,
+        "candidate_commands": _dedupe(candidate_commands),
+    }
+
+
+def _uv_workspace_members(*, target_root: Path) -> list[str]:
+    pyproject_path = target_root / "pyproject.toml"
+    if not pyproject_path.is_file():
+        return []
+    try:
+        payload = tomllib.loads(pyproject_path.read_text(encoding="utf-8-sig"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+    members = payload.get("tool", {}).get("uv", {}).get("workspace", {}).get("members", [])
+    if not isinstance(members, list):
+        return []
+    return [str(member).strip().replace("\\", "/").rstrip("/") for member in members if str(member).strip()]
+
+
+def _project_roots_for_changed_paths(*, target_root: Path | None, changed_paths: list[str]) -> list[dict[str, Any]]:
+    if target_root is None:
+        return []
+    roots: dict[str, tuple[Path, str]] = {".": (target_root, "target-root")}
+    match_counts: dict[str, int] = {".": len(changed_paths)}
+    for member in _uv_workspace_members(target_root=target_root):
+        member_path = target_root / member
+        if member_path.is_dir():
+            roots.setdefault(member, (member_path, "uv-workspace-member"))
+            match_counts[member] = sum(
+                1
+                for changed_path in changed_paths
+                if changed_path.replace("\\", "/") == member or changed_path.replace("\\", "/").startswith(f"{member}/")
+            )
+    for changed_path in changed_paths:
+        relative_path = Path(changed_path.replace("\\", "/"))
+        parts = relative_path.parts
+        for index in range(len(parts), 0, -1):
+            candidate_relative = Path(*parts[:index])
+            candidate = target_root / candidate_relative
+            if candidate.is_file():
+                candidate = candidate.parent
+                candidate_relative = candidate_relative.parent
+            if not candidate.is_dir():
+                continue
+            has_project_manifest = any(
+                (candidate / name).is_file()
+                for name in (
+                    "Makefile",
+                    "package.json",
+                    "pyproject.toml",
+                    "Cargo.toml",
+                    "go.mod",
+                    "pom.xml",
+                    "build.gradle",
+                    "build.gradle.kts",
+                )
+            )
+            if has_project_manifest:
+                roots.setdefault(candidate_relative.as_posix() or ".", (candidate, "changed-path-ancestor"))
+                match_counts[candidate_relative.as_posix() or "."] = match_counts.get(candidate_relative.as_posix() or ".", 0) + 1
+                break
+    records = [
+        _project_root_record(
+            target_root=target_root,
+            project_root=project_root,
+            source=source,
+            changed_path_match_count=match_counts.get(_relative, 0),
+        )
+        for _relative, (project_root, source) in roots.items()
+    ]
+    return sorted(records, key=lambda record: (0 if record["path"] == "." else 1, record["path"]))
 
 
 def _proof_intent_for_command_name(name: str) -> str | None:
@@ -19622,6 +19745,9 @@ def _proof_next_decision_payload(
             "why": f"{selected['intent_type']} intent selected {selected['selected_from']}.",
             "route_source": selected["selected_from"],
         }
+        if selected.get("cwd") and selected.get("cwd") != ".":
+            next_action["cwd"] = selected["cwd"]
+            next_action["run"] = selected.get("run", selected["command"])
     else:
         summary = None
         if isinstance(manual_verification, dict):
@@ -19678,6 +19804,8 @@ def _proof_route_decision_payload(
                 "lane": selected_command.get("lane"),
                 "route_source": selected_command.get("selected_from"),
                 "intent_type": selected_command.get("intent_type"),
+                **({"cwd": selected_command.get("cwd")} if selected_command.get("cwd") and selected_command.get("cwd") != "." else {}),
+                **({"run": selected_command.get("run")} if selected_command.get("cwd") and selected_command.get("cwd") != "." else {}),
             }
             if isinstance(selected_command, dict)
             else None
@@ -19803,7 +19931,12 @@ def _manual_verification_templates_for_intents(*, proof_intents: list[dict[str, 
     return templates
 
 
-def _target_proof_capabilities(*, target_root: Path | None, make_targets: set[str] | None) -> dict[str, Any]:
+def _target_proof_capabilities(
+    *,
+    target_root: Path | None,
+    make_targets: set[str] | None,
+    project_roots: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     package_scripts = _package_json_scripts(target_root)
     role_commands = _target_role_command_candidates(target_root=target_root, package_scripts=package_scripts)
     has_makefile = bool(target_root is not None and (target_root / "Makefile").is_file())
@@ -19841,6 +19974,7 @@ def _target_proof_capabilities(*, target_root: Path | None, make_targets: set[st
             ),
         },
         "role_commands": role_commands,
+        "project_roots": project_roots or [],
         "rule": (
             "Proof commands are executable only when the target repo exposes a matching capability; otherwise proof selection "
             "must report unavailable commands and ask for task-specific or manual verification."
@@ -19856,6 +19990,11 @@ def _target_proof_capabilities(*, target_root: Path | None, make_targets: set[st
                 discovered_commands.append(f"make {target}")
     for commands in role_commands.values():
         discovered_commands.extend(commands)
+    for project_root in project_roots or []:
+        if project_root.get("path") == ".":
+            continue
+        for command in project_root.get("candidate_commands", []):
+            discovered_commands.append(_command_with_cwd(str(command), str(project_root.get("path", "."))))
     capabilities["candidate_commands"] = _dedupe(discovered_commands)
     return capabilities
 
@@ -19928,6 +20067,76 @@ def _target_role_command_candidates(*, target_root: Path | None, package_scripts
     return {role: _dedupe(commands) for role, commands in role_commands.items() if commands}
 
 
+def _project_root_replacement_for_make_command(
+    *,
+    command: str,
+    target: str,
+    role: str | None,
+    project_roots: list[dict[str, Any]],
+    reason_prefix: str,
+) -> tuple[str, dict[str, str]] | None:
+    fallback_by_target = {
+        "test-workspace": "test",
+        "lint-workspace": "lint",
+        "test-planning": "test",
+        "lint-planning": "lint",
+        "test-memory": "test",
+        "lint-memory": "lint",
+    }
+    candidates = [project_root for project_root in project_roots if project_root.get("path") != "."]
+    candidates.sort(
+        key=lambda project_root: (
+            int(project_root.get("changed_path_match_count", 0)),
+            len(str(project_root.get("path", ".")).split("/")),
+        ),
+        reverse=True,
+    )
+    for project_root in candidates:
+        cwd = str(project_root.get("path", "."))
+        make_targets = set(project_root.get("make", {}).get("targets", []))
+        if target in make_targets:
+            replacement = _command_with_cwd(f"make {target}", cwd)
+            return replacement, {
+                "command": command,
+                "replacement": replacement,
+                "replacement_cwd": cwd,
+                "source_path": f"{cwd}/Makefile",
+                "reason": f"{reason_prefix}; using subrepo Makefile target {target!r} in {cwd}",
+            }
+        fallback = fallback_by_target.get(target)
+        if fallback and fallback in make_targets:
+            replacement = _command_with_cwd(f"make {fallback}", cwd)
+            return replacement, {
+                "command": command,
+                "replacement": replacement,
+                "replacement_cwd": cwd,
+                "source_path": f"{cwd}/Makefile",
+                "reason": f"{reason_prefix}; using subrepo Makefile target {fallback!r} in {cwd}",
+            }
+        package_scripts = set(project_root.get("package_json", {}).get("scripts", []))
+        script_replacement = _package_script_command_for_role(role=role, package_scripts={script: script for script in package_scripts})
+        if script_replacement is not None:
+            replacement = _command_with_cwd(script_replacement, cwd)
+            return replacement, {
+                "command": command,
+                "replacement": replacement,
+                "replacement_cwd": cwd,
+                "source_path": f"{cwd}/package.json",
+                "reason": f"{reason_prefix}; using subrepo package.json script for {role!r} proof in {cwd}",
+            }
+        role_replacement = next(iter(project_root.get("role_commands", {}).get(role or "", [])), None)
+        if role_replacement is not None:
+            replacement = _command_with_cwd(str(role_replacement), cwd)
+            return replacement, {
+                "command": command,
+                "replacement": replacement,
+                "replacement_cwd": cwd,
+                "source_path": cwd,
+                "reason": f"{reason_prefix}; using detected subrepo {role!r} proof capability in {cwd}",
+            }
+    return None
+
+
 def _adapt_make_proof_command_for_target(
     *,
     command: str,
@@ -19935,6 +20144,7 @@ def _adapt_make_proof_command_for_target(
     make_targets: set[str] | None,
     package_scripts: dict[str, str] | None = None,
     role_commands: dict[str, list[str]] | None = None,
+    project_roots: list[dict[str, Any]] | None = None,
 ) -> tuple[str | None, dict[str, str] | None]:
     target = _target_make_command(command)
     if target is None or target_root is None:
@@ -19952,6 +20162,15 @@ def _adapt_make_proof_command_for_target(
                 "replacement": script_replacement,
                 "reason": f"target repo has no Makefile; using package.json script for {_generic_proof_role_for_make_target(target)!r} proof",
             }
+        project_replacement = _project_root_replacement_for_make_command(
+            command=command,
+            target=target,
+            role=role,
+            project_roots=project_roots or [],
+            reason_prefix="target repo has no root Makefile",
+        )
+        if project_replacement is not None:
+            return project_replacement
         if role_replacement is not None:
             return role_replacement, {
                 "command": command,
@@ -19986,6 +20205,15 @@ def _adapt_make_proof_command_for_target(
             "replacement": script_replacement,
             "reason": f"target Makefile does not define {target!r}; using package.json script for {_generic_proof_role_for_make_target(target)!r} proof",
         }
+    project_replacement = _project_root_replacement_for_make_command(
+        command=command,
+        target=target,
+        role=role,
+        project_roots=project_roots or [],
+        reason_prefix=f"target Makefile does not define {target!r}",
+    )
+    if project_replacement is not None:
+        return project_replacement
     if role_replacement is not None:
         return role_replacement, {
             "command": command,
@@ -20316,7 +20544,8 @@ def _proof_selection_for_changed_paths(
     selected_lanes.extend(concern_lanes)
     make_targets = _makefile_targets(target_root)
     package_scripts = _package_json_scripts(target_root)
-    target_capabilities = _target_proof_capabilities(target_root=target_root, make_targets=make_targets)
+    project_roots = _project_roots_for_changed_paths(target_root=target_root, changed_paths=changed_paths)
+    target_capabilities = _target_proof_capabilities(target_root=target_root, make_targets=make_targets, project_roots=project_roots)
     learned_route_hints = _confirm_learned_route_hints(
         learned_hints=_load_proof_route_hints(target_root=target_root),
         target_capabilities=target_capabilities,
@@ -20336,6 +20565,7 @@ def _proof_selection_for_changed_paths(
                 make_targets=make_targets,
                 package_scripts=package_scripts,
                 role_commands=target_capabilities.get("role_commands", {}),
+                project_roots=project_roots,
             )
             if adapted_command is not None:
                 candidate_commands.append(adapted_command)
@@ -20364,6 +20594,7 @@ def _proof_selection_for_changed_paths(
                 make_targets=make_targets,
                 package_scripts=package_scripts,
                 role_commands=target_capabilities.get("role_commands", {}),
+                project_roots=project_roots,
             )
             if adjustment is not None:
                 adjustment = {"lane": str(lane.get("id", "")), **adjustment}
@@ -20419,14 +20650,17 @@ def _proof_selection_for_changed_paths(
     for lane in selected_lanes:
         intent = intent_by_lane_id.get(str(lane.get("id", "")), {})
         for command in lane.get("enough_proof", []):
+            command_text = str(command)
+            command_cwd, run_command = _split_validation_command(command_text)
             selected_commands.append(
                 {
                     "kind": "proof-command/v1",
-                    "command": str(command),
-                    "cwd": ".",
+                    "command": command_text,
+                    "cwd": command_cwd,
+                    "run": run_command,
                     "selected_from": _proof_route_source_for_lane(
                         lane=lane,
-                        command=str(command),
+                        command=command_text,
                         adjustments_by_replacement=adjustments_by_replacement,
                     ),
                     "intent_type": str(intent.get("type", "behavior-test")),

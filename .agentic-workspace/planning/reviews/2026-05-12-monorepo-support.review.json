@@ -76,7 +76,8 @@
       "source": "mixed",
       "promotion target": ".agentic-workspace/planning/state.toml roadmap or issue intake for proof-routing monorepo support",
       "promotion trigger": "Promote when proof routing work resumes, or immediately if another host monorepo reports missed subrepo validation commands.",
-      "post-remediation note shape": "shrink to a pointer to the monorepo discovery contract/tests once implemented"
+      "post-remediation note shape": "shrink to a pointer to the monorepo discovery contract/tests once implemented",
+      "status": "implemented"
     },
     {
       "id": "selected-proof-commands-have-no-subrepo-cwd",
@@ -89,7 +90,8 @@
       "source": "static-analysis",
       "promotion target": "proof command schema/output and tests/test_workspace_proof_cli.py",
       "promotion trigger": "Promote with subrepo Makefile discovery, because discovery and cwd locality need to land together to avoid another partial monorepo fix.",
-      "post-remediation note shape": "shrink after selected proof command records include locality and regression coverage"
+      "post-remediation note shape": "shrink after selected proof command records include locality and regression coverage",
+      "status": "implemented"
     },
     {
       "id": "monorepo-roots-are-not-a-contract",
@@ -102,12 +104,13 @@
       "source": "static-analysis",
       "promotion target": "contracts plus proof routing implementation, likely `src/agentic_workspace/contracts/` and `src/agentic_workspace/cli.py`",
       "promotion trigger": "Promote before broadening generated CLI or workspace proof support to additional monorepo packages/languages.",
-      "post-remediation note shape": "stub after a canonical project-root contract and proof selectors replace this review as evidence"
+      "post-remediation note shape": "stub after a canonical project-root contract and proof selectors replace this review as evidence",
+      "status": "implemented"
     }
   ],
   "recommendation": {
-    "promote": "Promote a single bounded follow-up for monorepo proof routing if the next implementation slice touches proof selection. The first implementation should discover changed-path project roots, detect subrepo Makefiles/package manifests, and emit cwd-aware proof commands.",
-    "defer": "Do not widen immediately into full monorepo lifecycle/install semantics; the urgent proven gap is validation/proof routing.",
+    "promote": "Implemented in the proof-routing slice: changed-path project roots are discovered, subrepo Makefiles/package manifests feed target_proof_capabilities, and selected proof commands carry cwd-aware execution records.",
+    "defer": "Full monorepo lifecycle/install semantics remain intentionally out of scope; this review only required validation/proof routing.",
     "dismiss": "No findings dismissed."
   },
   "retention": {
@@ -175,6 +178,7 @@
     "uv run agentic-workspace doctor --target . --modules planning --format json"
   ],
   "drift_log": [
-    "2026-05-12: Review created after dogfooding report that proof routing did not detect Makefiles in subrepos."
+    "2026-05-12: Review created after dogfooding report that proof routing did not detect Makefiles in subrepos.",
+    "2026-05-12: Findings promoted, implemented, and removed from live roadmap state after proof-routing regression coverage passed."
   ]
 }

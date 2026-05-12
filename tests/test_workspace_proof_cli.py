@@ -316,6 +316,96 @@ def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_pat
     assert payload["manual_verification"] is None
 
 
+def test_proof_changed_uses_subrepo_makefile_for_package_paths(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "pyproject.toml", '[tool.uv.workspace]\nmembers = ["packages/other", "packages/planning"]\n')
+    _write(tmp_path / "packages" / "other" / "Makefile", "test:\n\tfalse\n\nlint:\n\tfalse\n")
+    _write(tmp_path / "packages" / "planning" / "Makefile", "test:\n\tpytest\n\nlint:\n\truff check .\n")
+    _write(tmp_path / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "installer.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "packages/planning/src/repo_planning_bootstrap/installer.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["required_commands"] == ["cd packages/planning && make test", "cd packages/planning && make lint"]
+    assert answer["target_proof_capabilities"]["make"] == {"available": False, "targets": []}
+    project_roots = {project_root["path"]: project_root for project_root in answer["target_proof_capabilities"]["project_roots"]}
+    assert project_roots["packages/other"]["changed_path_matched"] is False
+    assert project_roots["packages/planning"]["changed_path_matched"] is True
+    assert project_roots["packages/planning"]["make"]["targets"] == ["lint", "test"]
+    assert "cd packages/planning && make test" in answer["target_proof_capabilities"]["candidate_commands"]
+    assert answer["selected_commands"][0] == {
+        "kind": "proof-command/v1",
+        "command": "cd packages/planning && make test",
+        "cwd": "packages/planning",
+        "run": "make test",
+        "selected_from": "live-adapted-target-capability",
+        "intent_type": "behavior-test",
+        "lane": "planning_package",
+        "required": True,
+    }
+    assert answer["proof_route_decision"]["selected_command"] == {
+        "command": "cd packages/planning && make test",
+        "lane": "planning_package",
+        "route_source": "live-adapted-target-capability",
+        "intent_type": "behavior-test",
+        "cwd": "packages/planning",
+        "run": "make test",
+    }
+    first_step = answer["validation_plan"]["required"][0]
+    assert first_step["command"] == "cd packages/planning && make test"
+    assert first_step["cwd"] == "packages/planning"
+    assert first_step["run"] == "make test"
+    assert answer.get("manual_verification") is None
+
+
+def test_proof_changed_uses_subrepo_package_json_for_package_paths(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "pyproject.toml", '[tool.uv.workspace]\nmembers = ["packages/ui"]\n')
+    _write(tmp_path / "packages" / "ui" / "package.json", json.dumps({"scripts": {"test": "vitest run", "lint": "eslint ."}}))
+    _write(tmp_path / "packages" / "ui" / "src" / "index.ts", "export const value = 1;\n")
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "packages/ui/src/index.ts", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["required_commands"] == ["cd packages/ui && npm test", "cd packages/ui && npm run lint"]
+    assert payload["next"]["command"] == "cd packages/ui && npm test"
+    assert payload["next"]["cwd"] == "packages/ui"
+    assert payload["next"]["run"] == "npm test"
+    assert payload["proof_command_adjustments"] == [
+        {
+            "lane": "workspace_cli",
+            "command": "make test-workspace",
+            "replacement": "cd packages/ui && npm test",
+            "replacement_cwd": "packages/ui",
+            "source_path": "packages/ui/package.json",
+            "reason": "target repo has no root Makefile; using subrepo package.json script for 'test' proof in packages/ui",
+        },
+        {
+            "lane": "workspace_cli",
+            "command": "make lint-workspace",
+            "replacement": "cd packages/ui && npm run lint",
+            "replacement_cwd": "packages/ui",
+            "source_path": "packages/ui/package.json",
+            "reason": "target repo has no root Makefile; using subrepo package.json script for 'lint' proof in packages/ui",
+        },
+    ]
+    assert payload["manual_verification"] is None
+
+
 def test_proof_changed_uses_python_pytest_capability_without_makefile(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
