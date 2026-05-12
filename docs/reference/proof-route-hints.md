@@ -15,4 +15,10 @@ Advisory proof route hints discovered during lifecycle setup/adopt. Hints are no
 | `schema_version` | const `"proof-route-hints/v1"` | yes |  | Version of the proof route hints contract. |  |  |
 | `source` | string | yes |  | Repo-relative source path or setup phase that produced these hints. |  |  |
 | `rule` | string | yes |  | Human-readable safety rule explaining how consumers should treat these hints. |  |  |
+| `learning_policy` | object | yes |  | Policy separating setup/adopt-learned hints from live capabilities and configured proof policy. |  |  |
+| `learning_policy.kind` | const `"setup-adopt-proof-route-learning-policy/v1"` | yes |  | Discriminator identifying the policy that governs setup/adopt-learned proof route hints. |  |  |
+| `learning_policy.persistence` | const `"advisory-hints"` | yes |  | Declares that discovered proof routes are retained only as advisory hints, not authoritative proof policy. |  |  |
+| `learning_policy.authoritative_selection` | const `"live-target-capabilities"` | yes |  | Declares that current target capabilities remain authoritative when selecting proof commands. |  |  |
+| `learning_policy.configured_policy_role` | string | yes |  | Explains how configured proof policy relates to learned advisory hints. |  |  |
+| `learning_policy.route_map_decision` | const `"do-not-create-second-route-map-unless-live-discovery-proves-insufficient"` | yes |  | Prevents learned setup/adopt hints from becoming a parallel route map unless live discovery cannot select proof. |  |  |
 | `hints` | array of object | yes |  | Advisory proof command candidates that still require live confirmation before use. |  |  |

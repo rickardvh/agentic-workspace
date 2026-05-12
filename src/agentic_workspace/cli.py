@@ -7983,6 +7983,7 @@ def _report_closeout_trust_payload(
     ]
     sample_signals = [message for message in sample_signals if message][:3]
     package_workflow_evidence = _package_workflow_evidence_payload(planning_report=planning_report)
+    intent_satisfaction_check = _intent_satisfaction_check_payload(planning_report=planning_report)
     acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
     active_planning_record = package_workflow_evidence.get("status") == "present"
     package_absence_signals: list[str] = []
@@ -7995,10 +7996,20 @@ def _report_closeout_trust_payload(
     effective_lower_trust_count = lower_trust_closeout_count + len(package_absence_signals)
     if acceptance_reconciliation.get("trust") == "lower-trust":
         effective_lower_trust_count += 1
+    intent_satisfaction_trust = str(intent_satisfaction_check.get("trust", ""))
+    intent_satisfaction_lower_trust_count = 1 if intent_satisfaction_trust in {"follow-up-required", "needs-review"} else 0
+    effective_lower_trust_count += intent_satisfaction_lower_trust_count
+    intent_satisfaction_signals: list[str] = []
+    if intent_satisfaction_lower_trust_count:
+        continuation_surface = str(intent_satisfaction_check.get("continuation_surface", "")).strip()
+        continuation_summary = f" via {continuation_surface}" if continuation_surface else ""
+        intent_satisfaction_signals.append(
+            f"Intent satisfaction is {intent_satisfaction_trust}{continuation_summary}; closeout needs package-owned continuation evidence before it is normal-trust."
+        )
     trust = "lower-trust" if effective_lower_trust_count > 0 else "normal"
     if trust == "lower-trust":
         summary = (
-            f"{effective_lower_trust_count} closeout signal(s) suggest package bypass, missing package evidence, or missing planning residue; "
+            f"{effective_lower_trust_count} closeout signal(s) suggest package bypass, missing package evidence, unsatisfied intent, or missing planning residue; "
             "treat closeout trust as lower until checked-in residue is visible."
         )
         recommended_next_action = str(
@@ -8020,11 +8031,12 @@ def _report_closeout_trust_payload(
         "planning_residue_lower_trust_count": lower_trust_closeout_count,
         "package_evidence_lower_trust_count": len(package_absence_signals),
         "acceptance_reconciliation_lower_trust_count": 1 if acceptance_reconciliation.get("trust") == "lower-trust" else 0,
+        "intent_satisfaction_lower_trust_count": intent_satisfaction_lower_trust_count,
         "summary": summary,
-        "sample_signals": [*sample_signals, *package_absence_signals][:3],
+        "sample_signals": [*sample_signals, *package_absence_signals, *intent_satisfaction_signals][:3],
         "absence_signals": package_absence_signals,
         "package_workflow_evidence": package_workflow_evidence,
-        "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report),
+        "intent_satisfaction_check": intent_satisfaction_check,
         "acceptance_criteria_reconciliation": acceptance_reconciliation,
         "historical_review_artifacts": _historical_review_artifacts_policy(
             planning_report=planning_report,
@@ -8319,10 +8331,149 @@ def _package_workflow_evidence_payload(*, planning_report: dict[str, Any]) -> di
     }
 
 
+def _open_package_owned_continuation_payload(*, planning_report: dict[str, Any]) -> dict[str, Any]:
+    closed_statuses = {"archive", "archived", "cancelled", "canceled", "closed", "complete", "completed", "dismissed", "done"}
+
+    def is_open_status(value: Any) -> bool:
+        normalized = str(value or "").strip().lower()
+        return not normalized or normalized not in closed_statuses
+
+    surfaces: list[dict[str, Any]] = []
+    work_maturity = planning_report.get("work_maturity", {}) if isinstance(planning_report, dict) else {}
+    if isinstance(work_maturity, dict):
+        for bucket_name in ("ready_slices", "needs_shaping", "deferred_lanes", "blocked_items", "residue_routing_needed"):
+            bucket = work_maturity.get(bucket_name, [])
+            if not isinstance(bucket, list):
+                continue
+            for item in bucket:
+                if not isinstance(item, dict) or not is_open_status(item.get("status")):
+                    continue
+                source_bucket = str(item.get("source_bucket", "")).strip()
+                surfaces.append(
+                    {
+                        "kind": f"work_maturity.{bucket_name}",
+                        "id": item.get("id", ""),
+                        "title": item.get("title", item.get("summary", "")),
+                        "status": item.get("status", ""),
+                        "maturity": item.get("maturity", ""),
+                        "refs": item.get("refs", item.get("issues", "")),
+                        "owner_surface": (
+                            ".agentic-workspace/planning/state.toml"
+                            if source_bucket.startswith("roadmap.")
+                            else source_bucket or ".agentic-workspace/planning/state.toml"
+                        ),
+                        "suggested_first_slice": item.get("suggested_first_slice", ""),
+                    }
+                )
+
+    roadmap = planning_report.get("roadmap", {}) if isinstance(planning_report, dict) else {}
+    if isinstance(roadmap, dict):
+        for bucket_name in ("candidate_lanes", "candidates"):
+            bucket = roadmap.get(bucket_name, [])
+            if not isinstance(bucket, list):
+                continue
+            for item in bucket:
+                if not isinstance(item, dict) or not is_open_status(item.get("status")):
+                    continue
+                surfaces.append(
+                    {
+                        "kind": f"roadmap.{bucket_name}",
+                        "id": item.get("id", ""),
+                        "title": item.get("title", item.get("summary", "")),
+                        "status": item.get("status", ""),
+                        "maturity": item.get("maturity", ""),
+                        "refs": item.get("refs", item.get("issues", "")),
+                        "owner_surface": ".agentic-workspace/planning/state.toml",
+                        "suggested_first_slice": item.get("suggested_first_slice", ""),
+                    }
+                )
+
+    decomposition = planning_report.get("decomposition", {}) if isinstance(planning_report, dict) else {}
+    if isinstance(decomposition, dict):
+        for record in _list_payload(decomposition.get("records")):
+            if not isinstance(record, dict) or not is_open_status(record.get("status")):
+                continue
+            candidate_lanes = [lane for lane in _list_payload(record.get("candidate_lanes")) if isinstance(lane, dict)]
+            surfaces.append(
+                {
+                    "kind": "decomposition.record",
+                    "id": record.get("path", ""),
+                    "title": record.get("title", ""),
+                    "status": record.get("status", ""),
+                    "owner_surface": record.get("path", ".agentic-workspace/planning/decompositions/"),
+                    "lane_count": record.get("lane_count", len(candidate_lanes)),
+                    "ready_lane_count": record.get("ready_lane_count", 0),
+                    "candidate_lane_ids": [str(lane.get("id", "")) for lane in candidate_lanes if str(lane.get("id", "")).strip()][:5],
+                }
+            )
+
+    surfaces = [
+        surface for surface in surfaces if str(surface.get("id") or surface.get("title") or surface.get("owner_surface") or "").strip()
+    ]
+    if not surfaces:
+        return {
+            "status": "quiet",
+            "surface_count": 0,
+            "surfaces": [],
+            "rule": "When no active planning record exists, package-owned roadmap and decomposition surfaces are still checked before intent closeout is trusted.",
+        }
+    return {
+        "status": "present",
+        "surface_count": len(surfaces),
+        "surfaces": surfaces[:5],
+        "owner_surfaces": sorted(
+            {str(surface.get("owner_surface", "")).strip() for surface in surfaces if str(surface.get("owner_surface", "")).strip()}
+        ),
+        "rule": "Open package-owned roadmap or decomposition continuation means quiet active state is not evidence of epic intent satisfaction.",
+    }
+
+
 def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any]) -> dict[str, Any]:
     active = planning_report.get("active", {}) if isinstance(planning_report, dict) else {}
     planning_record = active.get("planning_record", {}) if isinstance(active, dict) else {}
     if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
+        open_continuation = _open_package_owned_continuation_payload(planning_report=planning_report)
+        if open_continuation.get("status") == "present":
+            owner_surfaces = [str(item) for item in _list_payload(open_continuation.get("owner_surfaces"))]
+            continuation_surface = owner_surfaces[0] if owner_surfaces else ".agentic-workspace/planning/"
+            return {
+                "status": "present",
+                "trust": "follow-up-required",
+                "reason": "no active planning record, but package-owned continuation surfaces remain open",
+                "required_for_broad_work": True,
+                "larger_intent": "",
+                "slice_completes_larger_intent": "unknown",
+                "required_follow_on": "yes",
+                "continuation_surface": continuation_surface,
+                "package_owned_continuation": open_continuation,
+                "rule": "Validation success is not enough; package-owned roadmap or decomposition continuation must be routed before closeout can claim larger intent satisfaction.",
+                "closure_scope": {
+                    "validation_proof": {
+                        "status": "separate-answer",
+                        "not_sufficient_for_closure": True,
+                        "rule": "Validation success proves implementation behavior, not intent closure by itself.",
+                    },
+                    "requested_slice": {"status": "unavailable"},
+                    "lane_or_system_intent": {
+                        "status": "follow-up-required",
+                        "required_follow_on": "yes",
+                        "continuation_surface": continuation_surface,
+                        "sources": [
+                            "planning.roadmap",
+                            "planning.decomposition",
+                        ],
+                    },
+                    "larger_intent_closure": {
+                        "status": "open",
+                        "closure_decision": "requires-package-owned-continuation",
+                        "evidence": "open package-owned roadmap or decomposition continuation",
+                        "source": "planning roadmap/decomposition state",
+                        "rule": "External tracker state is evidence only; package-owned continuation controls intent satisfaction.",
+                    },
+                    "non_substitution_rule": "Validation success alone is not closure evidence.",
+                },
+                "recommended_next_action": "Promote, continue, or explicitly close the package-owned continuation surface before treating broad closeout as satisfied.",
+            }
         return {
             "status": "unavailable",
             "reason": "no active planning record exposes intent-continuity evidence",
