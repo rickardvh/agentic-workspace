@@ -1,7 +1,7 @@
 {
   "kind": "planning-decomposition/v1",
   "title": "Generated PowerShell CLI transport epic",
-  "status": "shaping",
+  "status": "closed",
   "larger_intended_outcome": "Plan PowerShell as the second shell-family generated command transport after the Bash boundary and proof route establish reusable shell adapter constraints.",
   "non_goals": [
     "Do not start PowerShell renderer implementation before Bash proves the shared shell-family boundary or records a blocker.",
@@ -13,7 +13,7 @@
     {
       "id": "powershell-reuse-gap-audit",
       "title": "PowerShell reuse and gap audit",
-      "readiness": "ready",
+      "readiness": "deferred",
       "outcome": "Bash shell-family boundary is compared against PowerShell quoting, argument binding, completion, exit-code, and process-handoff behavior before implementation begins.",
       "owner_surface": "docs/reviews/shell-adapter-feasibility-2026-04-27.md and src/agentic_workspace/contracts/command_package_ir.json",
       "proof": "Review record or decomposition update names any universal IR fields needed before renderer work starts.",
@@ -99,5 +99,5 @@
       "role": "boundary evidence"
     }
   ],
-  "notes": "This epic is intentionally behind Bash. Its first promoted slice should verify reuse and gaps rather than implement a PowerShell renderer immediately."
+  "notes": "Closed out of current scope on 2026-05-12 after #892 was reframed to Python-only until generated Python CLI completion actually removes package-specific executable cli.py front doors outside generated/python. Re-promote only after Python is complete and a new shell transport lane is explicitly selected."
 }

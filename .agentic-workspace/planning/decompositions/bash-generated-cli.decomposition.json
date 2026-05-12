@@ -1,7 +1,7 @@
 {
   "kind": "planning-decomposition/v1",
   "title": "Generated Bash CLI transport epic",
-  "status": "ready-for-lane-promotion",
+  "status": "closed",
   "larger_intended_outcome": "Promote Bash from an explicit deferred generated command target into the first additional shell-family generated command transport while keeping shell behavior downstream of command-package IR.",
   "non_goals": [
     "Do not implement runtime primitive behavior in Bash.",
@@ -13,7 +13,7 @@
     {
       "id": "bash-parser-help-boundary",
       "title": "Bash parser and help projection boundary",
-      "readiness": "ready",
+      "readiness": "deferred",
       "outcome": "Bash target can render command names, help text, option metadata, effect hints, and unsupported-command guidance from command-package IR without owning target-specific command semantics.",
       "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json",
       "proof": "IR/schema/static checks plus generated command package freshness check; no Bash runtime handoff required for this lane.",
@@ -23,7 +23,7 @@
     {
       "id": "bash-generated-fixture",
       "title": "Generated Bash fixture package",
-      "readiness": "needs-shaping",
+      "readiness": "deferred",
       "outcome": "Generated Bash outputs exist under the declared shell target root with no-direct-edit sentinels and freshness checks.",
       "owner_surface": "scripts/generate/generate_command_packages.py and generated/shell/bash",
       "proof": "Generated package freshness check plus static package proof verifies Bash files are rendered from IR.",
@@ -35,7 +35,7 @@
     {
       "id": "bash-runtime-handoff-conformance",
       "title": "Bash black-box runtime handoff conformance",
-      "readiness": "needs-shaping",
+      "readiness": "deferred",
       "outcome": "Generated Bash wrapper delegates supported commands to fixture runtime processes, preserves spaced argv values, and reports unsupported commands with recovery guidance.",
       "owner_surface": "scripts/check/check_generated_command_packages.py",
       "proof": "Docker-selected Bash conformance lane modeled after generated TypeScript adapter conformance.",
@@ -47,7 +47,7 @@
     {
       "id": "bash-maturity-promotion",
       "title": "Bash maturity promotion gate",
-      "readiness": "needs-shaping",
+      "readiness": "deferred",
       "outcome": "Bash target moves from deferred only when generated freshness, Docker proof, runtime handoff conformance, and weak-agent routing constraints are explicit.",
       "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json",
       "proof": "Generated package static proof rejects maturity drift and weak-agent routing before the Bash target is promoted.",
@@ -94,5 +94,5 @@
       "role": "boundary evidence"
     }
   ],
-  "notes": "This epic is implementation planning only. Product source changes should happen in promoted execplans with explicit changed paths and proof."
+  "notes": "Closed out of current scope on 2026-05-12 after #892 was reframed to Python-only until generated Python CLI completion actually removes package-specific executable cli.py front doors outside generated/python. Re-promote only after Python is complete and a new shell transport lane is explicitly selected."
 }
