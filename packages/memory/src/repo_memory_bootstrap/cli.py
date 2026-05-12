@@ -13,6 +13,9 @@ from repo_memory_bootstrap.generated_cli_package import (
     build_generated_parser as build_generated_cli_package_parser,
 )
 from repo_memory_bootstrap.generated_cli_package import (
+    generated_command_names as generated_cli_package_command_names,
+)
+from repo_memory_bootstrap.generated_cli_package import (
     run_generated_command as run_generated_cli_package_command,
 )
 from repo_memory_bootstrap.generated_cli_package import (
@@ -70,6 +73,7 @@ def build_parser() -> argparse.ArgumentParser:
         version=f"%(prog)s {__version__}",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+    generated_commands = set(generated_cli_package_command_names())
 
     install_parser = subparsers.add_parser("install", help="Install bootstrap files into a repository.")
     _add_install_arguments(install_parser)
@@ -132,36 +136,40 @@ def build_parser() -> argparse.ArgumentParser:
     _add_project_metadata_arguments(uninstall_parser)
     _add_format_argument(uninstall_parser)
 
-    doctor_parser = subparsers.add_parser("doctor", help="Diagnose bootstrap state and recommended remediation.")
-    _add_target_arguments(doctor_parser)
-    doctor_parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Emit broad diagnostic action detail.",
-    )
-    doctor_parser.add_argument(
-        "--strict-doc-ownership",
-        action="store_true",
-        help="Enforce doc-ownership audits even when the repo manifest has not enabled them.",
-    )
-    _add_project_metadata_arguments(doctor_parser)
-    _add_format_argument(doctor_parser)
+    if "doctor" not in generated_commands:
+        doctor_parser = subparsers.add_parser("doctor", help="Diagnose bootstrap state and recommended remediation.")
+        _add_target_arguments(doctor_parser)
+        doctor_parser.add_argument(
+            "--verbose",
+            action="store_true",
+            help="Emit broad diagnostic action detail.",
+        )
+        doctor_parser.add_argument(
+            "--strict-doc-ownership",
+            action="store_true",
+            help="Enforce doc-ownership audits even when the repo manifest has not enabled them.",
+        )
+        _add_project_metadata_arguments(doctor_parser)
+        _add_format_argument(doctor_parser)
 
-    status_parser = subparsers.add_parser("status", help="Report whether bootstrap files are present.")
-    _add_target_arguments(status_parser)
-    status_parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Emit broad diagnostic action detail.",
-    )
-    _add_format_argument(status_parser)
+    if "status" not in generated_commands:
+        status_parser = subparsers.add_parser("status", help="Report whether bootstrap files are present.")
+        _add_target_arguments(status_parser)
+        status_parser.add_argument(
+            "--verbose",
+            action="store_true",
+            help="Emit broad diagnostic action detail.",
+        )
+        _add_format_argument(status_parser)
 
-    list_files_parser = subparsers.add_parser("list-files", help="Preview packaged bootstrap files.")
-    _add_target_arguments(list_files_parser)
-    _add_format_argument(list_files_parser)
+    if "list-files" not in generated_commands:
+        list_files_parser = subparsers.add_parser("list-files", help="Preview packaged bootstrap files.")
+        _add_target_arguments(list_files_parser)
+        _add_format_argument(list_files_parser)
 
-    list_skills_parser = subparsers.add_parser("list-skills", help="List bundled bootstrap-lifecycle skills.")
-    _add_format_argument(list_skills_parser)
+    if "list-skills" not in generated_commands:
+        list_skills_parser = subparsers.add_parser("list-skills", help="List bundled bootstrap-lifecycle skills.")
+        _add_format_argument(list_skills_parser)
 
     prompt_parser = subparsers.add_parser(
         "prompt",
@@ -210,13 +218,14 @@ def build_parser() -> argparse.ArgumentParser:
     _add_target_arguments(route_review_parser)
     _add_format_argument(route_review_parser)
 
-    route_report_parser = subparsers.add_parser(
-        "route-report",
-        help="Show a compact aggregate routing snapshot derived from checked-in feedback cases and fixtures.",
-    )
-    _add_target_arguments(route_report_parser)
-    route_report_parser.add_argument("--verbose", action="store_true", help="Emit full route-report fixture detail.")
-    _add_format_argument(route_report_parser)
+    if "route-report" not in generated_commands:
+        route_report_parser = subparsers.add_parser(
+            "route-report",
+            help="Show a compact aggregate routing snapshot derived from checked-in feedback cases and fixtures.",
+        )
+        _add_target_arguments(route_report_parser)
+        route_report_parser.add_argument("--verbose", action="store_true", help="Emit full route-report fixture detail.")
+        _add_format_argument(route_report_parser)
 
     sync_parser = subparsers.add_parser(
         "sync-memory", help="Suggest memory updates for changed work and surface compact upstream improvement candidates."
@@ -226,39 +235,41 @@ def build_parser() -> argparse.ArgumentParser:
     sync_parser.add_argument("--notes", nargs="*", default=[], help="Explicit memory notes to review.")
     _add_format_argument(sync_parser)
 
-    promotion_parser = subparsers.add_parser(
-        "promotion-report",
-        help=(
-            "Suggest memory notes that should be promoted into canonical docs or "
-            "considered for elimination through skills, scripts, tests, or refactors."
-        ),
-    )
-    _add_target_arguments(promotion_parser)
-    promotion_parser.add_argument(
-        "--notes",
-        nargs="*",
-        default=[],
-        help="Explicit memory notes to inspect.",
-    )
-    promotion_parser.add_argument(
-        "--mode",
-        choices=("all", "remediation"),
-        default="all",
-        help="Report all candidates or only medium/high-confidence remediation candidates.",
-    )
-    _add_format_argument(promotion_parser)
+    if "promotion-report" not in generated_commands:
+        promotion_parser = subparsers.add_parser(
+            "promotion-report",
+            help=(
+                "Suggest memory notes that should be promoted into canonical docs or "
+                "considered for elimination through skills, scripts, tests, or refactors."
+            ),
+        )
+        _add_target_arguments(promotion_parser)
+        promotion_parser.add_argument(
+            "--notes",
+            nargs="*",
+            default=[],
+            help="Explicit memory notes to inspect.",
+        )
+        promotion_parser.add_argument(
+            "--mode",
+            choices=("all", "remediation"),
+            default="all",
+            help="Report all candidates or only medium/high-confidence remediation candidates.",
+        )
+        _add_format_argument(promotion_parser)
 
-    report_parser = subparsers.add_parser(
-        "report",
-        help="Report compact memory module state without broad note-tree inspection first.",
-    )
-    _add_target_arguments(report_parser)
-    report_parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Emit broad diagnostic report detail.",
-    )
-    _add_format_argument(report_parser)
+    if "report" not in generated_commands:
+        report_parser = subparsers.add_parser(
+            "report",
+            help="Report compact memory module state without broad note-tree inspection first.",
+        )
+        _add_target_arguments(report_parser)
+        report_parser.add_argument(
+            "--verbose",
+            action="store_true",
+            help="Emit broad diagnostic report detail.",
+        )
+        _add_format_argument(report_parser)
 
     create_note_parser = subparsers.add_parser(
         "create-note",

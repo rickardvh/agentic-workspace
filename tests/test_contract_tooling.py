@@ -1067,7 +1067,7 @@ def test_generated_adapter_contracts_match_live_cli_surfaces() -> None:
     assert module._validate_generated_adapter_live_cli_parity(contract_tooling.command_adapter_generation_manifest()) == []
 
 
-def test_generated_adapter_live_cli_parity_catches_missing_contract_option(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generated_adapter_live_cli_parity_defers_generated_command_options_to_package_ir(monkeypatch: pytest.MonkeyPatch) -> None:
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
     spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
     assert spec is not None and spec.loader is not None
@@ -1088,7 +1088,7 @@ def test_generated_adapter_live_cli_parity_catches_missing_contract_option(monke
 
     errors = module._validate_generated_adapter_live_cli_parity({"adapters": [memory_adapter]})
 
-    assert errors == ["generated adapter memory.status.cli live parser has CLI option(s) missing from operation contract: target, verbose"]
+    assert errors == []
 
 
 def test_validated_contract_loader_reports_contract_and_schema(monkeypatch, tmp_path: Path) -> None:

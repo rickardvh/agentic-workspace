@@ -693,23 +693,24 @@ def test_migrate_layout_moves_legacy_managed_files_into_agentic_memory_root(tmp_
 
 def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     parser = cli.build_parser()
+    generated_parser = cli.build_generated_cli_package_parser()
 
     current_args = parser.parse_args(["current", "check", "--target", "."])
-    list_skills_args = parser.parse_args(["list-skills", "--format", "json"])
+    list_skills_args = generated_parser.parse_args(["list-skills", "--format", "json"])
     cleanup_args = parser.parse_args(["bootstrap-cleanup", "--target", ".", "--format", "json"])
     migrate_args = parser.parse_args(["migrate-layout", "--target", ".", "--dry-run", "--format", "json"])
     uninstall_args = parser.parse_args(["uninstall", "--target", ".", "--dry-run", "--format", "json"])
-    doctor_args = parser.parse_args(["doctor", "--target", ".", "--strict-doc-ownership"])
+    doctor_args = generated_parser.parse_args(["doctor", "--target", "."])
     prompt_install_args = parser.parse_args(["prompt", "install", "--target", "./repo"])
     prompt_args = parser.parse_args(["prompt", "adopt", "--target", "./repo"])
     prompt_populate_args = parser.parse_args(["prompt", "populate", "--target", "./repo"])
     prompt_uninstall_args = parser.parse_args(["prompt", "uninstall", "--target", "./repo"])
     route_args = parser.parse_args(["route", "--files", "src/app.py"])
     sync_args = parser.parse_args(["sync-memory", "--notes", ".agentic-workspace/memory/repo/index.md"])
-    promotion_args = parser.parse_args(
+    promotion_args = generated_parser.parse_args(
         ["promotion-report", "--notes", ".agentic-workspace/memory/repo/domains/api.md", "--mode", "remediation"]
     )
-    report_args = parser.parse_args(["report", "--target", ".", "--format", "json"])
+    report_args = generated_parser.parse_args(["report", "--target", ".", "--format", "json"])
     verify_args = parser.parse_args(["verify-payload", "--format", "json"])
     install_args = parser.parse_args(
         [
@@ -732,7 +733,8 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     assert cleanup_args.command == "bootstrap-cleanup"
     assert migrate_args.command == "migrate-layout"
     assert uninstall_args.command == "uninstall"
-    assert doctor_args.strict_doc_ownership is True
+    assert doctor_args.command == "doctor"
+    assert doctor_args.target == "."
     assert prompt_install_args.prompt_command == "install"
     assert prompt_args.command == "prompt"
     assert prompt_args.prompt_command == "adopt"

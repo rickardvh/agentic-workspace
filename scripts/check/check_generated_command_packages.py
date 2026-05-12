@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import importlib
+import io
 import json
 import os
 import shutil
@@ -619,6 +621,37 @@ def _validate_no_legacy_generated_adapter_runtime_import(*, relative_path: str, 
     return []
 
 
+def _validate_generated_python_commands_absent_from_handwritten_parsers() -> list[str]:
+    errors: list[str] = []
+    package_modules = {
+        "root-workspace": ("agentic_workspace.generated_cli_package", "agentic_workspace.cli"),
+        "planning-bootstrap": ("repo_planning_bootstrap.generated_cli_package", "repo_planning_bootstrap.cli"),
+        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap.cli"),
+    }
+    for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
+        generated_module = importlib.import_module(generated_module_name)
+        runtime_module = importlib.import_module(runtime_module_name)
+        generated_command_names = getattr(generated_module, "generated_command_names", None)
+        build_parser = getattr(runtime_module, "build_parser", None)
+        if not callable(generated_command_names) or not callable(build_parser):
+            errors.append(f"{package_id} cannot prove generated command parser retirement")
+            continue
+        for command_name in generated_command_names():
+            parser = build_parser()
+            with contextlib.redirect_stderr(io.StringIO()):
+                try:
+                    parser.parse_args([str(command_name)])
+                except SystemExit as exc:
+                    if int(exc.code or 0) != 0:
+                        continue
+                else:
+                    errors.append(
+                        f"{runtime_module_name} handwritten parser still accepts generated command {command_name!r}; "
+                        "generated_cli_package must own parser shape"
+                    )
+    return errors
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -918,6 +951,7 @@ def _validate_static_surfaces() -> list[str]:
             if main_index == -1 or generated_index == -1 or parser_index == -1 or generated_index > parser_index:
                 errors.append(f"{relative_path} does not route generated Python adapters before the handwritten parser")
         errors.extend(_validate_python_runtime_handler_boundary())
+        errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
         durable_source_roots = {
             "src/agentic_workspace/generated_cli_package/__init__.py": "generated/python/workspace-cli",
             "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py": "generated/python/planning-cli",

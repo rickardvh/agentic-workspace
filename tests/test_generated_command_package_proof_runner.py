@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import sys
 from pathlib import Path
@@ -236,6 +237,23 @@ def test_python_runtime_import_boundary_rejects_legacy_generated_adapter_dispatc
         "src/agentic_workspace/cli.py must route generated Python commands through generated_cli_package, "
         "not legacy generated_command_adapters runtime dispatch"
     ]
+
+
+def test_python_parser_retirement_rejects_generated_command_in_handwritten_parser(monkeypatch) -> None:
+    checker = _load_checker()
+    root_cli = checker.importlib.import_module("agentic_workspace.cli")
+
+    def build_drifted_parser() -> argparse.ArgumentParser:
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers(dest="command", required=True)
+        subparsers.add_parser("defaults")
+        return parser
+
+    monkeypatch.setattr(root_cli, "build_parser", build_drifted_parser)
+
+    errors = checker._validate_generated_python_commands_absent_from_handwritten_parsers()
+
+    assert any("handwritten parser still accepts generated command 'defaults'" in error for error in errors)
 
 
 def test_typescript_runtime_handoff_thinness_rejects_runtime_owned_behavior() -> None:

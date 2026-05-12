@@ -111,6 +111,9 @@ from agentic_workspace.generated_cli_package import (
     build_generated_parser as build_generated_cli_package_parser,
 )
 from agentic_workspace.generated_cli_package import (
+    generated_command_names as generated_cli_package_command_names,
+)
+from agentic_workspace.generated_cli_package import (
     run_generated_command as run_generated_cli_package_command,
 )
 from agentic_workspace.generated_cli_package import (
@@ -1180,7 +1183,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
+    generated_commands = set(generated_cli_package_command_names())
     for command_spec in _CLI_COMMANDS_MANIFEST["commands"]:
+        if str(command_spec["name"]) in generated_commands:
+            continue
         _add_manifest_command(subparsers, command_spec)
 
     return parser

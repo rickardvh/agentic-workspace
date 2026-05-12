@@ -1,7 +1,7 @@
 {
   "kind": "planning-decomposition/v1",
   "title": "Python generated CLI completion",
-  "status": "ready-for-lane-promotion",
+  "status": "partially-promoted",
   "larger_intended_outcome": "Complete the Python side of #892 by moving command parser, dispatch, interface behavior, adapter metadata, and conformance expectations behind implementation-independent contracts or IR, leaving cli.py files as thin runtime primitive adapters only.",
   "non_goals": [
     "Do not claim weak-agent-safe adapter maturity is full Python generated CLI completion.",
@@ -12,7 +12,7 @@
     {
       "id": "python-runtime-handler-boundary",
       "title": "Python runtime handler boundary",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "Generated Python dispatch can identify supported operation ids from IR while cli.py exposes only thin operation handler adapters for hand-owned runtime primitives.",
       "owner_surface": "packages/command-generation/src/agentic_command_generation/generator.py and generated/python/*/generated_cli_package/__init__.py",
       "proof": "Generated package static proof plus Python conformance prove operation dispatch is generated and runtime handlers remain thin package-local adapters.",
@@ -22,7 +22,7 @@
     {
       "id": "python-handwritten-parser-retirement",
       "title": "Python handwritten parser retirement for generated commands",
-      "readiness": "needs-shaping",
+      "readiness": "promoted",
       "outcome": "Commands covered by command_package_ir no longer require duplicate handwritten argparse definitions in package cli.py files.",
       "owner_surface": "src/agentic_workspace/cli.py, packages/planning/src/repo_planning_bootstrap/cli.py, packages/memory/src/repo_memory_bootstrap/cli.py, and generated/python/*/generated_cli_package/__init__.py",
       "proof": "Static proof rejects duplicated handwritten parser ownership for generated command/interface surfaces; Python black-box conformance still passes.",
@@ -87,5 +87,5 @@
       "role": "dogfooding signal"
     }
   ],
-  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. This decomposition is the package-owned continuation surface for the remaining Python work."
+  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Runtime handler boundary and handwritten parser retirement have been promoted and implemented on codex/finish-python-generated-cli; remaining Python work starts at the interface-change gate."
 }
