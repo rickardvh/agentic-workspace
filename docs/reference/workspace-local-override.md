@@ -15,6 +15,7 @@ Machine-local override schema for invocation preferences, delegation capabilitie
 | `workspace` | object | no |  | Local workspace preferences that should not be checked into shared repo config. |  |  |
 | `workspace.cli_invoke` | string | no |  | Command prefix this machine should show in copyable Agentic Workspace commands, such as `uv run agentic-workspace`. |  |  |
 | `workspace.shared_config_path` | string | no |  | Optional path to another machine-local Agentic Workspace local config file. Relative paths resolve from the repository root; repo-local local config values override shared values. |  |  |
+| `workspace.maintainer_mode` | boolean | no |  | Machine-local opt-in that surfaces package-maintainer dogfooding report routes during ordinary start/report use without making them shared repo policy. |  |  |
 | `runtime` | object | no |  | Capabilities of the current agent/runtime on this machine. |  |  |
 | `runtime.supports_internal_delegation` | boolean | no |  | Whether the current runtime can hand work to an internal subagent or equivalent in-session worker. |  |  |
 | `runtime.strong_planner_available` | boolean | no |  | Whether this local environment has a stronger planning or reasoning path available for quality-sensitive work. |  |  |

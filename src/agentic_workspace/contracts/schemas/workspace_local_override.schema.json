@@ -24,6 +24,10 @@
           "type": "string",
           "minLength": 1,
           "description": "Optional path to another machine-local Agentic Workspace local config file. Relative paths resolve from the repository root; repo-local local config values override shared values."
+        },
+        "maintainer_mode": {
+          "type": "boolean",
+          "description": "Machine-local opt-in that surfaces package-maintainer dogfooding report routes during ordinary start/report use without making them shared repo policy."
         }
       },
       "additionalProperties": false,

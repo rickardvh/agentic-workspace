@@ -388,6 +388,10 @@ def report_router_payload(
         decision_grade_fields.append("report_profile.ordinary_agent_path")
     if "report_profile.feature_tier" not in decision_grade_fields:
         decision_grade_fields.append("report_profile.feature_tier")
+    maintainer_mode_value = payload.get("maintainer_mode", {})
+    if isinstance(maintainer_mode_value, dict) and maintainer_mode_value.get("status") == "enabled":
+        if "maintainer_mode" not in decision_grade_fields:
+            decision_grade_fields.append("maintainer_mode")
     enabled_advanced_features = set(advanced_policy.get("enabled_features", []) if isinstance(advanced_policy, dict) else [])
     maintenance_pressure_value = payload.get("maintenance_pressure", {})
     maintenance_pressure_status = str(maintenance_pressure_value.get("status", "")) if isinstance(maintenance_pressure_value, dict) else ""
@@ -418,6 +422,7 @@ def report_router_payload(
         "health": payload.get("health", "unknown"),
         "output_contract": _report_router_output_contract(payload.get("output_contract", {})),
         "operating_posture": _report_router_operating_posture(payload.get("operating_posture", {})),
+        "maintainer_mode": payload.get("maintainer_mode", {}),
         "report_profile": profile_payload,
         "current_work": current_work,
         "memory_consult": payload.get("memory_consult", {}),
@@ -453,6 +458,9 @@ def report_router_payload(
             "omitted_section_hint_count": max(0, len(section_hints) - len(compact_section_hints)),
         },
     }
+    maintainer_mode = router_payload.get("maintainer_mode", {})
+    if not (isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled"):
+        router_payload.pop("maintainer_mode", None)
     router_payload["surface_value_guardrail"]["prefer"] = router_payload["surface_value_guardrail"]["prefer"][:3]
     if "maintenance_pressure" in enabled_advanced_features or maintenance_pressure_relevant:
         router_payload["maintenance_pressure"] = _report_router_maintenance_pressure(payload.get("maintenance_pressure", {}))

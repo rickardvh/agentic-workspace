@@ -26,6 +26,7 @@
   "mixed_agent_local_override_fields": [
     "workspace.cli_invoke",
     "workspace.shared_config_path",
+    "workspace.maintainer_mode",
     "runtime.supports_internal_delegation",
     "runtime.strong_planner_available",
     "runtime.cheap_bounded_executor_available",

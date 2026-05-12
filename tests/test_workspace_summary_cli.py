@@ -104,6 +104,61 @@ candidates = [
     assert payload["schema"]["select_command"] == "agentic-workspace summary --select <field.path> --format json"
 
 
+def test_workspace_summary_completion_task_surfaces_closeout_trust(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "epic-continuation", maturity = "candidate", status = "next", priority = "P1", refs = "package-owned-only", title = "Continue epic", outcome = "Finish the original epic intent.", reason = "A completed lane did not satisfy the larger intent.", promotion_signal = "Promote before closeout.", suggested_first_slice = "Promote the next lane." },
+]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "epic-continuation.decomposition.json",
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Epic continuation",
+                "outcome": "Finish the original epic intent.",
+                "status": "ready-for-lane-promotion",
+                "lanes": [
+                    {
+                        "id": "next-lane",
+                        "title": "Next lane",
+                        "readiness": "ready",
+                        "owner_surface": ".agentic-workspace/planning/state.toml",
+                    }
+                ],
+            },
+            indent=2,
+        ),
+    )
+
+    assert cli.main(["summary", "--target", str(tmp_path), "--task", "Can this lane be considered done?", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    closeout = payload["closeout_trust_inspection"]
+    assert closeout["status"] == "required"
+    assert closeout["trust"] == "lower-trust"
+    assert closeout["strict_closeout_gate"]["status"] == "blocked"
+    assert closeout["intent_satisfaction"]["trust"] == "follow-up-required"
+    assert closeout["required_next_inspection"] == "agentic-workspace report --target ./repo --section closeout_trust --format json"
+
+
 def test_workspace_summary_json_accepts_verbose_detail(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")

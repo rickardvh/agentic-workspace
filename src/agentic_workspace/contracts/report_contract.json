@@ -14,6 +14,7 @@
     "report_profile",
     "output_contract",
     "operating_posture",
+    "maintainer_mode",
     "config_enforcement",
     "config_effect_audit",
     "branch_workflow_posture",
