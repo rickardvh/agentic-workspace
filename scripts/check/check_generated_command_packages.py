@@ -974,12 +974,40 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing")
             else:
                 generated_text = (REPO_ROOT / generated_root / "generated_cli_package" / "__init__.py").read_text(encoding="utf-8")
+                if "json.loads(\n    r\"\"\"" in generated_text:
+                    errors.append(f"{generated_root}/generated_cli_package/__init__.py embeds generated JSON instead of loading resources")
                 if "def generated_maturity()" not in generated_text:
                     errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_maturity")
                 if "def generated_weak_agent_routing()" not in generated_text:
                     errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_weak_agent_routing")
                 if "_GENERATED_WEAK_AGENT_ROUTING = 'allowed-read-only'" not in generated_text:
                     errors.append(f"{generated_root}/generated_cli_package/__init__.py does not advertise allowed-read-only routing")
+            for resource_name in ("command_package.json", "adapter_commands.json"):
+                resource_path = REPO_ROOT / generated_root / "generated_cli_package" / resource_name
+                if not resource_path.is_file():
+                    errors.append(f"{generated_root}/generated_cli_package/{resource_name} is missing")
+                    continue
+                try:
+                    payload = json.loads(resource_path.read_text(encoding="utf-8"))
+                except json.JSONDecodeError as exc:
+                    errors.append(f"{generated_root}/generated_cli_package/{resource_name} is invalid JSON: {exc}")
+                    continue
+                if resource_name == "command_package.json" and payload != package:
+                    errors.append(f"{generated_root}/generated_cli_package/command_package.json drifted from command_package_ir.json package {package_id!r}")
+                if resource_name == "adapter_commands.json":
+                    expected_adapter_commands = [
+                        {
+                            "adapter_id": command["adapter_id"],
+                            "operation_id": command["operation_ref"]["id"],
+                            "interface": dict(command["interface"]),
+                        }
+                        for command in package.get("commands", [])
+                        if isinstance(command, dict) and command.get("status") == "generated" and isinstance(command.get("interface"), dict)
+                    ]
+                    if payload != expected_adapter_commands:
+                        errors.append(
+                            f"{generated_root}/generated_cli_package/adapter_commands.json drifted from generated adapter projection"
+                        )
         generated_entrypoints = {
             "src/agentic_workspace/cli.py": "agentic_workspace.generated_cli_package",
             "packages/planning/src/repo_planning_bootstrap/cli.py": "repo_planning_bootstrap.generated_cli_package",

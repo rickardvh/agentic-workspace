@@ -70,8 +70,6 @@ def _python_adapter_command_payload(package: dict[str, Any]) -> list[dict[str, A
 
 
 def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, Any], *, source_path: str, regenerate_command: str) -> str:
-    rendered_package = _json_block(package)
-    rendered_commands = _json_block(_python_adapter_command_payload(package))
     weak_agent_routing = "allowed-read-only" if _is_weak_agent_safe_python_target(target) else "review-required"
     runnable = str(target.get("maturity_level_ref") in {"runtime-backed-read-only-adapter", "weak-agent-safe-adapter"})
     return (
@@ -84,21 +82,21 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         "import argparse\n"
         "import json\n"
         "from collections.abc import Callable\n"
+        "from importlib.resources import files\n"
+        "from pathlib import Path\n"
         "from typing import Any\n\n"
         "# DO NOT EDIT DIRECTLY.\n"
         f"# Command/interface changes belong in {source_path}.\n"
         "# Runtime behavior changes belong in hand-written operation/primitive implementation code.\n"
         f"# Regenerate with: {regenerate_command}\n"
-        "GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(\n"
-        '    r"""\n'
-        f"{rendered_package}\n"
-        '"""\n'
-        ")\n\n"
-        "_GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = json.loads(\n"
-        '    r"""\n'
-        f"{rendered_commands}\n"
-        '"""\n'
-        ")\n"
+        "\n\n"
+        "def _load_generated_json(name: str) -> Any:\n"
+        "    try:\n"
+        '        return json.loads(files(__package__).joinpath(name).read_text(encoding="utf-8"))\n'
+        "    except (AttributeError, FileNotFoundError, ModuleNotFoundError, TypeError):\n"
+        '        return json.loads(Path(__file__).with_name(name).read_text(encoding="utf-8"))\n\n\n'
+        'GENERATED_COMMAND_PACKAGE: dict[str, Any] = _load_generated_json("command_package.json")\n\n'
+        '_GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = _load_generated_json("adapter_commands.json")\n'
         "_GENERATED_COMMANDS_BY_NAME: dict[str, dict[str, Any]] = {\n"
         '    str(command["interface"]["name"]): command for command in _GENERATED_ADAPTER_COMMANDS\n'
         "}\n\n"
@@ -171,7 +169,6 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
 
 
 def _python_module(package: dict[str, Any], *, source_path: str, regenerate_command: str) -> str:
-    rendered = _json_block(package)
     return (
         '"""Generated command package metadata.\n\n'
         f"Source: {source_path}\n"
@@ -180,16 +177,20 @@ def _python_module(package: dict[str, Any], *, source_path: str, regenerate_comm
         '"""\n\n'
         "from __future__ import annotations\n\n"
         "import json\n"
+        "from importlib.resources import files\n"
+        "from pathlib import Path\n"
         "from typing import Any\n\n"
         "# DO NOT EDIT DIRECTLY.\n"
         f"# Command/package interface changes belong in {source_path}.\n"
         "# Runtime behavior changes belong in hand-written operation/primitive implementation code.\n"
         f"# Regenerate with: {regenerate_command}\n"
-        "GENERATED_COMMAND_PACKAGE: dict[str, Any] = json.loads(\n"
-        '    r"""\n'
-        f"{rendered}\n"
-        '"""\n'
-        ")\n"
+        "\n\n"
+        "def _load_generated_json(name: str) -> Any:\n"
+        "    try:\n"
+        '        return json.loads(files(__package__).joinpath(name).read_text(encoding="utf-8"))\n'
+        "    except (AttributeError, FileNotFoundError, ModuleNotFoundError, TypeError):\n"
+        '        return json.loads(Path(__file__).with_name(name).read_text(encoding="utf-8"))\n\n\n'
+        'GENERATED_COMMAND_PACKAGE: dict[str, Any] = _load_generated_json("command_package.json")\n'
     )
 
 
@@ -455,7 +456,14 @@ def render_outputs(
             root = repo_root / str(target["generated_root"])
             if target["kind"] == "python":
                 module_path = root / "generated_cli_package" / "__init__.py"
+                outputs.append(GeneratedOutput(root / "generated_cli_package" / "command_package.json", _json_block(package) + "\n"))
                 if _is_runtime_backed_python_target(target):
+                    outputs.append(
+                        GeneratedOutput(
+                            root / "generated_cli_package" / "adapter_commands.json",
+                            _json_block(_python_adapter_command_payload(package)) + "\n",
+                        )
+                    )
                     outputs.append(
                         GeneratedOutput(
                             module_path,

@@ -152,6 +152,8 @@ def test_memory_wheel_ships_generated_cli_package_import_dependency() -> None:
     assert "repo_memory_bootstrap/generated_command_adapters.py" in inventory
     assert "repo_memory_bootstrap/generated_cli_package/__init__.py" in inventory
     assert "repo_memory_bootstrap/_generated_cli_package_impl/__init__.py" in inventory
+    assert "repo_memory_bootstrap/_generated_cli_package_impl/command_package.json" in inventory
+    assert "repo_memory_bootstrap/_generated_cli_package_impl/adapter_commands.json" in inventory
 
 
 def test_memory_sdist_ships_generated_cli_package_import_dependency() -> None:
@@ -162,6 +164,8 @@ def test_memory_sdist_ships_generated_cli_package_import_dependency() -> None:
     assert "src/repo_memory_bootstrap/generated_command_adapters.py" in inventory
     assert "src/repo_memory_bootstrap/generated_cli_package/__init__.py" in inventory
     assert "src/repo_memory_bootstrap/_generated_cli_package_impl/__init__.py" in inventory
+    assert "src/repo_memory_bootstrap/_generated_cli_package_impl/command_package.json" in inventory
+    assert "src/repo_memory_bootstrap/_generated_cli_package_impl/adapter_commands.json" in inventory
 
 
 def test_installed_memory_wheel_imports_cli_module() -> None:

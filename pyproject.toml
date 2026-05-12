@@ -47,11 +47,15 @@ packages = ["src/agentic_workspace"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "generated/python/workspace-cli/generated_cli_package/__init__.py" = "src/agentic_workspace/_generated_cli_package_impl/__init__.py"
+"generated/python/workspace-cli/generated_cli_package/command_package.json" = "src/agentic_workspace/_generated_cli_package_impl/command_package.json"
+"generated/python/workspace-cli/generated_cli_package/adapter_commands.json" = "src/agentic_workspace/_generated_cli_package_impl/adapter_commands.json"
 
 [tool.hatch.build.targets.sdist]
 include = [
   "/README.md",
   "/generated/python/workspace-cli/generated_cli_package/__init__.py",
+  "/generated/python/workspace-cli/generated_cli_package/command_package.json",
+  "/generated/python/workspace-cli/generated_cli_package/adapter_commands.json",
   "/src/agentic_workspace",
   "/tests",
 ]
