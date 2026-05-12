@@ -1,0 +1,180 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Monorepo support review",
+  "date": "2026-05-12",
+  "classification": "dogfooding-review",
+  "goal": [
+    "Review overall monorepo support after dogfooding showed the proof router did not detect Makefiles in subrepos.",
+    "Capture evidence-backed follow-up candidates without activating implementation work in this pass."
+  ],
+  "scope": [
+    "Proof routing for changed paths under package or subrepo roots.",
+    "Target proof capability discovery across root and nested project manifests.",
+    "Command selection output shape for monorepo-local validation commands."
+  ],
+  "non_goals": [
+    "Do not implement monorepo discovery or proof routing changes in this review pass.",
+    "Do not assume this source repo's root Makefile target names are a valid contract for all host monorepos.",
+    "Do not create or close GitHub issues from this artifact unless a later promotion pass chooses that route."
+  ],
+  "review_mode": {
+    "mode": "validation-lane",
+    "review question": "Does the current validation/proof lane support monorepos as first-class targets, especially when relevant proof commands live in subrepo Makefiles or package manifests?",
+    "default finding cap": "3 findings",
+    "inputs inspected first": "proof selection implementation, proof selection tests, proof-selection rules, root and package Makefiles, current proof output for package-local changes, and workspace configuration/schema surfaces"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --task \"Produce a review on overall monorepo support, prompted by proof router not detecting Makefiles in subrepos\" --format json; rg proof/Makefile/monorepo surfaces; uv run agentic-workspace proof --changed packages/planning/src/repo_planning_bootstrap/installer.py --format json; uv run agentic-workspace proof --verbose --changed packages/planning/src/repo_planning_bootstrap/installer.py --format json; Get-ChildItem -Recurse -Filter Makefile",
+    "evidence sources": "src/agentic_workspace/cli.py proof capability discovery and command selection, tests/test_workspace_proof_cli.py proof router coverage, src/agentic_workspace/contracts/proof_selection_rules.json path lanes, root Makefile, packages/planning/Makefile, packages/memory/Makefile, pyproject.toml [tool.uv.workspace]"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "src/agentic_workspace/cli.py",
+      "label": "Proof capability discovery and proof command selection",
+      "role": "evidence",
+      "locator": "_makefile_targets, _target_proof_capabilities, _proof_selection_for_changed_paths"
+    },
+    {
+      "kind": "tests",
+      "target": "tests/test_workspace_proof_cli.py",
+      "label": "Current proof router coverage",
+      "role": "evidence",
+      "locator": "root Makefile/package.json capability tests"
+    },
+    {
+      "kind": "contract",
+      "target": "src/agentic_workspace/contracts/proof_selection_rules.json",
+      "label": "Changed-path lane routing",
+      "role": "evidence",
+      "locator": "planning_package and memory_package rules"
+    },
+    {
+      "kind": "repo-surface",
+      "target": "packages/planning/Makefile; packages/memory/Makefile",
+      "label": "Subrepo Makefiles",
+      "role": "evidence",
+      "locator": "package-local test/lint/check targets"
+    },
+    {
+      "kind": "repo-surface",
+      "target": "pyproject.toml",
+      "label": "Monorepo membership",
+      "role": "evidence",
+      "locator": "[tool.uv.workspace].members"
+    }
+  ],
+  "findings": [
+    {
+      "id": "subrepo-proof-capability-discovery",
+      "title": "Proof capability discovery is root-scoped and misses subrepo Makefiles",
+      "summary": "The proof router discovers only `target_root/Makefile` and `target_root/package.json`, so a monorepo package with its own Makefile or package manifest is invisible unless the root Makefile happens to delegate to it.",
+      "evidence": "`_makefile_targets` reads only `target_root / \"Makefile\"`; `_package_json_scripts` reads only `target_root / \"package.json\"`; `_target_proof_capabilities` reports only root-level `make` and `package_json` fields. This repo has package-local Makefiles under `packages/planning/` and `packages/memory/`, and `pyproject.toml` declares uv workspace members.",
+      "risk if unchanged": "Host monorepos without root delegating targets will route package-local changes to manual verification or wrong root-level commands even when a good subrepo proof command exists.",
+      "suggested action": "Add first-class monorepo capability discovery that maps changed paths to nearest project roots and discovers Makefile/package/language capabilities at those roots before falling back to root-level proof.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap or issue intake for proof-routing monorepo support",
+      "promotion trigger": "Promote when proof routing work resumes, or immediately if another host monorepo reports missed subrepo validation commands.",
+      "post-remediation note shape": "shrink to a pointer to the monorepo discovery contract/tests once implemented"
+    },
+    {
+      "id": "selected-proof-commands-have-no-subrepo-cwd",
+      "title": "Selected proof commands cannot represent package-local cwd",
+      "summary": "Proof output currently hardcodes selected command `cwd` as `.` and validation-plan steps inherit that root cwd, so even if subrepo commands are discovered later, the current output shape is too weak to express `cwd=packages/planning` or equivalent command locality.",
+      "evidence": "`_proof_selection_for_changed_paths` builds every selected command with `cwd: \".\"`; current verbose proof for a `packages/planning/...` change reports `make test-planning` with `cwd: \".\"`; package-local Makefiles contain direct `test`, `lint`, and check targets that would need package-local execution context if root delegation is absent.",
+      "risk if unchanged": "A future subrepo discovery patch could still emit commands that run in the wrong directory, causing false failures or encouraging root-specific wrapper targets as a hidden requirement.",
+      "suggested action": "Extend proof command records and validation-plan steps to carry command root, source path, and locality reason; adapt command rendering to either `cwd=<subrepo>` plus local command or an explicit root-level delegating command.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": "proof command schema/output and tests/test_workspace_proof_cli.py",
+      "promotion trigger": "Promote with subrepo Makefile discovery, because discovery and cwd locality need to land together to avoid another partial monorepo fix.",
+      "post-remediation note shape": "shrink after selected proof command records include locality and regression coverage"
+    },
+    {
+      "id": "monorepo-roots-are-not-a-contract",
+      "title": "Monorepo membership is inferred ad hoc rather than represented as a contract",
+      "summary": "The workspace has path lanes for `packages/planning/` and `packages/memory/`, but there is no general monorepo-root contract that proof, ownership, setup/adopt route hints, and validation output can share.",
+      "evidence": "`proof_selection_rules.json` has hard-coded package path prefixes and lanes; `pyproject.toml` declares `[tool.uv.workspace].members`; proof route hints describe live target capabilities as current Makefile/package.json/language discovery, but the capability payload has no `project_roots` or `workspace_members` section.",
+      "risk if unchanged": "Each subsystem will rediscover monorepo structure differently, causing drift between proof routing, subsystem ownership, setup/adopt learning, generated package work, and future host-repo support.",
+      "suggested action": "Introduce a small implementation-independent monorepo/project-root discovery surface with roots, root type, manifest path, proof candidates, and owner path prefixes; have proof routing consume that surface rather than special-casing package prefixes.",
+      "confidence": "medium-high",
+      "source": "static-analysis",
+      "promotion target": "contracts plus proof routing implementation, likely `src/agentic_workspace/contracts/` and `src/agentic_workspace/cli.py`",
+      "promotion trigger": "Promote before broadening generated CLI or workspace proof support to additional monorepo packages/languages.",
+      "post-remediation note shape": "stub after a canonical project-root contract and proof selectors replace this review as evidence"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote a single bounded follow-up for monorepo proof routing if the next implementation slice touches proof selection. The first implementation should discover changed-path project roots, detect subrepo Makefiles/package manifests, and emit cwd-aware proof commands.",
+    "defer": "Do not widen immediately into full monorepo lifecycle/install semantics; the urgent proven gap is validation/proof routing.",
+    "dismiss": "No findings dismissed."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "findings promoted, dismissed, or superseded",
+    "proof surface": "future issue or planning item, proof-routing tests, and monorepo/project-root contract",
+    "source retention rule": "Keep this artifact as the dogfooding evidence record until the monorepo proof-routing follow-up lands; then shrink to findings, outcome, and proof links.",
+    "distillation path": "If promoted, move active implementation details into an issue or execplan and keep this review as evidence/history only.",
+    "reconstructable refs": [
+      "src/agentic_workspace/cli.py",
+      "tests/test_workspace_proof_cli.py",
+      "src/agentic_workspace/contracts/proof_selection_rules.json",
+      "packages/planning/Makefile",
+      "packages/memory/Makefile",
+      "pyproject.toml"
+    ],
+    "fields intentionally omitted": [
+      "long command output",
+      "full source excerpts",
+      "issue titles"
+    ]
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --verbose --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-05-12: Review created after dogfooding report that proof routing did not detect Makefiles in subrepos."
+  ]
+}
