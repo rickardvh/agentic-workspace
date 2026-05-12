@@ -190,7 +190,7 @@
         "source_contract": "src/agentic_workspace/contracts/operation_contracts.json + src/agentic_workspace/contracts/cli_commands.json + src/agentic_workspace/contracts/python_runtime_boundary.json",
         "generator_contract": null,
         "regeneration_path": null,
-        "edit_policy": "Direct edits are allowed only for runtime primitives, live inspection, dispatch glue, or explicit migration exceptions; visible interface authority should route to contracts or generated metadata."
+        "edit_policy": "Direct edits are allowed only for runtime primitives, live inspection, dispatch glue, or explicit migration exceptions; visible interface authority should route to contracts or generated metadata, and any cli.py edit must select generated command package proof so interface drift cannot bypass the generated package gate."
       },
       {
         "id": "package-cli-runtime",
@@ -203,7 +203,7 @@
         "source_contract": "package-local CLI source plus package bootstrap payload checks",
         "generator_contract": null,
         "regeneration_path": null,
-        "edit_policy": "Direct edits are package-source work and may require package payload and install-surface proof before closeout."
+        "edit_policy": "Direct edits are package-source work and may require package payload and install-surface proof before closeout. Any package cli.py edit must also select generated command package proof so command/interface drift cannot bypass command_package_ir and generated_cli_package checks."
       }
     ]
   }

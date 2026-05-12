@@ -20030,8 +20030,11 @@ def _proof_selection_for_changed_paths(
                 break
         if not matched_rule:
             _select(str(_PROOF_SELECTION_RULES["fallback_lane"]))
-        if cli_authority_lane and _cli_authority_classification_for_path(changed_path):
+        cli_authority_classification = _cli_authority_classification_for_path(changed_path)
+        if cli_authority_lane and cli_authority_classification:
             _select(str(cli_authority_lane))
+            if cli_authority_classification.get("id") in {"root-workspace-cli-runtime", "package-cli-runtime"}:
+                _select("generated_command_packages")
 
     selected_lanes = [copy.deepcopy(_lane(lane_id)) for lane_id in selected_ids]
     generated_scope = generated_command_package_scope()

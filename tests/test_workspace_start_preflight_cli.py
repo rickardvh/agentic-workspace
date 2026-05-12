@@ -432,9 +432,13 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
         "manual-handoff",
         "ask-human",
     }
-    assert len(json.dumps(payload, sort_keys=True)) < 16600
+    assert len(json.dumps(payload, sort_keys=True)) < 18200
     assert payload["proof"]["required_commands"] == [
         "uv run agentic-workspace defaults --section root_cli_authority --format json",
+        "uv run python scripts/check/check_generated_command_packages.py",
+        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+        "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+        "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
     ]
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
     assert payload["path_boundaries"] == [

@@ -34,7 +34,7 @@
     {
       "id": "python-interface-change-gate",
       "title": "Python command/interface change gate",
-      "readiness": "needs-shaping",
+      "readiness": "promoted",
       "outcome": "Future package command/interface changes are forced through contracts, IR, generators, regenerated outputs, and black-box conformance rather than package-local executable cli.py edits.",
       "owner_surface": "scripts/check/check_generated_command_packages.py and src/agentic_workspace/contracts/proof_selection_rules.json",
       "proof": "Proof selection and static generated-package checks fail when command/interface changes bypass contract or generated surfaces.",
@@ -87,5 +87,5 @@
       "role": "dogfooding signal"
     }
   ],
-  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Runtime handler boundary and handwritten parser retirement have been promoted and implemented on codex/finish-python-generated-cli; remaining Python work starts at the interface-change gate."
+  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Runtime handler boundary, handwritten parser retirement, and interface-change proof gating have been promoted and implemented on codex/finish-python-generated-cli; remaining Python work starts at the completion promotion gate."
 }

@@ -1041,6 +1041,7 @@ def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
     assert [lane["id"] for lane in answer["selected_lanes"]] == [
         "workspace_cli",
         "cli_authority",
+        "generated_command_packages",
         "subsystem:workspace-cli-runtime",
     ]
     authority_review = answer["cli_authority_review"]
@@ -1082,6 +1083,7 @@ def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> No
         "contract_tooling",
         "workspace_cli",
         "cli_authority",
+        "generated_command_packages",
         "subsystem:workspace-cli-runtime",
     ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
@@ -1110,6 +1112,7 @@ def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None
         "planning_package",
         "workspace_cli",
         "cli_authority",
+        "generated_command_packages",
         "subsystem:workspace-cli-runtime",
     ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
