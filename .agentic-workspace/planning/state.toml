@@ -13,6 +13,7 @@ execplans = []
 
 [todo]
 active_items = [
+  { id = "codegen-python-runtime-boundary", title = "Reframe Python codegen around CLI and runtime boundaries", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/codegen-python-runtime-boundary.plan.json", why_now = "Created by new-plan scaffold.", owner_role = "implementation", handoff_ready = true },
 ]
 queued_items = []
 
